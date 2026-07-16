@@ -9,3 +9,6 @@ class InvalidRomError(RomWikiError):
 class ProfileError(RomWikiError):
     """Raised when a game profile is invalid."""
 
+
+class SiteError(RomWikiError):
+    """Raised when a site configuration or build is invalid."""

@@ -1,0 +1,14 @@
+site_name: Renegade Platinum Wiki
+site_description: A data-driven reference for Pokemon Renegade Platinum
+docs_dir: wiki
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+
+nav:
+  - Home: index.md
+  - Data Sources: data-sources.md

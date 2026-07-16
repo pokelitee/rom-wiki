@@ -1,0 +1,13 @@
+site_name: ROM Wiki
+site_description: Data-driven wikis for Pokemon ROM hacks
+docs_dir: wiki
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+
+nav:
+  - Home: index.md
+  - Methodology: methodology.md

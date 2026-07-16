@@ -27,18 +27,49 @@ python -m venv .venv
 Inspect a locally supplied game image:
 
 ```console
-romwiki inspect "Pokemon - Platinum Version (USA).nds"
-romwiki inspect "Pokemon - Platinum Version (USA).nds" --json
+romwiki inspect ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki inspect ".local/roms/Pokemon - Platinum Version (USA).nds" --json
 ```
 
 Write the machine-readable manifest used by later extraction stages:
 
 ```console
-romwiki manifest "Pokemon - Platinum Version (USA).nds" --output build/data/manifest.json
+romwiki manifest ".local/roms/Pokemon - Platinum Version (USA).nds" --output build/data/manifest.json
 ```
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.
+
+## Multi-site wiki
+
+The repository publishes one umbrella Pages artifact while keeping each game as an
+independent MkDocs site. The portal is emitted at the artifact root and game sites
+are emitted under stable slugs such as `/renegade-platinum/`.
+
+```text
+sites/
+├── portal/                    # Umbrella landing site
+├── games/
+│   └── renegade-platinum/     # Independent game site
+└── shared/                    # Shared templates and assets
+dist/                          # Ignored combined Pages artifact
+```
+
+List configured sites:
+
+```console
+romwiki site list
+```
+
+Build one game locally or every published site for deployment:
+
+```console
+romwiki site build renegade-platinum --output dist
+romwiki site build --all --output dist
+```
+
+The GitHub Pages workflow builds only committed structured data and maintained wiki
+content. It never requires or downloads a game image.
 
 ## PokéDB
 
@@ -51,4 +82,3 @@ through its internal implementation. The planned default local path is
 This repository does not include game images, patches, keys, or extracted
 copyrighted assets. Users must supply legally obtained inputs locally. Common game
 image and save-file extensions are ignored by Git.
-

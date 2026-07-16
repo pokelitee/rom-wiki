@@ -6,8 +6,10 @@ __pycache__/
 htmlcov/
 
 build/
+dist/
 site/
 .romwiki/
+.local/
 
 # User-supplied game images and related emulator data must remain local.
 *.nds
@@ -18,4 +20,3 @@ site/
 *.gb
 *.sav
 *.dsv
-

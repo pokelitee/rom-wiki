@@ -1,0 +1,13 @@
+[site]
+id = "renegade-platinum"
+name = "Renegade Platinum"
+kind = "game"
+slug = "renegade-platinum"
+published = true
+order = 10
+mkdocs_config = "mkdocs.yml"
+
+[game]
+profile = "renegade-platinum"
+generation = 4
+base_game = "platinum"

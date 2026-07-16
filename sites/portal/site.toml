@@ -1,0 +1,8 @@
+[site]
+id = "portal"
+name = "ROM Wiki"
+kind = "portal"
+slug = ""
+published = true
+order = 0
+mkdocs_config = "mkdocs.yml"
