@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+build/
+site/
+.romwiki/
+
+# User-supplied game images and related emulator data must remain local.
+*.nds
+*.3ds
+*.cia
+*.gba
+*.gbc
+*.gb
+*.sav
+*.dsv
+

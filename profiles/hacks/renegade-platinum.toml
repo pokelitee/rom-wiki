@@ -1,0 +1,20 @@
+[profile]
+id = "renegade-platinum"
+name = "Renegade Platinum"
+engine = "gen4_dppt"
+base_game = "platinum"
+
+[header]
+game_codes = ["CPUE"]
+rom_versions = [1]
+
+[[hashes]]
+algorithm = "md5"
+value = "4cbf654b4735760f8efd64a8a41415ca"
+variant = "standard-v1.3.0"
+
+[[hashes]]
+algorithm = "sha256"
+value = "c76667d191a8c9032ced5650ba87206d5286102c83fb85bb7226484283bbf72c"
+variant = "standard-v1.3.0"
+
