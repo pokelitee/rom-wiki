@@ -23,6 +23,7 @@ from romwiki.schema.locations import (
     LocationTrainerReference,
     LocationWarp,
 )
+from romwiki.schema.moves import Gen4Move
 
 __all__ = [
     "PokemonPersonalData",
@@ -42,4 +43,5 @@ __all__ = [
     "LocationConnection",
     "LocationTrainerReference",
     "LocationWarp",
+    "Gen4Move",
 ]

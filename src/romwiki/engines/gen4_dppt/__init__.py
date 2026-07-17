@@ -29,6 +29,7 @@ from romwiki.engines.gen4_dppt.scripts import (
     Gen4TrainerBattleCommand,
     parse_trainer_battle_commands,
 )
+from romwiki.engines.gen4_dppt.moves import MOVE_RECORD_SIZE, parse_move_record
 
 __all__ = [
     "PERSONAL_FORM_MEMBERS",
@@ -54,4 +55,6 @@ __all__ = [
     "parse_warp_events",
     "Gen4TrainerBattleCommand",
     "parse_trainer_battle_commands",
+    "MOVE_RECORD_SIZE",
+    "parse_move_record",
 ]

@@ -14,8 +14,8 @@ The project separates four concerns:
 
 The current extraction slices identify Nintendo DS images, enumerate their
 filesystem safely, read NARC archives, and decode normalized Gen IV Pokémon
-personal data, wild encounters, map-linked location names, and trainer parties
-with record-level provenance.
+personal data, move mechanics, wild encounters, map-linked location names, and
+trainer parties with record-level provenance.
 
 ## Development setup
 
@@ -91,6 +91,18 @@ romwiki build-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
 Location pages combine map headers with exact event warps, outdoor map-matrix
 connections, wild encounter tables, and trainer references. Each map header keeps
 a stable page even when several interiors share the same displayed location name.
+
+Extract and render move mechanics:
+
+```console
+romwiki extract-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki build-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+Move pages report the exact type, damage class, power, accuracy, PP, priority,
+effect, targeting, flag, and contest fields stored in the hack's active move
+archive. PokéDB supplies stable move names; mechanical values always come from
+the game image.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.

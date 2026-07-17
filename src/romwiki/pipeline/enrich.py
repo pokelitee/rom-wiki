@@ -26,6 +26,7 @@ COLOR_NAMES = (
     "red", "blue", "yellow", "green", "black", "brown", "purple", "gray",
     "white", "pink", "internal",
 )
+DAMAGE_CLASS_NAMES = ("physical", "special", "status")
 
 
 def enrich_personal_dataset(
@@ -93,6 +94,42 @@ def enrich_trainer_dataset(
         "active_record_count": sum(bool(record["party"]) for record in records),
         "linked_record_count": sum(bool(record["locations"]) for record in records),
         "location_reference_count": sum(len(record["locations"]) for record in records),
+        "source": dataset["source"],
+        "records": records,
+    }
+
+
+def enrich_move_dataset(
+    dataset: dict[str, Any], pokedb: PokeDBGeneration
+) -> dict[str, Any]:
+    source_records = dataset.get("records")
+    if not isinstance(source_records, list) or len(source_records) != 471:
+        raise DataSourceError("Expected exactly 471 Gen IV move records")
+
+    records = []
+    for expected_id, source in enumerate(source_records):
+        if source.get("move_id") != expected_id:
+            raise DataSourceError("Move records must be ordered by member ID")
+        public = 1 <= expected_id <= 467
+        slug = pokedb.move_name(expected_id) if public else f"internal-move-{expected_id}"
+        records.append(
+            {
+                **source,
+                "slug": slug,
+                "name": _display_name(slug),
+                "public": public,
+                "damage_class": _named_id(
+                    source["damage_class_id"], DAMAGE_CLASS_NAMES, "move class"
+                ),
+                "type": _named_id(source["type_id"], TYPE_NAMES, "type"),
+            }
+        )
+    return {
+        "schema_version": 1,
+        "game": dataset["game"],
+        "dataset": "moves",
+        "record_count": len(records),
+        "public_record_count": sum(record["public"] for record in records),
         "source": dataset["source"],
         "records": records,
     }
