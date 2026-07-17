@@ -33,6 +33,16 @@ class NarcArchiveTests(unittest.TestCase):
         with self.assertRaises(InvalidRomError):
             NarcArchive.from_bytes(data)
 
+    def test_can_read_available_part_of_an_explicitly_truncated_last_member(self) -> None:
+        data = make_narc()[:-1]
+
+        with self.assertRaises(InvalidRomError):
+            NarcArchive.from_bytes(data)
+
+        archive = NarcArchive.from_bytes(data, allow_truncated=True)
+        self.assertEqual(archive.read(0), b"abc")
+        self.assertEqual(archive.read(1), b"d")
+
 
 if __name__ == "__main__":
     unittest.main()

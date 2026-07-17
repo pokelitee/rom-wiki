@@ -35,6 +35,17 @@ class TrainerLocation:
 
 
 @dataclass(frozen=True, slots=True)
+class TrainerScriptReference:
+    header_id: int
+    internal_name: str
+    location_name_id: int
+    name: str
+    script_file_id: int
+    command_offset: int
+    opponent_slot: int
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4Trainer:
     trainer_id: int
     name: str
@@ -52,6 +63,7 @@ class Gen4Trainer:
     provenance: RecordProvenance
     party_provenance: RecordProvenance
     locations: tuple[TrainerLocation, ...] = ()
+    script_references: tuple[TrainerScriptReference, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)

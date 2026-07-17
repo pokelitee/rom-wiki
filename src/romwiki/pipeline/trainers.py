@@ -10,12 +10,13 @@ from romwiki.engines.gen4_dppt import (
     parse_english_message_archive,
     parse_object_events,
     parse_platinum_map_headers,
+    parse_trainer_battle_commands,
     parse_trainer_record,
 )
 from romwiki.errors import InvalidRomError, ProfileError
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
-from romwiki.schema import TrainerLocation
+from romwiki.schema import TrainerLocation, TrainerScriptReference
 
 
 def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -56,16 +57,20 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         )
         for member in trainers.members
     ]
-    locations_by_trainer, location_source = _extract_trainer_locations(
-        result,
-        filesystem,
-        messages,
-        trainer_count=len(parsed_records),
+    (
+        locations_by_trainer,
+        script_references_by_trainer,
+        location_source,
+    ) = _extract_trainer_locations(
+        result, filesystem, messages, trainer_count=len(parsed_records)
     )
     records = [
         replace(
             record,
             locations=tuple(locations_by_trainer.get(record.trainer_id, ())),
+            script_references=tuple(
+                script_references_by_trainer.get(record.trainer_id, ())
+            ),
         ).to_dict()
         for record in parsed_records
     ]
@@ -74,8 +79,14 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         "game": profile.id,
         "dataset": "trainers",
         "record_count": len(records),
-        "linked_record_count": sum(bool(record["locations"]) for record in records),
+        "linked_record_count": sum(
+            bool(record["locations"] or record["script_references"])
+            for record in records
+        ),
         "location_reference_count": sum(len(record["locations"]) for record in records),
+        "script_reference_count": sum(
+            len(record["script_references"]) for record in records
+        ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "trainer_archive": trainer_path,
@@ -94,11 +105,16 @@ def _extract_trainer_locations(
     messages: NarcArchive,
     *,
     trainer_count: int,
-) -> tuple[dict[int, list[TrainerLocation]], dict[str, Any]]:
+) -> tuple[
+    dict[int, list[TrainerLocation]],
+    dict[int, list[TrainerScriptReference]],
+    dict[str, Any],
+]:
     assert result.match is not None
     profile = result.match.profile
     try:
         events_path = profile.layout["events"]
+        scripts_path = profile.layout["scripts"]
         map_names_path = profile.layout["map_names"]
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
@@ -120,27 +136,30 @@ def _extract_trainer_locations(
     )
     location_names = parse_english_message_archive(messages.read(location_names_member))
     events = NarcArchive.from_bytes(filesystem.read(events_path))
+    scripts = NarcArchive.from_bytes(filesystem.read(scripts_path), allow_truncated=True)
     object_cache: dict[int, tuple[Any, ...]] = {}
+    script_cache: dict[int, tuple[Any, ...]] = {}
     locations: dict[int, list[TrainerLocation]] = {}
+    script_references: dict[int, list[TrainerScriptReference]] = {}
 
     for header in headers:
-        if header.event_file_id == null_event_id:
-            continue
-        if header.event_file_id >= len(events.members):
-            raise InvalidRomError(
-                f"Map header {header.header_id} references missing event file "
-                f"{header.event_file_id}"
-            )
         if header.location_name_id >= len(location_names):
             raise InvalidRomError(
                 f"Map header {header.header_id} references missing location name "
                 f"{header.location_name_id}"
             )
-        if header.event_file_id not in object_cache:
-            object_cache[header.event_file_id] = parse_object_events(
-                events.read(header.event_file_id), event_file_id=header.event_file_id
-            )
-        objects = object_cache[header.event_file_id]
+        objects: tuple[Any, ...] = ()
+        if header.event_file_id != null_event_id:
+            if header.event_file_id >= len(events.members):
+                raise InvalidRomError(
+                    f"Map header {header.header_id} references missing event file "
+                    f"{header.event_file_id}"
+                )
+            if header.event_file_id not in object_cache:
+                object_cache[header.event_file_id] = parse_object_events(
+                    events.read(header.event_file_id), event_file_id=header.event_file_id
+                )
+            objects = object_cache[header.event_file_id]
         for object_event in objects:
             if object_event.trainer_type == 0:
                 continue
@@ -168,7 +187,29 @@ def _extract_trainer_locations(
                     z=object_event.z,
                 )
             )
-    return locations, {
+        if header.script_file_id >= len(scripts.members):
+            raise InvalidRomError(
+                f"Map header {header.header_id} references missing script file "
+                f"{header.script_file_id}"
+            )
+        if header.script_file_id not in script_cache:
+            script_cache[header.script_file_id] = parse_trainer_battle_commands(
+                scripts.read(header.script_file_id), trainer_count=trainer_count
+            )
+        for command in script_cache[header.script_file_id]:
+            for opponent_slot, trainer_id in enumerate(command.trainer_ids, start=1):
+                script_references.setdefault(trainer_id, []).append(
+                    TrainerScriptReference(
+                        header_id=header.header_id,
+                        internal_name=header.internal_name,
+                        location_name_id=header.location_name_id,
+                        name=location_names[header.location_name_id],
+                        script_file_id=header.script_file_id,
+                        command_offset=command.offset,
+                        opponent_slot=opponent_slot,
+                    )
+                )
+    return locations, script_references, {
         "trainer_locations": {
             "events_archive": events_path,
             "map_headers": {"arm9_offset": table_offset, "count": count},
@@ -176,7 +217,13 @@ def _extract_trainer_locations(
             "location_names_member": location_names_member,
             "script_range": [script_start, script_end],
             "trainer_id_offset": trainer_id_offset,
-        }
+        },
+        "trainer_script_references": {
+            "scripts_archive": scripts_path,
+            "start_trainer_battle_opcode": 0xE5,
+            "check_won_battle_opcode": 0xEC,
+            "literal_ids_only": True,
+        },
     }
 
 

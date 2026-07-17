@@ -16,6 +16,7 @@ messages = "msgdata/pl_msg.narc"
 trainer_data = "poketool/trainer/trdata.narc"
 trainer_parties = "poketool/trainer/trpoke.narc"
 events = "fielddata/eventdata/zone_event.narc"
+scripts = "fielddata/script/scr_seq.narc"
 
 [parameters]
 map_header_offset = 0xE601C
