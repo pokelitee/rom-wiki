@@ -12,6 +12,10 @@ site/
 .romwiki/
 .local/
 
+# Generated wiki datasets are reproducible and remain local during development.
+sites/games/*/wiki/pokemon/
+sites/games/*/wiki/encounters/
+
 # User-supplied game images and related emulator data must remain local.
 *.nds
 *.3ds
