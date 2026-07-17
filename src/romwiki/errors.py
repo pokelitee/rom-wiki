@@ -12,3 +12,7 @@ class ProfileError(RomWikiError):
 
 class SiteError(RomWikiError):
     """Raised when a site configuration or build is invalid."""
+
+
+class DataSourceError(RomWikiError):
+    """Raised when an external structured-data source is invalid."""

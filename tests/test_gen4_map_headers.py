@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import string
+import struct
+import unittest
+
+from romwiki.engines.gen4_dppt import (
+    parse_english_message_archive,
+    parse_platinum_map_headers,
+)
+from romwiki.errors import InvalidRomError
+
+
+class Gen4MapHeaderTests(unittest.TestCase):
+    def test_decodes_header_linkage_and_internal_name(self) -> None:
+        data = bytearray(24)
+        struct.pack_into("<H", data, 0xE, 42)
+        data[0x12] = 7
+
+        headers = parse_platinum_map_headers(
+            bytes(data), b"W201\0" + bytes(11), count=1
+        )
+
+        self.assertEqual(headers[0].header_id, 0)
+        self.assertEqual(headers[0].encounter_id, 42)
+        self.assertEqual(headers[0].location_name_id, 7)
+        self.assertEqual(headers[0].internal_name, "W201")
+
+    def test_rejects_mismatched_table_size(self) -> None:
+        with self.assertRaises(InvalidRomError):
+            parse_platinum_map_headers(bytes(23), bytes(16), count=1)
+
+
+class Gen4MessageTests(unittest.TestCase):
+    def test_decrypts_english_location_names(self) -> None:
+        data = _make_message_archive(("Twinleaf Town", "Pokémon League"))
+
+        messages = parse_english_message_archive(data)
+
+        self.assertEqual(messages, ("Twinleaf Town", "Pokémon League"))
+
+
+_ENCODING = {
+    **{value: 0x121 + index for index, value in enumerate(string.digits)},
+    **{value: 0x12B + index for index, value in enumerate(string.ascii_uppercase)},
+    **{value: 0x145 + index for index, value in enumerate(string.ascii_lowercase)},
+    "é": 0x188,
+    " ": 0x1DE,
+}
+
+
+def _make_message_archive(messages: tuple[str, ...], archive_key: int = 0xA06) -> bytes:
+    table_end = 4 + len(messages) * 8
+    encoded_messages = []
+    for index, message in enumerate(messages):
+        key = (0x91BD3 * (index + 1)) & 0xFFFF
+        encoded = bytearray()
+        for value in [_ENCODING[character] for character in message] + [0xFFFF]:
+            encoded.extend(struct.pack("<H", value ^ key))
+            key = (key + 0x493D) & 0xFFFF
+        encoded_messages.append(bytes(encoded))
+
+    result = bytearray(struct.pack("<HH", len(messages), archive_key))
+    offset = table_end
+    for index, encoded in enumerate(encoded_messages):
+        entry_key = (archive_key * 0x2FD * (index + 1)) & 0xFFFF
+        entry_mask = entry_key | entry_key << 16
+        result.extend(
+            struct.pack(
+                "<II",
+                offset ^ entry_mask,
+                (len(encoded) // 2) ^ entry_mask,
+            )
+        )
+        offset += len(encoded)
+    result.extend(b"".join(encoded_messages))
+    return bytes(result)
+
+
+if __name__ == "__main__":
+    unittest.main()

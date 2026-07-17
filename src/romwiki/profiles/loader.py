@@ -67,6 +67,7 @@ def _load_profile(path: Path) -> GameProfile:
             rom_versions=tuple(header_data["rom_versions"]),
             hashes=hashes,
             layout=dict(data.get("layout", {})),
+            parameters=dict(data.get("parameters", {})),
         )
     except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
         raise ProfileError(f"Invalid profile {path}: {error}") from error

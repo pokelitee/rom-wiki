@@ -23,6 +23,7 @@ class GameProfile:
     rom_versions: tuple[int, ...]
     hashes: tuple[KnownHash, ...]
     layout: Mapping[str, str] = field(default_factory=dict)
+    parameters: Mapping[str, int] = field(default_factory=dict)
 
     def match(self, image: NintendoDSImage) -> HashMatch | None:
         if image.header.game_code not in self.game_codes:

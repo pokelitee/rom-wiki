@@ -45,6 +45,27 @@ romwiki extract-personal ".local/roms/Pokemon - Platinum Version (USA).nds"
 This writes `build/data/renegade-platinum/pokemon/personal.json`. Generated data is
 ignored until its publication and review policy is finalized.
 
+Build enriched records and the Pokémon wiki pages using the local PokéDB output:
+
+```console
+romwiki build-pokemon ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+This keeps the enriched audit dataset under `build/` and renders publishable
+Markdown into `sites/games/renegade-platinum/wiki/pokemon/`.
+
+Extract and render wild encounter tables:
+
+```console
+romwiki extract-encounters ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki build-encounters ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+Encounter pages use archive member IDs as stable file names while displaying the
+in-game location names resolved through Platinum's map headers. Populated archive
+members without a static map-header reference remain available in a separate
+unreferenced section for auditing.
+
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.
 

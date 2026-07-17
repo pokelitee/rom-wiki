@@ -7,10 +7,21 @@ import sys
 from typing import Sequence
 
 from romwiki.errors import RomWikiError
+from romwiki.pipeline.encounters import (
+    extract_encounter_dataset,
+    write_encounter_dataset,
+)
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
+from romwiki.pipeline.enrich import (
+    enrich_encounter_dataset,
+    enrich_personal_dataset,
+    write_enriched_dataset,
+)
 from romwiki.pipeline.manifest import create_manifest, write_manifest
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
+from romwiki.renderers.mkdocs import render_encounter_pages, render_pokemon_pages
 from romwiki.sites import SiteCatalog, build_sites
+from romwiki.sources import PokeDBGeneration
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,6 +56,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="dataset output path (defaults below build/data/<profile>/pokemon)",
     )
 
+    encounter_parser = subparsers.add_parser(
+        "extract-encounters", help="extract normalized wild encounter data"
+    )
+    _add_input_arguments(encounter_parser)
+    encounter_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/encounters)",
+    )
+
+    pokemon_parser = subparsers.add_parser(
+        "build-pokemon", help="extract, enrich, and render Pokemon pages"
+    )
+    _add_input_arguments(pokemon_parser)
+    pokemon_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokéDB generation output directory",
+    )
+    pokemon_parser.add_argument("--data-output", type=Path)
+    pokemon_parser.add_argument("--wiki-output", type=Path)
+
+    build_encounters_parser = subparsers.add_parser(
+        "build-encounters", help="extract, enrich, and render wild encounter pages"
+    )
+    _add_input_arguments(build_encounters_parser)
+    build_encounters_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokéDB generation output directory",
+    )
+    build_encounters_parser.add_argument("--data-output", type=Path)
+    build_encounters_parser.add_argument("--wiki-output", type=Path)
+
     site_parser = subparsers.add_parser(
         "site", help="list or build independently configured wiki sites"
     )
@@ -69,7 +116,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command in {"inspect", "manifest", "extract-personal"}:
+        if args.command in {
+            "inspect",
+            "manifest",
+            "extract-personal",
+            "extract-encounters",
+            "build-pokemon",
+            "build-encounters",
+        }:
             result = inspect_rom(args.rom, args.profiles_dir)
         if args.command == "inspect":
             _print_inspection(result, as_json=args.json)
@@ -86,6 +140,49 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_personal_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} personal records: {output}")
+        elif args.command == "extract-encounters":
+            dataset = extract_encounter_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "encounters" / "raw.json"
+            )
+            write_encounter_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} encounter records: {output}")
+        elif args.command == "build-pokemon":
+            personal = extract_personal_dataset(result)
+            enriched = enrich_personal_dataset(
+                personal, PokeDBGeneration.load(args.pokedb)
+            )
+            data_output = args.data_output or (
+                Path("build/data")
+                / enriched["game"]
+                / "pokemon"
+                / "enriched.json"
+            )
+            wiki_output = args.wiki_output or (
+                Path("sites/games") / enriched["game"] / "wiki" / "pokemon"
+            )
+            write_enriched_dataset(enriched, data_output)
+            page_count = render_pokemon_pages(enriched, wiki_output)
+            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
+            print(f"Rendered {page_count} Pokémon pages: {wiki_output}")
+        elif args.command == "build-encounters":
+            extracted = extract_encounter_dataset(result)
+            enriched = enrich_encounter_dataset(
+                extracted, PokeDBGeneration.load(args.pokedb)
+            )
+            data_output = args.data_output or (
+                Path("build/data")
+                / enriched["game"]
+                / "encounters"
+                / "enriched.json"
+            )
+            wiki_output = args.wiki_output or (
+                Path("sites/games") / enriched["game"] / "wiki" / "encounters"
+            )
+            write_enriched_dataset(enriched, data_output)
+            page_count = render_encounter_pages(enriched, wiki_output)
+            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
+            print(f"Rendered {page_count} encounter pages: {wiki_output}")
         elif args.command == "site":
             catalog = SiteCatalog.load(args.root)
             if args.site_command == "list":

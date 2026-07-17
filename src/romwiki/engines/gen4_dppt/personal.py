@@ -13,6 +13,23 @@ from romwiki.schema import (
 
 PERSONAL_RECORD_SIZE = 44
 
+PERSONAL_FORM_MEMBERS = {
+    496: "deoxys-attack",
+    497: "deoxys-defense",
+    498: "deoxys-speed",
+    499: "wormadam-sandy",
+    500: "wormadam-trash",
+    501: "giratina-origin",
+    502: "shaymin-sky",
+    503: "rotom-heat",
+    504: "rotom-wash",
+    505: "rotom-frost",
+    506: "rotom-fan",
+    507: "rotom-mow",
+}
+
+PERSONAL_INTERNAL_MEMBERS = {0: "none", 494: "egg", 495: "bad-egg"}
+
 
 def parse_personal_record(
     data: bytes,
