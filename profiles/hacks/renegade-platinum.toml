@@ -8,6 +8,9 @@ base_game = "platinum"
 game_codes = ["CPUE"]
 rom_versions = [1]
 
+[layout]
+personal = "poketool/personal/pl_personal.narc"
+
 [[hashes]]
 algorithm = "md5"
 value = "4cbf654b4735760f8efd64a8a41415ca"
@@ -17,4 +20,3 @@ variant = "standard-v1.3.0"
 algorithm = "sha256"
 value = "c76667d191a8c9032ced5650ba87206d5286102c83fb85bb7226484283bbf72c"
 variant = "standard-v1.3.0"
-

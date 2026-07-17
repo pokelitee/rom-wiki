@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from collections.abc import Mapping
 
 from romwiki.platforms.nds.reader import NintendoDSImage
 
@@ -21,6 +22,7 @@ class GameProfile:
     game_codes: tuple[str, ...]
     rom_versions: tuple[int, ...]
     hashes: tuple[KnownHash, ...]
+    layout: Mapping[str, str] = field(default_factory=dict)
 
     def match(self, image: NintendoDSImage) -> HashMatch | None:
         if image.header.game_code not in self.game_codes:
@@ -38,4 +40,3 @@ class GameProfile:
 class HashMatch:
     profile: GameProfile
     known_hash: KnownHash
-

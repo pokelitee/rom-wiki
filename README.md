@@ -12,10 +12,9 @@ The project separates four concerns:
 
 ## Current status
 
-The first development slice can identify Nintendo DS images, validate their basic
-header and filesystem metadata, match known profiles by cryptographic hash, and
-write a reproducible inspection manifest. Pokemon data parsers are the next
-milestone.
+The current extraction slice can identify Nintendo DS images, enumerate their
+filesystem safely, read NARC archives, and decode normalized Gen IV Pokemon
+personal data with record-level provenance.
 
 ## Development setup
 
@@ -36,6 +35,15 @@ Write the machine-readable manifest used by later extraction stages:
 ```console
 romwiki manifest ".local/roms/Pokemon - Platinum Version (USA).nds" --output build/data/manifest.json
 ```
+
+Extract the first normalized Pokemon dataset:
+
+```console
+romwiki extract-personal ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+This writes `build/data/renegade-platinum/pokemon/personal.json`. Generated data is
+ignored until its publication and review policy is finalized.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.

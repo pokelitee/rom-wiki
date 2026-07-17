@@ -9,6 +9,7 @@ from typing import Sequence
 from romwiki.errors import RomWikiError
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.manifest import create_manifest, write_manifest
+from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
 from romwiki.sites import SiteCatalog, build_sites
 
 
@@ -32,6 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("build/data/manifest.json"),
         help="manifest output path",
+    )
+
+    personal_parser = subparsers.add_parser(
+        "extract-personal", help="extract normalized Pokemon personal data"
+    )
+    _add_input_arguments(personal_parser)
+    personal_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/pokemon)",
     )
 
     site_parser = subparsers.add_parser(
@@ -58,13 +69,23 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command in {"inspect", "manifest"}:
+        if args.command in {"inspect", "manifest", "extract-personal"}:
             result = inspect_rom(args.rom, args.profiles_dir)
         if args.command == "inspect":
             _print_inspection(result, as_json=args.json)
         elif args.command == "manifest":
             write_manifest(create_manifest(result), args.output)
             print(f"Wrote manifest: {args.output}")
+        elif args.command == "extract-personal":
+            dataset = extract_personal_dataset(result)
+            output = args.output or (
+                Path("build/data")
+                / dataset["game"]
+                / "pokemon"
+                / "personal.json"
+            )
+            write_personal_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} personal records: {output}")
         elif args.command == "site":
             catalog = SiteCatalog.load(args.root)
             if args.site_command == "list":
