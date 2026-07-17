@@ -102,7 +102,17 @@ class PersonalEnrichmentTests(unittest.TestCase):
                     "move": {"id": 402, "slug": "seed-bomb", "name": "Seed Bomb"},
                     "location": {"id": 1, "name": "Survival Area"},
                     "shard_costs": {"red": 4, "blue": 0, "yellow": 0, "green": 4},
-                }
+                },
+                {
+                    "kind": "special",
+                    "move": {
+                        "id": 338,
+                        "slug": "frenzy-plant",
+                        "name": "Frenzy Plant",
+                    },
+                    "location": {"name": "Route 228"},
+                    "minimum_friendship": 255,
+                },
             ],
             "level_up_moves": [
                 {
@@ -110,6 +120,10 @@ class PersonalEnrichmentTests(unittest.TestCase):
                     "move": {"id": 33, "slug": "tackle", "name": "Tackle"},
                 }
             ],
+            "egg_moves": [
+                {"id": 130, "slug": "skull-bash", "name": "Skull Bash"}
+            ],
+            "egg_move_provenance": {"overlay_offset": 0x29222, "table_index": 0},
             "learnset_provenance": {"archive": "wotbl.narc", "member": 1},
             "evolutions": [
                 {
@@ -141,12 +155,16 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("# Bulbasaur", page)
         self.assertIn("| 45 | 49 |", page)
         self.assertIn("[Tackle](../moves/tackle.md)", page)
+        self.assertIn("[Skull Bash](../moves/skull-bash.md)", page)
+        self.assertIn("`0x29222`", page)
         self.assertIn("[Ivysaur](ivysaur.md)", page)
         self.assertIn("Level 16", page)
         self.assertIn("Use King's Rock", page)
         self.assertIn("[Focus Punch](../moves/focus-punch.md)", page)
         self.assertIn("[Seed Bomb](../moves/seed-bomb.md)", page)
         self.assertIn("4 Red, 4 Green", page)
+        self.assertIn("[Frenzy Plant](../moves/frenzy-plant.md)", page)
+        self.assertIn("Friendship 255", page)
 
 
 def _source_record(member: int) -> dict:

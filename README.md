@@ -55,6 +55,15 @@ romwiki extract-learnsets ".local/roms/Pokemon - Platinum Version (USA).nds"
 This writes `build/data/renegade-platinum/pokemon/learnsets.json`. Each entry
 preserves the level and move order stored for its species or form.
 
+Extract exact egg move lists from the packed ARM9 table:
+
+```console
+romwiki extract-egg-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+This writes `build/data/renegade-platinum/pokemon/egg-moves.json`. Each record
+preserves the species marker, move order, table index, and overlay offset.
+
 Extract exact evolution methods and parameters:
 
 ```console
@@ -74,14 +83,16 @@ This writes `build/data/renegade-platinum/machines/raw.json`. The Pokémon and
 move builds join these assignments with the compatibility flags stored in each
 Pokémon personal record.
 
-Extract exact shard move-tutor assignments, costs, locations, and compatibility:
+Extract exact move-tutor assignments, requirements, locations, and compatibility:
 
 ```console
 romwiki extract-tutors ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/tutors/raw.json`. Platinum stores the
-38 move records and 505 Pokémon/form compatibility rows in ARM9 overlay 5.
+This writes `build/data/renegade-platinum/tutors/raw.json`. The 38 shard-tutor
+records and 505 Pokémon/form compatibility rows come from ARM9 overlay 5. Four
+additional scripted tutors—Draco Meteor, Blast Burn, Hydro Cannon, and Frenzy
+Plant—are decoded from their field-script commands and eligibility checks.
 
 Build enriched records and the Pokémon wiki pages using the local PokéDB output:
 
@@ -89,8 +100,8 @@ Build enriched records and the Pokémon wiki pages using the local PokéDB outpu
 romwiki build-pokemon ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-The Pokémon build combines personal records, level-up learnsets, evolutions,
-TM/HM compatibility, and shard move-tutor compatibility from the ROM, then uses
+The Pokémon build combines personal records, level-up and egg moves, evolutions,
+TM/HM compatibility, and move-tutor compatibility from the ROM, then uses
 PokéDB to resolve stable Pokémon and move names and links.
 
 This keeps the enriched audit dataset under `build/` and renders publishable

@@ -36,6 +36,11 @@ from romwiki.engines.gen4_dppt.learnsets import (
     MOVE_ID_MASK,
     parse_level_up_learnset,
 )
+from romwiki.engines.gen4_dppt.egg_moves import (
+    EGG_MOVE_SPECIES_MARKER_BASE,
+    EGG_MOVE_TABLE_TERMINATOR,
+    parse_egg_move_table,
+)
 from romwiki.engines.gen4_dppt.evolutions import (
     EVOLUTION_RECORD_SIZE,
     EVOLUTION_SLOT_COUNT,
@@ -52,6 +57,8 @@ from romwiki.engines.gen4_dppt.tutors import (
     TUTOR_RECORD_SIZE,
     parse_tutor_compatibility_table,
     parse_tutor_move_table,
+    parse_special_tutor_move,
+    parse_special_tutor_species,
 )
 
 __all__ = [
@@ -84,6 +91,9 @@ __all__ = [
     "LEVEL_SHIFT",
     "MOVE_ID_MASK",
     "parse_level_up_learnset",
+    "EGG_MOVE_SPECIES_MARKER_BASE",
+    "EGG_MOVE_TABLE_TERMINATOR",
+    "parse_egg_move_table",
     "EVOLUTION_RECORD_SIZE",
     "EVOLUTION_SLOT_COUNT",
     "EVOLUTION_SLOT_SIZE",
@@ -95,4 +105,6 @@ __all__ = [
     "TUTOR_RECORD_SIZE",
     "parse_tutor_compatibility_table",
     "parse_tutor_move_table",
+    "parse_special_tutor_move",
+    "parse_special_tutor_species",
 ]

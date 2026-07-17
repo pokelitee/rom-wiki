@@ -32,3 +32,19 @@ class Gen4TutorCompatibility:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4SpecialTutorMove:
+    tutor_id: int
+    move_id: int
+    location_name: str
+    eligibility_kind: str
+    eligibility_value: int | tuple[int, ...]
+    minimum_friendship: int
+    script_member: int
+    command_offset: int
+    map_header_id: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

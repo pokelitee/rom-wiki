@@ -5,14 +5,21 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen4_dppt import (
+    MAP_HEADER_SIZE,
+    PERSONAL_FORM_MEMBERS,
     TUTOR_COMPATIBILITY_RECORD_SIZE,
     TUTOR_RECORD_SIZE,
+    parse_personal_record,
+    parse_platinum_map_headers,
+    parse_special_tutor_move,
+    parse_special_tutor_species,
     parse_tutor_compatibility_table,
     parse_tutor_move_table,
 )
 from romwiki.errors import InvalidRomError, ProfileError
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.nds.overlays import read_arm9_overlay
+from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 
 
 def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -63,12 +70,18 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         form_member_start=parameters["tutor_form_member_start"],
         form_count=parameters["tutor_form_count"],
     )
+    special_tutors, special_compatibility = _extract_special_tutors(
+        result,
+        start_tutor_id=len(tutors) + 1,
+    )
     return {
         "schema_version": 1,
         "game": profile.id,
         "dataset": "move_tutors",
         "record_count": len(tutors),
         "compatibility_record_count": len(compatibility),
+        "special_record_count": len(special_tutors),
+        "special_compatibility_record_count": len(special_compatibility),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay.id,
@@ -77,8 +90,10 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
             "compatibility_offset": parameters["tutor_compatibility_offset"],
         },
         "location_names": location_names,
-        "records": [tutor.to_dict() for tutor in tutors],
+        "records": [{**tutor.to_dict(), "kind": "shard"} for tutor in tutors],
         "compatibility": [record.to_dict() for record in compatibility],
+        "special_records": special_tutors,
+        "special_compatibility": special_compatibility,
     }
 
 
@@ -95,3 +110,115 @@ def _slice_overlay(data: bytes, offset: int, size: int, label: str) -> bytes:
     if offset < 0 or offset + size > len(data):
         raise InvalidRomError(f"Gen IV tutor {label} table is outside its overlay")
     return data[offset : offset + size]
+
+
+def _extract_special_tutors(
+    result: InspectionResult, *, start_tutor_id: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    profile = result.match.profile
+    definitions = profile.parameters.get("special_tutors", [])
+    if not isinstance(definitions, list):
+        raise ProfileError("Special tutor definitions must be a list")
+    if not definitions:
+        return [], []
+    try:
+        minimum_friendship = profile.parameters["special_tutor_minimum_friendship"]
+        script_path = profile.layout["scripts"]
+        personal_path = profile.layout["personal"]
+        map_names_path = profile.layout["map_names"]
+        map_header_offset = profile.parameters["map_header_offset"]
+        map_header_count = profile.parameters["map_header_count"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing special tutor metadata: {error.args[0]}"
+        ) from error
+
+    filesystem = NintendoDSFileSystem.from_image(result.image)
+    scripts = NarcArchive.from_bytes(
+        filesystem.read(script_path), allow_truncated=True
+    )
+    personal = NarcArchive.from_bytes(filesystem.read(personal_path))
+    with result.image.path.open("rb") as stream:
+        stream.seek(result.image.header.arm9_offset + map_header_offset)
+        map_header_data = stream.read(map_header_count * MAP_HEADER_SIZE)
+    headers = parse_platinum_map_headers(
+        map_header_data,
+        filesystem.read(map_names_path),
+        count=map_header_count,
+    )
+
+    records = []
+    compatibility: dict[int, list[int]] = {}
+    public_members = tuple(range(1, 494)) + tuple(PERSONAL_FORM_MEMBERS)
+    personal_records = {
+        member: parse_personal_record(
+            personal.read(member), species_id=member, archive_path=personal_path
+        )
+        for member in public_members
+    }
+    for index, definition in enumerate(definitions):
+        try:
+            script_member = definition["script_member"]
+            command_offset = definition["command_offset"]
+            map_header_id = definition["map_header_id"]
+            location_name = definition["location_name"]
+            eligibility_kind = definition["eligibility_kind"]
+        except (KeyError, TypeError) as error:
+            raise ProfileError("Special tutor definition is incomplete") from error
+        if not 0 <= script_member < len(scripts.members):
+            raise ProfileError("Special tutor references an unknown script member")
+        if not 0 <= map_header_id < len(headers):
+            raise ProfileError("Special tutor references an unknown map header")
+        if headers[map_header_id].script_file_id != script_member:
+            raise InvalidRomError(
+                f"Special tutor map header {map_header_id} does not reference "
+                f"script member {script_member}"
+            )
+        script_data = scripts.read(script_member)
+        if eligibility_kind == "species":
+            try:
+                eligibility_value = parse_special_tutor_species(
+                    script_data,
+                    comparison_offset=definition["comparison_offset"],
+                    species_count=definition["species_count"],
+                )
+            except KeyError as error:
+                raise ProfileError(
+                    "Species-based special tutor definition is incomplete"
+                ) from error
+        elif eligibility_kind == "type":
+            try:
+                eligibility_value = definition["eligibility_value"]
+            except KeyError as error:
+                raise ProfileError(
+                    "Type-based special tutor definition is incomplete"
+                ) from error
+        else:
+            raise ProfileError("Special tutor eligibility kind is unknown")
+
+        tutor_id = start_tutor_id + index
+        tutor = parse_special_tutor_move(
+            script_data,
+            tutor_id=tutor_id,
+            script_member=script_member,
+            command_offset=command_offset,
+            map_header_id=map_header_id,
+            location_name=location_name,
+            eligibility_kind=eligibility_kind,
+            eligibility_value=eligibility_value,
+            minimum_friendship=minimum_friendship,
+        )
+        records.append({**tutor.to_dict(), "kind": "special"})
+        for member, personal_record in personal_records.items():
+            eligible = (
+                member in eligibility_value
+                if eligibility_kind == "species"
+                else eligibility_value in personal_record.type_ids
+            )
+            if eligible:
+                compatibility.setdefault(member, []).append(tutor_id)
+
+    return records, [
+        {"personal_member": member, "tutor_ids": tutor_ids}
+        for member, tutor_ids in sorted(compatibility.items())
+    ]

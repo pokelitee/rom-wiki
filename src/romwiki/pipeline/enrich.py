@@ -68,6 +68,7 @@ def enrich_personal_dataset(
     evolution_dataset: dict[str, Any] | None = None,
     machine_dataset: dict[str, Any] | None = None,
     tutor_dataset: dict[str, Any] | None = None,
+    egg_move_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 508:
@@ -80,6 +81,7 @@ def enrich_personal_dataset(
     tutors, tutor_ids_by_member, tutor_locations = _validate_tutors(
         tutor_dataset, dataset["game"]
     )
+    egg_moves = _validate_egg_moves(egg_move_dataset, dataset["game"])
     records = []
     for expected_member, source in enumerate(source_records):
         if source.get("species_id") != expected_member:
@@ -95,6 +97,7 @@ def enrich_personal_dataset(
                 tutors,
                 tutor_ids_by_member.get(expected_member, []),
                 tutor_locations,
+                egg_moves.get(expected_member),
             )
         )
     enriched = {
@@ -121,6 +124,10 @@ def enrich_personal_dataset(
     if tutor_dataset is not None:
         enriched.setdefault("supplemental_sources", {})["move_tutors"] = (
             tutor_dataset["source"]
+        )
+    if egg_move_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
+            egg_move_dataset["source"]
         )
     return enriched
 
@@ -177,6 +184,7 @@ def enrich_move_dataset(
     pokedb: PokeDBGeneration,
     machine_dataset: dict[str, Any] | None = None,
     tutor_dataset: dict[str, Any] | None = None,
+    egg_move_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 471:
@@ -198,16 +206,19 @@ def enrich_move_dataset(
         tutors_by_move.setdefault(tutor["move_id"], []).append(
             {
                 **tutor,
-                "location": {
-                    "id": tutor["location_id"],
-                    "name": tutor_locations[tutor["location_id"]],
-                },
+                "location": _tutor_location(tutor, tutor_locations),
                 "compatible_pokemon": [
                     _personal_member_reference(member, pokedb)
                     for member in members_by_tutor[tutor_id]
                 ],
             }
         )
+    egg_moves = _validate_egg_moves(egg_move_dataset, dataset["game"])
+    egg_move_pokemon: dict[int, list[dict[str, Any]]] = {}
+    for species_id, egg_move_set in egg_moves.items():
+        pokemon = _personal_member_reference(species_id, pokedb)
+        for move_id in egg_move_set["move_ids"]:
+            egg_move_pokemon.setdefault(move_id, []).append(pokemon)
     records = []
     for expected_id, source in enumerate(source_records):
         if source.get("move_id") != expected_id:
@@ -226,6 +237,7 @@ def enrich_move_dataset(
                 "type": _named_id(source["type_id"], TYPE_NAMES, "type"),
                 "machines": machines_by_move.get(expected_id, []),
                 "tutors": tutors_by_move.get(expected_id, []),
+                "egg_move_pokemon": egg_move_pokemon.get(expected_id, []),
             }
         )
     enriched = {
@@ -242,6 +254,10 @@ def enrich_move_dataset(
     if tutor_dataset is not None:
         enriched.setdefault("supplemental_sources", {})["move_tutors"] = (
             tutor_dataset["source"]
+        )
+    if egg_move_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
+            egg_move_dataset["source"]
         )
     return enriched
 
@@ -413,6 +429,7 @@ def _enrich_record(
     tutors: dict[int, dict[str, Any]],
     tutor_ids: list[int],
     tutor_locations: list[str],
+    egg_move_set: dict[str, Any] | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
     if member in PERSONAL_INTERNAL_MEMBERS:
@@ -480,6 +497,15 @@ def _enrich_record(
         ),
         "level_up_moves": _enrich_level_up_moves(learnset, pokedb),
         "learnset_provenance": learnset["provenance"] if learnset is not None else None,
+        "egg_moves": _enrich_egg_moves(egg_move_set, pokedb),
+        "egg_move_provenance": (
+            {
+                "overlay_offset": egg_move_set["overlay_offset"],
+                "table_index": egg_move_set["table_index"],
+            }
+            if egg_move_set is not None
+            else None
+        ),
         "evolutions": _enrich_evolutions(
             evolution_set, pokedb, evolution_item_names
         ),
@@ -522,6 +548,39 @@ def _validate_evolutions(
     return records
 
 
+def _validate_egg_moves(
+    dataset: dict[str, Any] | None, game: str
+) -> dict[int, dict[str, Any]]:
+    if dataset is None:
+        return {}
+    if dataset.get("game") != game:
+        raise DataSourceError("Egg move dataset must be for the same game")
+    records = dataset.get("records")
+    if not isinstance(records, list):
+        raise DataSourceError("Egg move records must be a list")
+    result = {}
+    previous_species = 0
+    for expected_index, record in enumerate(records):
+        species_id = record.get("species_id")
+        move_ids = record.get("move_ids")
+        if (
+            not isinstance(species_id, int)
+            or not previous_species < species_id <= 493
+            or record.get("table_index") != expected_index
+        ):
+            raise DataSourceError("Egg move records must be ordered by species ID")
+        if not isinstance(move_ids, (list, tuple)) or not move_ids or any(
+            not isinstance(move_id, int) or not 1 <= move_id <= 467
+            for move_id in move_ids
+        ):
+            raise DataSourceError("Egg move record contains invalid move IDs")
+        if len(move_ids) != len(set(move_ids)):
+            raise DataSourceError("Egg move record contains duplicate move IDs")
+        result[species_id] = record
+        previous_species = species_id
+    return result
+
+
 def _validate_evolution_item_names(dataset: dict[str, Any] | None) -> list[str]:
     if dataset is None:
         return []
@@ -559,35 +618,57 @@ def _validate_tutors(
     if dataset.get("game") != game:
         raise DataSourceError("Tutor dataset must be for the same game")
     records = dataset.get("records")
+    special_records = dataset.get("special_records", [])
     compatibility = dataset.get("compatibility")
+    special_compatibility = dataset.get("special_compatibility", [])
     location_names = dataset.get("location_names")
     if not isinstance(records, list) or not records:
         raise DataSourceError("Tutor records must be a nonempty list")
+    if not isinstance(special_records, list):
+        raise DataSourceError("Special tutor records must be a list")
     if not isinstance(compatibility, list):
         raise DataSourceError("Tutor compatibility records must be a list")
+    if not isinstance(special_compatibility, list):
+        raise DataSourceError("Special tutor compatibility records must be a list")
     if not isinstance(location_names, list) or not all(
         isinstance(name, str) for name in location_names
     ):
         raise DataSourceError("Tutor location names must be a list")
     tutors = {}
-    for expected_id, record in enumerate(records, start=1):
+    for expected_id, record in enumerate(records + special_records, start=1):
         if record.get("tutor_id") != expected_id:
             raise DataSourceError("Tutor records must be ordered by tutor ID")
-        location_id = record.get("location_id")
-        if not isinstance(location_id, int) or not 0 <= location_id < len(location_names):
-            raise DataSourceError("Tutor record references an unknown location")
+        if record.get("kind") == "special":
+            if not isinstance(record.get("location_name"), str):
+                raise DataSourceError("Special tutor has an invalid location")
+        else:
+            location_id = record.get("location_id")
+            if not isinstance(location_id, int) or not 0 <= location_id < len(
+                location_names
+            ):
+                raise DataSourceError("Tutor record references an unknown location")
         tutors[expected_id] = record
     ids_by_member = {}
-    for record in compatibility:
-        member = record.get("personal_member")
-        tutor_ids = record.get("tutor_ids")
-        if not isinstance(member, int) or member in ids_by_member:
-            raise DataSourceError("Tutor compatibility has an invalid personal member")
-        if not isinstance(tutor_ids, (list, tuple)) or any(
-            value not in tutors for value in tutor_ids
-        ):
-            raise DataSourceError("Tutor compatibility references an unknown tutor ID")
-        ids_by_member[member] = list(tutor_ids)
+    for compatibility_group in (compatibility, special_compatibility):
+        group_members = set()
+        for record in compatibility_group:
+            member = record.get("personal_member")
+            tutor_ids = record.get("tutor_ids")
+            if not isinstance(member, int) or member in group_members:
+                raise DataSourceError(
+                    "Tutor compatibility has an invalid personal member"
+                )
+            group_members.add(member)
+            if not isinstance(tutor_ids, (list, tuple)) or any(
+                value not in tutors for value in tutor_ids
+            ):
+                raise DataSourceError(
+                    "Tutor compatibility references an unknown tutor ID"
+                )
+            existing = ids_by_member.setdefault(member, [])
+            if any(value in existing for value in tutor_ids):
+                raise DataSourceError("Tutor compatibility contains duplicate tutor IDs")
+            existing.extend(tutor_ids)
     return tutors, ids_by_member, location_names
 
 
@@ -611,13 +692,19 @@ def _enrich_compatible_tutors(
                     "slug": slug,
                     "name": _display_name(slug),
                 },
-                "location": {
-                    "id": tutor["location_id"],
-                    "name": location_names[tutor["location_id"]],
-                },
+                "location": _tutor_location(tutor, location_names),
             }
         )
     return result
+
+
+def _tutor_location(
+    tutor: dict[str, Any], location_names: list[str]
+) -> dict[str, Any]:
+    if tutor.get("kind") == "special":
+        return {"id": None, "name": tutor["location_name"]}
+    location_id = tutor["location_id"]
+    return {"id": location_id, "name": location_names[location_id]}
 
 
 def _personal_member_reference(
@@ -751,6 +838,18 @@ def _enrich_level_up_moves(
                 },
             }
         )
+    return moves
+
+
+def _enrich_egg_moves(
+    egg_move_set: dict[str, Any] | None, pokedb: PokeDBGeneration
+) -> list[dict[str, Any]]:
+    moves = []
+    for move_id in egg_move_set["move_ids"] if egg_move_set is not None else []:
+        slug = pokedb.move_name(move_id)
+        if slug is None:
+            raise DataSourceError("Egg moves cannot reference move ID 0")
+        moves.append({"id": move_id, "slug": slug, "name": _display_name(slug)})
     return moves
 
 

@@ -53,6 +53,9 @@ def _render_record(record: dict[str, Any]) -> str:
         "## Tutor compatibility",
         "",
         *_tutor_compatibility(record),
+        "## Egg move learners",
+        "",
+        *_egg_move_learners(record),
         "---",
         "",
         (
@@ -94,11 +97,14 @@ def _tutor_compatibility(record: dict[str, Any]) -> list[str]:
         return ["Not taught by a shard move tutor.", ""]
     lines = []
     for tutor in tutors:
-        costs = ", ".join(
-            f"{amount} {color.title()}"
-            for color, amount in tutor["shard_costs"].items()
-            if amount
-        ) or "Free"
+        if tutor.get("kind") == "special":
+            costs = f"Friendship {tutor['minimum_friendship']}"
+        else:
+            costs = ", ".join(
+                f"{amount} {color.title()}"
+                for color, amount in tutor["shard_costs"].items()
+                if amount
+            ) or "Free"
         pokemon = ", ".join(
             f"[{value['name']}](../pokemon/{value['slug']}.md)"
             for value in tutor["compatible_pokemon"]
@@ -112,6 +118,18 @@ def _tutor_compatibility(record: dict[str, Any]) -> list[str]:
             ]
         )
     return lines
+
+
+def _egg_move_learners(record: dict[str, Any]) -> list[str]:
+    pokemon = record.get("egg_move_pokemon", [])
+    if not pokemon:
+        return ["None.", ""]
+    return [
+        ", ".join(
+            f"[{value['name']}](../pokemon/{value['slug']}.md)" for value in pokemon
+        ),
+        "",
+    ]
 
 
 def _display_name(slug: str) -> str:

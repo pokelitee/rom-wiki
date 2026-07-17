@@ -15,6 +15,10 @@ from romwiki.pipeline.evolutions import (
     extract_evolution_dataset,
     write_evolution_dataset,
 )
+from romwiki.pipeline.egg_moves import (
+    extract_egg_move_dataset,
+    write_egg_move_dataset,
+)
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.enrich import (
     enrich_encounter_dataset,
@@ -119,6 +123,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_input_arguments(learnset_parser)
     learnset_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/pokemon)",
+    )
+
+    egg_move_parser = subparsers.add_parser(
+        "extract-egg-moves", help="extract normalized Pokémon egg moves"
+    )
+    _add_input_arguments(egg_move_parser)
+    egg_move_parser.add_argument(
         "--output",
         type=Path,
         help="dataset output path (defaults below build/data/<profile>/pokemon)",
@@ -246,6 +260,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "extract-locations",
             "extract-moves",
             "extract-learnsets",
+            "extract-egg-moves",
             "extract-evolutions",
             "extract-machines",
             "extract-tutors",
@@ -309,6 +324,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_learnset_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} learnsets: {output}")
+        elif args.command == "extract-egg-moves":
+            dataset = extract_egg_move_dataset(result)
+            output = args.output or (
+                Path("build/data")
+                / dataset["game"]
+                / "pokemon"
+                / "egg-moves.json"
+            )
+            write_egg_move_dataset(dataset, output)
+            print(
+                f"Wrote {dataset['record_count']} egg move sets with "
+                f"{dataset['move_reference_count']} move references: {output}"
+            )
         elif args.command == "extract-evolutions":
             dataset = extract_evolution_dataset(result)
             output = args.output or (
@@ -333,13 +361,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_tutor_dataset(dataset, output)
             print(
-                f"Wrote {dataset['record_count']} tutor records and "
-                f"{dataset['compatibility_record_count']} compatibility records: "
+                f"Wrote {dataset['record_count']} shard tutor records, "
+                f"{dataset['special_record_count']} special tutor records, and "
+                f"{dataset['compatibility_record_count']} shard compatibility "
+                f"rows plus {dataset['special_compatibility_record_count']} "
+                f"special compatibility rows: "
                 f"{output}"
             )
         elif args.command == "build-pokemon":
             personal = extract_personal_dataset(result)
             learnsets = extract_learnset_dataset(result)
+            egg_moves = extract_egg_move_dataset(result)
             evolutions = extract_evolution_dataset(result)
             machines = extract_machine_dataset(result)
             tutors = extract_tutor_dataset(result)
@@ -350,6 +382,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 evolutions,
                 machines,
                 tutors,
+                egg_moves,
             )
             data_output = args.data_output or (
                 Path("build/data")
@@ -413,11 +446,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             extracted = extract_move_dataset(result)
             machines = extract_machine_dataset(result)
             tutors = extract_tutor_dataset(result)
+            egg_moves = extract_egg_move_dataset(result)
             enriched = enrich_move_dataset(
                 extracted,
                 PokeDBGeneration.load(args.pokedb),
                 machines,
                 tutors,
+                egg_moves,
             )
             data_output = args.data_output or (
                 Path("build/data") / enriched["game"] / "moves" / "enriched.json"

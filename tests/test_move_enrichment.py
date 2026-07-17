@@ -42,6 +42,19 @@ class MoveEnrichmentTests(unittest.TestCase):
             "type": {"id": 13, "name": "electric"},
             "damage_class": {"id": 1, "name": "special"},
             "machines": [{"name": "TM24"}],
+            "tutors": [
+                {
+                    "kind": "special",
+                    "location": {"name": "Route 210"},
+                    "minimum_friendship": 255,
+                    "compatible_pokemon": [
+                        {"slug": "dragonite", "name": "Dragonite"}
+                    ],
+                }
+            ],
+            "egg_move_pokemon": [
+                {"slug": "pichu", "name": "Pichu"}
+            ],
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -54,6 +67,10 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertIn("| Power | 90 |", page)
         self.assertIn("`0x0010`", page)
         self.assertIn("| Machine | TM24 |", page)
+        self.assertIn("Route 210 — Friendship 255", page)
+        self.assertIn("[Dragonite](../pokemon/dragonite.md)", page)
+        self.assertIn("## Egg move learners", page)
+        self.assertIn("[Pichu](../pokemon/pichu.md)", page)
         self.assertIn("[Thunderbolt](thunderbolt.md)", index)
 
 

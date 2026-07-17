@@ -40,6 +40,8 @@ matrix_void_header_ids = [0, 0xFFFF]
 machine_move_offset = 0xF4BFC
 machine_count = 100
 tm_count = 92
+egg_move_overlay_id = 5
+egg_move_offset = 0x29222
 tutor_overlay_id = 5
 tutor_move_offset = 0x2FF64
 tutor_count = 38
@@ -48,6 +50,42 @@ tutor_base_species_count = 493
 tutor_form_member_start = 496
 tutor_form_count = 12
 tutor_location_names = ["Route 212", "Survival Area", "Snowpoint City"]
+special_tutor_minimum_friendship = 255
+
+[[parameters.special_tutors]]
+script_member = 450
+command_offset = 0x18F
+map_header_id = 364
+location_name = "Route 210"
+eligibility_kind = "type"
+eligibility_value = 16
+
+[[parameters.special_tutors]]
+script_member = 493
+command_offset = 0x112
+comparison_offset = 0x195
+species_count = 4
+map_header_id = 502
+location_name = "Route 228"
+eligibility_kind = "species"
+
+[[parameters.special_tutors]]
+script_member = 493
+command_offset = 0x132
+comparison_offset = 0x1C9
+species_count = 4
+map_header_id = 502
+location_name = "Route 228"
+eligibility_kind = "species"
+
+[[parameters.special_tutors]]
+script_member = 493
+command_offset = 0x152
+comparison_offset = 0x1FD
+species_count = 4
+map_header_id = 502
+location_name = "Route 228"
+eligibility_kind = "species"
 
 [[hashes]]
 algorithm = "md5"

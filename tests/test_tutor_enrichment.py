@@ -42,6 +42,41 @@ class TutorEnrichmentTests(unittest.TestCase):
             "pokemon-1",
         )
 
+    def test_joins_special_tutor_rules(self) -> None:
+        pokedb = _reference_pokedb()
+        pokedb.moves_by_id.update(
+            {move_id: f"move-{move_id}" for move_id in range(1, 468)}
+        )
+        tutors = _tutor_dataset()
+        tutors["special_records"] = [
+            {
+                "tutor_id": 2,
+                "kind": "special",
+                "move_id": 434,
+                "location_name": "Route 210",
+                "minimum_friendship": 255,
+                "eligibility_kind": "type",
+                "eligibility_value": 16,
+            }
+        ]
+        tutors["special_compatibility"] = [
+            {"personal_member": 6, "tutor_ids": [2]}
+        ]
+        pokemon = enrich_personal_dataset(
+            {
+                "game": "test",
+                "source": {"archive": "personal.narc"},
+                "records": [_source_record(member) for member in range(508)],
+            },
+            pokedb,
+            tutor_dataset=tutors,
+        )
+
+        special = pokemon["records"][6]["tutor_moves"][0]
+        self.assertEqual(special["move"]["slug"], "move-434")
+        self.assertEqual(special["location"]["name"], "Route 210")
+        self.assertEqual(special["minimum_friendship"], 255)
+
 
 def _tutor_dataset() -> dict:
     return {

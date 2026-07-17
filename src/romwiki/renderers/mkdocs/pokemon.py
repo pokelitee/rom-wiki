@@ -28,6 +28,7 @@ def _render_record(record: dict[str, Any]) -> str:
     machines = record["machines"]
     tutor_moves = record.get("tutor_moves", [])
     level_up_moves = record.get("level_up_moves", [])
+    egg_moves = record.get("egg_moves", [])
     evolutions = record.get("evolutions", [])
     lines = [
         f"# {record['name']}",
@@ -112,14 +113,14 @@ def _render_record(record: dict[str, Any]) -> str:
     if tutor_moves:
         lines.extend(
             [
-                "| Move | Location | Cost |",
+                "| Move | Location | Requirement |",
                 "| ---- | -------- | ---- |",
                 *[
                     (
                         f"| [{tutor['move']['name']}]"
                         f"(../moves/{tutor['move']['slug']}.md) | "
                         f"{tutor['location']['name']} | "
-                        f"{_shard_cost(tutor['shard_costs'])} |"
+                        f"{_tutor_requirement(tutor)} |"
                     )
                     for tutor in tutor_moves
                 ],
@@ -146,6 +147,19 @@ def _render_record(record: dict[str, Any]) -> str:
         )
     else:
         lines.extend(["No level-up moves.", ""])
+    lines.extend(["## Egg moves", ""])
+    if egg_moves:
+        lines.extend(
+            [
+                ", ".join(
+                    f"[{move['name']}](../moves/{move['slug']}.md)"
+                    for move in egg_moves
+                ),
+                "",
+            ]
+        )
+    else:
+        lines.extend(["None.", ""])
     lines.extend(
         [
             "---",
@@ -154,6 +168,16 @@ def _render_record(record: dict[str, Any]) -> str:
                 "Source: exact ROM record from "
                 f"`{record['provenance']['archive']}` member "
                 f"`{record['provenance']['member']}`."
+            ),
+            *(
+                [
+                    (
+                        "Egg move source: exact ROM table entry at overlay offset "
+                        f"`0x{record['egg_move_provenance']['overlay_offset']:X}`."
+                    )
+                ]
+                if record.get("egg_move_provenance") is not None
+                else []
             ),
             *(
                 [
@@ -230,6 +254,12 @@ def _shard_cost(costs: dict[str, int]) -> str:
         for color, amount in costs.items()
         if amount
     ) or "Free"
+
+
+def _tutor_requirement(tutor: dict[str, Any]) -> str:
+    if tutor.get("kind") == "special":
+        return f"Friendship {tutor['minimum_friendship']}"
+    return _shard_cost(tutor["shard_costs"])
 
 
 def _write_text(path: Path, value: str) -> None:
