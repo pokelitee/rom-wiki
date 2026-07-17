@@ -41,6 +41,7 @@ class MoveEnrichmentTests(unittest.TestCase):
             "public": True,
             "type": {"id": 13, "name": "electric"},
             "damage_class": {"id": 1, "name": "special"},
+            "machines": [{"name": "TM24"}],
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -52,6 +53,7 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertIn("# Thunderbolt", page)
         self.assertIn("| Power | 90 |", page)
         self.assertIn("`0x0010`", page)
+        self.assertIn("| Machine | TM24 |", page)
         self.assertIn("[Thunderbolt](thunderbolt.md)", index)
 
 

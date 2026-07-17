@@ -1,0 +1,34 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from typing import Any
+
+
+@dataclass(frozen=True, slots=True)
+class ShardCosts:
+    red: int
+    blue: int
+    yellow: int
+    green: int
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4TutorMove:
+    tutor_id: int
+    move_id: int
+    shard_costs: ShardCosts
+    location_id: int
+    table_index: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4TutorCompatibility:
+    personal_member: int
+    tutor_ids: tuple[int, ...]
+    table_index: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

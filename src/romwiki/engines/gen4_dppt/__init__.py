@@ -30,6 +30,29 @@ from romwiki.engines.gen4_dppt.scripts import (
     parse_trainer_battle_commands,
 )
 from romwiki.engines.gen4_dppt.moves import MOVE_RECORD_SIZE, parse_move_record
+from romwiki.engines.gen4_dppt.learnsets import (
+    LEARNSET_TERMINATOR,
+    LEVEL_SHIFT,
+    MOVE_ID_MASK,
+    parse_level_up_learnset,
+)
+from romwiki.engines.gen4_dppt.evolutions import (
+    EVOLUTION_RECORD_SIZE,
+    EVOLUTION_SLOT_COUNT,
+    EVOLUTION_SLOT_SIZE,
+    parse_evolution_record,
+)
+from romwiki.engines.gen4_dppt.machines import (
+    GEN4_MACHINE_COUNT,
+    GEN4_TM_COUNT,
+    parse_machine_move_table,
+)
+from romwiki.engines.gen4_dppt.tutors import (
+    TUTOR_COMPATIBILITY_RECORD_SIZE,
+    TUTOR_RECORD_SIZE,
+    parse_tutor_compatibility_table,
+    parse_tutor_move_table,
+)
 
 __all__ = [
     "PERSONAL_FORM_MEMBERS",
@@ -57,4 +80,19 @@ __all__ = [
     "parse_trainer_battle_commands",
     "MOVE_RECORD_SIZE",
     "parse_move_record",
+    "LEARNSET_TERMINATOR",
+    "LEVEL_SHIFT",
+    "MOVE_ID_MASK",
+    "parse_level_up_learnset",
+    "EVOLUTION_RECORD_SIZE",
+    "EVOLUTION_SLOT_COUNT",
+    "EVOLUTION_SLOT_SIZE",
+    "parse_evolution_record",
+    "GEN4_MACHINE_COUNT",
+    "GEN4_TM_COUNT",
+    "parse_machine_move_table",
+    "TUTOR_COMPATIBILITY_RECORD_SIZE",
+    "TUTOR_RECORD_SIZE",
+    "parse_tutor_compatibility_table",
+    "parse_tutor_move_table",
 ]

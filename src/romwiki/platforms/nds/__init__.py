@@ -2,13 +2,21 @@ from romwiki.platforms.nds.filesystem import NintendoDSFile, NintendoDSFileSyste
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.narc import NarcArchive, NarcMember
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
+from romwiki.platforms.nds.overlays import (
+    NintendoDSOverlay,
+    parse_overlay_table,
+    read_arm9_overlay,
+)
 
 __all__ = [
+    "NarcArchive",
+    "NarcMember",
     "NintendoDSFile",
     "NintendoDSFileSystem",
     "NintendoDSHeader",
     "NintendoDSImage",
-    "NarcArchive",
-    "NarcMember",
+    "NintendoDSOverlay",
     "RomHashes",
+    "parse_overlay_table",
+    "read_arm9_overlay",
 ]

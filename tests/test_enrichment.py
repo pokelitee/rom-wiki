@@ -91,7 +91,45 @@ class PersonalEnrichmentTests(unittest.TestCase):
             "hatch_cycles": 20,
             "growth_rate": {"name": "medium-slow"},
             "egg_groups": [{"name": "monster"}, {"name": "grass"}],
-            "machines": [{"name": "TM01"}],
+            "machines": [
+                {
+                    "name": "TM01",
+                    "move": {"id": 264, "slug": "focus-punch", "name": "Focus Punch"},
+                }
+            ],
+            "tutor_moves": [
+                {
+                    "move": {"id": 402, "slug": "seed-bomb", "name": "Seed Bomb"},
+                    "location": {"id": 1, "name": "Survival Area"},
+                    "shard_costs": {"red": 4, "blue": 0, "yellow": 0, "green": 4},
+                }
+            ],
+            "level_up_moves": [
+                {
+                    "level": 1,
+                    "move": {"id": 33, "slug": "tackle", "name": "Tackle"},
+                }
+            ],
+            "learnset_provenance": {"archive": "wotbl.narc", "member": 1},
+            "evolutions": [
+                {
+                    "method_id": 4,
+                    "method": {"id": 4, "name": "level"},
+                    "parameter_data": {"kind": "level", "value": 16},
+                    "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
+                },
+                {
+                    "method_id": 7,
+                    "method": {"id": 7, "name": "use-item"},
+                    "parameter_data": {
+                        "kind": "item",
+                        "id": 221,
+                        "name": "King's Rock",
+                    },
+                    "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
+                },
+            ],
+            "evolution_provenance": {"archive": "evo.narc", "member": 1},
             "provenance": {"archive": "personal.narc", "member": 1},
         }
         with tempfile.TemporaryDirectory() as directory:
@@ -102,6 +140,13 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertIn("# Bulbasaur", page)
         self.assertIn("| 45 | 49 |", page)
+        self.assertIn("[Tackle](../moves/tackle.md)", page)
+        self.assertIn("[Ivysaur](ivysaur.md)", page)
+        self.assertIn("Level 16", page)
+        self.assertIn("Use King's Rock", page)
+        self.assertIn("[Focus Punch](../moves/focus-punch.md)", page)
+        self.assertIn("[Seed Bomb](../moves/seed-bomb.md)", page)
+        self.assertIn("4 Red, 4 Green", page)
 
 
 def _source_record(member: int) -> dict:

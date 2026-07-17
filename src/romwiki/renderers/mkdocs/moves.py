@@ -12,14 +12,15 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
         "",
         "Move mechanics extracted directly from the game image.",
         "",
-        "| Move | Type | Class | Power | Accuracy | PP |",
-        "| ---- | ---- | ----- | ----: | -------: | -: |",
+        "| Move | Machine | Type | Class | Power | Accuracy | PP |",
+        "| ---- | ------- | ---- | ----- | ----: | -------: | -: |",
     ]
     for record in public_records:
         filename = f"{record['slug']}.md"
         _write_text(output_root / filename, _render_record(record))
         index_lines.append(
-            f"| [{record['name']}]({filename}) | {_display_name(record['type']['name'])} "
+            f"| [{record['name']}]({filename}) | {_machine_names(record)} | "
+            f"{_display_name(record['type']['name'])} "
             f"| {_display_name(record['damage_class']['name'])} | "
             f"{_optional_value(record['power'])} | "
             f"{_accuracy(record['accuracy'])} | {record['pp']} |"
@@ -39,6 +40,8 @@ def _render_record(record: dict[str, Any]) -> str:
         f"| Power | {_optional_value(record['power'])} |",
         f"| Accuracy | {_accuracy(record['accuracy'])} |",
         f"| PP | {record['pp']} |",
+        f"| Machine | {_machine_names(record)} |",
+        f"| Move tutor | {_tutor_locations(record)} |",
         f"| Priority | {record['priority']:+d} |",
         f"| Effect ID | `{record['effect_id']}` |",
         f"| Effect chance | {_effect_chance(record['effect_chance'])} |",
@@ -47,6 +50,9 @@ def _render_record(record: dict[str, Any]) -> str:
         f"| Contest effect ID | `{record['contest_effect_id']}` |",
         f"| Contest type ID | `{record['contest_type_id']}` |",
         "",
+        "## Tutor compatibility",
+        "",
+        *_tutor_compatibility(record),
         "---",
         "",
         (
@@ -70,6 +76,42 @@ def _accuracy(value: int) -> str:
 
 def _effect_chance(value: int) -> str:
     return f"{value}%" if value else "—"
+
+
+def _machine_names(record: dict[str, Any]) -> str:
+    return ", ".join(machine["name"] for machine in record.get("machines", [])) or "—"
+
+
+def _tutor_locations(record: dict[str, Any]) -> str:
+    return ", ".join(
+        tutor["location"]["name"] for tutor in record.get("tutors", [])
+    ) or "—"
+
+
+def _tutor_compatibility(record: dict[str, Any]) -> list[str]:
+    tutors = record.get("tutors", [])
+    if not tutors:
+        return ["Not taught by a shard move tutor.", ""]
+    lines = []
+    for tutor in tutors:
+        costs = ", ".join(
+            f"{amount} {color.title()}"
+            for color, amount in tutor["shard_costs"].items()
+            if amount
+        ) or "Free"
+        pokemon = ", ".join(
+            f"[{value['name']}](../pokemon/{value['slug']}.md)"
+            for value in tutor["compatible_pokemon"]
+        ) or "None"
+        lines.extend(
+            [
+                f"**{tutor['location']['name']} — {costs}:**",
+                "",
+                pokemon,
+                "",
+            ]
+        )
+    return lines
 
 
 def _display_name(slug: str) -> str:

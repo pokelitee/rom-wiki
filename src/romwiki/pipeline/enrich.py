@@ -27,21 +27,77 @@ COLOR_NAMES = (
     "white", "pink", "internal",
 )
 DAMAGE_CLASS_NAMES = ("physical", "special", "status")
+EVOLUTION_METHOD_NAMES = (
+    "none",
+    "friendship",
+    "friendship-day",
+    "friendship-night",
+    "level",
+    "trade",
+    "trade-held-item",
+    "use-item",
+    "level-attack-greater",
+    "level-attack-equal",
+    "level-defense-greater",
+    "level-personality-low",
+    "level-personality-high",
+    "level-ninjask",
+    "level-shedinja",
+    "beauty",
+    "use-item-male",
+    "use-item-female",
+    "level-held-item-day",
+    "level-held-item-night",
+    "level-knowing-move",
+    "level-with-party-species",
+    "level-male",
+    "level-female",
+    "level-magnetic-field",
+    "level-moss-rock",
+    "level-ice-rock",
+)
+_EVOLUTION_LEVEL_PARAMETERS = {4, 8, 9, 10, 13, 14, 22, 23}
+_EVOLUTION_ITEM_PARAMETERS = {6, 7, 16, 17, 18, 19}
+_EVOLUTION_PERSONALITY_PARAMETERS = {11, 12}
 
 
 def enrich_personal_dataset(
-    dataset: dict[str, Any], pokedb: PokeDBGeneration
+    dataset: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    learnset_dataset: dict[str, Any] | None = None,
+    evolution_dataset: dict[str, Any] | None = None,
+    machine_dataset: dict[str, Any] | None = None,
+    tutor_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 508:
         raise DataSourceError("Expected exactly 508 Gen IV personal records")
 
+    learnsets = _validate_learnsets(learnset_dataset, dataset["game"])
+    evolutions = _validate_evolutions(evolution_dataset, dataset["game"])
+    evolution_item_names = _validate_evolution_item_names(evolution_dataset)
+    machines = _validate_machines(machine_dataset, dataset["game"])
+    tutors, tutor_ids_by_member, tutor_locations = _validate_tutors(
+        tutor_dataset, dataset["game"]
+    )
     records = []
     for expected_member, source in enumerate(source_records):
         if source.get("species_id") != expected_member:
             raise DataSourceError("Personal records must be ordered by member ID")
-        records.append(_enrich_record(source, pokedb))
-    return {
+        records.append(
+            _enrich_record(
+                source,
+                pokedb,
+                learnsets[expected_member],
+                evolutions[expected_member],
+                evolution_item_names,
+                machines,
+                tutors,
+                tutor_ids_by_member.get(expected_member, []),
+                tutor_locations,
+            )
+        )
+    enriched = {
         "schema_version": 1,
         "game": dataset["game"],
         "dataset": "pokemon",
@@ -50,6 +106,23 @@ def enrich_personal_dataset(
         "source": dataset["source"],
         "records": records,
     }
+    if learnset_dataset is not None:
+        enriched["supplemental_sources"] = {
+            "level_up_learnsets": learnset_dataset["source"]
+        }
+    if evolution_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["evolutions"] = (
+            evolution_dataset["source"]
+        )
+    if machine_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["machines"] = (
+            machine_dataset["source"]
+        )
+    if tutor_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["move_tutors"] = (
+            tutor_dataset["source"]
+        )
+    return enriched
 
 
 def enrich_encounter_dataset(
@@ -100,12 +173,41 @@ def enrich_trainer_dataset(
 
 
 def enrich_move_dataset(
-    dataset: dict[str, Any], pokedb: PokeDBGeneration
+    dataset: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    machine_dataset: dict[str, Any] | None = None,
+    tutor_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 471:
         raise DataSourceError("Expected exactly 471 Gen IV move records")
 
+    machines = _validate_machines(machine_dataset, dataset["game"])
+    machines_by_move: dict[int, list[dict[str, Any]]] = {}
+    for machine in machines.values():
+        machines_by_move.setdefault(machine["move_id"], []).append(machine)
+    tutors, tutor_ids_by_member, tutor_locations = _validate_tutors(
+        tutor_dataset, dataset["game"]
+    )
+    members_by_tutor: dict[int, list[int]] = {tutor_id: [] for tutor_id in tutors}
+    for member, tutor_ids in tutor_ids_by_member.items():
+        for tutor_id in tutor_ids:
+            members_by_tutor[tutor_id].append(member)
+    tutors_by_move: dict[int, list[dict[str, Any]]] = {}
+    for tutor_id, tutor in tutors.items():
+        tutors_by_move.setdefault(tutor["move_id"], []).append(
+            {
+                **tutor,
+                "location": {
+                    "id": tutor["location_id"],
+                    "name": tutor_locations[tutor["location_id"]],
+                },
+                "compatible_pokemon": [
+                    _personal_member_reference(member, pokedb)
+                    for member in members_by_tutor[tutor_id]
+                ],
+            }
+        )
     records = []
     for expected_id, source in enumerate(source_records):
         if source.get("move_id") != expected_id:
@@ -122,9 +224,11 @@ def enrich_move_dataset(
                     source["damage_class_id"], DAMAGE_CLASS_NAMES, "move class"
                 ),
                 "type": _named_id(source["type_id"], TYPE_NAMES, "type"),
+                "machines": machines_by_move.get(expected_id, []),
+                "tutors": tutors_by_move.get(expected_id, []),
             }
         )
-    return {
+    enriched = {
         "schema_version": 1,
         "game": dataset["game"],
         "dataset": "moves",
@@ -133,6 +237,13 @@ def enrich_move_dataset(
         "source": dataset["source"],
         "records": records,
     }
+    if machine_dataset is not None:
+        enriched["supplemental_sources"] = {"machines": machine_dataset["source"]}
+    if tutor_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["move_tutors"] = (
+            tutor_dataset["source"]
+        )
+    return enriched
 
 
 def write_enriched_dataset(dataset: dict[str, Any], output_path: Path) -> None:
@@ -292,7 +403,17 @@ def _encounter_pokemon(
     }
 
 
-def _enrich_record(source: dict[str, Any], pokedb: PokeDBGeneration) -> dict[str, Any]:
+def _enrich_record(
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    learnset: dict[str, Any] | None,
+    evolution_set: dict[str, Any] | None,
+    evolution_item_names: list[str],
+    machines: dict[int, dict[str, Any]],
+    tutors: dict[int, dict[str, Any]],
+    tutor_ids: list[int],
+    tutor_locations: list[str],
+) -> dict[str, Any]:
     member = source["species_id"]
     if member in PERSONAL_INTERNAL_MEMBERS:
         slug = PERSONAL_INTERNAL_MEMBERS[member]
@@ -351,11 +472,286 @@ def _enrich_record(source: dict[str, Any], pokedb: PokeDBGeneration) -> dict[str
         "safari_flee_rate": source["safari_flee_rate"],
         "body_color": _named_id(source["body_color_id"], COLOR_NAMES, "body color"),
         "flip_sprite": source["flip_sprite"],
-        "machines": [
-            {"id": value, "name": _machine_name(value)} for value in source["machine_ids"]
-        ],
+        "machines": _enrich_compatible_machines(
+            source["machine_ids"], machines, pokedb
+        ),
+        "tutor_moves": _enrich_compatible_tutors(
+            tutor_ids, tutors, tutor_locations, pokedb
+        ),
+        "level_up_moves": _enrich_level_up_moves(learnset, pokedb),
+        "learnset_provenance": learnset["provenance"] if learnset is not None else None,
+        "evolutions": _enrich_evolutions(
+            evolution_set, pokedb, evolution_item_names
+        ),
+        "evolution_provenance": (
+            evolution_set["provenance"] if evolution_set is not None else None
+        ),
         "provenance": source["provenance"],
     }
+
+
+def _validate_learnsets(
+    dataset: dict[str, Any] | None, game: str
+) -> list[dict[str, Any] | None]:
+    if dataset is None:
+        return [None] * 508
+    if dataset.get("game") != game:
+        raise DataSourceError("Personal and learnset datasets must be for the same game")
+    records = dataset.get("records")
+    if not isinstance(records, list) or len(records) != 508:
+        raise DataSourceError("Expected exactly 508 Gen IV level-up learnsets")
+    for expected_member, record in enumerate(records):
+        if record.get("species_id") != expected_member:
+            raise DataSourceError("Learnsets must be ordered by member ID")
+    return records
+
+
+def _validate_evolutions(
+    dataset: dict[str, Any] | None, game: str
+) -> list[dict[str, Any] | None]:
+    if dataset is None:
+        return [None] * 508
+    if dataset.get("game") != game:
+        raise DataSourceError("Personal and evolution datasets must be for the same game")
+    records = dataset.get("records")
+    if not isinstance(records, list) or len(records) != 508:
+        raise DataSourceError("Expected exactly 508 Gen IV evolution records")
+    for expected_member, record in enumerate(records):
+        if record.get("species_id") != expected_member:
+            raise DataSourceError("Evolution records must be ordered by member ID")
+    return records
+
+
+def _validate_evolution_item_names(dataset: dict[str, Any] | None) -> list[str]:
+    if dataset is None:
+        return []
+    item_names = dataset.get("item_names")
+    if not isinstance(item_names, list) or not all(
+        isinstance(name, str) for name in item_names
+    ):
+        raise DataSourceError("Evolution dataset must include ROM item names")
+    return item_names
+
+
+def _validate_machines(
+    dataset: dict[str, Any] | None, game: str
+) -> dict[int, dict[str, Any]]:
+    if dataset is None:
+        return {}
+    if dataset.get("game") != game:
+        raise DataSourceError("Machine dataset must be for the same game")
+    records = dataset.get("records")
+    if not isinstance(records, list) or len(records) != 100:
+        raise DataSourceError("Expected exactly 100 Gen IV machine records")
+    result = {}
+    for expected_id, record in enumerate(records, start=1):
+        if record.get("machine_id") != expected_id:
+            raise DataSourceError("Machine records must be ordered by machine ID")
+        result[expected_id] = record
+    return result
+
+
+def _validate_tutors(
+    dataset: dict[str, Any] | None, game: str
+) -> tuple[dict[int, dict[str, Any]], dict[int, list[int]], list[str]]:
+    if dataset is None:
+        return {}, {}, []
+    if dataset.get("game") != game:
+        raise DataSourceError("Tutor dataset must be for the same game")
+    records = dataset.get("records")
+    compatibility = dataset.get("compatibility")
+    location_names = dataset.get("location_names")
+    if not isinstance(records, list) or not records:
+        raise DataSourceError("Tutor records must be a nonempty list")
+    if not isinstance(compatibility, list):
+        raise DataSourceError("Tutor compatibility records must be a list")
+    if not isinstance(location_names, list) or not all(
+        isinstance(name, str) for name in location_names
+    ):
+        raise DataSourceError("Tutor location names must be a list")
+    tutors = {}
+    for expected_id, record in enumerate(records, start=1):
+        if record.get("tutor_id") != expected_id:
+            raise DataSourceError("Tutor records must be ordered by tutor ID")
+        location_id = record.get("location_id")
+        if not isinstance(location_id, int) or not 0 <= location_id < len(location_names):
+            raise DataSourceError("Tutor record references an unknown location")
+        tutors[expected_id] = record
+    ids_by_member = {}
+    for record in compatibility:
+        member = record.get("personal_member")
+        tutor_ids = record.get("tutor_ids")
+        if not isinstance(member, int) or member in ids_by_member:
+            raise DataSourceError("Tutor compatibility has an invalid personal member")
+        if not isinstance(tutor_ids, (list, tuple)) or any(
+            value not in tutors for value in tutor_ids
+        ):
+            raise DataSourceError("Tutor compatibility references an unknown tutor ID")
+        ids_by_member[member] = list(tutor_ids)
+    return tutors, ids_by_member, location_names
+
+
+def _enrich_compatible_tutors(
+    tutor_ids: list[int],
+    tutors: dict[int, dict[str, Any]],
+    location_names: list[str],
+    pokedb: PokeDBGeneration,
+) -> list[dict[str, Any]]:
+    result = []
+    for tutor_id in tutor_ids:
+        tutor = tutors[tutor_id]
+        slug = pokedb.move_name(tutor["move_id"])
+        if slug is None:
+            raise DataSourceError(f"Tutor {tutor_id} references move ID 0")
+        result.append(
+            {
+                **tutor,
+                "move": {
+                    "id": tutor["move_id"],
+                    "slug": slug,
+                    "name": _display_name(slug),
+                },
+                "location": {
+                    "id": tutor["location_id"],
+                    "name": location_names[tutor["location_id"]],
+                },
+            }
+        )
+    return result
+
+
+def _personal_member_reference(
+    member: int, pokedb: PokeDBGeneration
+) -> dict[str, Any]:
+    if member in PERSONAL_FORM_MEMBERS:
+        slug = PERSONAL_FORM_MEMBERS[member]
+        reference = pokedb.pokemon_for_name(slug)
+        national_dex_id = pokedb.pokemon_for_species(reference["species"])["id"]
+    elif 1 <= member <= 493:
+        reference = pokedb.pokemon_for_id(member)
+        slug = reference["name"]
+        national_dex_id = member
+    else:
+        raise DataSourceError(f"Tutor compatibility references internal member {member}")
+    return {
+        "member": member,
+        "national_dex_id": national_dex_id,
+        "slug": slug,
+        "name": _display_name(slug),
+    }
+
+
+def _enrich_compatible_machines(
+    machine_ids: list[int],
+    machines: dict[int, dict[str, Any]],
+    pokedb: PokeDBGeneration,
+) -> list[dict[str, Any]]:
+    if not machines:
+        return [{"id": value, "name": _machine_name(value)} for value in machine_ids]
+    result = []
+    for machine_id in machine_ids:
+        try:
+            machine = machines[machine_id]
+        except KeyError as error:
+            raise DataSourceError(
+                f"Pokémon compatibility references unknown machine ID {machine_id}"
+            ) from error
+        slug = pokedb.move_name(machine["move_id"])
+        if slug is None:
+            raise DataSourceError(f"Machine {machine['name']} references move ID 0")
+        result.append(
+            {
+                "id": machine_id,
+                "name": machine["name"],
+                "kind": machine["kind"],
+                "number": machine["number"],
+                "move": {
+                    "id": machine["move_id"],
+                    "slug": slug,
+                    "name": _display_name(slug),
+                },
+            }
+        )
+    return result
+
+
+def _enrich_evolutions(
+    evolution_set: dict[str, Any] | None,
+    pokedb: PokeDBGeneration,
+    item_names: list[str],
+) -> list[dict[str, Any]]:
+    if evolution_set is None:
+        return []
+    result = []
+    for entry in evolution_set["evolutions"]:
+        method_id = entry["method_id"]
+        target = pokedb.pokemon_for_id(entry["target_species_id"])
+        result.append(
+            {
+                **entry,
+                "method": _named_id(
+                    method_id, EVOLUTION_METHOD_NAMES, "evolution method"
+                ),
+                "parameter_data": _evolution_parameter(entry, pokedb, item_names),
+                "target": {
+                    "id": entry["target_species_id"],
+                    "slug": target["name"],
+                    "name": _display_name(target["name"]),
+                },
+            }
+        )
+    return result
+
+
+def _evolution_parameter(
+    entry: dict[str, Any], pokedb: PokeDBGeneration, item_names: list[str]
+) -> dict[str, Any] | None:
+    method_id = entry["method_id"]
+    parameter = entry["parameter"]
+    if method_id in _EVOLUTION_LEVEL_PARAMETERS:
+        return {"kind": "level", "value": parameter}
+    if method_id in _EVOLUTION_ITEM_PARAMETERS:
+        if not 0 < parameter < len(item_names):
+            raise DataSourceError(f"Unknown Gen IV item ID: {parameter}")
+        return {"kind": "item", "id": parameter, "name": item_names[parameter]}
+    if method_id in _EVOLUTION_PERSONALITY_PARAMETERS:
+        return {"kind": "personality", "value": parameter}
+    if method_id == 15:
+        return {"kind": "beauty", "value": parameter}
+    if method_id == 20:
+        return {"kind": "move", "id": parameter, "name": pokedb.move_name(parameter)}
+    if method_id == 21:
+        species = pokedb.pokemon_for_id(parameter)
+        return {
+            "kind": "species",
+            "id": parameter,
+            "slug": species["name"],
+            "name": _display_name(species["name"]),
+        }
+    if parameter:
+        return {"kind": "raw", "value": parameter}
+    return None
+
+
+def _enrich_level_up_moves(
+    learnset: dict[str, Any] | None, pokedb: PokeDBGeneration
+) -> list[dict[str, Any]]:
+    moves = []
+    for entry in learnset["moves"] if learnset is not None else []:
+        slug = pokedb.move_name(entry["move_id"])
+        if slug is None:
+            raise DataSourceError("Level-up learnsets cannot reference move ID 0")
+        moves.append(
+            {
+                "level": entry["level"],
+                "move": {
+                    "id": entry["move_id"],
+                    "slug": slug,
+                    "name": _display_name(slug),
+                },
+            }
+        )
+    return moves
 
 
 def _named_id(value: int, names: tuple[str, ...], label: str) -> dict[str, Any]:

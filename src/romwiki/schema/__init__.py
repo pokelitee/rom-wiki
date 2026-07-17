@@ -24,6 +24,10 @@ from romwiki.schema.locations import (
     LocationWarp,
 )
 from romwiki.schema.moves import Gen4Move
+from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
+from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
+from romwiki.schema.machines import Gen4Machine
+from romwiki.schema.tutors import Gen4TutorCompatibility, Gen4TutorMove, ShardCosts
 
 __all__ = [
     "PokemonPersonalData",
@@ -44,4 +48,12 @@ __all__ = [
     "LocationTrainerReference",
     "LocationWarp",
     "Gen4Move",
+    "Gen4LevelUpLearnset",
+    "LevelUpMove",
+    "EvolutionEntry",
+    "Gen4EvolutionSet",
+    "Gen4Machine",
+    "Gen4TutorCompatibility",
+    "Gen4TutorMove",
+    "ShardCosts",
 ]

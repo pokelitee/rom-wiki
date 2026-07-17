@@ -19,11 +19,14 @@ events = "fielddata/eventdata/zone_event.narc"
 scripts = "fielddata/script/scr_seq.narc"
 map_matrices = "fielddata/mapmatrix/map_matrix.narc"
 moves = "poketool/waza/pl_waza_tbl.narc"
+learnsets = "poketool/personal/wotbl.narc"
+evolutions = "poketool/personal/evo.narc"
 
 [parameters]
 map_header_offset = 0xE601C
 map_header_count = 593
 location_names_member = 433
+item_names_member = 392
 null_encounter_id = 0xFFFF
 trainer_names_member = 618
 trainer_classes_member = 619
@@ -34,6 +37,17 @@ trainer_script_id_offset = 1
 dynamic_warp_header_id = 0x0FFF
 dynamic_warp_id = 0x0100
 matrix_void_header_ids = [0, 0xFFFF]
+machine_move_offset = 0xF4BFC
+machine_count = 100
+tm_count = 92
+tutor_overlay_id = 5
+tutor_move_offset = 0x2FF64
+tutor_count = 38
+tutor_compatibility_offset = 0x3012C
+tutor_base_species_count = 493
+tutor_form_member_start = 496
+tutor_form_count = 12
+tutor_location_names = ["Route 212", "Survival Area", "Snowpoint City"]
 
 [[hashes]]
 algorithm = "md5"

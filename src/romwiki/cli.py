@@ -11,6 +11,10 @@ from romwiki.pipeline.encounters import (
     extract_encounter_dataset,
     write_encounter_dataset,
 )
+from romwiki.pipeline.evolutions import (
+    extract_evolution_dataset,
+    write_evolution_dataset,
+)
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.enrich import (
     enrich_encounter_dataset,
@@ -20,10 +24,13 @@ from romwiki.pipeline.enrich import (
     write_enriched_dataset,
 )
 from romwiki.pipeline.locations import extract_location_dataset, write_location_dataset
+from romwiki.pipeline.learnsets import extract_learnset_dataset, write_learnset_dataset
 from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
 from romwiki.pipeline.manifest import create_manifest, write_manifest
+from romwiki.pipeline.machines import extract_machine_dataset, write_machine_dataset
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
+from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
 from romwiki.renderers.mkdocs import (
     render_encounter_pages,
     render_location_pages,
@@ -105,6 +112,46 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         help="dataset output path (defaults below build/data/<profile>/moves)",
+    )
+
+    learnset_parser = subparsers.add_parser(
+        "extract-learnsets", help="extract normalized level-up learnsets"
+    )
+    _add_input_arguments(learnset_parser)
+    learnset_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/pokemon)",
+    )
+
+    evolution_parser = subparsers.add_parser(
+        "extract-evolutions", help="extract normalized Pokémon evolutions"
+    )
+    _add_input_arguments(evolution_parser)
+    evolution_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/pokemon)",
+    )
+
+    machine_parser = subparsers.add_parser(
+        "extract-machines", help="extract TM/HM move assignments"
+    )
+    _add_input_arguments(machine_parser)
+    machine_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/machines)",
+    )
+
+    tutor_parser = subparsers.add_parser(
+        "extract-tutors", help="extract move tutor assignments and compatibility"
+    )
+    _add_input_arguments(tutor_parser)
+    tutor_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/tutors)",
     )
 
     pokemon_parser = subparsers.add_parser(
@@ -198,6 +245,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             "extract-trainers",
             "extract-locations",
             "extract-moves",
+            "extract-learnsets",
+            "extract-evolutions",
+            "extract-machines",
+            "extract-tutors",
             "build-pokemon",
             "build-encounters",
             "build-trainers",
@@ -248,10 +299,57 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_move_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} move records: {output}")
+        elif args.command == "extract-learnsets":
+            dataset = extract_learnset_dataset(result)
+            output = args.output or (
+                Path("build/data")
+                / dataset["game"]
+                / "pokemon"
+                / "learnsets.json"
+            )
+            write_learnset_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} learnsets: {output}")
+        elif args.command == "extract-evolutions":
+            dataset = extract_evolution_dataset(result)
+            output = args.output or (
+                Path("build/data")
+                / dataset["game"]
+                / "pokemon"
+                / "evolutions.json"
+            )
+            write_evolution_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} evolution records: {output}")
+        elif args.command == "extract-machines":
+            dataset = extract_machine_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "machines" / "raw.json"
+            )
+            write_machine_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} machine records: {output}")
+        elif args.command == "extract-tutors":
+            dataset = extract_tutor_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "tutors" / "raw.json"
+            )
+            write_tutor_dataset(dataset, output)
+            print(
+                f"Wrote {dataset['record_count']} tutor records and "
+                f"{dataset['compatibility_record_count']} compatibility records: "
+                f"{output}"
+            )
         elif args.command == "build-pokemon":
             personal = extract_personal_dataset(result)
+            learnsets = extract_learnset_dataset(result)
+            evolutions = extract_evolution_dataset(result)
+            machines = extract_machine_dataset(result)
+            tutors = extract_tutor_dataset(result)
             enriched = enrich_personal_dataset(
-                personal, PokeDBGeneration.load(args.pokedb)
+                personal,
+                PokeDBGeneration.load(args.pokedb),
+                learnsets,
+                evolutions,
+                machines,
+                tutors,
             )
             data_output = args.data_output or (
                 Path("build/data")
@@ -313,8 +411,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Rendered {page_count} location pages: {wiki_output}")
         elif args.command == "build-moves":
             extracted = extract_move_dataset(result)
+            machines = extract_machine_dataset(result)
+            tutors = extract_tutor_dataset(result)
             enriched = enrich_move_dataset(
-                extracted, PokeDBGeneration.load(args.pokedb)
+                extracted,
+                PokeDBGeneration.load(args.pokedb),
+                machines,
+                tutors,
             )
             data_output = args.data_output or (
                 Path("build/data") / enriched["game"] / "moves" / "enriched.json"

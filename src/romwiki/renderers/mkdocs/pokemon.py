@@ -25,7 +25,10 @@ def _render_record(record: dict[str, Any]) -> str:
         for value in record["abilities"]
         if value["name"] is not None
     )
-    machines = ", ".join(value["name"] for value in record["machines"]) or "None"
+    machines = record["machines"]
+    tutor_moves = record.get("tutor_moves", [])
+    level_up_moves = record.get("level_up_moves", [])
+    evolutions = record.get("evolutions", [])
     lines = [
         f"# {record['name']}",
         "",
@@ -56,20 +59,177 @@ def _render_record(record: dict[str, Any]) -> str:
             value["name"].replace("-", " ").title() for value in record["egg_groups"]
         ),
         "",
-        "## Compatible machines",
-        "",
-        machines,
-        "",
-        "---",
-        "",
-        (
-            "Source: exact ROM record from "
-            f"`{record['provenance']['archive']}` member "
-            f"`{record['provenance']['member']}`."
-        ),
+        "## Evolutions",
         "",
     ]
+    if evolutions:
+        lines.extend(
+            [
+                "| Evolves into | Condition | Method ID |",
+                "| ------------ | --------- | --------: |",
+                *[
+                    (
+                        f"| [{entry['target']['name']}]({entry['target']['slug']}.md) "
+                        f"| {_evolution_condition(entry)} | {entry['method_id']} |"
+                    )
+                    for entry in evolutions
+                ],
+                "",
+            ]
+        )
+    else:
+        lines.extend(["No further evolution.", ""])
+    lines.extend(
+        [
+            "## Compatible machines",
+            "",
+        ]
+    )
+    if machines and all("move" in machine for machine in machines):
+        lines.extend(
+            [
+                "| Machine | Move |",
+                "| ------- | ---- |",
+                *[
+                    (
+                        f"| {machine['name']} | "
+                        f"[{machine['move']['name']}]"
+                        f"(../moves/{machine['move']['slug']}.md) |"
+                    )
+                    for machine in machines
+                ],
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                ", ".join(machine["name"] for machine in machines) or "None",
+                "",
+            ]
+        )
+    lines.extend(["## Move tutors", ""])
+    if tutor_moves:
+        lines.extend(
+            [
+                "| Move | Location | Cost |",
+                "| ---- | -------- | ---- |",
+                *[
+                    (
+                        f"| [{tutor['move']['name']}]"
+                        f"(../moves/{tutor['move']['slug']}.md) | "
+                        f"{tutor['location']['name']} | "
+                        f"{_shard_cost(tutor['shard_costs'])} |"
+                    )
+                    for tutor in tutor_moves
+                ],
+                "",
+            ]
+        )
+    else:
+        lines.extend(["None.", ""])
+    lines.extend(["## Level-up moves", ""])
+    if level_up_moves:
+        lines.extend(
+            [
+                "| Level | Move |",
+                "| ----: | ---- |",
+                *[
+                    (
+                        f"| {entry['level']} | "
+                        f"[{entry['move']['name']}](../moves/{entry['move']['slug']}.md) |"
+                    )
+                    for entry in level_up_moves
+                ],
+                "",
+            ]
+        )
+    else:
+        lines.extend(["No level-up moves.", ""])
+    lines.extend(
+        [
+            "---",
+            "",
+            (
+                "Source: exact ROM record from "
+                f"`{record['provenance']['archive']}` member "
+                f"`{record['provenance']['member']}`."
+            ),
+            *(
+                [
+                    (
+                        "Level-up learnset source: exact ROM record from "
+                        f"`{record['learnset_provenance']['archive']}` member "
+                        f"`{record['learnset_provenance']['member']}`."
+                    )
+                ]
+                if record.get("learnset_provenance") is not None
+                else []
+            ),
+            *(
+                [
+                    (
+                        "Evolution source: exact ROM record from "
+                        f"`{record['evolution_provenance']['archive']}` member "
+                        f"`{record['evolution_provenance']['member']}`."
+                    )
+                ]
+                if record.get("evolution_provenance") is not None
+                else []
+            ),
+            "",
+        ]
+    )
     return "\n".join(lines)
+
+
+def _evolution_condition(entry: dict[str, Any]) -> str:
+    method = entry["method"]["name"]
+    parameter = entry["parameter_data"]
+    value = parameter.get("value") if parameter is not None else None
+    raw_name = parameter.get("name", "") if parameter is not None else ""
+    name = (
+        raw_name.replace("-", " ").title()
+        if raw_name.islower()
+        else raw_name
+    )
+    conditions = {
+        "friendship": "High friendship",
+        "friendship-day": "High friendship during the day",
+        "friendship-night": "High friendship at night",
+        "level": f"Level {value}",
+        "trade": "Trade",
+        "trade-held-item": f"Trade while holding {name}",
+        "use-item": f"Use {name}",
+        "level-attack-greater": f"Level {value} with Attack > Defense",
+        "level-attack-equal": f"Level {value} with Attack = Defense",
+        "level-defense-greater": f"Level {value} with Attack < Defense",
+        "level-personality-low": f"Level up; personality branch {value} (low)",
+        "level-personality-high": f"Level up; personality branch {value} (high)",
+        "level-ninjask": f"Level {value} (Ninjask branch)",
+        "level-shedinja": f"Level {value} (Shedinja branch)",
+        "beauty": f"Beauty {value}",
+        "use-item-male": f"Use {name} (male)",
+        "use-item-female": f"Use {name} (female)",
+        "level-held-item-day": f"Level up during the day while holding {name}",
+        "level-held-item-night": f"Level up at night while holding {name}",
+        "level-knowing-move": f"Level up knowing {name}",
+        "level-with-party-species": f"Level up with {name} in the party",
+        "level-male": f"Level {value} (male)",
+        "level-female": f"Level {value} (female)",
+        "level-magnetic-field": "Level up in a magnetic field",
+        "level-moss-rock": "Level up near a Moss Rock",
+        "level-ice-rock": "Level up near an Ice Rock",
+    }
+    return conditions.get(method, f"{method.replace('-', ' ').title()} ({value})")
+
+
+def _shard_cost(costs: dict[str, int]) -> str:
+    return ", ".join(
+        f"{amount} {color.title()}"
+        for color, amount in costs.items()
+        if amount
+    ) or "Free"
 
 
 def _write_text(path: Path, value: str) -> None:
