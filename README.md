@@ -100,8 +100,8 @@ Build enriched records and the Pokémon wiki pages using the local PokéDB outpu
 romwiki build-pokemon ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-The Pokémon build combines personal records, level-up and egg moves, evolutions,
-TM/HM compatibility, and move-tutor compatibility from the ROM, then uses
+The Pokémon build combines personal records, wild held-item slots, level-up and
+egg moves, evolutions, TM/HM compatibility, and move-tutor compatibility from the ROM, then uses
 PokéDB to resolve stable Pokémon and move names and links.
 
 This keeps the enriched audit dataset under `build/` and renders publishable

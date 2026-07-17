@@ -7,6 +7,8 @@ directly in table-driven ROM data.
 Record-level provenance is included in normalized datasets and generated pages,
 including separate archive/member references for Pokémon personal data and
 level-up learnsets, evolution records, and the ROM item-name catalog.
+Wild held-item slot IDs come from each Pokémon personal record; PokéDB resolves
+their stable display names.
 Egg move lists and their ordering come from the packed species table in ARM9
 overlay 5; each extracted set retains its exact overlay offset.
 TM/HM assignments come from the profile's exact ROM-offset table and are joined

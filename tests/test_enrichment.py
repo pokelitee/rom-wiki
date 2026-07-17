@@ -91,6 +91,10 @@ class PersonalEnrichmentTests(unittest.TestCase):
             "hatch_cycles": 20,
             "growth_rate": {"name": "medium-slow"},
             "egg_groups": [{"name": "monster"}, {"name": "grass"}],
+            "held_items": [
+                {"rarity": "common", "id": 0, "name": None},
+                {"rarity": "rare", "id": 81, "name": "moon-stone"},
+            ],
             "machines": [
                 {
                     "name": "TM01",
@@ -161,6 +165,8 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("Level 16", page)
         self.assertIn("Use King's Rock", page)
         self.assertIn("[Focus Punch](../moves/focus-punch.md)", page)
+        self.assertIn("## Wild held items", page)
+        self.assertIn("| Rare | Moon Stone | 81 |", page)
         self.assertIn("[Seed Bomb](../moves/seed-bomb.md)", page)
         self.assertIn("4 Red, 4 Green", page)
         self.assertIn("[Frenzy Plant](../moves/frenzy-plant.md)", page)

@@ -25,6 +25,7 @@ def _render_record(record: dict[str, Any]) -> str:
         for value in record["abilities"]
         if value["name"] is not None
     )
+    held_items = [item for item in record.get("held_items", []) if item["id"]]
     machines = record["machines"]
     tutor_moves = record.get("tutor_moves", [])
     level_up_moves = record.get("level_up_moves", [])
@@ -60,9 +61,32 @@ def _render_record(record: dict[str, Any]) -> str:
             value["name"].replace("-", " ").title() for value in record["egg_groups"]
         ),
         "",
-        "## Evolutions",
+        "## Wild held items",
         "",
     ]
+    if held_items:
+        lines.extend(
+            [
+                "| Slot | Item | Item ID |",
+                "| ---- | ---- | ------: |",
+                *[
+                    (
+                        f"| {item['rarity'].title()} | "
+                        f"{item['name'].replace('-', ' ').title()} | {item['id']} |"
+                    )
+                    for item in held_items
+                ],
+                "",
+            ]
+        )
+    else:
+        lines.extend(["None.", ""])
+    lines.extend(
+        [
+        "## Evolutions",
+        "",
+        ]
+    )
     if evolutions:
         lines.extend(
             [
