@@ -91,6 +91,8 @@ def enrich_trainer_dataset(
         "dataset": "trainers",
         "record_count": len(records),
         "active_record_count": sum(bool(record["party"]) for record in records),
+        "linked_record_count": sum(bool(record["locations"]) for record in records),
+        "location_reference_count": sum(len(record["locations"]) for record in records),
         "source": dataset["source"],
         "records": records,
     }

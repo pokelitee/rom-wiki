@@ -13,7 +13,31 @@ def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
         "Trainer parties and battle settings extracted directly from the ROM.",
         "",
     ]
-    for record in records:
+    linked = [record for record in records if record["locations"]]
+    unlinked = [record for record in records if not record["locations"]]
+    index.extend(["## Located overworld trainers", ""])
+    for record in sorted(
+        linked, key=lambda item: (item["locations"][0]["name"], _trainer_label(item), item["trainer_id"])
+    ):
+        filename = f"trainer-{record['trainer_id']:04}.md"
+        label = _trainer_label(record)
+        _write_text(output_root / filename, _render_trainer(record))
+        location_names = " / ".join(
+            dict.fromkeys(location["name"] for location in record["locations"])
+        )
+        index.append(f"- [{location_names} — {label}](./{filename})")
+    index.extend(
+        [
+            "",
+            "## Unlinked trainer records",
+            "",
+            "These records are not referenced by a direct overworld trainer object. "
+            "They may be invoked by local story scripts, used for rematches or facilities, "
+            "or retained as unused data.",
+            "",
+        ]
+    )
+    for record in unlinked:
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
         _write_text(output_root / filename, _render_trainer(record))
@@ -27,6 +51,7 @@ def _render_trainer(record: dict[str, Any]) -> str:
     lines = [f"# {label}", "", f"Trainer ID: `{record['trainer_id']}`", ""]
     if record["double_battle"]:
         lines.extend(["Battle type: Double battle", ""])
+    _append_locations(lines, record["locations"])
     lines.extend(
         [
             "## Party",
@@ -63,6 +88,26 @@ def _render_trainer(record: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _append_locations(lines: list[str], locations: list[dict[str, Any]]) -> None:
+    if not locations:
+        return
+    lines.extend(
+        [
+            "## Locations",
+            "",
+            "| Location | Header | Internal map | Position | Event object |",
+            "| -------- | -----: | ------------ | -------- | ------------ |",
+        ]
+    )
+    for location in locations:
+        lines.append(
+            f"| {location['name']} | {location['header_id']} | "
+            f"`{location['internal_name']}` | ({location['x']}, {location['z']}) | "
+            f"`{location['event_file_id']}:{location['object_index']}` |"
+        )
+    lines.append("")
 
 
 def _trainer_label(record: dict[str, Any]) -> str:

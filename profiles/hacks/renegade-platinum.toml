@@ -15,6 +15,7 @@ map_names = "fielddata/maptable/mapname.bin"
 messages = "msgdata/pl_msg.narc"
 trainer_data = "poketool/trainer/trdata.narc"
 trainer_parties = "poketool/trainer/trpoke.narc"
+events = "fielddata/eventdata/zone_event.narc"
 
 [parameters]
 map_header_offset = 0xE601C
@@ -23,6 +24,10 @@ location_names_member = 433
 null_encounter_id = 0xFFFF
 trainer_names_member = 618
 trainer_classes_member = 619
+null_event_id = 0xFFFF
+trainer_script_start = 3000
+trainer_script_end = 3999
+trainer_script_id_offset = 1
 
 [[hashes]]
 algorithm = "md5"

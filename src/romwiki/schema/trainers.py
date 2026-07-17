@@ -19,6 +19,22 @@ class TrainerPokemon:
 
 
 @dataclass(frozen=True, slots=True)
+class TrainerLocation:
+    header_id: int
+    internal_name: str
+    location_name_id: int
+    name: str
+    event_file_id: int
+    object_index: int
+    object_local_id: int
+    script_id: int
+    trainer_type: int
+    x: int
+    y: int
+    z: int
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4Trainer:
     trainer_id: int
     name: str
@@ -35,6 +51,7 @@ class Gen4Trainer:
     trailing_party_data: bytes
     provenance: RecordProvenance
     party_provenance: RecordProvenance
+    locations: tuple[TrainerLocation, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)

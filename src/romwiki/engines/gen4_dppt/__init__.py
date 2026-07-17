@@ -15,6 +15,7 @@ from romwiki.engines.gen4_dppt.map_headers import (
 )
 from romwiki.engines.gen4_dppt.messages import parse_english_message_archive
 from romwiki.engines.gen4_dppt.trainers import TRAINER_RECORD_SIZE, parse_trainer_record
+from romwiki.engines.gen4_dppt.events import Gen4ObjectEvent, parse_object_events
 
 __all__ = [
     "PERSONAL_FORM_MEMBERS",
@@ -29,4 +30,6 @@ __all__ = [
     "parse_platinum_map_headers",
     "TRAINER_RECORD_SIZE",
     "parse_trainer_record",
+    "Gen4ObjectEvent",
+    "parse_object_events",
 ]

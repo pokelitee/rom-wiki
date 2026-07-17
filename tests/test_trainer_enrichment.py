@@ -36,6 +36,20 @@ class TrainerEnrichmentTests(unittest.TestCase):
             "trailing_party_data": "",
             "provenance": {"source": "rom", "archive": "trdata.narc", "member": 0},
             "party_provenance": {"source": "rom", "archive": "trpoke.narc", "member": 0},
+            "locations": [{
+                "header_id": 343,
+                "internal_name": "R202",
+                "location_name_id": 17,
+                "name": "Route 202",
+                "event_file_id": 329,
+                "object_index": 0,
+                "object_local_id": 0,
+                "script_id": 3000,
+                "trainer_type": 1,
+                "x": 181,
+                "y": 65536,
+                "z": 818,
+            }],
         }
         pokedb = PokeDBGeneration(
             pokemon_by_id={1: {"id": 1, "name": "bulbasaur", "species": "bulbasaur"}},
@@ -59,6 +73,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("Master Ball", page)
         self.assertIn("Tackle", page)
+        self.assertIn("| Route 202 | 343 | `R202` | (181, 818) | `329:0` |", page)
 
 
 if __name__ == "__main__":

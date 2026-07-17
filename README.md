@@ -74,8 +74,11 @@ romwiki extract-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
 romwiki build-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-Trainer pages include battle type, levels, held items, and custom moves. Archive
-member IDs provide stable page names even when several trainers share a name.
+Trainer pages include battle type, levels, held items, custom moves, and exact
+overworld map locations when the trainer is referenced by a standard trainer
+object. Archive member IDs provide stable page names even when several trainers
+share a name. Story-script, facility, rematch, and unused records remain in a
+separate unlinked section until their invocation paths can be proven.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.

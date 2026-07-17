@@ -11,7 +11,7 @@ from romwiki.schema.encounters import (
     WalkingEncounterSlot,
     WaterEncounterSlot,
 )
-from romwiki.schema.trainers import Gen4Trainer, TrainerPokemon
+from romwiki.schema.trainers import Gen4Trainer, TrainerLocation, TrainerPokemon
 
 __all__ = [
     "PokemonPersonalData",
@@ -25,4 +25,5 @@ __all__ = [
     "WaterEncounterSlot",
     "Gen4Trainer",
     "TrainerPokemon",
+    "TrainerLocation",
 ]
