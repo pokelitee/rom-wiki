@@ -74,6 +74,28 @@ def enrich_encounter_dataset(
     }
 
 
+def enrich_trainer_dataset(
+    dataset: dict[str, Any], pokedb: PokeDBGeneration
+) -> dict[str, Any]:
+    source_records = dataset.get("records")
+    if not isinstance(source_records, list):
+        raise DataSourceError("Trainer dataset records must be a list")
+    records = []
+    for expected_id, source in enumerate(source_records):
+        if source.get("trainer_id") != expected_id:
+            raise DataSourceError("Trainer records must be ordered by trainer ID")
+        records.append(_enrich_trainer(source, pokedb))
+    return {
+        "schema_version": 1,
+        "game": dataset["game"],
+        "dataset": "trainers",
+        "record_count": len(records),
+        "active_record_count": sum(bool(record["party"]) for record in records),
+        "source": dataset["source"],
+        "records": records,
+    }
+
+
 def write_enriched_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     _write_json(output_path, dataset)
 
@@ -137,6 +159,78 @@ def _enrich_encounter_area(
         "special": special,
         "unknown_value": source["unknown_value"],
         "provenance": source["provenance"],
+    }
+
+
+_TRAINER_FORMS = {
+    (386, 1): "deoxys-attack",
+    (386, 2): "deoxys-defense",
+    (386, 3): "deoxys-speed",
+    (413, 1): "wormadam-sandy",
+    (413, 2): "wormadam-trash",
+    (479, 1): "rotom-heat",
+    (479, 2): "rotom-wash",
+    (479, 3): "rotom-frost",
+    (479, 4): "rotom-fan",
+    (479, 5): "rotom-mow",
+    (487, 1): "giratina-origin",
+    (492, 1): "shaymin-sky",
+}
+_TRAINER_COSMETIC_FORMS = {
+    (422, 1): "East Sea",
+    (423, 1): "East Sea",
+}
+
+
+def _enrich_trainer(source: dict[str, Any], pokedb: PokeDBGeneration) -> dict[str, Any]:
+    party = []
+    for pokemon in source["party"]:
+        species_id = pokemon["species_id"]
+        form_id = pokemon["form_id"]
+        if form_id:
+            slug = _TRAINER_FORMS.get((species_id, form_id))
+            cosmetic_form = _TRAINER_COSMETIC_FORMS.get((species_id, form_id))
+            if slug is not None:
+                reference = pokedb.pokemon_for_name(slug)
+            elif cosmetic_form is not None:
+                reference = pokedb.pokemon_for_id(species_id)
+            else:
+                raise DataSourceError(
+                    f"Unknown trainer form {form_id} for species {species_id}"
+                )
+        else:
+            reference = pokedb.pokemon_for_id(species_id)
+            cosmetic_form = None
+        party.append(
+            {
+                **pokemon,
+                "pokemon": {
+                    "id": species_id,
+                    "slug": reference["name"],
+                    "name": _display_name(reference["name"])
+                    + (f" ({cosmetic_form})" if cosmetic_form else ""),
+                },
+                "held_item": {
+                    "id": pokemon["held_item_id"],
+                    "name": pokedb.item_name(pokemon["held_item_id"]),
+                }
+                if pokemon["held_item_id"] is not None
+                else None,
+                "moves": [
+                    {"id": move_id, "name": pokedb.move_name(move_id)}
+                    for move_id in pokemon["move_ids"]
+                    if move_id
+                ],
+            }
+        )
+    return {
+        **source,
+        "party": party,
+        "reward_items": [
+            {"id": item_id, "name": pokedb.item_name(item_id)}
+            for item_id in source["reward_item_ids"]
+            if item_id
+        ],
     }
 
 

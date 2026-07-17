@@ -13,12 +13,16 @@ personal = "poketool/personal/pl_personal.narc"
 encounters = "fielddata/encountdata/pl_enc_data.narc"
 map_names = "fielddata/maptable/mapname.bin"
 messages = "msgdata/pl_msg.narc"
+trainer_data = "poketool/trainer/trdata.narc"
+trainer_parties = "poketool/trainer/trpoke.narc"
 
 [parameters]
 map_header_offset = 0xE601C
 map_header_count = 593
 location_names_member = 433
 null_encounter_id = 0xFFFF
+trainer_names_member = 618
+trainer_classes_member = 619
 
 [[hashes]]
 algorithm = "md5"

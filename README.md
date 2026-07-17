@@ -12,9 +12,10 @@ The project separates four concerns:
 
 ## Current status
 
-The current extraction slice can identify Nintendo DS images, enumerate their
-filesystem safely, read NARC archives, and decode normalized Gen IV Pokemon
-personal data with record-level provenance.
+The current extraction slices identify Nintendo DS images, enumerate their
+filesystem safely, read NARC archives, and decode normalized Gen IV Pokémon
+personal data, wild encounters, map-linked location names, and trainer parties
+with record-level provenance.
 
 ## Development setup
 
@@ -65,6 +66,16 @@ Encounter pages use archive member IDs as stable file names while displaying the
 in-game location names resolved through Platinum's map headers. Populated archive
 members without a static map-header reference remain available in a separate
 unreferenced section for auditing.
+
+Extract and render trainer parties:
+
+```console
+romwiki extract-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki build-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+Trainer pages include battle type, levels, held items, and custom moves. Archive
+member IDs provide stable page names even when several trainers share a name.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.

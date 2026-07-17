@@ -16,12 +16,14 @@ class PokeDBGeneration:
         pokemon_by_species: dict[str, dict[str, Any]],
         abilities_by_id: dict[int, str],
         items_by_id: dict[int, str],
+        moves_by_id: dict[int, str] | None = None,
     ) -> None:
         self.pokemon_by_id = pokemon_by_id
         self.pokemon_by_name = pokemon_by_name
         self.pokemon_by_species = pokemon_by_species
         self.abilities_by_id = abilities_by_id
         self.items_by_id = items_by_id
+        self.moves_by_id = moves_by_id or {}
 
     @classmethod
     def load(cls, root: Path) -> PokeDBGeneration:
@@ -30,6 +32,7 @@ class PokeDBGeneration:
         variants = _load_objects(resolved / "pokemon" / "variant")
         abilities = _load_objects(resolved / "ability")
         items = _load_objects(resolved / "item")
+        moves = _load_objects(resolved / "move")
         pokemon_by_id = {item["id"]: item for item in defaults}
         pokemon_by_name = {item["name"]: item for item in (*defaults, *variants)}
         if len(pokemon_by_id) != len(defaults):
@@ -40,6 +43,7 @@ class PokeDBGeneration:
             pokemon_by_species={item["species"]: item for item in defaults},
             abilities_by_id=_id_name_map(abilities, "ability"),
             items_by_id=_id_name_map(items, "item"),
+            moves_by_id=_id_name_map(moves, "move"),
         )
 
     def pokemon_for_id(self, pokemon_id: int) -> dict[str, Any]:
@@ -75,6 +79,14 @@ class PokeDBGeneration:
             return self.items_by_id[item_id]
         except KeyError as error:
             raise DataSourceError(f"PokéDB item ID does not exist: {item_id}") from error
+
+    def move_name(self, move_id: int) -> str | None:
+        if move_id == 0:
+            return None
+        try:
+            return self.moves_by_id[move_id]
+        except KeyError as error:
+            raise DataSourceError(f"PokéDB move ID does not exist: {move_id}") from error
 
 
 def _load_objects(directory: Path) -> list[dict[str, Any]]:

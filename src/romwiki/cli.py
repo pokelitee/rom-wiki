@@ -15,11 +15,17 @@ from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.enrich import (
     enrich_encounter_dataset,
     enrich_personal_dataset,
+    enrich_trainer_dataset,
     write_enriched_dataset,
 )
 from romwiki.pipeline.manifest import create_manifest, write_manifest
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
-from romwiki.renderers.mkdocs import render_encounter_pages, render_pokemon_pages
+from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
+from romwiki.renderers.mkdocs import (
+    render_encounter_pages,
+    render_pokemon_pages,
+    render_trainer_pages,
+)
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sources import PokeDBGeneration
 
@@ -66,6 +72,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="dataset output path (defaults below build/data/<profile>/encounters)",
     )
 
+    trainer_parser = subparsers.add_parser(
+        "extract-trainers", help="extract normalized trainer and party data"
+    )
+    _add_input_arguments(trainer_parser)
+    trainer_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/trainers)",
+    )
+
     pokemon_parser = subparsers.add_parser(
         "build-pokemon", help="extract, enrich, and render Pokemon pages"
     )
@@ -91,6 +107,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_encounters_parser.add_argument("--data-output", type=Path)
     build_encounters_parser.add_argument("--wiki-output", type=Path)
+
+    build_trainers_parser = subparsers.add_parser(
+        "build-trainers", help="extract, enrich, and render trainer pages"
+    )
+    _add_input_arguments(build_trainers_parser)
+    build_trainers_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokéDB generation output directory",
+    )
+    build_trainers_parser.add_argument("--data-output", type=Path)
+    build_trainers_parser.add_argument("--wiki-output", type=Path)
 
     site_parser = subparsers.add_parser(
         "site", help="list or build independently configured wiki sites"
@@ -121,8 +150,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             "manifest",
             "extract-personal",
             "extract-encounters",
+            "extract-trainers",
             "build-pokemon",
             "build-encounters",
+            "build-trainers",
         }:
             result = inspect_rom(args.rom, args.profiles_dir)
         if args.command == "inspect":
@@ -147,6 +178,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_encounter_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} encounter records: {output}")
+        elif args.command == "extract-trainers":
+            dataset = extract_trainer_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "trainers" / "raw.json"
+            )
+            write_trainer_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} trainer records: {output}")
         elif args.command == "build-pokemon":
             personal = extract_personal_dataset(result)
             enriched = enrich_personal_dataset(
@@ -183,6 +221,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             page_count = render_encounter_pages(enriched, wiki_output)
             print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
             print(f"Rendered {page_count} encounter pages: {wiki_output}")
+        elif args.command == "build-trainers":
+            extracted = extract_trainer_dataset(result)
+            enriched = enrich_trainer_dataset(
+                extracted, PokeDBGeneration.load(args.pokedb)
+            )
+            data_output = args.data_output or (
+                Path("build/data") / enriched["game"] / "trainers" / "enriched.json"
+            )
+            wiki_output = args.wiki_output or (
+                Path("sites/games") / enriched["game"] / "wiki" / "trainers"
+            )
+            write_enriched_dataset(enriched, data_output)
+            page_count = render_trainer_pages(enriched, wiki_output)
+            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
+            print(f"Rendered {page_count} trainer pages: {wiki_output}")
         elif args.command == "site":
             catalog = SiteCatalog.load(args.root)
             if args.site_command == "list":

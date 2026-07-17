@@ -13,4 +13,5 @@ nav:
   - Home: index.md
   - Pokémon: pokemon/index.md
   - Wild Encounters: encounters/index.md
+  - Trainers: trainers/index.md
   - Data Sources: data-sources.md

@@ -39,6 +39,11 @@ class Gen4MessageTests(unittest.TestCase):
 
         self.assertEqual(messages, ("Twinleaf Town", "Pokémon League"))
 
+    def test_decompresses_trainer_text(self) -> None:
+        data = _make_compressed_message_archive("Tristan")
+
+        self.assertEqual(parse_english_message_archive(data), ("Tristan",))
+
 
 _ENCODING = {
     **{value: 0x121 + index for index, value in enumerate(string.digits)},
@@ -75,6 +80,35 @@ def _make_message_archive(messages: tuple[str, ...], archive_key: int = 0xA06) -
         offset += len(encoded)
     result.extend(b"".join(encoded_messages))
     return bytes(result)
+
+
+def _make_compressed_message_archive(message: str) -> bytes:
+    buffer = 0
+    bit_count = 0
+    words = []
+    for value in [_ENCODING[character] for character in message] + [0x1FF]:
+        buffer |= value << bit_count
+        bit_count += 9
+        while bit_count >= 15:
+            words.append(buffer & 0x7FFF)
+            buffer >>= 15
+            bit_count -= 15
+    if bit_count:
+        words.append(buffer)
+
+    key = 0x91BD3 & 0xFFFF
+    encoded = bytearray()
+    for value in [0xF100, *words, 0xFFFF]:
+        encoded.extend(struct.pack("<H", value ^ key))
+        key = (key + 0x493D) & 0xFFFF
+    archive_key = 0xA06
+    entry_key = (archive_key * 0x2FD) & 0xFFFF
+    entry_mask = entry_key | entry_key << 16
+    return (
+        struct.pack("<HH", 1, archive_key)
+        + struct.pack("<II", 12 ^ entry_mask, (len(encoded) // 2) ^ entry_mask)
+        + encoded
+    )
 
 
 if __name__ == "__main__":

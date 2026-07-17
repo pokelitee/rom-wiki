@@ -15,6 +15,7 @@ site/
 # Generated wiki datasets are reproducible and remain local during development.
 sites/games/*/wiki/pokemon/
 sites/games/*/wiki/encounters/
+sites/games/*/wiki/trainers/
 
 # User-supplied game images and related emulator data must remain local.
 *.nds
