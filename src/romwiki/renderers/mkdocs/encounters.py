@@ -82,7 +82,8 @@ def _append_locations(lines: list[str], locations: list[dict[str, Any]]) -> None
     lines.extend(["## Map headers", "", "| Header | Location | Internal map |", "| -----: | -------- | ------------ |"])
     for location in locations:
         lines.append(
-            f"| {location['header_id']} | {location['name']} | "
+            f"| [{location['header_id']}](../locations/header-{location['header_id']:03}.md) "
+            f"| {location['name']} | "
             f"`{location['internal_name']}` |"
         )
     lines.append("")

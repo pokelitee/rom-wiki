@@ -16,6 +16,7 @@ site/
 sites/games/*/wiki/pokemon/
 sites/games/*/wiki/encounters/
 sites/games/*/wiki/trainers/
+sites/games/*/wiki/locations/
 
 # User-supplied game images and related emulator data must remain local.
 *.nds

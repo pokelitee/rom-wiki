@@ -24,7 +24,22 @@ class Gen4ObjectEvent:
     y: int
 
 
-def parse_object_events(data: bytes, *, event_file_id: int) -> tuple[Gen4ObjectEvent, ...]:
+@dataclass(frozen=True, slots=True)
+class Gen4WarpEvent:
+    index: int
+    x: int
+    z: int
+    destination_header_id: int
+    destination_warp_id: int
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4MapEvents:
+    objects: tuple[Gen4ObjectEvent, ...]
+    warps: tuple[Gen4WarpEvent, ...]
+
+
+def parse_map_events(data: bytes, *, event_file_id: int) -> Gen4MapEvents:
     position = 0
     background_count, position = _read_count(data, position, event_file_id)
     position = _skip_records(data, position, background_count, 20, event_file_id)
@@ -55,14 +70,43 @@ def parse_object_events(data: bytes, *, event_file_id: int) -> tuple[Gen4ObjectE
 
     position = object_end
     warp_count, position = _read_count(data, position, event_file_id)
-    position = _skip_records(data, position, warp_count, 12, event_file_id)
+    warp_end = _skip_records(data, position, warp_count, 12, event_file_id)
+    warps = []
+    for index in range(warp_count):
+        x, z, destination_header_id, destination_warp_id, unused_1, unused_2 = (
+            struct.unpack_from("<6H", data, position + index * 12)
+        )
+        if unused_1 or unused_2:
+            raise InvalidRomError(
+                f"Event file {event_file_id} warp {index} has nonzero unused data"
+            )
+        warps.append(
+            Gen4WarpEvent(
+                index=index,
+                x=x,
+                z=z,
+                destination_header_id=destination_header_id,
+                destination_warp_id=destination_warp_id,
+            )
+        )
+    position = warp_end
     coordinate_count, position = _read_count(data, position, event_file_id)
     position = _skip_records(data, position, coordinate_count, 16, event_file_id)
     if position != len(data):
         raise InvalidRomError(
             f"Event file {event_file_id} has {len(data) - position} trailing bytes"
         )
-    return tuple(objects)
+    return Gen4MapEvents(objects=tuple(objects), warps=tuple(warps))
+
+
+def parse_object_events(
+    data: bytes, *, event_file_id: int
+) -> tuple[Gen4ObjectEvent, ...]:
+    return parse_map_events(data, event_file_id=event_file_id).objects
+
+
+def parse_warp_events(data: bytes, *, event_file_id: int) -> tuple[Gen4WarpEvent, ...]:
+    return parse_map_events(data, event_file_id=event_file_id).warps
 
 
 def _read_count(data: bytes, position: int, event_file_id: int) -> tuple[int, int]:

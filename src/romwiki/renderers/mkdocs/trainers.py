@@ -121,7 +121,8 @@ def _append_locations(lines: list[str], locations: list[dict[str, Any]]) -> None
     )
     for location in locations:
         lines.append(
-            f"| {location['name']} | {location['header_id']} | "
+            f"| [{location['name']}](../locations/header-{location['header_id']:03}.md) "
+            f"| {location['header_id']} | "
             f"`{location['internal_name']}` | ({location['x']}, {location['z']}) | "
             f"`{location['event_file_id']}:{location['object_index']}` |"
         )
@@ -143,7 +144,8 @@ def _append_script_references(
     )
     for reference in references:
         lines.append(
-            f"| {reference['name']} | {reference['header_id']} | "
+            f"| [{reference['name']}](../locations/header-{reference['header_id']:03}.md) "
+            f"| {reference['header_id']} | "
             f"`{reference['internal_name']}` | "
             f"`{reference['script_file_id']}@0x{reference['command_offset']:X}` | "
             f"{reference['opponent_slot']} |"

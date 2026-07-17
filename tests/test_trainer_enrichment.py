@@ -73,7 +73,11 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("Master Ball", page)
         self.assertIn("Tackle", page)
-        self.assertIn("| Route 202 | 343 | `R202` | (181, 818) | `329:0` |", page)
+        self.assertIn(
+            "| [Route 202](../locations/header-343.md) | 343 | `R202` | "
+            "(181, 818) | `329:0` |",
+            page,
+        )
 
 
 if __name__ == "__main__":

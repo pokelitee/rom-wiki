@@ -13,6 +13,7 @@ INTERNAL_MAP_NAME_SIZE = 16
 @dataclass(frozen=True, slots=True)
 class PlatinumMapHeader:
     header_id: int
+    matrix_id: int
     script_file_id: int
     level_script_id: int
     text_archive_id: int
@@ -52,6 +53,7 @@ def parse_platinum_map_headers(
         headers.append(
             PlatinumMapHeader(
                 header_id=header_id,
+                matrix_id=struct.unpack_from("<H", data, offset + 0x2)[0],
                 script_file_id=struct.unpack_from("<H", data, offset + 0x4)[0],
                 level_script_id=struct.unpack_from("<H", data, offset + 0x6)[0],
                 text_archive_id=struct.unpack_from("<H", data, offset + 0x8)[0],

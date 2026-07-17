@@ -14,6 +14,7 @@ from romwiki.errors import InvalidRomError
 class Gen4MapHeaderTests(unittest.TestCase):
     def test_decodes_header_linkage_and_internal_name(self) -> None:
         data = bytearray(24)
+        struct.pack_into("<H", data, 0x2, 18)
         struct.pack_into("<HHH", data, 0x4, 427, 12, 433)
         struct.pack_into("<H", data, 0xE, 42)
         struct.pack_into("<H", data, 0x10, 328)
@@ -24,6 +25,7 @@ class Gen4MapHeaderTests(unittest.TestCase):
         )
 
         self.assertEqual(headers[0].header_id, 0)
+        self.assertEqual(headers[0].matrix_id, 18)
         self.assertEqual(headers[0].encounter_id, 42)
         self.assertEqual(headers[0].script_file_id, 427)
         self.assertEqual(headers[0].level_script_id, 12)

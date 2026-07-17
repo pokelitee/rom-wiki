@@ -17,6 +17,12 @@ from romwiki.schema.trainers import (
     TrainerPokemon,
     TrainerScriptReference,
 )
+from romwiki.schema.locations import (
+    Gen4Location,
+    LocationConnection,
+    LocationTrainerReference,
+    LocationWarp,
+)
 
 __all__ = [
     "PokemonPersonalData",
@@ -32,4 +38,8 @@ __all__ = [
     "TrainerPokemon",
     "TrainerLocation",
     "TrainerScriptReference",
+    "Gen4Location",
+    "LocationConnection",
+    "LocationTrainerReference",
+    "LocationWarp",
 ]

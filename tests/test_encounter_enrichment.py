@@ -55,7 +55,9 @@ class EncounterEnrichmentTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertIn("# Route 201", page)
-        self.assertIn("| 10 | Route 201 | `W201` |", page)
+        self.assertIn(
+            "| [10](../locations/header-010.md) | Route 201 | `W201` |", page
+        )
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
 
 

@@ -81,6 +81,17 @@ share a name. Dynamically selected facility and rematch trainers, along with unu
 records, remain in a separate unlinked section until their invocation paths can be
 resolved without guessing.
 
+Extract and render map locations and navigation:
+
+```console
+romwiki extract-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki build-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+Location pages combine map headers with exact event warps, outdoor map-matrix
+connections, wild encounter tables, and trainer references. Each map header keeps
+a stable page even when several interiors share the same displayed location name.
+
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.
 

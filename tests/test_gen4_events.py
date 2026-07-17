@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4_dppt import parse_object_events
+from romwiki.engines.gen4_dppt import parse_map_events, parse_object_events
 from romwiki.errors import InvalidRomError
 
 
@@ -40,6 +40,18 @@ class Gen4EventTests(unittest.TestCase):
     def test_rejects_trailing_event_data(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_object_events(struct.pack("<IIII", 0, 0, 0, 0) + b"x", event_file_id=1)
+
+    def test_decodes_warp_destination_and_position(self) -> None:
+        warp = struct.pack("<6H", 4, 9, 27, 2, 0, 0)
+        data = struct.pack("<III", 0, 0, 1) + warp + struct.pack("<I", 0)
+
+        events = parse_map_events(data, event_file_id=12)
+
+        self.assertEqual(events.objects, ())
+        self.assertEqual(len(events.warps), 1)
+        self.assertEqual((events.warps[0].x, events.warps[0].z), (4, 9))
+        self.assertEqual(events.warps[0].destination_header_id, 27)
+        self.assertEqual(events.warps[0].destination_warp_id, 2)
 
 
 if __name__ == "__main__":

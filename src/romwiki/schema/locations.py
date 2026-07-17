@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from typing import Any
+
+
+@dataclass(frozen=True, slots=True)
+class LocationWarp:
+    index: int
+    x: int
+    z: int
+    destination_header_id: int | None
+    destination_warp_id: int | None
+    destination_name: str | None
+    destination_internal_name: str | None
+    destination_warp_exists: bool | None
+    dynamic: bool
+
+
+@dataclass(frozen=True, slots=True)
+class LocationConnection:
+    destination_header_id: int
+    destination_name: str
+    destination_internal_name: str
+    directions: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LocationTrainerReference:
+    trainer_id: int
+    name: str
+    class_name: str
+    source: str
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4Location:
+    header_id: int
+    internal_name: str
+    location_name_id: int
+    name: str
+    matrix_id: int
+    event_file_id: int | None
+    encounter_id: int | None
+    warps: tuple[LocationWarp, ...]
+    connections: tuple[LocationConnection, ...]
+    trainers: tuple[LocationTrainerReference, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

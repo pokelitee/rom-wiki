@@ -17,6 +17,7 @@ trainer_data = "poketool/trainer/trdata.narc"
 trainer_parties = "poketool/trainer/trpoke.narc"
 events = "fielddata/eventdata/zone_event.narc"
 scripts = "fielddata/script/scr_seq.narc"
+map_matrices = "fielddata/mapmatrix/map_matrix.narc"
 
 [parameters]
 map_header_offset = 0xE601C
@@ -29,6 +30,9 @@ null_event_id = 0xFFFF
 trainer_script_start = 3000
 trainer_script_end = 3999
 trainer_script_id_offset = 1
+dynamic_warp_header_id = 0x0FFF
+dynamic_warp_id = 0x0100
+matrix_void_header_ids = [0, 0xFFFF]
 
 [[hashes]]
 algorithm = "md5"

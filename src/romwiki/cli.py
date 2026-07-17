@@ -18,11 +18,13 @@ from romwiki.pipeline.enrich import (
     enrich_trainer_dataset,
     write_enriched_dataset,
 )
+from romwiki.pipeline.locations import extract_location_dataset, write_location_dataset
 from romwiki.pipeline.manifest import create_manifest, write_manifest
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.renderers.mkdocs import (
     render_encounter_pages,
+    render_location_pages,
     render_pokemon_pages,
     render_trainer_pages,
 )
@@ -82,6 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="dataset output path (defaults below build/data/<profile>/trainers)",
     )
 
+    location_parser = subparsers.add_parser(
+        "extract-locations", help="extract normalized map locations and navigation"
+    )
+    _add_input_arguments(location_parser)
+    location_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/locations)",
+    )
+
     pokemon_parser = subparsers.add_parser(
         "build-pokemon", help="extract, enrich, and render Pokemon pages"
     )
@@ -121,6 +133,13 @@ def build_parser() -> argparse.ArgumentParser:
     build_trainers_parser.add_argument("--data-output", type=Path)
     build_trainers_parser.add_argument("--wiki-output", type=Path)
 
+    build_locations_parser = subparsers.add_parser(
+        "build-locations", help="extract and render location navigation pages"
+    )
+    _add_input_arguments(build_locations_parser)
+    build_locations_parser.add_argument("--data-output", type=Path)
+    build_locations_parser.add_argument("--wiki-output", type=Path)
+
     site_parser = subparsers.add_parser(
         "site", help="list or build independently configured wiki sites"
     )
@@ -151,9 +170,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             "extract-personal",
             "extract-encounters",
             "extract-trainers",
+            "extract-locations",
             "build-pokemon",
             "build-encounters",
             "build-trainers",
+            "build-locations",
         }:
             result = inspect_rom(args.rom, args.profiles_dir)
         if args.command == "inspect":
@@ -185,6 +206,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_trainer_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} trainer records: {output}")
+        elif args.command == "extract-locations":
+            dataset = extract_location_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "locations" / "raw.json"
+            )
+            write_location_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} location records: {output}")
         elif args.command == "build-pokemon":
             personal = extract_personal_dataset(result)
             enriched = enrich_personal_dataset(
@@ -236,6 +264,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             page_count = render_trainer_pages(enriched, wiki_output)
             print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
             print(f"Rendered {page_count} trainer pages: {wiki_output}")
+        elif args.command == "build-locations":
+            dataset = extract_location_dataset(result)
+            data_output = args.data_output or (
+                Path("build/data") / dataset["game"] / "locations" / "raw.json"
+            )
+            wiki_output = args.wiki_output or (
+                Path("sites/games") / dataset["game"] / "wiki" / "locations"
+            )
+            write_location_dataset(dataset, data_output)
+            page_count = render_location_pages(dataset, wiki_output)
+            print(f"Wrote {dataset['record_count']} location records: {data_output}")
+            print(f"Rendered {page_count} location pages: {wiki_output}")
         elif args.command == "site":
             catalog = SiteCatalog.load(args.root)
             if args.site_command == "list":
