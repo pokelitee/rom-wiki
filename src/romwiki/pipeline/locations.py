@@ -15,15 +15,22 @@ from romwiki.engines.gen4_dppt import (
     parse_map_matrix,
     parse_map_events,
     parse_common_mart_inventory,
+    parse_decoration_price_table,
+    parse_frontier_price_table,
     parse_item_price,
     parse_mart_commands,
+    parse_seal_price_table,
     parse_platinum_map_headers,
     parse_specialty_mart_inventories,
 )
 from romwiki.errors import InvalidRomError, ProfileError
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.trainers import extract_trainer_dataset
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
+from romwiki.platforms.nds import (
+    NarcArchive,
+    NintendoDSFileSystem,
+    read_arm9_overlay,
+)
 from romwiki.schema import (
     Gen4Location,
     LocationConnection,
@@ -56,6 +63,9 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
         item_names_member = profile.parameters["item_names_member"]
+        decoration_names_member = profile.parameters["decoration_names_member"]
+        decoration_name_count = profile.parameters["decoration_name_count"]
+        seal_names_member = profile.parameters["seal_names_member"]
         null_event_id = profile.parameters["null_event_id"]
         null_encounter_id = profile.parameters["null_encounter_id"]
         dynamic_warp_header_id = profile.parameters["dynamic_warp_header_id"]
@@ -71,6 +81,28 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         ]
         specialty_mart_inventory_count = profile.parameters[
             "specialty_mart_inventory_count"
+        ]
+        decoration_mart_inventory_start = profile.parameters[
+            "decoration_mart_inventory_start"
+        ]
+        decoration_mart_inventory_count = profile.parameters[
+            "decoration_mart_inventory_count"
+        ]
+        decoration_price_table_offset = profile.parameters[
+            "decoration_price_table_offset"
+        ]
+        seal_mart_inventory_start = profile.parameters["seal_mart_inventory_start"]
+        seal_mart_inventory_count = profile.parameters["seal_mart_inventory_count"]
+        seal_price_table_offset = profile.parameters["seal_price_table_offset"]
+        frontier_mart_inventory_count = profile.parameters[
+            "frontier_mart_inventory_count"
+        ]
+        frontier_price_overlay_id = profile.parameters["frontier_price_overlay_id"]
+        frontier_price_table_offset = profile.parameters[
+            "frontier_price_table_offset"
+        ]
+        frontier_price_record_count = profile.parameters[
+            "frontier_price_record_count"
         ]
         arm9_load_address = profile.parameters["arm9_load_address"]
     except KeyError as error:
@@ -91,6 +123,26 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         messages.read(location_names_member)
     )
     item_names = parse_english_message_archive(messages.read(item_names_member))
+    decoration_names = parse_english_message_archive(
+        messages.read(decoration_names_member), limit=decoration_name_count
+    )
+    seal_names = parse_english_message_archive(messages.read(seal_names_member))
+    decoration_prices = parse_decoration_price_table(
+        arm9_data,
+        offset=decoration_price_table_offset,
+        decoration_count=len(decoration_names),
+    )
+    seal_prices = parse_seal_price_table(
+        arm9_data, offset=seal_price_table_offset, seal_count=len(seal_names)
+    )
+    _, frontier_overlay = read_arm9_overlay(
+        result.image, frontier_price_overlay_id
+    )
+    frontier_prices = parse_frontier_price_table(
+        frontier_overlay,
+        offset=frontier_price_table_offset,
+        record_count=frontier_price_record_count,
+    )
     item_data = NarcArchive.from_bytes(filesystem.read(item_data_path))
     item_prices = tuple(
         parse_item_price(item_data.read(index))
@@ -161,8 +213,18 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 script_file_id=header.script_file_id,
                 common_items=common_mart_items,
                 specialty_inventories=specialty_mart_inventories,
+                decoration_inventory_start=decoration_mart_inventory_start,
+                decoration_inventory_count=decoration_mart_inventory_count,
+                seal_inventory_start=seal_mart_inventory_start,
+                seal_inventory_count=seal_mart_inventory_count,
+                frontier_inventory_count=frontier_mart_inventory_count,
                 item_names=item_names,
                 item_prices=item_prices,
+                decoration_names=decoration_names,
+                seal_names=seal_names,
+                decoration_prices=decoration_prices,
+                seal_prices=seal_prices,
+                frontier_prices=frontier_prices,
             )
         warps = []
         for warp in raw_warps_by_header[header.header_id]:
@@ -279,6 +341,15 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 "archive": messages_path,
                 "member": item_names_member,
             },
+            "decoration_names": {
+                "archive": messages_path,
+                "member": decoration_names_member,
+                "count": decoration_name_count,
+            },
+            "seal_names": {
+                "archive": messages_path,
+                "member": seal_names_member,
+            },
             "shops": {
                 "scripts_archive": scripts_path,
                 "item_data_archive": item_data_path,
@@ -286,6 +357,15 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 "specialty_pointer_table_arm9_offset": (
                     specialty_mart_pointer_table_offset
                 ),
+                "decoration_price_table_arm9_offset": (
+                    decoration_price_table_offset
+                ),
+                "seal_price_table_arm9_offset": seal_price_table_offset,
+                "frontier_price_table": {
+                    "overlay_id": frontier_price_overlay_id,
+                    "offset": frontier_price_table_offset,
+                    "record_count": frontier_price_record_count,
+                },
             },
         },
         "records": records,
@@ -298,30 +378,95 @@ def _extract_location_shops(
     script_file_id: int,
     common_items: tuple[Gen4CommonMartItem, ...],
     specialty_inventories: tuple[tuple[int, ...], ...],
+    decoration_inventory_start: int,
+    decoration_inventory_count: int,
+    seal_inventory_start: int,
+    seal_inventory_count: int,
+    frontier_inventory_count: int,
     item_names: tuple[str, ...],
     item_prices: tuple[int, ...],
+    decoration_names: tuple[str, ...],
+    seal_names: tuple[str, ...],
+    decoration_prices: tuple[int, ...],
+    seal_prices: tuple[int, ...],
+    frontier_prices: dict[int, int],
 ) -> tuple[LocationShop, ...]:
     shops = []
     for command in parse_mart_commands(script):
+        price_by_item: dict[int, int] | None = None
+        currency = "money"
         if command.kind == "common":
             source_items = (
                 (item.item_id, item.required_badges) for item in common_items
             )
+            names = item_names
+            prices: tuple[int, ...] | None = item_prices
         else:
-            if command.inventory_id >= len(specialty_inventories):
+            inventory_index = command.inventory_id
+            names = item_names
+            prices = item_prices
+            if command.kind == "decoration":
+                if command.inventory_id >= decoration_inventory_count:
+                    raise InvalidRomError(
+                        f"Script {script_file_id} references missing decoration mart "
+                        f"{command.inventory_id}"
+                    )
+                inventory_index += decoration_inventory_start
+                names = decoration_names
+                prices = decoration_prices
+            elif command.kind == "seal":
+                if command.inventory_id >= seal_inventory_count:
+                    raise InvalidRomError(
+                        f"Script {script_file_id} references missing seal mart "
+                        f"{command.inventory_id}"
+                    )
+                inventory_index += seal_inventory_start
+                names = seal_names
+                prices = seal_prices
+            elif command.kind == "frontier":
+                if command.inventory_id >= frontier_inventory_count:
+                    raise InvalidRomError(
+                        f"Script {script_file_id} references missing Battle Frontier "
+                        f"mart {command.inventory_id}"
+                    )
+                names = item_names
+                prices = None
+                price_by_item = frontier_prices
+                currency = "bp"
+            if inventory_index >= len(specialty_inventories):
                 raise InvalidRomError(
-                    f"Script {script_file_id} references missing specialty mart "
-                    f"{command.inventory_id}"
+                    f"Script {script_file_id} references missing {command.kind} mart "
+                    f"inventory {inventory_index}"
                 )
             source_items = (
                 (item_id, None)
-                for item_id in specialty_inventories[command.inventory_id]
+                for item_id in specialty_inventories[inventory_index]
             )
+        source_items = tuple(source_items)
+        for item_id, _required_badges in source_items:
+            if not 0 < item_id < len(names):
+                raise InvalidRomError(
+                    f"Script {script_file_id} {command.kind} mart references "
+                    f"missing catalog entry {item_id}"
+                )
+            if price_by_item is not None and item_id not in price_by_item:
+                raise InvalidRomError(
+                    f"Script {script_file_id} Battle Frontier mart item {item_id} "
+                    "has no BP price"
+                )
         items = tuple(
             LocationShopItem(
                 item_id=item_id,
-                name=item_names[item_id],
-                price=(item_prices[item_id] if item_id < len(item_prices) else None),
+                name=names[item_id],
+                price=(
+                    price_by_item[item_id]
+                    if price_by_item is not None
+                    else (
+                        prices[item_id]
+                        if prices is not None and item_id < len(prices)
+                        else None
+                    )
+                ),
                 required_badges=required_badges,
             )
             for item_id, required_badges in source_items
@@ -329,6 +474,7 @@ def _extract_location_shops(
         shops.append(
             LocationShop(
                 kind=command.kind,
+                currency=currency,
                 inventory_id=command.inventory_id,
                 script_file_id=script_file_id,
                 command_offset=command.offset,

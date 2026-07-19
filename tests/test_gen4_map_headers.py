@@ -40,6 +40,11 @@ class Gen4MapHeaderTests(unittest.TestCase):
 
 
 class Gen4MessageTests(unittest.TestCase):
+    def test_can_limit_decoding_to_a_message_prefix(self) -> None:
+        data = _make_message_archive(("Table", "Description"))
+
+        self.assertEqual(parse_english_message_archive(data, limit=1), ("Table",))
+
     def test_decrypts_english_location_names(self) -> None:
         data = _make_message_archive(("Twinleaf Town", "Pokémon League"))
 

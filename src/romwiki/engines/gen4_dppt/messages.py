@@ -35,16 +35,20 @@ _CHARACTERS = {
 }
 
 
-def parse_english_message_archive(data: bytes) -> tuple[str, ...]:
+def parse_english_message_archive(
+    data: bytes, *, limit: int | None = None
+) -> tuple[str, ...]:
     if len(data) < 4:
         raise InvalidRomError("Gen IV message archive is too small")
     message_count, archive_key = struct.unpack_from("<HH", data)
     table_end = 4 + message_count * 8
     if table_end > len(data):
         raise InvalidRomError("Gen IV message archive pointer table is truncated")
+    if limit is not None and not 0 <= limit <= message_count:
+        raise InvalidRomError("Gen IV message archive limit is out of bounds")
 
     messages = []
-    for index in range(message_count):
+    for index in range(message_count if limit is None else limit):
         entry_key = (archive_key * 0x2FD * (index + 1)) & 0xFFFF
         entry_mask = entry_key | entry_key << 16
         offset, length = struct.unpack_from("<II", data, 4 + index * 8)

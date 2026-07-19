@@ -28,6 +28,9 @@ map_header_offset = 0xE601C
 map_header_count = 593
 location_names_member = 433
 item_names_member = 392
+decoration_names_member = 626
+decoration_name_count = 139
+seal_names_member = 12
 null_encounter_id = 0xFFFF
 trainer_names_member = 618
 trainer_classes_member = 619
@@ -55,6 +58,16 @@ special_tutor_minimum_friendship = 255
 common_mart_inventory_offset = 0xEBAFC
 specialty_mart_pointer_table_offset = 0x100AF0
 specialty_mart_inventory_count = 20
+decoration_mart_inventory_start = 2
+decoration_mart_inventory_count = 2
+decoration_price_table_offset = 0xEC5A8
+seal_mart_inventory_start = 4
+seal_mart_inventory_count = 7
+seal_price_table_offset = 0xF64D6
+frontier_mart_inventory_count = 2
+frontier_price_overlay_id = 7
+frontier_price_table_offset = 0x5A98
+frontier_price_record_count = 41
 arm9_load_address = 0x02000000
 
 [[parameters.special_tutors]]

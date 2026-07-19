@@ -61,6 +61,21 @@ class LocationRenderingTests(unittest.TestCase):
                             "required_badges": None,
                         }
                     ],
+                },
+                {
+                    "kind": "frontier",
+                    "currency": "bp",
+                    "inventory_id": 0,
+                    "script_file_id": 51,
+                    "command_offset": 70,
+                    "items": [
+                        {
+                            "item_id": 333,
+                            "name": "TM06",
+                            "price": 32,
+                            "required_badges": None,
+                        }
+                    ],
                 }
             ],
             "warps": [
@@ -98,6 +113,8 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Visible | Potion | 17 | (8, 11) |", page)
         self.assertIn("| Hidden | Moon Stone | 81 | (12, 5) |", page)
         self.assertIn("| Protein | 46 | ₽9,800 | Always |", page)
+        self.assertIn("### Battle Frontier shop", page)
+        self.assertIn("| TM06 | 333 | 32 BP | Always |", page)
         self.assertIn("./header-047.md", page)
         self.assertIn("./header-344.md", page)
 

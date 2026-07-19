@@ -5,6 +5,17 @@ from pathlib import Path
 from typing import Any
 
 
+_SEAL_MART_DAYS = (
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+)
+
+
 def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
@@ -100,8 +111,16 @@ def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
     kind_indices: Counter[str] = Counter()
     for shop in shops:
         kind_indices[shop["kind"]] += 1
-        label = "Common Poké Mart" if shop["kind"] == "common" else "Specialty shop"
-        if kind_counts[shop["kind"]] > 1:
+        label = {
+            "common": "Common Poké Mart",
+            "specialty": "Specialty shop",
+            "decoration": "Decoration shop",
+            "seal": "Seal shop",
+            "frontier": "Battle Frontier shop",
+        }.get(shop["kind"], f"{shop['kind'].title()} shop")
+        if shop["kind"] == "seal" and shop["inventory_id"] < len(_SEAL_MART_DAYS):
+            label += f" — {_SEAL_MART_DAYS[shop['inventory_id']]}"
+        elif kind_counts[shop["kind"]] > 1:
             label += f" {kind_indices[shop['kind']]}"
         lines.extend(
             [
@@ -111,8 +130,14 @@ def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
                 "| ---- | ------: | ----: | --------------- |",
             ]
         )
+        currency = shop.get("currency", "money")
         for item in shop["items"]:
-            price = f"₽{item['price']:,}" if item["price"] is not None else "—"
+            if item["price"] is None:
+                price = "—"
+            elif currency == "money":
+                price = f"₽{item['price']:,}"
+            else:
+                price = f"{item['price']:,} {currency.upper()}"
             badges = item["required_badges"]
             if badges is None:
                 availability = "Always"

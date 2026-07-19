@@ -16,6 +16,12 @@ Common Poké Mart stock and badge requirements come from the shared ARM9
 progression table. Specialty inventories come from the ARM9 inventory pointer
 table selected by each clerk's field-script command. Prices come from Renegade
 Platinum's item-data records.
+Veilstone decoration and Sunyshore weekday seal inventories use distinct field
+commands and catalog-name message banks. Their prices come from the 28-byte goods
+records and 10-byte seal records in ARM9, respectively.
+Battle Frontier inventory IDs come from the dedicated field command used by its
+exchange counters. Exact item costs come from the 41-entry BP price table in ARM9
+overlay 7.
 Egg move lists and their ordering come from the packed species table in ARM9
 overlay 5; each extracted set retains its exact overlay offset.
 TM/HM assignments come from the profile's exact ROM-offset table and are joined

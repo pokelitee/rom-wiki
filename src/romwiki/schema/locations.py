@@ -56,6 +56,7 @@ class LocationShopItem:
 @dataclass(frozen=True, slots=True)
 class LocationShop:
     kind: str
+    currency: str
     inventory_id: int
     script_file_id: int
     command_offset: int
