@@ -3,28 +3,58 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.components import pokemon_summary, stat_list
+
 
 def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
     output_root.mkdir(parents=True, exist_ok=True)
-    index_lines = ["# Pokémon", "", "Extracted Pokémon and form data.", ""]
-    for record in public_records:
+    fallback_links = []
+    catalog_records = []
+    for index, record in enumerate(public_records):
         filename = f"{record['slug']}.md"
-        _write_text(output_root / filename, _render_record(record))
+        previous = public_records[index - 1] if index else None
+        following = public_records[index + 1] if index + 1 < len(public_records) else None
+        _write_text(output_root / filename, _render_record(record, previous, following))
         dex = record["national_dex_id"]
-        index_lines.append(f"- [#{dex:03} {record['name']}]({filename})")
-    _write_text(output_root / "index.md", "\n".join(index_lines) + "\n")
+        fallback_links.append(f"- [#{dex:03} {record['name']}]({filename})")
+        stats = record["base_stats"]
+        abilities = [value["name"] for value in record["abilities"] if value["name"]]
+        types = [value["name"] for value in record["types"]]
+        catalog_records.append(
+            {
+                "id": record.get("member", dex),
+                "dex": dex,
+                "label": record["name"],
+                "slug": record["slug"],
+                "url": f"{record['slug']}/",
+                "types": types,
+                "abilities": abilities,
+                "stats": stats,
+                "bst": sum(stats.values()),
+                "search_text": " ".join((record["name"], *types, *abilities)).lower(),
+            }
+        )
+    write_catalog(output_root, "pokemon", catalog_records)
+    _write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Pokémon",
+            "Extracted Pokémon and form data. Search, filter, and sort the complete roster.",
+            "pokemon",
+            fallback_links,
+        ),
+    )
     return len(public_records)
 
 
-def _render_record(record: dict[str, Any]) -> str:
+def _render_record(
+    record: dict[str, Any],
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
+) -> str:
     stats = record["base_stats"]
-    types = " / ".join(value["name"].title() for value in record["types"])
-    abilities = ", ".join(
-        value["name"].replace("-", " ").title()
-        for value in record["abilities"]
-        if value["name"] is not None
-    )
     held_items = [item for item in record.get("held_items", []) if item["id"]]
     machines = record["machines"]
     tutor_moves = record.get("tutor_moves", [])
@@ -34,13 +64,10 @@ def _render_record(record: dict[str, Any]) -> str:
     lines = [
         f"# {record['name']}",
         "",
-        f"**National Pokédex:** #{record['national_dex_id']:03}",
-        "",
-        f"**Types:** {types}",
-        "",
-        f"**Abilities:** {abilities or 'None'}",
-        "",
+        *pokemon_summary(record),
         "## Base stats",
+        "",
+        *stat_list(stats),
         "",
         "| HP | Attack | Defense | Speed | Sp. Atk | Sp. Def |",
         "| --: | -----: | ------: | ----: | ------: | ------: |",
@@ -186,7 +213,8 @@ def _render_record(record: dict[str, Any]) -> str:
         lines.extend(["None.", ""])
     lines.extend(
         [
-            "---",
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Data provenance</summary>",
             "",
             (
                 "Source: exact ROM record from "
@@ -226,9 +254,33 @@ def _render_record(record: dict[str, Any]) -> str:
                 else []
             ),
             "",
+            "</details>",
+            "",
         ]
     )
+    _append_record_navigation(lines, previous, following)
     return "\n".join(lines)
+
+
+def _append_record_navigation(
+    lines: list[str],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> None:
+    if previous is None and following is None:
+        return
+    lines.extend(['<nav class="rw-record-nav" aria-label="Pokémon navigation">'])
+    if previous is not None:
+        lines.append(
+            f'<a href="../{previous["slug"]}/">&larr; {previous["name"]}</a>'
+        )
+    else:
+        lines.append("<span></span>")
+    if following is not None:
+        lines.append(
+            f'<a href="../{following["slug"]}/">{following["name"]} &rarr;</a>'
+        )
+    lines.extend(["</nav>", ""])
 
 
 def _evolution_condition(entry: dict[str, Any]) -> str:

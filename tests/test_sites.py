@@ -20,6 +20,12 @@ class SiteCatalogTests(unittest.TestCase):
             ["portal", "renegade-platinum"],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
+        game = catalog.get("renegade-platinum").game
+        self.assertIsNotNone(game)
+        assert game is not None
+        self.assertEqual(game.creator, "Drayano")
+        self.assertEqual(game.platform, "nintendo-ds")
+        self.assertEqual(game.theme, "platinum")
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
@@ -45,6 +51,55 @@ class SiteCatalogTests(unittest.TestCase):
 
         with self.assertRaises(SiteError):
             build_sites(catalog, Path("dist"), runner=lambda command: None)
+
+    def test_rejects_invalid_game_appearance_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            portal = root / "sites" / "portal"
+            game = root / "sites" / "games" / "test-game"
+            portal.mkdir(parents=True)
+            game.mkdir(parents=True)
+            (portal / "mkdocs.yml").write_text("site_name: Portal\n", encoding="utf-8")
+            (game / "mkdocs.yml").write_text("site_name: Game\n", encoding="utf-8")
+            (portal / "site.toml").write_text(
+                """
+[site]
+id = "portal"
+name = "Portal"
+kind = "portal"
+slug = ""
+published = true
+order = 0
+mkdocs_config = "mkdocs.yml"
+description = "Portal"
+""".strip(),
+                encoding="utf-8",
+            )
+            (game / "game.toml").write_text(
+                """
+[site]
+id = "test-game"
+name = "Test Game"
+kind = "game"
+slug = "test-game"
+published = true
+order = 1
+mkdocs_config = "mkdocs.yml"
+description = "Test"
+[game]
+profile = "test-game"
+generation = 4
+base_game = "platinum"
+platform = "nintendo-ds"
+creator = "Tester"
+[appearance]
+theme = "Bad Theme"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(SiteError):
+                SiteCatalog.load(root)
 
 
 if __name__ == "__main__":

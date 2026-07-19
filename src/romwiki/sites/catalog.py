@@ -4,13 +4,23 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 import tomllib
-from typing import Literal
+from typing import Any, Literal
 
 from romwiki.errors import SiteError
 
 
 SiteKind = Literal["portal", "game"]
 _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+@dataclass(frozen=True, slots=True)
+class GameMetadata:
+    profile: str
+    generation: int
+    base_game: str
+    platform: str
+    creator: str
+    theme: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +32,8 @@ class SiteDefinition:
     published: bool
     order: int
     config_path: Path
+    description: str
+    game: GameMetadata | None = None
 
     def output_path(self, output_root: Path) -> Path:
         return output_root / self.slug if self.slug else output_root
@@ -83,9 +95,46 @@ def _load_site(path: Path, root: Path) -> SiteDefinition:
             published=data["published"],
             order=data["order"],
             config_path=config_path,
+            description=data.get("description", ""),
+            game=_load_game_metadata(path, root) if kind == "game" else None,
         )
     except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
         raise SiteError(f"Invalid site descriptor {path}: {error}") from error
+
+
+def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
+    try:
+        with path.open("rb") as stream:
+            data = tomllib.load(stream)
+        game = data["game"]
+        appearance = data["appearance"]
+        generation = game["generation"]
+        if not isinstance(generation, int) or generation < 1:
+            raise SiteError(f"Invalid game generation in {path.relative_to(root)}")
+        slug_fields: dict[str, Any] = {
+            "profile": game["profile"],
+            "base_game": game["base_game"],
+            "platform": game["platform"],
+            "theme": appearance["theme"],
+        }
+        for field_name, value in slug_fields.items():
+            if not isinstance(value, str) or not _SLUG_PATTERN.fullmatch(value):
+                raise SiteError(
+                    f"Invalid {field_name} in {path.relative_to(root)}: {value}"
+                )
+        creator = game["creator"]
+        if not isinstance(creator, str) or not creator.strip():
+            raise SiteError(f"Invalid creator in {path.relative_to(root)}")
+        return GameMetadata(
+            profile=slug_fields["profile"],
+            generation=generation,
+            base_game=slug_fields["base_game"],
+            platform=slug_fields["platform"],
+            creator=creator.strip(),
+            theme=slug_fields["theme"],
+        )
+    except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
+        raise SiteError(f"Invalid game metadata {path}: {error}") from error
 
 
 def _validate_catalog(sites: tuple[SiteDefinition, ...]) -> None:
@@ -99,3 +148,5 @@ def _validate_catalog(sites: tuple[SiteDefinition, ...]) -> None:
     slugs = [site.slug for site in sites]
     if len(slugs) != len(set(slugs)):
         raise SiteError("Site slugs must be unique")
+    if any(site.kind == "game" and site.game is None for site in sites):
+        raise SiteError("Every game site must include game metadata")

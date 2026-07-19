@@ -8,6 +8,9 @@ base_game = "platinum"
 game_codes = ["CPUE"]
 rom_versions = [1]
 
+[reference]
+sprite_version = "platinum"
+
 [layout]
 personal = "poketool/personal/pl_personal.narc"
 encounters = "fielddata/encountdata/pl_enc_data.narc"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import tomllib
 
 from romwiki.errors import ProfileError
@@ -43,6 +44,15 @@ def _load_profile(path: Path) -> GameProfile:
             data = tomllib.load(stream)
         profile_data = data["profile"]
         header_data = data["header"]
+        reference_data = data.get("reference", {})
+        if not isinstance(reference_data, dict):
+            raise ProfileError(f"Invalid reference metadata in {path}")
+        sprite_version = reference_data.get("sprite_version")
+        if sprite_version is not None and (
+            not isinstance(sprite_version, str)
+            or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", sprite_version) is None
+        ):
+            raise ProfileError(f"Invalid sprite version in {path}: {sprite_version}")
         hashes = tuple(
             KnownHash(
                 algorithm=item["algorithm"].lower(),
@@ -66,6 +76,7 @@ def _load_profile(path: Path) -> GameProfile:
             game_codes=tuple(header_data["game_codes"]),
             rom_versions=tuple(header_data["rom_versions"]),
             hashes=hashes,
+            sprite_version=sprite_version,
             layout=dict(data.get("layout", {})),
             parameters=dict(data.get("parameters", {})),
         )

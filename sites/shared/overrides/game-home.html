@@ -1,0 +1,31 @@
+{% extends "main.html" %}
+
+{% block content %}
+  <section class="rw-hero rw-hero--game">
+    <p class="rw-eyebrow">Generation {{ romwiki.current.generation }} reference</p>
+    <h1>{{ romwiki.current.name }}</h1>
+    <p class="rw-hero__lead">{{ romwiki.current.description }}</p>
+    <div class="rw-chip-row" aria-label="Game details">
+      <span>{{ romwiki.current.creator }}</span>
+      <span>{{ romwiki.current.platform | replace('-', ' ') | title }}</span>
+      <span>Based on {{ romwiki.current.base_game | replace('-', ' ') | title }}</span>
+    </div>
+  </section>
+  <section aria-labelledby="explore-heading">
+    <div class="rw-section-heading"><div><p class="rw-eyebrow">Browse the data</p><h2 id="explore-heading">Explore</h2></div></div>
+    <div class="rw-section-grid">
+      <a href="pokemon/" class="rw-section-card"><span class="rw-section-card__icon">#</span><h3>PokÃ©mon</h3><p>Stats, abilities, evolutions, machines, tutors, and learnsets.</p></a>
+      <a href="moves/" class="rw-section-card"><span class="rw-section-card__icon">POW</span><h3>Moves</h3><p>Exact battle properties, machines, tutors, and learners.</p></a>
+      <a href="encounters/" class="rw-section-card"><span class="rw-section-card__icon">%</span><h3>Wild encounters</h3><p>Encounter methods, rates, slots, species, and levels.</p></a>
+      <a href="trainers/" class="rw-section-card"><span class="rw-section-card__icon">VS</span><h3>Trainers</h3><p>Trainer parties, held items, moves, and battle locations.</p></a>
+      <a href="locations/" class="rw-section-card"><span class="rw-section-card__icon">MAP</span><h3>Locations</h3><p>Items, shops, encounters, trainers, gifts, trades, and connections.</p></a>
+    </div>
+  </section>
+  <section class="rw-method-card">
+    <div>{{ page.content }}</div>
+    <div class="rw-method-card__actions">
+      <a href="data-sources/">Review data sources</a>
+      <a href="{{ romwiki.portal_url }}methodology/">Read the methodology</a>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,129 @@
+# Architecture
+
+ROM Wiki turns game-specific binary data into normalized records and then renders
+those records as static documentation. The intended flow is:
+
+```text
+locally supplied game image
+        |
+        v
+platform reader -> profile identification -> engine decoder
+        |                                      |
+        +------------------+-------------------+
+                           v
+                 normalized raw datasets
+                           |
+                           v
+              enrichment and name resolution
+                           |
+                           v
+                 renderer -> MkDocs site
+```
+
+The key design rule is that renderers consume normalized data. They must not read
+ROM offsets, archive members, script opcodes, or other engine-specific structures.
+
+## Layers
+
+### Platform readers
+
+`src/romwiki/platforms/` handles game containers without interpreting Pokémon
+mechanics. The current NDS implementation validates an image, reads its header and
+filesystem, opens NARC archives, and reads overlays.
+
+A future GB/GBC, GBA, or 3DS implementation belongs in its own platform package.
+Platform readers should expose bytes and files to an engine decoder while avoiding
+game-specific concepts such as encounters or trainer parties.
+
+### Profiles
+
+`profiles/` identifies supported ROM variants by header metadata and cryptographic
+hash. A profile records the engine family, internal paths, table offsets, counts,
+and narrowly scoped annotations needed for exact extraction.
+
+Profiles describe layout differences; they do not replace parsers. If two hacks
+store the same record in the same format at different paths or offsets, they can
+normally share an engine decoder and use different profiles. If a hack changes the
+record format or script behavior, the engine needs a parser variant or an explicit
+capability for that difference.
+
+### Engine decoders
+
+`src/romwiki/engines/` contains binary and script parsers for an engine family.
+The current `gen4_dppt` package decodes the Generation IV D/P/Pt formats used by
+Renegade Platinum.
+
+Engine decoders should return typed facts, validate bounds and identifiers, and
+avoid page-layout decisions. Exact ROM-derived values take priority over external
+documentation.
+
+### Pipelines and normalized schemas
+
+`src/romwiki/pipeline/` joins decoded records into datasets. The dataclasses under
+`src/romwiki/schema/` define normalized concepts such as Pokémon personal data,
+moves, encounters, trainers, and locations. Datasets carry a `schema_version`, a
+game identifier, record counts, source metadata, and record-level provenance where
+appropriate.
+
+Normalized records use stable semantic fields such as `species_id`, `base_stats`,
+or `held_item_id`; they do not expose where a value happened to live in one ROM.
+Engine-only details needed for auditing belong in provenance fields.
+
+`src/romwiki/sources/` enriches normalized ROM facts with external reference data.
+PokéDB currently supplies stable names, slugs, links, and optional sprite URLs. It
+must not override a mechanical value extracted from the game. A profile's
+`reference.sprite_version` selects the matching version sprite; enrichment reduces
+PokéDB's nested sprite data to one optional URL and attribution record.
+
+### Renderers and sites
+
+`src/romwiki/renderers/` turns normalized datasets into documentation. The MkDocs
+renderer has no responsibility for identifying or parsing a ROM.
+
+`sites/games/<slug>/` contains one independently configurable game wiki. The site
+catalog builds those wikis and the portal into one GitHub Pages artifact while
+preserving stable per-game URLs.
+
+All sites inherit their Material configuration and design system from
+`sites/shared/`. A repository-local MkDocs hook loads the site catalog and exposes
+the current site plus every published game to the shared templates. The portal and
+game selector are therefore generated from site descriptors rather than a second
+maintained game list.
+
+Section renderers emit both Markdown and a compact, versioned `catalog.json`.
+Shared JavaScript progressively renders searchable and filterable catalog tables;
+the Markdown index retains a complete static fallback. Catalog JSON is a
+presentation index and does not replace the normalized datasets.
+
+## Reuse boundaries
+
+There are three common extension cases:
+
+1. **Another hack with the same engine and unchanged formats:** usually a profile,
+   site configuration, validation fixtures, and any necessary explicit annotations.
+2. **Another game in a partially supported engine family:** reuse the platform and
+   common parsers, then add format variants and pipeline capabilities where the base
+   game differs.
+3. **Another platform or generation:** add a platform reader when necessary, a new
+   engine decoder, and a pipeline adapter that emits the existing normalized
+   contracts. Existing renderers can then be reused for compatible concepts.
+
+A new engine should not be forced into Generation IV assumptions. If a game has a
+real concept that the schemas cannot represent, extend the normalized schema with
+an optional or versioned field and update renderers to degrade gracefully for games
+that do not provide it.
+
+## Current limitations
+
+The architecture is not yet a plug-in registry. `GameProfile` and ROM inspection
+currently depend on the NDS image type, and the extraction commands call the
+`gen4_dppt` pipelines directly. Before adding the first non-NDS engine, these entry
+points should be generalized behind platform and engine adapter interfaces.
+
+Likewise, normalized schemas are implemented as Python dataclasses and serialized
+JSON, but formal cross-engine compatibility fixtures are still needed. The first
+new engine should add contract tests proving that its output can be consumed by the
+existing enrichment and rendering layers without game-specific branches there.
+
+These are known extension tasks, not reasons to combine extraction and rendering.
+The existing boundary remains the intended long-term design.

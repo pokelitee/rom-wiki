@@ -88,6 +88,29 @@ class PokeDBGeneration:
         except KeyError as error:
             raise DataSourceError(f"PokéDB move ID does not exist: {move_id}") from error
 
+    def pokemon_sprite(
+        self, reference: dict[str, Any], version: str | None
+    ) -> dict[str, str] | None:
+        sprites = reference.get("sprites")
+        if not isinstance(sprites, dict):
+            return None
+        url = None
+        if version:
+            versions = sprites.get("versions")
+            if isinstance(versions, dict):
+                version_sprites = versions.get(version)
+                if isinstance(version_sprites, dict):
+                    url = version_sprites.get("front_default")
+        if not url:
+            url = sprites.get("front_default")
+        if not isinstance(url, str) or not url.startswith("https://"):
+            return None
+        return {
+            "url": url,
+            "source": "PokéAPI sprites",
+            "source_url": "https://github.com/PokeAPI/sprites",
+        }
+
 
 def _load_objects(directory: Path) -> list[dict[str, Any]]:
     if not directory.is_dir():

@@ -22,6 +22,7 @@ class GameProfile:
     game_codes: tuple[str, ...]
     rom_versions: tuple[int, ...]
     hashes: tuple[KnownHash, ...]
+    sprite_version: str | None = None
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, int] = field(default_factory=dict)
 

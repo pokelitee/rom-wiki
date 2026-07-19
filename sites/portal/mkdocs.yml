@@ -1,12 +1,13 @@
+INHERIT: ../shared/mkdocs.base.yml
+
 site_name: ROM Wiki
 site_description: Data-driven wikis for Pokemon ROM hacks
 docs_dir: wiki
+hooks:
+  - ../../src/romwiki/sites/mkdocs_hooks.py
 
 theme:
-  name: material
-  features:
-    - navigation.sections
-    - navigation.top
+  custom_dir: ../shared/overrides
 
 nav:
   - Home: index.md

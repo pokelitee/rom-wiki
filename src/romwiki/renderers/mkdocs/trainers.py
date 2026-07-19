@@ -1,18 +1,17 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
+
+from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
 
 
 def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
     records = [record for record in dataset["records"] if record["party"]]
     output_root.mkdir(parents=True, exist_ok=True)
-    index = [
-        "# Trainers",
-        "",
-        "Trainer parties and battle settings extracted directly from the ROM.",
-        "",
-    ]
+    fallback_links = []
+    catalog_records = []
     linked = [
         record
         for record in records
@@ -23,7 +22,6 @@ def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
         for record in records
         if not record["locations"] and not record.get("script_references", [])
     ]
-    index.extend(["## Located trainers", ""])
     for record in sorted(
         linked,
         key=lambda item: (
@@ -42,25 +40,59 @@ def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 + record.get("script_references", [])
             )
         )
-        index.append(f"- [{location_names} — {label}](./{filename})")
-    index.extend(
-        [
-            "",
-            "## Unlinked trainer records",
-            "",
-            "These records are not referenced by a direct overworld trainer object. "
-            "They may be selected dynamically by a facility or rematch script, or retained "
-            "as unused data.",
-            "",
-        ]
-    )
+        fallback_links.append(f"- [{location_names} — {label}](./{filename})")
+        catalog_records.append(
+            _catalog_record(record, filename.removesuffix(".md") + "/", location_names, True)
+        )
     for record in unlinked:
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
         _write_text(output_root / filename, _render_trainer(record))
-        index.append(f"- [{label}](./{filename})")
-    _write_text(output_root / "index.md", "\n".join(index) + "\n")
+        fallback_links.append(f"- [{label}](./{filename})")
+        catalog_records.append(
+            _catalog_record(record, filename.removesuffix(".md") + "/", "", False)
+        )
+    write_catalog(output_root, "trainers", catalog_records)
+    _write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Trainers",
+            "Trainer parties and battle settings extracted directly from the ROM.",
+            "trainers",
+            fallback_links,
+        ),
+    )
     return len(records)
+
+
+def _catalog_record(
+    record: dict[str, Any], filename: str, location_label: str, linked: bool
+) -> dict[str, Any]:
+    levels = [member["level"] for member in record["party"]]
+    location_names = list(
+        dict.fromkeys(
+            location["name"]
+            for location in record["locations"] + record.get("script_references", [])
+        )
+    )
+    species = [member["pokemon"]["name"] for member in record["party"]]
+    label = _trainer_label(record)
+    return {
+        "id": record["trainer_id"],
+        "label": label,
+        "url": filename,
+        "class_name": record["class_name"],
+        "name": record["name"],
+        "locations": location_names,
+        "location_label": location_label,
+        "linked": linked,
+        "double_battle": record["double_battle"],
+        "party_size": len(record["party"]),
+        "min_level": min(levels),
+        "max_level": max(levels),
+        "pokemon": species,
+        "search_text": " ".join((label, *location_names, *species)).lower(),
+    }
 
 
 def _render_trainer(record: dict[str, Any]) -> str:
@@ -70,31 +102,12 @@ def _render_trainer(record: dict[str, Any]) -> str:
         lines.extend(["Battle type: Double battle", ""])
     _append_locations(lines, record["locations"])
     _append_script_references(lines, record.get("script_references", []))
-    lines.extend(
-        [
-            "## Party",
-            "",
-            "| Slot | Pokémon | Level | Held item | Moves |",
-            "| ---: | ------- | ----: | --------- | ----- |",
-        ]
-    )
-    for index, member in enumerate(record["party"], start=1):
-        pokemon = member["pokemon"]
-        link = f"[{pokemon['name']}](../pokemon/{pokemon['slug']}.md)"
-        held_item = member["held_item"]
-        item_name = (
-            _display_name(held_item["name"])
-            if held_item and held_item["name"]
-            else "—"
-        )
-        moves = ", ".join(_display_name(move["name"]) for move in member["moves"]) or "—"
-        lines.append(
-            f"| {index} | {link} | {member['level']} | {item_name} | {moves} |"
-        )
+    lines.extend(["## Party", "", *_party_cards(record["party"])])
     lines.extend(
         [
             "",
-            "---",
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Data provenance</summary>",
             "",
             (
                 f"Source: exact ROM trainer record from `{record['provenance']['archive']}` "
@@ -103,9 +116,46 @@ def _render_trainer(record: dict[str, Any]) -> str:
                 f"`{record['party_provenance']['member']}`."
             ),
             "",
+            "</details>",
+            "",
         ]
     )
     return "\n".join(lines)
+
+
+def _party_cards(party: list[dict[str, Any]]) -> list[str]:
+    lines = ['<div class="rw-party-grid">']
+    for index, member in enumerate(party, start=1):
+        pokemon = member["pokemon"]
+        held_item = member["held_item"]
+        item_name = (
+            _display_name(held_item["name"])
+            if held_item and held_item["name"]
+            else "—"
+        )
+        lines.extend(
+            [
+                '<article class="rw-party-card">',
+                f'<span class="rw-party-card__slot">Slot {index}</span>',
+                f'<h3><a href="../../pokemon/{escape(pokemon["slug"], quote=True)}/">{escape(pokemon["name"])}</a></h3>',
+                '<dl class="rw-summary__facts">',
+                f"<div><dt>Level</dt><dd>{member['level']}</dd></div>",
+                f"<div><dt>Held item</dt><dd>{escape(item_name)}</dd></div>",
+                "</dl>",
+                '<ul class="rw-party-card__moves" aria-label="Moves">',
+            ]
+        )
+        if member["moves"]:
+            for move in member["moves"]:
+                slug = move["name"]
+                lines.append(
+                    f'<li><a href="../../moves/{escape(slug, quote=True)}/">{escape(_display_name(slug))}</a></li>'
+                )
+        else:
+            lines.append("<li>Default moves</li>")
+        lines.extend(["</ul>", "</article>"])
+    lines.extend(["</div>", ""])
+    return lines
 
 
 def _append_locations(lines: list[str], locations: list[dict[str, Any]]) -> None:

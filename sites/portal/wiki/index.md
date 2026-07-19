@@ -1,8 +1,7 @@
-# ROM Wiki
+---
+template: portal.html
+title: ROM Wiki
+---
 
-ROM Wiki publishes data-driven references for Pokemon ROM hacks. Each game has an
-independent wiki with its own navigation and search index.
-
-## Games
-
-- [Renegade Platinum](renegade-platinum/)
+Every wiki is generated from normalized game data and keeps exact ROM facts
+separate from external reference metadata.

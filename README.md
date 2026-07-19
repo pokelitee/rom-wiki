@@ -12,10 +12,23 @@ The project separates four concerns:
 
 ## Current status
 
-The current extraction slices identify Nintendo DS images, enumerate their
-filesystem safely, read NARC archives, and decode normalized Gen IV Pokémon
-personal data, move mechanics, wild encounters, map-linked location names, and
-trainer parties with record-level provenance.
+Renegade Platinum is the first complete baseline implementation. It identifies
+Nintendo DS images, reads their filesystem and NARC archives, and generates
+normalized datasets and wiki pages for Pokémon, moves, wild encounters,
+trainers, and locations. The location dataset also includes items, shops,
+warps, connections, gifts, static encounters, roaming activation audits, and
+in-game trades. Extracted records retain ROM provenance where practical.
+
+The project is designed to support additional games without coupling the wiki
+renderer to a particular ROM format. The normalized data contracts and MkDocs
+renderers are reusable, but extraction dispatch currently targets the
+Nintendo DS `gen4_dppt` engine directly. Supporting a different platform or
+generation therefore requires a new platform reader and/or engine adapter; it
+is not only a profile change.
+
+See [Architecture](docs/development/architecture.md) for the data flow and
+current extension boundaries, and [Adding a game](docs/development/adding-a-game.md)
+for the implementation checklist.
 
 ## Development setup
 
@@ -143,8 +156,8 @@ romwiki build-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
 Location pages combine map headers with exact visible and hidden item pickups;
 common, specialty, decoration, weekday seal-shop, and Battle Frontier BP
 inventories and prices; event warps; outdoor map-matrix connections; wild
-encounter tables; literal Pokémon and egg gifts; scripted static encounters; and
-trainer references. Each map
+encounter tables; literal Pokémon and egg gifts; in-game trades; scripted static
+encounters; roaming activation audits; and trainer references. Each map
 header keeps a stable page even when several interiors share the same displayed
 location name.
 
@@ -191,6 +204,20 @@ romwiki site build renegade-platinum --output dist
 romwiki site build --all --output dist
 ```
 
+Preview an individual site with live reload:
+
+```console
+python -m mkdocs serve --config-file sites/games/renegade-platinum/mkdocs.yml
+```
+
+The portal can be previewed by using `sites/portal/mkdocs.yml` instead. Each site
+inherits the shared responsive theme, light and dark palettes, catalog interface,
+and game selector from `sites/shared/`.
+
+Large generated sections expose progressively rendered catalogs with search,
+filters, sorting, and bookmarkable query parameters. A complete static link list
+remains available when JavaScript is disabled or a catalog cannot be loaded.
+
 The GitHub Pages workflow builds only committed structured data and maintained wiki
 content. It never requires or downloads a game image.
 
@@ -199,6 +226,11 @@ content. It never requires or downloads a game image.
 PokéDB will be consumed as an external reference dataset rather than imported
 through its internal implementation. The planned default local path is
 `../pokedb/.output/gen4`, with a configurable remote data-branch fallback for CI.
+
+Pokémon pages may also reference the generation-specific sprite URL selected from
+PokéDB. Sprites are loaded lazily from the upstream PokéAPI sprites repository;
+ROM Wiki does not download, cache, or publish copies of those image files. Missing
+or unreachable images degrade to a text placeholder.
 
 ## Legal notice
 

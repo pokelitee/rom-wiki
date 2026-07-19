@@ -4,6 +4,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+
 
 _SEAL_MART_DAYS = (
     "Sunday",
@@ -20,13 +22,8 @@ def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     name_counts = Counter(record["name"] for record in records)
-    index = [
-        "# Locations",
-        "",
-        "Map headers, item pickups, shops, trades, warps, outdoor connections, "
-        "encounters, and trainers extracted from the ROM.",
-        "",
-    ]
+    fallback_links = []
+    catalog_records = []
     for record in sorted(
         records,
         key=lambda item: (
@@ -43,8 +40,42 @@ def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 f"{label} — {record['internal_name']} "
                 f"(header {record['header_id']})"
             )
-        index.append(f"- [{label}](./{filename})")
-    _write_text(output_root / "index.md", "\n".join(index) + "\n")
+        fallback_links.append(f"- [{label}](./{filename})")
+        features = [
+            feature
+            for feature, active in (
+                ("encounters", record["encounter_id"] is not None),
+                ("items", bool(record.get("items"))),
+                ("shops", bool(record.get("shops"))),
+                ("gifts", bool(record.get("pokemon_gifts"))),
+                ("trades", bool(record.get("npc_trades"))),
+                ("static encounters", bool(record.get("static_encounters"))),
+                ("trainers", bool(record.get("trainers"))),
+                ("warps", bool(record.get("warps"))),
+                ("connections", bool(record.get("connections"))),
+            )
+            if active
+        ]
+        catalog_records.append(
+            {
+                "id": record["header_id"],
+                "label": record["name"],
+                "url": filename.removesuffix(".md") + "/",
+                "internal_name": record["internal_name"],
+                "features": features,
+                "search_text": f"{record['name']} {record['internal_name']}".lower(),
+            }
+        )
+    write_catalog(output_root, "locations", catalog_records)
+    _write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Locations",
+            "Map headers, items, shops, trades, connections, encounters, and trainers extracted from the ROM.",
+            "locations",
+            fallback_links,
+        ),
+    )
     return len(records)
 
 
@@ -52,10 +83,7 @@ def _render_location(record: dict[str, Any]) -> str:
     lines = [
         f"# {record['name']}",
         "",
-        f"Internal map: `{record['internal_name']}`  ",
-        f"Header ID: `{record['header_id']}`  ",
-        f"Matrix ID: `{record['matrix_id']}`",
-        "",
+        *_location_summary(record),
     ]
     if record["encounter_id"] is not None:
         lines.extend(
@@ -77,14 +105,36 @@ def _render_location(record: dict[str, Any]) -> str:
     _append_connections(lines, record["connections"])
     lines.extend(
         [
-            "---",
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Map identifiers and provenance</summary>",
+            "",
+            f"- Internal map: `{record['internal_name']}`",
+            f"- Header ID: `{record['header_id']}`",
+            f"- Matrix ID: `{record['matrix_id']}`",
             "",
             "Source: exact map header, event, script, item-data, and map-matrix "
             "records from the ROM.",
             "",
+            "</details>",
+            "",
         ]
     )
     return "\n".join(lines)
+
+
+def _location_summary(record: dict[str, Any]) -> list[str]:
+    facts = (
+        ("Items", len(record.get("items", []))),
+        ("Shops", len(record.get("shops", []))),
+        ("Trainers", len(record.get("trainers", []))),
+        ("Warps", len(record.get("warps", []))),
+        ("Connections", len(record.get("connections", []))),
+    )
+    lines = ['<section class="rw-location-summary">', '<dl class="rw-summary__facts">']
+    for label, value in facts:
+        lines.append(f"<div><dt>{label}</dt><dd>{value}</dd></div>")
+    lines.extend(["</dl>", "</section>", ""])
+    return lines
 
 
 def _append_items(lines: list[str], items: list[dict[str, Any]]) -> None:

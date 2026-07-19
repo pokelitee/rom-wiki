@@ -4,21 +4,17 @@ from pathlib import Path
 from typing import Any
 from collections import Counter
 
+from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+
 
 def render_encounter_pages(dataset: dict[str, Any], output_root: Path) -> int:
     records = [record for record in dataset["records"] if record["active"]]
     output_root.mkdir(parents=True, exist_ok=True)
-    index = [
-        "# Wild encounters",
-        "",
-        "Encounter tables extracted from the ROM and linked to their in-game "
-        "locations through Platinum's map headers.",
-        "",
-    ]
+    fallback_links = []
+    catalog_records = []
     linked = [record for record in records if record.get("locations")]
     unlinked = [record for record in records if not record.get("locations")]
     name_counts = Counter(record["name"] for record in linked)
-    index.extend(["## Locations", ""])
     for record in sorted(linked, key=lambda item: (item["name"], item["area_id"])):
         filename = f"area-{record['area_id']:03}.md"
         _write_text(output_root / filename, _render_area(record))
@@ -28,25 +24,69 @@ def render_encounter_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 dict.fromkeys(location["internal_name"] for location in record["locations"])
             )
             label = f"{label} — {internal_names}"
-        index.append(f"- [{label}]({filename})")
-    if unlinked:
-        index.extend(
-            [
-                "",
-                "## Unreferenced encounter records",
-                "",
-                "These populated archive members are not referenced by a static map "
-                "header. They may be unused data or selected by game logic that has "
-                "not yet been linked.",
-                "",
-            ]
+        fallback_links.append(f"- [{label}]({filename})")
+        catalog_records.append(
+            _catalog_record(record, filename.removesuffix(".md") + "/", True)
         )
+    if unlinked:
         for record in unlinked:
             filename = f"area-{record['area_id']:03}.md"
             _write_text(output_root / filename, _render_area(record))
-            index.append(f"- [{record['name']}]({filename})")
-    _write_text(output_root / "index.md", "\n".join(index) + "\n")
+            fallback_links.append(f"- [{record['name']}]({filename})")
+            catalog_records.append(
+                _catalog_record(record, filename.removesuffix(".md") + "/", False)
+            )
+    write_catalog(output_root, "encounters", catalog_records)
+    _write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Wild encounters",
+            "Exact encounter tables linked to their in-game map headers.",
+            "encounters",
+            fallback_links,
+        ),
+    )
     return len(records)
+
+
+def _catalog_record(
+    record: dict[str, Any], filename: str, referenced: bool
+) -> dict[str, Any]:
+    methods = []
+    levels = []
+    species = []
+    for label, key in (
+        ("walking", "walking"),
+        ("surf", "surf"),
+        ("old rod", "old_rod"),
+        ("good rod", "good_rod"),
+        ("super rod", "super_rod"),
+    ):
+        method = record[key]
+        if not method["rate"]:
+            continue
+        methods.append(label)
+        for slot in method["slots"]:
+            pokemon = slot.get("pokemon")
+            if pokemon:
+                species.append(pokemon["name"])
+            if "level" in slot:
+                levels.append(slot["level"])
+            else:
+                levels.extend((slot["minimum_level"], slot["maximum_level"]))
+    location_names = [location["name"] for location in record.get("locations", [])]
+    return {
+        "id": record["area_id"],
+        "label": record["name"],
+        "url": filename,
+        "locations": list(dict.fromkeys(location_names)),
+        "methods": methods,
+        "pokemon": list(dict.fromkeys(species)),
+        "min_level": min(levels) if levels else None,
+        "max_level": max(levels) if levels else None,
+        "referenced": referenced,
+        "search_text": " ".join((record["name"], *location_names, *species)).lower(),
+    }
 
 
 def _render_area(record: dict[str, Any]) -> str:
@@ -63,13 +103,16 @@ def _render_area(record: dict[str, Any]) -> str:
     _append_special(lines, record["special"])
     lines.extend(
         [
-            "---",
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Data provenance</summary>",
             "",
             (
                 "Source: exact ROM record from "
                 f"`{record['provenance']['archive']}` member "
                 f"`{record['provenance']['member']}`."
             ),
+            "",
+            "</details>",
             "",
         ]
     )

@@ -6,3 +6,4 @@ slug = ""
 published = true
 order = 0
 mkdocs_config = "mkdocs.yml"
+description = "Data-driven references for Pokemon ROM hacks"

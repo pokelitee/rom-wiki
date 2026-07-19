@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -61,6 +62,7 @@ class MoveEnrichmentTests(unittest.TestCase):
             count = render_move_pages({"records": [record]}, output)
             page = (output / "thunderbolt.md").read_text(encoding="utf-8")
             index = (output / "index.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
         self.assertIn("# Thunderbolt", page)
@@ -72,6 +74,8 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertIn("## Egg move learners", page)
         self.assertIn("[Pichu](../pokemon/pichu.md)", page)
         self.assertIn("[Thunderbolt](thunderbolt.md)", index)
+        self.assertEqual(catalog["kind"], "moves")
+        self.assertEqual(catalog["records"][0]["url"], "thunderbolt/")
 
 
 def _source_record(move_id: int) -> dict:

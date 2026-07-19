@@ -69,6 +69,8 @@ def enrich_personal_dataset(
     machine_dataset: dict[str, Any] | None = None,
     tutor_dataset: dict[str, Any] | None = None,
     egg_move_dataset: dict[str, Any] | None = None,
+    *,
+    sprite_version: str | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 508:
@@ -98,6 +100,7 @@ def enrich_personal_dataset(
                 tutor_ids_by_member.get(expected_member, []),
                 tutor_locations,
                 egg_moves.get(expected_member),
+                sprite_version,
             )
         )
     enriched = {
@@ -430,11 +433,13 @@ def _enrich_record(
     tutor_ids: list[int],
     tutor_locations: list[str],
     egg_move_set: dict[str, Any] | None,
+    sprite_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
     if member in PERSONAL_INTERNAL_MEMBERS:
         slug = PERSONAL_INTERNAL_MEMBERS[member]
         identity = {"national_dex_id": None, "base_species": None, "form": None}
+        sprite = None
         public = False
     elif member in PERSONAL_FORM_MEMBERS:
         slug = PERSONAL_FORM_MEMBERS[member]
@@ -445,6 +450,7 @@ def _enrich_record(
             "base_species": base_species,
             "form": slug.removeprefix(f"{base_species}-"),
         }
+        sprite = pokedb.pokemon_sprite(reference, sprite_version)
         public = True
     else:
         reference = pokedb.pokemon_for_id(member)
@@ -454,6 +460,7 @@ def _enrich_record(
             "base_species": reference["species"],
             "form": None,
         }
+        sprite = pokedb.pokemon_sprite(reference, sprite_version)
         public = True
 
     return {
@@ -462,6 +469,7 @@ def _enrich_record(
         "name": _display_name(slug),
         "public": public,
         **identity,
+        "sprite": sprite,
         "base_stats": source["base_stats"],
         "types": [_named_id(value, TYPE_NAMES, "type") for value in source["type_ids"]],
         "catch_rate": source["catch_rate"],

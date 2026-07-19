@@ -1,6 +1,7 @@
-# Renegade Platinum
+---
+template: game-home.html
+title: Renegade Platinum
+---
 
-This wiki is generated from normalized Renegade Platinum game data. It currently
-includes Pokémon stats, moves, wild encounters, trainers, and map locations.
-
-[Return to ROM Wiki](../)
+The current baseline covers PokÃ©mon, moves, wild encounters, trainers, and
+locations, including their linked items, shops, gifts, trades, and connections.

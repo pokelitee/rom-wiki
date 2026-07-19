@@ -383,6 +383,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 machines,
                 tutors,
                 egg_moves,
+                sprite_version=(
+                    result.match.profile.sprite_version if result.match else None
+                ),
             )
             data_output = args.data_output or (
                 Path("build/data")

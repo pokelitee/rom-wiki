@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -128,6 +129,7 @@ class LocationRenderingTests(unittest.TestCase):
 
             count = render_location_pages(dataset, output)
             page = (output / "header-045.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
         self.assertIn("../encounters/area-003.md", page)
@@ -141,6 +143,8 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Rotom | 20 |", page)
         self.assertIn("./header-047.md", page)
         self.assertIn("./header-344.md", page)
+        self.assertEqual(catalog["kind"], "locations")
+        self.assertIn("shops", catalog["records"][0]["features"])
 
 
 if __name__ == "__main__":

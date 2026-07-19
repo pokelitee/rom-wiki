@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from romwiki.errors import ProfileError
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
 from romwiki.profiles.loader import ProfileRepository
@@ -45,7 +46,32 @@ variant = "test"
         self.assertEqual(match.profile.id, "test")
         self.assertEqual(match.known_hash.variant, "test")
 
+    def test_rejects_invalid_sprite_version(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "test.toml"
+            profile_path.write_text(
+                """
+[profile]
+id = "test"
+name = "Test Profile"
+engine = "gen4_dppt"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [1]
+[reference]
+sprite_version = "Platinum Version"
+[[hashes]]
+algorithm = "sha256"
+value = "abcd"
+variant = "test"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "Invalid sprite version"):
+                ProfileRepository.load(Path(directory))
+
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -52,6 +53,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
             output = Path(directory)
             count = render_encounter_pages(enriched, output)
             page = (output / "area-000.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
         self.assertIn("# Route 201", page)
@@ -59,6 +61,8 @@ class EncounterEnrichmentTests(unittest.TestCase):
             "| [10](../locations/header-010.md) | Route 201 | `W201` |", page
         )
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
+        self.assertEqual(catalog["kind"], "encounters")
+        self.assertEqual(catalog["records"][0]["methods"], ["walking"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <meta name="romwiki-theme" content="{{ romwiki.current.theme if romwiki else 'portal' }}">
+  <link rel="stylesheet" href="{{ 'assets/stylesheets/romwiki.css' | url }}">
+{% endblock %}
+
+{% block announce %}
+  {% if romwiki %}
+    <div class="rw-sitebar" aria-label="Wiki selection">
+      <a class="rw-sitebar__portal" href="{{ romwiki.portal_url }}">ROM Wiki</a>
+      <span class="rw-sitebar__divider" aria-hidden="true">/</span>
+      <label class="rw-game-picker">
+        <span class="rw-visually-hidden">Choose a game</span>
+        <select data-rw-game-picker>
+          {% if romwiki.current.kind == "portal" %}
+            <option value="" selected>Choose a game</option>
+          {% endif %}
+          {% for game in romwiki.games %}
+            <option value="{{ game.url }}"{% if game.id == romwiki.current.id %} selected{% endif %}>{{ game.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="rw-content" data-rw-page>{{ super() }}</div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ 'assets/javascripts/romwiki.js' | url }}"></script>
+{% endblock %}

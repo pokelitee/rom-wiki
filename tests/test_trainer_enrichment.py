@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -67,10 +68,11 @@ class TrainerEnrichmentTests(unittest.TestCase):
             output = Path(directory)
             count = render_trainer_pages(enriched, output)
             page = (output / "trainer-0000.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
         self.assertIn("# Youngster Tristan", page)
-        self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
+        self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn("Master Ball", page)
         self.assertIn("Tackle", page)
         self.assertIn(
@@ -78,6 +80,8 @@ class TrainerEnrichmentTests(unittest.TestCase):
             "(181, 818) | `329:0` |",
             page,
         )
+        self.assertEqual(catalog["kind"], "trainers")
+        self.assertEqual(catalog["records"][0]["min_level"], 5)
 
 
 if __name__ == "__main__":
