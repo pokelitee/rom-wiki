@@ -9,6 +9,7 @@ from romwiki.engines.gen4_dppt import (
     MAP_HEADER_SIZE,
     Gen4CommonMartItem,
     Gen4MapEvents,
+    Gen4NpcTrade,
     Gen4WarpEvent,
     PLATINUM_ROAMING_SLOT_COUNT,
     PlatinumMapHeader,
@@ -21,6 +22,8 @@ from romwiki.engines.gen4_dppt import (
     parse_frontier_price_table,
     parse_item_price,
     parse_mart_commands,
+    parse_npc_trade_commands,
+    parse_npc_trade_record,
     parse_pokemon_gift_commands,
     parse_roaming_activation_commands,
     parse_seal_price_table,
@@ -41,6 +44,7 @@ from romwiki.schema import (
     LocationConnection,
     LocationItem,
     LocationPokemonGift,
+    LocationNpcTrade,
     LocationStaticEncounter,
     LocationShop,
     LocationShopItem,
@@ -53,6 +57,15 @@ _ITEM_BALL_GRAPHICS_ID = 87
 _VISIBLE_ITEM_SCRIPT_BASE = 7000
 _HIDDEN_ITEM_EVENT_TYPE = 2
 _HIDDEN_ITEM_SCRIPT_BASE = 8000
+_TRADE_LANGUAGES = {
+    1: "Japanese",
+    2: "English",
+    3: "French",
+    4: "Italian",
+    5: "German",
+    7: "Spanish",
+    8: "Korean",
+}
 
 
 def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -66,11 +79,13 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         messages_path = profile.layout["messages"]
         scripts_path = profile.layout["scripts"]
         item_data_path = profile.layout["item_data"]
+        npc_trades_path = profile.layout["npc_trades"]
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
         item_names_member = profile.parameters["item_names_member"]
         pokemon_names_member = profile.parameters["pokemon_names_member"]
+        npc_trade_names_member = profile.parameters["npc_trade_names_member"]
         decoration_names_member = profile.parameters["decoration_names_member"]
         decoration_name_count = profile.parameters["decoration_name_count"]
         seal_names_member = profile.parameters["seal_names_member"]
@@ -136,6 +151,9 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     )
     item_names = parse_english_message_archive(messages.read(item_names_member))
     pokemon_names = parse_english_message_archive(messages.read(pokemon_names_member))
+    npc_trade_names = parse_english_message_archive(
+        messages.read(npc_trade_names_member)
+    )
     decoration_names = parse_english_message_archive(
         messages.read(decoration_names_member), limit=decoration_name_count
     )
@@ -161,6 +179,19 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         parse_item_price(item_data.read(index))
         for index in range(len(item_data.members))
     )
+    npc_trades = NarcArchive.from_bytes(filesystem.read(npc_trades_path))
+    if len(npc_trade_names) != len(npc_trades.members) * 2:
+        raise InvalidRomError(
+            "NPC trade name bank must contain one nickname and OT name per trade"
+        )
+    npc_trade_records = tuple(
+        parse_npc_trade_record(
+            npc_trades.read(index),
+            species_count=len(pokemon_names),
+            item_count=len(item_names),
+        )
+        for index in range(len(npc_trades.members))
+    )
     common_mart_items = parse_common_mart_inventory(
         arm9_data, offset=common_mart_inventory_offset, item_count=len(item_names)
     )
@@ -183,6 +214,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     matrices = NarcArchive.from_bytes(filesystem.read(matrices_path))
     shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
     gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
+    npc_trades_by_script: dict[int, tuple[LocationNpcTrade, ...]] = {}
     static_encounters_by_location: dict[
         tuple[int, int], tuple[LocationStaticEncounter, ...]
     ] = {}
@@ -274,6 +306,15 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                     header.script_file_id, []
                 ),
             )
+        if header.script_file_id not in npc_trades_by_script:
+            npc_trades_by_script[header.script_file_id] = _extract_location_npc_trades(
+                scripts.read(header.script_file_id),
+                script_file_id=header.script_file_id,
+                trade_records=npc_trade_records,
+                trade_names=npc_trade_names,
+                pokemon_names=pokemon_names,
+                item_names=item_names,
+            )
         static_encounter_location_key = (
             header.script_file_id,
             header.header_id,
@@ -362,6 +403,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 static_encounters=static_encounters_by_location[
                     static_encounter_location_key
                 ],
+                npc_trades=npc_trades_by_script[header.script_file_id],
             ).to_dict()
         )
     return {
@@ -401,6 +443,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         "pokemon_gift_count": sum(
             len(record["pokemon_gifts"]) for record in records
         ),
+        "npc_trade_count": sum(len(record["npc_trades"]) for record in records),
         "static_encounter_count": sum(
             len(record["static_encounters"]) for record in records
         ),
@@ -426,6 +469,15 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             "pokemon_gifts": {
                 "scripts_archive": scripts_path,
                 "egg_commands": egg_gift_metadata,
+            },
+            "npc_trades": {
+                "archive": npc_trades_path,
+                "scripts_archive": scripts_path,
+                "command": "InitNPCTrade",
+                "names": {
+                    "archive": messages_path,
+                    "member": npc_trade_names_member,
+                },
             },
             "static_encounters": {
                 "scripts_archive": scripts_path,
@@ -668,6 +720,50 @@ def _extract_location_static_encounters(
             )
         )
     return tuple(encounters)
+
+
+def _extract_location_npc_trades(
+    script: bytes,
+    *,
+    script_file_id: int,
+    trade_records: tuple[Gen4NpcTrade, ...],
+    trade_names: tuple[str, ...],
+    pokemon_names: tuple[str, ...],
+    item_names: tuple[str, ...],
+) -> tuple[LocationNpcTrade, ...]:
+    trades = []
+    trade_count = len(trade_records)
+    for command in parse_npc_trade_commands(script, trade_count=trade_count):
+        trade = trade_records[command.trade_id]
+        held_item_id = trade.held_item_id
+        trades.append(
+            LocationNpcTrade(
+                trade_id=command.trade_id,
+                requested_species_id=trade.requested_species_id,
+                requested_species_name=pokemon_names[trade.requested_species_id],
+                offered_species_id=trade.offered_species_id,
+                offered_species_name=pokemon_names[trade.offered_species_id],
+                nickname=trade_names[command.trade_id],
+                ivs=trade.ivs,
+                nature=trade.nature,
+                held_item_id=held_item_id,
+                held_item_name=(
+                    item_names[held_item_id]
+                    if held_item_id is not None
+                    else None
+                ),
+                ot_name=trade_names[trade_count + command.trade_id],
+                ot_id=trade.ot_id,
+                ot_gender="Female" if trade.ot_gender else "Male",
+                language=_TRADE_LANGUAGES.get(
+                    trade.language_id, f"Language {trade.language_id}"
+                ),
+                personality=trade.personality,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+        )
+    return tuple(trades)
 
 
 def _extract_location_items(

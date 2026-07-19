@@ -27,6 +27,12 @@ including their level and held item. Togepi, Riolu, and Manaphy eggs come from
 profile-anchored `GiveEgg` commands because that opcode has no reliable adjacent
 signature for distinguishing commands from operands. Conditional script branches
 can make listed gift outcomes mutually exclusive.
+In-game trades are joined from literal `InitNPCTrade`/`StartNPCTrade` field
+command sequences and the four 80-byte records in
+`fielddata/pokemon_trade/fld_trade.narc`. Each record supplies the requested and
+offered species, fixed IVs, personality-derived nature, held item, OT metadata,
+and language. Nicknames and OT names come from ROM message member 370; the
+received Pokémon inherits the level of the Pokémon traded away.
 Static encounters are decoded from literal `WildBattle`, `LegendaryBattle`,
 `FatefulEncounter`, and `GiratinaOriginBattle` field commands followed by
 Platinum's battle-result check. The latter two preserve the encounter-specific

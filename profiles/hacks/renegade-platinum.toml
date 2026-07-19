@@ -22,6 +22,7 @@ moves = "poketool/waza/pl_waza_tbl.narc"
 learnsets = "poketool/personal/wotbl.narc"
 evolutions = "poketool/personal/evo.narc"
 item_data = "itemtool/itemdata/pl_item_data.narc"
+npc_trades = "fielddata/pokemon_trade/fld_trade.narc"
 
 [parameters]
 map_header_offset = 0xE601C
@@ -29,6 +30,7 @@ map_header_count = 593
 location_names_member = 433
 item_names_member = 392
 pokemon_names_member = 412
+npc_trade_names_member = 370
 decoration_names_member = 626
 decoration_name_count = 139
 seal_names_member = 12

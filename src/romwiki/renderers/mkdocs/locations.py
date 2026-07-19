@@ -23,8 +23,8 @@ def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
     index = [
         "# Locations",
         "",
-        "Map headers, item pickups, shops, warps, outdoor connections, encounters, "
-        "and trainers extracted from the ROM.",
+        "Map headers, item pickups, shops, trades, warps, outdoor connections, "
+        "encounters, and trainers extracted from the ROM.",
         "",
     ]
     for record in sorted(
@@ -70,6 +70,7 @@ def _render_location(record: dict[str, Any]) -> str:
     _append_items(lines, record.get("items", []))
     _append_shops(lines, record.get("shops", []))
     _append_pokemon_gifts(lines, record.get("pokemon_gifts", []))
+    _append_npc_trades(lines, record.get("npc_trades", []))
     _append_static_encounters(lines, record.get("static_encounters", []))
     _append_trainers(lines, record["trainers"])
     _append_warps(lines, record["warps"])
@@ -225,6 +226,40 @@ def _append_static_encounters(
             continue
         rendered_outcomes.add(outcome)
         lines.append(f"| {encounter['name']} | {encounter['level']} |")
+    lines.append("")
+
+
+def _append_npc_trades(
+    lines: list[str], trades: list[dict[str, Any]]
+) -> None:
+    if not trades:
+        return
+    lines.extend(
+        [
+            "## In-game trades",
+            "",
+            "The received Pokémon keeps the level of the Pokémon you trade away.",
+            "",
+            "| Give | Receive | Nickname | Nature | Held item | IVs |",
+            "| ---- | ------- | -------- | ------ | --------- | --- |",
+        ]
+    )
+    stat_names = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
+    for trade in trades:
+        ivs = " / ".join(
+            f"{name} {value}" for name, value in zip(stat_names, trade["ivs"])
+        )
+        held_item = trade["held_item_name"] or "—"
+        lines.append(
+            f"| {trade['requested_species_name']} | "
+            f"{trade['offered_species_name']} | {trade['nickname']} | "
+            f"{trade['nature']} | {held_item} | {ivs} |"
+        )
+        lines.append("")
+        lines.append(
+            f"OT: {trade['ot_name']} (ID {trade['ot_id']:05}), "
+            f"{trade['ot_gender'].lower()}, {trade['language']}."
+        )
     lines.append("")
 
 

@@ -93,6 +93,13 @@ from romwiki.engines.gen4_dppt.tutors import (
     parse_special_tutor_move,
     parse_special_tutor_species,
 )
+from romwiki.engines.gen4_dppt.trades import (
+    NPC_TRADE_RECORD_SIZE,
+    Gen4NpcTrade,
+    Gen4NpcTradeCommand,
+    parse_npc_trade_commands,
+    parse_npc_trade_record,
+)
 
 __all__ = [
     "PERSONAL_FORM_MEMBERS",
@@ -169,4 +176,9 @@ __all__ = [
     "parse_tutor_move_table",
     "parse_special_tutor_move",
     "parse_special_tutor_species",
+    "NPC_TRADE_RECORD_SIZE",
+    "Gen4NpcTrade",
+    "Gen4NpcTradeCommand",
+    "parse_npc_trade_commands",
+    "parse_npc_trade_record",
 ]

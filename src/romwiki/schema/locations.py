@@ -86,6 +86,27 @@ class LocationStaticEncounter:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationNpcTrade:
+    trade_id: int
+    requested_species_id: int
+    requested_species_name: str
+    offered_species_id: int
+    offered_species_name: str
+    nickname: str
+    ivs: tuple[int, ...]
+    nature: str
+    held_item_id: int | None
+    held_item_name: str | None
+    ot_name: str
+    ot_id: int
+    ot_gender: str
+    language: str
+    personality: int
+    script_file_id: int
+    command_offset: int
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4Location:
     header_id: int
     internal_name: str
@@ -101,6 +122,7 @@ class Gen4Location:
     shops: tuple[LocationShop, ...]
     pokemon_gifts: tuple[LocationPokemonGift, ...]
     static_encounters: tuple[LocationStaticEncounter, ...]
+    npc_trades: tuple[LocationNpcTrade, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
