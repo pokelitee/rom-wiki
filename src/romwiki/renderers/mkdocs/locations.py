@@ -218,7 +218,12 @@ def _append_static_encounters(
             "| ------- | ----: |",
         ]
     )
+    rendered_outcomes = set()
     for encounter in encounters:
+        outcome = (encounter["name"], encounter["level"])
+        if outcome in rendered_outcomes:
+            continue
+        rendered_outcomes.add(outcome)
         lines.append(f"| {encounter['name']} | {encounter['level']} |")
     lines.append("")
 

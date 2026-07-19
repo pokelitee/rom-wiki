@@ -95,6 +95,7 @@ class LocationRenderingTests(unittest.TestCase):
                     "species_id": 479,
                     "name": "Rotom",
                     "level": 20,
+                    "command": "WildBattle",
                     "script_file_id": 51,
                     "command_offset": 104,
                 }

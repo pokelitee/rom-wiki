@@ -111,6 +111,9 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             "frontier_price_record_count"
         ]
         egg_gift_metadata = profile.parameters["egg_gifts"]
+        static_encounter_location_metadata = profile.parameters.get(
+            "static_encounter_locations", []
+        )
         arm9_load_address = profile.parameters["arm9_load_address"]
     except KeyError as error:
         raise ProfileError(
@@ -173,7 +176,22 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     matrices = NarcArchive.from_bytes(filesystem.read(matrices_path))
     shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
     gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
-    static_encounters_by_script: dict[int, tuple[LocationStaticEncounter, ...]] = {}
+    static_encounters_by_location: dict[
+        tuple[int, int], tuple[LocationStaticEncounter, ...]
+    ] = {}
+    header_ids_by_script: dict[int, list[int]] = defaultdict(list)
+    for header in headers:
+        header_ids_by_script[header.script_file_id].append(header.header_id)
+    static_encounter_header_by_command = {
+        (metadata["script_member"], metadata["command_offset"]): metadata[
+            "map_header_id"
+        ]
+        for metadata in static_encounter_location_metadata
+    }
+    if len(static_encounter_header_by_command) != len(
+        static_encounter_location_metadata
+    ):
+        raise ProfileError("Static encounter location metadata contains duplicates")
     egg_gifts_by_script: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for metadata in egg_gift_metadata:
         egg_gifts_by_script[metadata["script_member"]].append(metadata)
@@ -249,11 +267,22 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                     header.script_file_id, []
                 ),
             )
-        if header.script_file_id not in static_encounters_by_script:
-            static_encounters_by_script[header.script_file_id] = (
+        static_encounter_location_key = (
+            header.script_file_id,
+            header.header_id,
+        )
+        if static_encounter_location_key not in static_encounters_by_location:
+            static_encounters_by_location[static_encounter_location_key] = (
                 _extract_location_static_encounters(
                     scripts.read(header.script_file_id),
                     script_file_id=header.script_file_id,
+                    map_header_id=header.header_id,
+                    script_is_shared=(
+                        len(header_ids_by_script[header.script_file_id]) > 1
+                    ),
+                    explicit_header_by_command=(
+                        static_encounter_header_by_command
+                    ),
                     pokemon_names=pokemon_names,
                 )
             )
@@ -323,8 +352,8 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 items=raw_items_by_header[header.header_id],
                 shops=shops_by_script[header.script_file_id],
                 pokemon_gifts=gifts_by_script[header.script_file_id],
-                static_encounters=static_encounters_by_script[
-                    header.script_file_id
+                static_encounters=static_encounters_by_location[
+                    static_encounter_location_key
                 ],
             ).to_dict()
         )
@@ -392,7 +421,8 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             },
             "static_encounters": {
                 "scripts_archive": scripts_path,
-                "command": "WildBattle",
+                "commands": ["WildBattle", "LegendaryBattle"],
+                "location_overrides": static_encounter_location_metadata,
             },
             "decoration_names": {
                 "archive": messages_path,
@@ -589,20 +619,37 @@ def _extract_location_static_encounters(
     script: bytes,
     *,
     script_file_id: int,
+    map_header_id: int,
+    script_is_shared: bool,
+    explicit_header_by_command: dict[tuple[int, int], int],
     pokemon_names: tuple[str, ...],
 ) -> tuple[LocationStaticEncounter, ...]:
-    return tuple(
-        LocationStaticEncounter(
-            species_id=command.species_id,
-            name=pokemon_names[command.species_id],
-            level=command.level,
-            script_file_id=script_file_id,
-            command_offset=command.offset,
+    encounters = []
+    for command in parse_static_encounter_commands(
+        script, species_count=len(pokemon_names)
+    ):
+        command_key = (script_file_id, command.offset)
+        explicit_header_id = explicit_header_by_command.get(command_key)
+        if explicit_header_id is not None:
+            if explicit_header_id != map_header_id:
+                continue
+        elif script_is_shared:
+            raise ProfileError(
+                "Static encounter in shared script member "
+                f"{script_file_id} at 0x{command.offset:X} requires a map-header "
+                "location override"
+            )
+        encounters.append(
+            LocationStaticEncounter(
+                species_id=command.species_id,
+                name=pokemon_names[command.species_id],
+                level=command.level,
+                command=command.command,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
         )
-        for command in parse_static_encounter_commands(
-            script, species_count=len(pokemon_names)
-        )
-    )
+    return tuple(encounters)
 
 
 def _extract_location_items(

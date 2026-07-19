@@ -33,6 +33,35 @@ class Gen4StaticEncounterTests(unittest.TestCase):
             (),
         )
 
+    def test_extracts_legendary_battle_with_intervening_flag_clear(self) -> None:
+        body = struct.pack(
+            "<6H", 0x02BD, 480, 60, 0x001F, 0x008E, 0x00EC
+        )
+
+        encounters = parse_static_encounter_commands(
+            make_script(body), species_count=494
+        )
+
+        self.assertEqual(
+            [
+                (
+                    encounter.offset,
+                    encounter.species_id,
+                    encounter.level,
+                    encounter.command,
+                )
+                for encounter in encounters
+            ],
+            [(6, 480, 60, "LegendaryBattle")],
+        )
+
+    def test_ignores_legendary_opcode_without_battle_result_check(self) -> None:
+        body = struct.pack("<4H", 0x02BD, 27, 31, 0x02BE)
+        self.assertEqual(
+            parse_static_encounter_commands(make_script(body), species_count=494),
+            (),
+        )
+
     def test_ignores_variable_species_or_level(self) -> None:
         body = b"".join(
             (

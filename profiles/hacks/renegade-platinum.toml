@@ -91,6 +91,26 @@ command_offset = 0x422
 script_member = 456
 command_offset = 0x153
 
+[[parameters.static_encounter_locations]]
+script_member = 401
+command_offset = 0xB1
+map_header_id = 210
+
+[[parameters.static_encounter_locations]]
+script_member = 401
+command_offset = 0x143
+map_header_id = 245
+
+[[parameters.static_encounter_locations]]
+script_member = 401
+command_offset = 0x21F
+map_header_id = 467
+
+[[parameters.static_encounter_locations]]
+script_member = 401
+command_offset = 0x30E
+map_header_id = 219
+
 [[parameters.special_tutors]]
 script_member = 493
 command_offset = 0x112

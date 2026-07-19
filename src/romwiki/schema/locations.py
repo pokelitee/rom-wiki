@@ -80,6 +80,7 @@ class LocationStaticEncounter:
     species_id: int
     name: str
     level: int
+    command: str
     script_file_id: int
     command_offset: int
 

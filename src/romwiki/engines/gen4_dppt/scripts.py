@@ -10,6 +10,8 @@ SCRIPT_TABLE_END = 0xFD13
 START_TRAINER_BATTLE = 0x00E5
 CHECK_WON_BATTLE = 0x00EC
 START_WILD_BATTLE = 0x0124
+START_LEGENDARY_BATTLE = 0x02BD
+CLEAR_FLAG = 0x001F
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +25,7 @@ class Gen4StaticEncounterCommand:
     offset: int
     species_id: int
     level: int
+    command: str
 
 
 def parse_trainer_battle_commands(
@@ -71,13 +74,16 @@ def parse_static_encounter_commands(
     """
     code_offset = _parse_script_table(data)
     commands = []
-    signature = struct.pack("<H", START_WILD_BATTLE)
-    win_check = struct.pack("<H", CHECK_WON_BATTLE)
+    signatures = {
+        START_WILD_BATTLE: "WildBattle",
+        START_LEGENDARY_BATTLE: "LegendaryBattle",
+    }
 
     for offset in range(code_offset, len(data) - 7):
-        if data[offset : offset + 2] != signature:
+        opcode = struct.unpack_from("<H", data, offset)[0]
+        if opcode not in signatures:
             continue
-        if data[offset + 6 : offset + 8] != win_check:
+        if not _has_static_battle_result_check(data, offset, opcode):
             continue
         species_id, level = struct.unpack_from("<HH", data, offset + 2)
         if not 0 < species_id < species_count or not 0 < level <= 100:
@@ -87,9 +93,21 @@ def parse_static_encounter_commands(
                 offset=offset,
                 species_id=species_id,
                 level=level,
+                command=signatures[opcode],
             )
         )
     return tuple(commands)
+
+
+def _has_static_battle_result_check(data: bytes, offset: int, opcode: int) -> bool:
+    following_opcode = struct.unpack_from("<H", data, offset + 6)[0]
+    if following_opcode == CHECK_WON_BATTLE:
+        return True
+    if opcode != START_LEGENDARY_BATTLE or following_opcode != CLEAR_FLAG:
+        return False
+    return offset + 12 <= len(data) and struct.unpack_from("<H", data, offset + 10)[
+        0
+    ] == CHECK_WON_BATTLE
 
 
 def _parse_script_table(data: bytes) -> int:

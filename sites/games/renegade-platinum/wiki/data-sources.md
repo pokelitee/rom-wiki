@@ -27,9 +27,12 @@ including their level and held item. Togepi, Riolu, and Manaphy eggs come from
 profile-anchored `GiveEgg` commands because that opcode has no reliable adjacent
 signature for distinguishing commands from operands. Conditional script branches
 can make listed gift outcomes mutually exclusive.
-Static encounters are decoded from literal `WildBattle` field commands followed
-by Platinum's battle-result check. Commands whose species or level comes from a
-script variable are excluded until their control flow can be resolved exactly.
+Static encounters are decoded from literal `WildBattle` and `LegendaryBattle`
+field commands followed by Platinum's battle-result check. Shared script member
+401 uses explicit map-header annotations to associate Articuno, Moltres, Lugia,
+and Kyogre with the object events that invoke their script entries. Commands whose
+species or level comes from a script variable are excluded until their control
+flow can be resolved exactly.
 Egg move lists and their ordering come from the packed species table in ARM9
 overlay 5; each extracted set retains its exact overlay offset.
 TM/HM assignments come from the profile's exact ROM-offset table and are joined
