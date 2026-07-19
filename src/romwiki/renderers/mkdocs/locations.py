@@ -70,6 +70,7 @@ def _render_location(record: dict[str, Any]) -> str:
     _append_items(lines, record.get("items", []))
     _append_shops(lines, record.get("shops", []))
     _append_pokemon_gifts(lines, record.get("pokemon_gifts", []))
+    _append_static_encounters(lines, record.get("static_encounters", []))
     _append_trainers(lines, record["trainers"])
     _append_warps(lines, record["warps"])
     _append_connections(lines, record["connections"])
@@ -198,6 +199,27 @@ def _append_pokemon_gifts(
             f"| {gift['name']} | {kind} | {gift['level']} | "
             f"{held_item} |"
         )
+    lines.append("")
+
+
+def _append_static_encounters(
+    lines: list[str], encounters: list[dict[str, Any]]
+) -> None:
+    if not encounters:
+        return
+    lines.extend(
+        [
+            "## Static encounters",
+            "",
+            "These are literal wild-battle commands in this map's scripts; "
+            "conditional branches may make encounters unavailable.",
+            "",
+            "| Pokémon | Level |",
+            "| ------- | ----: |",
+        ]
+    )
+    for encounter in encounters:
+        lines.append(f"| {encounter['name']} | {encounter['level']} |")
     lines.append("")
 
 

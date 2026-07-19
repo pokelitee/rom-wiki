@@ -22,6 +22,7 @@ from romwiki.engines.gen4_dppt import (
     parse_mart_commands,
     parse_pokemon_gift_commands,
     parse_seal_price_table,
+    parse_static_encounter_commands,
     parse_platinum_map_headers,
     parse_specialty_mart_inventories,
 )
@@ -38,6 +39,7 @@ from romwiki.schema import (
     LocationConnection,
     LocationItem,
     LocationPokemonGift,
+    LocationStaticEncounter,
     LocationShop,
     LocationShopItem,
     LocationTrainerReference,
@@ -171,6 +173,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     matrices = NarcArchive.from_bytes(filesystem.read(matrices_path))
     shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
     gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
+    static_encounters_by_script: dict[int, tuple[LocationStaticEncounter, ...]] = {}
     egg_gifts_by_script: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for metadata in egg_gift_metadata:
         egg_gifts_by_script[metadata["script_member"]].append(metadata)
@@ -246,6 +249,14 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                     header.script_file_id, []
                 ),
             )
+        if header.script_file_id not in static_encounters_by_script:
+            static_encounters_by_script[header.script_file_id] = (
+                _extract_location_static_encounters(
+                    scripts.read(header.script_file_id),
+                    script_file_id=header.script_file_id,
+                    pokemon_names=pokemon_names,
+                )
+            )
         warps = []
         for warp in raw_warps_by_header[header.header_id]:
             dynamic = (
@@ -312,6 +323,9 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 items=raw_items_by_header[header.header_id],
                 shops=shops_by_script[header.script_file_id],
                 pokemon_gifts=gifts_by_script[header.script_file_id],
+                static_encounters=static_encounters_by_script[
+                    header.script_file_id
+                ],
             ).to_dict()
         )
     return {
@@ -351,6 +365,9 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         "pokemon_gift_count": sum(
             len(record["pokemon_gifts"]) for record in records
         ),
+        "static_encounter_count": sum(
+            len(record["static_encounters"]) for record in records
+        ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "events_archive": events_path,
@@ -372,6 +389,10 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             "pokemon_gifts": {
                 "scripts_archive": scripts_path,
                 "egg_commands": egg_gift_metadata,
+            },
+            "static_encounters": {
+                "scripts_archive": scripts_path,
+                "command": "WildBattle",
             },
             "decoration_names": {
                 "archive": messages_path,
@@ -562,6 +583,26 @@ def _extract_location_pokemon_gifts(
             )
         )
     return tuple(sorted(gifts, key=lambda gift: gift.command_offset))
+
+
+def _extract_location_static_encounters(
+    script: bytes,
+    *,
+    script_file_id: int,
+    pokemon_names: tuple[str, ...],
+) -> tuple[LocationStaticEncounter, ...]:
+    return tuple(
+        LocationStaticEncounter(
+            species_id=command.species_id,
+            name=pokemon_names[command.species_id],
+            level=command.level,
+            script_file_id=script_file_id,
+            command_offset=command.offset,
+        )
+        for command in parse_static_encounter_commands(
+            script, species_count=len(pokemon_names)
+        )
+    )
 
 
 def _extract_location_items(

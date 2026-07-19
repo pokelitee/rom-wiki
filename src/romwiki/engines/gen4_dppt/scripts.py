@@ -9,12 +9,20 @@ from romwiki.errors import InvalidRomError
 SCRIPT_TABLE_END = 0xFD13
 START_TRAINER_BATTLE = 0x00E5
 CHECK_WON_BATTLE = 0x00EC
+START_WILD_BATTLE = 0x0124
 
 
 @dataclass(frozen=True, slots=True)
 class Gen4TrainerBattleCommand:
     offset: int
     trainer_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4StaticEncounterCommand:
+    offset: int
+    species_id: int
+    level: int
 
 
 def parse_trainer_battle_commands(
@@ -49,6 +57,37 @@ def parse_trainer_battle_commands(
         )
         commands.append(
             Gen4TrainerBattleCommand(offset=offset, trainer_ids=trainer_ids)
+        )
+    return tuple(commands)
+
+
+def parse_static_encounter_commands(
+    data: bytes, *, species_count: int
+) -> tuple[Gen4StaticEncounterCommand, ...]:
+    """Find literal wild battles followed by Platinum's battle-result check.
+
+    Species or level operands supplied through script variables are intentionally
+    excluded until their control flow can be resolved without guessing.
+    """
+    code_offset = _parse_script_table(data)
+    commands = []
+    signature = struct.pack("<H", START_WILD_BATTLE)
+    win_check = struct.pack("<H", CHECK_WON_BATTLE)
+
+    for offset in range(code_offset, len(data) - 7):
+        if data[offset : offset + 2] != signature:
+            continue
+        if data[offset + 6 : offset + 8] != win_check:
+            continue
+        species_id, level = struct.unpack_from("<HH", data, offset + 2)
+        if not 0 < species_id < species_count or not 0 < level <= 100:
+            continue
+        commands.append(
+            Gen4StaticEncounterCommand(
+                offset=offset,
+                species_id=species_id,
+                level=level,
+            )
         )
     return tuple(commands)
 

@@ -27,7 +27,9 @@ from romwiki.engines.gen4_dppt.events import (
     parse_warp_events,
 )
 from romwiki.engines.gen4_dppt.scripts import (
+    Gen4StaticEncounterCommand,
     Gen4TrainerBattleCommand,
+    parse_static_encounter_commands,
     parse_trainer_battle_commands,
 )
 from romwiki.engines.gen4_dppt.moves import MOVE_RECORD_SIZE, parse_move_record
@@ -113,6 +115,8 @@ __all__ = [
     "parse_object_events",
     "parse_warp_events",
     "Gen4TrainerBattleCommand",
+    "Gen4StaticEncounterCommand",
+    "parse_static_encounter_commands",
     "parse_trainer_battle_commands",
     "MOVE_RECORD_SIZE",
     "parse_move_record",

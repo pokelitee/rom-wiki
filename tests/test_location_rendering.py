@@ -90,6 +90,15 @@ class LocationRenderingTests(unittest.TestCase):
                     "command_offset": 90,
                 }
             ],
+            "static_encounters": [
+                {
+                    "species_id": 479,
+                    "name": "Rotom",
+                    "level": 20,
+                    "script_file_id": 51,
+                    "command_offset": 104,
+                }
+            ],
             "warps": [
                 {
                     "index": 0,
@@ -128,6 +137,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("### Battle Frontier shop", page)
         self.assertIn("| TM06 | 333 | 32 BP | Always |", page)
         self.assertIn("| Togepi | Egg | 1 | — |", page)
+        self.assertIn("| Rotom | 20 |", page)
         self.assertIn("./header-047.md", page)
         self.assertIn("./header-344.md", page)
 

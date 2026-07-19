@@ -143,7 +143,8 @@ romwiki build-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
 Location pages combine map headers with exact visible and hidden item pickups;
 common, specialty, decoration, weekday seal-shop, and Battle Frontier BP
 inventories and prices; event warps; outdoor map-matrix connections; wild
-encounter tables; literal Pokémon and egg gifts; and trainer references. Each map
+encounter tables; literal Pokémon and egg gifts; scripted static encounters; and
+trainer references. Each map
 header keeps a stable page even when several interiors share the same displayed
 location name.
 
