@@ -16,9 +16,11 @@ from romwiki.engines.gen4_dppt import (
     parse_map_events,
     parse_common_mart_inventory,
     parse_decoration_price_table,
+    parse_egg_gift_command,
     parse_frontier_price_table,
     parse_item_price,
     parse_mart_commands,
+    parse_pokemon_gift_commands,
     parse_seal_price_table,
     parse_platinum_map_headers,
     parse_specialty_mart_inventories,
@@ -35,6 +37,7 @@ from romwiki.schema import (
     Gen4Location,
     LocationConnection,
     LocationItem,
+    LocationPokemonGift,
     LocationShop,
     LocationShopItem,
     LocationTrainerReference,
@@ -63,6 +66,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
         item_names_member = profile.parameters["item_names_member"]
+        pokemon_names_member = profile.parameters["pokemon_names_member"]
         decoration_names_member = profile.parameters["decoration_names_member"]
         decoration_name_count = profile.parameters["decoration_name_count"]
         seal_names_member = profile.parameters["seal_names_member"]
@@ -104,6 +108,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         frontier_price_record_count = profile.parameters[
             "frontier_price_record_count"
         ]
+        egg_gift_metadata = profile.parameters["egg_gifts"]
         arm9_load_address = profile.parameters["arm9_load_address"]
     except KeyError as error:
         raise ProfileError(
@@ -123,6 +128,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         messages.read(location_names_member)
     )
     item_names = parse_english_message_archive(messages.read(item_names_member))
+    pokemon_names = parse_english_message_archive(messages.read(pokemon_names_member))
     decoration_names = parse_english_message_archive(
         messages.read(decoration_names_member), limit=decoration_name_count
     )
@@ -164,6 +170,10 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     events = NarcArchive.from_bytes(filesystem.read(events_path))
     matrices = NarcArchive.from_bytes(filesystem.read(matrices_path))
     shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
+    gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
+    egg_gifts_by_script: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for metadata in egg_gift_metadata:
+        egg_gifts_by_script[metadata["script_member"]].append(metadata)
 
     events_by_id: dict[int, Gen4MapEvents] = {}
     items_by_event: dict[int, tuple[LocationItem, ...]] = {}
@@ -225,6 +235,16 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 decoration_prices=decoration_prices,
                 seal_prices=seal_prices,
                 frontier_prices=frontier_prices,
+            )
+        if header.script_file_id not in gifts_by_script:
+            gifts_by_script[header.script_file_id] = _extract_location_pokemon_gifts(
+                scripts.read(header.script_file_id),
+                script_file_id=header.script_file_id,
+                pokemon_names=pokemon_names,
+                item_names=item_names,
+                egg_gift_metadata=egg_gifts_by_script.get(
+                    header.script_file_id, []
+                ),
             )
         warps = []
         for warp in raw_warps_by_header[header.header_id]:
@@ -291,6 +311,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
                 trainers=tuple(trainers.get(header.header_id, ())),
                 items=raw_items_by_header[header.header_id],
                 shops=shops_by_script[header.script_file_id],
+                pokemon_gifts=gifts_by_script[header.script_file_id],
             ).to_dict()
         )
     return {
@@ -327,6 +348,9 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             for record in records
             for shop in record["shops"]
         ),
+        "pokemon_gift_count": sum(
+            len(record["pokemon_gifts"]) for record in records
+        ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "events_archive": events_path,
@@ -340,6 +364,14 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             "item_names": {
                 "archive": messages_path,
                 "member": item_names_member,
+            },
+            "pokemon_names": {
+                "archive": messages_path,
+                "member": pokemon_names_member,
+            },
+            "pokemon_gifts": {
+                "scripts_archive": scripts_path,
+                "egg_commands": egg_gift_metadata,
             },
             "decoration_names": {
                 "archive": messages_path,
@@ -482,6 +514,54 @@ def _extract_location_shops(
             )
         )
     return tuple(shops)
+
+
+def _extract_location_pokemon_gifts(
+    script: bytes,
+    *,
+    script_file_id: int,
+    pokemon_names: tuple[str, ...],
+    item_names: tuple[str, ...],
+    egg_gift_metadata: list[dict[str, Any]],
+) -> tuple[LocationPokemonGift, ...]:
+    gifts = []
+    for command in parse_pokemon_gift_commands(
+        script, species_count=len(pokemon_names), item_count=len(item_names)
+    ):
+        held_item_id = command.held_item_id or None
+        gifts.append(
+            LocationPokemonGift(
+                kind="pokemon",
+                species_id=command.species_id,
+                name=pokemon_names[command.species_id],
+                level=command.level,
+                held_item_id=held_item_id,
+                held_item_name=(
+                    item_names[held_item_id] if held_item_id is not None else None
+                ),
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+        )
+    for metadata in egg_gift_metadata:
+        command = parse_egg_gift_command(
+            script,
+            offset=metadata["command_offset"],
+            species_count=len(pokemon_names),
+        )
+        gifts.append(
+            LocationPokemonGift(
+                kind="egg",
+                species_id=command.species_id,
+                name=pokemon_names[command.species_id],
+                level=1,
+                held_item_id=None,
+                held_item_name=None,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+        )
+    return tuple(sorted(gifts, key=lambda gift: gift.command_offset))
 
 
 def _extract_location_items(

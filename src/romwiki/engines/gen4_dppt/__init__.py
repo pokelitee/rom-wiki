@@ -48,6 +48,14 @@ from romwiki.engines.gen4_dppt.evolutions import (
     EVOLUTION_SLOT_SIZE,
     parse_evolution_record,
 )
+from romwiki.engines.gen4_dppt.gifts import (
+    GIVE_EGG_COMMAND,
+    GIVE_POKEMON_COMMAND,
+    Gen4EggGiftCommand,
+    Gen4PokemonGiftCommand,
+    parse_egg_gift_command,
+    parse_pokemon_gift_commands,
+)
 from romwiki.engines.gen4_dppt.machines import (
     GEN4_MACHINE_COUNT,
     GEN4_TM_COUNT,
@@ -119,6 +127,12 @@ __all__ = [
     "EVOLUTION_SLOT_COUNT",
     "EVOLUTION_SLOT_SIZE",
     "parse_evolution_record",
+    "GIVE_EGG_COMMAND",
+    "GIVE_POKEMON_COMMAND",
+    "Gen4EggGiftCommand",
+    "Gen4PokemonGiftCommand",
+    "parse_egg_gift_command",
+    "parse_pokemon_gift_commands",
     "GEN4_MACHINE_COUNT",
     "GEN4_TM_COUNT",
     "parse_machine_move_table",

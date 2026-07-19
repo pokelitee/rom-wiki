@@ -28,6 +28,7 @@ map_header_offset = 0xE601C
 map_header_count = 593
 location_names_member = 433
 item_names_member = 392
+pokemon_names_member = 412
 decoration_names_member = 626
 decoration_name_count = 139
 seal_names_member = 12
@@ -77,6 +78,18 @@ map_header_id = 364
 location_name = "Route 210"
 eligibility_kind = "type"
 eligibility_value = 16
+
+[[parameters.egg_gifts]]
+script_member = 71
+command_offset = 0xA7B
+
+[[parameters.egg_gifts]]
+script_member = 329
+command_offset = 0x422
+
+[[parameters.egg_gifts]]
+script_member = 456
+command_offset = 0x153
 
 [[parameters.special_tutors]]
 script_member = 493

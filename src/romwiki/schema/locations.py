@@ -64,6 +64,18 @@ class LocationShop:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationPokemonGift:
+    kind: str
+    species_id: int
+    name: str
+    level: int
+    held_item_id: int | None
+    held_item_name: str | None
+    script_file_id: int
+    command_offset: int
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4Location:
     header_id: int
     internal_name: str
@@ -77,6 +89,7 @@ class Gen4Location:
     trainers: tuple[LocationTrainerReference, ...]
     items: tuple[LocationItem, ...]
     shops: tuple[LocationShop, ...]
+    pokemon_gifts: tuple[LocationPokemonGift, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -69,6 +69,7 @@ def _render_location(record: dict[str, Any]) -> str:
         )
     _append_items(lines, record.get("items", []))
     _append_shops(lines, record.get("shops", []))
+    _append_pokemon_gifts(lines, record.get("pokemon_gifts", []))
     _append_trainers(lines, record["trainers"])
     _append_warps(lines, record["warps"])
     _append_connections(lines, record["connections"])
@@ -170,6 +171,32 @@ def _append_trainers(lines: list[str], trainers: list[dict[str, Any]]) -> None:
         lines.append(
             f"- [{label}](../trainers/trainer-{trainer['trainer_id']:04}.md) "
             f"({source})"
+        )
+        lines.append("")
+
+
+def _append_pokemon_gifts(
+    lines: list[str], gifts: list[dict[str, Any]]
+) -> None:
+    if not gifts:
+        return
+    lines.extend(
+        [
+            "## Gift Pokémon",
+            "",
+            "These are literal gift outcomes in this map's scripts; conditional "
+            "branches may be mutually exclusive.",
+            "",
+            "| Pokémon | Kind | Level | Held item |",
+            "| ------- | ---- | ----: | --------- |",
+        ]
+    )
+    for gift in gifts:
+        held_item = gift["held_item_name"] or "—"
+        kind = "Pokémon" if gift["kind"] == "pokemon" else gift["kind"].title()
+        lines.append(
+            f"| {gift['name']} | {kind} | {gift['level']} | "
+            f"{held_item} |"
         )
     lines.append("")
 

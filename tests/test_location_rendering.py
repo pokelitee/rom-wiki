@@ -78,6 +78,18 @@ class LocationRenderingTests(unittest.TestCase):
                     ],
                 }
             ],
+            "pokemon_gifts": [
+                {
+                    "kind": "egg",
+                    "species_id": 175,
+                    "name": "Togepi",
+                    "level": 1,
+                    "held_item_id": None,
+                    "held_item_name": None,
+                    "script_file_id": 51,
+                    "command_offset": 90,
+                }
+            ],
             "warps": [
                 {
                     "index": 0,
@@ -115,6 +127,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Protein | 46 | ₽9,800 | Always |", page)
         self.assertIn("### Battle Frontier shop", page)
         self.assertIn("| TM06 | 333 | 32 BP | Always |", page)
+        self.assertIn("| Togepi | Egg | 1 | — |", page)
         self.assertIn("./header-047.md", page)
         self.assertIn("./header-344.md", page)
 
