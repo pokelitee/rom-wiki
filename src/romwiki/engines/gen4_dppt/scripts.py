@@ -11,7 +11,12 @@ START_TRAINER_BATTLE = 0x00E5
 CHECK_WON_BATTLE = 0x00EC
 START_WILD_BATTLE = 0x0124
 START_LEGENDARY_BATTLE = 0x02BD
+START_FATEFUL_ENCOUNTER = 0x0318
+START_GIRATINA_ORIGIN_BATTLE = 0x0319
+ACTIVATE_ROAMING_POKEMON = 0x021C
 CLEAR_FLAG = 0x001F
+PLATINUM_ROAMING_SLOT_COUNT = 5
+_SCRIPT_COMMAND_COUNT = 0x033A
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +31,12 @@ class Gen4StaticEncounterCommand:
     species_id: int
     level: int
     command: str
+
+
+@dataclass(frozen=True, slots=True)
+class Gen4RoamingActivationCommand:
+    offset: int
+    slot: int
 
 
 def parse_trainer_battle_commands(
@@ -77,6 +88,8 @@ def parse_static_encounter_commands(
     signatures = {
         START_WILD_BATTLE: "WildBattle",
         START_LEGENDARY_BATTLE: "LegendaryBattle",
+        START_FATEFUL_ENCOUNTER: "FatefulEncounter",
+        START_GIRATINA_ORIGIN_BATTLE: "GiratinaOriginBattle",
     }
 
     for offset in range(code_offset, len(data) - 7):
@@ -103,11 +116,41 @@ def _has_static_battle_result_check(data: bytes, offset: int, opcode: int) -> bo
     following_opcode = struct.unpack_from("<H", data, offset + 6)[0]
     if following_opcode == CHECK_WON_BATTLE:
         return True
-    if opcode != START_LEGENDARY_BATTLE or following_opcode != CLEAR_FLAG:
+    if opcode not in {
+        START_LEGENDARY_BATTLE,
+        START_FATEFUL_ENCOUNTER,
+        START_GIRATINA_ORIGIN_BATTLE,
+    } or following_opcode != CLEAR_FLAG:
         return False
     return offset + 12 <= len(data) and struct.unpack_from("<H", data, offset + 10)[
         0
     ] == CHECK_WON_BATTLE
+
+
+def parse_roaming_activation_commands(
+    data: bytes,
+) -> tuple[Gen4RoamingActivationCommand, ...]:
+    """Find literal Platinum roaming-slot activation commands.
+
+    The command's one-byte operand makes unaligned opcode-like values common in
+    other operands. Requiring both a valid Platinum slot and a valid following
+    command avoids treating those byte sequences as roaming activations.
+    """
+    code_offset = _parse_script_table(data)
+    commands = []
+    signature = struct.pack("<H", ACTIVATE_ROAMING_POKEMON)
+
+    for offset in range(code_offset, len(data) - 4):
+        if data[offset : offset + 2] != signature:
+            continue
+        slot = data[offset + 2]
+        if slot >= PLATINUM_ROAMING_SLOT_COUNT:
+            continue
+        following_opcode = struct.unpack_from("<H", data, offset + 3)[0]
+        if following_opcode >= _SCRIPT_COMMAND_COUNT:
+            continue
+        commands.append(Gen4RoamingActivationCommand(offset=offset, slot=slot))
+    return tuple(commands)
 
 
 def _parse_script_table(data: bytes) -> int:

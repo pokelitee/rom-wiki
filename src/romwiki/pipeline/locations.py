@@ -10,6 +10,7 @@ from romwiki.engines.gen4_dppt import (
     Gen4CommonMartItem,
     Gen4MapEvents,
     Gen4WarpEvent,
+    PLATINUM_ROAMING_SLOT_COUNT,
     PlatinumMapHeader,
     parse_english_message_archive,
     parse_map_matrix,
@@ -21,6 +22,7 @@ from romwiki.engines.gen4_dppt import (
     parse_item_price,
     parse_mart_commands,
     parse_pokemon_gift_commands,
+    parse_roaming_activation_commands,
     parse_seal_price_table,
     parse_static_encounter_commands,
     parse_platinum_map_headers,
@@ -171,6 +173,11 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     )
     scripts = NarcArchive.from_bytes(
         filesystem.read(scripts_path), allow_truncated=True
+    )
+    referenced_script_ids = {header.script_file_id for header in headers}
+    roaming_activation_count = sum(
+        len(parse_roaming_activation_commands(scripts.read(script_file_id)))
+        for script_file_id in referenced_script_ids
     )
     events = NarcArchive.from_bytes(filesystem.read(events_path))
     matrices = NarcArchive.from_bytes(filesystem.read(matrices_path))
@@ -397,6 +404,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         "static_encounter_count": sum(
             len(record["static_encounters"]) for record in records
         ),
+        "roaming_activation_count": roaming_activation_count,
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "events_archive": events_path,
@@ -421,8 +429,18 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             },
             "static_encounters": {
                 "scripts_archive": scripts_path,
-                "commands": ["WildBattle", "LegendaryBattle"],
+                "commands": [
+                    "WildBattle",
+                    "LegendaryBattle",
+                    "FatefulEncounter",
+                    "GiratinaOriginBattle",
+                ],
                 "location_overrides": static_encounter_location_metadata,
+            },
+            "roaming_pokemon": {
+                "scripts_archive": scripts_path,
+                "command": "ActivateRoamingPokemon",
+                "slot_count": PLATINUM_ROAMING_SLOT_COUNT,
             },
             "decoration_names": {
                 "archive": messages_path,

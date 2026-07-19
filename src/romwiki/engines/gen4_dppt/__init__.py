@@ -27,8 +27,11 @@ from romwiki.engines.gen4_dppt.events import (
     parse_warp_events,
 )
 from romwiki.engines.gen4_dppt.scripts import (
+    Gen4RoamingActivationCommand,
     Gen4StaticEncounterCommand,
     Gen4TrainerBattleCommand,
+    PLATINUM_ROAMING_SLOT_COUNT,
+    parse_roaming_activation_commands,
     parse_static_encounter_commands,
     parse_trainer_battle_commands,
 )
@@ -115,7 +118,10 @@ __all__ = [
     "parse_object_events",
     "parse_warp_events",
     "Gen4TrainerBattleCommand",
+    "Gen4RoamingActivationCommand",
     "Gen4StaticEncounterCommand",
+    "PLATINUM_ROAMING_SLOT_COUNT",
+    "parse_roaming_activation_commands",
     "parse_static_encounter_commands",
     "parse_trainer_battle_commands",
     "MOVE_RECORD_SIZE",

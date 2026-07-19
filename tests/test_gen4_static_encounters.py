@@ -62,6 +62,33 @@ class Gen4StaticEncounterTests(unittest.TestCase):
             (),
         )
 
+    def test_extracts_specialized_static_battles(self) -> None:
+        body = b"".join(
+            (
+                struct.pack(
+                    "<6H", 0x0318, 492, 30, 0x001F, 0x008E, 0x00EC
+                ),
+                struct.pack(
+                    "<6H", 0x0319, 487, 70, 0x001F, 0x008E, 0x00EC
+                ),
+            )
+        )
+
+        encounters = parse_static_encounter_commands(
+            make_script(body), species_count=494
+        )
+
+        self.assertEqual(
+            [
+                (encounter.species_id, encounter.level, encounter.command)
+                for encounter in encounters
+            ],
+            [
+                (492, 30, "FatefulEncounter"),
+                (487, 70, "GiratinaOriginBattle"),
+            ],
+        )
+
     def test_ignores_variable_species_or_level(self) -> None:
         body = b"".join(
             (

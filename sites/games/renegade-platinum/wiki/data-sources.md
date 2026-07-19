@@ -27,12 +27,18 @@ including their level and held item. Togepi, Riolu, and Manaphy eggs come from
 profile-anchored `GiveEgg` commands because that opcode has no reliable adjacent
 signature for distinguishing commands from operands. Conditional script branches
 can make listed gift outcomes mutually exclusive.
-Static encounters are decoded from literal `WildBattle` and `LegendaryBattle`
-field commands followed by Platinum's battle-result check. Shared script member
+Static encounters are decoded from literal `WildBattle`, `LegendaryBattle`,
+`FatefulEncounter`, and `GiratinaOriginBattle` field commands followed by
+Platinum's battle-result check. The latter two preserve the encounter-specific
+setup used at Flower Paradise and in the Distortion World. Shared script member
 401 uses explicit map-header annotations to associate Articuno, Moltres, Lugia,
 and Kyogre with the object events that invoke their script entries. Commands whose
 species or level comes from a script variable are excluded until their control
 flow can be resolved exactly.
+Roaming Pokémon are audited through Platinum's one-byte
+`ActivateRoamingPokemon` slot command. Renegade Platinum does not invoke any of
+the five roaming slots from its referenced field scripts; its former roaming
+encounters are represented by the location-bound static encounters above.
 Egg move lists and their ordering come from the packed species table in ARM9
 overlay 5; each extracted set retains its exact overlay offset.
 TM/HM assignments come from the profile's exact ROM-offset table and are joined
