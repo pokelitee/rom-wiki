@@ -53,6 +53,17 @@ class Gen4EventTests(unittest.TestCase):
         self.assertEqual(events.warps[0].destination_header_id, 27)
         self.assertEqual(events.warps[0].destination_warp_id, 2)
 
+    def test_decodes_background_event(self) -> None:
+        background = struct.pack("<HH4I", 8087, 2, 14, 9, 0, 4)
+        data = struct.pack("<I", 1) + background + struct.pack("<III", 0, 0, 0)
+
+        events = parse_map_events(data, event_file_id=44)
+
+        self.assertEqual(len(events.backgrounds), 1)
+        self.assertEqual(events.backgrounds[0].script_id, 8087)
+        self.assertEqual(events.backgrounds[0].event_type, 2)
+        self.assertEqual((events.backgrounds[0].x, events.backgrounds[0].z), (14, 9))
+
 
 if __name__ == "__main__":
     unittest.main()

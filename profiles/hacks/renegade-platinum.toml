@@ -21,6 +21,7 @@ map_matrices = "fielddata/mapmatrix/map_matrix.narc"
 moves = "poketool/waza/pl_waza_tbl.narc"
 learnsets = "poketool/personal/wotbl.narc"
 evolutions = "poketool/personal/evo.narc"
+item_data = "itemtool/itemdata/pl_item_data.narc"
 
 [parameters]
 map_header_offset = 0xE601C
@@ -51,6 +52,10 @@ tutor_form_member_start = 496
 tutor_form_count = 12
 tutor_location_names = ["Route 212", "Survival Area", "Snowpoint City"]
 special_tutor_minimum_friendship = 255
+common_mart_inventory_offset = 0xEBAFC
+specialty_mart_pointer_table_offset = 0x100AF0
+specialty_mart_inventory_count = 20
+arm9_load_address = 0x02000000
 
 [[parameters.special_tutors]]
 script_member = 450

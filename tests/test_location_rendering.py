@@ -25,6 +25,44 @@ class LocationRenderingTests(unittest.TestCase):
                     "source": "map-script",
                 }
             ],
+            "items": [
+                {
+                    "item_id": 17,
+                    "name": "Potion",
+                    "kind": "visible",
+                    "event_index": 2,
+                    "x": 8,
+                    "z": 11,
+                    "y": 0,
+                    "hidden_flag": 400,
+                },
+                {
+                    "item_id": 81,
+                    "name": "Moon Stone",
+                    "kind": "hidden",
+                    "event_index": 0,
+                    "x": 12,
+                    "z": 5,
+                    "y": 0,
+                    "hidden_flag": None,
+                },
+            ],
+            "shops": [
+                {
+                    "kind": "specialty",
+                    "inventory_id": 1,
+                    "script_file_id": 51,
+                    "command_offset": 54,
+                    "items": [
+                        {
+                            "item_id": 46,
+                            "name": "Protein",
+                            "price": 9800,
+                            "required_badges": None,
+                        }
+                    ],
+                }
+            ],
             "warps": [
                 {
                     "index": 0,
@@ -57,6 +95,9 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertIn("../encounters/area-003.md", page)
         self.assertIn("../trainers/trainer-0246.md", page)
+        self.assertIn("| Visible | Potion | 17 | (8, 11) |", page)
+        self.assertIn("| Hidden | Moon Stone | 81 | (12, 5) |", page)
+        self.assertIn("| Protein | 46 | ₽9,800 | Always |", page)
         self.assertIn("./header-047.md", page)
         self.assertIn("./header-344.md", page)
 

@@ -34,6 +34,35 @@ class LocationTrainerReference:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationItem:
+    item_id: int
+    name: str
+    kind: str
+    event_index: int
+    x: int
+    z: int
+    y: int
+    hidden_flag: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class LocationShopItem:
+    item_id: int
+    name: str
+    price: int | None
+    required_badges: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class LocationShop:
+    kind: str
+    inventory_id: int
+    script_file_id: int
+    command_offset: int
+    items: tuple[LocationShopItem, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4Location:
     header_id: int
     internal_name: str
@@ -45,6 +74,8 @@ class Gen4Location:
     warps: tuple[LocationWarp, ...]
     connections: tuple[LocationConnection, ...]
     trainers: tuple[LocationTrainerReference, ...]
+    items: tuple[LocationItem, ...]
+    shops: tuple[LocationShop, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

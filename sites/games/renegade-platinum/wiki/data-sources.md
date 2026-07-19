@@ -9,6 +9,13 @@ including separate archive/member references for Pokémon personal data and
 level-up learnsets, evolution records, and the ROM item-name catalog.
 Wild held-item slot IDs come from each Pokémon personal record; PokéDB resolves
 their stable display names.
+Visible item pickups come from Poké Ball object events, while hidden pickups come
+from background-event records. Item IDs are decoded from their standard Gen IV
+script ranges and named with the ROM item-name catalog.
+Common Poké Mart stock and badge requirements come from the shared ARM9
+progression table. Specialty inventories come from the ARM9 inventory pointer
+table selected by each clerk's field-script command. Prices come from Renegade
+Platinum's item-data records.
 Egg move lists and their ordering come from the packed species table in ARM9
 overlay 5; each extracted set retains its exact overlay offset.
 TM/HM assignments come from the profile's exact ROM-offset table and are joined

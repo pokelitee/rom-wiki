@@ -12,8 +12,8 @@ def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
     index = [
         "# Locations",
         "",
-        "Map headers, warps, outdoor connections, encounters, and trainers "
-        "extracted from the ROM.",
+        "Map headers, item pickups, shops, warps, outdoor connections, encounters, "
+        "and trainers extracted from the ROM.",
         "",
     ]
     for record in sorted(
@@ -56,6 +56,8 @@ def _render_location(record: dict[str, Any]) -> str:
                 "",
             ]
         )
+    _append_items(lines, record.get("items", []))
+    _append_shops(lines, record.get("shops", []))
     _append_trainers(lines, record["trainers"])
     _append_warps(lines, record["warps"])
     _append_connections(lines, record["connections"])
@@ -63,12 +65,68 @@ def _render_location(record: dict[str, Any]) -> str:
         [
             "---",
             "",
-            "Source: exact map header, event archive, and map-matrix records "
-            "from the ROM.",
+            "Source: exact map header, event, script, item-data, and map-matrix "
+            "records from the ROM.",
             "",
         ]
     )
     return "\n".join(lines)
+
+
+def _append_items(lines: list[str], items: list[dict[str, Any]]) -> None:
+    if not items:
+        return
+    lines.extend(
+        [
+            "## Item pickups",
+            "",
+            "| Kind | Item | Item ID | Position |",
+            "| ---- | ---- | ------: | -------- |",
+        ]
+    )
+    for item in items:
+        lines.append(
+            f"| {item['kind'].title()} | {item['name']} | {item['item_id']} | "
+            f"({item['x']}, {item['z']}) |"
+        )
+    lines.append("")
+
+
+def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
+    if not shops:
+        return
+    lines.extend(["## Shops", ""])
+    kind_counts = Counter(shop["kind"] for shop in shops)
+    kind_indices: Counter[str] = Counter()
+    for shop in shops:
+        kind_indices[shop["kind"]] += 1
+        label = "Common Poké Mart" if shop["kind"] == "common" else "Specialty shop"
+        if kind_counts[shop["kind"]] > 1:
+            label += f" {kind_indices[shop['kind']]}"
+        lines.extend(
+            [
+                f"### {label}",
+                "",
+                "| Item | Item ID | Price | Available after |",
+                "| ---- | ------: | ----: | --------------- |",
+            ]
+        )
+        for item in shop["items"]:
+            price = f"₽{item['price']:,}" if item["price"] is not None else "—"
+            badges = item["required_badges"]
+            if badges is None:
+                availability = "Always"
+            elif badges == 0:
+                availability = "Start"
+            elif badges == 1:
+                availability = "1 badge"
+            else:
+                availability = f"{badges} badges"
+            lines.append(
+                f"| {item['name']} | {item['item_id']} | {price} | "
+                f"{availability} |"
+            )
+        lines.append("")
 
 
 def _append_trainers(lines: list[str], trainers: list[dict[str, Any]]) -> None:

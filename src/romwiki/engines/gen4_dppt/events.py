@@ -7,6 +7,17 @@ from romwiki.errors import InvalidRomError
 
 
 @dataclass(frozen=True, slots=True)
+class Gen4BackgroundEvent:
+    index: int
+    script_id: int
+    event_type: int
+    x: int
+    z: int
+    y: int
+    direction: int
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4ObjectEvent:
     index: int
     local_id: int
@@ -35,6 +46,7 @@ class Gen4WarpEvent:
 
 @dataclass(frozen=True, slots=True)
 class Gen4MapEvents:
+    backgrounds: tuple[Gen4BackgroundEvent, ...]
     objects: tuple[Gen4ObjectEvent, ...]
     warps: tuple[Gen4WarpEvent, ...]
 
@@ -42,7 +54,27 @@ class Gen4MapEvents:
 def parse_map_events(data: bytes, *, event_file_id: int) -> Gen4MapEvents:
     position = 0
     background_count, position = _read_count(data, position, event_file_id)
-    position = _skip_records(data, position, background_count, 20, event_file_id)
+    background_end = _skip_records(
+        data, position, background_count, 20, event_file_id
+    )
+    backgrounds = []
+    for index in range(background_count):
+        script_id, event_type, x, z, y, direction = struct.unpack_from(
+            "<HH4I", data, position + index * 20
+        )
+        backgrounds.append(
+            Gen4BackgroundEvent(
+                index=index,
+                script_id=script_id,
+                event_type=event_type,
+                x=x,
+                z=z,
+                y=y,
+                direction=direction,
+            )
+        )
+
+    position = background_end
     object_count, position = _read_count(data, position, event_file_id)
     object_end = _skip_records(data, position, object_count, 32, event_file_id)
 
@@ -96,7 +128,11 @@ def parse_map_events(data: bytes, *, event_file_id: int) -> Gen4MapEvents:
         raise InvalidRomError(
             f"Event file {event_file_id} has {len(data) - position} trailing bytes"
         )
-    return Gen4MapEvents(objects=tuple(objects), warps=tuple(warps))
+    return Gen4MapEvents(
+        backgrounds=tuple(backgrounds),
+        objects=tuple(objects),
+        warps=tuple(warps),
+    )
 
 
 def parse_object_events(

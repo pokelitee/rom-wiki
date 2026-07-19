@@ -140,9 +140,10 @@ romwiki extract-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
 romwiki build-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-Location pages combine map headers with exact event warps, outdoor map-matrix
-connections, wild encounter tables, and trainer references. Each map header keeps
-a stable page even when several interiors share the same displayed location name.
+Location pages combine map headers with exact visible and hidden item pickups,
+common and specialty shop inventories, event warps, outdoor map-matrix connections,
+wild encounter tables, and trainer references. Each map header keeps a stable page
+even when several interiors share the same displayed location name.
 
 Extract and render move mechanics:
 

@@ -18,6 +18,7 @@ from romwiki.engines.gen4_dppt.map_matrices import Gen4MapMatrix, parse_map_matr
 from romwiki.engines.gen4_dppt.messages import parse_english_message_archive
 from romwiki.engines.gen4_dppt.trainers import TRAINER_RECORD_SIZE, parse_trainer_record
 from romwiki.engines.gen4_dppt.events import (
+    Gen4BackgroundEvent,
     Gen4MapEvents,
     Gen4ObjectEvent,
     Gen4WarpEvent,
@@ -52,6 +53,17 @@ from romwiki.engines.gen4_dppt.machines import (
     GEN4_TM_COUNT,
     parse_machine_move_table,
 )
+from romwiki.engines.gen4_dppt.marts import (
+    COMMON_MART_COMMAND,
+    ITEM_RECORD_SIZE,
+    SPECIALTY_MART_COMMAND,
+    Gen4CommonMartItem,
+    Gen4MartCommand,
+    parse_common_mart_inventory,
+    parse_item_price,
+    parse_mart_commands,
+    parse_specialty_mart_inventories,
+)
 from romwiki.engines.gen4_dppt.tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,
     TUTOR_RECORD_SIZE,
@@ -78,6 +90,7 @@ __all__ = [
     "TRAINER_RECORD_SIZE",
     "parse_trainer_record",
     "Gen4ObjectEvent",
+    "Gen4BackgroundEvent",
     "Gen4MapEvents",
     "Gen4WarpEvent",
     "parse_map_events",
@@ -101,6 +114,15 @@ __all__ = [
     "GEN4_MACHINE_COUNT",
     "GEN4_TM_COUNT",
     "parse_machine_move_table",
+    "COMMON_MART_COMMAND",
+    "ITEM_RECORD_SIZE",
+    "SPECIALTY_MART_COMMAND",
+    "Gen4CommonMartItem",
+    "Gen4MartCommand",
+    "parse_common_mart_inventory",
+    "parse_item_price",
+    "parse_mart_commands",
+    "parse_specialty_mart_inventories",
     "TUTOR_COMPATIBILITY_RECORD_SIZE",
     "TUTOR_RECORD_SIZE",
     "parse_tutor_compatibility_table",

@@ -20,6 +20,9 @@ from romwiki.schema.trainers import (
 from romwiki.schema.locations import (
     Gen4Location,
     LocationConnection,
+    LocationItem,
+    LocationShop,
+    LocationShopItem,
     LocationTrainerReference,
     LocationWarp,
 )
@@ -51,6 +54,9 @@ __all__ = [
     "TrainerScriptReference",
     "Gen4Location",
     "LocationConnection",
+    "LocationItem",
+    "LocationShop",
+    "LocationShopItem",
     "LocationTrainerReference",
     "LocationWarp",
     "Gen4Move",
