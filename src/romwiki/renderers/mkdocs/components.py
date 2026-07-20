@@ -59,11 +59,18 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     else:
         media = '<span class="rw-summary__placeholder">Sprite unavailable</span>'
         attribution = "Not available"
-    abilities = ", ".join(
-        display_name(value["name"])
-        for value in record["abilities"]
-        if value["name"] is not None
-    ) or "None"
+    ability_links = []
+    for value in record["abilities"]:
+        if value["name"] is None:
+            continue
+        slug = value.get("slug")
+        label = escape(value["name"])
+        ability_links.append(
+            f'<a href="../../abilities/{escape(slug, quote=True)}/">{label}</a>'
+            if slug
+            else label
+        )
+    abilities = ", ".join(dict.fromkeys(ability_links)) or "None"
     dex = record["national_dex_id"]
     dex_label = f"#{dex:03}" if dex is not None else "—"
     return [
@@ -73,7 +80,7 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
         type_badges(record["types"]),
         '<dl class="rw-summary__facts">',
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
-        f"<div><dt>Abilities</dt><dd>{escape(abilities)}</dd></div>",
+        f"<div><dt>Abilities</dt><dd>{abilities}</dd></div>",
         f"<div><dt>Base stat total</dt><dd>{sum(record['base_stats'].values())}</dd></div>",
         f"<div><dt>Sprite source</dt><dd>{attribution}</dd></div>",
         "</dl>",

@@ -18,6 +18,7 @@ sites/games/*/wiki/encounters/
 sites/games/*/wiki/trainers/
 sites/games/*/wiki/locations/
 sites/games/*/wiki/moves/
+sites/games/*/wiki/abilities/
 
 # User-supplied game images and related emulator data must remain local.
 *.nds

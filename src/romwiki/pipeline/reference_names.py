@@ -10,6 +10,7 @@ from romwiki.profiles.models import GameProfile
 
 _NAME_TABLES = {
     "type_names": ("type_names_member", 18),
+    "ability_names": ("ability_names_member", 124),
     "move_names": ("move_names_member", 468),
 }
 

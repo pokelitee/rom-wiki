@@ -7,6 +7,7 @@ import sys
 from typing import Sequence
 
 from romwiki.errors import RomWikiError
+from romwiki.pipeline.abilities import build_ability_dataset, write_ability_dataset
 from romwiki.pipeline.encounters import (
     extract_encounter_dataset,
     write_encounter_dataset,
@@ -36,6 +37,7 @@ from romwiki.pipeline.personal import extract_personal_dataset, write_personal_d
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
 from romwiki.renderers.mkdocs import (
+    render_ability_pages,
     render_encounter_pages,
     render_location_pages,
     render_move_pages,
@@ -375,9 +377,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             evolutions = extract_evolution_dataset(result)
             machines = extract_machine_dataset(result)
             tutors = extract_tutor_dataset(result)
+            pokedb = PokeDBGeneration.load(args.pokedb)
             enriched = enrich_personal_dataset(
                 personal,
-                PokeDBGeneration.load(args.pokedb),
+                pokedb,
                 learnsets,
                 evolutions,
                 machines,
@@ -404,8 +407,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_enriched_dataset(enriched, data_output)
             page_count = render_pokemon_pages(enriched, wiki_output)
+            abilities = build_ability_dataset(enriched, pokedb)
+            ability_data_output = (
+                data_output.parent.parent / "abilities" / "enriched.json"
+            )
+            ability_wiki_output = wiki_output.parent / "abilities"
+            write_ability_dataset(abilities, ability_data_output)
+            ability_page_count = render_ability_pages(abilities, ability_wiki_output)
             print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
             print(f"Rendered {page_count} Pokémon pages: {wiki_output}")
+            print(
+                f"Wrote {abilities['record_count']} ability records: "
+                f"{ability_data_output}"
+            )
+            print(
+                f"Rendered {ability_page_count} ability pages: {ability_wiki_output}"
+            )
         elif args.command == "build-encounters":
             extracted = extract_encounter_dataset(result)
             enriched = enrich_encounter_dataset(

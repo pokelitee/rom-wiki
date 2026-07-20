@@ -75,6 +75,11 @@ Normalized records use stable semantic fields such as `species_id`, `base_stats`
 or `held_item_id`; they do not expose where a value happened to live in one ROM.
 Engine-only details needed for auditing belong in provenance fields.
 
+Derived datasets may invert normalized relationships without parsing the ROM again.
+For example, the ability dataset combines the ROM ability-name table with ability
+assignments already present in normalized PokÃ©mon records, producing ability pages
+and PokÃ©mon backlinks from one authoritative extraction.
+
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
 ROM message tables supply names when configured; PokéDB supplies canonical names
 for comparison and fallback, plus stable links and optional sprite URLs. It must

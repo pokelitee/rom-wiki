@@ -12,17 +12,19 @@ class ReferenceNameTests(unittest.TestCase):
     def test_extracts_configured_rom_name_tables_with_provenance(self) -> None:
         profile = _profile()
         archive = Mock()
-        archive.read.side_effect = [b"types", b"moves"]
+        archive.read.side_effect = [b"types", b"abilities", b"moves"]
         type_names = tuple(f"Type {index}" for index in range(18))
+        ability_names = tuple(f"Ability {index}" for index in range(124))
         move_names = tuple(f"Move {index}" for index in range(468))
 
         with patch(
             "romwiki.pipeline.reference_names.parse_english_message_archive",
-            side_effect=[type_names, move_names],
+            side_effect=[type_names, ability_names, move_names],
         ):
             result = extract_reference_names(profile, Mock(), archive)
 
         self.assertEqual(result["type_names"], list(type_names))
+        self.assertEqual(result["ability_names"], list(ability_names))
         self.assertEqual(result["move_names"], list(move_names))
         self.assertEqual(
             result["name_sources"]["move_names"],
@@ -50,7 +52,11 @@ def _profile() -> GameProfile:
         rom_versions=(1,),
         hashes=(),
         layout={"messages": "messages.narc"},
-        parameters={"type_names_member": 624, "move_names_member": 647},
+        parameters={
+            "type_names_member": 624,
+            "ability_names_member": 610,
+            "move_names_member": 647,
+        },
     )
 
 

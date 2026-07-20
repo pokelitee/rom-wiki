@@ -55,16 +55,20 @@ class PersonalEnrichmentTests(unittest.TestCase):
             pokemon_by_id=defaults,
             pokemon_by_name=by_name,
             pokemon_by_species={item["species"]: item for item in defaults.values()},
-            abilities_by_id={},
+            abilities_by_id={65: "overgrow"},
             items_by_id={},
         )
         records = [_source_record(member) for member in range(508)]
         records[1]["type_ids"] = [9, 9]
+        records[1]["ability_ids"] = [65, 65]
+        ability_names = [f"Ability {ability_id}" for ability_id in range(124)]
+        ability_names[65] = "Overgrow"
 
         enriched = enrich_personal_dataset(
             {
                 "game": "test",
                 "source": {"archive": "personal.narc"},
+                "ability_names": ability_names,
                 "records": records,
             },
             pokedb,
@@ -76,6 +80,10 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["records"][496]["slug"], "deoxys-attack")
         self.assertEqual(enriched["records"][496]["national_dex_id"], 386)
         self.assertEqual(enriched["records"][1]["types"][0], {"id": 9, "name": "fairy"})
+        self.assertEqual(
+            enriched["records"][1]["abilities"][0],
+            {"id": 65, "slug": "overgrow", "name": "Overgrow"},
+        )
 
     def test_renders_a_page_and_index(self) -> None:
         record = {

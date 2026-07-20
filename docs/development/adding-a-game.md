@@ -64,6 +64,7 @@ provenance:
 ```toml
 [parameters]
 type_names_member = 624
+ability_names_member = 610
 move_names_member = 647
 ```
 

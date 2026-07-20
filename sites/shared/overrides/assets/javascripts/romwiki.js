@@ -19,6 +19,12 @@
   });
 
   const CATALOGS = {
+    abilities: {
+      searchPlaceholder: "Search abilities or Pokémon",
+      filters: [{ key: "pokemon", label: "Pokémon", control: "datalist" }, { key: "status", label: "Assignment" }],
+      sorts: [["id", "Ability ID"], ["label", "Name"], ["pokemon_count", "Pokémon count"]],
+      columns: [["Ability", recordLink], ["ID", (r) => text(r.id, "rw-catalog__number")], ["Pokémon", (r) => previewList(r.pokemon)], ["Count", (r) => text(r.pokemon_count, "rw-catalog__number")]],
+    },
     pokemon: {
       searchPlaceholder: "Search Pokémon, types, or abilities",
       filters: [{ key: "types", label: "Type" }, { key: "abilities", label: "Ability", control: "datalist" }, { key: "egg_groups", label: "Egg group" }],

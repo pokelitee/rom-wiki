@@ -118,7 +118,9 @@ egg moves, evolutions, TM/HM compatibility, and move-tutor compatibility from th
 PokéDB to resolve stable Pokémon and move names and links.
 
 This keeps the enriched audit dataset under `build/` and renders publishable
-Markdown into `sites/games/renegade-platinum/wiki/pokemon/`.
+Markdown into `sites/games/renegade-platinum/wiki/pokemon/`. The same command also
+derives the normalized ability catalog from ROM names and personal-data assignments,
+then renders it under `sites/games/renegade-platinum/wiki/abilities/`.
 
 Extract and render wild encounter tables:
 

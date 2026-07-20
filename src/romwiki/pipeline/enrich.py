@@ -81,6 +81,7 @@ def enrich_personal_dataset(
         raise DataSourceError("Expected exactly 508 Gen IV personal records")
     type_names = _resolve_type_names(dataset, type_names)
     move_names = _resolve_move_names(dataset, move_names)
+    ability_names = _resolve_ability_names(dataset)
 
     learnsets = _validate_learnsets(learnset_dataset, dataset["game"])
     evolutions = _validate_evolutions(evolution_dataset, dataset["game"])
@@ -108,6 +109,7 @@ def enrich_personal_dataset(
                 egg_moves.get(expected_member),
                 type_names,
                 move_names,
+                ability_names,
                 sprite_version,
             )
         )
@@ -142,6 +144,8 @@ def enrich_personal_dataset(
         )
     if dataset.get("name_sources"):
         enriched["name_sources"] = dataset["name_sources"]
+    if "ability_names" in dataset:
+        enriched["ability_names"] = dataset["ability_names"]
     return enriched
 
 
@@ -475,6 +479,7 @@ def _enrich_record(
     egg_move_set: dict[str, Any] | None,
     type_names: Mapping[int, str] | None,
     move_names: Mapping[int, str] | None,
+    ability_names: list[str] | None,
     sprite_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
@@ -533,7 +538,7 @@ def _enrich_record(
             for value in source["egg_group_ids"]
         ],
         "abilities": [
-            {"id": value, "name": pokedb.ability_name(value)}
+            _ability_id(value, pokedb, ability_names)
             for value in source["ability_ids"]
         ],
         "safari_flee_rate": source["safari_flee_rate"],
@@ -962,6 +967,27 @@ def _resolve_move_names(
     if names is not None:
         result.update((move_id, _name_slug(name)) for move_id, name in enumerate(names))
     return result
+
+
+def _resolve_ability_names(dataset: dict[str, Any]) -> list[str] | None:
+    return _reference_name_table(dataset, "ability_names", 124)
+
+
+def _ability_id(
+    ability_id: int,
+    pokedb: PokeDBGeneration,
+    ability_names: list[str] | None,
+) -> dict[str, Any]:
+    slug = pokedb.ability_name(ability_id)
+    if ability_id == 0:
+        return {"id": 0, "slug": None, "name": None}
+    if ability_names is not None:
+        if ability_id >= len(ability_names):
+            raise DataSourceError(f"Unknown Gen IV ability ID: {ability_id}")
+        name = ability_names[ability_id]
+    else:
+        name = _display_name(slug)
+    return {"id": ability_id, "slug": slug, "name": name}
 
 
 def _replaced_move(

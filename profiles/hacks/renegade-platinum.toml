@@ -34,6 +34,7 @@ location_names_member = 433
 item_names_member = 392
 pokemon_names_member = 412
 type_names_member = 624
+ability_names_member = 610
 move_names_member = 647
 npc_trade_names_member = 370
 decoration_names_member = 626
