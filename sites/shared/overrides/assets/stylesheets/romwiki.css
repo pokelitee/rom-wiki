@@ -8,6 +8,9 @@
   --rw-radius: 0.75rem;
   --rw-shadow: 0 0.5rem 1.75rem rgba(27, 33, 48, 0.08);
   --rw-control-shadow: 0 1px 2px rgba(27, 33, 48, 0.06);
+  --rw-scrollbar-thumb: rgba(var(--rw-accent-rgb), 0.44);
+  --rw-scrollbar-thumb-hover: rgba(var(--rw-accent-rgb), 0.7);
+  --rw-scrollbar-track: transparent;
 }
 
 [data-md-color-scheme="slate"] {
@@ -22,6 +25,82 @@
 html[data-romwiki-theme="platinum"] {
   --rw-accent: #596b9f;
   --rw-accent-rgb: 89, 107, 159;
+}
+
+@media (pointer: fine) {
+  html {
+    scrollbar-color: var(--rw-scrollbar-thumb) var(--rw-scrollbar-track);
+    scrollbar-width: auto;
+  }
+  :where(
+    .md-sidebar__scrollwrap,
+    .md-search__scrollwrap,
+    .md-typeset__scrollwrap,
+    .md-typeset pre > code,
+    .md-typeset table:not([class]),
+    .rw-select__menu,
+    .rw-catalog__table-wrap
+  ) {
+    scrollbar-color: var(--rw-scrollbar-thumb) var(--rw-scrollbar-track);
+    scrollbar-width: thin;
+  }
+  html::-webkit-scrollbar { width: .8rem; height: .8rem; }
+  html::-webkit-scrollbar-track { background: var(--rw-scrollbar-track); }
+  html::-webkit-scrollbar-thumb {
+    border: 3px solid transparent; border-radius: 999px;
+    background: var(--rw-scrollbar-thumb); background-clip: padding-box;
+  }
+  html::-webkit-scrollbar-thumb:hover { background-color: var(--rw-scrollbar-thumb-hover); }
+  :where(
+    .md-sidebar__scrollwrap,
+    .md-search__scrollwrap,
+    .md-typeset__scrollwrap,
+    .md-typeset pre > code,
+    .md-typeset table:not([class]),
+    .rw-select__menu,
+    .rw-catalog__table-wrap
+  )::-webkit-scrollbar { width: .55rem; height: .55rem; }
+  :where(
+    .md-sidebar__scrollwrap,
+    .md-search__scrollwrap,
+    .md-typeset__scrollwrap,
+    .md-typeset pre > code,
+    .md-typeset table:not([class]),
+    .rw-select__menu,
+    .rw-catalog__table-wrap
+  )::-webkit-scrollbar-track { background: var(--rw-scrollbar-track); }
+  :where(
+    .md-sidebar__scrollwrap,
+    .md-search__scrollwrap,
+    .md-typeset__scrollwrap,
+    .md-typeset pre > code,
+    .md-typeset table:not([class]),
+    .rw-select__menu,
+    .rw-catalog__table-wrap
+  )::-webkit-scrollbar-thumb {
+    border: 2px solid transparent; border-radius: 999px;
+    background: var(--rw-scrollbar-thumb); background-clip: padding-box;
+  }
+  :where(
+    .md-sidebar__scrollwrap,
+    .md-search__scrollwrap,
+    .md-typeset__scrollwrap,
+    .md-typeset pre > code,
+    .md-typeset table:not([class]),
+    .rw-select__menu,
+    .rw-catalog__table-wrap
+  )::-webkit-scrollbar-thumb:hover { background-color: var(--rw-scrollbar-thumb-hover); }
+}
+
+@media (forced-colors: active) {
+  html,
+  .md-sidebar__scrollwrap,
+  .md-search__scrollwrap,
+  .md-typeset__scrollwrap,
+  .md-typeset pre > code,
+  .md-typeset table:not([class]),
+  .rw-select__menu,
+  .rw-catalog__table-wrap { scrollbar-color: auto; }
 }
 
 .md-grid { max-width: 82rem; }
@@ -195,14 +274,6 @@ html[data-romwiki-theme="platinum"] {
 .rw-catalog__reset:active, .rw-catalog__more:active { transform: translateY(1px); }
 .rw-catalog__summary { margin: .8rem 0 .35rem !important; color: var(--rw-text-muted); font-size: .66rem; font-weight: 700; }
 .rw-catalog__table-wrap { overflow-x: auto; border: 1px solid var(--rw-border); border-radius: .55rem; }
-.rw-select__menu, .rw-catalog__table-wrap { scrollbar-width: thin; scrollbar-color: rgba(var(--rw-accent-rgb), .48) transparent; }
-.rw-select__menu::-webkit-scrollbar, .rw-catalog__table-wrap::-webkit-scrollbar { width: .65rem; height: .65rem; }
-.rw-select__menu::-webkit-scrollbar-track, .rw-catalog__table-wrap::-webkit-scrollbar-track { background: transparent; }
-.rw-select__menu::-webkit-scrollbar-thumb, .rw-catalog__table-wrap::-webkit-scrollbar-thumb {
-  border: 2px solid transparent; border-radius: 999px;
-  background: rgba(var(--rw-accent-rgb), .42); background-clip: padding-box;
-}
-.rw-select__menu::-webkit-scrollbar-thumb:hover, .rw-catalog__table-wrap::-webkit-scrollbar-thumb:hover { background-color: rgba(var(--rw-accent-rgb), .68); }
 .rw-catalog__table { width: max-content; min-width: 100%; border-collapse: collapse; background: var(--rw-surface); font-size: .69rem; }
 .rw-catalog__table th, .rw-catalog__table td { padding: .48rem .62rem; border-bottom: 1px solid var(--rw-border); text-align: left; vertical-align: middle; }
 .rw-catalog__table th { position: sticky; top: 0; z-index: 1; white-space: nowrap; background: var(--rw-surface-muted); font-size: .59rem; letter-spacing: .04em; text-transform: uppercase; }
