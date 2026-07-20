@@ -3,6 +3,8 @@ from __future__ import annotations
 from html import escape
 from typing import Any
 
+from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
+
 
 DISPLAY_NAMES = {
     "poke-balls": "Poké Balls",
@@ -72,12 +74,16 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     for value in record["abilities"]:
         if value["name"] is None:
             continue
-        slug = value.get("slug")
-        label = escape(value["name"])
         ability_links.append(
-            f'<a href="../../abilities/{escape(slug, quote=True)}/">{label}</a>'
-            if slug
-            else label
+            ROUTES.html_link(
+                entity_reference(
+                    "ability",
+                    value.get("id", value["name"]),
+                    value["name"],
+                    value.get("slug"),
+                ),
+                f"pokemon/{record['slug']}/",
+            )
         )
     abilities = ", ".join(dict.fromkeys(ability_links)) or "None"
     dex = record["national_dex_id"]

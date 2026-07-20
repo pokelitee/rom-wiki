@@ -5,6 +5,11 @@ from typing import Any
 from collections import Counter
 
 from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    entity_reference,
+    unique_references,
+)
 
 
 def render_encounter_pages(dataset: dict[str, Any], output_root: Path) -> int:
@@ -55,6 +60,7 @@ def _catalog_record(
     methods = []
     levels = []
     species = []
+    pokemon_refs = []
     method_pokemon = {}
     for label, key in (
         ("walking", "walking"),
@@ -73,12 +79,15 @@ def _catalog_record(
             if pokemon:
                 species.append(pokemon["name"])
                 method_species.append(pokemon["name"])
+                pokemon_refs.append(_pokemon_reference(pokemon))
             if "level" in slot:
                 levels.append(slot["level"])
             else:
                 levels.extend((slot["minimum_level"], slot["maximum_level"]))
         method_pokemon[label] = list(dict.fromkeys(method_species))
-    special_species = _special_species(record["special"])
+    special_pokemon = _special_pokemon(record["special"])
+    special_species = [pokemon["name"] for pokemon in special_pokemon]
+    pokemon_refs.extend(_pokemon_reference(pokemon) for pokemon in special_pokemon)
     species.extend(special_species)
     if special_species and "walking" in method_pokemon:
         method_pokemon["walking"] = list(
@@ -92,6 +101,10 @@ def _catalog_record(
         "locations": list(dict.fromkeys(location_names)),
         "methods": methods,
         "pokemon": list(dict.fromkeys(species)),
+        "pokemon_refs": [
+            ROUTES.catalog_reference(reference, "encounters/")
+            for reference in unique_references(pokemon_refs)
+        ],
         "method_pokemon": method_pokemon,
         "min_level": min(levels) if levels else None,
         "max_level": max(levels) if levels else None,
@@ -100,8 +113,9 @@ def _catalog_record(
     }
 
 
-def _special_species(special: dict[str, Any]) -> list[str]:
+def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
     pokemon = []
+    seen = set()
     groups = (
         special["swarm"],
         special["day"],
@@ -110,22 +124,39 @@ def _special_species(special: dict[str, Any]) -> list[str]:
         *(values for values in special["dual_slot"].values()),
     )
     for group in groups:
-        pokemon.extend(value["name"] for value in group if value is not None)
-    return list(dict.fromkeys(pokemon))
+        for value in group:
+            if value is None:
+                continue
+            identity = (value.get("id"), value.get("slug"), value["name"])
+            if identity in seen:
+                continue
+            seen.add(identity)
+            pokemon.append(value)
+    return pokemon
+
+
+def _pokemon_reference(pokemon: dict[str, Any]):
+    return entity_reference(
+        "pokemon",
+        pokemon.get("id", pokemon["slug"]),
+        pokemon["name"],
+        pokemon.get("slug"),
+    )
 
 
 def _render_area(record: dict[str, Any]) -> str:
+    source_file = f"encounters/area-{record['area_id']:03}.md"
     lines = [f"# {record['name']}", ""]
-    _append_locations(lines, record.get("locations", []))
-    _append_walking(lines, record["walking"])
+    _append_locations(lines, record.get("locations", []), source_file)
+    _append_walking(lines, record["walking"], source_file)
     for heading, key in (
         ("Surf", "surf"),
         ("Old Rod", "old_rod"),
         ("Good Rod", "good_rod"),
         ("Super Rod", "super_rod"),
     ):
-        _append_water(lines, heading, record[key])
-    _append_special(lines, record["special"])
+        _append_water(lines, heading, record[key], source_file)
+    _append_special(lines, record["special"], source_file)
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -144,20 +175,30 @@ def _render_area(record: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _append_locations(lines: list[str], locations: list[dict[str, Any]]) -> None:
+def _append_locations(
+    lines: list[str], locations: list[dict[str, Any]], source_file: str
+) -> None:
     if not locations:
         return
     lines.extend(["## Map headers", "", "| Header | Location | Internal map |", "| -----: | -------- | ------------ |"])
     for location in locations:
+        reference = entity_reference(
+            "location",
+            location["header_id"],
+            str(location["header_id"]),
+            location.get("header_id"),
+        )
         lines.append(
-            f"| [{location['header_id']}](../locations/header-{location['header_id']:03}.md) "
+            f"| {ROUTES.markdown_link(reference, source_file)} "
             f"| {location['name']} | "
             f"`{location['internal_name']}` |"
         )
     lines.append("")
 
 
-def _append_walking(lines: list[str], method: dict[str, Any]) -> None:
+def _append_walking(
+    lines: list[str], method: dict[str, Any], source_file: str
+) -> None:
     if not method["rate"]:
         return
     lines.extend(
@@ -172,13 +213,15 @@ def _append_walking(lines: list[str], method: dict[str, Any]) -> None:
     )
     for index, slot in enumerate(method["slots"]):
         lines.append(
-            f"| {index + 1} | {_pokemon_link(slot['pokemon'])} | "
+            f"| {index + 1} | {_pokemon_link(slot['pokemon'], source_file)} | "
             f"{slot['level']} |"
         )
     lines.append("")
 
 
-def _append_water(lines: list[str], heading: str, method: dict[str, Any]) -> None:
+def _append_water(
+    lines: list[str], heading: str, method: dict[str, Any], source_file: str
+) -> None:
     if not method["rate"]:
         return
     lines.extend(
@@ -193,11 +236,15 @@ def _append_water(lines: list[str], heading: str, method: dict[str, Any]) -> Non
     )
     for index, slot in enumerate(method["slots"]):
         levels = _level_range(slot["minimum_level"], slot["maximum_level"])
-        lines.append(f"| {index + 1} | {_pokemon_link(slot['pokemon'])} | {levels} |")
+        lines.append(
+            f"| {index + 1} | {_pokemon_link(slot['pokemon'], source_file)} | {levels} |"
+        )
     lines.append("")
 
 
-def _append_special(lines: list[str], special: dict[str, Any]) -> None:
+def _append_special(
+    lines: list[str], special: dict[str, Any], source_file: str
+) -> None:
     groups = [
         ("Swarm", special["swarm"]),
         ("Day replacements", special["day"]),
@@ -213,15 +260,17 @@ def _append_special(lines: list[str], special: dict[str, Any]) -> None:
         return
     lines.extend(["## Special encounters", ""])
     for label, values in populated:
-        names = ", ".join(_pokemon_link(value) for value in values if value)
+        names = ", ".join(
+            _pokemon_link(value, source_file) for value in values if value
+        )
         lines.append(f"- {label}: {names}")
     lines.append("")
 
 
-def _pokemon_link(pokemon: dict[str, Any] | None) -> str:
+def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
     if pokemon is None:
         return "None"
-    return f"[{pokemon['name']}](../pokemon/{pokemon['slug']}.md)"
+    return ROUTES.markdown_link(_pokemon_reference(pokemon), source_file)
 
 
 def _level_range(minimum: int, maximum: int) -> str:

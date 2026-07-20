@@ -141,8 +141,8 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| TM06 | 333 | 32 BP | Always |", page)
         self.assertIn("| Togepi | Egg | 1 | — |", page)
         self.assertIn("| Rotom | 20 |", page)
-        self.assertIn("./header-047.md", page)
-        self.assertIn("./header-344.md", page)
+        self.assertIn("header-047.md", page)
+        self.assertIn("header-344.md", page)
         self.assertEqual(catalog["kind"], "locations")
         self.assertIn("shops", catalog["records"][0]["features"])
 

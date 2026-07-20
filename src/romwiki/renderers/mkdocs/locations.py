@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
 
 
 _SEAL_MART_DAYS = (
@@ -80,6 +81,7 @@ def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
 
 
 def _render_location(record: dict[str, Any]) -> str:
+    source_file = f"locations/{_filename(record['header_id'])}"
     lines = [
         f"# {record['name']}",
         "",
@@ -90,8 +92,15 @@ def _render_location(record: dict[str, Any]) -> str:
             [
                 "## Wild encounters",
                 "",
-                "[View encounter table]"
-                f"(../encounters/area-{record['encounter_id']:03}.md)",
+                ROUTES.markdown_link(
+                    entity_reference(
+                        "encounter",
+                        record["encounter_id"],
+                        "View encounter table",
+                        record["encounter_id"],
+                    ),
+                    source_file,
+                ),
                 "",
             ]
         )
@@ -100,9 +109,9 @@ def _render_location(record: dict[str, Any]) -> str:
     _append_pokemon_gifts(lines, record.get("pokemon_gifts", []))
     _append_npc_trades(lines, record.get("npc_trades", []))
     _append_static_encounters(lines, record.get("static_encounters", []))
-    _append_trainers(lines, record["trainers"])
-    _append_warps(lines, record["warps"])
-    _append_connections(lines, record["connections"])
+    _append_trainers(lines, record["trainers"], source_file)
+    _append_warps(lines, record["warps"], source_file)
+    _append_connections(lines, record["connections"], source_file)
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -207,7 +216,9 @@ def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
         lines.append("")
 
 
-def _append_trainers(lines: list[str], trainers: list[dict[str, Any]]) -> None:
+def _append_trainers(
+    lines: list[str], trainers: list[dict[str, Any]], source_file: str
+) -> None:
     if not trainers:
         return
     lines.extend(["## Trainers", ""])
@@ -220,9 +231,17 @@ def _append_trainers(lines: list[str], trainers: list[dict[str, Any]]) -> None:
             if trainer["source"] == "overworld-object"
             else "map script"
         )
+        link = ROUTES.markdown_link(
+            entity_reference(
+                "trainer",
+                trainer["trainer_id"],
+                label,
+                trainer.get("trainer_id"),
+            ),
+            source_file,
+        )
         lines.append(
-            f"- [{label}](../trainers/trainer-{trainer['trainer_id']:04}.md) "
-            f"({source})"
+            f"- {link} ({source})"
         )
         lines.append("")
 
@@ -313,7 +332,9 @@ def _append_npc_trades(
     lines.append("")
 
 
-def _append_warps(lines: list[str], warps: list[dict[str, Any]]) -> None:
+def _append_warps(
+    lines: list[str], warps: list[dict[str, Any]], source_file: str
+) -> None:
     if not warps:
         return
     lines.extend(
@@ -329,11 +350,16 @@ def _append_warps(lines: list[str], warps: list[dict[str, Any]]) -> None:
             destination = "Dynamic destination"
             destination_warp = "—"
         else:
-            destination = (
-                f"[{warp['destination_name']}]"
-                f"(./{_filename(warp['destination_header_id'])}) "
-                f"(`{warp['destination_internal_name']}`)"
+            destination = ROUTES.markdown_link(
+                entity_reference(
+                    "location",
+                    warp["destination_header_id"],
+                    warp["destination_name"],
+                    warp.get("destination_header_id"),
+                ),
+                source_file,
             )
+            destination += f" (`{warp['destination_internal_name']}`)"
             destination_warp = str(warp["destination_warp_id"])
             if not warp["destination_warp_exists"]:
                 destination_warp += " (missing target record)"
@@ -345,17 +371,24 @@ def _append_warps(lines: list[str], warps: list[dict[str, Any]]) -> None:
 
 
 def _append_connections(
-    lines: list[str], connections: list[dict[str, Any]]
+    lines: list[str], connections: list[dict[str, Any]], source_file: str
 ) -> None:
     if not connections:
         return
     lines.extend(["## Outdoor connections", ""])
     for connection in connections:
         directions = ", ".join(connection["directions"])
+        destination = ROUTES.markdown_link(
+            entity_reference(
+                "location",
+                connection["destination_header_id"],
+                connection["destination_name"],
+                connection.get("destination_header_id"),
+            ),
+            source_file,
+        )
         lines.append(
-            f"- {directions}: "
-            f"[{connection['destination_name']}]"
-            f"(./{_filename(connection['destination_header_id'])}) "
+            f"- {directions}: {destination} "
             f"(`{connection['destination_internal_name']}`)"
         )
     lines.append("")

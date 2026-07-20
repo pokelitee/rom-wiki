@@ -71,6 +71,15 @@ class EncounterEnrichmentTests(unittest.TestCase):
         self.assertIn("Charmander", catalog["records"][0]["pokemon"])
         self.assertIn("Charmander", catalog["records"][0]["method_pokemon"]["walking"])
         self.assertIn("charmander", catalog["records"][0]["search_text"])
+        self.assertIn(
+            {
+                "kind": "pokemon",
+                "id": 4,
+                "label": "Charmander",
+                "url": "../pokemon/charmander/",
+            },
+            catalog["records"][0]["pokemon_refs"],
+        )
 
 
 if __name__ == "__main__":

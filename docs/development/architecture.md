@@ -82,6 +82,11 @@ and Pokémon backlinks from one authoritative extraction. The item dataset follo
 the same pattern, joining normalized mechanics with item references from Pokémon,
 trainers, locations, shops, gifts, trades, and evolutions.
 
+Normalized relationships identify entities by stable IDs, not page paths. The
+MkDocs reference resolver maps those identities and resolved route keys to Markdown
+source links or published directory URLs. This keeps routing out of extraction and
+ensures catalog and detail-page links share one implementation.
+
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
 ROM message tables supply names when configured; PokéDB supplies canonical names
 for comparison and fallback, plus stable links and optional sprite URLs. It must

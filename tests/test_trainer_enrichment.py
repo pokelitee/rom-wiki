@@ -92,7 +92,20 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["min_level"], 5)
         self.assertEqual(
             catalog["records"][0]["party"],
-            [{"name": "Bulbasaur", "level": 5}],
+            [{
+                "name": "Bulbasaur",
+                "level": 5,
+                "pokemon_ref": {
+                    "kind": "pokemon",
+                    "id": 1,
+                    "label": "Bulbasaur",
+                    "url": "../pokemon/bulbasaur/",
+                },
+            }],
+        )
+        self.assertEqual(
+            catalog["records"][0]["location_refs"][0]["url"],
+            "../locations/header-343/",
         )
 
 

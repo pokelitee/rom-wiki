@@ -14,6 +14,36 @@ export function recordLink(record) {
   return link;
 }
 
+export function referenceLink(reference) {
+  if (!reference?.url) return text(reference?.label || "—");
+  const link = document.createElement("a");
+  link.href = reference.url;
+  link.textContent = reference.label;
+  return link;
+}
+
+export function referenceList(references, className = "rw-catalog__list") {
+  const wrap = document.createElement("span");
+  wrap.className = className;
+  if (!references?.length) {
+    wrap.textContent = "—";
+    return wrap;
+  }
+  references.forEach((reference, index) => {
+    if (index) wrap.append(", ");
+    wrap.append(referenceLink(reference));
+  });
+  return wrap;
+}
+
+export function referencePreviewList(references) {
+  const visible = (references || []).slice(0, 6);
+  const wrap = referenceList(visible);
+  const remaining = (references || []).length - visible.length;
+  if (remaining > 0) wrap.append(` +${remaining} more`);
+  return wrap;
+}
+
 export function pokemonName(record) {
   const wrap = document.createElement("span");
   wrap.className = "rw-catalog__name";
@@ -48,10 +78,16 @@ export function accessMethods(record) {
 }
 
 export function trainerParty(record) {
-  return text(
-    record.party.map((member) => `${member.name} Lv. ${member.level}`).join(", "),
-    "rw-catalog__list",
-  );
+  const wrap = document.createElement("span");
+  wrap.className = "rw-catalog__list";
+  record.party.forEach((member, index) => {
+    if (index) wrap.append(", ");
+    wrap.append(
+      member.pokemon_ref ? referenceLink(member.pokemon_ref) : member.name,
+      ` Lv. ${member.level}`,
+    );
+  });
+  return wrap;
 }
 
 export function locationIdentifier(record) {
@@ -62,13 +98,4 @@ export function locationIdentifier(record) {
     text(`Header ${record.id}`, "rw-catalog__number"),
   );
   return wrap;
-}
-
-export function previewList(values) {
-  const visible = values.slice(0, 6);
-  const remaining = values.length - visible.length;
-  return text(
-    `${visible.join(", ")}${remaining > 0 ? ` +${remaining} more` : ""}` || "—",
-    "rw-catalog__list",
-  );
 }

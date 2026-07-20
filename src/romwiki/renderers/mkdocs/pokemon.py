@@ -9,6 +9,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
 )
 from romwiki.renderers.mkdocs.components import pokemon_summary, stat_list
+from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
 
 
 def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
@@ -33,6 +34,19 @@ def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
         fallback_links.append(f"- [#{dex:03} {record['name']}]({filename})")
         stats = record["base_stats"]
         abilities = [value["name"] for value in record["abilities"] if value["name"]]
+        ability_refs = [
+            ROUTES.catalog_reference(
+                entity_reference(
+                    "ability",
+                    value.get("id", value["name"]),
+                    value["name"],
+                    value.get("slug"),
+                ),
+                "pokemon/",
+            )
+            for value in record["abilities"]
+            if value["name"]
+        ]
         types = list(dict.fromkeys(value["name"] for value in record["types"]))
         egg_groups = list(
             dict.fromkeys(value["name"] for value in record["egg_groups"])
@@ -46,6 +60,7 @@ def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 "url": f"{record['slug']}/",
                 "types": types,
                 "abilities": abilities,
+                "ability_refs": ability_refs,
                 "egg_groups": egg_groups,
                 "stats": stats,
                 "bst": sum(stats.values()),
@@ -73,6 +88,7 @@ def _render_record(
     following: dict[str, Any] | None = None,
     type_name_source: dict[str, Any] | None = None,
 ) -> str:
+    source_file = f"pokemon/{record['slug']}.md"
     stats = record["base_stats"]
     held_items = [item for item in record.get("held_items", []) if item["id"]]
     machines = record["machines"]
@@ -119,7 +135,7 @@ def _render_record(
                 *[
                     (
                         f"| {item['rarity'].title()} | "
-                        f"{_item_link(item)} | {item['id']} |"
+                        f"{_item_link(item, source_file)} | {item['id']} |"
                     )
                     for item in held_items
                 ],
@@ -141,7 +157,7 @@ def _render_record(
                 "| ------------ | --------- | --------: |",
                 *[
                     (
-                        f"| [{entry['target']['name']}]({entry['target']['slug']}.md) "
+                        f"| {_record_link('pokemon', entry['target'], source_file)} "
                         f"| {_evolution_condition(entry)} | {entry['method_id']} |"
                     )
                     for entry in evolutions
@@ -165,8 +181,7 @@ def _render_record(
                 *[
                     (
                         f"| {machine['name']} | "
-                        f"[{machine['move']['name']}]"
-                        f"(../moves/{machine['move']['slug']}.md) |"
+                        f"{_record_link('move', machine['move'], source_file)} |"
                     )
                     for machine in machines
                 ],
@@ -188,8 +203,7 @@ def _render_record(
                 "| ---- | -------- | ---- |",
                 *[
                     (
-                        f"| [{tutor['move']['name']}]"
-                        f"(../moves/{tutor['move']['slug']}.md) | "
+                        f"| {_record_link('move', tutor['move'], source_file)} | "
                         f"{tutor['location']['name']} | "
                         f"{_tutor_requirement(tutor)} |"
                     )
@@ -209,7 +223,7 @@ def _render_record(
                 *[
                     (
                         f"| {entry['level']} | "
-                        f"[{entry['move']['name']}](../moves/{entry['move']['slug']}.md) |"
+                        f"{_record_link('move', entry['move'], source_file)} |"
                     )
                     for entry in level_up_moves
                 ],
@@ -223,7 +237,7 @@ def _render_record(
         lines.extend(
             [
                 ", ".join(
-                    f"[{move['name']}](../moves/{move['slug']}.md)"
+                    _record_link("move", move, source_file)
                     for move in egg_moves
                 ),
                 "",
@@ -353,10 +367,18 @@ def _evolution_condition(entry: dict[str, Any]) -> str:
     return conditions.get(method, f"{method.replace('-', ' ').title()} ({value})")
 
 
-def _item_link(item: dict[str, Any]) -> str:
-    name = item["name"]
-    slug = item.get("slug")
-    return f"[{name}](../items/{slug}.md)" if slug else name
+def _item_link(item: dict[str, Any], source_file: str) -> str:
+    return _record_link("item", item, source_file)
+
+
+def _record_link(kind: str, value: dict[str, Any], source_file: str) -> str:
+    reference = entity_reference(
+        kind,
+        value.get("id", value.get("slug", value["name"])),
+        value["name"],
+        value.get("slug"),
+    )
+    return ROUTES.markdown_link(reference, source_file)
 
 
 def _shard_cost(costs: dict[str, int]) -> str:

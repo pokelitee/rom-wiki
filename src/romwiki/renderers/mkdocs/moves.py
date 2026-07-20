@@ -9,6 +9,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
 )
 from romwiki.renderers.mkdocs.components import type_badges
+from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
 
 
 def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
@@ -85,6 +86,7 @@ def _render_record(
     following: dict[str, Any] | None = None,
     name_source: dict[str, Any] | None = None,
 ) -> str:
+    source_file = f"moves/{record['slug']}.md"
     lines = [
         f"# {record['name']}",
         "",
@@ -119,10 +121,10 @@ def _render_record(
         "",
         "## Tutor compatibility",
         "",
-        *_tutor_compatibility(record),
+        *_tutor_compatibility(record, source_file),
         "## Egg move learners",
         "",
-        *_egg_move_learners(record),
+        *_egg_move_learners(record, source_file),
         '<details class="rw-source-details" markdown="1">',
         "<summary>Engine details and provenance</summary>",
         "",
@@ -199,7 +201,9 @@ def _tutor_locations(record: dict[str, Any]) -> str:
     ) or "—"
 
 
-def _tutor_compatibility(record: dict[str, Any]) -> list[str]:
+def _tutor_compatibility(
+    record: dict[str, Any], source_file: str
+) -> list[str]:
     tutors = record.get("tutors", [])
     if not tutors:
         return ["Not taught by a shard move tutor.", ""]
@@ -214,7 +218,7 @@ def _tutor_compatibility(record: dict[str, Any]) -> list[str]:
                 if amount
             ) or "Free"
         pokemon = ", ".join(
-            f"[{value['name']}](../pokemon/{value['slug']}.md)"
+            _pokemon_link(value, source_file)
             for value in tutor["compatible_pokemon"]
         ) or "None"
         lines.extend(
@@ -228,13 +232,15 @@ def _tutor_compatibility(record: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _egg_move_learners(record: dict[str, Any]) -> list[str]:
+def _egg_move_learners(
+    record: dict[str, Any], source_file: str
+) -> list[str]:
     pokemon = record.get("egg_move_pokemon", [])
     if not pokemon:
         return ["None.", ""]
     return [
         ", ".join(
-            f"[{value['name']}](../pokemon/{value['slug']}.md)" for value in pokemon
+            _pokemon_link(value, source_file) for value in pokemon
         ),
         "",
     ]
@@ -242,6 +248,18 @@ def _egg_move_learners(record: dict[str, Any]) -> list[str]:
 
 def _display_name(slug: str) -> str:
     return " ".join(part.capitalize() for part in slug.split("-"))
+
+
+def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
+    return ROUTES.markdown_link(
+        entity_reference(
+            "pokemon",
+            value.get("id", value.get("slug", value["name"])),
+            value["name"],
+            value.get("slug"),
+        ),
+        source_file,
+    )
 
 
 def _write_text(path: Path, value: str) -> None:

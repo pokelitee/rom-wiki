@@ -52,6 +52,17 @@ For example, encounter records preserve the Pokémon available through each meth
 so combining those filters cannot produce a false match. Breaking catalog changes
 require a version bump and matching JavaScript support.
 
+Entity relationships remain ID-based in normalized data. Renderers convert them
+to additive catalog references with `kind`, `id`, `label`, and an optional resolved
+`url`; existing scalar fields remain available for filtering. Catalog columns render
+the reference as a link only when `url` is present, so an unresolved relationship
+cannot create a guessed or broken target.
+
+`renderers/mkdocs/references.py` is the single route registry for cross-entity
+links. It resolves Markdown source paths separately from published directory URLs
+and accounts for the source page depth. Catalog JSON and detail-page renderers must
+use this resolver instead of constructing section paths from labels or slugs.
+
 Multi-select facets are reserved for fields where each record can contain several
 values. They remain open while options are toggled and default to matching every
 selected value. Once two values are selected, users can switch that facet between

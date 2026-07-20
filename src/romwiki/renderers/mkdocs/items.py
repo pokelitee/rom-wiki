@@ -10,6 +10,11 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text,
 )
 from romwiki.renderers.mkdocs.components import display_name
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    entity_reference,
+    unique_references,
+)
 
 
 def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
@@ -33,6 +38,18 @@ def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 for reference in record[field]
             )
         )
+        location_refs = unique_references(
+            [
+                entity_reference(
+                    "location",
+                    reference["header_id"],
+                    reference["name"],
+                    reference.get("header_id"),
+                )
+                for field in ("locations", "shops", "gifts", "trades")
+                for reference in record[field]
+            ]
+        )
         catalog_records.append(
             {
                 "id": record["item_id"],
@@ -45,6 +62,10 @@ def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 "fling_power": record["fling_power"],
                 "features": features,
                 "locations": locations,
+                "location_refs": [
+                    ROUTES.catalog_reference(reference, "items/")
+                    for reference in location_refs
+                ],
                 "search_text": " ".join((record["name"], *features, *locations)).lower(),
             }
         )
@@ -66,6 +87,7 @@ def _render_record(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> str:
+    source_file = f"items/{record['slug']}.md"
     price = f"₽{record['price']:,}" if record["price"] else "Not sold"
     lines = [
         f"# {record['name']}",
@@ -104,12 +126,12 @@ def _render_record(
         lines.extend(["- Party-use effects: " + ", ".join(party_effects)])
     lines.append("")
 
-    _append_locations(lines, record)
-    _append_shops(lines, record["shops"])
-    _append_pokemon(lines, record)
-    _append_trainers(lines, record)
-    _append_gifts_and_trades(lines, record)
-    _append_evolutions(lines, record["evolutions"])
+    _append_locations(lines, record, source_file)
+    _append_shops(lines, record["shops"], source_file)
+    _append_pokemon(lines, record, source_file)
+    _append_trainers(lines, record, source_file)
+    _append_gifts_and_trades(lines, record, source_file)
+    _append_evolutions(lines, record["evolutions"], source_file)
     lines.extend(
         [
             "## Source",
@@ -127,7 +149,9 @@ def _render_record(
     return "\n".join(lines)
 
 
-def _append_locations(lines: list[str], record: dict[str, Any]) -> None:
+def _append_locations(
+    lines: list[str], record: dict[str, Any], source_file: str
+) -> None:
     lines.extend(["## Overworld locations", ""])
     if not record["locations"]:
         lines.extend(["None found.", ""])
@@ -138,7 +162,7 @@ def _append_locations(lines: list[str], record: dict[str, Any]) -> None:
             "| -------- | ---- | ----------- |",
             *[
                 (
-                    f"| [{value['name']}](../locations/header-{value['header_id']:03}.md) "
+                    f"| {_location_link(value, source_file)} "
                     f"| {value['kind'].title()} | ({value['x']}, {value['z']}) |"
                 )
                 for value in record["locations"]
@@ -148,7 +172,9 @@ def _append_locations(lines: list[str], record: dict[str, Any]) -> None:
     )
 
 
-def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
+def _append_shops(
+    lines: list[str], shops: list[dict[str, Any]], source_file: str
+) -> None:
     lines.extend(["## Shops", ""])
     if not shops:
         lines.extend(["Not sold by an extracted shop.", ""])
@@ -159,7 +185,7 @@ def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
             "| -------- | ---- | ----: | ------------ |",
             *[
                 (
-                    f"| [{shop['name']}](../locations/header-{shop['header_id']:03}.md) "
+                    f"| {_location_link(shop, source_file)} "
                     f"| {shop['kind'].title()} | {_shop_price(shop)} | "
                     f"{_availability(shop['required_badges'])} |"
                 )
@@ -170,7 +196,9 @@ def _append_shops(lines: list[str], shops: list[dict[str, Any]]) -> None:
     )
 
 
-def _append_pokemon(lines: list[str], record: dict[str, Any]) -> None:
+def _append_pokemon(
+    lines: list[str], record: dict[str, Any], source_file: str
+) -> None:
     lines.extend(["## Wild held by", ""])
     if not record["wild_held_by"]:
         lines.extend(["No wild held-item assignments.", ""])
@@ -180,7 +208,7 @@ def _append_pokemon(lines: list[str], record: dict[str, Any]) -> None:
             "| Pokémon | Slot |",
             "| ------- | ---- |",
             *[
-                f"| [{value['name']}](../pokemon/{value['slug']}.md) | {value['rarity'].title()} |"
+                f"| {_pokemon_link(value, source_file)} | {value['rarity'].title()} |"
                 for value in record["wild_held_by"]
             ],
             "",
@@ -188,7 +216,9 @@ def _append_pokemon(lines: list[str], record: dict[str, Any]) -> None:
     )
 
 
-def _append_trainers(lines: list[str], record: dict[str, Any]) -> None:
+def _append_trainers(
+    lines: list[str], record: dict[str, Any], source_file: str
+) -> None:
     lines.extend(["## Trainer references", ""])
     values = [
         (value, f"Held by {value['pokemon']['name']}")
@@ -203,8 +233,7 @@ def _append_trainers(lines: list[str], record: dict[str, Any]) -> None:
             "| ------- | --------- |",
             *[
                 (
-                    f"| [{value['class_name']} {value['name']}]"
-                    f"(../trainers/trainer-{value['trainer_id']:04}.md) | {kind} |"
+                    f"| {_trainer_link(value, source_file)} | {kind} |"
                 )
                 for value, kind in values
             ],
@@ -213,11 +242,13 @@ def _append_trainers(lines: list[str], record: dict[str, Any]) -> None:
     )
 
 
-def _append_gifts_and_trades(lines: list[str], record: dict[str, Any]) -> None:
+def _append_gifts_and_trades(
+    lines: list[str], record: dict[str, Any], source_file: str
+) -> None:
     lines.extend(["## Gifts and trades", ""])
     values = [
-        (value, "Gift", value["pokemon"]["name"]) for value in record["gifts"]
-    ] + [(value, "Trade", value["pokemon"]["name"]) for value in record["trades"]]
+        (value, "Gift", value["pokemon"]) for value in record["gifts"]
+    ] + [(value, "Trade", value["pokemon"]) for value in record["trades"]]
     if not values:
         lines.extend(["No gift or trade references.", ""])
         return
@@ -227,8 +258,8 @@ def _append_gifts_and_trades(lines: list[str], record: dict[str, Any]) -> None:
             "| -------- | ---- | ------- |",
             *[
                 (
-                    f"| [{value['name']}](../locations/header-{value['header_id']:03}.md) "
-                    f"| {kind} | {pokemon} |"
+                    f"| {_location_link(value, source_file)} "
+                    f"| {kind} | {_pokemon_link(pokemon, source_file)} |"
                 )
                 for value, kind, pokemon in values
             ],
@@ -237,7 +268,9 @@ def _append_gifts_and_trades(lines: list[str], record: dict[str, Any]) -> None:
     )
 
 
-def _append_evolutions(lines: list[str], evolutions: list[dict[str, Any]]) -> None:
+def _append_evolutions(
+    lines: list[str], evolutions: list[dict[str, Any]], source_file: str
+) -> None:
     lines.extend(["## Evolutions", ""])
     if not evolutions:
         lines.extend(["No extracted evolutions use this item.", ""])
@@ -248,10 +281,8 @@ def _append_evolutions(lines: list[str], evolutions: list[dict[str, Any]]) -> No
             "| ---- | -- | ------ |",
             *[
                 (
-                    f"| [{value['source']['name']}]"
-                    f"(../pokemon/{value['source']['slug']}.md) | "
-                    f"[{value['target']['name']}]"
-                    f"(../pokemon/{value['target']['slug']}.md) | "
+                    f"| {_pokemon_link(value['source'], source_file)} | "
+                    f"{_pokemon_link(value['target'], source_file)} | "
                     f"{display_name(value['method'])} |"
                 )
                 for value in evolutions
@@ -289,6 +320,45 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
     if effects["pp_restore"] or effects["pp_restore_all"]:
         result.append(f"PP amount {effects['pp_restored']}")
     return result
+
+
+def _location_link(value: dict[str, Any], source_file: str) -> str:
+    return ROUTES.markdown_link(
+        entity_reference(
+            "location",
+            value["header_id"],
+            value["name"],
+            value.get("header_id"),
+        ),
+        source_file,
+    )
+
+
+def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
+    return ROUTES.markdown_link(
+        entity_reference(
+            "pokemon",
+            value.get("id", value.get("slug", value["name"])),
+            value["name"],
+            value.get("slug"),
+        ),
+        source_file,
+    )
+
+
+def _trainer_link(value: dict[str, Any], source_file: str) -> str:
+    label = " ".join(
+        part for part in (value.get("class_name"), value.get("name")) if part
+    )
+    return ROUTES.markdown_link(
+        entity_reference(
+            "trainer",
+            value["trainer_id"],
+            label,
+            value.get("trainer_id"),
+        ),
+        source_file,
+    )
 
 
 def _features(record: dict[str, Any]) -> list[str]:

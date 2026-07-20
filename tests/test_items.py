@@ -110,6 +110,15 @@ class ItemDatasetTests(unittest.TestCase):
             catalog["records"][0]["features"],
             ["overworld", "wild-held", "trainer-held"],
         )
+        self.assertEqual(
+            catalog["records"][0]["location_refs"],
+            [{
+                "kind": "location",
+                "id": 10,
+                "label": "Route 1",
+                "url": "../locations/header-010/",
+            }],
+        )
 
 
 def _item_record() -> dict:

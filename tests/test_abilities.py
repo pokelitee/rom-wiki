@@ -92,6 +92,15 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(catalog["kind"], "abilities")
         self.assertEqual(catalog["records"][0]["pokemon_count"], 1)
         self.assertEqual(catalog["records"][0]["status"], "assigned")
+        self.assertEqual(
+            catalog["records"][0]["pokemon_refs"],
+            [{
+                "kind": "pokemon",
+                "id": 1,
+                "label": "Bulbasaur",
+                "url": "../pokemon/bulbasaur/",
+            }],
+        )
 
 
 def _pokedb() -> PokeDBGeneration:

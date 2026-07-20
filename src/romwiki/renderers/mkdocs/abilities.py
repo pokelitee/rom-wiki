@@ -9,6 +9,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
 
 
 def render_ability_pages(dataset: dict[str, Any], output_root: Path) -> int:
@@ -28,6 +29,18 @@ def render_ability_pages(dataset: dict[str, Any], output_root: Path) -> int:
             f"- [#{record['ability_id']:03} {record['name']}]({filename})"
         )
         pokemon_names = [pokemon["name"] for pokemon in record["pokemon"]]
+        pokemon_refs = [
+            ROUTES.catalog_reference(
+                entity_reference(
+                    "pokemon",
+                    pokemon.get("member", pokemon["national_dex_id"]),
+                    pokemon["name"],
+                    pokemon.get("slug"),
+                ),
+                "abilities/",
+            )
+            for pokemon in record["pokemon"]
+        ]
         catalog_records.append(
             {
                 "id": record["ability_id"],
@@ -35,6 +48,7 @@ def render_ability_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 "slug": record["slug"],
                 "url": f"{record['slug']}/",
                 "pokemon": pokemon_names,
+                "pokemon_refs": pokemon_refs,
                 "pokemon_count": len(pokemon_names),
                 "status": "assigned" if pokemon_names else "unassigned",
                 "search_text": " ".join((record["name"], *pokemon_names)).lower(),
@@ -60,6 +74,7 @@ def _render_record(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> str:
+    source_file = f"abilities/{record['slug']}.md"
     lines = [
         f"# {record['name']}",
         "",
@@ -75,7 +90,7 @@ def _render_record(
                 "| ------- | ---------------: | ------------ |",
                 *[
                     (
-                        f"| [{pokemon['name']}](../pokemon/{pokemon['slug']}.md) | "
+                        f"| {_pokemon_link(pokemon, source_file)} | "
                         f"#{pokemon['national_dex_id']:03} | "
                         f"{', '.join(str(slot) for slot in pokemon['slots'])} |"
                     )
@@ -100,6 +115,16 @@ def _render_record(
         ]
     )
     return "\n".join(lines)
+
+
+def _pokemon_link(pokemon: dict[str, Any], source_file: str) -> str:
+    reference = entity_reference(
+        "pokemon",
+        pokemon.get("member", pokemon["national_dex_id"]),
+        pokemon["name"],
+        pokemon.get("slug"),
+    )
+    return ROUTES.markdown_link(reference, source_file)
 
 
 def _page_navigation(
