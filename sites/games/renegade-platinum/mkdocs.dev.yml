@@ -1,0 +1,34 @@
+INHERIT: mkdocs.yml
+
+site_name: Renegade Platinum Wiki (Development)
+site_dir: ../../../build/mkdocs-dev/renegade-platinum
+
+extra:
+  romwiki_site_id: renegade-platinum
+
+exclude_docs: |
+  /pokemon/*.md
+  !/pokemon/index.md
+  !/pokemon/bulbasaur.md
+  /abilities/*.md
+  !/abilities/index.md
+  !/abilities/overgrow.md
+  /items/*.md
+  !/items/index.md
+  !/items/master-ball.md
+  /moves/*.md
+  !/moves/index.md
+  !/moves/pound.md
+  /encounters/*.md
+  !/encounters/index.md
+  !/encounters/area-000.md
+  /trainers/*.md
+  !/trainers/index.md
+  !/trainers/trainer-0001.md
+  /locations/*.md
+  !/locations/index.md
+  !/locations/header-000.md
+
+validation:
+  links:
+    not_found: ignore
