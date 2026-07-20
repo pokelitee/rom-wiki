@@ -6,6 +6,7 @@ import unittest
 
 from romwiki.errors import SiteError
 from romwiki.sites import SiteCatalog, build_sites
+from romwiki.sites.mkdocs_hooks import _deployment_site_url
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -52,6 +53,23 @@ class SiteCatalogTests(unittest.TestCase):
 
         with self.assertRaises(SiteError):
             build_sites(catalog, Path("dist"), runner=lambda command: None)
+
+    def test_deployment_urls_preserve_the_pages_repository_path(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+
+        self.assertEqual(
+            _deployment_site_url(
+                "https://example.test/rom-wiki", catalog.get("portal")
+            ),
+            "https://example.test/rom-wiki/",
+        )
+        self.assertEqual(
+            _deployment_site_url(
+                "https://example.test/rom-wiki/",
+                catalog.get("renegade-platinum"),
+            ),
+            "https://example.test/rom-wiki/renegade-platinum/",
+        )
 
     def test_rejects_invalid_game_appearance_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

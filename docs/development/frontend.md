@@ -20,6 +20,11 @@ token to custom properties such as `--rw-accent`; components consume the variabl
 rather than game names. Components must support the default and slate Material
 schemes and remain readable without color.
 
+The shared `404.html` provides portal- and game-aware recovery links. GitHub Pages
+builds pass the deployment root through `ROMWIKI_SITE_URL`; the MkDocs hook derives
+each site's `site_url` from it so 404 assets and links remain valid when the combined
+artifact is hosted below a repository path. Local builds may leave it unset.
+
 Shared frontend assets are divided by responsibility. `theme.css` owns tokens,
 Material integration, and global scrolling; `shell.css` owns navigation and landing
 pages; `records.css` owns record-level components; `controls.css` owns reusable

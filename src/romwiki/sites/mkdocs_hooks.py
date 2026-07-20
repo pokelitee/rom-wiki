@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,14 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
     _catalog = catalog
     _current_site = current
     config.extra["romwiki_site"] = _site_context(current)
+    config.extra["romwiki_games"] = [
+        _site_context(site)
+        for site in catalog.published()
+        if site.kind == "game"
+    ]
+    deployment_url = os.environ.get("ROMWIKI_SITE_URL")
+    if deployment_url:
+        config.site_url = _deployment_site_url(deployment_url, current)
     return config
 
 
@@ -83,3 +92,8 @@ def _site_context(site: SiteDefinition) -> dict[str, Any]:
         "creator": game.creator if game else None,
         "theme": game.theme if game else "portal",
     }
+
+
+def _deployment_site_url(root_url: str, site: SiteDefinition) -> str:
+    root = root_url.rstrip("/") + "/"
+    return f"{root}{site.slug}/" if site.kind == "game" else root
