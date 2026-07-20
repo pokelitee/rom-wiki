@@ -48,10 +48,13 @@ matching so users do not have to choose an exact suggestion.
 
 The index contains a `data-rw-catalog` container followed by every record as normal
 Markdown links. JavaScript hides that fallback only after it has successfully
-loaded and validated the JSON. Filtering and sorting happen locally, 50 rows render
-at a time, and non-default controls are stored in the query string. Player-facing
-tables should lead with recognizable game data; internal IDs should be combined or
-moved later in the row when they distinguish otherwise identical records.
+started, preventing it from flashing before the interactive catalog renders. A
+loading indicator occupies the catalog region in the meantime. The fallback stays
+visible without JavaScript and is restored if the catalog cannot load or validate.
+Filtering and sorting happen locally, 50 rows render at a time, and non-default
+controls are stored in the query string. Player-facing tables should lead with
+recognizable game data; internal IDs should be combined or moved later in the row
+when they distinguish otherwise identical records.
 
 Do not put sprites in catalog rows. Hundreds of external image requests would make
 indexes slower and less reliable.

@@ -3,6 +3,14 @@
 {% block extrahead %}
   {{ super() }}
   <meta name="romwiki-theme" content="{{ romwiki.current.theme if romwiki else 'portal' }}">
+  <script>
+    document.documentElement.classList.add("rw-js");
+    window.setTimeout(function () {
+      if (!document.documentElement.classList.contains("rw-js-ready")) {
+        document.documentElement.classList.remove("rw-js");
+      }
+    }, 4000);
+  </script>
   <link rel="stylesheet" href="{{ 'assets/stylesheets/romwiki.css' | url }}">
 {% endblock %}
 

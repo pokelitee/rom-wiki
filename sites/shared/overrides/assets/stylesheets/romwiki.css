@@ -218,6 +218,7 @@ html[data-romwiki-theme="platinum"] {
 .rw-party-card__moves li { margin: 0 !important; padding: .28rem .38rem; border-radius: .3rem; background: var(--rw-surface-muted); font-size: .63rem; }
 
 .rw-catalog { margin: 1.2rem 0 2rem; }
+html:not(.rw-js) .rw-catalog { display: none; }
 .rw-catalog__controls {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .65rem;
   align-items: end; padding: .85rem; border: 1px solid var(--rw-border);
@@ -321,7 +322,16 @@ html[data-romwiki-theme="platinum"] {
 .rw-catalog__table tbody tr:last-child td { border-bottom: 0; }
 .rw-catalog__table tbody tr:hover { background: rgba(var(--rw-accent-rgb), .045); }
 .rw-catalog__more { display: block; margin: .8rem auto 0; }
-.rw-catalog__status { padding: .7rem; border-left: .15rem solid var(--rw-accent); background: var(--rw-surface-muted); }
+.rw-catalog__status {
+  display: flex; align-items: center; gap: .55rem; min-height: 3.2rem; padding: .7rem;
+  border: 1px solid var(--rw-border); border-left: .15rem solid var(--rw-accent);
+  border-radius: .5rem; color: var(--rw-text-muted); background: var(--rw-surface-muted);
+}
+.rw-js .rw-catalog:not(.rw-catalog--failed) .rw-catalog__status::before {
+  content: ""; flex: 0 0 .85rem; width: .85rem; height: .85rem;
+  border: 2px solid rgba(var(--rw-accent-rgb), .22); border-top-color: var(--rw-accent);
+  border-radius: 50%; animation: rw-spin .75s linear infinite;
+}
 .rw-catalog__name { display: flex; align-items: baseline; gap: .45rem; white-space: nowrap; }
 .rw-catalog__dex, .rw-catalog__number { color: var(--rw-text-muted); font-variant-numeric: tabular-nums; }
 .rw-catalog__code { font-family: var(--md-code-font-family); font-size: .63rem; }
@@ -329,8 +339,15 @@ html[data-romwiki-theme="platinum"] {
 .rw-catalog__map-id { display: grid; gap: .12rem; min-width: 7rem; }
 .rw-type-list { display: flex; flex-wrap: wrap; gap: .25rem; }
 .rw-catalog-fallback { columns: 3 14rem; column-gap: 1.5rem; }
+.rw-js [data-rw-catalog-fallback]:not(.rw-catalog-fallback--visible) { display: none; }
 .rw-catalog-fallback h2 { column-span: all; }
 .rw-catalog-fallback ul { margin-top: 0; }
+
+@keyframes rw-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rw-js .rw-catalog__status::before { animation: none; }
+}
 
 @media (max-width: 44rem) {
   .md-typeset { font-size: .74rem; }

@@ -87,6 +87,7 @@
     },
   };
 
+  document.documentElement.classList.add("rw-js-ready");
   document.querySelectorAll("[data-rw-catalog]").forEach(loadCatalog);
 
   async function loadCatalog(root) {
@@ -103,8 +104,15 @@
       const fallback = document.querySelector("[data-rw-catalog-fallback]");
       if (fallback) fallback.hidden = true;
     } catch (error) {
-      status.textContent = "Interactive catalog unavailable. The complete static list is shown below.";
+      if (status) {
+        status.textContent = "Interactive catalog unavailable. The complete static list is shown below.";
+      }
       root.classList.add("rw-catalog--failed");
+      const fallback = document.querySelector("[data-rw-catalog-fallback]");
+      if (fallback) {
+        fallback.hidden = false;
+        fallback.classList.add("rw-catalog-fallback--visible");
+      }
     }
   }
 
