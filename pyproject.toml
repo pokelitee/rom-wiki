@@ -19,7 +19,10 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-docs = ["mkdocs-material>=9"]
+docs = [
+    "mkdocs>=1.6.1,<2",
+    "mkdocs-material>=9.7.6,<10",
+]
 
 [project.scripts]
 romwiki = "romwiki.cli:main"
@@ -30,4 +33,3 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-
