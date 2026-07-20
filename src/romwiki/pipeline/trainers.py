@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen4_dppt import (
+    GEN4_ARCHIVE_MEMBER_NONE,
     MAP_HEADER_SIZE,
     parse_english_message_archive,
     parse_object_events,
@@ -122,7 +123,6 @@ def _extract_trainer_locations(
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
-        null_event_id = profile.parameters["null_event_id"]
         script_start = profile.parameters["trainer_script_start"]
         script_end = profile.parameters["trainer_script_end"]
         trainer_id_offset = profile.parameters["trainer_script_id_offset"]
@@ -130,6 +130,7 @@ def _extract_trainer_locations(
         raise ProfileError(
             f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
         ) from error
+    null_event_id = profile.parameters.get("null_event_id", GEN4_ARCHIVE_MEMBER_NONE)
 
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset + table_offset)

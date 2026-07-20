@@ -20,6 +20,7 @@ class NintendoDSHeader:
     rom_version: int
     header_size: int
     arm9_offset: int
+    arm9_ram_address: int
     arm9_size: int
     arm7_offset: int
     arm7_size: int
@@ -62,6 +63,7 @@ class NintendoDSHeader:
             rom_version=data[0x1E],
             header_size=_uint32(data, 0x84),
             arm9_offset=_uint32(data, 0x20),
+            arm9_ram_address=_uint32(data, 0x28),
             arm9_size=_uint32(data, 0x2C),
             arm7_offset=_uint32(data, 0x30),
             arm7_size=_uint32(data, 0x3C),
@@ -96,4 +98,3 @@ def _decode_identifier(value: bytes, label: str) -> str:
     if not decoded.isalnum():
         raise InvalidRomError(f"Nintendo DS {label} is invalid: {decoded!r}")
     return decoded
-

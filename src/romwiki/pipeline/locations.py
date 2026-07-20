@@ -6,12 +6,16 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen4_dppt import (
+    GEN4_ARCHIVE_MEMBER_NONE,
     MAP_HEADER_SIZE,
     Gen4CommonMartItem,
     Gen4MapEvents,
     Gen4NpcTrade,
     Gen4WarpEvent,
     PLATINUM_ROAMING_SLOT_COUNT,
+    PLATINUM_DYNAMIC_WARP_HEADER_ID,
+    PLATINUM_DYNAMIC_WARP_ID,
+    PLATINUM_MATRIX_VOID_HEADER_IDS,
     PlatinumMapHeader,
     parse_english_message_archive,
     parse_map_matrix,
@@ -89,13 +93,6 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         decoration_names_member = profile.parameters["decoration_names_member"]
         decoration_name_count = profile.parameters["decoration_name_count"]
         seal_names_member = profile.parameters["seal_names_member"]
-        null_event_id = profile.parameters["null_event_id"]
-        null_encounter_id = profile.parameters["null_encounter_id"]
-        dynamic_warp_header_id = profile.parameters["dynamic_warp_header_id"]
-        dynamic_warp_id = profile.parameters["dynamic_warp_id"]
-        matrix_void_header_ids = frozenset(
-            profile.parameters["matrix_void_header_ids"]
-        )
         common_mart_inventory_offset = profile.parameters[
             "common_mart_inventory_offset"
         ]
@@ -131,11 +128,27 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         static_encounter_location_metadata = profile.parameters.get(
             "static_encounter_locations", []
         )
-        arm9_load_address = profile.parameters["arm9_load_address"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
         ) from error
+
+    null_event_id = profile.parameters.get("null_event_id", GEN4_ARCHIVE_MEMBER_NONE)
+    null_encounter_id = profile.parameters.get(
+        "null_encounter_id", GEN4_ARCHIVE_MEMBER_NONE
+    )
+    dynamic_warp_header_id = profile.parameters.get(
+        "dynamic_warp_header_id", PLATINUM_DYNAMIC_WARP_HEADER_ID
+    )
+    dynamic_warp_id = profile.parameters.get(
+        "dynamic_warp_id", PLATINUM_DYNAMIC_WARP_ID
+    )
+    matrix_void_header_ids = frozenset(
+        profile.parameters.get(
+            "matrix_void_header_ids", PLATINUM_MATRIX_VOID_HEADER_IDS
+        )
+    )
+    arm9_load_address = result.image.header.arm9_ram_address
 
     filesystem = NintendoDSFileSystem.from_image(result.image)
     with result.image.path.open("rb") as stream:

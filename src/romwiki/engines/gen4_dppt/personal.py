@@ -12,6 +12,7 @@ from romwiki.schema import (
 
 
 PERSONAL_RECORD_SIZE = 44
+GEN4_BASE_SPECIES_COUNT = 493
 
 PERSONAL_FORM_MEMBERS = {
     496: "deoxys-attack",

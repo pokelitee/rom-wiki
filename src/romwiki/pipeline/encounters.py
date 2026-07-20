@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen4_dppt import (
+    GEN4_ARCHIVE_MEMBER_NONE,
     MAP_HEADER_SIZE,
     parse_encounter_record,
     parse_english_message_archive,
@@ -75,7 +76,6 @@ def _extract_encounter_locations(
         "map_header_offset",
         "map_header_count",
         "location_names_member",
-        "null_encounter_id",
     )
     try:
         layout = {name: profile.layout[name] for name in required_layout}
@@ -103,7 +103,9 @@ def _extract_encounter_locations(
     location_names = parse_english_message_archive(messages.read(member))
 
     locations: dict[int, list[EncounterLocation]] = {}
-    null_encounter_id = parameters["null_encounter_id"]
+    null_encounter_id = profile.parameters.get(
+        "null_encounter_id", GEN4_ARCHIVE_MEMBER_NONE
+    )
     for header in headers:
         if header.encounter_id == null_encounter_id:
             continue

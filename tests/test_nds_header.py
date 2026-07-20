@@ -15,6 +15,7 @@ def make_header() -> bytes:
     data[0x14] = 10
     data[0x1E] = 1
     struct.pack_into("<I", data, 0x20, 0x4000)
+    struct.pack_into("<I", data, 0x28, 0x02000000)
     struct.pack_into("<I", data, 0x2C, 0x100)
     struct.pack_into("<I", data, 0x30, 0x5000)
     struct.pack_into("<I", data, 0x3C, 0x100)
@@ -33,6 +34,7 @@ class NintendoDSHeaderTests(unittest.TestCase):
         self.assertEqual(header.title, "POKEMON PL")
         self.assertEqual(header.game_code, "CPUE")
         self.assertEqual(header.rom_version, 1)
+        self.assertEqual(header.arm9_ram_address, 0x02000000)
         self.assertEqual(header.filesystem_file_count, 8)
         self.assertEqual(header.declared_capacity_bytes, 128 * 1024 * 1024)
 
@@ -43,4 +45,3 @@ class NintendoDSHeaderTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

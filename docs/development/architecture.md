@@ -47,6 +47,12 @@ normally share an engine decoder and use different profiles. If a hack changes t
 record format or script behavior, the engine needs a parser variant or an explicit
 capability for that difference.
 
+Platform readers own values encoded by the container itself, and engine decoders
+own stable format defaults such as sentinels and standard record counts. A profile
+contains only build-specific locators and verified overrides. Relationships that
+cannot yet be derived exactly, such as a shared script command's map association,
+remain narrow profile annotations rather than hard-coded pipeline branches.
+
 ### Engine decoders
 
 `src/romwiki/engines/` contains binary and script parsers for an engine family.

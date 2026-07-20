@@ -39,30 +39,19 @@ npc_trade_names_member = 370
 decoration_names_member = 626
 decoration_name_count = 139
 seal_names_member = 12
-null_encounter_id = 0xFFFF
 trainer_names_member = 618
 trainer_classes_member = 619
-null_event_id = 0xFFFF
 trainer_script_start = 3000
 trainer_script_end = 3999
 trainer_script_id_offset = 1
-dynamic_warp_header_id = 0x0FFF
-dynamic_warp_id = 0x0100
-matrix_void_header_ids = [0, 0xFFFF]
 machine_move_offset = 0xF4BFC
-machine_count = 100
-tm_count = 92
 egg_move_overlay_id = 5
 egg_move_offset = 0x29222
 tutor_overlay_id = 5
 tutor_move_offset = 0x2FF64
 tutor_count = 38
 tutor_compatibility_offset = 0x3012C
-tutor_base_species_count = 493
-tutor_form_member_start = 496
-tutor_form_count = 12
 tutor_location_names = ["Route 212", "Survival Area", "Snowpoint City"]
-special_tutor_minimum_friendship = 255
 common_mart_inventory_offset = 0xEBAFC
 specialty_mart_pointer_table_offset = 0x100AF0
 specialty_mart_inventory_count = 20
@@ -76,15 +65,37 @@ frontier_mart_inventory_count = 2
 frontier_price_overlay_id = 7
 frontier_price_table_offset = 0x5A98
 frontier_price_record_count = 41
-arm9_load_address = 0x02000000
 
 [[parameters.special_tutors]]
 script_member = 450
 command_offset = 0x18F
 map_header_id = 364
-location_name = "Route 210"
 eligibility_kind = "type"
 eligibility_value = 16
+
+[[parameters.special_tutors]]
+script_member = 493
+command_offset = 0x112
+comparison_offset = 0x195
+species_count = 4
+map_header_id = 502
+eligibility_kind = "species"
+
+[[parameters.special_tutors]]
+script_member = 493
+command_offset = 0x132
+comparison_offset = 0x1C9
+species_count = 4
+map_header_id = 502
+eligibility_kind = "species"
+
+[[parameters.special_tutors]]
+script_member = 493
+command_offset = 0x152
+comparison_offset = 0x1FD
+species_count = 4
+map_header_id = 502
+eligibility_kind = "species"
 
 [[parameters.egg_gifts]]
 script_member = 71
@@ -117,33 +128,6 @@ map_header_id = 467
 script_member = 401
 command_offset = 0x30E
 map_header_id = 219
-
-[[parameters.special_tutors]]
-script_member = 493
-command_offset = 0x112
-comparison_offset = 0x195
-species_count = 4
-map_header_id = 502
-location_name = "Route 228"
-eligibility_kind = "species"
-
-[[parameters.special_tutors]]
-script_member = 493
-command_offset = 0x132
-comparison_offset = 0x1C9
-species_count = 4
-map_header_id = 502
-location_name = "Route 228"
-eligibility_kind = "species"
-
-[[parameters.special_tutors]]
-script_member = 493
-command_offset = 0x152
-comparison_offset = 0x1FD
-species_count = 4
-map_header_id = 502
-location_name = "Route 228"
-eligibility_kind = "species"
 
 [[hashes]]
 algorithm = "md5"

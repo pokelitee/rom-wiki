@@ -5,11 +5,14 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen4_dppt import (
+    GEN4_BASE_SPECIES_COUNT,
+    GEN4_MAX_FRIENDSHIP,
     MAP_HEADER_SIZE,
     PERSONAL_FORM_MEMBERS,
     TUTOR_COMPATIBILITY_RECORD_SIZE,
     TUTOR_RECORD_SIZE,
     parse_personal_record,
+    parse_english_message_archive,
     parse_platinum_map_headers,
     parse_special_tutor_move,
     parse_special_tutor_species,
@@ -31,9 +34,6 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         "tutor_move_offset",
         "tutor_count",
         "tutor_compatibility_offset",
-        "tutor_base_species_count",
-        "tutor_form_member_start",
-        "tutor_form_count",
         "tutor_location_names",
     )
     try:
@@ -43,9 +43,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
 
     overlay, data = read_arm9_overlay(result.image, parameters["tutor_overlay_id"])
     move_size = parameters["tutor_count"] * TUTOR_RECORD_SIZE
-    compatibility_count = (
-        parameters["tutor_base_species_count"] + parameters["tutor_form_count"]
-    )
+    form_members = tuple(sorted(PERSONAL_FORM_MEMBERS))
+    compatibility_count = GEN4_BASE_SPECIES_COUNT + len(form_members)
     compatibility_size = compatibility_count * TUTOR_COMPATIBILITY_RECORD_SIZE
     move_data = _slice_overlay(data, parameters["tutor_move_offset"], move_size, "move")
     compatibility_data = _slice_overlay(
@@ -66,9 +65,9 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     compatibility = parse_tutor_compatibility_table(
         compatibility_data,
         tutor_count=parameters["tutor_count"],
-        base_species_count=parameters["tutor_base_species_count"],
-        form_member_start=parameters["tutor_form_member_start"],
-        form_count=parameters["tutor_form_count"],
+        base_species_count=GEN4_BASE_SPECIES_COUNT,
+        form_member_start=form_members[0],
+        form_count=len(form_members),
     )
     special_tutors, special_compatibility = _extract_special_tutors(
         result,
@@ -122,10 +121,14 @@ def _extract_special_tutors(
     if not definitions:
         return [], []
     try:
-        minimum_friendship = profile.parameters["special_tutor_minimum_friendship"]
+        minimum_friendship = profile.parameters.get(
+            "special_tutor_minimum_friendship", GEN4_MAX_FRIENDSHIP
+        )
         script_path = profile.layout["scripts"]
         personal_path = profile.layout["personal"]
         map_names_path = profile.layout["map_names"]
+        messages_path = profile.layout["messages"]
+        location_names_member = profile.parameters["location_names_member"]
         map_header_offset = profile.parameters["map_header_offset"]
         map_header_count = profile.parameters["map_header_count"]
     except KeyError as error:
@@ -138,6 +141,10 @@ def _extract_special_tutors(
         filesystem.read(script_path), allow_truncated=True
     )
     personal = NarcArchive.from_bytes(filesystem.read(personal_path))
+    messages = NarcArchive.from_bytes(filesystem.read(messages_path))
+    location_names = parse_english_message_archive(
+        messages.read(location_names_member)
+    )
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset + map_header_offset)
         map_header_data = stream.read(map_header_count * MAP_HEADER_SIZE)
@@ -149,7 +156,9 @@ def _extract_special_tutors(
 
     records = []
     compatibility: dict[int, list[int]] = {}
-    public_members = tuple(range(1, 494)) + tuple(PERSONAL_FORM_MEMBERS)
+    public_members = tuple(range(1, GEN4_BASE_SPECIES_COUNT + 1)) + tuple(
+        PERSONAL_FORM_MEMBERS
+    )
     personal_records = {
         member: parse_personal_record(
             personal.read(member), species_id=member, archive_path=personal_path
@@ -161,7 +170,6 @@ def _extract_special_tutors(
             script_member = definition["script_member"]
             command_offset = definition["command_offset"]
             map_header_id = definition["map_header_id"]
-            location_name = definition["location_name"]
             eligibility_kind = definition["eligibility_kind"]
         except (KeyError, TypeError) as error:
             raise ProfileError("Special tutor definition is incomplete") from error
@@ -174,6 +182,13 @@ def _extract_special_tutors(
                 f"Special tutor map header {map_header_id} does not reference "
                 f"script member {script_member}"
             )
+        location_name_id = headers[map_header_id].location_name_id
+        if location_name_id >= len(location_names):
+            raise InvalidRomError(
+                f"Special tutor map header {map_header_id} references missing "
+                f"location name {location_name_id}"
+            )
+        location_name = location_names[location_name_id]
         script_data = scripts.read(script_member)
         if eligibility_kind == "species":
             try:

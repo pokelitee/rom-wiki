@@ -39,6 +39,13 @@ Create `profiles/<category>/<game-id>.toml` with:
 Keep format logic out of the profile. A profile should select and configure a
 parser, not implement one through a large collection of magic values.
 
+Do not repeat platform or engine invariants in a game profile. Values such as an
+ARM executable's load address should come from the container header, while stable
+sentinels and table dimensions should be defaults owned by the engine decoder.
+Profiles may override an engine default only when a verified ROM variant actually
+changes it. Keep exact paths, table offsets, message members, and script anchors in
+the profile because those identify where that build stores its data.
+
 When PokéDB contains generation-specific sprites, set the optional reference key:
 
 ```toml

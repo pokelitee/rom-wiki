@@ -4,7 +4,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.gen4_dppt import parse_machine_move_table
+from romwiki.engines.gen4_dppt import (
+    GEN4_MACHINE_COUNT,
+    GEN4_TM_COUNT,
+    parse_machine_move_table,
+)
 from romwiki.errors import InvalidRomError, ProfileError
 from romwiki.pipeline.identify import InspectionResult
 
@@ -15,12 +19,12 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
     profile = result.match.profile
     try:
         offset = profile.parameters["machine_move_offset"]
-        machine_count = profile.parameters["machine_count"]
-        tm_count = profile.parameters["tm_count"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} does not define a machine move table"
         ) from error
+    machine_count = profile.parameters.get("machine_count", GEN4_MACHINE_COUNT)
+    tm_count = profile.parameters.get("tm_count", GEN4_TM_COUNT)
 
     size = machine_count * 2
     if offset < 0 or offset + size > result.image.size:

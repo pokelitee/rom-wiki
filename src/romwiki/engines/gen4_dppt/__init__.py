@@ -1,8 +1,16 @@
 from romwiki.engines.gen4_dppt.personal import (
+    GEN4_BASE_SPECIES_COUNT,
     PERSONAL_FORM_MEMBERS,
     PERSONAL_INTERNAL_MEMBERS,
     PERSONAL_RECORD_SIZE,
     parse_personal_record,
+)
+from romwiki.engines.gen4_dppt.constants import (
+    GEN4_ARCHIVE_MEMBER_NONE,
+    GEN4_MAX_FRIENDSHIP,
+    PLATINUM_DYNAMIC_WARP_HEADER_ID,
+    PLATINUM_DYNAMIC_WARP_ID,
+    PLATINUM_MATRIX_VOID_HEADER_IDS,
 )
 from romwiki.engines.gen4_dppt.encounters import (
     DUAL_SLOT_GAMES,
@@ -102,6 +110,12 @@ from romwiki.engines.gen4_dppt.trades import (
 )
 
 __all__ = [
+    "GEN4_ARCHIVE_MEMBER_NONE",
+    "GEN4_BASE_SPECIES_COUNT",
+    "GEN4_MAX_FRIENDSHIP",
+    "PLATINUM_DYNAMIC_WARP_HEADER_ID",
+    "PLATINUM_DYNAMIC_WARP_ID",
+    "PLATINUM_MATRIX_VOID_HEADER_IDS",
     "PERSONAL_FORM_MEMBERS",
     "PERSONAL_INTERNAL_MEMBERS",
     "PERSONAL_RECORD_SIZE",
