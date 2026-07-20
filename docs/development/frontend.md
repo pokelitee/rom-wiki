@@ -47,6 +47,23 @@ moved later in the row when they distinguish otherwise identical records.
 Do not put sprites in catalog rows. Hundreds of external image requests would make
 indexes slower and less reliable.
 
+## Development preview
+
+Use the lightweight Renegade Platinum configuration while iterating on shared
+templates, styles, and catalog behavior:
+
+```console
+python -m mkdocs serve --dirty --config-file sites/games/renegade-platinum/mkdocs.dev.yml
+```
+
+It inherits the production configuration, keeps every catalog index and JSON
+payload, and includes one representative detail page from each generated section.
+The remaining generated Markdown pages are excluded, and development output is
+written below `build/mkdocs-dev/`. Link validation for excluded detail pages is
+disabled only in this configuration.
+
+Always use the production configuration or the multi-site build before deployment.
+
 ## Record components
 
 Renderer helpers produce semantic classes for type badges, summaries, stat bars,

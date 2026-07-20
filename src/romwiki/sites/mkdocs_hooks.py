@@ -19,9 +19,14 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
     config_path = Path(config.config_file_path).resolve()
     root = _find_repository_root(config_path.parent)
     catalog = SiteCatalog.load(root)
-    current = next(
-        (site for site in catalog.sites if site.config_path == config_path),
-        None,
+    configured_site_id = config.extra.get("romwiki_site_id")
+    current = (
+        catalog.get(configured_site_id)
+        if isinstance(configured_site_id, str)
+        else next(
+            (site for site in catalog.sites if site.config_path == config_path),
+            None,
+        )
     )
     if current is None:
         raise SiteError(f"MkDocs configuration is not registered: {config_path}")

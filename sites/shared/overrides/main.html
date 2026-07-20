@@ -11,9 +11,9 @@
     <div class="rw-sitebar" aria-label="Wiki selection">
       <a class="rw-sitebar__portal" href="{{ romwiki.portal_url }}">ROM Wiki</a>
       <span class="rw-sitebar__divider" aria-hidden="true">/</span>
-      <label class="rw-game-picker">
-        <span class="rw-visually-hidden">Choose a game</span>
-        <select data-rw-game-picker>
+      <div class="rw-game-picker">
+        <label class="rw-visually-hidden" for="rw-game-picker">Choose a game</label>
+        <select id="rw-game-picker" data-rw-game-picker>
           {% if romwiki.current.kind == "portal" %}
             <option value="" selected>Choose a game</option>
           {% endif %}
@@ -21,7 +21,7 @@
             <option value="{{ game.url }}"{% if game.id == romwiki.current.id %} selected{% endif %}>{{ game.name }}</option>
           {% endfor %}
         </select>
-      </label>
+      </div>
     </div>
   {% endif %}
 {% endblock %}

@@ -11,10 +11,19 @@
     "vs-recorder": "Vs. Recorder",
     "vs-seeker": "Vs. Seeker",
   });
+  const selectWidgets = new WeakMap();
+  let selectSequence = 0;
 
   document.querySelectorAll("[data-rw-game-picker]").forEach((picker) => {
     picker.addEventListener("change", () => {
       if (picker.value) window.location.assign(picker.value);
+    });
+    enhanceSelect(picker, "Choose a game");
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    document.querySelectorAll(".rw-select--open").forEach((widget) => {
+      if (!widget.contains(event.target)) closeSelect(widget);
     });
   });
 
@@ -192,6 +201,10 @@
     more.type = "button";
     more.className = "rw-catalog__more";
     more.textContent = "Show 50 more";
+    form.querySelectorAll("select").forEach((select) => {
+      const label = select.closest(".rw-control")?.querySelector(".rw-control__label");
+      enhanceSelect(select, label?.textContent || select.name);
+    });
     root.append(form, summary, tableWrap, more);
 
     const render = () => {
@@ -244,20 +257,177 @@
 
     form.addEventListener("input", () => { state.visible = 50; render(); });
     form.addEventListener("change", () => { state.visible = 50; render(); });
-    reset.addEventListener("click", () => { form.reset(); state.visible = 50; render(); });
+    reset.addEventListener("click", () => {
+      form.reset();
+      form.querySelectorAll("select").forEach(syncSelect);
+      state.visible = 50;
+      render();
+    });
     more.addEventListener("click", () => { state.visible += 50; render(); });
     window.addEventListener("popstate", () => window.location.reload());
     render();
   }
 
   function control(kind, labelText, name) {
-    const label = document.createElement("label");
-    const caption = document.createElement("span");
+    const field = document.createElement("div");
+    field.className = "rw-control";
+    const caption = document.createElement("label");
+    caption.className = "rw-control__label";
     caption.textContent = labelText;
     const input = document.createElement(kind);
+    input.id = `rw-control-${++selectSequence}`;
     input.name = name;
-    label.append(caption, input);
-    return { label, input };
+    caption.htmlFor = input.id;
+    field.append(caption, input);
+    return { label: field, input };
+  }
+
+  function enhanceSelect(select, label) {
+    if (selectWidgets.has(select)) return;
+    const widget = document.createElement("div");
+    widget.className = "rw-select";
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.id = `rw-select-trigger-${++selectSequence}`;
+    trigger.className = "rw-select__trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    const menu = document.createElement("div");
+    menu.id = `rw-select-menu-${++selectSequence}`;
+    menu.className = "rw-select__menu";
+    menu.role = "listbox";
+    menu.hidden = true;
+    menu.setAttribute("aria-label", label);
+    trigger.setAttribute("aria-controls", menu.id);
+
+    for (const option of select.options) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "rw-select__option";
+      item.role = "option";
+      item.tabIndex = -1;
+      item.dataset.value = option.value;
+      item.textContent = option.textContent;
+      item.addEventListener("click", () => {
+        select.value = option.value;
+        syncSelect(select);
+        closeSelect(widget);
+        trigger.focus();
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      menu.append(item);
+    }
+
+    trigger.addEventListener("click", () => {
+      if (widget.classList.contains("rw-select--open")) {
+        closeSelect(widget);
+      } else {
+        openSelect(widget);
+      }
+    });
+    trigger.addEventListener("keydown", (event) => {
+      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        const focus = event.key === "ArrowUp" || event.key === "End"
+          ? "last"
+          : event.key === "Home" ? "first" : "selected";
+        openSelect(widget, focus);
+      }
+    });
+    menu.addEventListener("keydown", (event) => {
+      const options = [...menu.querySelectorAll(".rw-select__option")];
+      const current = options.indexOf(document.activeElement);
+      let target = null;
+      if (event.key === "ArrowDown") target = options[Math.min(current + 1, options.length - 1)];
+      if (event.key === "ArrowUp") target = options[Math.max(current - 1, 0)];
+      if (event.key === "Home") target = options[0];
+      if (event.key === "End") target = options.at(-1);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(widget);
+        trigger.focus();
+        return;
+      }
+      if (!target && event.key.length === 1 && event.key.trim()) {
+        const ordered = [...options.slice(current + 1), ...options.slice(0, current + 1)];
+        target = ordered.find((option) =>
+          option.textContent.trim().toLowerCase().startsWith(event.key.toLowerCase())
+        );
+      }
+      if (target) {
+        event.preventDefault();
+        target.focus();
+      }
+    });
+    widget.addEventListener("focusout", (event) => {
+      if (!widget.contains(event.relatedTarget)) closeSelect(widget);
+    });
+
+    select.hidden = true;
+    select.setAttribute("aria-hidden", "true");
+    select.tabIndex = -1;
+    const caption = [...select.parentElement.children].find(
+      (element) => element.tagName === "LABEL" && element.htmlFor === select.id
+    );
+    if (caption) caption.htmlFor = trigger.id;
+    select.insertAdjacentElement("afterend", widget);
+    widget.append(trigger, menu);
+    const parts = { label, menu, trigger, widget };
+    selectWidgets.set(select, parts);
+    selectWidgets.set(widget, parts);
+    select.addEventListener("change", () => syncSelect(select));
+    syncSelect(select);
+  }
+
+  function syncSelect(select) {
+    const parts = selectWidgets.get(select);
+    if (!parts) return;
+    const selected = select.selectedOptions[0];
+    parts.trigger.textContent = selected?.textContent || "Select";
+    parts.trigger.setAttribute("aria-label", `${parts.label}: ${parts.trigger.textContent}`);
+    parts.menu.querySelectorAll(".rw-select__option").forEach((option) => {
+      const active = option.dataset.value === select.value;
+      option.classList.toggle("rw-select__option--selected", active);
+      option.setAttribute("aria-selected", String(active));
+    });
+  }
+
+  function openSelect(widget, focus = "selected") {
+    document.querySelectorAll(".rw-select--open").forEach((openWidget) => {
+      if (openWidget !== widget) closeSelect(openWidget);
+    });
+    const parts = selectWidgets.get(widget);
+    if (!parts) return;
+    widget.classList.add("rw-select--open");
+    parts.trigger.setAttribute("aria-expanded", "true");
+    parts.menu.hidden = false;
+    widget.classList.remove("rw-select--above", "rw-select--align-right");
+    const triggerBounds = parts.trigger.getBoundingClientRect();
+    const menuBounds = parts.menu.getBoundingClientRect();
+    if (menuBounds.right > window.innerWidth - 16) {
+      widget.classList.add("rw-select--align-right");
+    }
+    const spaceBelow = window.innerHeight - triggerBounds.bottom;
+    if (menuBounds.height > spaceBelow - 16 && triggerBounds.top > spaceBelow) {
+      widget.classList.add("rw-select--above");
+    }
+    if (focus) {
+      const options = [...parts.menu.querySelectorAll(".rw-select__option")];
+      const target = focus === "last"
+        ? options.at(-1)
+        : focus === "first"
+          ? options[0]
+          : parts.menu.querySelector(".rw-select__option--selected") || options[0];
+      target?.focus();
+    }
+  }
+
+  function closeSelect(widget) {
+    const parts = selectWidgets.get(widget);
+    if (!parts) return;
+    widget.classList.remove("rw-select--open");
+    parts.trigger.setAttribute("aria-expanded", "false");
+    parts.menu.hidden = true;
   }
 
   function valuesFor(records, key) {

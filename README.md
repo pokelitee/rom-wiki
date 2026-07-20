@@ -225,6 +225,16 @@ Preview an individual site with live reload:
 python -m mkdocs serve --config-file sites/games/renegade-platinum/mkdocs.yml
 ```
 
+For a faster frontend development loop, use the lightweight game configuration:
+
+```console
+python -m mkdocs serve --dirty --config-file sites/games/renegade-platinum/mkdocs.dev.yml
+```
+
+The development configuration keeps every catalog index and its JSON data but
+builds only one representative detail page per generated section. Use the normal
+configuration for final link, navigation, search, and production-build review.
+
 The portal can be previewed by using `sites/portal/mkdocs.yml` instead. Each site
 inherits the shared responsive theme, light and dark palettes, catalog interface,
 and game selector from `sites/shared/`.
