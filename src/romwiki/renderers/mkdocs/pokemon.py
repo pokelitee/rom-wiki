@@ -22,6 +22,7 @@ def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
         stats = record["base_stats"]
         abilities = [value["name"] for value in record["abilities"] if value["name"]]
         types = [value["name"] for value in record["types"]]
+        egg_groups = [value["name"] for value in record["egg_groups"]]
         catalog_records.append(
             {
                 "id": record.get("member", dex),
@@ -31,9 +32,12 @@ def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 "url": f"{record['slug']}/",
                 "types": types,
                 "abilities": abilities,
+                "egg_groups": egg_groups,
                 "stats": stats,
                 "bst": sum(stats.values()),
-                "search_text": " ".join((record["name"], *types, *abilities)).lower(),
+                "search_text": " ".join(
+                    (record["name"], *types, *abilities, *egg_groups)
+                ).lower(),
             }
         )
     write_catalog(output_root, "pokemon", catalog_records)

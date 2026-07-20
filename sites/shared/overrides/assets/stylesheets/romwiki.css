@@ -141,7 +141,7 @@ html[data-romwiki-theme="platinum"] {
 .rw-catalog__reset:hover, .rw-catalog__more:hover { color: #fff; background: var(--rw-accent); }
 .rw-catalog__summary { margin: .8rem 0 .35rem !important; color: var(--rw-text-muted); font-size: .66rem; font-weight: 700; }
 .rw-catalog__table-wrap { overflow-x: auto; border: 1px solid var(--rw-border); border-radius: .55rem; }
-.rw-catalog__table { width: 100%; border-collapse: collapse; background: var(--rw-surface); font-size: .69rem; }
+.rw-catalog__table { width: max-content; min-width: 100%; border-collapse: collapse; background: var(--rw-surface); font-size: .69rem; }
 .rw-catalog__table th, .rw-catalog__table td { padding: .48rem .62rem; border-bottom: 1px solid var(--rw-border); text-align: left; vertical-align: middle; }
 .rw-catalog__table th { position: sticky; top: 0; z-index: 1; white-space: nowrap; background: var(--rw-surface-muted); font-size: .59rem; letter-spacing: .04em; text-transform: uppercase; }
 .rw-catalog__table tbody tr:last-child td { border-bottom: 0; }
@@ -151,6 +151,8 @@ html[data-romwiki-theme="platinum"] {
 .rw-catalog__name { display: flex; align-items: baseline; gap: .45rem; white-space: nowrap; }
 .rw-catalog__dex, .rw-catalog__number { color: var(--rw-text-muted); font-variant-numeric: tabular-nums; }
 .rw-catalog__code { font-family: var(--md-code-font-family); font-size: .63rem; }
+.rw-catalog__list { display: block; min-width: 12rem; max-width: 26rem; line-height: 1.45; }
+.rw-catalog__map-id { display: grid; gap: .12rem; min-width: 7rem; }
 .rw-type-list { display: flex; flex-wrap: wrap; gap: .25rem; }
 .rw-catalog-fallback { columns: 3 14rem; column-gap: 1.5rem; }
 .rw-catalog-fallback h2 { column-span: all; }

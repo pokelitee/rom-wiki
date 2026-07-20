@@ -30,14 +30,19 @@ Each generated section writes `catalog.json` with this envelope:
 
 The `kind` selects the shared filters, columns, and sorting behavior. Every record
 has a stable ID, display label, final directory URL, and normalized `search_text`.
-Section-specific fields provide only the values visible or filterable in the
-catalog. Breaking catalog changes require a version bump and matching JavaScript
-support.
+Section-specific fields provide only the values visible, searchable, sortable,
+or filterable in the catalog. Catalog definitions may use select or searchable
+datalist facets, numeric ranges, sort direction, and correlations between facets.
+For example, encounter records preserve the Pokémon available through each method
+so combining those filters cannot produce a false match. Breaking catalog changes
+require a version bump and matching JavaScript support.
 
 The index contains a `data-rw-catalog` container followed by every record as normal
 Markdown links. JavaScript hides that fallback only after it has successfully
 loaded and validated the JSON. Filtering and sorting happen locally, 50 rows render
-at a time, and non-default controls are stored in the query string.
+at a time, and non-default controls are stored in the query string. Player-facing
+tables should lead with recognizable game data; internal IDs should be combined or
+moved later in the row when they distinguish otherwise identical records.
 
 Do not put sprites in catalog rows. Hundreds of external image requests would make
 indexes slower and less reliable.

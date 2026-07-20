@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rom-wiki"
 version = "0.1.0"
-description = "Extract structured Pokemon ROM data and generate static wikis"
+description = "Extract structured Pokémon ROM data and generate static wikis"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }

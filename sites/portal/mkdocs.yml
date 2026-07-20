@@ -1,7 +1,7 @@
 INHERIT: ../shared/mkdocs.base.yml
 
 site_name: ROM Wiki
-site_description: Data-driven wikis for Pokemon ROM hacks
+site_description: Data-driven wikis for Pokémon ROM hacks
 docs_dir: wiki
 hooks:
   - ../../src/romwiki/sites/mkdocs_hooks.py

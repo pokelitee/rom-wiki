@@ -19,6 +19,15 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
         _write_text(output_root / filename, _render_record(record, previous, following))
         fallback_links.append(f"- [{record['name']}]({filename})")
         machines = [machine["name"] for machine in record.get("machines", [])]
+        access_methods = [
+            method
+            for method, available in (
+                ("machine", bool(machines)),
+                ("move tutor", bool(record.get("tutors"))),
+                ("egg move", bool(record.get("egg_move_pokemon"))),
+            )
+            if available
+        ]
         catalog_records.append(
             {
                 "id": record["move_id"],
@@ -31,8 +40,10 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 "accuracy": record["accuracy"],
                 "pp": record["pp"],
                 "machines": machines,
-                "tutor": bool(record.get("tutors")),
-                "search_text": " ".join((record["name"], *machines)).lower(),
+                "access_methods": access_methods,
+                "search_text": " ".join(
+                    (record["name"], *machines, *access_methods)
+                ).lower(),
             }
         )
     write_catalog(output_root, "moves", catalog_records)

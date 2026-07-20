@@ -48,6 +48,11 @@ class EncounterEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["active_record_count"], 1)
         pokemon = enriched["records"][0]["walking"]["slots"][0]["pokemon"]
         self.assertEqual(pokemon["name"], "Bulbasaur")
+        enriched["records"][0]["special"]["radar"][0] = {
+            "id": 4,
+            "name": "Charmander",
+            "slug": "charmander",
+        }
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -63,6 +68,9 @@ class EncounterEnrichmentTests(unittest.TestCase):
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertEqual(catalog["kind"], "encounters")
         self.assertEqual(catalog["records"][0]["methods"], ["walking"])
+        self.assertIn("Charmander", catalog["records"][0]["pokemon"])
+        self.assertIn("Charmander", catalog["records"][0]["method_pokemon"]["walking"])
+        self.assertIn("charmander", catalog["records"][0]["search_text"])
 
 
 if __name__ == "__main__":

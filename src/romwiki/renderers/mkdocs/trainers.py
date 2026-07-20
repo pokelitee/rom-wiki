@@ -75,7 +75,11 @@ def _catalog_record(
             for location in record["locations"] + record.get("script_references", [])
         )
     )
-    species = [member["pokemon"]["name"] for member in record["party"]]
+    party = [
+        {"name": member["pokemon"]["name"], "level": member["level"]}
+        for member in record["party"]
+    ]
+    species = [member["name"] for member in party]
     label = _trainer_label(record)
     return {
         "id": record["trainer_id"],
@@ -91,6 +95,7 @@ def _catalog_record(
         "min_level": min(levels),
         "max_level": max(levels),
         "pokemon": species,
+        "party": party,
         "search_text": " ".join((label, *location_names, *species)).lower(),
     }
 

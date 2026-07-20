@@ -19,6 +19,7 @@ class GameMetadata:
     generation: int
     base_game: str
     platform: str
+    platform_name: str
     creator: str
     theme: str
 
@@ -125,11 +126,15 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
         creator = game["creator"]
         if not isinstance(creator, str) or not creator.strip():
             raise SiteError(f"Invalid creator in {path.relative_to(root)}")
+        platform_name = game["platform_name"]
+        if not isinstance(platform_name, str) or not platform_name.strip():
+            raise SiteError(f"Invalid platform name in {path.relative_to(root)}")
         return GameMetadata(
             profile=slug_fields["profile"],
             generation=generation,
             base_game=slug_fields["base_game"],
             platform=slug_fields["platform"],
+            platform_name=platform_name.strip(),
             creator=creator.strip(),
             theme=slug_fields["theme"],
         )

@@ -49,7 +49,7 @@ from romwiki.sources import PokeDBGeneration
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="romwiki",
-        description="Extract structured Pokemon ROM data for static wikis.",
+        description="Extract structured Pokémon ROM data for static wikis.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -69,7 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     personal_parser = subparsers.add_parser(
-        "extract-personal", help="extract normalized Pokemon personal data"
+        "extract-personal", help="extract normalized Pokémon personal data"
     )
     _add_input_arguments(personal_parser)
     personal_parser.add_argument(
@@ -169,7 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     pokemon_parser = subparsers.add_parser(
-        "build-pokemon", help="extract, enrich, and render Pokemon pages"
+        "build-pokemon", help="extract, enrich, and render Pokémon pages"
     )
     _add_input_arguments(pokemon_parser)
     pokemon_parser.add_argument(

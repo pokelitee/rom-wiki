@@ -7,7 +7,7 @@
     <p class="rw-hero__lead">{{ romwiki.current.description }}</p>
     <div class="rw-chip-row" aria-label="Game details">
       <span>{{ romwiki.current.creator }}</span>
-      <span>{{ romwiki.current.platform | replace('-', ' ') | title }}</span>
+      <span>{{ romwiki.current.platform_name }}</span>
       <span>Based on {{ romwiki.current.base_game | replace('-', ' ') | title }}</span>
     </div>
   </section>

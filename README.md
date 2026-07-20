@@ -1,11 +1,11 @@
 # ROM Wiki
 
-ROM Wiki is an extensible Pokemon game-data extraction framework and static-wiki
-generator. Initial development targets Pokemon Platinum and Renegade Platinum.
+ROM Wiki is an extensible Pokémon game-data extraction framework and static-wiki
+generator. Initial development targets Pokémon Platinum and Renegade Platinum.
 
 The project separates four concerns:
 
-1. platform readers open game containers without interpreting Pokemon data;
+1. platform readers open game containers without interpreting Pokémon data;
 2. engine adapters decode game-specific records;
 3. normalized models combine ROM facts, PokéDB reference data, and annotations;
 4. renderers generate MkDocs source from the normalized dataset.
@@ -50,7 +50,7 @@ Write the machine-readable manifest used by later extraction stages:
 romwiki manifest ".local/roms/Pokemon - Platinum Version (USA).nds" --output build/data/manifest.json
 ```
 
-Extract the first normalized Pokemon dataset:
+Extract the first normalized Pokémon dataset:
 
 ```console
 romwiki extract-personal ".local/roms/Pokemon - Platinum Version (USA).nds"

@@ -55,6 +55,7 @@ def _catalog_record(
     methods = []
     levels = []
     species = []
+    method_pokemon = {}
     for label, key in (
         ("walking", "walking"),
         ("surf", "surf"),
@@ -66,14 +67,23 @@ def _catalog_record(
         if not method["rate"]:
             continue
         methods.append(label)
+        method_species = []
         for slot in method["slots"]:
             pokemon = slot.get("pokemon")
             if pokemon:
                 species.append(pokemon["name"])
+                method_species.append(pokemon["name"])
             if "level" in slot:
                 levels.append(slot["level"])
             else:
                 levels.extend((slot["minimum_level"], slot["maximum_level"]))
+        method_pokemon[label] = list(dict.fromkeys(method_species))
+    special_species = _special_species(record["special"])
+    species.extend(special_species)
+    if special_species and "walking" in method_pokemon:
+        method_pokemon["walking"] = list(
+            dict.fromkeys((*method_pokemon["walking"], *special_species))
+        )
     location_names = [location["name"] for location in record.get("locations", [])]
     return {
         "id": record["area_id"],
@@ -82,11 +92,26 @@ def _catalog_record(
         "locations": list(dict.fromkeys(location_names)),
         "methods": methods,
         "pokemon": list(dict.fromkeys(species)),
+        "method_pokemon": method_pokemon,
         "min_level": min(levels) if levels else None,
         "max_level": max(levels) if levels else None,
         "referenced": referenced,
         "search_text": " ".join((record["name"], *location_names, *species)).lower(),
     }
+
+
+def _special_species(special: dict[str, Any]) -> list[str]:
+    pokemon = []
+    groups = (
+        special["swarm"],
+        special["day"],
+        special["night"],
+        special["radar"],
+        *(values for values in special["dual_slot"].values()),
+    )
+    for group in groups:
+        pokemon.extend(value["name"] for value in group if value is not None)
+    return list(dict.fromkeys(pokemon))
 
 
 def _render_area(record: dict[str, Any]) -> str:

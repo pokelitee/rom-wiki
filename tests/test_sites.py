@@ -25,6 +25,7 @@ class SiteCatalogTests(unittest.TestCase):
         assert game is not None
         self.assertEqual(game.creator, "Drayano")
         self.assertEqual(game.platform, "nintendo-ds")
+        self.assertEqual(game.platform_name, "Nintendo DS")
         self.assertEqual(game.theme, "platinum")
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
@@ -91,6 +92,7 @@ profile = "test-game"
 generation = 4
 base_game = "platinum"
 platform = "nintendo-ds"
+platform_name = "Nintendo DS"
 creator = "Tester"
 [appearance]
 theme = "Bad Theme"

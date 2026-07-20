@@ -19,7 +19,7 @@
           <p>{{ game.description }}</p>
           <dl>
             <div><dt>Creator</dt><dd>{{ game.creator }}</dd></div>
-            <div><dt>Platform</dt><dd>{{ game.platform | replace('-', ' ') | title }}</dd></div>
+            <div><dt>Platform</dt><dd>{{ game.platform_name }}</dd></div>
             <div><dt>Base game</dt><dd>{{ game.base_game | replace('-', ' ') | title }}</dd></div>
           </dl>
           <span class="rw-card-action">Open wiki <span aria-hidden="true">&rarr;</span></span>

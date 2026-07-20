@@ -75,6 +75,10 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertIn("[Pichu](../pokemon/pichu.md)", page)
         self.assertIn("[Thunderbolt](thunderbolt.md)", index)
         self.assertEqual(catalog["kind"], "moves")
+        self.assertEqual(
+            catalog["records"][0]["access_methods"],
+            ["machine", "move tutor", "egg move"],
+        )
         self.assertEqual(catalog["records"][0]["url"], "thunderbolt/")
 
 

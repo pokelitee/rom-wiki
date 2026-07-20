@@ -59,7 +59,7 @@ def render_location_pages(dataset: dict[str, Any], output_root: Path) -> int:
         catalog_records.append(
             {
                 "id": record["header_id"],
-                "label": record["name"],
+                "label": label,
                 "url": filename.removesuffix(".md") + "/",
                 "internal_name": record["internal_name"],
                 "features": features,

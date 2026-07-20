@@ -20,29 +20,39 @@
 
   const CATALOGS = {
     pokemon: {
-      filters: [["types", "Type"], ["abilities", "Ability"]],
+      searchPlaceholder: "Search Pokémon, types, or abilities",
+      filters: [{ key: "types", label: "Type" }, { key: "abilities", label: "Ability", control: "datalist" }, { key: "egg_groups", label: "Egg group" }],
+      ranges: [{ key: "bst", label: "BST" }],
       sorts: [["dex", "Pokédex number"], ["label", "Name"], ["bst", "Base stat total"], ["stats.hp", "HP"], ["stats.attack", "Attack"], ["stats.defense", "Defense"], ["stats.special_attack", "Sp. Atk"], ["stats.special_defense", "Sp. Def"], ["stats.speed", "Speed"]],
-      columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (r) => text(r.abilities.map(title).join(", ") || "—")], ["BST", (r) => text(r.bst, "rw-catalog__number")]],
+      columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (r) => text(r.abilities.map(title).join(", ") || "—")], ["HP", (r) => stat(r, "hp")], ["Atk", (r) => stat(r, "attack")], ["Def", (r) => stat(r, "defense")], ["SpA", (r) => stat(r, "special_attack")], ["SpD", (r) => stat(r, "special_defense")], ["Spe", (r) => stat(r, "speed")], ["BST", (r) => text(r.bst, "rw-catalog__number")]],
     },
     moves: {
-      filters: [["type", "Type"], ["damage_class", "Class"], ["tutor", "Tutor"]],
-      sorts: [["id", "Move ID"], ["label", "Name"], ["power", "Power"], ["accuracy", "Accuracy"], ["pp", "PP"]],
-      columns: [["Move", recordLink], ["Type", (r) => typeBadge(r.type)], ["Class", (r) => text(title(r.damage_class))], ["Power", (r) => numberOrDash(r.power)], ["Accuracy", (r) => text(r.accuracy ? `${r.accuracy}%` : "Always")], ["PP", (r) => text(r.pp, "rw-catalog__number")]],
+      searchPlaceholder: "Search moves or machine numbers",
+      filters: [{ key: "type", label: "Type" }, { key: "damage_class", label: "Class" }, { key: "access_methods", label: "Available as" }],
+      ranges: [{ key: "power", label: "Power" }],
+      sorts: [["label", "Name"], ["id", "Move ID"], ["power", "Power"], ["accuracy", "Accuracy"], ["pp", "PP"]],
+      columns: [["Move", recordLink], ["Type", (r) => typeBadge(r.type)], ["Class", (r) => text(title(r.damage_class))], ["Power", (r) => numberOrDash(r.power)], ["Accuracy", (r) => text(r.accuracy ? `${r.accuracy}%` : "Always")], ["PP", (r) => text(r.pp, "rw-catalog__number")], ["Available as", accessMethods]],
     },
     trainers: {
-      filters: [["class_name", "Class"], ["locations", "Location"], ["double_battle", "Battle"]],
-      sorts: [["id", "Trainer ID"], ["label", "Name"], ["min_level", "Minimum level"], ["max_level", "Maximum level"], ["party_size", "Party size"]],
-      columns: [["Trainer", recordLink], ["Location", (r) => text(r.location_label || "Unlinked")], ["Party", (r) => text(r.party_size, "rw-catalog__number")], ["Levels", (r) => text(`${r.min_level}–${r.max_level}`, "rw-catalog__number")], ["Battle", (r) => text(r.double_battle ? "Double" : "Single")]],
+      searchPlaceholder: "Search trainers, locations, or party Pokémon",
+      filters: [{ key: "class_name", label: "Class", control: "datalist" }, { key: "locations", label: "Location", control: "datalist" }, { key: "pokemon", label: "Party Pokémon", control: "datalist" }, { key: "double_battle", label: "Battle format" }, { key: "linked", label: "Location status" }],
+      ranges: [{ key: "level", label: "Party level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
+      sorts: [["label", "Name"], ["id", "Trainer ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"], ["party_size", "Party size"]],
+      columns: [["Trainer", recordLink], ["Location", (r) => text(r.location_label || "Unlinked")], ["Party", trainerParty], ["Format", (r) => text(r.double_battle ? "Double" : "Single")]],
     },
     locations: {
-      filters: [["features", "Contains"]],
+      searchPlaceholder: "Search location or internal map name",
+      filters: [{ key: "features", label: "Contains" }],
       sorts: [["label", "Name"], ["id", "Header ID"]],
-      columns: [["Location", recordLink], ["Internal map", (r) => text(r.internal_name, "rw-catalog__code")], ["Header", (r) => text(r.id, "rw-catalog__number")], ["Contains", (r) => text(r.features.map(title).join(", ") || "—")]],
+      columns: [["Location", recordLink], ["Contains", (r) => text(r.features.map(title).join(", ") || "—")], ["Map ID", locationIdentifier]],
     },
     encounters: {
-      filters: [["methods", "Method"], ["referenced", "Status"]],
+      searchPlaceholder: "Search areas or wild Pokémon",
+      filters: [{ key: "methods", label: "Method" }, { key: "pokemon", label: "Pokémon", control: "datalist" }],
+      ranges: [{ key: "level", label: "Level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
+      correlations: [{ left: "methods", right: "pokemon", path: "method_pokemon" }],
       sorts: [["label", "Location"], ["id", "Area ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
-      columns: [["Area", recordLink], ["Methods", (r) => text(r.methods.map(title).join(", "))], ["Levels", (r) => text(r.min_level == null ? "—" : `${r.min_level}–${r.max_level}`, "rw-catalog__number")], ["Status", (r) => text(r.referenced ? "Referenced" : "Unreferenced")]],
+      columns: [["Area", recordLink], ["Methods", (r) => text(r.methods.map(title).join(", "))], ["Levels", (r) => text(r.min_level == null ? "—" : `${r.min_level}–${r.max_level}`, "rw-catalog__number")], ["Pokémon", (r) => previewList(r.pokemon)]],
     },
   };
 
@@ -78,18 +88,45 @@
 
     const search = control("input", "Search", "q");
     search.input.type = "search";
-    search.input.placeholder = "Search records";
+    search.input.placeholder = config.searchPlaceholder || "Search records";
     search.input.value = params.get("q") || "";
     form.append(search.label);
 
-    for (const [key, label] of config.filters) {
-      const field = control("select", label, key);
-      field.input.append(new Option(`Any ${label.toLowerCase()}`, ""));
-      valuesFor(records, key).forEach((value) => {
-        field.input.append(new Option(displayFilter(key, value), String(value)));
-      });
+    for (const filter of config.filters) {
+      const { key, label } = filter;
+      const kind = filter.control === "datalist" ? "input" : "select";
+      const field = control(kind, label, key);
+      if (filter.control === "datalist") {
+        field.input.type = "search";
+        field.input.placeholder = `Any ${label.toLowerCase()}`;
+        const options = document.createElement("datalist");
+        options.id = `rw-${root.dataset.rwKind}-${key}`;
+        valuesFor(records, key).forEach((value) => {
+          options.append(new Option(displayFilter(key, value)));
+        });
+        field.input.setAttribute("list", options.id);
+        field.label.append(options);
+      } else {
+        field.input.append(new Option(`Any ${label.toLowerCase()}`, ""));
+        valuesFor(records, key).forEach((value) => {
+          field.input.append(new Option(displayFilter(key, value), String(value)));
+        });
+      }
       field.input.value = params.get(key) || "";
       form.append(field.label);
+    }
+
+    for (const range of config.ranges || []) {
+      for (const bound of ["min", "max"]) {
+        const name = `${range.key}_${bound}`;
+        const field = control("input", `${range.label} ${bound}`, name);
+        field.input.type = "number";
+        field.input.min = "0";
+        field.input.step = "1";
+        field.input.placeholder = bound === "min" ? "Minimum" : "Maximum";
+        field.input.value = params.get(name) || "";
+        form.append(field.label);
+      }
     }
 
     const sort = control("select", "Sort by", "sort");
@@ -97,6 +134,13 @@
     sort.input.dataset.default = config.sorts[0][0];
     sort.input.value = params.get("sort") || config.sorts[0][0];
     form.append(sort.label);
+
+    const direction = control("select", "Direction", "direction");
+    direction.input.append(new Option("Ascending", "asc"));
+    direction.input.append(new Option("Descending", "desc"));
+    direction.input.dataset.default = "asc";
+    direction.input.value = params.get("direction") || "asc";
+    form.append(direction.label);
 
     const reset = document.createElement("button");
     reset.type = "button";
@@ -134,16 +178,33 @@
       const query = String(values.q || "").trim().toLowerCase();
       let filtered = records.filter((record) => {
         if (query && !record.search_text.includes(query)) return false;
-        return config.filters.every(([key]) => {
+        const matchesFilters = config.filters.every((filter) => {
+          const { key } = filter;
           const selected = String(values[key] || "");
           if (!selected) return true;
           const current = getValue(record, key);
+          if (filter.control === "datalist") {
+            const options = Array.isArray(current) ? current : [current];
+            const normalized = selected.toLowerCase();
+            return options.some((value) =>
+              displayFilter(key, value).toLowerCase().includes(normalized)
+            );
+          }
           return Array.isArray(current)
             ? current.map(String).includes(selected)
             : String(current) === selected;
         });
+        if (!matchesFilters || !matchesRanges(record, values, config.ranges || [])) {
+          return false;
+        }
+        return (config.correlations || []).every((correlation) =>
+          matchesCorrelation(record, values, correlation)
+        );
       });
-      filtered.sort(compareBy(values.sort || config.sorts[0][0]));
+      filtered.sort(compareBy(
+        values.sort || config.sorts[0][0],
+        values.direction || "asc",
+      ));
       body.replaceChildren();
       filtered.slice(0, state.visible).forEach((record) => {
         const row = document.createElement("tr");
@@ -190,12 +251,43 @@
     return path.split(".").reduce((value, key) => value == null ? value : value[key], record);
   }
 
-  function compareBy(path) {
+  function matchesRanges(record, values, ranges) {
+    return ranges.every((range) => {
+      const selectedMin = values[`${range.key}_min`];
+      const selectedMax = values[`${range.key}_max`];
+      if (selectedMin === "" && selectedMax === "") return true;
+      if (range.mode === "overlap") {
+        const recordMin = getValue(record, range.minKey);
+        const recordMax = getValue(record, range.maxKey);
+        if (recordMin == null || recordMax == null) return false;
+        if (selectedMin !== "" && recordMax < Number(selectedMin)) return false;
+        if (selectedMax !== "" && recordMin > Number(selectedMax)) return false;
+        return true;
+      }
+      const current = getValue(record, range.key);
+      if (current == null) return false;
+      if (selectedMin !== "" && current < Number(selectedMin)) return false;
+      return selectedMax === "" || current <= Number(selectedMax);
+    });
+  }
+
+  function matchesCorrelation(record, values, correlation) {
+    const left = String(values[correlation.left] || "");
+    const right = String(values[correlation.right] || "").toLowerCase();
+    if (!left || !right) return true;
+    const related = getValue(record, correlation.path)?.[left] || [];
+    return related.some((value) =>
+      displayFilter(correlation.right, value).toLowerCase().includes(right)
+    );
+  }
+
+  function compareBy(path, direction) {
+    const multiplier = direction === "desc" ? -1 : 1;
     return (left, right) => {
       const a = getValue(left, path);
       const b = getValue(right, path);
-      if (typeof a === "number" && typeof b === "number") return a - b;
-      return String(a ?? "").localeCompare(String(b ?? ""), undefined, { numeric: true });
+      if (typeof a === "number" && typeof b === "number") return (a - b) * multiplier;
+      return String(a ?? "").localeCompare(String(b ?? ""), undefined, { numeric: true }) * multiplier;
     };
   }
 
@@ -214,8 +306,9 @@
 
   function displayFilter(key, value) {
     if (key === "double_battle") return value === true ? "Double" : "Single";
+    if (key === "linked") return value === true ? "Mapped" : "Unlinked";
     if (key === "referenced") return value === true ? "Referenced" : "Unreferenced";
-    if (key === "tutor") return value === true ? "Available" : "Unavailable";
+    if (key === "access_methods" && value === "machine") return "TM / HM";
     return title(String(value));
   }
 
@@ -258,5 +351,41 @@
 
   function numberOrDash(value) {
     return text(value || "—", "rw-catalog__number");
+  }
+
+  function stat(record, key) {
+    return text(record.stats[key], "rw-catalog__number");
+  }
+
+  function accessMethods(record) {
+    return text(
+      record.access_methods.map((value) => displayFilter("access_methods", value)).join(", ") || "—"
+    );
+  }
+
+  function trainerParty(record) {
+    return text(
+      record.party.map((member) => `${member.name} Lv. ${member.level}`).join(", "),
+      "rw-catalog__list",
+    );
+  }
+
+  function locationIdentifier(record) {
+    const wrap = document.createElement("span");
+    wrap.className = "rw-catalog__map-id";
+    wrap.append(
+      text(record.internal_name, "rw-catalog__code"),
+      text(`Header ${record.id}`, "rw-catalog__number"),
+    );
+    return wrap;
+  }
+
+  function previewList(values) {
+    const visible = values.slice(0, 6);
+    const remaining = values.length - visible.length;
+    return text(
+      `${visible.join(", ")}${remaining > 0 ? ` +${remaining} more` : ""}` || "—",
+      "rw-catalog__list",
+    );
   }
 })();

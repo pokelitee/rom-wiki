@@ -115,13 +115,14 @@ slug = "renegade-platinum"
 published = true
 order = 10
 mkdocs_config = "mkdocs.yml"
-description = "An exact, data-driven reference for Pokemon Renegade Platinum"
+description = "An exact, data-driven reference for Pokémon Renegade Platinum"
 
 [game]
 profile = "renegade-platinum"
 generation = 4
 base_game = "platinum"
 platform = "nintendo-ds"
+platform_name = "Nintendo DS"
 creator = "Drayano"
 
 [appearance]

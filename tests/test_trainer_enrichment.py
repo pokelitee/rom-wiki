@@ -82,6 +82,10 @@ class TrainerEnrichmentTests(unittest.TestCase):
         )
         self.assertEqual(catalog["kind"], "trainers")
         self.assertEqual(catalog["records"][0]["min_level"], 5)
+        self.assertEqual(
+            catalog["records"][0]["party"],
+            [{"name": "Bulbasaur", "level": 5}],
+        )
 
 
 if __name__ == "__main__":
