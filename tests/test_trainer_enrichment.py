@@ -60,10 +60,16 @@ class TrainerEnrichmentTests(unittest.TestCase):
             items_by_id={1: "master-ball"},
             moves_by_id={33: "tackle"},
         )
+        move_names = ["None", *(f"Move {move_id}" for move_id in range(1, 468))]
+        move_names[33] = "Play Rough"
         enriched = enrich_trainer_dataset(
-            {"game": "test", "source": {}, "records": [source]},
+            {
+                "game": "test",
+                "source": {},
+                "move_names": move_names,
+                "records": [source],
+            },
             pokedb,
-            move_names={33: "play-rough"},
         )
 
         with tempfile.TemporaryDirectory() as directory:

@@ -5,11 +5,11 @@ from PokéDB and explicit annotations may supplement facts that are not represen
 directly in table-driven ROM data.
 
 Renegade Platinum repurposes Generation IV type ID 9, the base game's unused
-Unknown type, as Fairy. The game profile records that semantic override, and the
-normalized Pokémon and move datasets preserve both the native ID and Fairy name.
-Moves replaced with later-generation moves are identified by profile semantics;
-their ROM IDs remain unchanged while their normalized names and links use the
-Renegade Platinum replacements.
+Unknown type, as Fairy. Type names are decoded from message member 624, and move
+names are decoded from message member 647. The normalized datasets preserve their
+native IDs, decoded names, and message-table provenance. Comparing those move names
+with PokéDB identifies later-generation replacements while leaving the ROM name
+authoritative.
 
 Record-level provenance is included in normalized datasets and generated pages,
 including separate archive/member references for Pokémon personal data and

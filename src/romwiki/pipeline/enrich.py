@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 from romwiki.engines.gen4_dppt import PERSONAL_FORM_MEMBERS, PERSONAL_INTERNAL_MEMBERS
@@ -78,6 +79,8 @@ def enrich_personal_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 508:
         raise DataSourceError("Expected exactly 508 Gen IV personal records")
+    type_names = _resolve_type_names(dataset, type_names)
+    move_names = _resolve_move_names(dataset, move_names)
 
     learnsets = _validate_learnsets(learnset_dataset, dataset["game"])
     evolutions = _validate_evolutions(evolution_dataset, dataset["game"])
@@ -137,6 +140,8 @@ def enrich_personal_dataset(
         enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
             egg_move_dataset["source"]
         )
+    if dataset.get("name_sources"):
+        enriched["name_sources"] = dataset["name_sources"]
     return enriched
 
 
@@ -172,12 +177,13 @@ def enrich_trainer_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
         raise DataSourceError("Trainer dataset records must be a list")
+    move_names = _resolve_move_names(dataset, move_names)
     records = []
     for expected_id, source in enumerate(source_records):
         if source.get("trainer_id") != expected_id:
             raise DataSourceError("Trainer records must be ordered by trainer ID")
         records.append(_enrich_trainer(source, pokedb, move_names))
-    return {
+    enriched = {
         "schema_version": 1,
         "game": dataset["game"],
         "dataset": "trainers",
@@ -188,6 +194,9 @@ def enrich_trainer_dataset(
         "source": dataset["source"],
         "records": records,
     }
+    if dataset.get("name_sources"):
+        enriched["name_sources"] = dataset["name_sources"]
+    return enriched
 
 
 def enrich_move_dataset(
@@ -203,6 +212,9 @@ def enrich_move_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 471:
         raise DataSourceError("Expected exactly 471 Gen IV move records")
+    rom_move_names = _reference_name_table(dataset, "move_names", 468)
+    type_names = _resolve_type_names(dataset, type_names)
+    move_names = _resolve_move_names(dataset, move_names)
 
     machines = _validate_machines(machine_dataset, dataset["game"])
     machines_by_move: dict[int, list[dict[str, Any]]] = {}
@@ -247,7 +259,14 @@ def enrich_move_dataset(
             {
                 **source,
                 "slug": slug,
-                "name": _display_name(slug),
+                "name": (
+                    rom_move_names[expected_id]
+                    if public and rom_move_names is not None
+                    else _display_name(slug)
+                ),
+                "replaces": (
+                    _replaced_move(expected_id, slug, pokedb) if public else None
+                ),
                 "public": public,
                 "damage_class": _named_id(
                     source["damage_class_id"], DAMAGE_CLASS_NAMES, "move class"
@@ -277,6 +296,8 @@ def enrich_move_dataset(
         enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
             egg_move_dataset["source"]
         )
+    if dataset.get("name_sources"):
+        enriched["name_sources"] = dataset["name_sources"]
     return enriched
 
 
@@ -904,6 +925,54 @@ def _named_id(value: int, names: tuple[str, ...], label: str) -> dict[str, Any]:
     return {"id": value, "name": names[value]}
 
 
+def _reference_name_table(
+    dataset: dict[str, Any], field: str, expected_count: int
+) -> list[str] | None:
+    names = dataset.get(field)
+    if names is None:
+        return None
+    if (
+        not isinstance(names, list)
+        or len(names) != expected_count
+        or any(not isinstance(name, str) or not name for name in names)
+    ):
+        raise DataSourceError(
+            f"Expected exactly {expected_count} ROM-derived {field.replace('_', ' ')}"
+        )
+    return names
+
+
+def _resolve_type_names(
+    dataset: dict[str, Any], fallback: Mapping[int, str] | None
+) -> dict[int, str]:
+    result = dict(fallback or {})
+    names = _reference_name_table(dataset, "type_names", len(TYPE_NAMES))
+    if names is not None:
+        result.update(
+            (type_id, _name_slug(name)) for type_id, name in enumerate(names)
+        )
+    return result
+
+
+def _resolve_move_names(
+    dataset: dict[str, Any], fallback: Mapping[int, str] | None
+) -> dict[int, str]:
+    result = dict(fallback or {})
+    names = _reference_name_table(dataset, "move_names", 468)
+    if names is not None:
+        result.update((move_id, _name_slug(name)) for move_id, name in enumerate(names))
+    return result
+
+
+def _replaced_move(
+    move_id: int, slug: str, pokedb: PokeDBGeneration
+) -> dict[str, Any] | None:
+    canonical_slug = pokedb.move_name(move_id)
+    if canonical_slug is None or canonical_slug == slug:
+        return None
+    return {"slug": canonical_slug, "name": _display_name(canonical_slug)}
+
+
 def _type_id(
     value: int, type_names: Mapping[int, str] | None
 ) -> dict[str, Any]:
@@ -920,6 +989,10 @@ def _move_name(
     if move_names is not None and move_id in move_names:
         return move_names[move_id]
     return pokedb.move_name(move_id)
+
+
+def _name_slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
 
 
 def _machine_name(machine_id: int) -> str:

@@ -11,22 +11,6 @@ rom_versions = [1]
 [reference]
 sprite_version = "platinum"
 
-[semantics.types]
-9 = "fairy"
-
-[semantics.moves]
-32 = "drill-run"
-66 = "play-rough"
-132 = "icicle-crash"
-140 = "draining-kiss"
-239 = "hurricane"
-295 = "dazzling-gleam"
-296 = "disarming-voice"
-328 = "bulldoze"
-344 = "wild-charge"
-362 = "scald"
-461 = "moonblast"
-
 [layout]
 personal = "poketool/personal/pl_personal.narc"
 encounters = "fielddata/encountdata/pl_enc_data.narc"
@@ -49,6 +33,8 @@ map_header_count = 593
 location_names_member = 433
 item_names_member = 392
 pokemon_names_member = 412
+type_names_member = 624
+move_names_member = 647
 npc_trade_names_member = 370
 decoration_names_member = 626
 decoration_name_count = 139

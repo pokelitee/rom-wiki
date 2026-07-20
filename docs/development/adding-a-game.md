@@ -50,27 +50,32 @@ Use the exact key present under PokéDB's `sprites.versions`. If it is absent or
 URL is unavailable, rendered pages use PokéDB's generic front sprite and then a
 text-only fallback. Sprite availability must never affect extraction success.
 
-When a hack repurposes an engine-local identifier, declare the semantic override
-in its profile instead of changing the engine default. For example, a Generation
-IV hack that uses the otherwise unknown type ID 9 for Fairy declares:
+Prefer ROM-derived name tables whenever the engine stores them. Profiles identify
+the message members, while extraction decodes their contents and records
+provenance:
+
+```toml
+[parameters]
+type_names_member = 624
+move_names_member = 647
+```
+
+Enrichment uses those tables consistently in move records, learnsets, trainer
+parties, machines, tutors, egg moves, and evolution conditions. Comparing the ROM
+move name at an ID with PokéDB also identifies replaced moves without making the
+external name authoritative. Semantic overrides remain a fallback for games whose
+names cannot be decoded from the image:
 
 ```toml
 [semantics.types]
 9 = "fairy"
-```
 
-Type names must be lowercase hyphenated values. Enrichment applies the override to
-every normalized Pokémon and move type while an unconfigured Generation IV game
-continues to use the engine's standard mapping.
-
-Replaced moves use the same mechanism so their names and links remain consistent
-in move records, learnsets, trainer parties, machines, tutors, egg moves, and
-evolution conditions:
-
-```toml
 [semantics.moves]
 66 = "play-rough"
 ```
+
+Fallback names must be lowercase hyphenated values and must never replace a
+successfully decoded ROM name.
 
 ## 3. Implement or extend the platform and engine
 

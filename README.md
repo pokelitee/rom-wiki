@@ -170,8 +170,9 @@ romwiki build-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
 
 Move pages report the exact type, damage class, power, accuracy, PP, priority,
 effect, targeting, flag, and contest fields stored in the hack's active move
-archive. PokéDB supplies stable move names; mechanical values always come from
-the game image.
+archive. Move and type names come from configured ROM message tables. PokéDB
+provides canonical comparison names and fallback metadata; ROM-derived values
+remain authoritative.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.

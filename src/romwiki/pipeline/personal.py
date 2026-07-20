@@ -7,6 +7,7 @@ from typing import Any
 from romwiki.engines.gen4_dppt import parse_personal_record
 from romwiki.errors import ProfileError
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 
 
@@ -21,6 +22,7 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
 
     filesystem = NintendoDSFileSystem.from_image(result.image)
     archive = NarcArchive.from_bytes(filesystem.read(archive_path))
+    reference_names = extract_reference_names(profile, filesystem)
     records = [
         parse_personal_record(
             archive.read(member.index),
@@ -38,6 +40,7 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
         },
+        **reference_names,
         "records": records,
     }
 

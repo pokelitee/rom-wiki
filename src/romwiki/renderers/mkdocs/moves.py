@@ -20,13 +20,20 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
     )
     fallback_links = []
     catalog_records = []
+    name_source = dataset.get("name_sources", {}).get("move_names")
     for index, record in enumerate(public_records):
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
-        _write_text(output_root / filename, _render_record(record, previous, following))
+        _write_text(
+            output_root / filename,
+            _render_record(record, previous, following, name_source),
+        )
         fallback_links.append(f"- [{record['name']}]({filename})")
         machines = [machine["name"] for machine in record.get("machines", [])]
+        replaced_name = (
+            record["replaces"]["name"] if record.get("replaces") else None
+        )
         access_methods = [
             method
             for method, available in (
@@ -50,7 +57,12 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 "machines": machines,
                 "access_methods": access_methods,
                 "search_text": " ".join(
-                    (record["name"], *machines, *access_methods)
+                    (
+                        record["name"],
+                        *machines,
+                        *access_methods,
+                        *((replaced_name,) if replaced_name else ()),
+                    )
                 ).lower(),
             }
         )
@@ -71,6 +83,7 @@ def _render_record(
     record: dict[str, Any],
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
+    name_source: dict[str, Any] | None = None,
 ) -> str:
     lines = [
         f"# {record['name']}",
@@ -96,6 +109,11 @@ def _render_record(
         f"| PP | {record['pp']} |",
         f"| Machine | {_machine_names(record)} |",
         f"| Move tutor | {_tutor_locations(record)} |",
+        *(
+            [f"| Replaces | {record['replaces']['name']} |"]
+            if record.get("replaces")
+            else []
+        ),
         f"| Priority | {record['priority']:+d} |",
         f"| Effect chance | {_effect_chance(record['effect_chance'])} |",
         "",
@@ -121,6 +139,14 @@ def _render_record(
             f"`{record['provenance']['archive']}` member "
             f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
             "shown in their native engine representation."
+        ),
+        *(
+            [
+                "Move name source: ROM message table "
+                f"`{name_source['archive']}` member `{name_source['member']}`."
+            ]
+            if name_source is not None
+            else []
         ),
         "",
         "</details>",

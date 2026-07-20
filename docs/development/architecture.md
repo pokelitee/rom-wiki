@@ -70,8 +70,9 @@ or `held_item_id`; they do not expose where a value happened to live in one ROM.
 Engine-only details needed for auditing belong in provenance fields.
 
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
-PokéDB currently supplies stable names, slugs, links, and optional sprite URLs. It
-must not override a mechanical value extracted from the game. A profile's
+ROM message tables supply names when configured; PokéDB supplies canonical names
+for comparison and fallback, plus stable links and optional sprite URLs. It must
+not override a value extracted from the game. A profile's
 `reference.sprite_version` selects the matching version sprite; enrichment reduces
 PokéDB's nested sprite data to one optional URL and attribution record.
 

@@ -15,6 +15,7 @@ from romwiki.engines.gen4_dppt import (
 )
 from romwiki.errors import InvalidRomError, ProfileError
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 from romwiki.schema import TrainerLocation, TrainerScriptReference
 
@@ -38,6 +39,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     trainers = NarcArchive.from_bytes(filesystem.read(trainer_path))
     parties = NarcArchive.from_bytes(filesystem.read(party_path))
     messages = NarcArchive.from_bytes(filesystem.read(messages_path))
+    reference_names = extract_reference_names(profile, filesystem, messages)
     if len(trainers.members) != len(parties.members):
         raise InvalidRomError("Trainer data and party archives have different counts")
     names = parse_english_message_archive(messages.read(names_member))
@@ -95,6 +97,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             "trainer_classes": {"archive": messages_path, "member": classes_member},
             **location_source,
         },
+        **reference_names,
         "records": records,
     }
 

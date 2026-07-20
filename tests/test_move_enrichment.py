@@ -28,11 +28,18 @@ class MoveEnrichmentTests(unittest.TestCase):
         )
 
         default_enriched = enrich_move_dataset(dataset, pokedb)
+        dataset["type_names"] = [
+            "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug",
+            "Ghost", "Steel", "Fairy", "Fire", "Water", "Grass", "Electric",
+            "Psychic", "Ice", "Dragon", "Dark",
+        ]
+        dataset["move_names"] = ["None", *(f"Move {move_id}" for move_id in range(1, 468))]
+        dataset["move_names"][85] = "Moonblast"
         enriched = enrich_move_dataset(
             dataset,
             pokedb,
-            type_names={9: "fairy"},
-            move_names={85: "moonblast"},
+            type_names={9: "fallback-type"},
+            move_names={85: "fallback-move"},
         )
 
         self.assertEqual(enriched["public_record_count"], 467)
@@ -40,6 +47,10 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["records"][85]["slug"], "moonblast")
         self.assertEqual(enriched["records"][85]["name"], "Moonblast")
         self.assertEqual(enriched["records"][85]["type"]["name"], "fairy")
+        self.assertEqual(
+            enriched["records"][85]["replaces"],
+            {"slug": "move-85", "name": "Move 85"},
+        )
         self.assertEqual(enriched["records"][85]["damage_class"]["name"], "special")
         self.assertFalse(enriched["records"][468]["public"])
 

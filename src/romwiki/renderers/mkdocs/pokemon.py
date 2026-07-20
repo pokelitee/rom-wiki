@@ -20,11 +20,15 @@ def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
     )
     fallback_links = []
     catalog_records = []
+    type_name_source = dataset.get("name_sources", {}).get("type_names")
     for index, record in enumerate(public_records):
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
-        _write_text(output_root / filename, _render_record(record, previous, following))
+        _write_text(
+            output_root / filename,
+            _render_record(record, previous, following, type_name_source),
+        )
         dex = record["national_dex_id"]
         fallback_links.append(f"- [#{dex:03} {record['name']}]({filename})")
         stats = record["base_stats"]
@@ -67,6 +71,7 @@ def _render_record(
     record: dict[str, Any],
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
+    type_name_source: dict[str, Any] | None = None,
 ) -> str:
     stats = record["base_stats"]
     held_items = [item for item in record.get("held_items", []) if item["id"]]
@@ -235,6 +240,15 @@ def _render_record(
                 "Source: exact ROM record from "
                 f"`{record['provenance']['archive']}` member "
                 f"`{record['provenance']['member']}`."
+            ),
+            *(
+                [
+                    "Type name source: ROM message table "
+                    f"`{type_name_source['archive']}` member "
+                    f"`{type_name_source['member']}`."
+                ]
+                if type_name_source is not None
+                else []
             ),
             *(
                 [
