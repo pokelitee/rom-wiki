@@ -11,8 +11,10 @@
     "vs-recorder": "Vs. Recorder",
     "vs-seeker": "Vs. Seeker",
   });
+  const COMBOBOX_RESULT_LIMIT = 50;
+  const comboboxWidgets = new WeakMap();
   const selectWidgets = new WeakMap();
-  let selectSequence = 0;
+  let elementSequence = 0;
 
   document.querySelectorAll("[data-rw-game-picker]").forEach((picker) => {
     picker.addEventListener("change", () => {
@@ -22,9 +24,8 @@
   });
 
   document.addEventListener("pointerdown", (event) => {
-    document.querySelectorAll(".rw-select--open").forEach((widget) => {
-      if (!widget.contains(event.target)) closeSelect(widget);
-    });
+    const openWidget = event.target.closest?.(".rw-select--open, .rw-combobox--open");
+    closeOpenMenus(openWidget);
   });
 
   document.querySelectorAll("img[data-rw-sprite]").forEach((image) => {
@@ -38,20 +39,20 @@
   const CATALOGS = {
     items: {
       searchPlaceholder: "Search items, locations, or uses",
-      filters: [{ key: "pocket", label: "Pocket" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by", multi: true }, { key: "locations", label: "Location", control: "datalist" }],
+      filters: [{ key: "pocket", label: "Pocket" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by", multi: true }, { key: "locations", label: "Location", control: "combobox" }],
       ranges: [{ key: "price", label: "Price" }, { key: "fling_power", label: "Fling power" }],
       sorts: [["id", "Item ID"], ["label", "Name"], ["price", "Price"], ["fling_power", "Fling power"]],
       columns: [["Item", recordLink], ["Pocket", (r) => text(title(r.pocket))], ["Price", (r) => text(r.price ? `₽${r.price.toLocaleString()}` : "Not sold", "rw-catalog__number")], ["Fling", (r) => numberOrDash(r.fling_power)], ["Referenced by", (r) => text(r.features.map(title).join(", ") || "—")]],
     },
     abilities: {
       searchPlaceholder: "Search abilities or Pokémon",
-      filters: [{ key: "pokemon", label: "Pokémon", control: "datalist" }, { key: "status", label: "Assignment" }],
+      filters: [{ key: "pokemon", label: "Pokémon", control: "combobox" }, { key: "status", label: "Assignment" }],
       sorts: [["id", "Ability ID"], ["label", "Name"], ["pokemon_count", "Pokémon count"]],
       columns: [["Ability", recordLink], ["ID", (r) => text(r.id, "rw-catalog__number")], ["Pokémon", (r) => previewList(r.pokemon)], ["Count", (r) => text(r.pokemon_count, "rw-catalog__number")]],
     },
     pokemon: {
       searchPlaceholder: "Search Pokémon, types, or abilities",
-      filters: [{ key: "types", label: "Type", multi: true }, { key: "abilities", label: "Ability", control: "datalist" }, { key: "egg_groups", label: "Egg group", multi: true }],
+      filters: [{ key: "types", label: "Type", multi: true }, { key: "abilities", label: "Ability", control: "combobox" }, { key: "egg_groups", label: "Egg group", multi: true }],
       ranges: [{ key: "bst", label: "BST" }],
       sorts: [["dex", "Pokédex number"], ["label", "Name"], ["bst", "Base stat total"], ["stats.hp", "HP"], ["stats.attack", "Attack"], ["stats.defense", "Defense"], ["stats.special_attack", "Sp. Atk"], ["stats.special_defense", "Sp. Def"], ["stats.speed", "Speed"]],
       columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (r) => text(r.abilities.map(title).join(", ") || "—")], ["HP", (r) => stat(r, "hp")], ["Atk", (r) => stat(r, "attack")], ["Def", (r) => stat(r, "defense")], ["SpA", (r) => stat(r, "special_attack")], ["SpD", (r) => stat(r, "special_defense")], ["Spe", (r) => stat(r, "speed")], ["BST", (r) => text(r.bst, "rw-catalog__number")]],
@@ -65,7 +66,7 @@
     },
     trainers: {
       searchPlaceholder: "Search trainers, locations, or party Pokémon",
-      filters: [{ key: "class_name", label: "Class", control: "datalist" }, { key: "locations", label: "Location", control: "datalist" }, { key: "pokemon", label: "Party Pokémon", control: "datalist" }, { key: "double_battle", label: "Battle format" }, { key: "linked", label: "Location status" }],
+      filters: [{ key: "class_name", label: "Class", control: "combobox" }, { key: "locations", label: "Location", control: "combobox" }, { key: "pokemon", label: "Party Pokémon", control: "combobox" }, { key: "double_battle", label: "Battle format" }, { key: "linked", label: "Location status" }],
       ranges: [{ key: "level", label: "Party level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
       sorts: [["label", "Name"], ["id", "Trainer ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"], ["party_size", "Party size"]],
       columns: [["Trainer", recordLink], ["Location", (r) => text(r.location_label || "Unlinked")], ["Party", trainerParty], ["Format", (r) => text(r.double_battle ? "Double" : "Single")]],
@@ -78,7 +79,7 @@
     },
     encounters: {
       searchPlaceholder: "Search areas or wild Pokémon",
-      filters: [{ key: "methods", label: "Method", multi: true }, { key: "pokemon", label: "Pokémon", control: "datalist" }],
+      filters: [{ key: "methods", label: "Method", multi: true }, { key: "pokemon", label: "Pokémon", control: "combobox" }],
       ranges: [{ key: "level", label: "Level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
       correlations: [{ left: "methods", right: "pokemon", path: "method_pokemon" }],
       sorts: [["label", "Location"], ["id", "Area ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
@@ -124,18 +125,16 @@
 
     for (const filter of config.filters) {
       const { key, label } = filter;
-      const kind = filter.control === "datalist" ? "input" : "select";
+      const kind = filter.control === "combobox" ? "input" : "select";
       const field = control(kind, label, key);
-      if (filter.control === "datalist") {
+      if (filter.control === "combobox") {
         field.input.type = "search";
         field.input.placeholder = `Any ${label.toLowerCase()}`;
-        const options = document.createElement("datalist");
-        options.id = `rw-${root.dataset.rwKind}-${key}`;
-        valuesFor(records, key).forEach((value) => {
-          options.append(new Option(displayFilter(key, value)));
-        });
-        field.input.setAttribute("list", options.id);
-        field.label.append(options);
+        enhanceCombobox(
+          field.input,
+          label,
+          valuesFor(records, key).map((value) => displayFilter(key, value)),
+        );
       } else {
         field.input.multiple = Boolean(filter.multi);
         field.input.dataset.placeholder = `Any ${label.toLowerCase()}`;
@@ -151,6 +150,14 @@
         for (const option of field.input.options) {
           option.selected = selected.has(option.value);
         }
+        const mode = document.createElement("input");
+        mode.type = "hidden";
+        mode.name = `${key}_mode`;
+        mode.dataset.default = "all";
+        mode.dataset.rwMatchMode = "";
+        mode.defaultValue = "all";
+        mode.value = params.get(mode.name) === "any" ? "any" : "all";
+        field.label.append(mode);
       } else {
         field.input.value = params.get(key) || "";
       }
@@ -230,7 +237,7 @@
             : String(values[key] || "");
           if (filter.multi ? selected.length === 0 : !selected) return true;
           const current = getValue(record, key);
-          if (filter.control === "datalist") {
+          if (filter.control === "combobox") {
             const options = Array.isArray(current) ? current : [current];
             const normalized = selected.toLowerCase();
             return options.some((value) =>
@@ -239,7 +246,7 @@
           }
           if (filter.multi) {
             const options = (Array.isArray(current) ? current : [current]).map(String);
-            return selected.every((value) => options.includes(value));
+            return matchesSelected(options, selected, values[`${key}_mode`]);
           }
           return Array.isArray(current)
             ? current.map(String).includes(selected)
@@ -276,6 +283,9 @@
     form.addEventListener("change", () => { state.visible = 50; render(); });
     reset.addEventListener("click", () => {
       form.reset();
+      form.querySelectorAll("[data-rw-match-mode]").forEach((mode) => {
+        mode.value = mode.dataset.default;
+      });
       form.querySelectorAll("select").forEach(syncSelect);
       state.visible = 50;
       render();
@@ -292,11 +302,151 @@
     caption.className = "rw-control__label";
     caption.textContent = labelText;
     const input = document.createElement(kind);
-    input.id = `rw-control-${++selectSequence}`;
+    input.id = `rw-control-${++elementSequence}`;
     input.name = name;
     caption.htmlFor = input.id;
     field.append(caption, input);
     return { label: field, input };
+  }
+
+  function enhanceCombobox(input, label, values) {
+    if (comboboxWidgets.has(input)) return;
+    const widget = document.createElement("div");
+    widget.className = "rw-combobox";
+    const menu = document.createElement("div");
+    menu.id = `rw-combobox-menu-${++elementSequence}`;
+    menu.className = "rw-select__menu rw-combobox__menu";
+    menu.hidden = true;
+    const optionList = document.createElement("div");
+    optionList.id = `${menu.id}-options`;
+    optionList.className = "rw-select__options";
+    optionList.role = "listbox";
+    optionList.setAttribute("aria-label", `${label} suggestions`);
+    const status = document.createElement("div");
+    status.className = "rw-combobox__status";
+    status.setAttribute("aria-live", "polite");
+    menu.append(optionList, status);
+
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-controls", optionList.id);
+    input.setAttribute("aria-expanded", "false");
+    input.setAttribute("role", "combobox");
+    input.insertAdjacentElement("afterend", widget);
+    widget.append(input, menu);
+
+    const parts = { activeIndex: -1, input, menu, optionList, status, values, widget };
+    comboboxWidgets.set(input, parts);
+    comboboxWidgets.set(widget, parts);
+
+    input.addEventListener("focus", () => openCombobox(widget));
+    input.addEventListener("input", () => openCombobox(widget));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (!widget.classList.contains("rw-combobox--open")) return;
+        event.preventDefault();
+        closeCombobox(widget);
+        return;
+      }
+      if (event.key === "Enter" && parts.activeIndex >= 0) {
+        event.preventDefault();
+        const options = [...optionList.querySelectorAll(".rw-select__option")];
+        chooseComboboxOption(input, options[parts.activeIndex]);
+        return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      if (!widget.classList.contains("rw-combobox--open")) openCombobox(widget);
+      const options = [...optionList.querySelectorAll(".rw-select__option")];
+      const last = options.length - 1;
+      if (last < 0) return;
+      if (event.key === "Home") parts.activeIndex = 0;
+      if (event.key === "End") parts.activeIndex = last;
+      if (event.key === "ArrowDown") parts.activeIndex = Math.min(parts.activeIndex + 1, last);
+      if (event.key === "ArrowUp") {
+        parts.activeIndex = parts.activeIndex < 0 ? last : Math.max(parts.activeIndex - 1, 0);
+      }
+      syncComboboxActive(parts);
+    });
+    widget.addEventListener("focusout", (event) => {
+      if (!widget.contains(event.relatedTarget)) closeCombobox(widget);
+    });
+  }
+
+  function renderComboboxOptions(parts) {
+    const query = parts.input.value.trim().toLowerCase();
+    const matches = parts.values.filter((value) => value.toLowerCase().includes(query));
+    const visible = matches.slice(0, COMBOBOX_RESULT_LIMIT);
+    parts.activeIndex = -1;
+    parts.input.removeAttribute("aria-activedescendant");
+    parts.optionList.replaceChildren();
+    visible.forEach((value, index) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.id = `${parts.menu.id}-option-${index}`;
+      option.className = "rw-select__option";
+      option.role = "option";
+      option.tabIndex = -1;
+      option.textContent = value;
+      option.setAttribute("aria-selected", "false");
+      option.addEventListener("pointerdown", (event) => event.preventDefault());
+      option.addEventListener("click", () => chooseComboboxOption(parts.input, option));
+      option.addEventListener("pointermove", () => {
+        parts.activeIndex = index;
+        syncComboboxActive(parts);
+      });
+      parts.optionList.append(option);
+    });
+    parts.status.textContent = matches.length === 0
+      ? "No suggestions"
+      : matches.length > visible.length
+        ? `${visible.length} of ${matches.length} suggestions shown. Keep typing to narrow the list.`
+        : `${matches.length} suggestion${matches.length === 1 ? "" : "s"}`;
+  }
+
+  function chooseComboboxOption(input, option) {
+    if (!option) return;
+    input.value = option.textContent;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    closeCombobox(comboboxWidgets.get(input).widget);
+    input.focus();
+  }
+
+  function syncComboboxActive(parts) {
+    const options = [...parts.optionList.querySelectorAll(".rw-select__option")];
+    options.forEach((option, index) => {
+      const active = index === parts.activeIndex;
+      option.classList.toggle("rw-select__option--active", active);
+      option.setAttribute("aria-selected", String(active));
+    });
+    const active = options[parts.activeIndex];
+    if (active) {
+      parts.input.setAttribute("aria-activedescendant", active.id);
+      active.scrollIntoView({ block: "nearest" });
+    } else {
+      parts.input.removeAttribute("aria-activedescendant");
+    }
+  }
+
+  function openCombobox(widget) {
+    const parts = comboboxWidgets.get(widget);
+    if (!parts) return;
+    closeOpenMenus(widget);
+    renderComboboxOptions(parts);
+    widget.classList.add("rw-combobox--open");
+    parts.input.setAttribute("aria-expanded", "true");
+    parts.menu.hidden = false;
+    positionMenu(widget, parts.input, parts.menu);
+  }
+
+  function closeCombobox(widget) {
+    const parts = comboboxWidgets.get(widget);
+    if (!parts) return;
+    widget.classList.remove("rw-combobox--open");
+    parts.input.setAttribute("aria-expanded", "false");
+    parts.input.removeAttribute("aria-activedescendant");
+    parts.menu.hidden = true;
+    parts.activeIndex = -1;
   }
 
   function enhanceSelect(select, label) {
@@ -306,12 +456,12 @@
     widget.classList.toggle("rw-select--multiple", select.multiple);
     const trigger = document.createElement("button");
     trigger.type = "button";
-    trigger.id = `rw-select-trigger-${++selectSequence}`;
+    trigger.id = `rw-select-trigger-${++elementSequence}`;
     trigger.className = "rw-select__trigger";
     trigger.setAttribute("aria-haspopup", "listbox");
     trigger.setAttribute("aria-expanded", "false");
     const menu = document.createElement("div");
-    menu.id = `rw-select-menu-${++selectSequence}`;
+    menu.id = `rw-select-menu-${++elementSequence}`;
     menu.className = "rw-select__menu";
     menu.hidden = true;
     const optionList = document.createElement("div");
@@ -346,11 +496,37 @@
     }
 
     let clear = null;
+    let match = null;
+    let modeInput = null;
+    const modeButtons = [];
     if (select.multiple) {
-      const hint = document.createElement("p");
-      hint.className = "rw-select__hint";
-      hint.textContent = "Matches all selected";
-      menu.append(hint);
+      modeInput = select.parentElement.querySelector("[data-rw-match-mode]");
+      match = document.createElement("div");
+      match.className = "rw-select__match";
+      match.hidden = true;
+      const matchLabel = document.createElement("span");
+      matchLabel.textContent = "Match";
+      const matchOptions = document.createElement("span");
+      matchOptions.className = "rw-select__match-options";
+      matchOptions.role = "group";
+      matchOptions.setAttribute("aria-label", `${label} match mode`);
+      for (const [value, text] of [["all", "All"], ["any", "Any"]]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "rw-select__match-option";
+        button.dataset.value = value;
+        button.textContent = text;
+        button.addEventListener("click", () => {
+          if (!modeInput || modeInput.value === value) return;
+          modeInput.value = value;
+          syncSelect(select);
+          modeInput.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        modeButtons.push(button);
+        matchOptions.append(button);
+      }
+      match.append(matchLabel, matchOptions);
+      menu.append(match);
       clear = document.createElement("button");
       clear.type = "button";
       clear.className = "rw-select__clear";
@@ -419,7 +595,17 @@
     if (caption) caption.htmlFor = trigger.id;
     select.insertAdjacentElement("afterend", widget);
     widget.append(trigger, menu);
-    const parts = { clear, label, menu, optionList, trigger, widget };
+    const parts = {
+      clear,
+      label,
+      match,
+      menu,
+      modeButtons,
+      modeInput,
+      optionList,
+      trigger,
+      widget,
+    };
     selectWidgets.set(select, parts);
     selectWidgets.set(widget, parts);
     select.addEventListener("change", () => syncSelect(select));
@@ -430,12 +616,20 @@
     const parts = selectWidgets.get(select);
     if (!parts) return;
     const selected = [...select.selectedOptions];
+    if (selected.length < 2 && parts.modeInput) parts.modeInput.value = "all";
+    const mode = parts.modeInput?.value === "any" ? "any" : "all";
     parts.trigger.textContent = select.multiple
       ? selected.length === 0
         ? select.dataset.placeholder || "Any"
-        : selected.length === 1 ? selected[0].textContent : `${selected.length} selected`
+        : selected.length === 1
+          ? selected[0].textContent
+          : `${selected.length} selected · ${title(mode)}`
       : selected[0]?.textContent || "Select";
-    parts.trigger.setAttribute("aria-label", `${parts.label}: ${parts.trigger.textContent}`);
+    const modeLabel = selected.length > 1 ? `, match ${mode}` : "";
+    parts.trigger.setAttribute(
+      "aria-label",
+      `${parts.label}: ${selected.length > 1 ? `${selected.length} selected` : parts.trigger.textContent}${modeLabel}`
+    );
     const selectedValues = new Set(selected.map((option) => option.value));
     parts.menu.querySelectorAll(".rw-select__option").forEach((option) => {
       const active = selectedValues.has(option.dataset.value);
@@ -443,27 +637,22 @@
       option.setAttribute("aria-selected", String(active));
     });
     if (parts.clear) parts.clear.disabled = selected.length === 0;
+    if (parts.match) parts.match.hidden = selected.length < 2;
+    parts.modeButtons.forEach((button) => {
+      const active = button.dataset.value === mode;
+      button.classList.toggle("rw-select__match-option--selected", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
   }
 
   function openSelect(widget, focus = "selected") {
-    document.querySelectorAll(".rw-select--open").forEach((openWidget) => {
-      if (openWidget !== widget) closeSelect(openWidget);
-    });
     const parts = selectWidgets.get(widget);
     if (!parts) return;
+    closeOpenMenus(widget);
     widget.classList.add("rw-select--open");
     parts.trigger.setAttribute("aria-expanded", "true");
     parts.menu.hidden = false;
-    widget.classList.remove("rw-select--above", "rw-select--align-right");
-    const triggerBounds = parts.trigger.getBoundingClientRect();
-    const menuBounds = parts.menu.getBoundingClientRect();
-    if (menuBounds.right > window.innerWidth - 16) {
-      widget.classList.add("rw-select--align-right");
-    }
-    const spaceBelow = window.innerHeight - triggerBounds.bottom;
-    if (menuBounds.height > spaceBelow - 16 && triggerBounds.top > spaceBelow) {
-      widget.classList.add("rw-select--above");
-    }
+    positionMenu(widget, parts.trigger, parts.menu);
     if (focus) {
       const options = [...parts.menu.querySelectorAll(".rw-select__option")];
       const target = focus === "last"
@@ -481,6 +670,28 @@
     widget.classList.remove("rw-select--open");
     parts.trigger.setAttribute("aria-expanded", "false");
     parts.menu.hidden = true;
+  }
+
+  function closeOpenMenus(except) {
+    document.querySelectorAll(".rw-select--open").forEach((widget) => {
+      if (widget !== except) closeSelect(widget);
+    });
+    document.querySelectorAll(".rw-combobox--open").forEach((widget) => {
+      if (widget !== except) closeCombobox(widget);
+    });
+  }
+
+  function positionMenu(widget, anchor, menu) {
+    widget.classList.remove("rw-menu--above", "rw-menu--align-right");
+    const anchorBounds = anchor.getBoundingClientRect();
+    const menuBounds = menu.getBoundingClientRect();
+    if (menuBounds.right > window.innerWidth - 16) {
+      widget.classList.add("rw-menu--align-right");
+    }
+    const spaceBelow = window.innerHeight - anchorBounds.bottom;
+    if (menuBounds.height > spaceBelow - 16 && anchorBounds.top > spaceBelow) {
+      widget.classList.add("rw-menu--above");
+    }
   }
 
   function valuesFor(records, key) {
@@ -502,6 +713,12 @@
       values[select.name] = data.getAll(select.name).map(String);
     });
     return values;
+  }
+
+  function matchesSelected(options, selected, mode) {
+    return mode === "any"
+      ? selected.some((value) => options.includes(value))
+      : selected.every((value) => options.includes(value));
   }
 
   function matchesRanges(record, values, ranges) {
@@ -532,11 +749,14 @@
     const right = String(values[correlation.right] || "").toLowerCase();
     if (left.length === 0 || !right) return true;
     const related = getValue(record, correlation.path) || {};
-    return left.every((leftValue) =>
+    const correlated = left.filter((leftValue) =>
       (related[leftValue] || []).some((value) =>
         displayFilter(correlation.right, value).toLowerCase().includes(right)
       )
     );
+    return values[`${correlation.left}_mode`] === "any"
+      ? correlated.length > 0
+      : correlated.length === left.length;
   }
 
   function compareBy(path, direction) {

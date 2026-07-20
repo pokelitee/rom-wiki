@@ -237,9 +237,11 @@ html[data-romwiki-theme="platinum"] {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1.25 5 5 5-5' fill='none' stroke='%237c8498' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-position: right .7rem center; background-repeat: no-repeat; background-size: .65rem auto;
 }
-.rw-select { position: relative; min-width: 0; }
+.rw-select, .rw-combobox { position: relative; min-width: 0; }
+.rw-combobox > input { display: block; }
 .rw-select__trigger { display: block; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .rw-select--open .rw-select__trigger { border-color: var(--rw-accent); }
+.rw-combobox--open > input { border-color: var(--rw-accent); }
 .rw-select__menu {
   position: absolute; z-index: 30; top: calc(100% + .32rem); left: 0;
   width: max-content; min-width: 100%; max-width: min(20rem, calc(100vw - 2rem)); max-height: min(17rem, calc(100vh - 2rem));
@@ -247,16 +249,37 @@ html[data-romwiki-theme="platinum"] {
   background: var(--rw-surface); box-shadow: var(--rw-shadow);
 }
 .rw-select__menu[hidden] { display: none; }
-.rw-select--align-right .rw-select__menu { right: 0; left: auto; }
-.rw-select--above .rw-select__menu { top: auto; bottom: calc(100% + .32rem); }
-.rw-select__hint { margin: 0 !important; padding: .28rem .58rem .38rem; color: var(--rw-text-muted); font-size: .58rem; }
+.rw-menu--align-right .rw-select__menu { right: 0; left: auto; }
+.rw-menu--above .rw-select__menu { top: auto; bottom: calc(100% + .32rem); }
+.rw-combobox__menu { width: 100%; }
+.rw-combobox__status {
+  padding: .38rem .58rem .22rem; border-top: 1px solid var(--rw-border);
+  color: var(--rw-text-muted); font-size: .58rem; line-height: 1.35;
+}
+.rw-select__match {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  margin-bottom: .25rem; padding: .2rem .28rem .42rem .58rem;
+  border-bottom: 1px solid var(--rw-border); color: var(--rw-text-muted);
+  font-size: .58rem; font-weight: 750; text-transform: uppercase; letter-spacing: .04em;
+}
+.rw-select__match[hidden] { display: none; }
+.rw-select__match-options { display: inline-flex; padding: .12rem; border-radius: .38rem; background: var(--rw-surface-muted); }
+.rw-select__match-option {
+  min-width: 2.2rem; padding: .24rem .42rem; border: 0; border-radius: .28rem;
+  color: var(--rw-text-muted); background: transparent; font: inherit; cursor: pointer;
+  transition: color .16s, background-color .16s, box-shadow .16s;
+}
+.rw-select__match-option:hover, .rw-select__match-option:focus-visible { color: var(--rw-accent); outline: none; }
+.rw-select__match-option:focus-visible { box-shadow: 0 0 0 2px rgba(var(--rw-accent-rgb), .24); }
+.rw-select__match-option--selected { color: #fff; background: var(--rw-accent); box-shadow: var(--rw-control-shadow); }
+.rw-select__match-option--selected:hover, .rw-select__match-option--selected:focus-visible { color: #fff; }
 .rw-select__options { display: grid; gap: .05rem; }
 .rw-select__option {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   width: 100%; padding: .48rem .58rem; border: 0; border-radius: .35rem;
   color: var(--md-typeset-color); background: transparent; font: inherit; text-align: left; cursor: pointer;
 }
-.rw-select__option:hover, .rw-select__option:focus-visible { outline: none; background: rgba(var(--rw-accent-rgb), .11); }
+.rw-select__option:hover, .rw-select__option:focus-visible, .rw-select__option--active { outline: none; background: rgba(var(--rw-accent-rgb), .11); }
 .rw-select__option--selected { color: var(--rw-accent); font-weight: 750; background: rgba(var(--rw-accent-rgb), .08); }
 .rw-select__option--selected::after { content: "✓"; font-weight: 850; }
 .rw-select--multiple .rw-select__option::after {

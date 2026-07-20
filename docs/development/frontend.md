@@ -32,15 +32,19 @@ The `kind` selects the shared filters, columns, and sorting behavior. Every reco
 has a stable ID, display label, final directory URL, and normalized `search_text`.
 Section-specific fields provide only the values visible, searchable, sortable,
 or filterable in the catalog. Catalog definitions may use select or searchable
-datalist facets, numeric ranges, sort direction, and correlations between facets.
+combobox facets, numeric ranges, sort direction, and correlations between facets.
 For example, encounter records preserve the Pokémon available through each method
 so combining those filters cannot produce a false match. Breaking catalog changes
 require a version bump and matching JavaScript support.
 
 Multi-select facets are reserved for fields where each record can contain several
-values. They match every selected value, remain open while options are toggled,
-and serialize selections as repeated query parameters. Scalar facets and
-high-cardinality searchable datalists remain single-value controls.
+values. They remain open while options are toggled and default to matching every
+selected value. Once two values are selected, users can switch that facet between
+`All` and `Any`; non-default modes use a companion query parameter such as
+`types_mode=any`. Selections use repeated query parameters. Scalar facets and
+high-cardinality searchable comboboxes remain single-value controls. Comboboxes
+accept free text, limit the rendered suggestion list, and preserve substring
+matching so users do not have to choose an exact suggestion.
 
 The index contains a `data-rw-catalog` container followed by every record as normal
 Markdown links. JavaScript hides that fallback only after it has successfully
