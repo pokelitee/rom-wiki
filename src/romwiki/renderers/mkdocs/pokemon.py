@@ -119,7 +119,7 @@ def _render_record(
                 *[
                     (
                         f"| {item['rarity'].title()} | "
-                        f"{item['name'].replace('-', ' ').title()} | {item['id']} |"
+                        f"{_item_link(item)} | {item['id']} |"
                     )
                     for item in held_items
                 ],
@@ -351,6 +351,12 @@ def _evolution_condition(entry: dict[str, Any]) -> str:
         "level-ice-rock": "Level up near an Ice Rock",
     }
     return conditions.get(method, f"{method.replace('-', ' ').title()} ({value})")
+
+
+def _item_link(item: dict[str, Any]) -> str:
+    name = item["name"]
+    slug = item.get("slug")
+    return f"[{name}](../items/{slug}.md)" if slug else name
 
 
 def _shard_cost(costs: dict[str, int]) -> str:

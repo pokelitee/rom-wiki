@@ -77,8 +77,10 @@ Engine-only details needed for auditing belong in provenance fields.
 
 Derived datasets may invert normalized relationships without parsing the ROM again.
 For example, the ability dataset combines the ROM ability-name table with ability
-assignments already present in normalized PokÃ©mon records, producing ability pages
-and PokÃ©mon backlinks from one authoritative extraction.
+assignments already present in normalized Pokémon records, producing ability pages
+and Pokémon backlinks from one authoritative extraction. The item dataset follows
+the same pattern, joining normalized mechanics with item references from Pokémon,
+trainers, locations, shops, gifts, trades, and evolutions.
 
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
 ROM message tables supply names when configured; PokéDB supplies canonical names

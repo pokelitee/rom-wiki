@@ -47,6 +47,18 @@ class PokeDBSpriteTests(unittest.TestCase):
         self.assertEqual(fallback["url"], "https://example.test/default.png")
         self.assertIsNone(rejected)
 
+    def test_matches_rom_item_names_without_using_rom_item_ids(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={213: "bright-powder"},
+        )
+
+        self.assertEqual(pokedb.item_slug("BrightPowder"), "bright-powder")
+        self.assertEqual(pokedb.item_slug("Odd Invitation"), "odd-invitation")
+
 
 if __name__ == "__main__":
     unittest.main()

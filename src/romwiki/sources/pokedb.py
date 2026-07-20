@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 from typing import Any
+import unicodedata
 
 from romwiki.errors import DataSourceError
 
@@ -16,6 +18,7 @@ class PokeDBGeneration:
         pokemon_by_species: dict[str, dict[str, Any]],
         abilities_by_id: dict[int, str],
         items_by_id: dict[int, str],
+        items_by_lookup: dict[str, str] | None = None,
         moves_by_id: dict[int, str] | None = None,
     ) -> None:
         self.pokemon_by_id = pokemon_by_id
@@ -23,6 +26,9 @@ class PokeDBGeneration:
         self.pokemon_by_species = pokemon_by_species
         self.abilities_by_id = abilities_by_id
         self.items_by_id = items_by_id
+        self.items_by_lookup = items_by_lookup or {
+            _lookup_key(name): name for name in items_by_id.values()
+        }
         self.moves_by_id = moves_by_id or {}
 
     @classmethod
@@ -43,6 +49,7 @@ class PokeDBGeneration:
             pokemon_by_species={item["species"]: item for item in defaults},
             abilities_by_id=_id_name_map(abilities, "ability"),
             items_by_id=_id_name_map(items, "item"),
+            items_by_lookup={_lookup_key(item["name"]): item["name"] for item in items},
             moves_by_id=_id_name_map(moves, "move"),
         )
 
@@ -79,6 +86,10 @@ class PokeDBGeneration:
             return self.items_by_id[item_id]
         except KeyError as error:
             raise DataSourceError(f"PokéDB item ID does not exist: {item_id}") from error
+
+    def item_slug(self, rom_name: str) -> str:
+        key = _lookup_key(rom_name)
+        return self.items_by_lookup.get(key, _name_slug(rom_name))
 
     def move_name(self, move_id: int) -> str | None:
         if move_id == 0:
@@ -134,3 +145,13 @@ def _id_name_map(objects: list[dict[str, Any]], resource: str) -> dict[int, str]
     if len(result) != len(objects):
         raise DataSourceError(f"PokéDB {resource} IDs must be unique")
     return result
+
+
+def _lookup_key(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", normalized.casefold())
+
+
+def _name_slug(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", normalized.casefold()).strip("-")

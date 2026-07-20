@@ -19,6 +19,13 @@
   });
 
   const CATALOGS = {
+    items: {
+      searchPlaceholder: "Search items, locations, or uses",
+      filters: [{ key: "pocket", label: "Pocket" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by" }, { key: "locations", label: "Location", control: "datalist" }],
+      ranges: [{ key: "price", label: "Price" }, { key: "fling_power", label: "Fling power" }],
+      sorts: [["id", "Item ID"], ["label", "Name"], ["price", "Price"], ["fling_power", "Fling power"]],
+      columns: [["Item", recordLink], ["Pocket", (r) => text(title(r.pocket))], ["Price", (r) => text(r.price ? `₽${r.price.toLocaleString()}` : "Not sold", "rw-catalog__number")], ["Fling", (r) => numberOrDash(r.fling_power)], ["Referenced by", (r) => text(r.features.map(title).join(", ") || "—")]],
+    },
     abilities: {
       searchPlaceholder: "Search abilities or Pokémon",
       filters: [{ key: "pokemon", label: "Pokémon", control: "datalist" }, { key: "status", label: "Assignment" }],

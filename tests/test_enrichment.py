@@ -105,7 +105,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
             "egg_groups": [{"name": "monster"}, {"name": "grass"}],
             "held_items": [
                 {"rarity": "common", "id": 0, "name": None},
-                {"rarity": "rare", "id": 81, "name": "moon-stone"},
+                {"rarity": "rare", "id": 81, "name": "Moon Stone"},
             ],
             "machines": [
                 {

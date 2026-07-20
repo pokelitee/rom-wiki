@@ -176,6 +176,18 @@ archive. Move and type names come from configured ROM message tables. PokéDB
 provides canonical comparison names and fallback metadata; ROM-derived values
 remain authoritative.
 
+Extract and render the item catalog:
+
+```console
+romwiki extract-items ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki build-items ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+Item pages combine the ROM item-name table, the 34-byte item mechanics records,
+and the ARM9 item-to-archive-member map. The enriched build links overworld and
+hidden pickups, shops, wild and trainer held items, trainer rewards, gifts,
+trades, and item-based evolutions.
+
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.
 

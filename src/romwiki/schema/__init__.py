@@ -32,6 +32,7 @@ from romwiki.schema.locations import (
 from romwiki.schema.moves import Gen4Move
 from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
 from romwiki.schema.egg_moves import Gen4EggMoveSet
+from romwiki.schema.items import Gen4Item, ItemPartyEffects
 from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
 from romwiki.schema.machines import Gen4Machine
 from romwiki.schema.tutors import (

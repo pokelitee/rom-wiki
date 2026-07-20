@@ -82,6 +82,7 @@ def enrich_personal_dataset(
     type_names = _resolve_type_names(dataset, type_names)
     move_names = _resolve_move_names(dataset, move_names)
     ability_names = _resolve_ability_names(dataset)
+    item_names = _resolve_item_names(dataset)
 
     learnsets = _validate_learnsets(learnset_dataset, dataset["game"])
     evolutions = _validate_evolutions(evolution_dataset, dataset["game"])
@@ -110,6 +111,7 @@ def enrich_personal_dataset(
                 type_names,
                 move_names,
                 ability_names,
+                item_names,
                 sprite_version,
             )
         )
@@ -182,11 +184,12 @@ def enrich_trainer_dataset(
     if not isinstance(source_records, list):
         raise DataSourceError("Trainer dataset records must be a list")
     move_names = _resolve_move_names(dataset, move_names)
+    item_names = _resolve_item_names(dataset)
     records = []
     for expected_id, source in enumerate(source_records):
         if source.get("trainer_id") != expected_id:
             raise DataSourceError("Trainer records must be ordered by trainer ID")
-        records.append(_enrich_trainer(source, pokedb, move_names))
+        records.append(_enrich_trainer(source, pokedb, move_names, item_names))
     enriched = {
         "schema_version": 1,
         "game": dataset["game"],
@@ -395,6 +398,7 @@ def _enrich_trainer(
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
+    item_names: list[str] | None,
 ) -> dict[str, Any]:
     party = []
     for pokemon in source["party"]:
@@ -424,8 +428,7 @@ def _enrich_trainer(
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
                 },
                 "held_item": {
-                    "id": pokemon["held_item_id"],
-                    "name": pokedb.item_name(pokemon["held_item_id"]),
+                    **_item_reference(pokemon["held_item_id"], pokedb, item_names),
                 }
                 if pokemon["held_item_id"] is not None
                 else None,
@@ -440,7 +443,7 @@ def _enrich_trainer(
         **source,
         "party": party,
         "reward_items": [
-            {"id": item_id, "name": pokedb.item_name(item_id)}
+            _item_reference(item_id, pokedb, item_names)
             for item_id in source["reward_item_ids"]
             if item_id
         ],
@@ -480,6 +483,7 @@ def _enrich_record(
     type_names: Mapping[int, str] | None,
     move_names: Mapping[int, str] | None,
     ability_names: list[str] | None,
+    item_names: list[str] | None,
     sprite_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
@@ -523,7 +527,7 @@ def _enrich_record(
         "base_experience": source["base_experience"],
         "ev_yields": source["ev_yields"],
         "held_items": [
-            {"rarity": rarity, "id": value, "name": pokedb.item_name(value)}
+            {"rarity": rarity, **_item_reference(value, pokedb, item_names)}
             for rarity, value in (
                 ("common", source["wild_held_items"]["common"]),
                 ("rare", source["wild_held_items"]["rare"]),
@@ -863,7 +867,13 @@ def _evolution_parameter(
     if method_id in _EVOLUTION_ITEM_PARAMETERS:
         if not 0 < parameter < len(item_names):
             raise DataSourceError(f"Unknown Gen IV item ID: {parameter}")
-        return {"kind": "item", "id": parameter, "name": item_names[parameter]}
+        name = item_names[parameter]
+        return {
+            "kind": "item",
+            "id": parameter,
+            "slug": pokedb.item_slug(name),
+            "name": name,
+        }
     if method_id in _EVOLUTION_PERSONALITY_PARAMETERS:
         return {"kind": "personality", "value": parameter}
     if method_id == 15:
@@ -971,6 +981,26 @@ def _resolve_move_names(
 
 def _resolve_ability_names(dataset: dict[str, Any]) -> list[str] | None:
     return _reference_name_table(dataset, "ability_names", 124)
+
+
+def _resolve_item_names(dataset: dict[str, Any]) -> list[str] | None:
+    return _reference_name_table(dataset, "item_names", 468)
+
+
+def _item_reference(
+    item_id: int,
+    pokedb: PokeDBGeneration,
+    item_names: list[str] | None,
+) -> dict[str, Any]:
+    if item_id == 0:
+        return {"id": 0, "slug": None, "name": None}
+    if item_names is None:
+        slug = pokedb.item_name(item_id)
+        return {"id": item_id, "slug": slug, "name": _display_name(slug)}
+    if item_id >= len(item_names):
+        raise DataSourceError(f"Unknown Gen IV item ID: {item_id}")
+    name = item_names[item_id]
+    return {"id": item_id, "slug": pokedb.item_slug(name), "name": name}
 
 
 def _ability_id(

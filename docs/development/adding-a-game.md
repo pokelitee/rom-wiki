@@ -65,6 +65,7 @@ provenance:
 [parameters]
 type_names_member = 624
 ability_names_member = 610
+item_names_member = 392
 move_names_member = 647
 ```
 
@@ -84,6 +85,12 @@ names cannot be decoded from the image:
 
 Fallback names must be lowercase hyphenated values and must never replace a
 successfully decoded ROM name.
+
+Item IDs may map to different item-data archive members. Engine adapters should
+decode that mapping from the ROM rather than assuming an item ID is also an
+archive index. The Generation IV adapter locates and validates the complete ARM9
+mapping table, allowing hacks to repurpose unused item IDs without profile-level
+member overrides.
 
 ## 3. Implement or extend the platform and engine
 

@@ -24,6 +24,7 @@ from romwiki.engines.gen4_dppt import (
     parse_decoration_price_table,
     parse_egg_gift_command,
     parse_frontier_price_table,
+    find_item_archive_members,
     parse_item_price,
     parse_mart_commands,
     parse_npc_trade_commands,
@@ -188,9 +189,14 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
         record_count=frontier_price_record_count,
     )
     item_data = NarcArchive.from_bytes(filesystem.read(item_data_path))
+    item_archive_map_offset, item_data_members = find_item_archive_members(
+        arm9_data,
+        item_count=len(item_names),
+        data_member_count=len(item_data.members),
+    )
     item_prices = tuple(
-        parse_item_price(item_data.read(index))
-        for index in range(len(item_data.members))
+        parse_item_price(item_data.read(data_member))
+        for data_member in item_data_members
     )
     npc_trades = NarcArchive.from_bytes(filesystem.read(npc_trades_path))
     if len(npc_trade_names) != len(npc_trades.members) * 2:
@@ -519,6 +525,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
             "shops": {
                 "scripts_archive": scripts_path,
                 "item_data_archive": item_data_path,
+                "item_archive_map_arm9_offset": item_archive_map_offset,
                 "common_inventory_arm9_offset": common_mart_inventory_offset,
                 "specialty_pointer_table_arm9_offset": (
                     specialty_mart_pointer_table_offset

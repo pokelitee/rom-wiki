@@ -14,8 +14,9 @@ authoritative.
 Record-level provenance is included in normalized datasets and generated pages,
 including separate archive/member references for Pokémon personal data and
 level-up learnsets, evolution records, and the ROM item-name catalog.
-Wild held-item slot IDs come from each Pokémon personal record; PokéDB resolves
-their stable display names.
+Wild held-item slot IDs come from each Pokémon personal record. Display names come
+from ROM message member 392; PokéDB supplies stable page slugs without overriding
+those names.
 Visible item pickups come from Poké Ball object events, while hidden pickups come
 from background-event records. Item IDs are decoded from their standard Gen IV
 script ranges and named with the ROM item-name catalog.
@@ -23,6 +24,11 @@ Common Poké Mart stock and badge requirements come from the shared ARM9
 progression table. Specialty inventories come from the ARM9 inventory pointer
 table selected by each clerk's field-script command. Prices come from Renegade
 Platinum's item-data records.
+The 34-byte item records also provide price, pocket, held-effect parameters,
+Fling and Natural Gift properties, usability flags, and party-use parameters.
+Item IDs are joined to those records through the complete mapping table discovered
+and validated in ARM9 rather than by assuming the ID equals the archive member.
+This preserves Renegade Platinum's repurposed and shifted item slots.
 Veilstone decoration and Sunyshore weekday seal inventories use distinct field
 commands and catalog-name message banks. Their prices come from the 28-byte goods
 records and 10-byte seal records in ARM9, respectively.

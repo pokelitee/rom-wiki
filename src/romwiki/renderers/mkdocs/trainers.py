@@ -133,11 +133,16 @@ def _party_cards(party: list[dict[str, Any]]) -> list[str]:
     for index, member in enumerate(party, start=1):
         pokemon = member["pokemon"]
         held_item = member["held_item"]
-        item_name = (
-            _display_name(held_item["name"])
-            if held_item and held_item["name"]
-            else "—"
-        )
+        if held_item and held_item["name"]:
+            item_name = escape(held_item["name"])
+            item_slug = held_item.get("slug")
+            if item_slug:
+                item_name = (
+                    f'<a href="../../items/{escape(item_slug, quote=True)}/">'
+                    f"{item_name}</a>"
+                )
+        else:
+            item_name = "—"
         lines.extend(
             [
                 '<article class="rw-party-card">',
@@ -145,7 +150,7 @@ def _party_cards(party: list[dict[str, Any]]) -> list[str]:
                 f'<h3><a href="../../pokemon/{escape(pokemon["slug"], quote=True)}/">{escape(pokemon["name"])}</a></h3>',
                 '<dl class="rw-summary__facts">',
                 f"<div><dt>Level</dt><dd>{member['level']}</dd></div>",
-                f"<div><dt>Held item</dt><dd>{escape(item_name)}</dd></div>",
+                f"<div><dt>Held item</dt><dd>{item_name}</dd></div>",
                 "</dl>",
                 '<ul class="rw-party-card__moves" aria-label="Moves">',
             ]

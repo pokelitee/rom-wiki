@@ -24,6 +24,14 @@ from romwiki.engines.gen4_dppt.map_headers import (
 )
 from romwiki.engines.gen4_dppt.map_matrices import Gen4MapMatrix, parse_map_matrix
 from romwiki.engines.gen4_dppt.messages import parse_english_message_archive
+from romwiki.engines.gen4_dppt.items import (
+    GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE,
+    GEN4_ITEM_FIELD_USE_NAMES,
+    GEN4_ITEM_POCKET_NAMES,
+    GEN4_ITEM_RECORD_SIZE,
+    find_item_archive_members,
+    parse_item_record,
+)
 from romwiki.engines.gen4_dppt.trainers import TRAINER_RECORD_SIZE, parse_trainer_record
 from romwiki.engines.gen4_dppt.events import (
     Gen4BackgroundEvent,
@@ -126,6 +134,12 @@ __all__ = [
     "MAP_HEADER_SIZE",
     "PlatinumMapHeader",
     "parse_english_message_archive",
+    "GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE",
+    "GEN4_ITEM_FIELD_USE_NAMES",
+    "GEN4_ITEM_POCKET_NAMES",
+    "GEN4_ITEM_RECORD_SIZE",
+    "find_item_archive_members",
+    "parse_item_record",
     "parse_platinum_map_headers",
     "Gen4MapMatrix",
     "parse_map_matrix",

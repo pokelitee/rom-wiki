@@ -21,6 +21,11 @@ from romwiki.pipeline.egg_moves import (
     write_egg_move_dataset,
 )
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
+from romwiki.pipeline.items import (
+    build_item_dataset,
+    extract_item_dataset,
+    write_item_dataset,
+)
 from romwiki.pipeline.enrich import (
     enrich_encounter_dataset,
     enrich_move_dataset,
@@ -40,6 +45,7 @@ from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,
     render_location_pages,
+    render_item_pages,
     render_move_pages,
     render_pokemon_pages,
     render_trainer_pages,
@@ -118,6 +124,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         help="dataset output path (defaults below build/data/<profile>/moves)",
+    )
+
+    item_parser = subparsers.add_parser(
+        "extract-items", help="extract normalized item mechanics"
+    )
+    _add_input_arguments(item_parser)
+    item_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/items)",
     )
 
     learnset_parser = subparsers.add_parser(
@@ -229,6 +245,19 @@ def build_parser() -> argparse.ArgumentParser:
     build_moves_parser.add_argument("--data-output", type=Path)
     build_moves_parser.add_argument("--wiki-output", type=Path)
 
+    build_items_parser = subparsers.add_parser(
+        "build-items", help="extract, enrich, and render item pages"
+    )
+    _add_input_arguments(build_items_parser)
+    build_items_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokÃ©DB generation output directory",
+    )
+    build_items_parser.add_argument("--data-output", type=Path)
+    build_items_parser.add_argument("--wiki-output", type=Path)
+
     site_parser = subparsers.add_parser(
         "site", help="list or build independently configured wiki sites"
     )
@@ -261,6 +290,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "extract-trainers",
             "extract-locations",
             "extract-moves",
+            "extract-items",
             "extract-learnsets",
             "extract-egg-moves",
             "extract-evolutions",
@@ -271,6 +301,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "build-trainers",
             "build-locations",
             "build-moves",
+            "build-items",
         }:
             result = inspect_rom(args.rom, args.profiles_dir)
         if args.command == "inspect":
@@ -316,6 +347,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             write_move_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} move records: {output}")
+        elif args.command == "extract-items":
+            dataset = extract_item_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "items" / "raw.json"
+            )
+            write_item_dataset(dataset, output)
+            print(f"Wrote {dataset['record_count']} item records: {output}")
         elif args.command == "extract-learnsets":
             dataset = extract_learnset_dataset(result)
             output = args.output or (
@@ -472,6 +510,38 @@ def main(argv: Sequence[str] | None = None) -> int:
             page_count = render_location_pages(dataset, wiki_output)
             print(f"Wrote {dataset['record_count']} location records: {data_output}")
             print(f"Rendered {page_count} location pages: {wiki_output}")
+        elif args.command == "build-items":
+            pokedb = PokeDBGeneration.load(args.pokedb)
+            extracted = extract_item_dataset(result)
+            personal = extract_personal_dataset(result)
+            evolutions = extract_evolution_dataset(result)
+            pokemon = enrich_personal_dataset(
+                personal,
+                pokedb,
+                evolution_dataset=evolutions,
+                type_names=result.match.profile.type_names,
+                move_names=result.match.profile.move_names,
+                sprite_version=result.match.profile.sprite_version,
+            )
+            trainers = enrich_trainer_dataset(
+                extract_trainer_dataset(result),
+                pokedb,
+                move_names=result.match.profile.move_names,
+            )
+            locations = extract_location_dataset(result)
+            items = build_item_dataset(
+                extracted, pokedb, pokemon, trainers, locations
+            )
+            data_output = args.data_output or (
+                Path("build/data") / items["game"] / "items" / "enriched.json"
+            )
+            wiki_output = args.wiki_output or (
+                Path("sites/games") / items["game"] / "wiki" / "items"
+            )
+            write_item_dataset(items, data_output)
+            page_count = render_item_pages(items, wiki_output)
+            print(f"Wrote {items['record_count']} enriched item records: {data_output}")
+            print(f"Rendered {page_count} item pages: {wiki_output}")
         elif args.command == "build-moves":
             extracted = extract_move_dataset(result)
             machines = extract_machine_dataset(result)
