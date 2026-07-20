@@ -4,6 +4,14 @@
   const theme = document.querySelector('meta[name="romwiki-theme"]');
   if (theme) document.documentElement.dataset.romwikiTheme = theme.content;
 
+  const DISPLAY_NAMES = Object.freeze({
+    "poke-balls": "Poké Balls",
+    "poke-radar": "Poké Radar",
+    "tm-hm": "TM / HM",
+    "vs-recorder": "Vs. Recorder",
+    "vs-seeker": "Vs. Seeker",
+  });
+
   document.querySelectorAll("[data-rw-game-picker]").forEach((picker) => {
     picker.addEventListener("change", () => {
       if (picker.value) window.location.assign(picker.value);
@@ -326,7 +334,9 @@
   }
 
   function title(value) {
-    return String(value).replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+    const normalized = String(value);
+    return DISPLAY_NAMES[normalized]
+      || normalized.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
   function text(value, className) {

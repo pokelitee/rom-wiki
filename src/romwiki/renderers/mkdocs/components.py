@@ -4,6 +4,15 @@ from html import escape
 from typing import Any
 
 
+DISPLAY_NAMES = {
+    "poke-balls": "Poké Balls",
+    "poke-radar": "Poké Radar",
+    "tm-hm": "TM / HM",
+    "vs-recorder": "Vs. Recorder",
+    "vs-seeker": "Vs. Seeker",
+}
+
+
 def type_badges(types: list[dict[str, Any]]) -> str:
     badges = []
     seen = set()
@@ -91,4 +100,7 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
 
 
 def display_name(value: str) -> str:
-    return " ".join(part.capitalize() for part in value.split("-"))
+    return DISPLAY_NAMES.get(
+        value,
+        " ".join(part.capitalize() for part in value.split("-")),
+    )
