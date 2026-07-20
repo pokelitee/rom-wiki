@@ -37,6 +37,11 @@ For example, encounter records preserve the Pokémon available through each meth
 so combining those filters cannot produce a false match. Breaking catalog changes
 require a version bump and matching JavaScript support.
 
+Multi-select facets are reserved for fields where each record can contain several
+values. They match every selected value, remain open while options are toggled,
+and serialize selections as repeated query parameters. Scalar facets and
+high-cardinality searchable datalists remain single-value controls.
+
 The index contains a `data-rw-catalog` container followed by every record as normal
 Markdown links. JavaScript hides that fallback only after it has successfully
 loaded and validated the JSON. Filtering and sorting happen locally, 50 rows render

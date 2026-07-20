@@ -38,7 +38,7 @@
   const CATALOGS = {
     items: {
       searchPlaceholder: "Search items, locations, or uses",
-      filters: [{ key: "pocket", label: "Pocket" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by" }, { key: "locations", label: "Location", control: "datalist" }],
+      filters: [{ key: "pocket", label: "Pocket" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by", multi: true }, { key: "locations", label: "Location", control: "datalist" }],
       ranges: [{ key: "price", label: "Price" }, { key: "fling_power", label: "Fling power" }],
       sorts: [["id", "Item ID"], ["label", "Name"], ["price", "Price"], ["fling_power", "Fling power"]],
       columns: [["Item", recordLink], ["Pocket", (r) => text(title(r.pocket))], ["Price", (r) => text(r.price ? `₽${r.price.toLocaleString()}` : "Not sold", "rw-catalog__number")], ["Fling", (r) => numberOrDash(r.fling_power)], ["Referenced by", (r) => text(r.features.map(title).join(", ") || "—")]],
@@ -51,14 +51,14 @@
     },
     pokemon: {
       searchPlaceholder: "Search Pokémon, types, or abilities",
-      filters: [{ key: "types", label: "Type" }, { key: "abilities", label: "Ability", control: "datalist" }, { key: "egg_groups", label: "Egg group" }],
+      filters: [{ key: "types", label: "Type", multi: true }, { key: "abilities", label: "Ability", control: "datalist" }, { key: "egg_groups", label: "Egg group", multi: true }],
       ranges: [{ key: "bst", label: "BST" }],
       sorts: [["dex", "Pokédex number"], ["label", "Name"], ["bst", "Base stat total"], ["stats.hp", "HP"], ["stats.attack", "Attack"], ["stats.defense", "Defense"], ["stats.special_attack", "Sp. Atk"], ["stats.special_defense", "Sp. Def"], ["stats.speed", "Speed"]],
       columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (r) => text(r.abilities.map(title).join(", ") || "—")], ["HP", (r) => stat(r, "hp")], ["Atk", (r) => stat(r, "attack")], ["Def", (r) => stat(r, "defense")], ["SpA", (r) => stat(r, "special_attack")], ["SpD", (r) => stat(r, "special_defense")], ["Spe", (r) => stat(r, "speed")], ["BST", (r) => text(r.bst, "rw-catalog__number")]],
     },
     moves: {
       searchPlaceholder: "Search moves or machine numbers",
-      filters: [{ key: "type", label: "Type" }, { key: "damage_class", label: "Class" }, { key: "access_methods", label: "Available as" }],
+      filters: [{ key: "type", label: "Type" }, { key: "damage_class", label: "Class" }, { key: "access_methods", label: "Available as", multi: true }],
       ranges: [{ key: "power", label: "Power" }],
       sorts: [["label", "Name"], ["id", "Move ID"], ["power", "Power"], ["accuracy", "Accuracy"], ["pp", "PP"]],
       columns: [["Move", recordLink], ["Type", (r) => typeBadge(r.type)], ["Class", (r) => text(title(r.damage_class))], ["Power", (r) => numberOrDash(r.power)], ["Accuracy", (r) => text(r.accuracy ? `${r.accuracy}%` : "Always")], ["PP", (r) => text(r.pp, "rw-catalog__number")], ["Available as", accessMethods]],
@@ -72,13 +72,13 @@
     },
     locations: {
       searchPlaceholder: "Search location or internal map name",
-      filters: [{ key: "features", label: "Contains" }],
+      filters: [{ key: "features", label: "Contains", multi: true }],
       sorts: [["label", "Name"], ["id", "Header ID"]],
       columns: [["Location", recordLink], ["Contains", (r) => text(r.features.map(title).join(", ") || "—")], ["Map ID", locationIdentifier]],
     },
     encounters: {
       searchPlaceholder: "Search areas or wild Pokémon",
-      filters: [{ key: "methods", label: "Method" }, { key: "pokemon", label: "Pokémon", control: "datalist" }],
+      filters: [{ key: "methods", label: "Method", multi: true }, { key: "pokemon", label: "Pokémon", control: "datalist" }],
       ranges: [{ key: "level", label: "Level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
       correlations: [{ left: "methods", right: "pokemon", path: "method_pokemon" }],
       sorts: [["label", "Location"], ["id", "Area ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
@@ -137,12 +137,23 @@
         field.input.setAttribute("list", options.id);
         field.label.append(options);
       } else {
-        field.input.append(new Option(`Any ${label.toLowerCase()}`, ""));
+        field.input.multiple = Boolean(filter.multi);
+        field.input.dataset.placeholder = `Any ${label.toLowerCase()}`;
+        if (!filter.multi) {
+          field.input.append(new Option(field.input.dataset.placeholder, ""));
+        }
         valuesFor(records, key).forEach((value) => {
           field.input.append(new Option(displayFilter(key, value), String(value)));
         });
       }
-      field.input.value = params.get(key) || "";
+      if (filter.multi) {
+        const selected = new Set(params.getAll(key));
+        for (const option of field.input.options) {
+          option.selected = selected.has(option.value);
+        }
+      } else {
+        field.input.value = params.get(key) || "";
+      }
       form.append(field.label);
     }
 
@@ -208,14 +219,16 @@
     root.append(form, summary, tableWrap, more);
 
     const render = () => {
-      const values = Object.fromEntries(new FormData(form));
+      const values = formValues(form);
       const query = String(values.q || "").trim().toLowerCase();
       let filtered = records.filter((record) => {
         if (query && !record.search_text.includes(query)) return false;
         const matchesFilters = config.filters.every((filter) => {
           const { key } = filter;
-          const selected = String(values[key] || "");
-          if (!selected) return true;
+          const selected = filter.multi
+            ? values[key] || []
+            : String(values[key] || "");
+          if (filter.multi ? selected.length === 0 : !selected) return true;
           const current = getValue(record, key);
           if (filter.control === "datalist") {
             const options = Array.isArray(current) ? current : [current];
@@ -223,6 +236,10 @@
             return options.some((value) =>
               displayFilter(key, value).toLowerCase().includes(normalized)
             );
+          }
+          if (filter.multi) {
+            const options = (Array.isArray(current) ? current : [current]).map(String);
+            return selected.every((value) => options.includes(value));
           }
           return Array.isArray(current)
             ? current.map(String).includes(selected)
@@ -286,6 +303,7 @@
     if (selectWidgets.has(select)) return;
     const widget = document.createElement("div");
     widget.className = "rw-select";
+    widget.classList.toggle("rw-select--multiple", select.multiple);
     const trigger = document.createElement("button");
     trigger.type = "button";
     trigger.id = `rw-select-trigger-${++selectSequence}`;
@@ -295,9 +313,12 @@
     const menu = document.createElement("div");
     menu.id = `rw-select-menu-${++selectSequence}`;
     menu.className = "rw-select__menu";
-    menu.role = "listbox";
     menu.hidden = true;
-    menu.setAttribute("aria-label", label);
+    const optionList = document.createElement("div");
+    optionList.className = "rw-select__options";
+    optionList.role = "listbox";
+    optionList.setAttribute("aria-label", label);
+    if (select.multiple) optionList.setAttribute("aria-multiselectable", "true");
     trigger.setAttribute("aria-controls", menu.id);
 
     for (const option of select.options) {
@@ -309,14 +330,40 @@
       item.dataset.value = option.value;
       item.textContent = option.textContent;
       item.addEventListener("click", () => {
-        select.value = option.value;
+        if (select.multiple) {
+          option.selected = !option.selected;
+        } else {
+          select.value = option.value;
+        }
         syncSelect(select);
-        closeSelect(widget);
-        trigger.focus();
         select.dispatchEvent(new Event("change", { bubbles: true }));
+        if (!select.multiple) {
+          closeSelect(widget);
+          trigger.focus();
+        }
       });
-      menu.append(item);
+      optionList.append(item);
     }
+
+    let clear = null;
+    if (select.multiple) {
+      const hint = document.createElement("p");
+      hint.className = "rw-select__hint";
+      hint.textContent = "Matches all selected";
+      menu.append(hint);
+      clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "rw-select__clear";
+      clear.textContent = "Clear selection";
+      clear.addEventListener("click", () => {
+        for (const option of select.options) option.selected = false;
+        syncSelect(select);
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        optionList.querySelector(".rw-select__option")?.focus();
+      });
+    }
+    menu.append(optionList);
+    if (clear) menu.append(clear);
 
     trigger.addEventListener("click", () => {
       if (widget.classList.contains("rw-select--open")) {
@@ -372,7 +419,7 @@
     if (caption) caption.htmlFor = trigger.id;
     select.insertAdjacentElement("afterend", widget);
     widget.append(trigger, menu);
-    const parts = { label, menu, trigger, widget };
+    const parts = { clear, label, menu, optionList, trigger, widget };
     selectWidgets.set(select, parts);
     selectWidgets.set(widget, parts);
     select.addEventListener("change", () => syncSelect(select));
@@ -382,14 +429,20 @@
   function syncSelect(select) {
     const parts = selectWidgets.get(select);
     if (!parts) return;
-    const selected = select.selectedOptions[0];
-    parts.trigger.textContent = selected?.textContent || "Select";
+    const selected = [...select.selectedOptions];
+    parts.trigger.textContent = select.multiple
+      ? selected.length === 0
+        ? select.dataset.placeholder || "Any"
+        : selected.length === 1 ? selected[0].textContent : `${selected.length} selected`
+      : selected[0]?.textContent || "Select";
     parts.trigger.setAttribute("aria-label", `${parts.label}: ${parts.trigger.textContent}`);
+    const selectedValues = new Set(selected.map((option) => option.value));
     parts.menu.querySelectorAll(".rw-select__option").forEach((option) => {
-      const active = option.dataset.value === select.value;
+      const active = selectedValues.has(option.dataset.value);
       option.classList.toggle("rw-select__option--selected", active);
       option.setAttribute("aria-selected", String(active));
     });
+    if (parts.clear) parts.clear.disabled = selected.length === 0;
   }
 
   function openSelect(widget, focus = "selected") {
@@ -442,6 +495,15 @@
     return path.split(".").reduce((value, key) => value == null ? value : value[key], record);
   }
 
+  function formValues(form) {
+    const data = new FormData(form);
+    const values = Object.fromEntries(data);
+    form.querySelectorAll("select[multiple]").forEach((select) => {
+      values[select.name] = data.getAll(select.name).map(String);
+    });
+    return values;
+  }
+
   function matchesRanges(record, values, ranges) {
     return ranges.every((range) => {
       const selectedMin = values[`${range.key}_min`];
@@ -463,12 +525,17 @@
   }
 
   function matchesCorrelation(record, values, correlation) {
-    const left = String(values[correlation.left] || "");
+    const rawLeft = values[correlation.left];
+    const left = (Array.isArray(rawLeft) ? rawLeft : [rawLeft])
+      .filter((value) => value !== null && value !== undefined && value !== "")
+      .map(String);
     const right = String(values[correlation.right] || "").toLowerCase();
-    if (!left || !right) return true;
-    const related = getValue(record, correlation.path)?.[left] || [];
-    return related.some((value) =>
-      displayFilter(correlation.right, value).toLowerCase().includes(right)
+    if (left.length === 0 || !right) return true;
+    const related = getValue(record, correlation.path) || {};
+    return left.every((leftValue) =>
+      (related[leftValue] || []).some((value) =>
+        displayFilter(correlation.right, value).toLowerCase().includes(right)
+      )
     );
   }
 
@@ -487,7 +554,7 @@
     for (const [key, value] of new FormData(form)) {
       const field = form.elements.namedItem(key);
       if (value && (!field.dataset.default || field.dataset.default !== value)) {
-        params.set(key, value);
+        params.append(key, value);
       }
     }
     if (visible > 50) params.set("page", String(Math.ceil(visible / 50)));

@@ -249,6 +249,8 @@ html[data-romwiki-theme="platinum"] {
 .rw-select__menu[hidden] { display: none; }
 .rw-select--align-right .rw-select__menu { right: 0; left: auto; }
 .rw-select--above .rw-select__menu { top: auto; bottom: calc(100% + .32rem); }
+.rw-select__hint { margin: 0 !important; padding: .28rem .58rem .38rem; color: var(--rw-text-muted); font-size: .58rem; }
+.rw-select__options { display: grid; gap: .05rem; }
 .rw-select__option {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   width: 100%; padding: .48rem .58rem; border: 0; border-radius: .35rem;
@@ -257,6 +259,22 @@ html[data-romwiki-theme="platinum"] {
 .rw-select__option:hover, .rw-select__option:focus-visible { outline: none; background: rgba(var(--rw-accent-rgb), .11); }
 .rw-select__option--selected { color: var(--rw-accent); font-weight: 750; background: rgba(var(--rw-accent-rgb), .08); }
 .rw-select__option--selected::after { content: "✓"; font-weight: 850; }
+.rw-select--multiple .rw-select__option::after {
+  content: ""; display: grid; flex: 0 0 .82rem; place-items: center;
+  width: .82rem; height: .82rem; border: 1px solid var(--rw-border); border-radius: .22rem;
+  color: #fff; background: var(--rw-surface-muted); font-size: .58rem; line-height: 1;
+}
+.rw-select--multiple .rw-select__option--selected::after {
+  content: "✓"; border-color: var(--rw-accent); background: var(--rw-accent);
+}
+.rw-select__clear {
+  position: sticky; bottom: -.3rem; display: block; width: 100%; margin-top: .25rem;
+  padding: .45rem .58rem; border: 0; border-top: 1px solid var(--rw-border);
+  color: var(--rw-accent); background: var(--rw-surface); font: inherit; font-weight: 750;
+  text-align: left; cursor: pointer;
+}
+.rw-select__clear:hover, .rw-select__clear:focus-visible { outline: none; background: var(--rw-surface-muted); }
+.rw-select__clear:disabled { color: var(--rw-text-muted); cursor: default; opacity: .55; }
 .rw-catalog__controls input[type="number"] { font-variant-numeric: tabular-nums; }
 .rw-catalog__controls input:hover, .rw-catalog__controls select:hover, .rw-catalog__controls .rw-select__trigger:hover { border-color: rgba(var(--rw-accent-rgb), .62); }
 .rw-catalog__controls input:focus, .rw-catalog__controls select:focus, .rw-catalog__controls .rw-select__trigger:focus-visible {
