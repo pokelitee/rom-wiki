@@ -11,7 +11,11 @@
       }
     }, 4000);
   </script>
-  <link rel="stylesheet" href="{{ 'assets/stylesheets/romwiki.css' | url }}">
+  <link rel="stylesheet" href="{{ 'assets/stylesheets/theme.css' | url }}">
+  <link rel="stylesheet" href="{{ 'assets/stylesheets/controls.css' | url }}">
+  <link rel="stylesheet" href="{{ 'assets/stylesheets/shell.css' | url }}">
+  <link rel="stylesheet" href="{{ 'assets/stylesheets/records.css' | url }}">
+  <link rel="stylesheet" href="{{ 'assets/stylesheets/catalog.css' | url }}">
 {% endblock %}
 
 {% block announce %}
@@ -40,5 +44,5 @@
 
 {% block scripts %}
   {{ super() }}
-  <script src="{{ 'assets/javascripts/romwiki.js' | url }}"></script>
+  <script type="module" src="{{ 'assets/javascripts/romwiki.js' | url }}"></script>
 {% endblock %}

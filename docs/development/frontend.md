@@ -20,6 +20,21 @@ token to custom properties such as `--rw-accent`; components consume the variabl
 rather than game names. Components must support the default and slate Material
 schemes and remain readable without color.
 
+Shared frontend assets are divided by responsibility. `theme.css` owns tokens,
+Material integration, and global scrolling; `shell.css` owns navigation and landing
+pages; `records.css` owns record-level components; `controls.css` owns reusable
+select and combobox presentation; and `catalog.css` owns catalog layout and tables.
+Keep responsive rules with the component they modify. The template loads these as
+separate stylesheets rather than chaining CSS imports.
+
+`romwiki.js` is a small browser-module entry point. Site-wide behavior lives in
+`site.js`, reusable field behavior in `controls.js`, and display normalization in
+`formatting.js`. The `catalog/` modules separately own the catalog contract,
+renderers, and interactive orchestration. Modules may depend toward these lower
+layers, but shared controls and formatting must not depend on catalog definitions.
+This structure is shared by every game; do not create game-specific frontend
+bundles for normalized data or appearance differences.
+
 ## Catalog contract
 
 Each generated section writes `catalog.json` with this envelope:

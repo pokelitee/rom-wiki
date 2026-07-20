@@ -1,0 +1,36 @@
+.rw-type { display: inline-flex; align-items: center; justify-content: center; min-width: 4.2rem; padding: .2rem .48rem; border-radius: 999px; color: #fff; background: #777; font-size: .62rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
+.rw-type--normal{background:#8a8a72}.rw-type--fire{background:#d66535}.rw-type--water{background:#4f79c8}.rw-type--electric{background:#d5a82e}.rw-type--grass{background:#579f4c}.rw-type--ice{background:#62aeb1}.rw-type--fighting{background:#a33d35}.rw-type--poison{background:#8d478f}.rw-type--ground{background:#b38b45}.rw-type--flying{background:#8272c4}.rw-type--psychic{background:#cd5277}.rw-type--bug{background:#849523}.rw-type--rock{background:#98813a}.rw-type--ghost{background:#62557e}.rw-type--dragon{background:#6145b4}.rw-type--dark{background:#57483f}.rw-type--steel{background:#777e94}.rw-type--fairy{background:#c66f9a}
+
+.rw-summary { display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr; gap: 1.2rem; margin: 0 0 1.5rem; padding: 1rem; border: 1px solid var(--rw-border); border-radius: var(--rw-radius); background: var(--rw-surface); }
+.rw-summary__media { display: grid; place-items: center; min-height: 9rem; border-radius: .55rem; background: radial-gradient(circle, rgba(var(--rw-accent-rgb),.16), transparent 68%); }
+.rw-summary__media img { width: min(100%, 8rem); height: auto; image-rendering: pixelated; }
+.rw-summary__placeholder { color: var(--rw-text-muted); font-size: .68rem; }
+.rw-summary__facts { display: grid; grid-template-columns: repeat(auto-fit,minmax(8rem,1fr)); gap: .65rem; margin: .8rem 0 0; }
+.rw-summary__facts div { padding: .55rem; border-radius: .45rem; background: var(--rw-surface-muted); }
+.rw-summary__facts dt { color: var(--rw-text-muted); font-size: .58rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+.rw-summary__facts dd { margin: .15rem 0 0; font-weight: 700; }
+.rw-stat-list { display: grid; gap: .45rem; margin: .8rem 0 1.5rem; }
+.rw-stat { display: grid; grid-template-columns: 5.5rem 2.2rem 1fr; gap: .5rem; align-items: center; font-size: .68rem; }
+.rw-stat__value { font-variant-numeric: tabular-nums; font-weight: 750; text-align: right; }
+.rw-stat__track { height: .48rem; overflow: hidden; border-radius: 999px; background: var(--rw-border); }
+.rw-stat__bar { display: block; width: var(--stat-percent); height: 100%; border-radius: inherit; background: var(--rw-accent); }
+.rw-record-nav { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin: 2rem 0 0; }
+.rw-record-nav a { padding: .7rem; border: 1px solid var(--rw-border); border-radius: .5rem; }
+.rw-record-nav a:last-child { text-align: right; }
+.rw-source-details { margin-top: 2rem; color: var(--rw-text-muted); font-size: .66rem; }
+.rw-move-summary,
+.rw-location-summary { margin-bottom: 1.4rem; padding: .85rem; border: 1px solid var(--rw-border); border-radius: var(--rw-radius); background: var(--rw-surface); }
+.rw-move-summary > .rw-summary__facts { margin-top: .7rem; }
+.rw-party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: .75rem; }
+.rw-party-card { position: relative; padding: .9rem; border: 1px solid var(--rw-border); border-radius: .6rem; background: var(--rw-surface); }
+.rw-party-card h3 { margin: .15rem 0 .65rem; }
+.rw-party-card__slot { color: var(--rw-accent); font-size: .57rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.rw-party-card .rw-summary__facts { grid-template-columns: 4rem 1fr; }
+.rw-party-card__moves { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; margin: .7rem 0 0 !important; padding: 0 !important; list-style: none; }
+.rw-party-card__moves li { margin: 0 !important; padding: .28rem .38rem; border-radius: .3rem; background: var(--rw-surface-muted); font-size: .63rem; }
+
+@media (max-width: 44rem) {
+  .rw-summary { grid-template-columns: 1fr; }
+  .rw-summary__media { min-height: 7rem; }
+  .rw-stat { grid-template-columns: 4.8rem 2rem 1fr; }
+}
