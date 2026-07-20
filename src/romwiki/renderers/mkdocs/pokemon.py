@@ -3,13 +3,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.catalog import (
+    catalog_index,
+    prune_catalog_pages,
+    write_catalog,
+)
 from romwiki.renderers.mkdocs.components import pokemon_summary, stat_list
 
 
 def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
     output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {"index.md", *(f"{record['slug']}.md" for record in public_records)},
+    )
     fallback_links = []
     catalog_records = []
     for index, record in enumerate(public_records):
@@ -21,8 +29,10 @@ def render_pokemon_pages(dataset: dict[str, Any], output_root: Path) -> int:
         fallback_links.append(f"- [#{dex:03} {record['name']}]({filename})")
         stats = record["base_stats"]
         abilities = [value["name"] for value in record["abilities"] if value["name"]]
-        types = [value["name"] for value in record["types"]]
-        egg_groups = [value["name"] for value in record["egg_groups"]]
+        types = list(dict.fromkeys(value["name"] for value in record["types"]))
+        egg_groups = list(
+            dict.fromkeys(value["name"] for value in record["egg_groups"])
+        )
         catalog_records.append(
             {
                 "id": record.get("member", dex),
@@ -89,7 +99,8 @@ def _render_record(
         f"- Hatch cycles: {record['hatch_cycles']}",
         f"- Growth rate: {record['growth_rate']['name'].replace('-', ' ').title()}",
         "- Egg groups: " + " / ".join(
-            value["name"].replace("-", " ").title() for value in record["egg_groups"]
+            name.replace("-", " ").title()
+            for name in dict.fromkeys(value["name"] for value in record["egg_groups"])
         ),
         "",
         "## Wild held items",

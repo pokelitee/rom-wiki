@@ -23,6 +23,8 @@ class GameProfile:
     rom_versions: tuple[int, ...]
     hashes: tuple[KnownHash, ...]
     sprite_version: str | None = None
+    type_names: Mapping[int, str] = field(default_factory=dict)
+    move_names: Mapping[int, str] = field(default_factory=dict)
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, int] = field(default_factory=dict)
 

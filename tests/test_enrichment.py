@@ -59,6 +59,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
             items_by_id={},
         )
         records = [_source_record(member) for member in range(508)]
+        records[1]["type_ids"] = [9, 9]
 
         enriched = enrich_personal_dataset(
             {
@@ -67,12 +68,14 @@ class PersonalEnrichmentTests(unittest.TestCase):
                 "records": records,
             },
             pokedb,
+            type_names={9: "fairy"},
         )
 
         self.assertEqual(enriched["public_record_count"], 505)
         self.assertFalse(enriched["records"][494]["public"])
         self.assertEqual(enriched["records"][496]["slug"], "deoxys-attack")
         self.assertEqual(enriched["records"][496]["national_dex_id"], 386)
+        self.assertEqual(enriched["records"][1]["types"][0], {"id": 9, "name": "fairy"})
 
     def test_renders_a_page_and_index(self) -> None:
         record = {
@@ -84,7 +87,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
                 "hp": 45, "attack": 49, "defense": 49, "speed": 45,
                 "special_attack": 65, "special_defense": 65,
             },
-            "types": [{"name": "grass"}, {"name": "poison"}],
+            "types": [{"name": "grass"}, {"name": "grass"}],
             "abilities": [{"name": "overgrow"}],
             "catch_rate": 45,
             "base_experience": 64,
@@ -159,6 +162,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertIn("# Bulbasaur", page)
+        self.assertEqual(page.count("rw-type--grass"), 1)
         self.assertIn("| 45 | 49 |", page)
         self.assertIn("[Tackle](../moves/tackle.md)", page)
         self.assertIn("[Skull Bash](../moves/skull-bash.md)", page)

@@ -53,6 +53,15 @@ def _load_profile(path: Path) -> GameProfile:
             or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", sprite_version) is None
         ):
             raise ProfileError(f"Invalid sprite version in {path}: {sprite_version}")
+        semantics_data = data.get("semantics", {})
+        if not isinstance(semantics_data, dict):
+            raise ProfileError(f"Invalid semantic metadata in {path}")
+        type_names = _load_semantic_names(
+            semantics_data.get("types", {}), path, "type", 0xFF
+        )
+        move_names = _load_semantic_names(
+            semantics_data.get("moves", {}), path, "move", 0xFFFF
+        )
         hashes = tuple(
             KnownHash(
                 algorithm=item["algorithm"].lower(),
@@ -77,8 +86,34 @@ def _load_profile(path: Path) -> GameProfile:
             rom_versions=tuple(header_data["rom_versions"]),
             hashes=hashes,
             sprite_version=sprite_version,
+            type_names=type_names,
+            move_names=move_names,
             layout=dict(data.get("layout", {})),
             parameters=dict(data.get("parameters", {})),
         )
     except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
         raise ProfileError(f"Invalid profile {path}: {error}") from error
+
+
+def _load_semantic_names(
+    value: object, path: Path, label: str, maximum_id: int
+) -> dict[int, str]:
+    if not isinstance(value, dict):
+        raise ProfileError(f"Invalid {label} semantics in {path}")
+    result = {}
+    for raw_id, name in value.items():
+        try:
+            semantic_id = int(raw_id)
+        except (TypeError, ValueError) as error:
+            raise ProfileError(f"Invalid {label} ID in {path}: {raw_id}") from error
+        if (
+            not 0 <= semantic_id <= maximum_id
+            or not isinstance(name, str)
+            or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) is None
+            or semantic_id in result
+        ):
+            raise ProfileError(
+                f"Invalid {label} semantic in {path}: {raw_id} = {name}"
+            )
+        result[semantic_id] = name
+    return result

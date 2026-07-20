@@ -3,13 +3,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.catalog import (
+    catalog_index,
+    prune_catalog_pages,
+    write_catalog,
+)
 from romwiki.renderers.mkdocs.components import type_badges
 
 
 def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
     output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {"index.md", *(f"{record['slug']}.md" for record in public_records)},
+    )
     fallback_links = []
     catalog_records = []
     for index, record in enumerate(public_records):

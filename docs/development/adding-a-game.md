@@ -50,6 +50,28 @@ Use the exact key present under PokéDB's `sprites.versions`. If it is absent or
 URL is unavailable, rendered pages use PokéDB's generic front sprite and then a
 text-only fallback. Sprite availability must never affect extraction success.
 
+When a hack repurposes an engine-local identifier, declare the semantic override
+in its profile instead of changing the engine default. For example, a Generation
+IV hack that uses the otherwise unknown type ID 9 for Fairy declares:
+
+```toml
+[semantics.types]
+9 = "fairy"
+```
+
+Type names must be lowercase hyphenated values. Enrichment applies the override to
+every normalized Pokémon and move type while an unconfigured Generation IV game
+continues to use the engine's standard mapping.
+
+Replaced moves use the same mechanism so their names and links remain consistent
+in move records, learnsets, trainer parties, machines, tutors, egg moves, and
+evolution conditions:
+
+```toml
+[semantics.moves]
+66 = "play-rough"
+```
+
 ## 3. Implement or extend the platform and engine
 
 For a new platform, add container and filesystem readers under

@@ -61,7 +61,9 @@ class TrainerEnrichmentTests(unittest.TestCase):
             moves_by_id={33: "tackle"},
         )
         enriched = enrich_trainer_dataset(
-            {"game": "test", "source": {}, "records": [source]}, pokedb
+            {"game": "test", "source": {}, "records": [source]},
+            pokedb,
+            move_names={33: "play-rough"},
         )
 
         with tempfile.TemporaryDirectory() as directory:
@@ -74,7 +76,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn("Master Ball", page)
-        self.assertIn("Tackle", page)
+        self.assertIn("Play Rough", page)
         self.assertIn(
             "| [Route 202](../locations/header-343.md) | 343 | `R202` | "
             "(181, 818) | `329:0` |",

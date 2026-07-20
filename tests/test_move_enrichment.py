@@ -17,6 +17,7 @@ class MoveEnrichmentTests(unittest.TestCase):
             "source": {"archive": "moves.narc"},
             "records": [_source_record(move_id) for move_id in range(471)],
         }
+        dataset["records"][85]["type_id"] = 9
         pokedb = PokeDBGeneration(
             pokemon_by_id={},
             pokemon_by_name={},
@@ -26,11 +27,19 @@ class MoveEnrichmentTests(unittest.TestCase):
             moves_by_id={move_id: f"move-{move_id}" for move_id in range(1, 468)},
         )
 
-        enriched = enrich_move_dataset(dataset, pokedb)
+        default_enriched = enrich_move_dataset(dataset, pokedb)
+        enriched = enrich_move_dataset(
+            dataset,
+            pokedb,
+            type_names={9: "fairy"},
+            move_names={85: "moonblast"},
+        )
 
         self.assertEqual(enriched["public_record_count"], 467)
-        self.assertEqual(enriched["records"][85]["slug"], "move-85")
-        self.assertEqual(enriched["records"][85]["type"]["name"], "electric")
+        self.assertEqual(default_enriched["records"][85]["type"]["name"], "unknown")
+        self.assertEqual(enriched["records"][85]["slug"], "moonblast")
+        self.assertEqual(enriched["records"][85]["name"], "Moonblast")
+        self.assertEqual(enriched["records"][85]["type"]["name"], "fairy")
         self.assertEqual(enriched["records"][85]["damage_class"]["name"], "special")
         self.assertFalse(enriched["records"][468]["public"])
 
@@ -59,12 +68,15 @@ class MoveEnrichmentTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
+            stale_page = output / "old-move-name.md"
+            stale_page.write_text("stale", encoding="utf-8")
             count = render_move_pages({"records": [record]}, output)
             page = (output / "thunderbolt.md").read_text(encoding="utf-8")
             index = (output / "index.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
+        self.assertFalse(stale_page.exists())
         self.assertIn("# Thunderbolt", page)
         self.assertIn("| Power | 90 |", page)
         self.assertIn("`0x0010`", page)

@@ -11,6 +11,12 @@ def write_catalog(output_root: Path, kind: str, records: list[dict[str, Any]]) -
     write_text(output_root / "catalog.json", value)
 
 
+def prune_catalog_pages(output_root: Path, filenames: set[str]) -> None:
+    for path in output_root.glob("*.md"):
+        if path.name not in filenames:
+            path.unlink()
+
+
 def catalog_index(
     title: str,
     description: str,

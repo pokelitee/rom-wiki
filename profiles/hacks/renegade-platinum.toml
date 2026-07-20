@@ -11,6 +11,22 @@ rom_versions = [1]
 [reference]
 sprite_version = "platinum"
 
+[semantics.types]
+9 = "fairy"
+
+[semantics.moves]
+32 = "drill-run"
+66 = "play-rough"
+132 = "icicle-crash"
+140 = "draining-kiss"
+239 = "hurricane"
+295 = "dazzling-gleam"
+296 = "disarming-voice"
+328 = "bulldoze"
+344 = "wild-charge"
+362 = "scald"
+461 = "moonblast"
+
 [layout]
 personal = "poketool/personal/pl_personal.narc"
 encounters = "fielddata/encountdata/pl_enc_data.narc"

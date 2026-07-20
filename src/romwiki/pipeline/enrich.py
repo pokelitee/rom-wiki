@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 from pathlib import Path
 from typing import Any
@@ -70,6 +71,8 @@ def enrich_personal_dataset(
     tutor_dataset: dict[str, Any] | None = None,
     egg_move_dataset: dict[str, Any] | None = None,
     *,
+    type_names: Mapping[int, str] | None = None,
+    move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
@@ -100,6 +103,8 @@ def enrich_personal_dataset(
                 tutor_ids_by_member.get(expected_member, []),
                 tutor_locations,
                 egg_moves.get(expected_member),
+                type_names,
+                move_names,
                 sprite_version,
             )
         )
@@ -159,7 +164,10 @@ def enrich_encounter_dataset(
 
 
 def enrich_trainer_dataset(
-    dataset: dict[str, Any], pokedb: PokeDBGeneration
+    dataset: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    *,
+    move_names: Mapping[int, str] | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
@@ -168,7 +176,7 @@ def enrich_trainer_dataset(
     for expected_id, source in enumerate(source_records):
         if source.get("trainer_id") != expected_id:
             raise DataSourceError("Trainer records must be ordered by trainer ID")
-        records.append(_enrich_trainer(source, pokedb))
+        records.append(_enrich_trainer(source, pokedb, move_names))
     return {
         "schema_version": 1,
         "game": dataset["game"],
@@ -188,6 +196,9 @@ def enrich_move_dataset(
     machine_dataset: dict[str, Any] | None = None,
     tutor_dataset: dict[str, Any] | None = None,
     egg_move_dataset: dict[str, Any] | None = None,
+    *,
+    type_names: Mapping[int, str] | None = None,
+    move_names: Mapping[int, str] | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 471:
@@ -227,7 +238,11 @@ def enrich_move_dataset(
         if source.get("move_id") != expected_id:
             raise DataSourceError("Move records must be ordered by member ID")
         public = 1 <= expected_id <= 467
-        slug = pokedb.move_name(expected_id) if public else f"internal-move-{expected_id}"
+        slug = (
+            _move_name(expected_id, pokedb, move_names)
+            if public
+            else f"internal-move-{expected_id}"
+        )
         records.append(
             {
                 **source,
@@ -237,7 +252,7 @@ def enrich_move_dataset(
                 "damage_class": _named_id(
                     source["damage_class_id"], DAMAGE_CLASS_NAMES, "move class"
                 ),
-                "type": _named_id(source["type_id"], TYPE_NAMES, "type"),
+                "type": _type_id(source["type_id"], type_names),
                 "machines": machines_by_move.get(expected_id, []),
                 "tutors": tutors_by_move.get(expected_id, []),
                 "egg_move_pokemon": egg_move_pokemon.get(expected_id, []),
@@ -351,7 +366,11 @@ _TRAINER_COSMETIC_FORMS = {
 }
 
 
-def _enrich_trainer(source: dict[str, Any], pokedb: PokeDBGeneration) -> dict[str, Any]:
+def _enrich_trainer(
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
+) -> dict[str, Any]:
     party = []
     for pokemon in source["party"]:
         species_id = pokemon["species_id"]
@@ -386,7 +405,7 @@ def _enrich_trainer(source: dict[str, Any], pokedb: PokeDBGeneration) -> dict[st
                 if pokemon["held_item_id"] is not None
                 else None,
                 "moves": [
-                    {"id": move_id, "name": pokedb.move_name(move_id)}
+                    {"id": move_id, "name": _move_name(move_id, pokedb, move_names)}
                     for move_id in pokemon["move_ids"]
                     if move_id
                 ],
@@ -433,6 +452,8 @@ def _enrich_record(
     tutor_ids: list[int],
     tutor_locations: list[str],
     egg_move_set: dict[str, Any] | None,
+    type_names: Mapping[int, str] | None,
+    move_names: Mapping[int, str] | None,
     sprite_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
@@ -471,7 +492,7 @@ def _enrich_record(
         **identity,
         "sprite": sprite,
         "base_stats": source["base_stats"],
-        "types": [_named_id(value, TYPE_NAMES, "type") for value in source["type_ids"]],
+        "types": [_type_id(value, type_names) for value in source["type_ids"]],
         "catch_rate": source["catch_rate"],
         "base_experience": source["base_experience"],
         "ev_yields": source["ev_yields"],
@@ -498,14 +519,14 @@ def _enrich_record(
         "body_color": _named_id(source["body_color_id"], COLOR_NAMES, "body color"),
         "flip_sprite": source["flip_sprite"],
         "machines": _enrich_compatible_machines(
-            source["machine_ids"], machines, pokedb
+            source["machine_ids"], machines, pokedb, move_names
         ),
         "tutor_moves": _enrich_compatible_tutors(
-            tutor_ids, tutors, tutor_locations, pokedb
+            tutor_ids, tutors, tutor_locations, pokedb, move_names
         ),
-        "level_up_moves": _enrich_level_up_moves(learnset, pokedb),
+        "level_up_moves": _enrich_level_up_moves(learnset, pokedb, move_names),
         "learnset_provenance": learnset["provenance"] if learnset is not None else None,
-        "egg_moves": _enrich_egg_moves(egg_move_set, pokedb),
+        "egg_moves": _enrich_egg_moves(egg_move_set, pokedb, move_names),
         "egg_move_provenance": (
             {
                 "overlay_offset": egg_move_set["overlay_offset"],
@@ -515,7 +536,7 @@ def _enrich_record(
             else None
         ),
         "evolutions": _enrich_evolutions(
-            evolution_set, pokedb, evolution_item_names
+            evolution_set, pokedb, evolution_item_names, move_names
         ),
         "evolution_provenance": (
             evolution_set["provenance"] if evolution_set is not None else None
@@ -685,11 +706,12 @@ def _enrich_compatible_tutors(
     tutors: dict[int, dict[str, Any]],
     location_names: list[str],
     pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     result = []
     for tutor_id in tutor_ids:
         tutor = tutors[tutor_id]
-        slug = pokedb.move_name(tutor["move_id"])
+        slug = _move_name(tutor["move_id"], pokedb, move_names)
         if slug is None:
             raise DataSourceError(f"Tutor {tutor_id} references move ID 0")
         result.append(
@@ -740,6 +762,7 @@ def _enrich_compatible_machines(
     machine_ids: list[int],
     machines: dict[int, dict[str, Any]],
     pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     if not machines:
         return [{"id": value, "name": _machine_name(value)} for value in machine_ids]
@@ -751,7 +774,7 @@ def _enrich_compatible_machines(
             raise DataSourceError(
                 f"Pokémon compatibility references unknown machine ID {machine_id}"
             ) from error
-        slug = pokedb.move_name(machine["move_id"])
+        slug = _move_name(machine["move_id"], pokedb, move_names)
         if slug is None:
             raise DataSourceError(f"Machine {machine['name']} references move ID 0")
         result.append(
@@ -774,6 +797,7 @@ def _enrich_evolutions(
     evolution_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     item_names: list[str],
+    move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     if evolution_set is None:
         return []
@@ -787,7 +811,9 @@ def _enrich_evolutions(
                 "method": _named_id(
                     method_id, EVOLUTION_METHOD_NAMES, "evolution method"
                 ),
-                "parameter_data": _evolution_parameter(entry, pokedb, item_names),
+                "parameter_data": _evolution_parameter(
+                    entry, pokedb, item_names, move_names
+                ),
                 "target": {
                     "id": entry["target_species_id"],
                     "slug": target["name"],
@@ -799,7 +825,10 @@ def _enrich_evolutions(
 
 
 def _evolution_parameter(
-    entry: dict[str, Any], pokedb: PokeDBGeneration, item_names: list[str]
+    entry: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    item_names: list[str],
+    move_names: Mapping[int, str] | None,
 ) -> dict[str, Any] | None:
     method_id = entry["method_id"]
     parameter = entry["parameter"]
@@ -814,7 +843,11 @@ def _evolution_parameter(
     if method_id == 15:
         return {"kind": "beauty", "value": parameter}
     if method_id == 20:
-        return {"kind": "move", "id": parameter, "name": pokedb.move_name(parameter)}
+        return {
+            "kind": "move",
+            "id": parameter,
+            "name": _move_name(parameter, pokedb, move_names),
+        }
     if method_id == 21:
         species = pokedb.pokemon_for_id(parameter)
         return {
@@ -829,11 +862,13 @@ def _evolution_parameter(
 
 
 def _enrich_level_up_moves(
-    learnset: dict[str, Any] | None, pokedb: PokeDBGeneration
+    learnset: dict[str, Any] | None,
+    pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     moves = []
     for entry in learnset["moves"] if learnset is not None else []:
-        slug = pokedb.move_name(entry["move_id"])
+        slug = _move_name(entry["move_id"], pokedb, move_names)
         if slug is None:
             raise DataSourceError("Level-up learnsets cannot reference move ID 0")
         moves.append(
@@ -850,11 +885,13 @@ def _enrich_level_up_moves(
 
 
 def _enrich_egg_moves(
-    egg_move_set: dict[str, Any] | None, pokedb: PokeDBGeneration
+    egg_move_set: dict[str, Any] | None,
+    pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     moves = []
     for move_id in egg_move_set["move_ids"] if egg_move_set is not None else []:
-        slug = pokedb.move_name(move_id)
+        slug = _move_name(move_id, pokedb, move_names)
         if slug is None:
             raise DataSourceError("Egg moves cannot reference move ID 0")
         moves.append({"id": move_id, "slug": slug, "name": _display_name(slug)})
@@ -865,6 +902,24 @@ def _named_id(value: int, names: tuple[str, ...], label: str) -> dict[str, Any]:
     if not 0 <= value < len(names):
         raise DataSourceError(f"Unknown Gen IV {label} ID: {value}")
     return {"id": value, "name": names[value]}
+
+
+def _type_id(
+    value: int, type_names: Mapping[int, str] | None
+) -> dict[str, Any]:
+    if type_names is not None and value in type_names:
+        return {"id": value, "name": type_names[value]}
+    return _named_id(value, TYPE_NAMES, "type")
+
+
+def _move_name(
+    move_id: int,
+    pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
+) -> str | None:
+    if move_names is not None and move_id in move_names:
+        return move_names[move_id]
+    return pokedb.move_name(move_id)
 
 
 def _machine_name(machine_id: int) -> str:

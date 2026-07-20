@@ -6,8 +6,12 @@ from typing import Any
 
 def type_badges(types: list[dict[str, Any]]) -> str:
     badges = []
+    seen = set()
     for value in types:
         name = str(value["name"])
+        if name in seen:
+            continue
+        seen.add(name)
         label = display_name(name)
         badges.append(
             f'<span class="rw-type rw-type--{escape(name)}">{escape(label)}</span>'

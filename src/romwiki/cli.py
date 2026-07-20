@@ -383,6 +383,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 machines,
                 tutors,
                 egg_moves,
+                type_names=(
+                    result.match.profile.type_names if result.match else None
+                ),
+                move_names=(
+                    result.match.profile.move_names if result.match else None
+                ),
                 sprite_version=(
                     result.match.profile.sprite_version if result.match else None
                 ),
@@ -421,7 +427,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "build-trainers":
             extracted = extract_trainer_dataset(result)
             enriched = enrich_trainer_dataset(
-                extracted, PokeDBGeneration.load(args.pokedb)
+                extracted,
+                PokeDBGeneration.load(args.pokedb),
+                move_names=(
+                    result.match.profile.move_names if result.match else None
+                ),
             )
             data_output = args.data_output or (
                 Path("build/data") / enriched["game"] / "trainers" / "enriched.json"
@@ -456,6 +466,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 machines,
                 tutors,
                 egg_moves,
+                type_names=(
+                    result.match.profile.type_names if result.match else None
+                ),
+                move_names=(
+                    result.match.profile.move_names if result.match else None
+                ),
             )
             data_output = args.data_output or (
                 Path("build/data") / enriched["game"] / "moves" / "enriched.json"

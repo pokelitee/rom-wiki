@@ -25,6 +25,10 @@ base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
 rom_versions = [1]
+[semantics.types]
+9 = "fairy"
+[semantics.moves]
+66 = "play-rough"
 [[hashes]]
 algorithm = "sha256"
 value = "abcd"
@@ -44,6 +48,8 @@ variant = "test"
         self.assertIsNotNone(match)
         assert match is not None
         self.assertEqual(match.profile.id, "test")
+        self.assertEqual(match.profile.type_names, {9: "fairy"})
+        self.assertEqual(match.profile.move_names, {66: "play-rough"})
         self.assertEqual(match.known_hash.variant, "test")
 
     def test_rejects_invalid_sprite_version(self) -> None:
@@ -70,6 +76,32 @@ variant = "test"
             )
 
             with self.assertRaisesRegex(ProfileError, "Invalid sprite version"):
+                ProfileRepository.load(Path(directory))
+
+    def test_rejects_invalid_type_semantic(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "test.toml"
+            profile_path.write_text(
+                """
+[profile]
+id = "test"
+name = "Test Profile"
+engine = "gen4_dppt"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [1]
+[semantics.types]
+9 = "Fairy Type"
+[[hashes]]
+algorithm = "sha256"
+value = "abcd"
+variant = "test"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "Invalid type semantic"):
                 ProfileRepository.load(Path(directory))
 
 
