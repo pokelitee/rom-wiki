@@ -19,6 +19,12 @@ trainers, and locations. The location dataset also includes items, shops,
 warps, connections, gifts, static encounters, roaming activation audits, and
 in-game trades. Extracted records retain ROM provenance where practical.
 
+The exact USA retail release of Pokémon Platinum is also registered as the
+`platinum-us` profile. It reuses the Generation IV engine and has been validated
+across every raw and enriched dataset as the clean normalized baseline for
+Renegade Platinum comparisons. Comparative builds annotate every supported
+catalog and detail page and generate a game-wide Changes overview.
+
 The project is designed to support additional games without coupling the wiki
 renderer to a particular ROM format. The normalized data contracts and MkDocs
 renderers are reusable, but extraction dispatch currently targets the
@@ -36,6 +42,75 @@ for the implementation checklist.
 python -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev,docs]"
 ```
+
+### Local game inputs
+
+Keep machine-specific ROM paths in the ignored `.local/games.toml` registry rather
+than committed profiles. Start from the tracked example:
+
+```powershell
+New-Item -ItemType Directory -Force .local | Out-Null
+Copy-Item config/games.example.toml .local/games.toml
+```
+
+Paths are relative to the configuration file. A hack entry may declare both its
+patched image and the clean base release used for normalized comparisons:
+
+```toml
+version = 1
+
+[games.renegade-platinum]
+patched_rom = "roms/Pokemon - Renegade Platinum.nds"
+base_rom = "roms/Pokemon - Platinum Version (USA).nds"
+```
+
+Select the patched image by game ID, or add `--base` to select its clean base:
+
+```console
+romwiki inspect --game renegade-platinum
+romwiki inspect --game renegade-platinum --base
+romwiki build-game --game renegade-platinum
+romwiki extract-personal --game renegade-platinum --base
+```
+
+`build-game` is the normal complete workflow. It finishes and caches all clean-ROM
+raw extraction before parsing the hack, then builds Pokémon, abilities, moves,
+items, encounters, trainers, locations, semantic comparison JSON, and the wiki.
+Cached baseline data lives under `build/data/baselines/<base-profile>/` and is
+reused while its profile, ROM hash, schema, and cache revision still match.
+
+```console
+romwiki baseline build --game renegade-platinum
+romwiki baseline build --game renegade-platinum --scope pokemon moves
+romwiki build-game --game renegade-platinum --refresh-baseline
+```
+
+Configured builds require the registered base ROM by default. For an explicit ROM
+path, supply `--base-rom`; use `--hack-only` only when intentionally generating a
+site without comparisons:
+
+```console
+romwiki build-game --rom "D:\Games\hack.nds" --base-rom "D:\Games\base.nds"
+romwiki build-moves --rom "D:\Games\hack.nds" --hack-only
+```
+
+The individual `build-*` commands remain useful during focused development and
+follow the same baseline policy. `inspect`, `manifest`, and `extract-*` stay
+single-ROM audit commands and never implicitly parse another image. MkDocs itself
+only consumes generated files and never opens a ROM.
+
+Use `--games-config` for a different registry. `--rom` provides a one-command
+override, and the original positional path remains supported:
+
+```console
+romwiki inspect --rom "D:\Games\patched.nds"
+romwiki inspect "D:\Games\patched.nds"
+```
+
+Only the selected path is validated for inspection and raw extraction. Comparative
+builds validate both configured paths before building. Profiles remain responsible
+for identifying each image; registering a path does not make an otherwise
+unsupported base release extractable.
 
 Inspect a locally supplied game image:
 
@@ -110,7 +185,7 @@ Plant—are decoded from their field-script commands and eligibility checks.
 Build enriched records and the Pokémon wiki pages using the local PokéDB output:
 
 ```console
-romwiki build-pokemon ".local/roms/Pokemon - Platinum Version (USA).nds"
+romwiki build-pokemon --game renegade-platinum
 ```
 
 The Pokémon build combines personal records, wild held-item slots, level-up and

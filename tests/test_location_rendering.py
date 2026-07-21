@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from romwiki.renderers.mkdocs import render_location_pages
+from romwiki.renderers.mkdocs.references import ReferenceIndex
 
 
 class LocationRenderingTests(unittest.TestCase):
@@ -124,23 +125,53 @@ class LocationRenderingTests(unittest.TestCase):
             ],
         }
         dataset = {"records": [record]}
+        references = ReferenceIndex.from_datasets(
+            {
+                "pokemon": {
+                    "records": [
+                        {
+                            "public": True,
+                            "member": 175,
+                            "national_dex_id": 175,
+                            "name": "Togepi",
+                            "slug": "togepi",
+                        },
+                        {
+                            "public": True,
+                            "member": 479,
+                            "national_dex_id": 479,
+                            "name": "Rotom",
+                            "slug": "rotom",
+                        },
+                    ]
+                },
+                "items": {
+                    "records": [
+                        {"item_id": 17, "name": "Potion", "slug": "potion"},
+                        {"item_id": 81, "name": "Moon Stone", "slug": "moon-stone"},
+                        {"item_id": 46, "name": "Protein", "slug": "protein"},
+                        {"item_id": 333, "name": "TM06", "slug": "tm06"},
+                    ]
+                },
+            }
+        )
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
 
-            count = render_location_pages(dataset, output)
+            count = render_location_pages(dataset, output, references=references)
             page = (output / "header-045.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
         self.assertIn("../encounters/area-003.md", page)
         self.assertIn("../trainers/trainer-0246.md", page)
-        self.assertIn("| Visible | Potion | 17 | (8, 11) |", page)
-        self.assertIn("| Hidden | Moon Stone | 81 | (12, 5) |", page)
-        self.assertIn("| Protein | 46 | ₽9,800 | Always |", page)
+        self.assertIn("| Visible | [Potion](../items/potion.md) | 17 | (8, 11) |", page)
+        self.assertIn("[Moon Stone](../items/moon-stone.md)", page)
+        self.assertIn("| [Protein](../items/protein.md) | 46 | ₽9,800 | Always |", page)
         self.assertIn("### Battle Frontier shop", page)
-        self.assertIn("| TM06 | 333 | 32 BP | Always |", page)
-        self.assertIn("| Togepi | Egg | 1 | — |", page)
-        self.assertIn("| Rotom | 20 |", page)
+        self.assertIn("| [TM06](../items/tm06.md) | 333 | 32 BP | Always |", page)
+        self.assertIn("| [Togepi](../pokemon/togepi.md) | Egg | 1 | — |", page)
+        self.assertIn("| [Rotom](../pokemon/rotom.md) | 20 |", page)
         self.assertIn("header-047.md", page)
         self.assertIn("header-344.md", page)
         self.assertEqual(catalog["kind"], "locations")

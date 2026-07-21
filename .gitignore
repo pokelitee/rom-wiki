@@ -20,6 +20,7 @@ sites/games/*/wiki/locations/
 sites/games/*/wiki/moves/
 sites/games/*/wiki/abilities/
 sites/games/*/wiki/items/
+sites/games/*/wiki/changes/
 
 # User-supplied game images and related emulator data must remain local.
 *.nds

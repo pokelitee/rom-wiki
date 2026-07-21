@@ -1,6 +1,7 @@
 import { title } from "../formatting.js";
 import {
   accessMethods,
+  changeStatus,
   locationIdentifier,
   numberOrDash,
   pokemonName,
@@ -64,3 +65,8 @@ export const CATALOGS = {
     columns: [["Area", recordLink], ["Methods", (record) => text(record.methods.map(title).join(", "))], ["Levels", (record) => text(record.min_level == null ? "—" : `${record.min_level}–${record.max_level}`, "rw-catalog__number")], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
   },
 };
+
+for (const config of Object.values(CATALOGS)) {
+  config.filters.unshift({ key: "change_status", label: "Change status" });
+  config.columns.splice(1, 0, ["Changes", changeStatus]);
+}

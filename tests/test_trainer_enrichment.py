@@ -5,12 +5,40 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from romwiki.pipeline.enrich import enrich_trainer_dataset
+from romwiki.pipeline.enrich import _enrich_trainer, enrich_trainer_dataset
 from romwiki.renderers.mkdocs import render_trainer_pages
 from romwiki.sources import PokeDBGeneration
 
 
 class TrainerEnrichmentTests(unittest.TestCase):
+    def test_labels_burmy_cosmetic_cloaks(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={
+                412: {"id": 412, "name": "burmy", "species": "burmy"}
+            },
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "reward_item_ids": [],
+            "party": [
+                {
+                    "species_id": 412,
+                    "form_id": 1,
+                    "held_item_id": None,
+                    "move_ids": [],
+                }
+            ]
+        }
+
+        trainer = _enrich_trainer(source, pokedb, None, None)
+
+        self.assertEqual(
+            trainer["party"][0]["pokemon"]["name"], "Burmy (Sandy Cloak)"
+        )
+
     def test_enriches_and_renders_a_trainer_party(self) -> None:
         source = {
             "trainer_id": 0,

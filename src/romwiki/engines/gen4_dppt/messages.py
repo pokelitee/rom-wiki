@@ -63,14 +63,18 @@ def parse_english_message_archive(
 def _decode_message(data: bytes, offset: int, length: int, index: int) -> str:
     key = (0x91BD3 * (index + 1)) & 0xFFFF
     values = []
+    terminated = False
     for position in range(length):
         value = struct.unpack_from("<H", data, offset + position * 2)[0] ^ key
         key = (key + 0x493D) & 0xFFFF
         if value == 0xFFFF:
+            terminated = True
             break
         values.append(value)
     if values and values[0] == 0xF100:
-        values = _unpack_compressed_characters(values[1:])
+        values = _unpack_compressed_characters(
+            values[1:], allow_outer_terminator=terminated
+        )
 
     characters = []
     for value in values:
@@ -83,7 +87,9 @@ def _decode_message(data: bytes, offset: int, length: int, index: int) -> str:
     return "".join(characters)
 
 
-def _unpack_compressed_characters(words: list[int]) -> list[int]:
+def _unpack_compressed_characters(
+    words: list[int], *, allow_outer_terminator: bool = False
+) -> list[int]:
     characters = []
     buffer = 0
     bit_count = 0
@@ -97,4 +103,7 @@ def _unpack_compressed_characters(words: list[int]) -> list[int]:
             if value == 0x1FF:
                 return characters
             characters.append(value)
+    terminator_prefix = bit_count and buffer == (1 << bit_count) - 1
+    if allow_outer_terminator and (bit_count == 0 or terminator_prefix):
+        return characters
     raise InvalidRomError("Compressed Gen IV message has no terminator")

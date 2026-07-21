@@ -3,6 +3,40 @@
 The amount of work depends on how closely the new game matches an already supported
 platform and engine. Begin by classifying the target before writing parsers.
 
+## Register local inputs
+
+Add development-only paths to `.local/games.toml`, which is ignored by Git:
+
+```toml
+[games.example-hack]
+patched_rom = "roms/Example Hack.nds"
+base_rom = "roms/Example Base Game.nds"
+```
+
+Paths are relative to `.local/games.toml`. Use `romwiki inspect --game example-hack`
+to verify the patched selection and add `--base` to inspect the clean selection.
+Do not put local paths in the committed profile or site descriptor. A registered
+base image also needs a matching profile before extraction commands can normalize
+it for comparison.
+
+When a hack and its clean base share an engine, keep separate profiles for their
+exact releases. Shared parsers do not imply identical metadata: hashes, ROM
+versions, script offsets, or repurposed tables may differ. Validate the base profile
+through every supported raw extractor and enriched builder before treating it as a
+comparison baseline.
+
+Once both images identify correctly, populate and verify the clean cache, then run
+the complete comparative workflow:
+
+```console
+romwiki baseline build --game example-hack
+romwiki build-game --game example-hack
+```
+
+Do not build a mechanic baseline from PokéDB. It supplies names, links,
+descriptions, and sprites; the separately parsed clean ROM supplies comparison
+values. New engines must emit the stable keys needed to align equivalent records.
+
 ## 1. Classify the target
 
 - Determine the platform, generation, base game, region, revision, and hack version.
@@ -54,8 +88,14 @@ sprite_version = "platinum"
 ```
 
 Use the exact key present under PokéDB's `sprites.versions`. If it is absent or its
-URL is unavailable, rendered pages use PokéDB's generic front sprite and then a
-text-only fallback. Sprite availability must never affect extraction success.
+URL is unavailable, rendered pages use PokéDB's generic sprites and then a
+text-only fallback. Sprite availability must never affect extraction success or
+comparison status.
+
+The required profile `base_game` should use the corresponding lowercase PokéDB
+version key when one exists. Pokémon enrichment uses it to select descriptive
+reference text and label comparisons with the unmodified game. Missing reference
+fields are optional and must not prevent extraction or page rendering.
 
 Prefer ROM-derived name tables whenever the engine stores them. Profiles identify
 the message members, while extraction decodes their contents and records
@@ -190,9 +230,12 @@ fallback so new categories remain usable without JavaScript.
 - Add profile identification tests for supported hashes and rejection tests for
   near matches.
 - Add normalized contract and renderer tests.
+- Add baseline-versus-hack comparison fixtures for every supported dataset.
 - Extract the complete target and reconcile record counts against its archives.
 - Manually verify representative records from every content category.
 - Run the full test suite and build the individual site and combined Pages artifact.
+- Run `romwiki build-game --game <id>` twice and confirm the second run reuses the
+  baseline cache.
 - Test catalogs with missing optional values, duplicate labels, and enough records
   to exercise progressive rendering.
 - Review representative pages at desktop and narrow mobile widths in light and dark

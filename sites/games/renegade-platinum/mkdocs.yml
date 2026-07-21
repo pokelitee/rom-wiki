@@ -11,6 +11,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Changes: changes/index.md
   - Pokémon: pokemon/index.md
   - Abilities: abilities/index.md
   - Items: items/index.md

@@ -16,3 +16,7 @@ class SiteError(RomWikiError):
 
 class DataSourceError(RomWikiError):
     """Raised when an external structured-data source is invalid."""
+
+
+class LocalConfigError(RomWikiError):
+    """Raised when local game inputs are missing or invalid."""

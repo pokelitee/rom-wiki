@@ -4,24 +4,59 @@ ROM Wiki turns game-specific binary data into normalized records and then render
 those records as static documentation. The intended flow is:
 
 ```text
-locally supplied game image
-        |
-        v
-platform reader -> profile identification -> engine decoder
-        |                                      |
-        +------------------+-------------------+
-                           v
-                 normalized raw datasets
-                           |
-                           v
-              enrichment and name resolution
-                           |
-                           v
-                 renderer -> MkDocs site
+configured clean ROM                configured patched ROM
+        |                                   |
+        v                                   v
+identify -> decode -> normalized raw cache  identify -> decode -> normalized data
+        |                                   |
+        +----------------+------------------+
+                         v
+              semantic dataset comparison
+                         |
+                         v
+       enrichment/presentation -> renderer -> MkDocs site
 ```
 
 The key design rule is that renderers consume normalized data. They must not read
 ROM offsets, archive members, script opcodes, or other engine-specific structures.
+
+## Local input registry
+
+Committed profiles describe how to identify and decode an image, but never contain
+machine-specific ROM paths. The ignored `.local/games.toml` registry associates a
+game ID with `patched_rom` and optional `base_rom` paths. Relative paths resolve
+from the registry's directory. CLI commands accept `--game` to select the patched
+path and `--base` to select the clean baseline; explicit and legacy positional ROM
+paths remain supported.
+
+Path registration and format support are separate. The registry validates that the
+selected file exists, after which normal profile identification still determines
+whether extraction may proceed. Comparison workflows should normalize each input
+independently and compare those datasets rather than comparing ROM bytes.
+
+The `platinum-us` profile is the verified clean baseline for Renegade Platinum. It
+uses the same `gen4_dppt` engine while retaining retail-specific profile metadata,
+including its ROM version, hash, and egg-gift script offsets. Selecting
+`renegade-platinum` with `--base` resolves the local base path; profile
+identification then assigns extracted datasets to `platinum-us`. Generated baseline
+raw data remains under ignored `build/data/baselines/platinum-us/` paths. Cache
+manifests bind those files to the base profile, exact ROM SHA-256, schema version,
+and an explicit cache revision.
+
+`GameBuildWorkflow` is the dependency-aware orchestration boundary. A complete
+build materializes every baseline dataset before any patched dataset, then compares
+the normalized outputs. A focused section build still extracts that section's
+baseline before its patched equivalent. The escape hatch `--hack-only` is explicit;
+configured builds fail clearly when their clean base image is missing.
+
+Comparisons operate on stable normalized keys: Pokémon personal member, numeric
+ability/move/item/trainer IDs, encounter area ID, and location header ID. They
+classify records as unchanged, changed, added, or removed and retain exact field
+deltas. Presentation-only reference objects, sprites, and provenance do not count
+as game-mechanic changes. Nested relationships compare stable numeric identities,
+so spelling, spacing, or slug changes are reported on the referenced entity rather
+than falsely changing every record that links to it. Removed records receive
+comparison-only snapshot pages.
 
 ## Layers
 
@@ -91,8 +126,12 @@ ensures catalog and detail-page links share one implementation.
 ROM message tables supply names when configured; PokéDB supplies canonical names
 for comparison and fallback, plus stable links and optional sprite URLs. It must
 not override a value extracted from the game. A profile's
-`reference.sprite_version` selects the matching version sprite; enrichment reduces
-PokéDB's nested sprite data to one optional URL and attribution record.
+`reference.sprite_version` selects matching version sprites; enrichment keeps a
+default sprite for compact cards plus every available front/back, normal/shiny,
+and gender variant for detail-page galleries. Pokémon records also keep a
+deliberately small `reference` object containing descriptive species metadata.
+PokéDB is never the mechanic baseline: exact change sections compare the parsed
+clean ROM with the parsed hack, and ROM-derived values remain authoritative.
 
 ### Renderers and sites
 
@@ -112,7 +151,10 @@ maintained game list.
 Section renderers emit both Markdown and a compact, versioned `catalog.json`.
 Shared JavaScript progressively renders searchable and filterable catalog tables;
 the Markdown index retains a complete static fallback. Catalog JSON is a
-presentation index and does not replace the normalized datasets.
+presentation index and does not replace the normalized datasets. Comparative
+catalogs share a Change status filter and column. Every current detail page has an
+explicit base-game section, including a verified-unchanged state, and the generated
+Changes page summarizes all sections.
 
 ## Reuse boundaries
 

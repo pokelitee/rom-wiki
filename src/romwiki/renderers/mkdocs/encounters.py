@@ -5,14 +5,25 @@ from typing import Any
 from collections import Counter
 
 from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
+    ReferenceIndex,
     entity_reference,
     unique_references,
 )
 
 
-def render_encounter_pages(dataset: dict[str, Any], output_root: Path) -> int:
+def render_encounter_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    comparison: dict[str, Any] | None = None,
+    references: ReferenceIndex | None = None,
+) -> int:
     records = [record for record in dataset["records"] if record["active"]]
     output_root.mkdir(parents=True, exist_ok=True)
     fallback_links = []
@@ -21,25 +32,65 @@ def render_encounter_pages(dataset: dict[str, Any], output_root: Path) -> int:
     unlinked = [record for record in records if not record.get("locations")]
     name_counts = Counter(record["name"] for record in linked)
     for record in sorted(linked, key=lambda item: (item["name"], item["area_id"])):
+        change = record_comparison(comparison, record["area_id"])
         filename = f"area-{record['area_id']:03}.md"
-        _write_text(output_root / filename, _render_area(record))
+        _write_text(
+            output_root / filename,
+            _render_area(
+                record,
+                change,
+                comparison.get("baseline") if comparison else None,
+                references,
+            ),
+        )
         label = record["name"]
         if name_counts[label] > 1:
             internal_names = ", ".join(
                 dict.fromkeys(location["internal_name"] for location in record["locations"])
             )
             label = f"{label} — {internal_names}"
-        fallback_links.append(f"- [{label}]({filename})")
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "encounter", record["area_id"], label, record["area_id"]
+                ),
+                "encounters/index.md",
+            )
+        )
         catalog_records.append(
-            _catalog_record(record, filename.removesuffix(".md") + "/", True)
+            _catalog_record(
+                record, filename.removesuffix(".md") + "/", True, change
+            )
         )
     if unlinked:
         for record in unlinked:
+            change = record_comparison(comparison, record["area_id"])
             filename = f"area-{record['area_id']:03}.md"
-            _write_text(output_root / filename, _render_area(record))
-            fallback_links.append(f"- [{record['name']}]({filename})")
+            _write_text(
+                output_root / filename,
+                _render_area(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                ),
+            )
+            fallback_links.append(
+                "- "
+                + ROUTES.markdown_link(
+                    entity_reference(
+                        "encounter",
+                        record["area_id"],
+                        record["name"],
+                        record["area_id"],
+                    ),
+                    "encounters/index.md",
+                )
+            )
             catalog_records.append(
-                _catalog_record(record, filename.removesuffix(".md") + "/", False)
+                _catalog_record(
+                    record, filename.removesuffix(".md") + "/", False, change
+                )
             )
     write_catalog(output_root, "encounters", catalog_records)
     _write_text(
@@ -55,7 +106,10 @@ def render_encounter_pages(dataset: dict[str, Any], output_root: Path) -> int:
 
 
 def _catalog_record(
-    record: dict[str, Any], filename: str, referenced: bool
+    record: dict[str, Any],
+    filename: str,
+    referenced: bool,
+    change: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     methods = []
     levels = []
@@ -94,7 +148,7 @@ def _catalog_record(
             dict.fromkeys((*method_pokemon["walking"], *special_species))
         )
     location_names = [location["name"] for location in record.get("locations", [])]
-    return {
+    return add_change_status({
         "id": record["area_id"],
         "label": record["name"],
         "url": filename,
@@ -110,7 +164,7 @@ def _catalog_record(
         "max_level": max(levels) if levels else None,
         "referenced": referenced,
         "search_text": " ".join((record["name"], *location_names, *species)).lower(),
-    }
+    }, change)
 
 
 def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
@@ -144,9 +198,18 @@ def _pokemon_reference(pokemon: dict[str, Any]):
     )
 
 
-def _render_area(record: dict[str, Any]) -> str:
+def _render_area(
+    record: dict[str, Any],
+    change: dict[str, Any] | None = None,
+    baseline_name: str | None = None,
+    references: ReferenceIndex | None = None,
+) -> str:
     source_file = f"encounters/area-{record['area_id']:03}.md"
-    lines = [f"# {record['name']}", ""]
+    lines = [
+        f"# {record['name']}",
+        "",
+        *comparison_section(change, baseline_name, source_file, references),
+    ]
     _append_locations(lines, record.get("locations", []), source_file)
     _append_walking(lines, record["walking"], source_file)
     for heading, key in (

@@ -53,6 +53,13 @@ has a stable ID, display label, final directory URL, and normalized `search_text
 Section-specific fields provide only the values visible, searchable, sortable,
 or filterable in the catalog. Catalog definitions may use select or searchable
 combobox facets, numeric ranges, sort direction, and correlations between facets.
+Comparative builds add a shared `change_status` field, filter, and badge column to
+every section; section configurations must not reimplement that common control.
+Comparison presentation is field-aware. Pokémon pages show ability slots,
+compatibility changes, grouped learnset differences, and individual stat changes
+as readable labels. Generic structured changes lead with a short human summary and
+place exact normalized JSON in a collapsed audit detail instead of using raw JSON
+as the primary interface.
 For example, encounter records preserve the Pokémon available through each method
 so combining those filters cannot produce a false match. Breaking catalog changes
 require a version bump and matching JavaScript support.
@@ -67,6 +74,14 @@ cannot create a guessed or broken target.
 links. It resolves Markdown source paths separately from published directory URLs
 and accounts for the source page depth. Catalog JSON and detail-page renderers must
 use this resolver instead of constructing section paths from labels or slugs.
+
+Full game builds also create a reference index from the generated datasets. The
+index maps stable normalized IDs to the route keys of pages that actually exist.
+This lets location pickups, shop inventory, gifts, trades, static encounters, and
+held items link to their item or Pokémon pages without deriving a slug from display
+text. A missing route remains visible as plain text. Tutor location list positions
+are not map-header IDs, so tutor locations remain unlinked until a profile supplies
+an explicit map-header identity.
 
 Multi-select facets are reserved for fields where each record can contain several
 values. They remain open while options are toggled and default to matching every
@@ -110,15 +125,32 @@ Always use the production configuration or the multi-site build before deploymen
 ## Record components
 
 Renderer helpers produce semantic classes for type badges, summaries, stat bars,
-party cards, record navigation, and provenance details. Exact numeric values and
-normal links remain in the document; visualization is supplementary.
+fact grids, exact clean-ROM comparisons, compact link lists, party cards, record
+navigation, and provenance details. Exact numeric values and normal links remain
+in the document; visualization is supplementary. Pokémon detail pages group move
+sources under one learnset section and include the common type, class, power,
+accuracy, and PP fields alongside source-specific level, machine, location, and
+requirement columns. Evolution sections derive a complete branch-aware graph from
+the ROM evolution dataset, stack wide branches into readable rows, make each species
+card navigable, highlight the current record, and guard against cycles. Long chains
+retain horizontal overflow as a narrow-viewport fallback. Branch outcomes remain
+separate horizontal paths so multi-stage lineage stays unambiguous. The lightweight
+development build retains Eevee and Wurmple as representative branch-layout fixtures.
 
-Pokémon sprites are optional external URLs selected during enrichment. Pages use
-lazy loading, an explicit source link, and a visible fallback after load failure.
-The build must not download or copy sprites.
+Pokémon sprites are optional external URLs selected during enrichment. The summary
+uses one default image and the detail gallery includes all available version-specific
+front/back, normal/shiny, and gender variants. Pages use lazy loading, an explicit
+source link, and a visible fallback after load failure. The build must not download
+or copy sprites.
+
+Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
+These are labeled reference content. Stat, type, ability, training, breeding,
+evolution, held-item, and learnset values shown for the hack remain ROM-derived.
 
 Raw HTML links use final directory URLs because MkDocs does not rewrite `.md` paths
-inside HTML. Normal Markdown links may continue to use source filenames.
+inside HTML. Normal Markdown links use source filenames so MkDocs can validate and
+rewrite them. Both forms must resolve through the shared route registry; the output
+syntax follows the surrounding component rather than defining link identity.
 
 ## Review checklist
 

@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 from typing import Sequence
 
-from romwiki.errors import RomWikiError
-from romwiki.pipeline.abilities import build_ability_dataset, write_ability_dataset
+from romwiki.errors import LocalConfigError, RomWikiError
+from romwiki.local_config import LocalGameRegistry
 from romwiki.pipeline.encounters import (
     extract_encounter_dataset,
     write_encounter_dataset,
@@ -21,16 +21,14 @@ from romwiki.pipeline.egg_moves import (
     write_egg_move_dataset,
 )
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
+from romwiki.pipeline.comparisons import write_comparison_dataset
+from romwiki.pipeline.build_context import GameBuildContext
+from romwiki.pipeline.game_build import DATASET_KINDS, DatasetBuild, GameBuildWorkflow
 from romwiki.pipeline.items import (
-    build_item_dataset,
     extract_item_dataset,
     write_item_dataset,
 )
 from romwiki.pipeline.enrich import (
-    enrich_encounter_dataset,
-    enrich_move_dataset,
-    enrich_personal_dataset,
-    enrich_trainer_dataset,
     write_enriched_dataset,
 )
 from romwiki.pipeline.locations import extract_location_dataset, write_location_dataset
@@ -50,6 +48,8 @@ from romwiki.renderers.mkdocs import (
     render_pokemon_pages,
     render_trainer_pages,
 )
+from romwiki.renderers.mkdocs.comparisons import render_changes_pages
+from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sources import PokeDBGeneration
 
@@ -258,6 +258,68 @@ def build_parser() -> argparse.ArgumentParser:
     build_items_parser.add_argument("--data-output", type=Path)
     build_items_parser.add_argument("--wiki-output", type=Path)
 
+    build_parsers = (
+        pokemon_parser,
+        build_encounters_parser,
+        build_trainers_parser,
+        build_locations_parser,
+        build_moves_parser,
+        build_items_parser,
+    )
+    for build_parser in build_parsers:
+        _add_comparison_arguments(build_parser)
+    build_locations_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokéDB generation output directory",
+    )
+
+    build_game_parser = subparsers.add_parser(
+        "build-game", help="build every dataset and wiki section for one game"
+    )
+    _add_input_arguments(build_game_parser)
+    _add_comparison_arguments(build_game_parser)
+    build_game_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokéDB generation output directory",
+    )
+    build_game_parser.add_argument(
+        "--data-root", type=Path, default=Path("build/data")
+    )
+    build_game_parser.add_argument(
+        "--wiki-root", type=Path, help="game wiki root (defaults below sites/games)"
+    )
+
+    baseline_parser = subparsers.add_parser(
+        "baseline", help="manage clean-ROM baseline caches"
+    )
+    baseline_subparsers = baseline_parser.add_subparsers(
+        dest="baseline_command", required=True
+    )
+    baseline_build_parser = baseline_subparsers.add_parser(
+        "build", help="extract and cache a configured clean base ROM"
+    )
+    baseline_build_parser.add_argument("--game", required=True)
+    baseline_build_parser.add_argument(
+        "--games-config", type=Path, default=Path(".local/games.toml")
+    )
+    baseline_build_parser.add_argument(
+        "--profiles-dir", type=Path, default=Path("profiles")
+    )
+    baseline_build_parser.add_argument(
+        "--pokedb", type=Path, default=Path("../pokedb/.output/gen4")
+    )
+    baseline_build_parser.add_argument(
+        "--data-root", type=Path, default=Path("build/data")
+    )
+    baseline_build_parser.add_argument(
+        "--scope", nargs="+", choices=DATASET_KINDS, default=list(DATASET_KINDS)
+    )
+    baseline_build_parser.add_argument("--refresh", action="store_true")
+
     site_parser = subparsers.add_parser(
         "site", help="list or build independently configured wiki sites"
     )
@@ -302,8 +364,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             "build-locations",
             "build-moves",
             "build-items",
+            "build-game",
         }:
-            result = inspect_rom(args.rom, args.profiles_dir)
+            result = inspect_rom(_resolve_input_rom(args), args.profiles_dir)
         if args.command == "inspect":
             _print_inspection(result, as_json=args.json)
         elif args.command == "manifest":
@@ -408,168 +471,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"special compatibility rows: "
                 f"{output}"
             )
-        elif args.command == "build-pokemon":
-            personal = extract_personal_dataset(result)
-            learnsets = extract_learnset_dataset(result)
-            egg_moves = extract_egg_move_dataset(result)
-            evolutions = extract_evolution_dataset(result)
-            machines = extract_machine_dataset(result)
-            tutors = extract_tutor_dataset(result)
-            pokedb = PokeDBGeneration.load(args.pokedb)
-            enriched = enrich_personal_dataset(
-                personal,
-                pokedb,
-                learnsets,
-                evolutions,
-                machines,
-                tutors,
-                egg_moves,
-                type_names=(
-                    result.match.profile.type_names if result.match else None
-                ),
-                move_names=(
-                    result.match.profile.move_names if result.match else None
-                ),
-                sprite_version=(
-                    result.match.profile.sprite_version if result.match else None
-                ),
-            )
-            data_output = args.data_output or (
-                Path("build/data")
-                / enriched["game"]
-                / "pokemon"
-                / "enriched.json"
-            )
-            wiki_output = args.wiki_output or (
-                Path("sites/games") / enriched["game"] / "wiki" / "pokemon"
-            )
-            write_enriched_dataset(enriched, data_output)
-            page_count = render_pokemon_pages(enriched, wiki_output)
-            abilities = build_ability_dataset(enriched, pokedb)
-            ability_data_output = (
-                data_output.parent.parent / "abilities" / "enriched.json"
-            )
-            ability_wiki_output = wiki_output.parent / "abilities"
-            write_ability_dataset(abilities, ability_data_output)
-            ability_page_count = render_ability_pages(abilities, ability_wiki_output)
-            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
-            print(f"Rendered {page_count} Pokémon pages: {wiki_output}")
-            print(
-                f"Wrote {abilities['record_count']} ability records: "
-                f"{ability_data_output}"
-            )
-            print(
-                f"Rendered {ability_page_count} ability pages: {ability_wiki_output}"
-            )
-        elif args.command == "build-encounters":
-            extracted = extract_encounter_dataset(result)
-            enriched = enrich_encounter_dataset(
-                extracted, PokeDBGeneration.load(args.pokedb)
-            )
-            data_output = args.data_output or (
-                Path("build/data")
-                / enriched["game"]
-                / "encounters"
-                / "enriched.json"
-            )
-            wiki_output = args.wiki_output or (
-                Path("sites/games") / enriched["game"] / "wiki" / "encounters"
-            )
-            write_enriched_dataset(enriched, data_output)
-            page_count = render_encounter_pages(enriched, wiki_output)
-            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
-            print(f"Rendered {page_count} encounter pages: {wiki_output}")
-        elif args.command == "build-trainers":
-            extracted = extract_trainer_dataset(result)
-            enriched = enrich_trainer_dataset(
-                extracted,
-                PokeDBGeneration.load(args.pokedb),
-                move_names=(
-                    result.match.profile.move_names if result.match else None
-                ),
-            )
-            data_output = args.data_output or (
-                Path("build/data") / enriched["game"] / "trainers" / "enriched.json"
-            )
-            wiki_output = args.wiki_output or (
-                Path("sites/games") / enriched["game"] / "wiki" / "trainers"
-            )
-            write_enriched_dataset(enriched, data_output)
-            page_count = render_trainer_pages(enriched, wiki_output)
-            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
-            print(f"Rendered {page_count} trainer pages: {wiki_output}")
-        elif args.command == "build-locations":
-            dataset = extract_location_dataset(result)
-            data_output = args.data_output or (
-                Path("build/data") / dataset["game"] / "locations" / "raw.json"
-            )
-            wiki_output = args.wiki_output or (
-                Path("sites/games") / dataset["game"] / "wiki" / "locations"
-            )
-            write_location_dataset(dataset, data_output)
-            page_count = render_location_pages(dataset, wiki_output)
-            print(f"Wrote {dataset['record_count']} location records: {data_output}")
-            print(f"Rendered {page_count} location pages: {wiki_output}")
-        elif args.command == "build-items":
-            pokedb = PokeDBGeneration.load(args.pokedb)
-            extracted = extract_item_dataset(result)
-            personal = extract_personal_dataset(result)
-            evolutions = extract_evolution_dataset(result)
-            pokemon = enrich_personal_dataset(
-                personal,
-                pokedb,
-                evolution_dataset=evolutions,
-                type_names=result.match.profile.type_names,
-                move_names=result.match.profile.move_names,
-                sprite_version=result.match.profile.sprite_version,
-            )
-            trainers = enrich_trainer_dataset(
-                extract_trainer_dataset(result),
-                pokedb,
-                move_names=result.match.profile.move_names,
-            )
-            locations = extract_location_dataset(result)
-            items = build_item_dataset(
-                extracted, pokedb, pokemon, trainers, locations
-            )
-            data_output = args.data_output or (
-                Path("build/data") / items["game"] / "items" / "enriched.json"
-            )
-            wiki_output = args.wiki_output or (
-                Path("sites/games") / items["game"] / "wiki" / "items"
-            )
-            write_item_dataset(items, data_output)
-            page_count = render_item_pages(items, wiki_output)
-            print(f"Wrote {items['record_count']} enriched item records: {data_output}")
-            print(f"Rendered {page_count} item pages: {wiki_output}")
-        elif args.command == "build-moves":
-            extracted = extract_move_dataset(result)
-            machines = extract_machine_dataset(result)
-            tutors = extract_tutor_dataset(result)
-            egg_moves = extract_egg_move_dataset(result)
-            enriched = enrich_move_dataset(
-                extracted,
-                PokeDBGeneration.load(args.pokedb),
-                machines,
-                tutors,
-                egg_moves,
-                type_names=(
-                    result.match.profile.type_names if result.match else None
-                ),
-                move_names=(
-                    result.match.profile.move_names if result.match else None
-                ),
-            )
-            data_output = args.data_output or (
-                Path("build/data") / enriched["game"] / "moves" / "enriched.json"
-            )
-            wiki_output = args.wiki_output or (
-                Path("sites/games") / enriched["game"] / "wiki" / "moves"
-            )
-            write_enriched_dataset(enriched, data_output)
-            page_count = render_move_pages(enriched, wiki_output)
-            print(f"Wrote {enriched['record_count']} enriched records: {data_output}")
-            print(f"Rendered {page_count} move pages: {wiki_output}")
+        elif args.command in {
+            "build-pokemon",
+            "build-encounters",
+            "build-trainers",
+            "build-locations",
+            "build-moves",
+            "build-items",
+        }:
+            _run_section_build(args, result)
+        elif args.command == "build-game":
+            _run_full_game_build(args, result)
+        elif args.command == "baseline":
+            _run_baseline_build(args)
         elif args.command == "site":
             catalog = SiteCatalog.load(args.root)
             if args.site_command == "list":
@@ -590,13 +504,309 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _add_input_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("rom", type=Path, help="path to a locally supplied ROM image")
+    parser.add_argument(
+        "input_rom",
+        type=Path,
+        nargs="?",
+        help="path to a locally supplied ROM image (legacy positional form)",
+    )
+    parser.add_argument(
+        "--rom",
+        dest="rom_override",
+        type=Path,
+        help="explicit ROM path; overrides the selected local game path",
+    )
+    parser.add_argument(
+        "--game",
+        help="game identifier from the local game configuration",
+    )
+    parser.add_argument(
+        "--base",
+        action="store_true",
+        help="use the selected game's clean base ROM instead of its patched ROM",
+    )
+    parser.add_argument(
+        "--games-config",
+        type=Path,
+        default=Path(".local/games.toml"),
+        help="local game-path configuration (default: .local/games.toml)",
+    )
     parser.add_argument(
         "--profiles-dir",
         type=Path,
         default=Path("profiles"),
         help="directory containing game and hack profiles",
     )
+
+
+def _add_comparison_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--base-rom",
+        type=Path,
+        help="clean base ROM used for exact game-data comparisons",
+    )
+    parser.add_argument(
+        "--hack-only",
+        action="store_true",
+        help="build without a clean-ROM baseline or change annotations",
+    )
+    parser.add_argument(
+        "--refresh-baseline",
+        action="store_true",
+        help="ignore and replace cached clean-ROM extraction data",
+    )
+
+
+def _create_build_workflow(
+    args: argparse.Namespace,
+    result: InspectionResult,
+) -> GameBuildWorkflow:
+    pokedb = PokeDBGeneration.load(args.pokedb)
+    baseline_path = _resolve_build_baseline(args)
+    baseline = (
+        inspect_rom(baseline_path, args.profiles_dir)
+        if baseline_path is not None
+        else None
+    )
+    return GameBuildWorkflow(
+        result,
+        pokedb,
+        baseline=baseline,
+        baseline_cache_root=getattr(args, "data_root", Path("build/data"))
+        / "baselines",
+        refresh_baseline=args.refresh_baseline,
+    )
+
+
+def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
+    if args.hack_only or args.base:
+        if args.base_rom is not None:
+            raise LocalConfigError("--base-rom cannot be combined with --hack-only or --base")
+        return None
+    if args.base_rom is not None:
+        resolved = args.base_rom.resolve()
+        if not resolved.is_file():
+            raise LocalConfigError(f"Base ROM image does not exist: {resolved}")
+        return resolved
+    if args.input_rom is not None or args.rom_override is not None:
+        raise LocalConfigError(
+            "Explicit ROM builds require --base-rom, or --hack-only to skip comparison"
+        )
+    if not args.game:
+        raise LocalConfigError(
+            "Comparative builds require --game or --base-rom; use --hack-only to opt out"
+        )
+    return LocalGameRegistry.load(args.games_config).get(args.game).rom(base=True)
+
+
+def _run_section_build(
+    args: argparse.Namespace, result: InspectionResult
+) -> None:
+    kinds = {
+        "build-pokemon": ("pokemon", "abilities"),
+        "build-encounters": ("encounters",),
+        "build-trainers": ("trainers",),
+        "build-locations": ("locations",),
+        "build-moves": ("moves",),
+        "build-items": ("items",),
+    }[args.command]
+    workflow = _create_build_workflow(args, result)
+    move_dataset = (
+        workflow.build("moves").current
+        if args.command == "build-pokemon"
+        else None
+    )
+    game = workflow.current.profile.id
+    wiki_root = (
+        args.wiki_output.parent
+        if args.wiki_output is not None
+        else Path("sites/games") / game / "wiki"
+    )
+    data_root = (
+        args.data_output.parent.parent
+        if args.data_output is not None
+        else Path("build/data") / game
+    )
+    comparisons = _load_comparisons(data_root / "comparisons")
+    reference_datasets = {}
+    if args.command == "build-locations":
+        reference_datasets = {
+            "pokemon": workflow.current.pokemon(),
+            "items": workflow.current.items(),
+        }
+    elif args.command == "build-pokemon":
+        reference_datasets = {
+            "pokemon": workflow.current.pokemon(),
+            "abilities": workflow.current.abilities(),
+            "moves": workflow.current.moves(),
+        }
+    reference_index = (
+        ReferenceIndex.from_datasets(reference_datasets)
+        if reference_datasets
+        else None
+    )
+    for index, kind in enumerate(kinds):
+        build = workflow.build(kind)
+        data_output = (
+            args.data_output
+            if index == 0 and args.data_output is not None
+            else _dataset_output(data_root, kind)
+        )
+        wiki_output = (
+            args.wiki_output
+            if index == 0 and args.wiki_output is not None
+            else wiki_root / _section_name(kind)
+        )
+        _write_dataset_build(
+            kind,
+            build,
+            data_output,
+            wiki_output,
+            move_dataset=move_dataset,
+            reference_index=reference_index,
+        )
+        if build.comparison is not None:
+            comparisons[kind] = build.comparison
+        else:
+            comparisons.pop(kind, None)
+            comparison_path = data_root / "comparisons" / f"{kind}.json"
+            if comparison_path.is_file():
+                comparison_path.unlink()
+    render_changes_pages(comparisons, wiki_root)
+
+
+def _run_full_game_build(
+    args: argparse.Namespace, result: InspectionResult
+) -> None:
+    workflow = _create_build_workflow(args, result)
+    game = workflow.current.profile.id
+    data_root = args.data_root / game
+    wiki_root = args.wiki_root or Path("sites/games") / game / "wiki"
+    builds = workflow.build_all()
+    reference_index = ReferenceIndex.from_datasets(
+        {kind: build.current for kind, build in builds.items()}
+    )
+    comparisons = {}
+    for kind, build in builds.items():
+        _write_dataset_build(
+            kind,
+            build,
+            _dataset_output(data_root, kind),
+            wiki_root / _section_name(kind),
+            move_dataset=builds["moves"].current,
+            reference_index=reference_index,
+        )
+        if build.comparison is not None:
+            comparisons[kind] = build.comparison
+    if not comparisons:
+        comparison_root = data_root / "comparisons"
+        if comparison_root.is_dir():
+            for path in comparison_root.glob("*.json"):
+                path.unlink()
+    page_count = render_changes_pages(comparisons, wiki_root)
+    print(f"Rendered {page_count} change overview pages: {wiki_root / 'changes'}")
+
+
+def _run_baseline_build(args: argparse.Namespace) -> None:
+    paths = LocalGameRegistry.load(args.games_config).get(args.game)
+    result = inspect_rom(paths.rom(base=True), args.profiles_dir)
+    pokedb = PokeDBGeneration.load(args.pokedb)
+    if result.match is None:
+        raise LocalConfigError("The configured base ROM did not match a game profile")
+    cache_root = args.data_root / "baselines" / result.match.profile.id
+    context = GameBuildContext(
+        result, pokedb, cache_root=cache_root, refresh=args.refresh
+    )
+    for kind in args.scope:
+        getattr(context, kind)()
+    print(
+        f"Cached {len(args.scope)} baseline dataset groups for "
+        f"{result.match.profile.id}: {cache_root}"
+    )
+
+
+def _write_dataset_build(
+    kind: str,
+    build: DatasetBuild,
+    data_output: Path,
+    wiki_output: Path,
+    *,
+    move_dataset: dict | None = None,
+    reference_index: ReferenceIndex | None = None,
+) -> None:
+    write_enriched_dataset(build.current, data_output)
+    if build.comparison is not None:
+        comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
+        write_comparison_dataset(build.comparison, comparison_output)
+    renderer = {
+        "pokemon": render_pokemon_pages,
+        "abilities": render_ability_pages,
+        "moves": render_move_pages,
+        "items": render_item_pages,
+        "encounters": render_encounter_pages,
+        "trainers": render_trainer_pages,
+        "locations": render_location_pages,
+    }[kind]
+    if kind == "pokemon":
+        page_count = renderer(
+            build.current,
+            wiki_output,
+            build.comparison,
+            move_dataset,
+            reference_index,
+        )
+    elif kind == "locations":
+        page_count = renderer(
+            build.current, wiki_output, build.comparison, reference_index
+        )
+    else:
+        page_count = renderer(
+            build.current, wiki_output, build.comparison, reference_index
+        )
+    print(f"Wrote {len(build.current['records'])} {kind} records: {data_output}")
+    print(f"Rendered {page_count} {kind} pages: {wiki_output}")
+
+
+def _dataset_output(data_root: Path, kind: str) -> Path:
+    filename = "raw.json" if kind == "locations" else "enriched.json"
+    return data_root / _section_name(kind) / filename
+
+
+def _section_name(kind: str) -> str:
+    return "encounters" if kind == "encounters" else kind
+
+
+def _load_comparisons(root: Path) -> dict[str, dict]:
+    comparisons = {}
+    if not root.is_dir():
+        return comparisons
+    for path in root.glob("*.json"):
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if isinstance(value, dict) and isinstance(value.get("kind"), str):
+            comparisons[_comparison_workflow_kind(value["kind"])] = value
+    return comparisons
+
+
+def _comparison_workflow_kind(kind: str) -> str:
+    return "encounters" if kind == "wild_encounters" else kind
+
+
+def _resolve_input_rom(args: argparse.Namespace) -> Path:
+    if args.input_rom is not None and args.rom_override is not None:
+        raise LocalConfigError("Specify a positional ROM path or --rom, not both")
+    explicit = args.rom_override or args.input_rom
+    if explicit is not None:
+        resolved = explicit.resolve()
+        if not resolved.is_file():
+            raise LocalConfigError(f"ROM image does not exist: {resolved}")
+        return resolved
+    if not args.game:
+        raise LocalConfigError("Specify a ROM path or select a configured game with --game")
+    game = LocalGameRegistry.load(args.games_config).get(args.game)
+    return game.rom(base=args.base)
 
 
 def _add_site_root_argument(parser: argparse.ArgumentParser) -> None:

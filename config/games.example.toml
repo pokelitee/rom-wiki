@@ -1,0 +1,5 @@
+version = 1
+
+[games.renegade-platinum]
+patched_rom = "roms/Pokemon - Renegade Platinum.nds"
+base_rom = "roms/Pokemon - Platinum Version (USA).nds"

@@ -73,7 +73,10 @@ _TRADE_LANGUAGES = {
 }
 
 
-def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
+def extract_location_dataset(
+    result: InspectionResult,
+    trainer_dataset: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
@@ -288,7 +291,7 @@ def extract_location_dataset(result: InspectionResult) -> dict[str, Any]:
     connections = _extract_matrix_connections(
         headers, matrices, location_names, matrix_void_header_ids
     )
-    trainers = _extract_trainer_references(result)
+    trainers = _extract_trainer_references(result, trainer_dataset)
     records = []
     for header in headers:
         if header.script_file_id >= len(scripts.members):
@@ -891,10 +894,12 @@ def _extract_matrix_connections(
 
 def _extract_trainer_references(
     result: InspectionResult,
+    trainer_dataset: dict[str, Any] | None = None,
 ) -> dict[int, list[LocationTrainerReference]]:
     references: dict[int, list[LocationTrainerReference]] = defaultdict(list)
     seen: set[tuple[int, int, str]] = set()
-    for trainer in extract_trainer_dataset(result)["records"]:
+    trainers = trainer_dataset or extract_trainer_dataset(result)
+    for trainer in trainers["records"]:
         for source, locations in (
             ("overworld-object", trainer["locations"]),
             ("map-script", trainer["script_references"]),

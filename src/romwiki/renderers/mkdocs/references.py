@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from html import escape
 from pathlib import PurePosixPath
 import posixpath
-from typing import Any, Callable
+from typing import Any, Callable, Iterable, Mapping
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +73,61 @@ class RouteResolver:
         return factory(reference.route_key).rstrip("/")
 
 
+class ReferenceIndex:
+    """Resolve normalized entity IDs to generated wiki routes."""
+
+    def __init__(self, references: Iterable[EntityReference] = ()) -> None:
+        self._references: dict[tuple[str, int | str], EntityReference] = {}
+        for reference in references:
+            self.add(reference)
+
+    @classmethod
+    def from_datasets(
+        cls, datasets: Mapping[str, dict[str, Any]]
+    ) -> ReferenceIndex:
+        index = cls()
+        for kind, dataset in datasets.items():
+            route_kind = _DATASET_ROUTE_KINDS.get(kind)
+            if route_kind is None:
+                continue
+            for record in dataset.get("records", []):
+                reference = _record_reference(route_kind, record)
+                if reference is None:
+                    continue
+                index.add(reference)
+                if route_kind == "pokemon":
+                    dex = record.get("national_dex_id")
+                    if dex is not None:
+                        index.add(
+                            EntityReference(
+                                route_kind,
+                                dex,
+                                reference.label,
+                                reference.route_key,
+                            )
+                        )
+        return index
+
+    def add(self, reference: EntityReference) -> None:
+        if reference.route_key is not None:
+            self._references.setdefault((reference.kind, reference.id), reference)
+
+    def resolve(
+        self,
+        kind: str,
+        identifier: int | str,
+        label: str,
+        route_key: int | str | None = None,
+    ) -> EntityReference:
+        indexed = self._references.get((kind, identifier))
+        return EntityReference(
+            kind,
+            identifier,
+            label,
+            indexed.route_key if indexed is not None else route_key,
+        )
+
+
 def entity_reference(
     kind: str,
     identifier: int | str,
@@ -80,6 +135,19 @@ def entity_reference(
     route_key: int | str | None,
 ) -> EntityReference:
     return EntityReference(kind, identifier, label, route_key)
+
+
+def resolved_reference(
+    kind: str,
+    identifier: int | str,
+    label: str,
+    route_key: int | str | None = None,
+    *,
+    index: ReferenceIndex | None = None,
+) -> EntityReference:
+    if index is None:
+        return entity_reference(kind, identifier, label, route_key)
+    return index.resolve(kind, identifier, label, route_key)
 
 
 def unique_references(
@@ -123,6 +191,50 @@ ROUTES = RouteResolver(
         ),
     }
 )
+
+
+_DATASET_ROUTE_KINDS = {
+    "pokemon": "pokemon",
+    "abilities": "ability",
+    "moves": "move",
+    "items": "item",
+    "encounters": "encounter",
+    "trainers": "trainer",
+    "locations": "location",
+}
+
+
+def _record_reference(
+    kind: str, record: Mapping[str, Any]
+) -> EntityReference | None:
+    if kind in {"pokemon", "move"} and not record.get("public", True):
+        return None
+    identity_fields = {
+        "pokemon": "member",
+        "ability": "ability_id",
+        "move": "move_id",
+        "item": "item_id",
+        "encounter": "area_id",
+        "trainer": "trainer_id",
+        "location": "header_id",
+    }
+    route_fields = {
+        "pokemon": "slug",
+        "ability": "slug",
+        "move": "slug",
+        "item": "slug",
+        "encounter": "area_id",
+        "trainer": "trainer_id",
+        "location": "header_id",
+    }
+    identity = record.get(identity_fields[kind])
+    if identity is None and kind == "pokemon":
+        identity = record.get("national_dex_id")
+    route_key = record.get(route_fields[kind])
+    label = record.get("name") or record.get("label")
+    if identity is None or route_key is None or not isinstance(label, str):
+        return None
+    return EntityReference(kind, identity, label, route_key)
 
 
 def _escape_markdown(value: str) -> str:

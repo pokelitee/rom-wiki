@@ -102,24 +102,113 @@ class PokeDBGeneration:
     def pokemon_sprite(
         self, reference: dict[str, Any], version: str | None
     ) -> dict[str, str] | None:
+        sprites = self.pokemon_sprites(reference, version)
+        return sprites[0] if sprites else None
+
+    def pokemon_sprites(
+        self, reference: dict[str, Any], version: str | None
+    ) -> list[dict[str, str]]:
         sprites = reference.get("sprites")
         if not isinstance(sprites, dict):
-            return None
-        url = None
+            return []
+        selected = sprites
         if version:
             versions = sprites.get("versions")
             if isinstance(versions, dict):
                 version_sprites = versions.get(version)
                 if isinstance(version_sprites, dict):
-                    url = version_sprites.get("front_default")
-        if not url:
-            url = sprites.get("front_default")
-        if not isinstance(url, str) or not url.startswith("https://"):
-            return None
+                    selected = version_sprites
+        result = []
+        seen = set()
+        for key, label in (
+            ("front_default", "Front"),
+            ("front_female", "Front, female"),
+            ("front_shiny", "Front, shiny"),
+            ("front_shiny_female", "Front, female shiny"),
+            ("back_default", "Back"),
+            ("back_female", "Back, female"),
+            ("back_shiny", "Back, shiny"),
+            ("back_shiny_female", "Back, female shiny"),
+        ):
+            url = selected.get(key)
+            if not isinstance(url, str) or not url.startswith("https://") or url in seen:
+                continue
+            seen.add(url)
+            result.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "url": url,
+                    "source": "PokéAPI sprites",
+                    "source_url": "https://github.com/PokeAPI/sprites",
+                }
+            )
+        if not result and selected is not sprites:
+            return self.pokemon_sprites(reference, None)
+        return result
+
+    def pokemon_reference(
+        self, reference: dict[str, Any], version: str | None
+    ) -> dict[str, Any]:
+        """Return a small, version-aware reference snapshot for presentation."""
+        flavor_texts = reference.get("flavor_text")
+        flavor_text = None
+        flavor_version = None
+        if isinstance(flavor_texts, dict):
+            if version and isinstance(flavor_texts.get(version), str):
+                flavor_version = version
+                flavor_text = flavor_texts[version]
+            else:
+                flavor_version, flavor_text = next(
+                    (
+                        (key, value)
+                        for key, value in flavor_texts.items()
+                        if isinstance(key, str) and isinstance(value, str)
+                    ),
+                    (None, None),
+                )
+
+        stats = reference.get("stats")
+        base_stats = None
+        if isinstance(stats, dict):
+            keys = {
+                "hp": "hp",
+                "attack": "attack",
+                "defense": "defense",
+                "speed": "speed",
+                "special-attack": "special_attack",
+                "special-defense": "special_defense",
+            }
+            if all(isinstance(stats.get(source), int) for source in keys):
+                base_stats = {target: stats[source] for source, target in keys.items()}
+
+        abilities = reference.get("abilities")
+        ability_names = []
+        if isinstance(abilities, list):
+            ability_names = [
+                value["name"]
+                for value in abilities
+                if isinstance(value, dict) and isinstance(value.get("name"), str)
+            ]
+
+        types = reference.get("types")
+        type_names = (
+            [value for value in types if isinstance(value, str)]
+            if isinstance(types, list)
+            else []
+        )
         return {
-            "url": url,
-            "source": "PokéAPI sprites",
-            "source_url": "https://github.com/PokeAPI/sprites",
+            "version": version,
+            "source": "PokéDB / PokéAPI",
+            "source_url": reference.get("source_url"),
+            "genus": reference.get("genus"),
+            "height_dm": reference.get("height"),
+            "weight_hg": reference.get("weight"),
+            "flavor_text": flavor_text,
+            "flavor_text_version": flavor_version,
+            "base_stats": base_stats,
+            "types": type_names,
+            "abilities": ability_names,
         }
 
 

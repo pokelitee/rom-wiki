@@ -10,6 +10,8 @@ exclude_docs: |
   /pokemon/*.md
   !/pokemon/index.md
   !/pokemon/bulbasaur.md
+  !/pokemon/eevee.md
+  !/pokemon/wurmple.md
   /abilities/*.md
   !/abilities/index.md
   !/abilities/overgrow.md

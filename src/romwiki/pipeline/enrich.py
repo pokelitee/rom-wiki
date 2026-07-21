@@ -75,6 +75,7 @@ def enrich_personal_dataset(
     type_names: Mapping[int, str] | None = None,
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
+    reference_version: str | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 508:
@@ -113,6 +114,7 @@ def enrich_personal_dataset(
                 ability_names,
                 item_names,
                 sprite_version,
+                reference_version,
             )
         )
     enriched = {
@@ -389,6 +391,8 @@ _TRAINER_FORMS = {
     (492, 1): "shaymin-sky",
 }
 _TRAINER_COSMETIC_FORMS = {
+    (412, 1): "Sandy Cloak",
+    (412, 2): "Trash Cloak",
     (422, 1): "East Sea",
     (423, 1): "East Sea",
 }
@@ -485,12 +489,15 @@ def _enrich_record(
     ability_names: list[str] | None,
     item_names: list[str] | None,
     sprite_version: str | None,
+    reference_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
     if member in PERSONAL_INTERNAL_MEMBERS:
         slug = PERSONAL_INTERNAL_MEMBERS[member]
         identity = {"national_dex_id": None, "base_species": None, "form": None}
         sprite = None
+        sprites = []
+        reference_data = None
         public = False
     elif member in PERSONAL_FORM_MEMBERS:
         slug = PERSONAL_FORM_MEMBERS[member]
@@ -502,6 +509,8 @@ def _enrich_record(
             "form": slug.removeprefix(f"{base_species}-"),
         }
         sprite = pokedb.pokemon_sprite(reference, sprite_version)
+        sprites = pokedb.pokemon_sprites(reference, sprite_version)
+        reference_data = pokedb.pokemon_reference(reference, reference_version)
         public = True
     else:
         reference = pokedb.pokemon_for_id(member)
@@ -512,6 +521,8 @@ def _enrich_record(
             "form": None,
         }
         sprite = pokedb.pokemon_sprite(reference, sprite_version)
+        sprites = pokedb.pokemon_sprites(reference, sprite_version)
+        reference_data = pokedb.pokemon_reference(reference, reference_version)
         public = True
 
     return {
@@ -521,6 +532,8 @@ def _enrich_record(
         "public": public,
         **identity,
         "sprite": sprite,
+        "sprites": sprites,
+        "reference": reference_data,
         "base_stats": source["base_stats"],
         "types": [_type_id(value, type_names) for value in source["type_ids"]],
         "catch_rate": source["catch_rate"],

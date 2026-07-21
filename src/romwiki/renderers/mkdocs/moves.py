@@ -9,10 +9,20 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
 )
 from romwiki.renderers.mkdocs.components import type_badges
-from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
+from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
 
 
-def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
+def render_move_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    comparison: dict[str, Any] | None = None,
+    references: ReferenceIndex | None = None,
+) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -23,14 +33,34 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
     catalog_records = []
     name_source = dataset.get("name_sources", {}).get("move_names")
     for index, record in enumerate(public_records):
+        change = record_comparison(comparison, record["move_id"])
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
         _write_text(
             output_root / filename,
-            _render_record(record, previous, following, name_source),
+            _render_record(
+                record,
+                previous,
+                following,
+                name_source,
+                change,
+                comparison.get("baseline") if comparison else None,
+                references,
+            ),
         )
-        fallback_links.append(f"- [{record['name']}]({filename})")
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "move",
+                    record["move_id"],
+                    record["name"],
+                    record["slug"],
+                ),
+                "moves/index.md",
+            )
+        )
         machines = [machine["name"] for machine in record.get("machines", [])]
         replaced_name = (
             record["replaces"]["name"] if record.get("replaces") else None
@@ -45,7 +75,7 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
             if available
         ]
         catalog_records.append(
-            {
+            add_change_status({
                 "id": record["move_id"],
                 "label": record["name"],
                 "slug": record["slug"],
@@ -65,7 +95,7 @@ def render_move_pages(dataset: dict[str, Any], output_root: Path) -> int:
                         *((replaced_name,) if replaced_name else ()),
                     )
                 ).lower(),
-            }
+            }, change)
         )
     write_catalog(output_root, "moves", catalog_records)
     _write_text(
@@ -85,6 +115,9 @@ def _render_record(
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
     name_source: dict[str, Any] | None = None,
+    change: dict[str, Any] | None = None,
+    baseline_name: str | None = None,
+    references: ReferenceIndex | None = None,
 ) -> str:
     source_file = f"moves/{record['slug']}.md"
     lines = [
@@ -100,6 +133,7 @@ def _render_record(
         "</dl>",
         "</section>",
         "",
+        *comparison_section(change, baseline_name, source_file, references),
         "## Battle properties",
         "",
         "| Property | Value |",
@@ -154,28 +188,42 @@ def _render_record(
         "</details>",
         "",
     ]
-    _append_record_navigation(lines, previous, following)
+    _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
 
 
 def _append_record_navigation(
     lines: list[str],
+    record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
     if previous is None and following is None:
         return
+    source_url = f"moves/{record['slug']}/"
     lines.extend(['<nav class="rw-record-nav" aria-label="Move navigation">'])
     if previous is not None:
-        lines.append(
-            f'<a href="../{previous["slug"]}/">&larr; {previous["name"]}</a>'
-        )
+        lines.append(ROUTES.html_link(
+            entity_reference(
+                "move",
+                previous["move_id"],
+                f"← {previous['name']}",
+                previous["slug"],
+            ),
+            source_url,
+        ))
     else:
         lines.append("<span></span>")
     if following is not None:
-        lines.append(
-            f'<a href="../{following["slug"]}/">{following["name"]} &rarr;</a>'
-        )
+        lines.append(ROUTES.html_link(
+            entity_reference(
+                "move",
+                following["move_id"],
+                f"{following['name']} →",
+                following["slug"],
+            ),
+            source_url,
+        ))
     lines.extend(["</nav>", ""])
 
 

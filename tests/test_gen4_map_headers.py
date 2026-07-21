@@ -57,6 +57,20 @@ class Gen4MessageTests(unittest.TestCase):
 
         self.assertEqual(parse_english_message_archive(data), ("Tristan",))
 
+    def test_accepts_aligned_compressed_text_with_outer_terminator(self) -> None:
+        data = _make_compressed_message_archive(
+            "Vogan", truncate_compressed_terminator=True
+        )
+
+        self.assertEqual(parse_english_message_archive(data), ("Vogan",))
+
+    def test_accepts_compressed_terminator_prefix_with_outer_terminator(self) -> None:
+        data = _make_compressed_message_archive(
+            "Trista", truncate_compressed_terminator=True
+        )
+
+        self.assertEqual(parse_english_message_archive(data), ("Trista",))
+
 
 _ENCODING = {
     **{value: 0x121 + index for index, value in enumerate(string.digits)},
@@ -95,18 +109,21 @@ def _make_message_archive(messages: tuple[str, ...], archive_key: int = 0xA06) -
     return bytes(result)
 
 
-def _make_compressed_message_archive(message: str) -> bytes:
+def _make_compressed_message_archive(
+    message: str, *, truncate_compressed_terminator: bool = False
+) -> bytes:
     buffer = 0
     bit_count = 0
     words = []
-    for value in [_ENCODING[character] for character in message] + [0x1FF]:
+    values = [_ENCODING[character] for character in message] + [0x1FF]
+    for value in values:
         buffer |= value << bit_count
         bit_count += 9
         while bit_count >= 15:
             words.append(buffer & 0x7FFF)
             buffer >>= 15
             bit_count -= 15
-    if bit_count:
+    if bit_count and not truncate_compressed_terminator:
         words.append(buffer)
 
     key = 0x91BD3 & 0xFFFF

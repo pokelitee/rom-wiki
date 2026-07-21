@@ -7,6 +7,7 @@ import unittest
 
 from romwiki.pipeline.enrich import enrich_personal_dataset
 from romwiki.renderers.mkdocs import render_pokemon_pages
+from romwiki.renderers.mkdocs.pokemon import _evolution_chain, _index_preevolutions
 from romwiki.sources import PokeDBGeneration
 
 
@@ -91,6 +92,23 @@ class PersonalEnrichmentTests(unittest.TestCase):
             "slug": "bulbasaur",
             "name": "Bulbasaur",
             "national_dex_id": 1,
+            "form": None,
+            "reference": {
+                "version": "platinum",
+                "source": "PokéDB / PokéAPI",
+                "source_url": "https://pokeapi.co/api/v2/pokemon/1/",
+                "genus": "Seed Pokémon",
+                "height_dm": 7,
+                "weight_hg": 69,
+                "flavor_text": "A seed was planted on its back at birth.",
+                "flavor_text_version": "platinum",
+                "base_stats": {
+                    "hp": 45, "attack": 49, "defense": 49, "speed": 45,
+                    "special_attack": 60, "special_defense": 65,
+                },
+                "types": ["grass", "poison"],
+                "abilities": ["overgrow"],
+            },
             "base_stats": {
                 "hp": 45, "attack": 49, "defense": 49, "speed": 45,
                 "special_attack": 65, "special_defense": 65,
@@ -100,6 +118,12 @@ class PersonalEnrichmentTests(unittest.TestCase):
             "catch_rate": 45,
             "base_experience": 64,
             "base_friendship": 70,
+            "ev_yields": {
+                "hp": 0, "attack": 0, "defense": 0, "speed": 0,
+                "special_attack": 1, "special_defense": 0,
+            },
+            "gender_ratio": 31,
+            "safari_flee_rate": 0,
             "hatch_cycles": 20,
             "growth_rate": {"name": "medium-slow"},
             "egg_groups": [{"name": "monster"}, {"name": "grass"}],
@@ -155,6 +179,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
                         "kind": "item",
                         "id": 221,
                         "name": "King's Rock",
+                        "slug": "kings-rock",
                     },
                     "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
                 },
@@ -171,13 +196,28 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertIn("# Bulbasaur", page)
         self.assertEqual(page.count("rw-type--grass"), 1)
-        self.assertIn("| 45 | 49 |", page)
+        self.assertIn('<span class="rw-stat__value">45</span>', page)
+        self.assertNotIn("+5", page)
+        self.assertIn("A seed was planted on its back at birth.", page)
+        self.assertIn("0.7 m (2′4″)", page)
+        self.assertIn("1 Sp. Atk", page)
+        self.assertIn("87.5% male / 12.5% female", page)
+        self.assertNotIn("Base typing", page)
         self.assertIn("[Tackle](../moves/tackle.md)", page)
         self.assertIn("[Skull Bash](../moves/skull-bash.md)", page)
+        self.assertIn("| Move | Type | Class | Power | Accuracy | PP |", page)
+        self.assertIn("## Learnset", page)
         self.assertIn("`0x29222`", page)
-        self.assertIn("[Ivysaur](ivysaur.md)", page)
+        self.assertIn(
+            '<a class="rw-evolution-node" href="../ivysaur/">', page
+        )
+        self.assertIn(
+            '<span class="rw-evolution-node__name">Ivysaur</span>', page
+        )
         self.assertIn("Level 16", page)
-        self.assertIn("Use King's Rock", page)
+        self.assertIn(
+            'Use <a href="../../items/kings-rock/">King&#x27;s Rock</a>', page
+        )
         self.assertIn("[Focus Punch](../moves/focus-punch.md)", page)
         self.assertIn("## Wild held items", page)
         self.assertIn("| Rare | Moon Stone | 81 |", page)
@@ -190,6 +230,67 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["bst"], 318)
         self.assertEqual(catalog["records"][0]["egg_groups"], ["monster", "grass"])
         self.assertEqual(catalog["records"][0]["url"], "bulbasaur/")
+
+    def test_indexes_reverse_evolution_links_for_public_records(self) -> None:
+        records = [
+            {
+                "public": True,
+                "member": 1,
+                "national_dex_id": 1,
+                "slug": "bulbasaur",
+                "name": "Bulbasaur",
+                "evolutions": [
+                    {
+                        "method_id": 4,
+                        "target": {
+                            "id": 2,
+                            "slug": "ivysaur",
+                            "name": "Ivysaur",
+                        },
+                    }
+                ],
+            },
+            {
+                "public": True,
+                "member": 2,
+                "national_dex_id": 2,
+                "slug": "ivysaur",
+                "name": "Ivysaur",
+                "evolutions": [],
+            },
+        ]
+
+        index = _index_preevolutions(records)
+
+        self.assertEqual(index["ivysaur"][0]["source"]["slug"], "bulbasaur")
+        self.assertEqual(index["ivysaur"][0]["evolution"]["method_id"], 4)
+
+    def test_renders_complete_branching_evolution_chain(self) -> None:
+        eevee = _evolution_record("eevee", "Eevee", 133)
+        vaporeon = _evolution_record("vaporeon", "Vaporeon", 134)
+        jolteon = _evolution_record("jolteon", "Jolteon", 135)
+        eevee["evolutions"] = [
+            _evolution("vaporeon", "Vaporeon", 134, "Water Stone"),
+            _evolution("jolteon", "Jolteon", 135, "Thunder Stone"),
+        ]
+
+        chain = "\n".join(
+            _evolution_chain(
+                [eevee, vaporeon, jolteon], jolteon, "pokemon/jolteon.md"
+            )
+        )
+
+        self.assertIn("Eevee", chain)
+        self.assertIn("Vaporeon", chain)
+        self.assertIn("Jolteon", chain)
+        self.assertIn("Water Stone", chain)
+        self.assertIn("rw-evolution-node--current", chain)
+        self.assertIn('aria-current="page"', chain)
+        self.assertIn('class="rw-evolution-node__current">Current', chain)
+        self.assertIn('class="rw-evolution-node__dex">#135', chain)
+        self.assertIn('class="rw-evolution-step"', chain)
+        self.assertIn('class="rw-evolution-branches"', chain)
+        self.assertIn('href="../vaporeon/"', chain)
 
 
 def _source_record(member: int) -> dict:
@@ -218,6 +319,26 @@ def _source_record(member: int) -> dict:
         "flip_sprite": False,
         "machine_ids": [],
         "provenance": {"source": "rom", "archive": "personal.narc", "member": member},
+    }
+
+
+def _evolution_record(slug: str, name: str, member: int) -> dict:
+    return {
+        "slug": slug,
+        "name": name,
+        "member": member,
+        "national_dex_id": member,
+        "sprite": None,
+        "evolutions": [],
+    }
+
+
+def _evolution(slug: str, name: str, member: int, item: str) -> dict:
+    return {
+        "method_id": 7,
+        "method": {"id": 7, "name": "use-item"},
+        "parameter_data": {"kind": "item", "id": 1, "name": item},
+        "target": {"id": member, "slug": slug, "name": name},
     }
 
 

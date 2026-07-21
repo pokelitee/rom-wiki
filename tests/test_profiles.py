@@ -12,6 +12,16 @@ from tests.test_nds_header import make_header
 
 
 class ProfileRepositoryTests(unittest.TestCase):
+    def test_loads_clean_platinum_baseline_profile(self) -> None:
+        profiles = ProfileRepository.load(Path("profiles")).profiles
+
+        profile = next(value for value in profiles if value.id == "platinum-us")
+
+        self.assertEqual(profile.engine, "gen4_dppt")
+        self.assertEqual(profile.base_game, "platinum")
+        self.assertEqual(profile.rom_versions, (0,))
+        self.assertEqual(profile.parameters["egg_gifts"][0]["command_offset"], 0xE59)
+
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "test.toml"

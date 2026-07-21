@@ -10,14 +10,25 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text,
 )
 from romwiki.renderers.mkdocs.components import display_name
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
+    ReferenceIndex,
     entity_reference,
     unique_references,
 )
 
 
-def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
+def render_item_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    comparison: dict[str, Any] | None = None,
+    references: ReferenceIndex | None = None,
+) -> int:
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     filenames = {"index.md", *(f"{record['slug']}.md" for record in records)}
@@ -25,11 +36,33 @@ def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
     fallback_links = []
     catalog_records = []
     for index, record in enumerate(records):
+        change = record_comparison(comparison, record["item_id"])
         filename = f"{record['slug']}.md"
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
-        write_text(output_root / filename, _render_record(record, previous, following))
-        fallback_links.append(f"- [#{record['item_id']:03} {record['name']}]({filename})")
+        write_text(
+            output_root / filename,
+            _render_record(
+                record,
+                previous,
+                following,
+                change,
+                comparison.get("baseline") if comparison else None,
+                references,
+            ),
+        )
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "item",
+                    record["item_id"],
+                    f"#{record['item_id']:03} {record['name']}",
+                    record["slug"],
+                ),
+                "items/index.md",
+            )
+        )
         features = _features(record)
         locations = list(
             dict.fromkeys(
@@ -51,7 +84,7 @@ def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
             ]
         )
         catalog_records.append(
-            {
+            add_change_status({
                 "id": record["item_id"],
                 "label": record["name"],
                 "slug": record["slug"],
@@ -67,7 +100,7 @@ def render_item_pages(dataset: dict[str, Any], output_root: Path) -> int:
                     for reference in location_refs
                 ],
                 "search_text": " ".join((record["name"], *features, *locations)).lower(),
-            }
+            }, change)
         )
     write_catalog(output_root, "items", catalog_records)
     write_text(
@@ -86,6 +119,9 @@ def _render_record(
     record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
+    change: dict[str, Any] | None = None,
+    baseline_name: str | None = None,
+    references: ReferenceIndex | None = None,
 ) -> str:
     source_file = f"items/{record['slug']}.md"
     price = f"₽{record['price']:,}" if record["price"] else "Not sold"
@@ -100,6 +136,7 @@ def _render_record(
             f"{_yes_no(not record['prevent_toss'])} |"
         ),
         "",
+        *comparison_section(change, baseline_name, source_file, references),
         "## Mechanics",
         "",
         f"- Field use: {display_name(record['field_use']['name'])}",
@@ -142,7 +179,7 @@ def _render_record(
                 "behavior is implemented by game code rather than the item record."
             ),
             "",
-            _page_navigation(previous, following),
+            _page_navigation(previous, following, source_file),
             "",
         ]
     )
@@ -399,12 +436,30 @@ def _yes_no(value: bool) -> str:
 
 
 def _page_navigation(
-    previous: dict[str, Any] | None, following: dict[str, Any] | None
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+    source_file: str,
 ) -> str:
     links = []
     if previous is not None:
-        links.append(f"[← {previous['name']}]({previous['slug']}.md)")
+        links.append(ROUTES.markdown_link(
+            entity_reference(
+                "item",
+                previous["item_id"],
+                f"← {previous['name']}",
+                previous["slug"],
+            ),
+            source_file,
+        ))
     links.append("[All items](index.md)")
     if following is not None:
-        links.append(f"[{following['name']} →]({following['slug']}.md)")
+        links.append(ROUTES.markdown_link(
+            entity_reference(
+                "item",
+                following["item_id"],
+                f"{following['name']} →",
+                following["slug"],
+            ),
+            source_file,
+        ))
     return " · ".join(links)

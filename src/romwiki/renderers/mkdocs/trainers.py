@@ -4,14 +4,25 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
+    ReferenceIndex,
     entity_reference,
     unique_references,
 )
 
 
-def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
+def render_trainer_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    comparison: dict[str, Any] | None = None,
+    references: ReferenceIndex | None = None,
+) -> int:
     records = [record for record in dataset["records"] if record["party"]]
     output_root.mkdir(parents=True, exist_ok=True)
     fallback_links = []
@@ -34,9 +45,18 @@ def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
             item["trainer_id"],
         ),
     ):
+        change = record_comparison(comparison, record["trainer_id"])
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
-        _write_text(output_root / filename, _render_trainer(record))
+        _write_text(
+            output_root / filename,
+            _render_trainer(
+                record,
+                change,
+                comparison.get("baseline") if comparison else None,
+                references,
+            ),
+        )
         location_names = " / ".join(
             dict.fromkeys(
                 location["name"]
@@ -44,17 +64,56 @@ def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
                 + record.get("script_references", [])
             )
         )
-        fallback_links.append(f"- [{location_names} — {label}](./{filename})")
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "trainer",
+                    record["trainer_id"],
+                    f"{location_names} — {label}",
+                    record["trainer_id"],
+                ),
+                "trainers/index.md",
+            )
+        )
         catalog_records.append(
-            _catalog_record(record, filename.removesuffix(".md") + "/", location_names, True)
+            _catalog_record(
+                record,
+                filename.removesuffix(".md") + "/",
+                location_names,
+                True,
+                change,
+            )
         )
     for record in unlinked:
+        change = record_comparison(comparison, record["trainer_id"])
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
-        _write_text(output_root / filename, _render_trainer(record))
-        fallback_links.append(f"- [{label}](./{filename})")
+        _write_text(
+            output_root / filename,
+            _render_trainer(
+                record,
+                change,
+                comparison.get("baseline") if comparison else None,
+            ),
+        )
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "trainer", record["trainer_id"], label, record["trainer_id"]
+                ),
+                "trainers/index.md",
+            )
+        )
         catalog_records.append(
-            _catalog_record(record, filename.removesuffix(".md") + "/", "", False)
+            _catalog_record(
+                record,
+                filename.removesuffix(".md") + "/",
+                "",
+                False,
+                change,
+            )
         )
     write_catalog(output_root, "trainers", catalog_records)
     _write_text(
@@ -70,7 +129,11 @@ def render_trainer_pages(dataset: dict[str, Any], output_root: Path) -> int:
 
 
 def _catalog_record(
-    record: dict[str, Any], filename: str, location_label: str, linked: bool
+    record: dict[str, Any],
+    filename: str,
+    location_label: str,
+    linked: bool,
+    change: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     levels = [member["level"] for member in record["party"]]
     location_names = list(
@@ -108,7 +171,7 @@ def _catalog_record(
     )
     species = [member["name"] for member in party]
     label = _trainer_label(record)
-    return {
+    return add_change_status({
         "id": record["trainer_id"],
         "label": label,
         "url": filename,
@@ -128,14 +191,25 @@ def _catalog_record(
         "pokemon": species,
         "party": party,
         "search_text": " ".join((label, *location_names, *species)).lower(),
-    }
+    }, change)
 
 
-def _render_trainer(record: dict[str, Any]) -> str:
+def _render_trainer(
+    record: dict[str, Any],
+    change: dict[str, Any] | None = None,
+    baseline_name: str | None = None,
+    references: ReferenceIndex | None = None,
+) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
     source_url = f"trainers/trainer-{record['trainer_id']:04}/"
-    lines = [f"# {label}", "", f"Trainer ID: `{record['trainer_id']}`", ""]
+    lines = [
+        f"# {label}",
+        "",
+        f"Trainer ID: `{record['trainer_id']}`",
+        "",
+        *comparison_section(change, baseline_name, source_file, references),
+    ]
     if record["double_battle"]:
         lines.extend(["Battle type: Double battle", ""])
     _append_locations(lines, record["locations"], source_file)
