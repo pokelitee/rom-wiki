@@ -84,7 +84,7 @@ html:not(.rw-js) .rw-catalog { display: none; }
   border-color: var(--rw-accent); outline: none;
   box-shadow: 0 0 0 3px rgba(var(--rw-accent-rgb), .18), var(--rw-control-shadow);
 }
-.rw-catalog__page-nav-group { display: flex; align-items: center; gap: .5rem; }
+.rw-catalog__page-nav-group { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem; }
 .rw-catalog__page-nav-group[hidden] { display: none; }
 .rw-catalog__page-nav {
   min-width: 2.1rem; min-height: 2.1rem; padding: .3rem .55rem; border: 1px solid var(--rw-border);
