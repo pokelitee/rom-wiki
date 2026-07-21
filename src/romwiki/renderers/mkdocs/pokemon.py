@@ -333,7 +333,8 @@ def _sprite_gallery(record: dict[str, Any]) -> list[str]:
         "",
         '<div class="rw-sprite-matrix">',
         '<div class="rw-sprite-matrix__row rw-sprite-matrix__row--header">',
-        "<span></span><span>Normal</span><span>Shiny</span>",
+        '<span><span class="rw-visually-hidden">Sprite variant</span></span>'
+        "<span>Normal</span><span>Shiny</span>",
         "</div>",
     ]
     for label, default_sprite, shiny_sprite in rows:
@@ -496,6 +497,8 @@ def _evolution_row(
         '<span class="rw-evolution-row__current">Current</span>' if is_current else ""
     )
     row_class = "rw-evolution-row"
+    if is_current:
+        row_class += " rw-evolution-row--current"
     style_attribute = ""
     if depth:
         row_class += " rw-evolution-row--child"
