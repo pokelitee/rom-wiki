@@ -3,7 +3,7 @@ from __future__ import annotations
 import string
 import struct
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 _CHARACTERS = {

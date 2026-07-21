@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from romwiki.errors import SiteError
+from romwiki.util.errors import SiteError
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 
 

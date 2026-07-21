@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import struct
 
 from romwiki.engines.gen4_dppt.scripts import _parse_script_table
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 GIVE_POKEMON_COMMAND = 0x0096

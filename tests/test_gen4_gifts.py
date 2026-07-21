@@ -7,11 +7,9 @@ from romwiki.engines.gen4_dppt import (
     parse_egg_gift_command,
     parse_pokemon_gift_commands,
 )
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
-
-def make_script(body: bytes) -> bytes:
-    return struct.pack("<iH", 2, 0xFD13) + body
+from tests.conftest import make_script
 
 
 class Gen4GiftTests(unittest.TestCase):

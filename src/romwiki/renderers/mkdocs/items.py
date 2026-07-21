@@ -19,6 +19,7 @@ from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     entity_reference,
+    pokemon_markdown_link,
     unique_references,
 )
 
@@ -179,10 +180,9 @@ def _render_record(
                 "behavior is implemented by game code rather than the item record."
             ),
             "",
-            _page_navigation(previous, following, source_file),
-            "",
         ]
     )
+    _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
 
 
@@ -372,13 +372,10 @@ def _location_link(value: dict[str, Any], source_file: str) -> str:
 
 
 def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
-    return ROUTES.markdown_link(
-        entity_reference(
-            "pokemon",
-            value.get("id", value.get("slug", value["name"])),
-            value["name"],
-            value.get("slug"),
-        ),
+    return pokemon_markdown_link(
+        value.get("id", value.get("slug", value["name"])),
+        value["name"],
+        value.get("slug"),
         source_file,
     )
 
@@ -435,31 +432,36 @@ def _yes_no(value: bool) -> str:
     return "Yes" if value else "No"
 
 
-def _page_navigation(
+def _append_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
-    source_file: str,
-) -> str:
-    links = []
+) -> None:
+    if previous is None and following is None:
+        return
+    source_url = f"items/{record['slug']}/"
+    lines.extend(['<nav class="rw-record-nav" aria-label="Item navigation">'])
     if previous is not None:
-        links.append(ROUTES.markdown_link(
+        lines.append(ROUTES.html_link(
             entity_reference(
                 "item",
                 previous["item_id"],
                 f"← {previous['name']}",
                 previous["slug"],
             ),
-            source_file,
+            source_url,
         ))
-    links.append("[All items](index.md)")
+    else:
+        lines.append("<span></span>")
     if following is not None:
-        links.append(ROUTES.markdown_link(
+        lines.append(ROUTES.html_link(
             entity_reference(
                 "item",
                 following["item_id"],
                 f"{following['name']} →",
                 following["slug"],
             ),
-            source_file,
+            source_url,
         ))
-    return " · ".join(links)
+    lines.extend(["</nav>", ""])

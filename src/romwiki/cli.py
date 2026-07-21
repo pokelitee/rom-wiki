@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 from typing import Sequence
 
-from romwiki.errors import LocalConfigError, RomWikiError
-from romwiki.local_config import LocalGameRegistry
+from romwiki.util.errors import LocalConfigError, RomWikiError
+from romwiki.util.local_config import LocalGameRegistry
 from romwiki.pipeline.encounters import (
     extract_encounter_dataset,
     write_encounter_dataset,
@@ -253,7 +253,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--pokedb",
         type=Path,
         default=Path("../pokedb/.output/gen4"),
-        help="PokÃ©DB generation output directory",
+        help="PokéDB generation output directory",
     )
     build_items_parser.add_argument("--data-output", type=Path)
     build_items_parser.add_argument("--wiki-output", type=Path)
@@ -754,10 +754,6 @@ def _write_dataset_build(
             build.comparison,
             move_dataset,
             reference_index,
-        )
-    elif kind == "locations":
-        page_count = renderer(
-            build.current, wiki_output, build.comparison, reference_index
         )
     else:
         page_count = renderer(

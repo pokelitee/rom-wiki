@@ -4,7 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen4_dppt import parse_trainer_record
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 class Gen4TrainerTests(unittest.TestCase):

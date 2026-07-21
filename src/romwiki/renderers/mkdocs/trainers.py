@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.catalog import (
+    catalog_index,
+    write_catalog,
+    write_text as _write_text,
+)
+from romwiki.renderers.mkdocs.components import display_name
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -282,7 +287,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                     entity_reference(
                         "move",
                         move.get("id", slug),
-                        _display_name(slug),
+                        display_name(slug),
                         slug,
                     ),
                     source_url,
@@ -373,11 +378,3 @@ def _trainer_label(record: dict[str, Any]) -> str:
     return " ".join(value for value in (record["class_name"], record["name"]) if value)
 
 
-def _display_name(slug: str) -> str:
-    return " ".join(part.capitalize() for part in slug.split("-"))
-
-
-def _write_text(path: Path, value: str) -> None:
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(value, encoding="utf-8")
-    temporary.replace(path)

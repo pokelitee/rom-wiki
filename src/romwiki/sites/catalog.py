@@ -6,7 +6,7 @@ import re
 import tomllib
 from typing import Any, Literal
 
-from romwiki.errors import SiteError
+from romwiki.util.errors import SiteError
 
 
 SiteKind = Literal["portal", "game"]

@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from romwiki.errors import DataSourceError
+from romwiki.util.errors import DataSourceError
+from romwiki.util.json_io import write_json_atomic
 
 
 _KEYS = {
@@ -194,12 +195,7 @@ def compare_datasets(
 
 
 def write_comparison_dataset(dataset: dict[str, Any], output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output_path.with_suffix(f"{output_path.suffix}.tmp")
-    temporary.write_text(
-        json.dumps(dataset, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    temporary.replace(output_path)
+    write_json_atomic(output_path, dataset)
 
 
 def comparison_by_key(

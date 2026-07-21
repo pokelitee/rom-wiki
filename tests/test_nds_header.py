@@ -1,30 +1,11 @@
 from __future__ import annotations
 
-import struct
 import unittest
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.header import NintendoDSHeader
 
-
-def make_header() -> bytes:
-    data = bytearray(0x200)
-    data[0:12] = b"POKEMON PL\0\0"
-    data[0x0C:0x10] = b"CPUE"
-    data[0x10:0x12] = b"01"
-    data[0x14] = 10
-    data[0x1E] = 1
-    struct.pack_into("<I", data, 0x20, 0x4000)
-    struct.pack_into("<I", data, 0x28, 0x02000000)
-    struct.pack_into("<I", data, 0x2C, 0x100)
-    struct.pack_into("<I", data, 0x30, 0x5000)
-    struct.pack_into("<I", data, 0x3C, 0x100)
-    struct.pack_into("<I", data, 0x40, 0x6000)
-    struct.pack_into("<I", data, 0x44, 0x100)
-    struct.pack_into("<I", data, 0x48, 0x7000)
-    struct.pack_into("<I", data, 0x4C, 0x40)
-    struct.pack_into("<I", data, 0x84, 0x4000)
-    return bytes(data)
+from tests.conftest import make_header
 
 
 class NintendoDSHeaderTests(unittest.TestCase):

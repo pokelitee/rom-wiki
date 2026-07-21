@@ -4,7 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen4_dppt.learnsets import parse_level_up_learnset
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 class Gen4LearnsetTests(unittest.TestCase):

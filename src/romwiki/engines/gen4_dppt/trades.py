@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import struct
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 NPC_TRADE_RECORD_SIZE = 80

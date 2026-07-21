@@ -1,7 +1,6 @@
 import { title } from "../formatting.js";
 import {
   accessMethods,
-  changeStatus,
   locationIdentifier,
   numberOrDash,
   pokemonName,
@@ -68,5 +67,4 @@ export const CATALOGS = {
 
 for (const config of Object.values(CATALOGS)) {
   config.filters.unshift({ key: "change_status", label: "Change status" });
-  config.columns.splice(1, 0, ["Changes", changeStatus]);
 }

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from romwiki.errors import DataSourceError, ProfileError
+from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.comparisons import compare_datasets
 from romwiki.pipeline.identify import InspectionResult

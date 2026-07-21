@@ -13,11 +13,9 @@ from romwiki.engines.gen4_dppt import (
     parse_seal_price_table,
     parse_specialty_mart_inventories,
 )
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
-
-def make_script(body: bytes) -> bytes:
-    return struct.pack("<iH", 2, 0xFD13) + body
+from tests.conftest import make_script
 
 
 class Gen4MartTests(unittest.TestCase):

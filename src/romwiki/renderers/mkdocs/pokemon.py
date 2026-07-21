@@ -8,8 +8,13 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
+    write_text as _write_text,
 )
-from romwiki.renderers.mkdocs.components import pokemon_summary, stat_list
+from romwiki.renderers.mkdocs.components import (
+    pokemon_summary,
+    stat_list,
+    tutor_requirement,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -550,7 +555,7 @@ def _append_tutor_moves(
                 (
                     f"| {_record_link('move', tutor['move'], source_file)} | "
                     f"{_move_cells(tutor['move'], move_lookup)} | "
-                    f"{tutor['location']['name']} | {_tutor_requirement(tutor)} |"
+                    f"{tutor['location']['name']} | {tutor_requirement(tutor)} |"
                 )
                 for tutor in moves
             ],
@@ -775,21 +780,5 @@ def _record_link(kind: str, value: dict[str, Any], source_file: str) -> str:
     return ROUTES.markdown_link(reference, source_file)
 
 
-def _shard_cost(costs: dict[str, int]) -> str:
-    return ", ".join(
-        f"{amount} {color.title()}"
-        for color, amount in costs.items()
-        if amount
-    ) or "Free"
 
 
-def _tutor_requirement(tutor: dict[str, Any]) -> str:
-    if tutor.get("kind") == "special":
-        return f"Friendship {tutor['minimum_friendship']}"
-    return _shard_cost(tutor["shard_costs"])
-
-
-def _write_text(path: Path, value: str) -> None:
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(value, encoding="utf-8")
-    temporary.replace(path)

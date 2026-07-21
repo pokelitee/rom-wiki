@@ -6,7 +6,8 @@ import re
 from typing import Any
 import unicodedata
 
-from romwiki.errors import DataSourceError
+from romwiki.util.errors import DataSourceError
+from romwiki.util.text import name_slug
 
 
 class PokeDBGeneration:
@@ -89,7 +90,7 @@ class PokeDBGeneration:
 
     def item_slug(self, rom_name: str) -> str:
         key = _lookup_key(rom_name)
-        return self.items_by_lookup.get(key, _name_slug(rom_name))
+        return self.items_by_lookup.get(key, name_slug(rom_name))
 
     def move_name(self, move_id: int) -> str | None:
         if move_id == 0:
@@ -241,6 +242,3 @@ def _lookup_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", normalized.casefold())
 
 
-def _name_slug(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", "-", normalized.casefold()).strip("-")

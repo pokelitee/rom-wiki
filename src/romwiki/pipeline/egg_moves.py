@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen4_dppt import parse_egg_move_table
-from romwiki.errors import ProfileError
+from romwiki.util.errors import ProfileError
+from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.nds.overlays import read_arm9_overlay
 
@@ -41,10 +41,4 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def write_egg_move_dataset(dataset: dict[str, Any], output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = output_path.with_suffix(f"{output_path.suffix}.tmp")
-    temporary_path.write_text(
-        json.dumps(dataset, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    temporary_path.replace(output_path)
+    write_json_atomic(output_path, dataset)

@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.header import NintendoDSHeader
 
 

@@ -168,3 +168,17 @@ def display_name(value: str) -> str:
         value,
         " ".join(part.capitalize() for part in value.split("-")),
     )
+
+
+def shard_cost(costs: dict[str, int]) -> str:
+    return ", ".join(
+        f"{amount} {color.title()}"
+        for color, amount in costs.items()
+        if amount
+    ) or "Free"
+
+
+def tutor_requirement(tutor: dict[str, Any]) -> str:
+    if tutor.get("kind") == "special":
+        return f"Friendship {tutor['minimum_friendship']}"
+    return shard_cost(tutor["shard_costs"])

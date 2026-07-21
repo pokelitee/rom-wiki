@@ -4,7 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen4_dppt.egg_moves import parse_egg_move_table
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 class Gen4EggMoveTests(unittest.TestCase):

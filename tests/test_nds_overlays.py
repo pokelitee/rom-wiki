@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.overlays import parse_overlay_table
 
 

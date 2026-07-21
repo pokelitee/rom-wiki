@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import struct
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 MAP_HEADER_SIZE = 24

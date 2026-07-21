@@ -5,9 +5,7 @@ import unittest
 
 from romwiki.engines.gen4_dppt import parse_roaming_activation_commands
 
-
-def make_script(body: bytes) -> bytes:
-    return struct.pack("<iH", 2, 0xFD13) + body
+from tests.conftest import make_script
 
 
 class Gen4RoamingActivationTests(unittest.TestCase):

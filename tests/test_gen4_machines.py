@@ -4,7 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen4_dppt.machines import parse_machine_move_table
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 class Gen4MachineTests(unittest.TestCase):

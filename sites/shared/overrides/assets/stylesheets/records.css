@@ -58,28 +58,6 @@
   .rw-summary__credit { text-align: center; }
   .rw-stat { grid-template-columns: 4.8rem 2rem 2rem 1fr; }
 }
-.rw-change-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--md-default-fg-color--lighter);
-  border-radius: 999px;
-  color: var(--md-default-fg-color--light);
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.rw-change-status--changed {
-  border-color: color-mix(in srgb, var(--md-accent-fg-color) 50%, transparent);
-  color: var(--md-accent-fg-color);
-}
-
-.rw-change-status--added {
-  border-color: color-mix(in srgb, #2e8b57 55%, transparent);
-  color: #2e8b57;
-}
-
 .rw-comparison-list {
   margin: 0;
   padding-left: 1rem;

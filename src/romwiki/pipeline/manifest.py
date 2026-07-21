@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-import json
 from pathlib import Path
 from typing import Any
 
 from romwiki import __version__
+from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 
 
@@ -20,11 +20,5 @@ def create_manifest(result: InspectionResult) -> dict[str, Any]:
 
 
 def write_manifest(manifest: dict[str, Any], output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = output_path.with_suffix(f"{output_path.suffix}.tmp")
-    temporary_path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    temporary_path.replace(output_path)
+    write_json_atomic(output_path, manifest)
 

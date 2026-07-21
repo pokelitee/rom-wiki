@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 from romwiki.schema.items import Gen4Item, ItemPartyEffects
 from romwiki.schema.pokemon import RecordProvenance
 

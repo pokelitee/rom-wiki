@@ -3,19 +3,10 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.narc import NarcArchive
 
-
-def make_narc() -> bytes:
-    raw_data = b"abc\0de"
-    fat = struct.pack("<4sII", b"BTAF", 28, 2)
-    fat += struct.pack("<IIII", 0, 3, 4, 6)
-    fnt = struct.pack("<4sI", b"BTNF", 8)
-    image = struct.pack("<4sI", b"GMIF", 8 + len(raw_data)) + raw_data
-    file_size = 16 + len(fat) + len(fnt) + len(image)
-    header = struct.pack("<4sHHIHH", b"NARC", 0xFFFE, 0x0100, file_size, 16, 3)
-    return header + fat + fnt + image
+from tests.conftest import make_narc
 
 
 class NarcArchiveTests(unittest.TestCase):

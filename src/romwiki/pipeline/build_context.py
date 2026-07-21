@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from romwiki.errors import ProfileError
+from romwiki.util.errors import ProfileError
+from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.abilities import build_ability_dataset
 from romwiki.pipeline.encounters import extract_encounter_dataset
 from romwiki.pipeline.egg_moves import extract_egg_move_dataset
@@ -183,7 +184,7 @@ class GameBuildContext:
         value = extractor(self.result)
         self._values[key] = value
         if path is not None:
-            _write_json(path, value)
+            write_json_atomic(path, value)
             self._write_manifest()
         return value
 
@@ -220,7 +221,7 @@ class GameBuildContext:
 
     def _write_manifest(self) -> None:
         if self.cache_root is not None:
-            _write_json(self.cache_root / "manifest.json", self._manifest())
+            write_json_atomic(self.cache_root / "manifest.json", self._manifest())
 
     def _manifest(self) -> dict[str, Any]:
         return {
@@ -231,10 +232,3 @@ class GameBuildContext:
         }
 
 
-def _write_json(path: Path, value: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    temporary.replace(path)

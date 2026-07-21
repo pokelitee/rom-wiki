@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.gen4_dppt import parse_english_message_archive
-from romwiki.errors import DataSourceError, ProfileError
+from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 from romwiki.profiles.models import GameProfile
 

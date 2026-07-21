@@ -7,7 +7,7 @@ from romwiki.engines.gen4_dppt import (
     parse_npc_trade_commands,
     parse_npc_trade_record,
 )
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 def make_trade_record() -> bytes:

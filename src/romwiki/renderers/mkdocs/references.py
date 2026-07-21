@@ -52,7 +52,7 @@ class RouteResolver:
         return value
 
     def markdown_link(self, reference: EntityReference, source_file: str) -> str:
-        label = _escape_markdown(reference.label)
+        label = escape_markdown(reference.label)
         href = self.markdown_href(reference, source_file)
         return f"[{label}]({href})" if href is not None else label
 
@@ -135,6 +135,17 @@ def entity_reference(
     route_key: int | str | None,
 ) -> EntityReference:
     return EntityReference(kind, identifier, label, route_key)
+
+
+def pokemon_markdown_link(
+    identifier: int | str,
+    label: str,
+    route_key: int | str | None,
+    source_file: str,
+) -> str:
+    return ROUTES.markdown_link(
+        entity_reference("pokemon", identifier, label, route_key), source_file
+    )
 
 
 def resolved_reference(
@@ -237,5 +248,5 @@ def _record_reference(
     return EntityReference(kind, identity, label, route_key)
 
 
-def _escape_markdown(value: str) -> str:
+def escape_markdown(value: str) -> str:
     return value.replace("[", "\\[").replace("]", "\\]")

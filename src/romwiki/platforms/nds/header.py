@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 import struct
 from typing import Any
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 _MINIMUM_HEADER_SIZE = 0x200

@@ -14,6 +14,7 @@ from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     entity_reference,
+    escape_markdown,
     resolved_reference,
 )
 
@@ -78,7 +79,7 @@ def comparison_section(
         [
             f"Compared with **{escape(baseline)}**.",
             "",
-            '<div class="rw-table-scroll" markdown="1">',
+            '<div class="rw-catalog__table-wrap" markdown="1">',
             "",
             "| Field | Base game | This game |",
             "| ----- | --------- | --------- |",
@@ -161,7 +162,7 @@ def render_changes_pages(
         )
         for record in changed:
             href = _change_href(kind, record)
-            label = _markdown_escape(record["label"])
+            label = escape_markdown(record["label"])
             record_cell = f"[{label}]({href})" if href else label
             labels = ", ".join(change["label"] for change in record["changes"])
             lines.append(
@@ -620,5 +621,3 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _markdown_escape(value: str) -> str:
-    return value.replace("[", "\\[").replace("]", "\\]")

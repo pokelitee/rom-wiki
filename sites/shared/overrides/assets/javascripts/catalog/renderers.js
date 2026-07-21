@@ -14,12 +14,6 @@ export function recordLink(record) {
   return link;
 }
 
-export function changeStatus(record) {
-  const status = record.change_status;
-  if (!status) return text("—");
-  return text(title(status), `rw-change-status rw-change-status--${status}`);
-}
-
 export function referenceLink(reference) {
   if (!reference?.url) return text(reference?.label || "—");
   const link = document.createElement("a");

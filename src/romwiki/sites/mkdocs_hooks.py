@@ -7,7 +7,7 @@ from typing import Any
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure.pages import Page
 
-from romwiki.errors import SiteError
+from romwiki.util.errors import SiteError
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 
 

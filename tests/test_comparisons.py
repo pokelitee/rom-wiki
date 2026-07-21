@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.errors import DataSourceError
+from romwiki.util.errors import DataSourceError
 from romwiki.pipeline.comparisons import compare_datasets, comparison_by_key
 
 

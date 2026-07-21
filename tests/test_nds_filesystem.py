@@ -8,7 +8,7 @@ import unittest
 from romwiki.platforms.nds.filesystem import NintendoDSFileSystem
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
-from tests.test_nds_header import make_header
+from tests.conftest import make_header
 
 
 class NintendoDSFileSystemTests(unittest.TestCase):

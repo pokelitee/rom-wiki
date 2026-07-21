@@ -9,7 +9,7 @@ from romwiki.engines.gen4_dppt.tutors import (
     parse_tutor_compatibility_table,
     parse_tutor_move_table,
 )
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 class Gen4TutorTests(unittest.TestCase):

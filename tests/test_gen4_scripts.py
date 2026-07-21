@@ -4,12 +4,9 @@ import struct
 import unittest
 
 from romwiki.engines.gen4_dppt import parse_trainer_battle_commands
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
-
-def make_script(body: bytes) -> bytes:
-    table = struct.pack("<iH", 2, 0xFD13)
-    return table + body
+from tests.conftest import make_script
 
 
 class Gen4ScriptTests(unittest.TestCase):

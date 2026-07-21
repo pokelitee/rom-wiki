@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 import unittest
 
-from romwiki.errors import DataSourceError
+from romwiki.util.errors import DataSourceError
 from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.profiles.models import GameProfile
 

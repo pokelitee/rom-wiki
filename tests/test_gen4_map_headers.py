@@ -8,7 +8,7 @@ from romwiki.engines.gen4_dppt import (
     parse_english_message_archive,
     parse_platinum_map_headers,
 )
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 
 
 class Gen4MapHeaderTests(unittest.TestCase):

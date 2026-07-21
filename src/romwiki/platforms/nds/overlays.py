@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import struct
 
-from romwiki.errors import InvalidRomError
+from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.filesystem import NintendoDSFileSystem
 from romwiki.platforms.nds.reader import NintendoDSImage
 

@@ -7,14 +7,24 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
+    write_text as _write_text,
 )
-from romwiki.renderers.mkdocs.components import type_badges
+from romwiki.renderers.mkdocs.components import (
+    display_name,
+    tutor_requirement,
+    type_badges,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
     record_comparison,
 )
-from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    ReferenceIndex,
+    entity_reference,
+    pokemon_markdown_link,
+)
 
 
 def render_move_pages(
@@ -126,7 +136,7 @@ def _render_record(
         '<section class="rw-move-summary">',
         type_badges([record["type"]]),
         '<dl class="rw-summary__facts">',
-        f"<div><dt>Class</dt><dd>{_display_name(record['damage_class']['name'])}</dd></div>",
+        f"<div><dt>Class</dt><dd>{display_name(record['damage_class']['name'])}</dd></div>",
         f"<div><dt>Power</dt><dd>{_optional_value(record['power'])}</dd></div>",
         f"<div><dt>Accuracy</dt><dd>{_accuracy(record['accuracy'])}</dd></div>",
         f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
@@ -138,8 +148,8 @@ def _render_record(
         "",
         "| Property | Value |",
         "| -------- | ----- |",
-        f"| Type | {_display_name(record['type']['name'])} |",
-        f"| Damage class | {_display_name(record['damage_class']['name'])} |",
+        f"| Type | {display_name(record['type']['name'])} |",
+        f"| Damage class | {display_name(record['damage_class']['name'])} |",
         f"| Power | {_optional_value(record['power'])} |",
         f"| Accuracy | {_accuracy(record['accuracy'])} |",
         f"| PP | {record['pp']} |",
@@ -257,14 +267,7 @@ def _tutor_compatibility(
         return ["Not taught by a shard move tutor.", ""]
     lines = []
     for tutor in tutors:
-        if tutor.get("kind") == "special":
-            costs = f"Friendship {tutor['minimum_friendship']}"
-        else:
-            costs = ", ".join(
-                f"{amount} {color.title()}"
-                for color, amount in tutor["shard_costs"].items()
-                if amount
-            ) or "Free"
+        costs = tutor_requirement(tutor)
         pokemon = ", ".join(
             _pokemon_link(value, source_file)
             for value in tutor["compatible_pokemon"]
@@ -294,23 +297,12 @@ def _egg_move_learners(
     ]
 
 
-def _display_name(slug: str) -> str:
-    return " ".join(part.capitalize() for part in slug.split("-"))
-
-
 def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
-    return ROUTES.markdown_link(
-        entity_reference(
-            "pokemon",
-            value.get("id", value.get("slug", value["name"])),
-            value["name"],
-            value.get("slug"),
-        ),
+    return pokemon_markdown_link(
+        value.get("id", value.get("slug", value["name"])),
+        value["name"],
+        value.get("slug"),
         source_file,
     )
 
 
-def _write_text(path: Path, value: str) -> None:
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(value, encoding="utf-8")
-    temporary.replace(path)

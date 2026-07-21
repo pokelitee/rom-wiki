@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-import json
 from pathlib import Path
-import re
 from typing import Any
 
 from romwiki.engines.gen4_dppt import PERSONAL_FORM_MEMBERS, PERSONAL_INTERNAL_MEMBERS
-from romwiki.errors import DataSourceError
+from romwiki.util.errors import DataSourceError
+from romwiki.util.json_io import write_json_atomic
 from romwiki.sources import PokeDBGeneration
+from romwiki.util.text import name_slug, title_case_slug
 
 
 TYPE_NAMES = (
@@ -271,7 +271,7 @@ def enrich_move_dataset(
                 "name": (
                     rom_move_names[expected_id]
                     if public and rom_move_names is not None
-                    else _display_name(slug)
+                    else title_case_slug(slug)
                 ),
                 "replaces": (
                     _replaced_move(expected_id, slug, pokedb) if public else None
@@ -311,7 +311,7 @@ def enrich_move_dataset(
 
 
 def write_enriched_dataset(dataset: dict[str, Any], output_path: Path) -> None:
-    _write_json(output_path, dataset)
+    write_json_atomic(output_path, dataset)
 
 
 def _enrich_encounter_area(
@@ -428,7 +428,7 @@ def _enrich_trainer(
                 "pokemon": {
                     "id": species_id,
                     "slug": reference["name"],
-                    "name": _display_name(reference["name"])
+                    "name": title_case_slug(reference["name"])
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
                 },
                 "held_item": {
@@ -469,7 +469,7 @@ def _encounter_pokemon(
     return {
         "id": species_id,
         "slug": reference["name"],
-        "name": _display_name(reference["name"]),
+        "name": title_case_slug(reference["name"]),
     }
 
 
@@ -528,7 +528,7 @@ def _enrich_record(
     return {
         "member": member,
         "slug": slug,
-        "name": _display_name(slug),
+        "name": title_case_slug(slug),
         "public": public,
         **identity,
         "sprite": sprite,
@@ -763,7 +763,7 @@ def _enrich_compatible_tutors(
                 "move": {
                     "id": tutor["move_id"],
                     "slug": slug,
-                    "name": _display_name(slug),
+                    "name": title_case_slug(slug),
                 },
                 "location": _tutor_location(tutor, location_names),
             }
@@ -797,7 +797,7 @@ def _personal_member_reference(
         "member": member,
         "national_dex_id": national_dex_id,
         "slug": slug,
-        "name": _display_name(slug),
+        "name": title_case_slug(slug),
     }
 
 
@@ -829,7 +829,7 @@ def _enrich_compatible_machines(
                 "move": {
                     "id": machine["move_id"],
                     "slug": slug,
-                    "name": _display_name(slug),
+                    "name": title_case_slug(slug),
                 },
             }
         )
@@ -860,7 +860,7 @@ def _enrich_evolutions(
                 "target": {
                     "id": entry["target_species_id"],
                     "slug": target["name"],
-                    "name": _display_name(target["name"]),
+                    "name": title_case_slug(target["name"]),
                 },
             }
         )
@@ -903,7 +903,7 @@ def _evolution_parameter(
             "kind": "species",
             "id": parameter,
             "slug": species["name"],
-            "name": _display_name(species["name"]),
+            "name": title_case_slug(species["name"]),
         }
     if parameter:
         return {"kind": "raw", "value": parameter}
@@ -926,7 +926,7 @@ def _enrich_level_up_moves(
                 "move": {
                     "id": entry["move_id"],
                     "slug": slug,
-                    "name": _display_name(slug),
+                    "name": title_case_slug(slug),
                 },
             }
         )
@@ -943,7 +943,7 @@ def _enrich_egg_moves(
         slug = _move_name(move_id, pokedb, move_names)
         if slug is None:
             raise DataSourceError("Egg moves cannot reference move ID 0")
-        moves.append({"id": move_id, "slug": slug, "name": _display_name(slug)})
+        moves.append({"id": move_id, "slug": slug, "name": title_case_slug(slug)})
     return moves
 
 
@@ -977,7 +977,7 @@ def _resolve_type_names(
     names = _reference_name_table(dataset, "type_names", len(TYPE_NAMES))
     if names is not None:
         result.update(
-            (type_id, _name_slug(name)) for type_id, name in enumerate(names)
+            (type_id, name_slug(name)) for type_id, name in enumerate(names)
         )
     return result
 
@@ -988,7 +988,7 @@ def _resolve_move_names(
     result = dict(fallback or {})
     names = _reference_name_table(dataset, "move_names", 468)
     if names is not None:
-        result.update((move_id, _name_slug(name)) for move_id, name in enumerate(names))
+        result.update((move_id, name_slug(name)) for move_id, name in enumerate(names))
     return result
 
 
@@ -1009,7 +1009,7 @@ def _item_reference(
         return {"id": 0, "slug": None, "name": None}
     if item_names is None:
         slug = pokedb.item_name(item_id)
-        return {"id": item_id, "slug": slug, "name": _display_name(slug)}
+        return {"id": item_id, "slug": slug, "name": title_case_slug(slug)}
     if item_id >= len(item_names):
         raise DataSourceError(f"Unknown Gen IV item ID: {item_id}")
     name = item_names[item_id]
@@ -1029,7 +1029,7 @@ def _ability_id(
             raise DataSourceError(f"Unknown Gen IV ability ID: {ability_id}")
         name = ability_names[ability_id]
     else:
-        name = _display_name(slug)
+        name = title_case_slug(slug)
     return {"id": ability_id, "slug": slug, "name": name}
 
 
@@ -1039,7 +1039,7 @@ def _replaced_move(
     canonical_slug = pokedb.move_name(move_id)
     if canonical_slug is None or canonical_slug == slug:
         return None
-    return {"slug": canonical_slug, "name": _display_name(canonical_slug)}
+    return {"slug": canonical_slug, "name": title_case_slug(canonical_slug)}
 
 
 def _type_id(
@@ -1060,8 +1060,6 @@ def _move_name(
     return pokedb.move_name(move_id)
 
 
-def _name_slug(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
 
 
 def _machine_name(machine_id: int) -> str:
@@ -1072,12 +1070,3 @@ def _machine_name(machine_id: int) -> str:
     return f"MACHINE{machine_id:03}"
 
 
-def _display_name(slug: str) -> str:
-    return " ".join(part.capitalize() for part in slug.split("-"))
-
-
-def _write_json(path: Path, value: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    temporary.replace(path)

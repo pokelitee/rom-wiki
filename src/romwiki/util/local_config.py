@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import tomllib
 
-from romwiki.errors import LocalConfigError
+from romwiki.util.errors import LocalConfigError
 
 
 @dataclass(frozen=True, slots=True)

@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import tomllib
 
-from romwiki.errors import ProfileError
+from romwiki.util.errors import ProfileError
 from romwiki.platforms.nds.reader import NintendoDSImage
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
 

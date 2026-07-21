@@ -4,7 +4,11 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from romwiki.renderers.mkdocs.catalog import catalog_index, write_catalog
+from romwiki.renderers.mkdocs.catalog import (
+    catalog_index,
+    write_catalog,
+    write_text as _write_text,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -523,7 +527,3 @@ def _filename(header_id: int) -> str:
     return f"header-{header_id:03}.md"
 
 
-def _write_text(path: Path, value: str) -> None:
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(value, encoding="utf-8")
-    temporary.replace(path)

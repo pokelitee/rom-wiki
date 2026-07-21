@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -36,7 +35,8 @@ from romwiki.engines.gen4_dppt import (
     parse_platinum_map_headers,
     parse_specialty_mart_inventories,
 )
-from romwiki.errors import InvalidRomError, ProfileError
+from romwiki.util.errors import InvalidRomError, ProfileError
+from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.nds import (
@@ -923,9 +923,4 @@ def _extract_trainer_references(
 
 
 def write_location_dataset(dataset: dict[str, Any], output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output_path.with_suffix(f"{output_path.suffix}.tmp")
-    temporary.write_text(
-        json.dumps(dataset, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    temporary.replace(output_path)
+    write_json_atomic(output_path, dataset)

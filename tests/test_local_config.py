@@ -5,8 +5,8 @@ import tempfile
 import unittest
 
 from romwiki.cli import _resolve_build_baseline, _resolve_input_rom, build_parser
-from romwiki.errors import LocalConfigError
-from romwiki.local_config import LocalGameRegistry
+from romwiki.util.errors import LocalConfigError
+from romwiki.util.local_config import LocalGameRegistry
 
 
 class LocalGameRegistryTests(unittest.TestCase):

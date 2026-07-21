@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from romwiki.errors import SiteError
+from romwiki.util.errors import SiteError
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
 

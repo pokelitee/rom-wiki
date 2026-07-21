@@ -14,7 +14,12 @@ from romwiki.renderers.mkdocs.comparisons import (
     comparison_section,
     record_comparison,
 )
-from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    ReferenceIndex,
+    entity_reference,
+    pokemon_markdown_link,
+)
 
 
 def render_ability_pages(
@@ -144,48 +149,51 @@ def _render_record(
             "Ability behavior is not inferred from the name or from external "
             "reference data.",
             "",
-            _page_navigation(previous, following, source_file),
-            "",
         ]
     )
+    _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
 
 
 def _pokemon_link(pokemon: dict[str, Any], source_file: str) -> str:
-    reference = entity_reference(
-        "pokemon",
+    return pokemon_markdown_link(
         pokemon.get("member", pokemon["national_dex_id"]),
         pokemon["name"],
         pokemon.get("slug"),
+        source_file,
     )
-    return ROUTES.markdown_link(reference, source_file)
 
 
-def _page_navigation(
+def _append_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
-    source_file: str,
-) -> str:
-    links = []
+) -> None:
+    if previous is None and following is None:
+        return
+    source_url = f"abilities/{record['slug']}/"
+    lines.extend(['<nav class="rw-record-nav" aria-label="Ability navigation">'])
     if previous is not None:
-        links.append(ROUTES.markdown_link(
+        lines.append(ROUTES.html_link(
             entity_reference(
                 "ability",
                 previous["ability_id"],
                 f"← {previous['name']}",
                 previous["slug"],
             ),
-            source_file,
+            source_url,
         ))
-    links.append("[All abilities](index.md)")
+    else:
+        lines.append("<span></span>")
     if following is not None:
-        links.append(ROUTES.markdown_link(
+        lines.append(ROUTES.html_link(
             entity_reference(
                 "ability",
                 following["ability_id"],
                 f"{following['name']} →",
                 following["slug"],
             ),
-            source_file,
+            source_url,
         ))
-    return " · ".join(links)
+    lines.extend(["</nav>", ""])
