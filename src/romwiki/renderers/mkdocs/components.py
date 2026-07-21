@@ -89,17 +89,17 @@ def stat_list(
 
 
 def pokemon_summary(record: dict[str, Any]) -> list[str]:
-    sprite = record.get("sprite")
-    if sprite:
+    portrait = record.get("portrait") or record.get("sprite")
+    if portrait:
         media = (
-            f'<img data-rw-sprite src="{escape(sprite["url"], quote=True)}" '
+            f'<img data-rw-sprite src="{escape(portrait["url"], quote=True)}" '
             f'alt="{escape(record["name"], quote=True)} sprite" loading="lazy" '
             'referrerpolicy="no-referrer">'
             '<span class="rw-summary__placeholder" hidden>Sprite unavailable</span>'
         )
         attribution = (
-            f'<a href="{escape(sprite["source_url"], quote=True)}">'
-            f'{escape(sprite["source"])}</a>'
+            f'<a href="{escape(portrait["source_url"], quote=True)}">'
+            f'{escape(portrait["source"])}</a>'
         )
     else:
         media = '<span class="rw-summary__placeholder">Sprite unavailable</span>'

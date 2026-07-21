@@ -41,7 +41,7 @@ class ComparisonRenderingTests(unittest.TestCase):
         )
 
         self.assertIn("Verified unchanged", "\n".join(unchanged))
-        self.assertIn("| Power | 40 | 60 |", "\n".join(changed))
+        self.assertIn("| Power | 40 → 60 |", "\n".join(changed))
 
     def test_complex_changes_render_only_exact_list_deltas(self) -> None:
         section = comparison_section(
@@ -118,8 +118,7 @@ class ComparisonRenderingTests(unittest.TestCase):
 
         self.assertIn(">Overgrow</a>", value)
         self.assertIn(">Chlorophyll</a>", value)
-        self.assertIn(">Natural Gift</a>: Compatible", value)
-        self.assertIn("TM83: Not compatible", value)
+        self.assertIn(">Natural Gift</a>: Compatible → Not compatible", value)
         self.assertIn('href="../../abilities/overgrow/"', value)
         self.assertIn('href="../../moves/natural-gift/"', value)
         self.assertNotIn("{&quot;id&quot;", value)

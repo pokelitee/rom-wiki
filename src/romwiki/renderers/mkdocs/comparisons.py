@@ -79,24 +79,19 @@ def comparison_section(
         [
             f"Compared with **{escape(baseline)}**.",
             "",
-            '<div class="rw-catalog__table-wrap" markdown="1">',
-            "",
-            "| Field | Base game | This game |",
-            "| ----- | --------- | --------- |",
+            "| Field | Change |",
+            "| ----- | ------ |",
         ]
     )
     for change in entry["changes"]:
-        before, after = _format_change(
+        value = _format_change(
             change,
             entry.get("kind"),
             source_file.removesuffix(".md") + ("/" if source_file else ""),
             references,
         )
-        lines.append(
-            f"| {escape(str(change['label']))} | "
-            f"{before} | {after} |"
-        )
-    lines.extend(["", "</div>", ""])
+        lines.append(f"| {escape(str(change['label']))} | {value} |")
+    lines.append("")
     return lines
 
 
@@ -254,7 +249,7 @@ def _format_change(
     kind: str | None = None,
     source_url: str = "",
     references: ReferenceIndex | None = None,
-) -> tuple[str, str]:
+) -> str:
     before = change["before"]
     after = change["after"]
     if kind == "pokemon":
@@ -264,7 +259,7 @@ def _format_change(
     if isinstance(before, dict) and isinstance(after, dict):
         return _format_mapping_change(before, after)
     if not isinstance(before, list) or not isinstance(after, list):
-        return _format_value(before), _format_value(after)
+        return f"{_format_value(before)} → {_format_value(after)}"
     field = change.get("field")
     before_values = {
         _canonical(normalize_comparison_value(item, kind=kind, field=field)): item
@@ -277,18 +272,32 @@ def _format_change(
     removed = [before_values[key] for key in before_values.keys() - after_values.keys()]
     added = [after_values[key] for key in after_values.keys() - before_values.keys()]
     if not removed and not added:
-        return (
-            f"Order changed ({len(before)} entries)",
-            f"Order changed ({len(after)} entries)",
-        )
-    return _format_delta("removed", removed), _format_delta("added", added)
+        return f"Order changed ({len(before)} entries)"
+    return _format_set_delta(removed, added)
+
+
+def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
+    parts = []
+    for label, values in (("removed", removed), ("added", added)):
+        if not values:
+            continue
+        ordered = sorted(values, key=_canonical)
+        if len(ordered) == 1:
+            parts.append(f"{label.title()}: {_format_value(ordered[0])}")
+        else:
+            entries = "".join(f"<li>{_format_value(value)}</li>" for value in ordered)
+            parts.append(
+                f"<details><summary>{len(ordered)} {label}</summary>"
+                f"<ul>{entries}</ul></details>"
+            )
+    return "<br>".join(parts) if parts else "No changes"
 
 
 def _format_pokemon_change(
     change: dict[str, Any],
     source_url: str,
     references: ReferenceIndex | None,
-) -> tuple[str, str] | None:
+) -> str | None:
     field = change["field"]
     before = change["before"]
     after = change["after"]
@@ -324,9 +333,8 @@ def _format_slots(
     reference_kind: str | None = None,
     source_url: str = "",
     references: ReferenceIndex | None = None,
-) -> tuple[str, str]:
-    previous = []
-    current = []
+) -> str:
+    lines = []
     for index in range(max(len(before), len(after))):
         old = before[index] if index < len(before) else None
         new = after[index] if index < len(after) else None
@@ -334,10 +342,8 @@ def _format_slots(
             continue
         old_label = _reference_html(old, reference_kind, source_url, references)
         new_label = _reference_html(new, reference_kind, source_url, references)
-        previous.append(f"{label} {index + 1}: {old_label}")
-        current.append(f"{label} {index + 1}: {new_label}")
-    trusted = reference_kind is not None
-    return _format_lines(previous, trusted), _format_lines(current, trusted)
+        lines.append(f"{label} {index + 1}: {old_label} → {new_label}")
+    return _format_lines(lines, reference_kind is not None)
 
 
 def _format_compatibility(
@@ -346,11 +352,10 @@ def _format_compatibility(
     identity: Any,
     source_url: str,
     references: ReferenceIndex | None,
-) -> tuple[str, str]:
+) -> str:
     previous = {identity(item): item for item in before}
     current = {identity(item): item for item in after}
-    old_lines = []
-    new_lines = []
+    lines = []
     for key in sorted(set(previous) | set(current), key=str):
         old = previous.get(key)
         new = current.get(key)
@@ -361,9 +366,10 @@ def _format_compatibility(
         display = _reference_html(
             move or value, "move", source_url, references
         )
-        old_lines.append(f"{display}: {'Compatible' if old else 'Not compatible'}")
-        new_lines.append(f"{display}: {'Compatible' if new else 'Not compatible'}")
-    return _format_lines(old_lines, True), _format_lines(new_lines, True)
+        old_state = "Compatible" if old else "Not compatible"
+        new_state = "Compatible" if new else "Not compatible"
+        lines.append(f"{display}: {old_state} → {new_state}")
+    return _format_lines(lines, True)
 
 
 def _format_level_up_moves(
@@ -371,15 +377,12 @@ def _format_level_up_moves(
     after: list[dict[str, Any]],
     source_url: str,
     references: ReferenceIndex | None,
-) -> tuple[str, str]:
+) -> str:
     previous = _level_moves_by_id(before)
     current = _level_moves_by_id(after)
-    changed_old = []
-    changed_new = []
-    removed_old = []
-    removed_new = []
-    added_old = []
-    added_new = []
+    changed = []
+    removed = []
+    added = []
     move_ids = list(
         dict.fromkeys(
             [entry["move"]["id"] for entry in before]
@@ -393,30 +396,23 @@ def _format_level_up_moves(
         new_levels = tuple(new["levels"]) if new else ()
         if old_levels == new_levels:
             continue
-        old_name = _reference_html(old or new, "move", source_url, references)
-        new_name = _reference_html(new or old, "move", source_url, references)
-        old_line = f"{old_name}: {_level_label(old_levels)}"
-        new_line = f"{new_name}: {_level_label(new_levels)}"
+        display = _reference_html(old or new, "move", source_url, references)
+        line = f"{display}: {_level_label(old_levels)} → {_level_label(new_levels)}"
         if old and new:
-            changed_old.append(old_line)
-            changed_new.append(new_line)
+            changed.append(line)
         elif old:
-            removed_old.append(old_line)
-            removed_new.append(new_line)
+            removed.append(line)
         else:
-            added_old.append(old_line)
-            added_new.append(new_line)
+            added.append(line)
     groups = [
-        ("level changes", changed_old, changed_new),
-        ("moves removed", removed_old, removed_new),
-        ("moves added", added_old, added_new),
+        ("level changes", changed),
+        ("moves removed", removed),
+        ("moves added", added),
     ]
     groups = [group for group in groups if group[1]]
     if not groups:
-        return "Order changed", "Order changed"
-    return _format_change_groups(
-        groups, side=1, trusted=True
-    ), _format_change_groups(groups, side=2, trusted=True)
+        return "Order changed"
+    return _format_change_groups(groups)
 
 
 def _level_moves_by_id(moves: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -444,16 +440,16 @@ def _level_label(levels: tuple[int, ...]) -> str:
 
 def _format_mapping_change(
     before: dict[str, Any], after: dict[str, Any]
-) -> tuple[str, str]:
-    old_lines = []
-    new_lines = []
+) -> str:
+    lines = []
     for key in sorted(before.keys() | after.keys()):
         if before.get(key) == after.get(key):
             continue
         label = key.replace("_", " ").title()
-        old_lines.append(f"{label}: {_plain_value(before.get(key))}")
-        new_lines.append(f"{label}: {_plain_value(after.get(key))}")
-    return _format_lines(old_lines), _format_lines(new_lines)
+        lines.append(
+            f"{label}: {_plain_value(before.get(key))} → {_plain_value(after.get(key))}"
+        )
+    return _format_lines(lines)
 
 
 def _format_lines(values: list[str], trusted: bool = False) -> str:
@@ -467,24 +463,15 @@ def _format_lines(values: list[str], trusted: bool = False) -> str:
     ) + "</ul>"
 
 
-def _format_change_groups(
-    groups: list[tuple[str, list[str], list[str]]],
-    *,
-    side: int,
-    trusted: bool = False,
-) -> str:
-    values = []
-    for label, previous, current in groups:
-        lines = previous if side == 1 else current
-        count = len(lines)
-        entries = "".join(
-            f"<li>{line if trusted else escape(line)}</li>" for line in lines
-        )
-        values.append(
-            f"<details><summary>{count} {label}</summary>"
+def _format_change_groups(groups: list[tuple[str, list[str]]]) -> str:
+    parts = []
+    for label, lines in groups:
+        entries = "".join(f"<li>{line}</li>" for line in lines)
+        parts.append(
+            f"<details><summary>{len(lines)} {label}</summary>"
             f'<ul class="rw-comparison-list">{entries}</ul></details>'
         )
-    return "".join(values)
+    return "".join(parts)
 
 
 def _mapping_summary(value: dict[str, Any]) -> str:
@@ -545,31 +532,21 @@ def _format_machine_compatibility(
     after: list[dict[str, Any]],
     source_url: str,
     references: ReferenceIndex | None,
-) -> tuple[str, str]:
+) -> str:
     previous = {_machine_identity(item): item for item in before}
     current = {_machine_identity(item): item for item in after}
-    old_lines = []
-    new_lines = []
+    lines = []
     for key in sorted(set(previous) | set(current)):
         old = previous.get(key)
         new = current.get(key)
         if old is not None and new is not None:
             continue
+        label = _machine_label(old or new, source_url, references)
         if old is not None:
-            old_lines.append(
-                f"{_machine_label(old, source_url, references)}: Compatible"
-            )
-            new_lines.append(
-                f"{escape(str(old.get('name', 'Machine')))}: Not compatible"
-            )
+            lines.append(f"{label}: Compatible → Not compatible")
         else:
-            old_lines.append(
-                f"{escape(str(new.get('name', 'Machine')))}: Not compatible"
-            )
-            new_lines.append(
-                f"{_machine_label(new, source_url, references)}: Compatible"
-            )
-    return _format_lines(old_lines, True), _format_lines(new_lines, True)
+            lines.append(f"{label}: Not compatible → Compatible")
+    return _format_lines(lines, True)
 
 
 def _move_identity(value: dict[str, Any]) -> Any:
@@ -601,19 +578,6 @@ def _reference_html(
             index=references,
         ),
         source_url,
-    )
-
-
-def _format_delta(label: str, values: list[Any]) -> str:
-    if not values:
-        return "No entries"
-    ordered = sorted(values, key=_canonical)
-    if len(ordered) == 1:
-        return _format_value(ordered[0])
-    entries = "".join(f"<li>{_format_value(value)}</li>" for value in ordered)
-    return (
-        f"<details><summary>{len(ordered)} {label}</summary>"
-        f"<ul>{entries}</ul></details>"
     )
 
 

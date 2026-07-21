@@ -7,7 +7,11 @@ import unittest
 
 from romwiki.pipeline.enrich import enrich_personal_dataset
 from romwiki.renderers.mkdocs import render_pokemon_pages
-from romwiki.renderers.mkdocs.pokemon import _evolution_chain, _index_preevolutions
+from romwiki.renderers.mkdocs.pokemon import (
+    _evolution_chain,
+    _index_preevolutions,
+    _sprite_gallery,
+)
 from romwiki.sources import PokeDBGeneration
 
 
@@ -291,6 +295,52 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn('class="rw-evolution-step"', chain)
         self.assertIn('class="rw-evolution-branches"', chain)
         self.assertIn('href="../vaporeon/"', chain)
+
+
+class SpriteGalleryTests(unittest.TestCase):
+    def test_omits_the_section_when_no_sprites_are_available(self) -> None:
+        self.assertEqual(_sprite_gallery({"name": "Missingno", "sprites": []}), [])
+        self.assertEqual(_sprite_gallery({"name": "Missingno"}), [])
+
+    def test_still_renders_a_single_known_sprite(self) -> None:
+        lines = _sprite_gallery(
+            {
+                "name": "Bulbasaur",
+                "sprites": [
+                    {
+                        "key": "front_default",
+                        "label": "Front",
+                        "url": "https://example.test/front.png",
+                    }
+                ],
+            }
+        )
+
+        page = "\n".join(lines)
+        self.assertIn("## Sprites", page)
+        self.assertIn('src="https://example.test/front.png"', page)
+        self.assertIn('<span class="rw-sprite-matrix__label">Front</span>', page)
+
+    def test_groups_variants_into_a_normal_and_shiny_matrix(self) -> None:
+        lines = _sprite_gallery(
+            {
+                "name": "Bulbasaur",
+                "sprites": [
+                    {"key": "front_default", "label": "Front", "url": "https://example.test/front.png"},
+                    {"key": "front_shiny", "label": "Front, shiny", "url": "https://example.test/front-shiny.png"},
+                    {"key": "back_default", "label": "Back", "url": "https://example.test/back.png"},
+                ],
+            }
+        )
+
+        page = "\n".join(lines)
+        self.assertIn('<span class="rw-sprite-matrix__label">Front</span>', page)
+        self.assertIn('<span class="rw-sprite-matrix__label">Back</span>', page)
+        self.assertNotIn("Front, female", page)
+        self.assertIn('src="https://example.test/front.png"', page)
+        self.assertIn('src="https://example.test/front-shiny.png"', page)
+        self.assertIn('src="https://example.test/back.png"', page)
+        self.assertIn('rw-sprite-matrix__cell--empty">—<', page)
 
 
 def _source_record(member: int) -> dict:

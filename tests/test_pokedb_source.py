@@ -68,6 +68,41 @@ class PokeDBSpriteTests(unittest.TestCase):
         self.assertEqual(fallback["url"], "https://example.test/default.png")
         self.assertIsNone(rejected)
 
+    def test_portrait_prefers_official_artwork_over_home(self) -> None:
+        reference = {
+            "sprites": {
+                "front_default": "https://example.test/default.png",
+                "other": {
+                    "official-artwork": {
+                        "front_default": "https://example.test/artwork.png"
+                    },
+                    "home": {"front_default": "https://example.test/home.png"},
+                },
+            }
+        }
+
+        portrait = self.pokedb.pokemon_portrait(reference)
+
+        assert portrait is not None
+        self.assertEqual(portrait["url"], "https://example.test/artwork.png")
+        self.assertEqual(portrait["key"], "official-artwork")
+
+    def test_portrait_falls_back_to_home_then_none(self) -> None:
+        with_home = self.pokedb.pokemon_portrait(
+            {"sprites": {"other": {"home": {"front_default": "https://example.test/home.png"}}}}
+        )
+        without_artwork = self.pokedb.pokemon_portrait(
+            {"sprites": {"front_default": "https://example.test/default.png"}}
+        )
+        rejects_non_https = self.pokedb.pokemon_portrait(
+            {"sprites": {"other": {"home": {"front_default": "http://example.test/home.png"}}}}
+        )
+
+        assert with_home is not None
+        self.assertEqual(with_home["url"], "https://example.test/home.png")
+        self.assertIsNone(without_artwork)
+        self.assertIsNone(rejects_non_https)
+
     def test_matches_rom_item_names_without_using_rom_item_ids(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={},

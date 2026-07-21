@@ -293,26 +293,57 @@ def _render_record(
     return "\n".join(lines)
 
 
+_SPRITE_MATRIX_ROWS = (
+    ("Front", "front_default", "front_shiny"),
+    ("Front, female", "front_female", "front_shiny_female"),
+    ("Back", "back_default", "back_shiny"),
+    ("Back, female", "back_female", "back_shiny_female"),
+)
+
+
 def _sprite_gallery(record: dict[str, Any]) -> list[str]:
     sprites = record.get("sprites", [])
-    if len(sprites) <= 1:
+    if not sprites:
         return []
-    lines = ["## Sprites", "", '<div class="rw-sprite-gallery">']
-    for sprite in sprites:
+    by_key = {sprite["key"]: sprite for sprite in sprites}
+    rows = [
+        (label, by_key.get(default_key), by_key.get(shiny_key))
+        for label, default_key, shiny_key in _SPRITE_MATRIX_ROWS
+        if by_key.get(default_key) or by_key.get(shiny_key)
+    ]
+    if not rows:
+        return []
+    lines = [
+        "## Sprites",
+        "",
+        '<div class="rw-sprite-matrix">',
+        '<div class="rw-sprite-matrix__row rw-sprite-matrix__row--header">',
+        "<span></span><span>Normal</span><span>Shiny</span>",
+        "</div>",
+    ]
+    for label, default_sprite, shiny_sprite in rows:
         lines.extend(
             [
-                '<figure class="rw-sprite-gallery__item">',
-                (
-                    f'<img src="{escape(sprite["url"], quote=True)}" '
-                    f'alt="{escape(record["name"])} — {escape(sprite["label"])}" '
-                    'loading="lazy">'
-                ),
-                f"<figcaption>{escape(sprite['label'])}</figcaption>",
-                "</figure>",
+                '<div class="rw-sprite-matrix__row">',
+                f'<span class="rw-sprite-matrix__label">{escape(label)}</span>',
+                _sprite_cell(default_sprite, record["name"]),
+                _sprite_cell(shiny_sprite, record["name"]),
+                "</div>",
             ]
         )
     lines.extend(["</div>", ""])
     return lines
+
+
+def _sprite_cell(sprite: dict[str, str] | None, name: str) -> str:
+    if sprite is None:
+        return '<span class="rw-sprite-matrix__cell rw-sprite-matrix__cell--empty">—</span>'
+    return (
+        '<span class="rw-sprite-matrix__cell">'
+        f'<img src="{escape(sprite["url"], quote=True)}" '
+        f'alt="{escape(name)} — {escape(sprite["label"])}" loading="lazy">'
+        "</span>"
+    )
 
 
 def _comparison_base_stats(

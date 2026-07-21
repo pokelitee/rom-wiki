@@ -106,6 +106,36 @@ class PokeDBGeneration:
         sprites = self.pokemon_sprites(reference, version)
         return sprites[0] if sprites else None
 
+    def pokemon_portrait(self, reference: dict[str, Any]) -> dict[str, str] | None:
+        """Return a generation-agnostic artwork for use as a summary portrait.
+
+        Unlike in-game sprites, this artwork is keyed by species rather than by
+        game version, so it stays available for any past or future game profile.
+        """
+        sprites = reference.get("sprites")
+        if not isinstance(sprites, dict):
+            return None
+        other = sprites.get("other")
+        if not isinstance(other, dict):
+            return None
+        for key, label in (
+            ("official-artwork", "Official artwork"),
+            ("home", "Home render"),
+        ):
+            variant = other.get(key)
+            if not isinstance(variant, dict):
+                continue
+            url = variant.get("front_default")
+            if isinstance(url, str) and url.startswith("https://"):
+                return {
+                    "key": key,
+                    "label": label,
+                    "url": url,
+                    "source": "PokéAPI sprites",
+                    "source_url": "https://github.com/PokeAPI/sprites",
+                }
+        return None
+
     def pokemon_sprites(
         self, reference: dict[str, Any], version: str | None
     ) -> list[dict[str, str]]:
