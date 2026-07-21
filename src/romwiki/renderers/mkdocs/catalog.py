@@ -17,6 +17,31 @@ def prune_catalog_pages(output_root: Path, filenames: set[str]) -> None:
             path.unlink()
 
 
+_SKELETON_FIELDS = 5
+_SKELETON_ROWS = 6
+
+
+def _catalog_skeleton() -> list[str]:
+    return [
+        '<div class="rw-catalog__skeleton" data-rw-catalog-skeleton aria-hidden="true">',
+        '<div class="rw-skeleton__controls">',
+        *(
+            '<span class="rw-skeleton__field"></span>'
+            for _ in range(_SKELETON_FIELDS)
+        ),
+        "</div>",
+        '<span class="rw-skeleton__bar"></span>',
+        '<div class="rw-skeleton__table">',
+        '<span class="rw-skeleton__row rw-skeleton__row--head"></span>',
+        *(
+            '<span class="rw-skeleton__row"></span>'
+            for _ in range(_SKELETON_ROWS)
+        ),
+        "</div>",
+        "</div>",
+    ]
+
+
 def catalog_index(
     title: str,
     description: str,
@@ -28,8 +53,10 @@ def catalog_index(
         "",
         description,
         "",
-        f'<div class="rw-catalog" data-rw-catalog="catalog.json" data-rw-kind="{kind}">',
-        '<p class="rw-catalog__status" data-rw-catalog-status>Loading catalog&hellip;</p>',
+        f'<div class="rw-catalog" data-rw-catalog="catalog.json" data-rw-kind="{kind}" aria-busy="true">',
+        '<p class="rw-catalog__status" data-rw-catalog-status role="status" aria-live="polite">'
+        '<span class="rw-visually-hidden">Loading catalog&hellip;</span></p>',
+        *_catalog_skeleton(),
         "</div>",
         "",
         '<div class="rw-catalog-fallback" data-rw-catalog-fallback>',

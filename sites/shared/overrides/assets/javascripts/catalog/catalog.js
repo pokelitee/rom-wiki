@@ -19,6 +19,7 @@ async function loadCatalog(root) {
       throw new Error("Unsupported catalog format");
     }
     enhanceCatalog(root, data.records, config);
+    root.removeAttribute("aria-busy");
     const fallback = document.querySelector("[data-rw-catalog-fallback]");
     if (fallback) fallback.hidden = true;
   } catch (error) {
@@ -26,6 +27,7 @@ async function loadCatalog(root) {
       status.textContent = "Interactive catalog unavailable. The complete static list is shown below.";
     }
     root.classList.add("rw-catalog--failed");
+    root.removeAttribute("aria-busy");
     const fallback = document.querySelector("[data-rw-catalog-fallback]");
     if (fallback) {
       fallback.hidden = false;
