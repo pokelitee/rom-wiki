@@ -2,7 +2,8 @@ import { control, enhanceCombobox, enhanceSelect, syncSelect } from "../controls
 import { displayFilter } from "../formatting.js";
 import { CATALOGS } from "./config.js";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZES = [25, 50, 100, 200];
+const DEFAULT_PAGE_SIZE = 50;
 
 export function initializeCatalogs() {
   document.querySelectorAll("[data-rw-catalog]").forEach(loadCatalog);
@@ -38,7 +39,11 @@ async function loadCatalog(root) {
 
 function enhanceCatalog(root, records, config) {
   const params = new URLSearchParams(window.location.search);
-  const state = { visible: Math.max(1, Number(params.get("page")) || 1) * PAGE_SIZE };
+  const requestedSize = Number(params.get("size"));
+  const state = {
+    pageSize: PAGE_SIZES.includes(requestedSize) ? requestedSize : DEFAULT_PAGE_SIZE,
+    page: Math.max(1, Number(params.get("page")) || 1),
+  };
   root.replaceChildren();
   const form = document.createElement("form");
   form.className = "rw-catalog__controls";
@@ -143,15 +148,31 @@ function enhanceCatalog(root, records, config) {
   const body = document.createElement("tbody");
   table.append(head, body);
   tableWrap.append(table);
-  const more = document.createElement("button");
-  more.type = "button";
-  more.className = "rw-catalog__more";
-  more.textContent = `Show ${PAGE_SIZE} more`;
+
+  const pagination = document.createElement("div");
+  pagination.className = "rw-catalog__pagination";
+
+  const pageSizeField = document.createElement("label");
+  pageSizeField.className = "rw-catalog__page-size";
+  const pageSizeLabel = document.createElement("span");
+  pageSizeLabel.textContent = "Rows per page";
+  const pageSizeSelect = document.createElement("select");
+  for (const size of PAGE_SIZES) pageSizeSelect.append(new Option(String(size), String(size)));
+  pageSizeSelect.value = String(state.pageSize);
+  pageSizeField.append(pageSizeLabel, pageSizeSelect);
+
+  const pageNav = document.createElement("nav");
+  pageNav.className = "rw-catalog__page-nav-group";
+  pageNav.setAttribute("aria-label", "Catalog pages");
+
+  pagination.append(pageSizeField, pageNav);
+
   form.querySelectorAll("select").forEach((select) => {
     const label = select.closest(".rw-control")?.querySelector(".rw-control__label");
     enhanceSelect(select, label?.textContent || select.name);
   });
-  root.append(form, summary, tableWrap, more);
+  enhanceSelect(pageSizeSelect, "Rows per page");
+  root.append(form, summary, tableWrap, pagination);
 
   const render = () => {
     const values = formValues(form);
@@ -189,8 +210,11 @@ function enhanceCatalog(root, records, config) {
       values.sort || config.sorts[0][0],
       values.direction || "asc",
     ));
+    const totalPages = Math.max(1, Math.ceil(filtered.length / state.pageSize));
+    state.page = Math.min(Math.max(1, state.page), totalPages);
+    const start = (state.page - 1) * state.pageSize;
     body.replaceChildren();
-    filtered.slice(0, state.visible).forEach((record) => {
+    filtered.slice(start, start + state.pageSize).forEach((record) => {
       const row = document.createElement("tr");
       config.columns.forEach(([, renderer]) => {
         const cell = document.createElement("td");
@@ -199,26 +223,82 @@ function enhanceCatalog(root, records, config) {
       });
       body.append(row);
     });
-    summary.textContent = `${filtered.length.toLocaleString()} record${filtered.length === 1 ? "" : "s"}`;
-    more.hidden = filtered.length <= state.visible;
+    summary.textContent = filtered.length === 0
+      ? "0 records"
+      : `${(start + 1).toLocaleString()}–${Math.min(start + state.pageSize, filtered.length).toLocaleString()} of ${filtered.length.toLocaleString()} record${filtered.length === 1 ? "" : "s"}`;
     tableWrap.hidden = filtered.length === 0;
-    updateUrl(form, state.visible);
+    renderPagination(pageNav, state.page, totalPages, (page) => {
+      state.page = page;
+      render();
+      tableWrap.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    updateUrl(form, state.page, state.pageSize);
   };
 
-  form.addEventListener("input", () => { state.visible = PAGE_SIZE; render(); });
-  form.addEventListener("change", () => { state.visible = PAGE_SIZE; render(); });
+  form.addEventListener("input", () => { state.page = 1; render(); });
+  form.addEventListener("change", () => { state.page = 1; render(); });
   reset.addEventListener("click", () => {
     form.reset();
     form.querySelectorAll("[data-rw-match-mode]").forEach((mode) => {
       mode.value = mode.dataset.default;
     });
     form.querySelectorAll("select").forEach(syncSelect);
-    state.visible = PAGE_SIZE;
+    state.page = 1;
     render();
   });
-  more.addEventListener("click", () => { state.visible += PAGE_SIZE; render(); });
+  pageSizeSelect.addEventListener("change", () => {
+    const next = Number(pageSizeSelect.value);
+    state.pageSize = PAGE_SIZES.includes(next) ? next : DEFAULT_PAGE_SIZE;
+    state.page = 1;
+    render();
+  });
   window.addEventListener("popstate", () => window.location.reload());
   render();
+}
+
+function renderPagination(container, page, totalPages, onSelect) {
+  container.replaceChildren();
+  container.hidden = totalPages <= 1;
+  if (container.hidden) return;
+  container.append(
+    paginationButton("«", 1, page > 1, onSelect, "rw-catalog__page-nav", "First page"),
+    paginationButton("‹", page - 1, page > 1, onSelect, "rw-catalog__page-nav", "Previous page"),
+    paginationJump(page, totalPages, onSelect),
+    paginationButton("›", page + 1, page < totalPages, onSelect, "rw-catalog__page-nav", "Next page"),
+    paginationButton("»", totalPages, page < totalPages, onSelect, "rw-catalog__page-nav", "Last page"),
+  );
+}
+
+function paginationJump(page, totalPages, onSelect) {
+  const group = document.createElement("span");
+  group.className = "rw-catalog__page-jump";
+  const before = document.createElement("span");
+  before.textContent = "Page";
+  const select = document.createElement("select");
+  for (let value = 1; value <= totalPages; value += 1) {
+    select.append(new Option(String(value), String(value)));
+  }
+  select.value = String(page);
+  select.addEventListener("change", () => {
+    const target = Number(select.value);
+    if (target !== page) onSelect(target);
+  });
+  const after = document.createElement("span");
+  after.textContent = `of ${totalPages}`;
+  group.append(before, select, after);
+  enhanceSelect(select, `Page number, ${totalPages} total`);
+  return group;
+}
+
+function paginationButton(label, target, enabled, onSelect, className, ariaLabel) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.setAttribute("aria-label", ariaLabel);
+  button.disabled = !enabled;
+  if (enabled) button.addEventListener("click", () => onSelect(target));
+  return button;
 }
 
 function valuesFor(records, key) {
@@ -304,7 +384,7 @@ function compareBy(path, direction) {
   };
 }
 
-function updateUrl(form, visible) {
+function updateUrl(form, page, pageSize) {
   const params = new URLSearchParams();
   for (const [key, value] of new FormData(form)) {
     const field = form.elements.namedItem(key);
@@ -312,7 +392,8 @@ function updateUrl(form, visible) {
       params.append(key, value);
     }
   }
-  if (visible > PAGE_SIZE) params.set("page", String(Math.ceil(visible / PAGE_SIZE)));
+  if (pageSize !== DEFAULT_PAGE_SIZE) params.set("size", String(pageSize));
+  if (page > 1) params.set("page", String(page));
   const query = params.toString();
   history.replaceState(
     null,

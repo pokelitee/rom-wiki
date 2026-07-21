@@ -32,7 +32,10 @@ _SKELETON_FILTER_COUNTS = {
     "locations": 4,
     "encounters": 7,
 }
-_SKELETON_ROWS = 10
+# Matches DEFAULT_PAGE_SIZE in
+# sites/shared/overrides/assets/javascripts/catalog/catalog.js, so the
+# skeleton previews as many rows as the first page actually renders.
+_SKELETON_ROWS = 50
 
 
 def _catalog_skeleton(kind: str) -> list[str]:
