@@ -41,6 +41,32 @@ class EvolutionEnrichmentTests(unittest.TestCase):
             "evo.narc",
         )
 
+    def test_party_species_parameter_uses_pokemon_reference_kind(self) -> None:
+        pokedb = _reference_pokedb()
+        records = [_evolution_set(member) for member in range(508)]
+        records[223]["evolutions"] = [
+            {"method_id": 21, "parameter": 224, "target_species_id": 226}
+        ]
+
+        enriched = enrich_personal_dataset(
+            {
+                "game": "test",
+                "source": {"archive": "personal.narc"},
+                "records": [_source_record(member) for member in range(508)],
+            },
+            pokedb,
+            evolution_dataset={
+                "game": "test",
+                "source": {"archive": "evo.narc"},
+                "item_names": [],
+                "records": records,
+            },
+        )
+
+        parameter = enriched["records"][223]["evolutions"][0]["parameter_data"]
+        self.assertEqual(parameter["kind"], "pokemon")
+        self.assertEqual(parameter["slug"], "pokemon-224")
+
 
 def _reference_pokedb() -> PokeDBGeneration:
     defaults = {

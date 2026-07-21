@@ -30,6 +30,77 @@ def type_badges(types: list[dict[str, Any]]) -> str:
     return '<span class="rw-type-list">' + "".join(badges) + "</span>"
 
 
+def class_badge(damage_class: dict[str, Any]) -> str:
+    name = str(damage_class["name"])
+    label = display_name(name)
+    return f'<span class="rw-class rw-class--{escape(name)}">{escape(label)}</span>'
+
+
+def evolution_condition(entry: dict[str, Any], source_url: str) -> str:
+    method = entry["method"]["name"]
+    parameter = entry["parameter_data"]
+    value = parameter.get("value") if parameter is not None else None
+    raw_name = parameter.get("name", "") if parameter is not None else ""
+    name = (
+        raw_name.replace("-", " ").title()
+        if raw_name.islower()
+        else raw_name
+    )
+    parameter_label = escape(name)
+    parameter_kind = parameter.get("kind") if parameter is not None else None
+    if parameter_kind is None:
+        if method in {
+            "trade-held-item",
+            "use-item",
+            "use-item-male",
+            "use-item-female",
+            "level-held-item-day",
+            "level-held-item-night",
+        }:
+            parameter_kind = "item"
+        elif method == "level-knowing-move":
+            parameter_kind = "move"
+        elif method == "level-with-party-species":
+            parameter_kind = "pokemon"
+    parameter_id = parameter.get("id", value) if parameter is not None else None
+    if parameter_kind in {"item", "move", "pokemon"} and parameter_id is not None:
+        route_key = parameter.get("slug")
+        if route_key is None and parameter_kind == "move":
+            route_key = raw_name
+        parameter_label = ROUTES.html_link(
+            entity_reference(parameter_kind, parameter_id, name, route_key), source_url
+        )
+    conditions = {
+        "friendship": "High friendship",
+        "friendship-day": "High friendship during the day",
+        "friendship-night": "High friendship at night",
+        "level": f"Level {value}",
+        "trade": "Trade",
+        "trade-held-item": f"Trade while holding {parameter_label}",
+        "use-item": f"Use {parameter_label}",
+        "level-attack-greater": f"Level {value} with Attack > Defense",
+        "level-attack-equal": f"Level {value} with Attack = Defense",
+        "level-defense-greater": f"Level {value} with Attack < Defense",
+        "level-personality-low": f"Level {value} (random — low personality value)",
+        "level-personality-high": f"Level {value} (random — high personality value)",
+        "level-ninjask": f"Level {value} (Ninjask branch)",
+        "level-shedinja": f"Level {value} (Shedinja branch)",
+        "beauty": f"Beauty {value}",
+        "use-item-male": f"Use {parameter_label} (male)",
+        "use-item-female": f"Use {parameter_label} (female)",
+        "level-held-item-day": f"Level up during the day while holding {parameter_label}",
+        "level-held-item-night": f"Level up at night while holding {parameter_label}",
+        "level-knowing-move": f"Level up knowing {parameter_label}",
+        "level-with-party-species": f"Level up with {parameter_label} in the party",
+        "level-male": f"Level {value} (male)",
+        "level-female": f"Level {value} (female)",
+        "level-magnetic-field": "Level up in a magnetic field",
+        "level-moss-rock": "Level up near a Moss Rock",
+        "level-ice-rock": "Level up near an Ice Rock",
+    }
+    return conditions.get(method, f"{method.replace('-', ' ').title()} ({value})")
+
+
 def stat_list(
     stats: dict[str, int], reference_stats: dict[str, int] | None = None
 ) -> list[str]:
@@ -97,26 +168,16 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
             'referrerpolicy="no-referrer">'
             '<span class="rw-summary__placeholder" hidden>Sprite unavailable</span>'
         )
-        attribution = (
-            f'<a href="{escape(portrait["source_url"], quote=True)}">'
-            f'{escape(portrait["source"])}</a>'
-        )
     else:
         media = '<span class="rw-summary__placeholder">Sprite unavailable</span>'
-        attribution = "Not available"
     cry = record.get("cry")
     cry_html = ""
-    cry_credit = ""
     if cry:
         cry_html = (
             f'<audio class="rw-summary__cry" controls preload="none" '
             f'src="{escape(cry["url"], quote=True)}">'
             "Your browser does not support audio playback."
             "</audio>"
-        )
-        cry_credit = (
-            f'<p class="rw-summary__credit">Cry: '
-            f'<a href="{escape(cry["source_url"], quote=True)}">{escape(cry["source"])}</a></p>'
         )
     ability_links = []
     for value in record["abilities"]:
@@ -171,8 +232,6 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
         *(f"<div><dt>Weight</dt><dd>{escape(measurements['weight'])}</dd></div>" for _ in [0] if measurements.get("weight")),
         "</dl>",
         "</div>",
-        f'<p class="rw-summary__credit">Sprite: {attribution}</p>',
-        *([cry_credit] if cry_credit else []),
         "</section>",
         "",
     ]

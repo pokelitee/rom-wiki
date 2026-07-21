@@ -109,11 +109,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
             'src="https://example.test/bulbasaur.ogg">',
             page,
         )
-        self.assertIn(
-            '<p class="rw-summary__credit">Cry: '
-            '<a href="https://github.com/PokeAPI/cries">PokéAPI cries</a></p>',
-            page,
-        )
+        self.assertNotIn("rw-summary__credit", page)
         self.assertIn("<div><dt>Body color</dt><dd>Green</dd></div>", page)
         self.assertIn("<div><dt>Habitat</dt><dd>Grassland</dd></div>", page)
         self.assertIn("<div><dt>Shape</dt><dd>Quadruped</dd></div>", page)

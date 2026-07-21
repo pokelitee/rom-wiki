@@ -11,9 +11,12 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text as _write_text,
 )
 from romwiki.renderers.mkdocs.components import (
+    class_badge,
+    evolution_condition,
     pokemon_summary,
     stat_list,
     tutor_requirement,
+    type_badges,
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
@@ -485,7 +488,7 @@ def _evolution_row(
         name = name_escaped
     condition_html = (
         f'<span class="rw-evolution-row__condition">'
-        f"{_evolution_condition(condition, source_url)}</span>"
+        f"{evolution_condition(condition, source_url)}</span>"
         if condition is not None
         else ""
     )
@@ -637,10 +640,10 @@ def _move_cells(
     move = move_lookup.get(reference.get("id"))
     if move is None:
         return "— | — | — | — | —"
-    move_type = _label(move["type"]["name"])
-    damage_class = _label(move["damage_class"]["name"])
+    move_type = type_badges([move["type"]])
+    damage_class = class_badge(move["damage_class"])
     power = move["power"] if move["power"] else "—"
-    accuracy = f"{move['accuracy']}%" if move["accuracy"] else "Always"
+    accuracy = f"{move['accuracy']}%" if move["accuracy"] else "—"
     return f"{move_type} | {damage_class} | {power} | {accuracy} | {move['pp']}"
 
 
@@ -650,14 +653,10 @@ def _reference_entry(reference: dict[str, Any]) -> list[str]:
         return []
     version = reference.get("flavor_text_version") or reference.get("version")
     version_label = f"{_label(version)} Pokédex" if version else "Pokédex"
-    source = escape(str(reference.get("source") or "PokéDB"))
-    source_url = reference.get("source_url")
-    if isinstance(source_url, str) and source_url.startswith("https://"):
-        source = f'<a href="{escape(source_url, quote=True)}">{source}</a>'
     return [
         '<figure class="rw-pokedex-entry">',
         f"<blockquote>{escape(' '.join(text.split()))}</blockquote>",
-        f"<figcaption>{escape(version_label)} · {source}</figcaption>",
+        f"<figcaption>{escape(version_label)}</figcaption>",
         "</figure>",
         "",
     ]
@@ -720,94 +719,47 @@ def _append_record_navigation(
         return
     source_url = f"pokemon/{record['slug']}/"
     lines.extend(['<nav class="rw-record-nav" aria-label="Pokémon navigation">'])
-    if previous is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "pokemon",
-                previous.get("member", previous.get("national_dex_id")),
-                f"← {previous['name']}",
-                previous["slug"],
-            ),
-            source_url,
-        ))
-    else:
-        lines.append("<span></span>")
-    if following is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "pokemon",
-                following.get("member", following.get("national_dex_id")),
-                f"{following['name']} →",
-                following["slug"],
-            ),
-            source_url,
-        ))
+    lines.append(
+        _record_nav_link(previous, f"← {previous['name']}", source_url, "prev")
+        if previous is not None
+        else "<span></span>"
+    )
+    lines.append(
+        _record_nav_link(following, f"{following['name']} →", source_url, "next")
+        if following is not None
+        else "<span></span>"
+    )
     lines.extend(["</nav>", ""])
 
 
-def _evolution_condition(entry: dict[str, Any], source_url: str) -> str:
-    method = entry["method"]["name"]
-    parameter = entry["parameter_data"]
-    value = parameter.get("value") if parameter is not None else None
-    raw_name = parameter.get("name", "") if parameter is not None else ""
-    name = (
-        raw_name.replace("-", " ").title()
-        if raw_name.islower()
-        else raw_name
+def _record_nav_link(
+    record: dict[str, Any], label: str, source_url: str, direction: str
+) -> str:
+    href = ROUTES.published_href(
+        entity_reference(
+            "pokemon",
+            record.get("member", record.get("national_dex_id")),
+            label,
+            record["slug"],
+        ),
+        source_url,
     )
-    parameter_label = escape(name)
-    parameter_kind = parameter.get("kind") if parameter is not None else None
-    if parameter_kind is None:
-        if method in {
-            "trade-held-item",
-            "use-item",
-            "use-item-male",
-            "use-item-female",
-            "level-held-item-day",
-            "level-held-item-night",
-        }:
-            parameter_kind = "item"
-        elif method == "level-knowing-move":
-            parameter_kind = "move"
-        elif method == "level-with-party-species":
-            parameter_kind = "pokemon"
-    parameter_id = parameter.get("id", value) if parameter is not None else None
-    if parameter_kind in {"item", "move", "pokemon"} and parameter_id is not None:
-        route_key = parameter.get("slug")
-        if route_key is None and parameter_kind == "move":
-            route_key = raw_name
-        parameter_label = ROUTES.html_link(
-            entity_reference(parameter_kind, parameter_id, name, route_key), source_url
-        )
-    conditions = {
-        "friendship": "High friendship",
-        "friendship-day": "High friendship during the day",
-        "friendship-night": "High friendship at night",
-        "level": f"Level {value}",
-        "trade": "Trade",
-        "trade-held-item": f"Trade while holding {parameter_label}",
-        "use-item": f"Use {parameter_label}",
-        "level-attack-greater": f"Level {value} with Attack > Defense",
-        "level-attack-equal": f"Level {value} with Attack = Defense",
-        "level-defense-greater": f"Level {value} with Attack < Defense",
-        "level-personality-low": f"Level {value} (random — low personality value)",
-        "level-personality-high": f"Level {value} (random — high personality value)",
-        "level-ninjask": f"Level {value} (Ninjask branch)",
-        "level-shedinja": f"Level {value} (Shedinja branch)",
-        "beauty": f"Beauty {value}",
-        "use-item-male": f"Use {parameter_label} (male)",
-        "use-item-female": f"Use {parameter_label} (female)",
-        "level-held-item-day": f"Level up during the day while holding {parameter_label}",
-        "level-held-item-night": f"Level up at night while holding {parameter_label}",
-        "level-knowing-move": f"Level up knowing {parameter_label}",
-        "level-with-party-species": f"Level up with {parameter_label} in the party",
-        "level-male": f"Level {value} (male)",
-        "level-female": f"Level {value} (female)",
-        "level-magnetic-field": "Level up in a magnetic field",
-        "level-moss-rock": "Level up near a Moss Rock",
-        "level-ice-rock": "Level up near an Ice Rock",
-    }
-    return conditions.get(method, f"{method.replace('-', ' ').title()} ({value})")
+    if href is None:
+        return escape(label)
+    sprite_data = record.get("sprite")
+    sprite = (
+        f'<img class="rw-record-nav__sprite" src="{escape(sprite_data["url"], quote=True)}" '
+        f'alt="" loading="lazy" referrerpolicy="no-referrer">'
+        if sprite_data and sprite_data.get("url")
+        else ""
+    )
+    return (
+        f'<a class="rw-record-nav__link rw-record-nav__link--{direction}" '
+        f'href="{escape(href, quote=True)}">'
+        f"{sprite}"
+        f'<span class="rw-record-nav__label">{escape(label)}</span>'
+        "</a>"
+    )
 
 
 def _item_link(item: dict[str, Any], source_file: str) -> str:
@@ -822,7 +774,4 @@ def _record_link(kind: str, value: dict[str, Any], source_file: str) -> str:
         value.get("slug"),
     )
     return ROUTES.markdown_link(reference, source_file)
-
-
-
 

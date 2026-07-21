@@ -10,6 +10,7 @@ from romwiki.pipeline.comparisons import (
     normalize_comparison_value,
 )
 from romwiki.renderers.mkdocs.catalog import write_text
+from romwiki.renderers.mkdocs.components import evolution_condition
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
@@ -17,6 +18,10 @@ from romwiki.renderers.mkdocs.references import (
     escape_markdown,
     resolved_reference,
 )
+
+
+def _diff(before: str, after: str) -> str:
+    return f'{before}<span class="rw-diff-arrow">→</span>{after}'
 
 
 _SECTIONS = {
@@ -56,7 +61,7 @@ def comparison_section(
         return []
     baseline = baseline_name or "the clean base game"
     status = entry["status"]
-    lines = ["## Changes from base game", ""]
+    lines = ["## Hack changes", ""]
     if status == "unchanged":
         return [
             *lines,
@@ -259,7 +264,7 @@ def _format_change(
     if isinstance(before, dict) and isinstance(after, dict):
         return _format_mapping_change(before, after)
     if not isinstance(before, list) or not isinstance(after, list):
-        return f"{_format_value(before)} → {_format_value(after)}"
+        return _diff(_format_value(before), _format_value(after))
     field = change.get("field")
     before_values = {
         _canonical(normalize_comparison_value(item, kind=kind, field=field)): item
@@ -288,7 +293,7 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
             entries = "".join(f"<li>{_format_value(value)}</li>" for value in ordered)
             parts.append(
                 f"<details><summary>{len(ordered)} {label}</summary>"
-                f"<ul>{entries}</ul></details>"
+                f'<ul class="rw-comparison-list">{entries}</ul></details>'
             )
     if not parts:
         return "No changes"
@@ -326,6 +331,8 @@ def _format_pokemon_change(
         )
     if field == "level_up_moves":
         return _format_level_up_moves(before, after, source_url, references)
+    if field == "evolutions":
+        return _format_evolutions(before, after, source_url, references)
     if field in {"base_stats", "ev_yields"}:
         return _format_mapping_change(before, after)
     return None
@@ -347,8 +354,8 @@ def _format_slots(
             continue
         old_label = _reference_html(old, reference_kind, source_url, references)
         new_label = _reference_html(new, reference_kind, source_url, references)
-        lines.append(f"{label} {index + 1}: {old_label} → {new_label}")
-    return _format_lines(lines, reference_kind is not None)
+        lines.append(f"{label} {index + 1}: {_diff(old_label, new_label)}")
+    return _format_lines(lines, True)
 
 
 def _format_compatibility(
@@ -373,7 +380,7 @@ def _format_compatibility(
         )
         old_state = "Compatible" if old else "Not compatible"
         new_state = "Compatible" if new else "Not compatible"
-        lines.append(f"{display}: {old_state} → {new_state}")
+        lines.append(f"{display}: {_diff(old_state, new_state)}")
     return _format_lines(lines, True)
 
 
@@ -402,7 +409,7 @@ def _format_level_up_moves(
         if old_levels == new_levels:
             continue
         display = _reference_html(old or new, "move", source_url, references)
-        line = f"{display}: {_level_label(old_levels)} → {_level_label(new_levels)}"
+        line = f"{display}: {_diff(_level_label(old_levels), _level_label(new_levels))}"
         if old and new:
             changed.append(line)
         elif old:
@@ -413,6 +420,43 @@ def _format_level_up_moves(
         ("level changes", changed),
         ("moves removed", removed),
         ("moves added", added),
+    ]
+    groups = [group for group in groups if group[1]]
+    if not groups:
+        return "Order changed"
+    return _format_change_groups(groups)
+
+
+def _format_evolutions(
+    before: list[dict[str, Any]],
+    after: list[dict[str, Any]],
+    source_url: str,
+    references: ReferenceIndex | None,
+) -> str:
+    previous = {entry["target"]["id"]: entry for entry in before}
+    current = {entry["target"]["id"]: entry for entry in after}
+    changed = []
+    removed = []
+    added = []
+    target_ids = list(dict.fromkeys(list(previous) + list(current)))
+    for target_id in target_ids:
+        old = previous.get(target_id)
+        new = current.get(target_id)
+        display = _reference_html((old or new)["target"], "pokemon", source_url, references)
+        if old is not None and new is not None:
+            old_condition = evolution_condition(old, source_url)
+            new_condition = evolution_condition(new, source_url)
+            if old_condition == new_condition:
+                continue
+            changed.append(f"{display}: {_diff(old_condition, new_condition)}")
+        elif old is not None:
+            removed.append(f"{display}: {evolution_condition(old, source_url)}")
+        else:
+            added.append(f"{display}: {evolution_condition(new, source_url)}")
+    groups = [
+        ("evolution changes", changed),
+        ("evolutions removed", removed),
+        ("evolutions added", added),
     ]
     groups = [group for group in groups if group[1]]
     if not groups:
@@ -450,11 +494,11 @@ def _format_mapping_change(
     for key in sorted(before.keys() | after.keys()):
         if before.get(key) == after.get(key):
             continue
-        label = key.replace("_", " ").title()
-        lines.append(
-            f"{label}: {_plain_value(before.get(key))} → {_plain_value(after.get(key))}"
-        )
-    return _format_lines(lines)
+        label = escape(key.replace("_", " ").title())
+        old_value = escape(_plain_value(before.get(key)))
+        new_value = escape(_plain_value(after.get(key)))
+        lines.append(f"{label}: {_diff(old_value, new_value)}")
+    return _format_lines(lines, True)
 
 
 def _format_lines(values: list[str], trusted: bool = False) -> str:
@@ -548,9 +592,9 @@ def _format_machine_compatibility(
             continue
         label = _machine_label(old or new, source_url, references)
         if old is not None:
-            lines.append(f"{label}: Compatible → Not compatible")
+            lines.append(f"{label}: {_diff('Compatible', 'Not compatible')}")
         else:
-            lines.append(f"{label}: Not compatible → Compatible")
+            lines.append(f"{label}: {_diff('Not compatible', 'Compatible')}")
     return _format_lines(lines, True)
 
 
@@ -572,7 +616,7 @@ def _reference_html(
         return "None"
     name = str(value["name"])
     if kind is None:
-        return name
+        return escape(name)
     identifier = value.get("id", value.get("slug", name))
     return ROUTES.html_link(
         resolved_reference(

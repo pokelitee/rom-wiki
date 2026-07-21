@@ -6,6 +6,21 @@
 
 .md-banner { background: color-mix(in srgb, var(--rw-accent) 86%, #17213c); }
 .md-banner__inner { margin: 0 auto; padding: 0.35rem 0.8rem; }
+
+.md-footer-meta__inner { justify-content: center; }
+.rw-footer { min-width: 0; max-width: 100%; padding: 0.3rem 0; text-align: center; }
+.rw-footer__disclaimer { max-width: 34rem; margin: 0 auto; font-size: 0.6rem; line-height: 1.55; }
+.rw-footer__credit,
+.rw-footer__generator { margin: 0.35rem 0 0; font-size: 0.62rem; }
+.rw-footer__link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 0.15rem;
+  transition: text-decoration-color 0.16s;
+}
+.rw-footer__link:hover,
+.rw-footer__link:focus-visible { text-decoration-color: currentColor; }
 .rw-sitebar { display: flex; align-items: center; gap: 0.55rem; min-height: 2rem; font-size: 0.68rem; }
 .rw-sitebar a { color: #fff; font-weight: 700; }
 .rw-sitebar__divider { opacity: 0.55; }

@@ -908,7 +908,7 @@ def _evolution_parameter(
     if method_id == 21:
         species = pokedb.pokemon_for_id(parameter)
         return {
-            "kind": "species",
+            "kind": "pokemon",
             "id": parameter,
             "slug": species["name"],
             "name": title_case_slug(species["name"]),
@@ -1029,9 +1029,9 @@ def _ability_id(
     pokedb: PokeDBGeneration,
     ability_names: list[str] | None,
 ) -> dict[str, Any]:
-    slug = pokedb.ability_name(ability_id)
     if ability_id == 0:
         return {"id": 0, "slug": None, "name": None}
+    slug = pokedb.ability_name(ability_id)
     if ability_names is not None:
         if ability_id >= len(ability_names):
             raise DataSourceError(f"Unknown Gen IV ability ID: {ability_id}")
@@ -1066,8 +1066,6 @@ def _move_name(
     if move_names is not None and move_id in move_names:
         return move_names[move_id]
     return pokedb.move_name(move_id)
-
-
 
 
 def _machine_name(machine_id: int) -> str:
