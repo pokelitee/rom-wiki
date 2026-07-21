@@ -17,29 +17,48 @@ def prune_catalog_pages(output_root: Path, filenames: set[str]) -> None:
             path.unlink()
 
 
-_SKELETON_FIELDS = 5
-_SKELETON_ROWS = 6
+# Filter field count per catalog kind, so the loading skeleton's control
+# row previews roughly the number of fields the interactive catalog renders.
+# Mirrors "filters" (plus the injected change-status filter and two fields
+# per "ranges" entry) for each kind in
+# sites/shared/overrides/assets/javascripts/catalog/config.js — keep in sync
+# when that config changes.
+_SKELETON_FILTER_COUNTS = {
+    "pokemon": 8,
+    "abilities": 5,
+    "items": 11,
+    "moves": 8,
+    "trainers": 10,
+    "locations": 4,
+    "encounters": 7,
+}
+_SKELETON_ROWS = 10
 
 
-def _catalog_skeleton() -> list[str]:
+def _catalog_skeleton(kind: str) -> list[str]:
+    filter_count = _SKELETON_FILTER_COUNTS.get(kind, 5)
     return [
         '<div class="rw-catalog__skeleton" data-rw-catalog-skeleton aria-hidden="true">',
         '<div class="rw-skeleton__controls">',
         *(
             '<span class="rw-skeleton__field"></span>'
-            for _ in range(_SKELETON_FIELDS)
+            for _ in range(filter_count)
         ),
         "</div>",
         '<span class="rw-skeleton__bar"></span>',
         '<div class="rw-skeleton__table">',
-        '<span class="rw-skeleton__row rw-skeleton__row--head"></span>',
-        *(
-            '<span class="rw-skeleton__row"></span>'
-            for _ in range(_SKELETON_ROWS)
-        ),
+        _skeleton_table_row(head=True),
+        *(_skeleton_table_row() for _ in range(_SKELETON_ROWS)),
         "</div>",
         "</div>",
     ]
+
+
+def _skeleton_table_row(*, head: bool = False) -> str:
+    row_class = "rw-skeleton__table-row"
+    if head:
+        row_class += " rw-skeleton__table-row--head"
+    return f'<div class="{row_class}"><span class="rw-skeleton__cell"></span></div>'
 
 
 def catalog_index(
@@ -56,7 +75,7 @@ def catalog_index(
         f'<div class="rw-catalog" data-rw-catalog="catalog.json" data-rw-kind="{kind}" aria-busy="true">',
         '<p class="rw-catalog__status" data-rw-catalog-status role="status" aria-live="polite">'
         '<span class="rw-visually-hidden">Loading catalog&hellip;</span></p>',
-        *_catalog_skeleton(),
+        *_catalog_skeleton(kind),
         "</div>",
         "",
         '<div class="rw-catalog-fallback" data-rw-catalog-fallback>',
