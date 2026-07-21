@@ -103,6 +103,35 @@ class PokeDBSpriteTests(unittest.TestCase):
         self.assertIsNone(without_artwork)
         self.assertIsNone(rejects_non_https)
 
+    def test_cry_prefers_latest_over_legacy(self) -> None:
+        reference = {
+            "cries": {
+                "legacy": "https://example.test/legacy.ogg",
+                "latest": "https://example.test/latest.ogg",
+            }
+        }
+
+        cry = self.pokedb.pokemon_cry(reference)
+
+        assert cry is not None
+        self.assertEqual(cry["url"], "https://example.test/latest.ogg")
+        self.assertEqual(cry["key"], "latest")
+        self.assertEqual(cry["source"], "PokéAPI cries")
+
+    def test_cry_falls_back_to_legacy_then_none(self) -> None:
+        legacy_only = self.pokedb.pokemon_cry(
+            {"cries": {"legacy": "https://example.test/legacy.ogg"}}
+        )
+        missing = self.pokedb.pokemon_cry({"cries": {}})
+        rejects_non_https = self.pokedb.pokemon_cry(
+            {"cries": {"legacy": "http://example.test/legacy.ogg"}}
+        )
+
+        assert legacy_only is not None
+        self.assertEqual(legacy_only["url"], "https://example.test/legacy.ogg")
+        self.assertIsNone(missing)
+        self.assertIsNone(rejects_non_https)
+
     def test_matches_rom_item_names_without_using_rom_item_ids(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={},

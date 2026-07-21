@@ -8,7 +8,7 @@ import unittest
 from romwiki.pipeline.enrich import enrich_personal_dataset
 from romwiki.renderers.mkdocs import render_pokemon_pages
 from romwiki.renderers.mkdocs.pokemon import (
-    _evolution_chain,
+    _evolution_list,
     _index_preevolutions,
     _sprite_gallery,
 )
@@ -104,6 +104,20 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn('<span class="rw-stat__value">45</span>', page)
         self.assertNotIn("+5", page)
         self.assertIn("A seed was planted on its back at birth.", page)
+        self.assertIn(
+            '<audio class="rw-summary__cry" controls preload="none" '
+            'src="https://example.test/bulbasaur.ogg">',
+            page,
+        )
+        self.assertIn(
+            '<p class="rw-summary__credit">Cry: '
+            '<a href="https://github.com/PokeAPI/cries">PokéAPI cries</a></p>',
+            page,
+        )
+        self.assertIn("<div><dt>Body color</dt><dd>Green</dd></div>", page)
+        self.assertIn("<div><dt>Habitat</dt><dd>Grassland</dd></div>", page)
+        self.assertIn("<div><dt>Shape</dt><dd>Quadruped</dd></div>", page)
+        self.assertNotIn("rw-summary__tags", page)
         self.assertIn("0.7 m (2′4″)", page)
         self.assertIn("1 Sp. Atk", page)
         self.assertIn("87.5% male / 12.5% female", page)
@@ -114,10 +128,10 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("## Learnset", page)
         self.assertIn("`0x29222`", page)
         self.assertIn(
-            '<a class="rw-evolution-node" href="../ivysaur/">', page
+            '<a href="../ivysaur/">Ivysaur</a>', page
         )
         self.assertIn(
-            '<span class="rw-evolution-node__name">Ivysaur</span>', page
+            '<span class="rw-evolution-row__name">', page
         )
         self.assertIn("Level 16", page)
         self.assertIn(
@@ -135,6 +149,23 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["bst"], 318)
         self.assertEqual(catalog["records"][0]["egg_groups"], ["monster", "grass"])
         self.assertEqual(catalog["records"][0]["url"], "bulbasaur/")
+
+    def test_renders_classification_badges_for_legendary_and_baby_species(self) -> None:
+        record = _bulbasaur_record()
+        record["reference"]["is_legendary"] = True
+        record["reference"]["is_baby"] = True
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages({"records": [record]}, output)
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            '<div class="rw-summary__tags">'
+            '<span class="rw-summary__tag">Legendary</span>'
+            '<span class="rw-summary__tag">Baby</span></div>',
+            page,
+        )
+        self.assertNotIn(">Mythical<", page)
 
     def test_only_pages_skips_detail_pages_but_keeps_full_catalog(self) -> None:
         record = _bulbasaur_record()
@@ -194,7 +225,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         ]
 
         chain = "\n".join(
-            _evolution_chain(
+            _evolution_list(
                 [eevee, vaporeon, jolteon], jolteon, "pokemon/jolteon.md"
             )
         )
@@ -203,13 +234,42 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("Vaporeon", chain)
         self.assertIn("Jolteon", chain)
         self.assertIn("Water Stone", chain)
-        self.assertIn("rw-evolution-node--current", chain)
         self.assertIn('aria-current="page"', chain)
-        self.assertIn('class="rw-evolution-node__current">Current', chain)
-        self.assertIn('class="rw-evolution-node__dex">#135', chain)
-        self.assertIn('class="rw-evolution-step"', chain)
-        self.assertIn('class="rw-evolution-branches"', chain)
+        self.assertIn('class="rw-evolution-row__current">Current', chain)
+        self.assertIn('class="rw-evolution-row__dex">#135', chain)
+        self.assertIn('rw-evolution-row--child', chain)
         self.assertIn('href="../vaporeon/"', chain)
+
+    def test_renders_personality_based_branch_as_a_level_not_a_branch_number(
+        self,
+    ) -> None:
+        wurmple = _evolution_record("wurmple", "Wurmple", 265)
+        silcoon = _evolution_record("silcoon", "Silcoon", 266)
+        cascoon = _evolution_record("cascoon", "Cascoon", 268)
+        wurmple["evolutions"] = [
+            {
+                "method_id": 11,
+                "method": {"id": 11, "name": "level-personality-low"},
+                "parameter_data": {"kind": "personality", "value": 7},
+                "target": {"id": 266, "slug": "silcoon", "name": "Silcoon"},
+            },
+            {
+                "method_id": 12,
+                "method": {"id": 12, "name": "level-personality-high"},
+                "parameter_data": {"kind": "personality", "value": 7},
+                "target": {"id": 268, "slug": "cascoon", "name": "Cascoon"},
+            },
+        ]
+
+        chain = "\n".join(
+            _evolution_list(
+                [wurmple, silcoon, cascoon], wurmple, "pokemon/wurmple.md"
+            )
+        )
+
+        self.assertIn("Level 7 (random — low personality value)", chain)
+        self.assertIn("Level 7 (random — high personality value)", chain)
+        self.assertNotIn("personality branch", chain)
 
 
 class SpriteGalleryTests(unittest.TestCase):
@@ -280,6 +340,18 @@ def _bulbasaur_record() -> dict:
             },
             "types": ["grass", "poison"],
             "abilities": ["overgrow"],
+            "is_baby": False,
+            "is_legendary": False,
+            "is_mythical": False,
+            "habitat": "grassland",
+            "shape": "quadruped",
+        },
+        "body_color": {"id": 3, "name": "green"},
+        "cry": {
+            "key": "legacy",
+            "url": "https://example.test/bulbasaur.ogg",
+            "source": "PokéAPI cries",
+            "source_url": "https://github.com/PokeAPI/cries",
         },
         "base_stats": {
             "hp": 45, "attack": 49, "defense": 49, "speed": 45,

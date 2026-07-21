@@ -290,7 +290,12 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
                 f"<details><summary>{len(ordered)} {label}</summary>"
                 f"<ul>{entries}</ul></details>"
             )
-    return "<br>".join(parts) if parts else "No changes"
+    if not parts:
+        return "No changes"
+    # <details> is already block-level (and Material gives it its own
+    # margin), so an explicit <br> before one just doubles the gap.
+    separator = "" if any("<details" in part for part in parts) else "<br>"
+    return separator.join(parts)
 
 
 def _format_pokemon_change(

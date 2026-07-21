@@ -166,8 +166,8 @@ def _render_record(
         f"# {record['name']}",
         "",
         *pokemon_summary(record),
-        *_sprite_gallery(record),
         *_reference_entry(reference),
+        *_sprite_gallery(record),
         *comparison_section(change, baseline_name, source_file, references),
         "## Base stats",
         "",
@@ -232,7 +232,7 @@ def _render_record(
     lines.extend(["## Evolutions", ""])
     if preevolutions or evolutions:
         lines.extend(
-            _evolution_chain(all_records or [record], record, source_file)
+            _evolution_list(all_records or [record], record, source_file)
         )
     else:
         lines.extend(["This Pokémon does not evolve.", ""])
@@ -391,7 +391,7 @@ def _index_preevolutions(
     return index
 
 
-def _evolution_chain(
+def _evolution_list(
     records: list[dict[str, Any]],
     current: dict[str, Any],
     source_file: str,
@@ -436,26 +436,24 @@ def _evolution_chain(
     )
     if not roots:
         roots = [current["slug"]]
-    lines = [
-        '<div class="rw-evolution-chain" aria-label="Evolution chain">',
-        '<ul class="rw-evolution-tree">',
-    ]
+    lines = ['<div class="rw-evolution-list" aria-label="Evolution chain">']
     for root in roots:
         lines.extend(
-            _evolution_node(
-                by_slug[root], by_slug, current["slug"], source_url, set()
+            _evolution_row(
+                by_slug[root], by_slug, current["slug"], source_url, set(), 0
             )
         )
-    lines.extend(["</ul>", "</div>", ""])
+    lines.extend(["</div>", ""])
     return lines
 
 
-def _evolution_node(
+def _evolution_row(
     record: dict[str, Any],
     by_slug: dict[str, dict[str, Any]],
     current_slug: str,
     source_url: str,
     path: set[str],
+    depth: int,
     condition: dict[str, Any] | None = None,
 ) -> list[str]:
     slug = record["slug"]
@@ -468,7 +466,7 @@ def _evolution_node(
     )
     href = ROUTES.published_href(reference, source_url)
     sprite = record.get("sprite") or {}
-    media = '<span class="rw-evolution-node__placeholder" aria-hidden="true">?</span>'
+    media = '<span class="rw-evolution-row__placeholder" aria-hidden="true">?</span>'
     if sprite.get("url"):
         media = (
             f'<img src="{escape(sprite["url"], quote=True)}" alt="" '
@@ -476,56 +474,59 @@ def _evolution_node(
         )
     dex = record.get("national_dex_id")
     dex_label = f"#{dex:03}" if isinstance(dex, int) else ""
-    current_label = (
-        '<span class="rw-evolution-node__current">Current</span>'
-        if is_current
-        else ""
-    )
-    node_class = "rw-evolution-node"
-    if is_current:
-        node_class += " rw-evolution-node--current"
-    node_content = (
-        f'{current_label}<span class="rw-evolution-node__media">{media}</span>'
-        f'<span class="rw-evolution-node__name">{escape(record["name"])}</span>'
-        f'<span class="rw-evolution-node__dex">{dex_label}</span>'
-    )
+    name_escaped = escape(record["name"])
     if href is not None:
         current_attribute = ' aria-current="page"' if is_current else ""
-        node = (
-            f'<a class="{node_class}" href="{escape(href, quote=True)}"'
-            f'{current_attribute}>{node_content}</a>'
+        name = (
+            f'<a href="{escape(href, quote=True)}"{current_attribute}>'
+            f"{name_escaped}</a>"
         )
     else:
-        node = f'<div class="{node_class}">{node_content}</div>'
-
-    lines = ["<li>", '<div class="rw-evolution-step">']
-    if condition is not None:
-        lines.append(
-            '<span class="rw-evolution-condition">'
-            f"{_evolution_condition(condition, source_url)}</span>"
-        )
-    lines.extend([node, "</div>"])
+        name = name_escaped
+    condition_html = (
+        f'<span class="rw-evolution-row__condition">'
+        f"{_evolution_condition(condition, source_url)}</span>"
+        if condition is not None
+        else ""
+    )
+    current_badge = (
+        '<span class="rw-evolution-row__current">Current</span>' if is_current else ""
+    )
+    row_class = "rw-evolution-row"
+    style_attribute = ""
+    if depth:
+        row_class += " rw-evolution-row--child"
+        style_attribute = f' style="--rw-evolution-depth: {depth}"'
+    lines = [
+        line
+        for line in [
+            f'<div class="{row_class}"{style_attribute}>',
+            f'<span class="rw-evolution-row__icon">{media}</span>',
+            '<span class="rw-evolution-row__text">',
+            f'<span class="rw-evolution-row__name">{name}</span>',
+            condition_html,
+            "</span>",
+            current_badge,
+            f'<span class="rw-evolution-row__dex">{dex_label}</span>',
+            "</div>",
+        ]
+        if line
+    ]
     next_path = {*path, slug}
-    children = []
     for evolution in record.get("evolutions", []):
         target = by_slug.get(evolution["target"].get("slug"))
         if target is not None and target["slug"] not in next_path:
-            children.append((evolution, target))
-    if children:
-        lines.append('<ul class="rw-evolution-branches">')
-        for evolution, target in children:
             lines.extend(
-                _evolution_node(
+                _evolution_row(
                     target,
                     by_slug,
                     current_slug,
                     source_url,
                     next_path,
+                    depth + 1,
                     evolution,
                 )
             )
-        lines.append("</ul>")
-    lines.append("</li>")
     return lines
 
 
@@ -789,8 +790,8 @@ def _evolution_condition(entry: dict[str, Any], source_url: str) -> str:
         "level-attack-greater": f"Level {value} with Attack > Defense",
         "level-attack-equal": f"Level {value} with Attack = Defense",
         "level-defense-greater": f"Level {value} with Attack < Defense",
-        "level-personality-low": f"Level up; personality branch {value} (low)",
-        "level-personality-high": f"Level up; personality branch {value} (high)",
+        "level-personality-low": f"Level {value} (random — low personality value)",
+        "level-personality-high": f"Level {value} (random — high personality value)",
         "level-ninjask": f"Level {value} (Ninjask branch)",
         "level-shedinja": f"Level {value} (Shedinja branch)",
         "beauty": f"Beauty {value}",

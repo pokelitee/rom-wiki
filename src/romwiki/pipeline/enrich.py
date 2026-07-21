@@ -498,6 +498,7 @@ def _enrich_record(
         sprite = None
         sprites = []
         portrait = None
+        cry = None
         reference_data = None
         public = False
     elif member in PERSONAL_FORM_MEMBERS:
@@ -512,6 +513,7 @@ def _enrich_record(
         sprite = pokedb.pokemon_sprite(reference, sprite_version)
         sprites = pokedb.pokemon_sprites(reference, sprite_version)
         portrait = pokedb.pokemon_portrait(reference) or sprite
+        cry = pokedb.pokemon_cry(reference)
         reference_data = pokedb.pokemon_reference(reference, reference_version)
         public = True
     else:
@@ -525,6 +527,7 @@ def _enrich_record(
         sprite = pokedb.pokemon_sprite(reference, sprite_version)
         sprites = pokedb.pokemon_sprites(reference, sprite_version)
         portrait = pokedb.pokemon_portrait(reference) or sprite
+        cry = pokedb.pokemon_cry(reference)
         reference_data = pokedb.pokemon_reference(reference, reference_version)
         public = True
 
@@ -536,6 +539,7 @@ def _enrich_record(
         **identity,
         "sprite": sprite,
         "portrait": portrait,
+        "cry": cry,
         "sprites": sprites,
         "reference": reference_data,
         "base_stats": source["base_stats"],

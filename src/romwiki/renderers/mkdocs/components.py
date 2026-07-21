@@ -104,6 +104,20 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     else:
         media = '<span class="rw-summary__placeholder">Sprite unavailable</span>'
         attribution = "Not available"
+    cry = record.get("cry")
+    cry_html = ""
+    cry_credit = ""
+    if cry:
+        cry_html = (
+            f'<audio class="rw-summary__cry" controls preload="none" '
+            f'src="{escape(cry["url"], quote=True)}">'
+            "Your browser does not support audio playback."
+            "</audio>"
+        )
+        cry_credit = (
+            f'<p class="rw-summary__credit">Cry: '
+            f'<a href="{escape(cry["source_url"], quote=True)}">{escape(cry["source"])}</a></p>'
+        )
     ability_links = []
     for value in record["abilities"]:
         if value["name"] is None:
@@ -126,22 +140,39 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     genus = reference.get("genus")
     form = record.get("form")
     measurements = _pokemon_measurements(reference)
+    classification = "".join(
+        f'<span class="rw-summary__tag">{label}</span>'
+        for flag, label in (
+            ("is_legendary", "Legendary"),
+            ("is_mythical", "Mythical"),
+            ("is_baby", "Baby"),
+        )
+        if reference.get(flag)
+    )
+    body_color = (record.get("body_color") or {}).get("name")
+    habitat = reference.get("habitat")
+    shape = reference.get("shape")
     return [
         '<section class="rw-summary">',
-        f'<div class="rw-summary__media">{media}</div>',
+        f'<div class="rw-summary__media">{media}{cry_html}</div>',
         '<div class="rw-summary__body">',
         *(f'<p class="rw-summary__genus">{escape(genus)}</p>' for _ in [0] if genus),
+        *([f'<div class="rw-summary__tags">{classification}</div>'] if classification else []),
         type_badges(record["types"]),
         '<dl class="rw-summary__facts">',
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
         *(f"<div><dt>Form</dt><dd>{escape(display_name(form))}</dd></div>" for _ in [0] if form),
+        *(f"<div><dt>Body color</dt><dd>{escape(display_name(body_color))}</dd></div>" for _ in [0] if body_color),
         f"<div><dt>Abilities</dt><dd>{abilities}</dd></div>",
         f"<div><dt>Base stat total</dt><dd>{sum(record['base_stats'].values())}</dd></div>",
+        *(f"<div><dt>Habitat</dt><dd>{escape(display_name(habitat))}</dd></div>" for _ in [0] if habitat),
+        *(f"<div><dt>Shape</dt><dd>{escape(display_name(shape))}</dd></div>" for _ in [0] if shape),
         *(f"<div><dt>Height</dt><dd>{escape(measurements['height'])}</dd></div>" for _ in [0] if measurements.get("height")),
         *(f"<div><dt>Weight</dt><dd>{escape(measurements['weight'])}</dd></div>" for _ in [0] if measurements.get("weight")),
         "</dl>",
         "</div>",
         f'<p class="rw-summary__credit">Sprite: {attribution}</p>',
+        *([cry_credit] if cry_credit else []),
         "</section>",
         "",
     ]

@@ -136,6 +136,27 @@ class PokeDBGeneration:
                 }
         return None
 
+    def pokemon_cry(self, reference: dict[str, Any]) -> dict[str, str] | None:
+        """Return this Pokémon's cry audio, if available.
+
+        PokéAPI splits cries into "legacy" (Gen 1-5 style) and "latest"
+        (redesigned in Gen 6+) recordings; PokéDB already resolves this to
+        whichever recording applies to the target generation.
+        """
+        cries = reference.get("cries")
+        if not isinstance(cries, dict):
+            return None
+        for key in ("latest", "legacy"):
+            url = cries.get(key)
+            if isinstance(url, str) and url.startswith("https://"):
+                return {
+                    "key": key,
+                    "url": url,
+                    "source": "PokéAPI cries",
+                    "source_url": "https://github.com/PokeAPI/cries",
+                }
+        return None
+
     def pokemon_sprites(
         self, reference: dict[str, Any], version: str | None
     ) -> list[dict[str, str]]:
@@ -240,6 +261,11 @@ class PokeDBGeneration:
             "base_stats": base_stats,
             "types": type_names,
             "abilities": ability_names,
+            "is_baby": reference.get("is_baby"),
+            "is_legendary": reference.get("is_legendary"),
+            "is_mythical": reference.get("is_mythical"),
+            "habitat": reference.get("habitat"),
+            "shape": reference.get("shape"),
         }
 
 
