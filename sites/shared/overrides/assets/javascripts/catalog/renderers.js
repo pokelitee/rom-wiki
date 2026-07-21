@@ -14,7 +14,7 @@ export function recordLink(record) {
   return link;
 }
 
-export function referenceLink(reference) {
+function referenceLink(reference) {
   if (!reference?.url) return text(reference?.label || "—");
   const link = document.createElement("a");
   link.href = reference.url;

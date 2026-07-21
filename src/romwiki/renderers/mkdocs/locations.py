@@ -6,6 +6,7 @@ from typing import Any
 
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
+    prune_catalog_pages,
     write_catalog,
     write_text as _write_text,
 )
@@ -38,12 +39,27 @@ def render_location_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    *,
+    only_pages: frozenset[str] | None = None,
 ) -> int:
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                _filename(record["header_id"])
+                for record in records
+                if only_pages is None
+                or _filename(record["header_id"]).removesuffix(".md") in only_pages
+            ),
+        },
+    )
     name_counts = Counter(record["name"] for record in records)
     fallback_links = []
     catalog_records = []
+    page_count = 0
     for record in sorted(
         records,
         key=lambda item: (
@@ -54,15 +70,17 @@ def render_location_pages(
     ):
         change = record_comparison(comparison, record["header_id"])
         filename = _filename(record["header_id"])
-        _write_text(
-            output_root / filename,
-            _render_location(
-                record,
-                change,
-                comparison.get("baseline") if comparison else None,
-                references,
-            ),
-        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            _write_text(
+                output_root / filename,
+                _render_location(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                ),
+            )
+            page_count += 1
         label = record["name"]
         if name_counts[label] > 1:
             label = (
@@ -113,7 +131,7 @@ def render_location_pages(
             fallback_links,
         ),
     )
-    return len(records)
+    return page_count
 
 
 def _render_location(

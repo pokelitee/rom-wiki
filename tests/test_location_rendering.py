@@ -157,12 +157,16 @@ class LocationRenderingTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
+            stale_page = output / "header-999.md"
+            stale_page.parent.mkdir(parents=True, exist_ok=True)
+            stale_page.write_text("stale", encoding="utf-8")
 
             count = render_location_pages(dataset, output, references=references)
             page = (output / "header-045.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
+        self.assertFalse(stale_page.exists())
         self.assertIn("../encounters/area-003.md", page)
         self.assertIn("../trainers/trainer-0246.md", page)
         self.assertIn("| Visible | [Potion](../items/potion.md) | 17 | (8, 11) |", page)

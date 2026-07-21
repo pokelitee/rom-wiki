@@ -6,6 +6,7 @@ from collections import Counter
 
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
+    prune_catalog_pages,
     write_catalog,
     write_text as _write_text,
 )
@@ -27,26 +28,42 @@ def render_encounter_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    *,
+    only_pages: frozenset[str] | None = None,
 ) -> int:
     records = [record for record in dataset["records"] if record["active"]]
     output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                f"area-{record['area_id']:03}.md"
+                for record in records
+                if only_pages is None or f"area-{record['area_id']:03}" in only_pages
+            ),
+        },
+    )
     fallback_links = []
     catalog_records = []
+    page_count = 0
     linked = [record for record in records if record.get("locations")]
     unlinked = [record for record in records if not record.get("locations")]
     name_counts = Counter(record["name"] for record in linked)
     for record in sorted(linked, key=lambda item: (item["name"], item["area_id"])):
         change = record_comparison(comparison, record["area_id"])
         filename = f"area-{record['area_id']:03}.md"
-        _write_text(
-            output_root / filename,
-            _render_area(
-                record,
-                change,
-                comparison.get("baseline") if comparison else None,
-                references,
-            ),
-        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            _write_text(
+                output_root / filename,
+                _render_area(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                ),
+            )
+            page_count += 1
         label = record["name"]
         if name_counts[label] > 1:
             internal_names = ", ".join(
@@ -71,14 +88,16 @@ def render_encounter_pages(
         for record in unlinked:
             change = record_comparison(comparison, record["area_id"])
             filename = f"area-{record['area_id']:03}.md"
-            _write_text(
-                output_root / filename,
-                _render_area(
-                    record,
-                    change,
-                    comparison.get("baseline") if comparison else None,
-                ),
-            )
+            if only_pages is None or filename.removesuffix(".md") in only_pages:
+                _write_text(
+                    output_root / filename,
+                    _render_area(
+                        record,
+                        change,
+                        comparison.get("baseline") if comparison else None,
+                    ),
+                )
+                page_count += 1
             fallback_links.append(
                 "- "
                 + ROUTES.markdown_link(
@@ -106,7 +125,7 @@ def render_encounter_pages(
             fallback_links,
         ),
     )
-    return len(records)
+    return page_count
 
 
 def _catalog_record(

@@ -11,12 +11,15 @@ def write_json_atomic(path: Path, value: Any) -> None:
     """Write ``value`` to ``path`` as pretty-printed, sorted JSON.
 
     Writes to a sibling ``.tmp`` file first and renames it into place so
-    readers never observe a partially written file.
+    readers never observe a partially written file. Leaves an existing file
+    untouched (including its mtime) when its content already matches, so
+    unchanged pages don't force unnecessary downstream rebuilds (e.g. mkdocs
+    `--dirty`, which decides what to reprocess by file modification time).
     """
+    content = json.dumps(value, indent=2, sort_keys=True) + "\n"
+    if path.is_file() and path.read_text(encoding="utf-8") == content:
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
-    temporary_path.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    temporary_path.write_text(content, encoding="utf-8")
     temporary_path.replace(path)

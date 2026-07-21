@@ -91,106 +91,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         )
 
     def test_renders_a_page_and_index(self) -> None:
-        record = {
-            "public": True,
-            "slug": "bulbasaur",
-            "name": "Bulbasaur",
-            "national_dex_id": 1,
-            "form": None,
-            "reference": {
-                "version": "platinum",
-                "source": "PokéDB / PokéAPI",
-                "source_url": "https://pokeapi.co/api/v2/pokemon/1/",
-                "genus": "Seed Pokémon",
-                "height_dm": 7,
-                "weight_hg": 69,
-                "flavor_text": "A seed was planted on its back at birth.",
-                "flavor_text_version": "platinum",
-                "base_stats": {
-                    "hp": 45, "attack": 49, "defense": 49, "speed": 45,
-                    "special_attack": 60, "special_defense": 65,
-                },
-                "types": ["grass", "poison"],
-                "abilities": ["overgrow"],
-            },
-            "base_stats": {
-                "hp": 45, "attack": 49, "defense": 49, "speed": 45,
-                "special_attack": 65, "special_defense": 65,
-            },
-            "types": [{"name": "grass"}, {"name": "grass"}],
-            "abilities": [{"name": "overgrow"}],
-            "catch_rate": 45,
-            "base_experience": 64,
-            "base_friendship": 70,
-            "ev_yields": {
-                "hp": 0, "attack": 0, "defense": 0, "speed": 0,
-                "special_attack": 1, "special_defense": 0,
-            },
-            "gender_ratio": 31,
-            "safari_flee_rate": 0,
-            "hatch_cycles": 20,
-            "growth_rate": {"name": "medium-slow"},
-            "egg_groups": [{"name": "monster"}, {"name": "grass"}],
-            "held_items": [
-                {"rarity": "common", "id": 0, "name": None},
-                {"rarity": "rare", "id": 81, "name": "Moon Stone"},
-            ],
-            "machines": [
-                {
-                    "name": "TM01",
-                    "move": {"id": 264, "slug": "focus-punch", "name": "Focus Punch"},
-                }
-            ],
-            "tutor_moves": [
-                {
-                    "move": {"id": 402, "slug": "seed-bomb", "name": "Seed Bomb"},
-                    "location": {"id": 1, "name": "Survival Area"},
-                    "shard_costs": {"red": 4, "blue": 0, "yellow": 0, "green": 4},
-                },
-                {
-                    "kind": "special",
-                    "move": {
-                        "id": 338,
-                        "slug": "frenzy-plant",
-                        "name": "Frenzy Plant",
-                    },
-                    "location": {"name": "Route 228"},
-                    "minimum_friendship": 255,
-                },
-            ],
-            "level_up_moves": [
-                {
-                    "level": 1,
-                    "move": {"id": 33, "slug": "tackle", "name": "Tackle"},
-                }
-            ],
-            "egg_moves": [
-                {"id": 130, "slug": "skull-bash", "name": "Skull Bash"}
-            ],
-            "egg_move_provenance": {"overlay_offset": 0x29222, "table_index": 0},
-            "learnset_provenance": {"archive": "wotbl.narc", "member": 1},
-            "evolutions": [
-                {
-                    "method_id": 4,
-                    "method": {"id": 4, "name": "level"},
-                    "parameter_data": {"kind": "level", "value": 16},
-                    "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
-                },
-                {
-                    "method_id": 7,
-                    "method": {"id": 7, "name": "use-item"},
-                    "parameter_data": {
-                        "kind": "item",
-                        "id": 221,
-                        "name": "King's Rock",
-                        "slug": "kings-rock",
-                    },
-                    "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
-                },
-            ],
-            "evolution_provenance": {"archive": "evo.narc", "member": 1},
-            "provenance": {"archive": "personal.narc", "member": 1},
-        }
+        record = _bulbasaur_record()
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             count = render_pokemon_pages({"records": [record]}, output)
@@ -234,6 +135,20 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["bst"], 318)
         self.assertEqual(catalog["records"][0]["egg_groups"], ["monster", "grass"])
         self.assertEqual(catalog["records"][0]["url"], "bulbasaur/")
+
+    def test_only_pages_skips_detail_pages_but_keeps_full_catalog(self) -> None:
+        record = _bulbasaur_record()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            count = render_pokemon_pages(
+                {"records": [record]}, output, only_pages=frozenset()
+            )
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(count, 0)
+        self.assertFalse((output / "bulbasaur.md").exists())
+        self.assertEqual(len(catalog["records"]), 1)
+        self.assertEqual(catalog["records"][0]["slug"], "bulbasaur")
 
     def test_indexes_reverse_evolution_links_for_public_records(self) -> None:
         records = [
@@ -341,6 +256,109 @@ class SpriteGalleryTests(unittest.TestCase):
         self.assertIn('src="https://example.test/front-shiny.png"', page)
         self.assertIn('src="https://example.test/back.png"', page)
         self.assertIn('rw-sprite-matrix__cell--empty">—<', page)
+
+
+def _bulbasaur_record() -> dict:
+    return {
+        "public": True,
+        "slug": "bulbasaur",
+        "name": "Bulbasaur",
+        "national_dex_id": 1,
+        "form": None,
+        "reference": {
+            "version": "platinum",
+            "source": "PokéDB / PokéAPI",
+            "source_url": "https://pokeapi.co/api/v2/pokemon/1/",
+            "genus": "Seed Pokémon",
+            "height_dm": 7,
+            "weight_hg": 69,
+            "flavor_text": "A seed was planted on its back at birth.",
+            "flavor_text_version": "platinum",
+            "base_stats": {
+                "hp": 45, "attack": 49, "defense": 49, "speed": 45,
+                "special_attack": 60, "special_defense": 65,
+            },
+            "types": ["grass", "poison"],
+            "abilities": ["overgrow"],
+        },
+        "base_stats": {
+            "hp": 45, "attack": 49, "defense": 49, "speed": 45,
+            "special_attack": 65, "special_defense": 65,
+        },
+        "types": [{"name": "grass"}, {"name": "grass"}],
+        "abilities": [{"name": "overgrow"}],
+        "catch_rate": 45,
+        "base_experience": 64,
+        "base_friendship": 70,
+        "ev_yields": {
+            "hp": 0, "attack": 0, "defense": 0, "speed": 0,
+            "special_attack": 1, "special_defense": 0,
+        },
+        "gender_ratio": 31,
+        "safari_flee_rate": 0,
+        "hatch_cycles": 20,
+        "growth_rate": {"name": "medium-slow"},
+        "egg_groups": [{"name": "monster"}, {"name": "grass"}],
+        "held_items": [
+            {"rarity": "common", "id": 0, "name": None},
+            {"rarity": "rare", "id": 81, "name": "Moon Stone"},
+        ],
+        "machines": [
+            {
+                "name": "TM01",
+                "move": {"id": 264, "slug": "focus-punch", "name": "Focus Punch"},
+            }
+        ],
+        "tutor_moves": [
+            {
+                "move": {"id": 402, "slug": "seed-bomb", "name": "Seed Bomb"},
+                "location": {"id": 1, "name": "Survival Area"},
+                "shard_costs": {"red": 4, "blue": 0, "yellow": 0, "green": 4},
+            },
+            {
+                "kind": "special",
+                "move": {
+                    "id": 338,
+                    "slug": "frenzy-plant",
+                    "name": "Frenzy Plant",
+                },
+                "location": {"name": "Route 228"},
+                "minimum_friendship": 255,
+            },
+        ],
+        "level_up_moves": [
+            {
+                "level": 1,
+                "move": {"id": 33, "slug": "tackle", "name": "Tackle"},
+            }
+        ],
+        "egg_moves": [
+            {"id": 130, "slug": "skull-bash", "name": "Skull Bash"}
+        ],
+        "egg_move_provenance": {"overlay_offset": 0x29222, "table_index": 0},
+        "learnset_provenance": {"archive": "wotbl.narc", "member": 1},
+        "evolutions": [
+            {
+                "method_id": 4,
+                "method": {"id": 4, "name": "level"},
+                "parameter_data": {"kind": "level", "value": 16},
+                "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
+            },
+            {
+                "method_id": 7,
+                "method": {"id": 7, "name": "use-item"},
+                "parameter_data": {
+                    "kind": "item",
+                    "id": 221,
+                    "name": "King's Rock",
+                    "slug": "kings-rock",
+                },
+                "target": {"id": 2, "slug": "ivysaur", "name": "Ivysaur"},
+            },
+        ],
+        "evolution_provenance": {"archive": "evo.narc", "member": 1},
+        "provenance": {"archive": "personal.narc", "member": 1},
+    }
 
 
 def _source_record(member: int) -> dict:

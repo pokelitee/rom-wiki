@@ -32,33 +32,45 @@ def render_move_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    *,
+    only_pages: frozenset[str] | None = None,
 ) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
-        {"index.md", *(f"{record['slug']}.md" for record in public_records)},
+        {
+            "index.md",
+            *(
+                f"{record['slug']}.md"
+                for record in public_records
+                if only_pages is None or record["slug"] in only_pages
+            ),
+        },
     )
     fallback_links = []
     catalog_records = []
+    page_count = 0
     name_source = dataset.get("name_sources", {}).get("move_names")
     for index, record in enumerate(public_records):
         change = record_comparison(comparison, record["move_id"])
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
-        _write_text(
-            output_root / filename,
-            _render_record(
-                record,
-                previous,
-                following,
-                name_source,
-                change,
-                comparison.get("baseline") if comparison else None,
-                references,
-            ),
-        )
+        if only_pages is None or record["slug"] in only_pages:
+            _write_text(
+                output_root / filename,
+                _render_record(
+                    record,
+                    previous,
+                    following,
+                    name_source,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                ),
+            )
+            page_count += 1
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -117,7 +129,7 @@ def render_move_pages(
             fallback_links,
         ),
     )
-    return len(public_records)
+    return page_count
 
 
 def _render_record(

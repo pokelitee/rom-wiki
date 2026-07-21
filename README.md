@@ -79,10 +79,17 @@ items, encounters, trainers, locations, semantic comparison JSON, and the wiki.
 Cached baseline data lives under `build/data/baselines/<base-profile>/` and is
 reused while its profile, ROM hash, schema, and cache revision still match.
 
+The same caching also applies to the hack ROM's raw extraction, cached under
+`build/data/cache/<profile>/`. If the hack ROM's hash hasn't changed since the
+last build, extraction is skipped and the cached data is reused; enrichment and
+rendering still run, but this cuts out the slowest step of an unchanged rebuild.
+Pass `--refresh-cache` to force re-extraction regardless.
+
 ```console
 romwiki baseline build --game renegade-platinum
 romwiki baseline build --game renegade-platinum --scope pokemon moves
 romwiki build-game --game renegade-platinum --refresh-baseline
+romwiki build-game --game renegade-platinum --refresh-cache
 ```
 
 Configured builds require the registered base ROM by default. For an explicit ROM
@@ -309,6 +316,18 @@ python -m mkdocs serve --dirty --config-file sites/games/renegade-platinum/mkdoc
 The development configuration keeps every catalog index and its JSON data but
 builds only one representative detail page per generated section. Use the normal
 configuration for final link, navigation, search, and production-build review.
+
+Add `--dev` to any `build-*` command (including `build-game`) to match this at
+generation time: only the representative pages consumed by `mkdocs.dev.yml` are
+extracted, enriched, and rendered, while `catalog.json` and each section's
+index page are still built in full. This speeds up local iteration on renderer
+changes, since a full `build-game` re-renders every dataset's complete page set
+on every run.
+
+```console
+romwiki build-game --game renegade-platinum --dev
+romwiki build-pokemon --game renegade-platinum --dev
+```
 
 The portal can be previewed by using `sites/portal/mkdocs.yml` instead. Each site
 inherits the shared responsive theme, light and dark palettes, catalog interface,

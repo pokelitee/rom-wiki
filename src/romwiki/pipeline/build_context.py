@@ -29,7 +29,7 @@ from romwiki.pipeline.identify import InspectionResult
 from romwiki.sources import PokeDBGeneration
 
 
-BASELINE_CACHE_REVISION = 1
+CACHE_REVISION = 1
 
 
 class GameBuildContext:
@@ -226,7 +226,7 @@ class GameBuildContext:
     def _manifest(self) -> dict[str, Any]:
         return {
             "schema_version": 1,
-            "cache_revision": BASELINE_CACHE_REVISION,
+            "cache_revision": CACHE_REVISION,
             "profile": self.profile.id,
             "rom_sha256": self.result.image.hashes.sha256,
         }

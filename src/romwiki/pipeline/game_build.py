@@ -38,8 +38,20 @@ class GameBuildWorkflow:
         baseline: InspectionResult | None = None,
         baseline_cache_root: Path = Path("build/data/baselines"),
         refresh_baseline: bool = False,
+        current_cache_root: Path | None = None,
+        refresh_current: bool = False,
     ) -> None:
-        self.current = GameBuildContext(current, pokedb)
+        current_cache = None
+        if current_cache_root is not None:
+            if current.match is None:
+                raise ProfileError("A matched profile is required for a game build")
+            current_cache = current_cache_root / current.match.profile.id
+        self.current = GameBuildContext(
+            current,
+            pokedb,
+            cache_root=current_cache,
+            refresh=refresh_current,
+        )
         self.baseline = None
         if baseline is not None:
             if baseline.match is None:

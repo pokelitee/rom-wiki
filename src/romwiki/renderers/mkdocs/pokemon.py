@@ -29,16 +29,26 @@ def render_pokemon_pages(
     comparison: dict[str, Any] | None = None,
     move_dataset: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    *,
+    only_pages: frozenset[str] | None = None,
 ) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
     preevolutions = _index_preevolutions(public_records)
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
-        {"index.md", *(f"{record['slug']}.md" for record in public_records)},
+        {
+            "index.md",
+            *(
+                f"{record['slug']}.md"
+                for record in public_records
+                if only_pages is None or record["slug"] in only_pages
+            ),
+        },
     )
     fallback_links = []
     catalog_records = []
+    page_count = 0
     type_name_source = dataset.get("name_sources", {}).get("type_names")
     move_lookup = {
         record["move_id"]: record for record in (move_dataset or {}).get("records", [])
@@ -50,21 +60,23 @@ def render_pokemon_pages(
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
-        _write_text(
-            output_root / filename,
-            _render_record(
-                record,
-                previous,
-                following,
-                type_name_source,
-                preevolutions.get(record["slug"], []),
-                public_records,
-                move_lookup,
-                change,
-                comparison.get("baseline") if comparison else None,
-                references,
-            ),
-        )
+        if only_pages is None or record["slug"] in only_pages:
+            _write_text(
+                output_root / filename,
+                _render_record(
+                    record,
+                    previous,
+                    following,
+                    type_name_source,
+                    preevolutions.get(record["slug"], []),
+                    public_records,
+                    move_lookup,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                ),
+            )
+            page_count += 1
         dex = record["national_dex_id"]
         fallback_links.append(
             "- "
@@ -125,7 +137,7 @@ def render_pokemon_pages(
             fallback_links,
         ),
     )
-    return len(public_records)
+    return page_count
 
 
 def _render_record(

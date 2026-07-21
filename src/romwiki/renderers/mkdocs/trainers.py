@@ -5,6 +5,7 @@ from typing import Any
 
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
+    prune_catalog_pages,
     write_catalog,
     write_text as _write_text,
 )
@@ -27,11 +28,26 @@ def render_trainer_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    *,
+    only_pages: frozenset[str] | None = None,
 ) -> int:
     records = [record for record in dataset["records"] if record["party"]]
     output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                f"trainer-{record['trainer_id']:04}.md"
+                for record in records
+                if only_pages is None
+                or f"trainer-{record['trainer_id']:04}" in only_pages
+            ),
+        },
+    )
     fallback_links = []
     catalog_records = []
+    page_count = 0
     linked = [
         record
         for record in records
@@ -53,15 +69,17 @@ def render_trainer_pages(
         change = record_comparison(comparison, record["trainer_id"])
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
-        _write_text(
-            output_root / filename,
-            _render_trainer(
-                record,
-                change,
-                comparison.get("baseline") if comparison else None,
-                references,
-            ),
-        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            _write_text(
+                output_root / filename,
+                _render_trainer(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                ),
+            )
+            page_count += 1
         location_names = " / ".join(
             dict.fromkeys(
                 location["name"]
@@ -94,14 +112,16 @@ def render_trainer_pages(
         change = record_comparison(comparison, record["trainer_id"])
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
-        _write_text(
-            output_root / filename,
-            _render_trainer(
-                record,
-                change,
-                comparison.get("baseline") if comparison else None,
-            ),
-        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            _write_text(
+                output_root / filename,
+                _render_trainer(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                ),
+            )
+            page_count += 1
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -130,7 +150,7 @@ def render_trainer_pages(
             fallback_links,
         ),
     )
-    return len(records)
+    return page_count
 
 
 def _catalog_record(

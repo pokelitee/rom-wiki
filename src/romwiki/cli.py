@@ -49,6 +49,7 @@ from romwiki.renderers.mkdocs import (
     render_trainer_pages,
 )
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
+from romwiki.renderers.mkdocs.dev_fixtures import DEV_FIXTURE_PAGES
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sources import PokeDBGeneration
@@ -268,6 +269,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     for build_parser in build_parsers:
         _add_comparison_arguments(build_parser)
+        _add_dev_argument(build_parser)
+        _add_cache_argument(build_parser)
     build_locations_parser.add_argument(
         "--pokedb",
         type=Path,
@@ -280,6 +283,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_input_arguments(build_game_parser)
     _add_comparison_arguments(build_game_parser)
+    _add_dev_argument(build_game_parser)
+    _add_cache_argument(build_game_parser)
     build_game_parser.add_argument(
         "--pokedb",
         type=Path,
@@ -557,6 +562,30 @@ def _add_comparison_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_dev_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help=(
+            "only render the representative detail pages used by "
+            "mkdocs.dev.yml, keeping full catalog data; speeds up local "
+            "iteration on renderer changes"
+        ),
+    )
+
+
+def _add_cache_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--refresh-cache",
+        action="store_true",
+        help=(
+            "ignore and replace cached raw extraction data for the current "
+            "ROM; normally unnecessary since the cache already invalidates "
+            "itself whenever the ROM's hash changes"
+        ),
+    )
+
+
 def _create_build_workflow(
     args: argparse.Namespace,
     result: InspectionResult,
@@ -568,13 +597,15 @@ def _create_build_workflow(
         if baseline_path is not None
         else None
     )
+    data_root = getattr(args, "data_root", Path("build/data"))
     return GameBuildWorkflow(
         result,
         pokedb,
         baseline=baseline,
-        baseline_cache_root=getattr(args, "data_root", Path("build/data"))
-        / "baselines",
+        baseline_cache_root=data_root / "baselines",
         refresh_baseline=args.refresh_baseline,
+        current_cache_root=data_root / "cache",
+        refresh_current=args.refresh_cache,
     )
 
 
@@ -664,6 +695,7 @@ def _run_section_build(
             wiki_output,
             move_dataset=move_dataset,
             reference_index=reference_index,
+            only_pages=DEV_FIXTURE_PAGES.get(kind) if args.dev else None,
         )
         if build.comparison is not None:
             comparisons[kind] = build.comparison
@@ -695,6 +727,7 @@ def _run_full_game_build(
             wiki_root / _section_name(kind),
             move_dataset=builds["moves"].current,
             reference_index=reference_index,
+            only_pages=DEV_FIXTURE_PAGES.get(kind) if args.dev else None,
         )
         if build.comparison is not None:
             comparisons[kind] = build.comparison
@@ -733,6 +766,7 @@ def _write_dataset_build(
     *,
     move_dataset: dict | None = None,
     reference_index: ReferenceIndex | None = None,
+    only_pages: frozenset[str] | None = None,
 ) -> None:
     write_enriched_dataset(build.current, data_output)
     if build.comparison is not None:
@@ -754,10 +788,15 @@ def _write_dataset_build(
             build.comparison,
             move_dataset,
             reference_index,
+            only_pages=only_pages,
         )
     else:
         page_count = renderer(
-            build.current, wiki_output, build.comparison, reference_index
+            build.current,
+            wiki_output,
+            build.comparison,
+            reference_index,
+            only_pages=only_pages,
         )
     print(f"Wrote {len(build.current['records'])} {kind} records: {data_output}")
     print(f"Rendered {page_count} {kind} pages: {wiki_output}")

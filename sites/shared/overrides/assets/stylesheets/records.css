@@ -28,8 +28,6 @@
 .rw-data-grid div { padding: .7rem; border: 1px solid var(--rw-border); border-radius: .48rem; background: var(--rw-surface); }
 .rw-data-grid dt { color: var(--rw-text-muted); font-size: .58rem; font-weight: 750; letter-spacing: .055em; text-transform: uppercase; }
 .rw-data-grid dd { margin: .18rem 0 0; font-size: .72rem; font-weight: 700; }
-.rw-link-list { display: flex; flex-wrap: wrap; gap: .4rem; margin: .7rem 0 1.2rem; }
-.rw-link-list a { padding: .28rem .48rem; border: 1px solid var(--rw-border); border-radius: 999px; background: var(--rw-surface); font-size: .63rem; font-weight: 650; }
 .rw-record-nav { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin: 2rem 0 0; }
 .rw-record-nav a { padding: .7rem; border: 1px solid var(--rw-border); border-radius: .5rem; }
 .rw-record-nav a:last-child { text-align: right; }

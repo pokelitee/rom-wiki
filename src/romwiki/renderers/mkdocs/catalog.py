@@ -45,6 +45,16 @@ def catalog_index(
 
 
 def write_text(path: Path, value: str) -> None:
+    """Write ``value`` to ``path``, leaving an unchanged file's mtime alone.
+
+    Writes to a sibling ``.tmp`` file first and renames it into place so
+    readers never observe a partially written file. Skipping the write
+    entirely when the content already matches avoids bumping the mtime of
+    unchanged pages, which matters for tools like mkdocs `--dirty` that
+    decide what to reprocess by file modification time.
+    """
+    if path.is_file() and path.read_text(encoding="utf-8") == value:
+        return
     temporary = path.with_suffix(f"{path.suffix}.tmp")
     temporary.write_text(value, encoding="utf-8")
     temporary.replace(path)

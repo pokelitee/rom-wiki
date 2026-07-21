@@ -27,30 +27,42 @@ def render_ability_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    *,
+    only_pages: frozenset[str] | None = None,
 ) -> int:
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
-    filenames = {"index.md", *(f"{record['slug']}.md" for record in records)}
+    filenames = {
+        "index.md",
+        *(
+            f"{record['slug']}.md"
+            for record in records
+            if only_pages is None or record["slug"] in only_pages
+        ),
+    }
     prune_catalog_pages(output_root, filenames)
 
     fallback_links = []
     catalog_records = []
+    page_count = 0
     for index, record in enumerate(records):
         change = record_comparison(comparison, record["ability_id"])
         filename = f"{record['slug']}.md"
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
-        write_text(
-            output_root / filename,
-            _render_record(
-                record,
-                previous,
-                following,
-                change,
-                comparison.get("baseline") if comparison else None,
-                references,
-            ),
-        )
+        if only_pages is None or record["slug"] in only_pages:
+            write_text(
+                output_root / filename,
+                _render_record(
+                    record,
+                    previous,
+                    following,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                ),
+            )
+            page_count += 1
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -101,7 +113,7 @@ def render_ability_pages(
             fallback_links,
         ),
     )
-    return len(records)
+    return page_count
 
 
 def _render_record(

@@ -102,11 +102,15 @@ class TrainerEnrichmentTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
+            stale_page = output / "trainer-9999.md"
+            stale_page.parent.mkdir(parents=True, exist_ok=True)
+            stale_page.write_text("stale", encoding="utf-8")
             count = render_trainer_pages(enriched, output)
             page = (output / "trainer-0000.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
+        self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn("Master Ball", page)
