@@ -29,7 +29,7 @@ from romwiki.pipeline.identify import InspectionResult
 from romwiki.sources import PokeDBGeneration
 
 
-CACHE_REVISION = 1
+CACHE_REVISION = 2
 
 
 class GameBuildContext:
@@ -49,6 +49,7 @@ class GameBuildContext:
         self.cache_root = cache_root
         self.refresh = refresh
         self._values: dict[str, dict[str, Any]] = {}
+        self._initial_cache_valid = self._manifest_valid()
 
     def personal_raw(self) -> dict[str, Any]:
         return self._raw("pokemon/personal", extract_personal_dataset)
@@ -147,6 +148,7 @@ class GameBuildContext:
             lambda: enrich_trainer_dataset(
                 self.trainers_raw(),
                 self.pokedb,
+                pokemon_dataset=self.pokemon(),
                 move_names=self.profile.move_names,
                 sprite_version=self.profile.sprite_version,
                 reference_version=self.profile.base_game,
@@ -208,7 +210,7 @@ class GameBuildContext:
         return self._values[key]
 
     def _read_cache(self, path: Path) -> dict[str, Any] | None:
-        if not self._manifest_valid() or not path.is_file():
+        if not self._initial_cache_valid or not path.is_file():
             return None
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
@@ -216,6 +218,10 @@ class GameBuildContext:
             return None
         source = value.get("source", {}) if isinstance(value, dict) else {}
         if value.get("schema_version") != 1:
+            return None
+        if value.get("dataset") == "trainers" and not isinstance(
+            value.get("engine"), str
+        ):
             return None
         if source.get("rom_sha256") != self.result.image.hashes.sha256:
             return None

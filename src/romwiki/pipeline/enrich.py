@@ -14,6 +14,8 @@ from romwiki.engines.gen4_dppt import (
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.sources import PokeDBGeneration
+from romwiki.pipeline.trainer_party import normalize_trainer_party_member
+from romwiki.schema.trainers import TRAINER_PARTY_SCHEMA_VERSION
 from romwiki.util.text import name_slug, title_case_slug
 
 
@@ -189,6 +191,7 @@ def enrich_trainer_dataset(
     dataset: dict[str, Any],
     pokedb: PokeDBGeneration,
     *,
+    pokemon_dataset: dict[str, Any] | None = None,
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
     reference_version: str | None = None,
@@ -196,6 +199,10 @@ def enrich_trainer_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
         raise DataSourceError("Trainer dataset records must be a list")
+    engine = dataset.get("engine")
+    if not isinstance(engine, str):
+        raise DataSourceError("Trainer dataset must declare its source engine")
+    pokemon_records = _trainer_pokemon_index(dataset, pokemon_dataset)
     move_names = _resolve_move_names(dataset, move_names)
     item_names = _resolve_item_names(dataset)
     records = []
@@ -210,12 +217,16 @@ def enrich_trainer_dataset(
                 item_names,
                 sprite_version,
                 reference_version,
+                engine=engine,
+                pokemon_records=pokemon_records,
             )
         )
     enriched = {
         "schema_version": 1,
         "game": dataset["game"],
+        "engine": engine,
         "dataset": "trainers",
+        "party_schema_version": TRAINER_PARTY_SCHEMA_VERSION,
         "record_count": len(records),
         "active_record_count": sum(bool(record["party"]) for record in records),
         "linked_record_count": sum(bool(record["locations"]) for record in records),
@@ -455,9 +466,17 @@ def _enrich_trainer(
     item_names: list[str] | None,
     sprite_version: str | None = None,
     reference_version: str | None = None,
+    *,
+    engine: str = "gen4_dppt",
+    pokemon_records: Mapping[int | str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     party = []
-    for pokemon in source["party"]:
+    for raw_member in source["party"]:
+        pokemon = normalize_trainer_party_member(
+            engine,
+            raw_member,
+            has_custom_moves=source["has_custom_moves"],
+        )
         species_id = pokemon["species_id"]
         form_id = pokemon["form_id"]
         if form_id:
@@ -474,20 +493,37 @@ def _enrich_trainer(
         else:
             reference = pokedb.pokemon_for_id(species_id)
             cosmetic_form = None
+        game_record = None
+        if pokemon_records is not None:
+            game_record = pokemon_records.get(slug if form_id and slug else species_id)
+        pokemon_slug = game_record["slug"] if game_record else reference["name"]
+        pokemon_name = game_record["name"] if game_record else title_case_slug(
+            reference["name"]
+        )
+        pokemon_sprite = (
+            game_record.get("sprite")
+            if game_record
+            else pokedb.pokemon_sprite(reference, sprite_version)
+        )
         held_item = (
             _item_reference(pokemon["held_item_id"], pokedb, item_names)
             if pokemon["held_item_id"] is not None
             else None
         )
+        canonical_member = {
+            key: value
+            for key, value in pokemon.items()
+            if key not in {"held_item_id", "move_ids"}
+        }
         party.append(
             {
-                **pokemon,
+                **canonical_member,
                 "pokemon": {
                     "id": species_id,
-                    "slug": reference["name"],
-                    "name": title_case_slug(reference["name"])
+                    "slug": pokemon_slug,
+                    "name": pokemon_name
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
-                    "sprite": pokedb.pokemon_sprite(reference, sprite_version),
+                    "sprite": pokemon_sprite,
                 },
                 "held_item": (
                     _with_item_sprite(held_item, pokedb, reference_version)
@@ -516,6 +552,28 @@ def _enrich_trainer(
             if item_id
         ],
     }
+
+
+def _trainer_pokemon_index(
+    trainer_dataset: Mapping[str, Any],
+    pokemon_dataset: dict[str, Any] | None,
+) -> dict[int | str, dict[str, Any]] | None:
+    if pokemon_dataset is None:
+        return None
+    if pokemon_dataset.get("game") != trainer_dataset.get("game"):
+        raise DataSourceError("Trainer and Pokémon datasets must be for the same game")
+    records = pokemon_dataset.get("records")
+    if not isinstance(records, list):
+        raise DataSourceError("Pokémon dataset records must be a list")
+    index: dict[int | str, dict[str, Any]] = {}
+    for record in records:
+        member = record.get("member")
+        slug = record.get("slug")
+        if member is not None:
+            index[member] = record
+        if isinstance(slug, str):
+            index[slug] = record
+    return index
 
 
 def _with_item_sprite(

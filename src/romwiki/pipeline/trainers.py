@@ -80,6 +80,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "trainers",
         "record_count": len(records),
         "linked_record_count": sum(

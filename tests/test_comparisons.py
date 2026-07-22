@@ -71,6 +71,33 @@ class DatasetComparisonTests(unittest.TestCase):
 
         self.assertEqual(comparison["counts"]["unchanged"], 1)
 
+    def test_ignores_engine_source_fields_in_trainer_comparisons(self) -> None:
+        baseline_member = {
+            "pokemon": {"id": 1, "slug": "bulbasaur", "name": "Bulbasaur"},
+            "level": 5,
+            "moves": [],
+            "moves_source": "level-up",
+            "source_fields": {"difficulty": 0},
+        }
+        current_member = {
+            **baseline_member,
+            "source_fields": {"difficulty": 100},
+        }
+        baseline = _dataset(
+            "trainers",
+            "base",
+            [{"trainer_id": 1, "name": "Sam", "party": [baseline_member]}],
+        )
+        current = _dataset(
+            "trainers",
+            "hack",
+            [{"trainer_id": 1, "name": "Sam", "party": [current_member]}],
+        )
+
+        comparison = compare_datasets(current, baseline)
+
+        self.assertEqual(comparison["counts"]["unchanged"], 1)
+
     def test_nested_reference_names_do_not_create_mechanical_changes(self) -> None:
         baseline = _dataset(
             "pokemon",

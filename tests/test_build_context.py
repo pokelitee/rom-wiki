@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -70,6 +71,25 @@ class GameBuildContextCacheTests(unittest.TestCase):
             _context(cache_root, refresh=True)._raw("kind/key", extractor)
 
         self.assertEqual(len(calls), 2)
+
+    def test_invalid_manifest_rebuilds_every_entry_in_the_context(self) -> None:
+        calls: list = []
+        extractor = _extractor(calls)
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+            initial = _context(cache_root)
+            initial._raw("first", extractor)
+            initial._raw("second", extractor)
+            manifest_path = cache_root / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["cache_revision"] = 0
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            rebuilt = _context(cache_root)
+            rebuilt._raw("first", extractor)
+            rebuilt._raw("second", extractor)
+
+        self.assertEqual(len(calls), 4)
 
     def test_without_a_cache_root_every_call_re_extracts(self) -> None:
         calls: list = []

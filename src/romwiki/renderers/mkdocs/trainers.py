@@ -473,7 +473,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 "</dl>",
             ]
         )
-        if member["moves"]:
+        if member["moves_source"] == "explicit":
             lines.append('<ol class="rw-party-card__moves" aria-label="Moves">')
             for move in member["moves"]:
                 slug = move["name"]
@@ -487,10 +487,16 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                     source_url,
                 )
                 lines.append(f"<li>{move_link}</li>")
+            if not member["moves"]:
+                lines.append('<li class="rw-party-card__moves-empty">No moves</li>')
             lines.append("</ol>")
-        else:
+        elif member["moves_source"] == "level-up":
             lines.append(
                 '<p class="rw-party-card__default-moves">Uses default level-up moves.</p>'
+            )
+        else:
+            lines.append(
+                '<p class="rw-party-card__default-moves">Moves unavailable.</p>'
             )
         lines.append("</article>")
     lines.extend(["</div>", ""])

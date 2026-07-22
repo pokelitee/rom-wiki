@@ -22,11 +22,13 @@ class TrainerEnrichmentTests(unittest.TestCase):
             items_by_id={},
         )
         source = {
+            "has_custom_moves": False,
             "reward_item_ids": [],
             "party": [
                 {
                     "species_id": 412,
                     "form_id": 1,
+                    "level": 5,
                     "held_item_id": None,
                     "move_ids": [],
                 }
@@ -93,11 +95,23 @@ class TrainerEnrichmentTests(unittest.TestCase):
         enriched = enrich_trainer_dataset(
             {
                 "game": "test",
+                "engine": "gen4_dppt",
                 "source": {},
                 "move_names": move_names,
                 "records": [source],
             },
             pokedb,
+            pokemon_dataset={
+                "game": "test",
+                "records": [
+                    {
+                        "member": 1,
+                        "name": "Bulbasaur",
+                        "slug": "bulbasaur",
+                        "sprite": {"url": "https://example.test/bulbasaur.png"},
+                    }
+                ],
+            },
         )
 
         with tempfile.TemporaryDirectory() as directory:
@@ -110,9 +124,11 @@ class TrainerEnrichmentTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
+        self.assertEqual(enriched["party_schema_version"], 1)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
+        self.assertIn('src="https://example.test/bulbasaur.png"', page)
         self.assertIn("Master Ball", page)
         self.assertIn("Play Rough", page)
         self.assertIn(
@@ -122,6 +138,13 @@ class TrainerEnrichmentTests(unittest.TestCase):
         )
         self.assertEqual(catalog["kind"], "trainers")
         self.assertEqual(catalog["records"][0]["min_level"], 5)
+        party_member = enriched["records"][0]["party"][0]
+        self.assertEqual(party_member["moves_source"], "explicit")
+        self.assertEqual(
+            party_member["source_fields"],
+            {"difficulty": 0, "gender_ability": 0, "ball_seal": 0},
+        )
+        self.assertNotIn("difficulty", party_member)
         self.assertEqual(
             catalog["records"][0]["party"],
             [{

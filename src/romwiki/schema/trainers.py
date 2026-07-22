@@ -1,9 +1,35 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Literal, TypedDict
 
 from romwiki.schema.pokemon import RecordProvenance
+
+
+TRAINER_PARTY_SCHEMA_VERSION = 1
+
+
+class TrainerAttribute(TypedDict):
+    """A stored or derived party attribute with explicit provenance."""
+
+    source: Literal["stored", "derived", "engine-default"]
+
+
+class NormalizedTrainerPokemon(TypedDict):
+    """Engine-neutral party fields consumed by enrichment and renderers."""
+
+    species_id: int
+    form_id: int
+    level: int
+    held_item_id: int | None
+    move_ids: list[int]
+    moves_source: Literal["explicit", "level-up", "unavailable"]
+    ability: TrainerAttribute | None
+    nature: TrainerAttribute | None
+    gender: TrainerAttribute | None
+    ivs: TrainerAttribute | None
+    evs: TrainerAttribute | None
+    source_fields: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)

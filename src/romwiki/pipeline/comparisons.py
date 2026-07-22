@@ -263,7 +263,8 @@ def _clean(value: Any) -> Any:
     return {
         key: _clean(item)
         for key, item in value.items()
-        if key not in {"provenance", "reference", "sprite", "sprites"}
+        if key
+        not in {"provenance", "reference", "source_fields", "sprite", "sprites"}
         and not key.endswith("_provenance")
     }
 

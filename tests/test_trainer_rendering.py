@@ -68,6 +68,7 @@ def _party_member(moves: list[str]) -> dict[str, object]:
             "sprite": None,
         },
         "moves": [{"id": index, "name": name} for index, name in enumerate(moves)],
+        "moves_source": "explicit" if moves else "level-up",
     }
 
 
