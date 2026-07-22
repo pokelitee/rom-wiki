@@ -331,6 +331,10 @@ def _format_list_change(
     kind: str | None = None,
     field: str | None = None,
 ) -> str:
+    keyed_before = _keyed_records(before)
+    keyed_after = _keyed_records(after)
+    if keyed_before is not None and keyed_after is not None:
+        return _format_keyed_list_change(keyed_before, keyed_after)
     before_values = {
         _canonical(normalize_comparison_value(item, kind=kind, field=field)): item
         for item in before
@@ -360,6 +364,54 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
                     ],
                 )
             )
+    return _format_change_groups(groups)
+
+
+def _keyed_records(values: list[Any]) -> dict[Any, dict[str, Any]] | None:
+    if not values or not all(isinstance(value, dict) for value in values):
+        return None
+    result: dict[Any, dict[str, Any]] = {}
+    for value in values:
+        if "command_offset" in value:
+            key = (
+                value.get("kind"), value.get("inventory_id"),
+                value.get("script_file_id"), value["command_offset"],
+            )
+        elif "item_id" in value:
+            key = ("item_id", value["item_id"])
+        else:
+            return None
+        if key in result:
+            return None
+        result[key] = value
+    return result
+
+
+def _format_keyed_list_change(
+    before: dict[Any, dict[str, Any]],
+    after: dict[Any, dict[str, Any]],
+    *,
+    nested: bool = False,
+) -> str:
+    changed, removed, added = [], [], []
+    for key in sorted(set(before) | set(after), key=str):
+        old, new = before.get(key), after.get(key)
+        if old is None:
+            added.append(_format_value_summary(new))
+        elif new is None:
+            removed.append(_format_value_summary(old))
+        elif old != new:
+            changed.append(
+                f"{_format_value_summary(new)}: "
+                f"{_format_mapping_change(old, new, nested=True)}"
+            )
+    groups = [
+        ("entry changed", "entries changed", changed),
+        ("entry removed", "entries removed", removed),
+        ("entry added", "entries added", added),
+    ]
+    if nested:
+        return _format_plain_change_groups(groups)
     return _format_change_groups(groups)
 
 
@@ -676,7 +728,11 @@ def _level_label(levels: tuple[int, ...]) -> str:
 
 
 def _format_mapping_change(
-    before: dict[str, Any], after: dict[str, Any], *, kind: str | None = None
+    before: dict[str, Any],
+    after: dict[str, Any],
+    *,
+    kind: str | None = None,
+    nested: bool = False,
 ) -> str:
     lines = []
     for key in sorted(before.keys() | after.keys()):
@@ -685,9 +741,19 @@ def _format_mapping_change(
         if old_value == new_value:
             continue
         label = escape(key.replace("_", " ").title())
-        value = _format_value_change(old_value, new_value, kind=kind, field=key)
+        if isinstance(old_value, list) and isinstance(new_value, list):
+            keyed_before = _keyed_records(old_value)
+            keyed_after = _keyed_records(new_value)
+            if keyed_before is not None and keyed_after is not None:
+                value = _format_keyed_list_change(
+                    keyed_before, keyed_after, nested=nested
+                )
+            else:
+                value = _format_value_change(old_value, new_value, kind=kind, field=key)
+        else:
+            value = _format_value_change(old_value, new_value, kind=kind, field=key)
         lines.append(f"{label}: {value}")
-    return _format_lines(lines, True)
+    return _format_lines(lines, True) if not nested else _format_plain_lines(lines)
 
 
 def _format_lines(values: list[str], trusted: bool = False) -> str:
@@ -697,15 +763,24 @@ def _format_lines(values: list[str], trusted: bool = False) -> str:
         value if trusted else escape(value).replace("|", "&#124;")
         for value in values
     ]
-    return _format_collection(rendered, "changes")
+    return _format_collection(rendered, "change", "changes")
 
 
-def _format_collection(values: list[str], plural: str) -> str:
+def _format_plain_lines(values: list[str]) -> str:
+    if not values:
+        return "No changes"
+    return '<ul class="rw-comparison-list">' + "".join(
+        f"<li>{value}</li>" for value in values
+    ) + "</ul>"
+
+
+def _format_collection(values: list[str], singular: str, plural: str) -> str:
     if not values:
         return "No changes"
     entries = "".join(f"<li>{value}</li>" for value in values)
     return (
-        f"<details><summary>{len(values)} {plural}</summary>"
+        f"<details><summary>{len(values)} "
+        f"{singular if len(values) == 1 else plural}</summary>"
         f'<ul class="rw-comparison-list">{entries}</ul></details>'
     )
 
@@ -718,7 +793,23 @@ def _format_change_groups(
         if not values:
             continue
         label = singular if len(values) == 1 else plural
-        parts.append(_format_collection(values, label))
+        parts.append(_format_collection(values, singular, plural))
+    return "".join(parts) or "No changes"
+
+
+def _format_plain_change_groups(
+    groups: list[tuple[str, str, list[str]]],
+) -> str:
+    parts = []
+    for singular, plural, values in groups:
+        if not values:
+            continue
+        label = singular if len(values) == 1 else plural
+        entries = "".join(f"<li>{value}</li>" for value in values)
+        parts.append(
+            f"<strong>{escape(label[:1].upper() + label[1:])}:</strong>"
+            f'<ul class="rw-comparison-list">{entries}</ul>'
+        )
     return "".join(parts) or "No changes"
 
 

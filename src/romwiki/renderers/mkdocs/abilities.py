@@ -11,6 +11,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text,
 )
 from romwiki.renderers.mkdocs.components import (
+    empty_state,
     record_nav_link,
     record_navigation,
     table_sprite_cell,
@@ -159,7 +160,7 @@ def _render_record(
             ]
         )
     else:
-        lines.extend(["No Pokémon in this game are assigned this ability.", ""])
+        lines.extend(empty_state("No PokÃ©mon are assigned this ability."))
 
     lines.extend(
         [

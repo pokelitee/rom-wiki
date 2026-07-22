@@ -11,6 +11,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text as _write_text,
 )
 from romwiki.renderers.mkdocs.components import (
+    empty_state,
     display_name,
     record_nav_link,
     record_navigation,
@@ -297,7 +298,7 @@ def _append_ai_battle_items(
     )
     items = [item for item in record.get("ai_battle_items", []) if item.get("name")]
     if not items:
-        lines.extend(["None.", ""])
+        lines.extend(empty_state("No AI battle items."))
         return
     names = ", ".join(
         ROUTES.markdown_link(

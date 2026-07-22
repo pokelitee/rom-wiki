@@ -12,6 +12,7 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
+    empty_state,
     evolution_condition,
     fact_grid,
     pokemon_summary,
@@ -233,7 +234,7 @@ def _render_record(
             ]
         )
     else:
-        lines.extend(["None.", ""])
+        lines.extend(empty_state("No wild held items."))
     preevolutions = preevolutions or []
     lines.extend(["## Evolutions", ""])
     if preevolutions or evolutions:
@@ -546,7 +547,7 @@ def _append_level_up_moves(
     move_lookup: dict[int, dict[str, Any]],
 ) -> None:
     if not moves:
-        lines.extend(["No level-up moves.", ""])
+        lines.extend(empty_state("No level-up moves."))
         return
     lines.extend(
         [
@@ -588,7 +589,10 @@ def _append_machines(
             ]
         )
         return
-    lines.extend([", ".join(machine["name"] for machine in machines) or "None", ""])
+    if not machines:
+        lines.extend(empty_state("No compatible machines."))
+        return
+    lines.extend([", ".join(machine["name"] for machine in machines), ""])
 
 
 def _append_tutor_moves(
@@ -598,7 +602,7 @@ def _append_tutor_moves(
     move_lookup: dict[int, dict[str, Any]],
 ) -> None:
     if not moves:
-        lines.extend(["None.", ""])
+        lines.extend(empty_state("No compatible tutor moves."))
         return
     lines.extend(
         [
@@ -624,7 +628,7 @@ def _append_egg_moves(
     move_lookup: dict[int, dict[str, Any]],
 ) -> None:
     if not moves:
-        lines.extend(["None.", ""])
+        lines.extend(empty_state("No egg moves."))
         return
     lines.extend(
         [

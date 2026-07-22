@@ -13,6 +13,7 @@ from romwiki.renderers.mkdocs.catalog import (
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
+    empty_state,
     record_nav_link,
     record_navigation,
     tutor_requirement,
@@ -307,7 +308,7 @@ def _tutor_compatibility(
 ) -> list[str]:
     tutors = record.get("tutors", [])
     if not tutors:
-        return ["Not taught by a shard move tutor.", ""]
+        return empty_state("Not taught by a shard move tutor.")
     lines = []
     for tutor in tutors:
         costs = tutor_requirement(tutor)
@@ -331,7 +332,7 @@ def _egg_move_learners(
 ) -> list[str]:
     pokemon = record.get("egg_move_pokemon", [])
     if not pokemon:
-        return ["None.", ""]
+        return empty_state("No egg-move learners.")
     return [
         ", ".join(
             _pokemon_link(value, source_file) for value in pokemon

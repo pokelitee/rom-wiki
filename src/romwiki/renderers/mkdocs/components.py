@@ -15,6 +15,9 @@ DISPLAY_NAMES = {
     "trainer-ai-item": "Trainer AI item",
 }
 
+def empty_state(message: str) -> list[str]:
+    return [message, ""]
+
 
 def type_badges(types: list[dict[str, Any]]) -> str:
     badges = []

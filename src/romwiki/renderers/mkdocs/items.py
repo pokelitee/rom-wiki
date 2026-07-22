@@ -12,6 +12,7 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.components import (
     display_name,
+    empty_state,
     fact_grid,
     record_nav_link,
     record_navigation,
@@ -280,7 +281,7 @@ def _append_locations(
 ) -> None:
     lines.extend(["## Overworld locations", ""])
     if not record["locations"]:
-        lines.extend(["None found.", ""])
+        lines.extend(empty_state("No overworld locations found."))
         return
     lines.extend(
         [
@@ -303,7 +304,7 @@ def _append_shops(
 ) -> None:
     lines.extend(["## Shops", ""])
     if not shops:
-        lines.extend(["Not sold by an extracted shop.", ""])
+        lines.extend(empty_state("Not sold in any extracted shop."))
         return
     lines.extend(
         [
@@ -327,7 +328,7 @@ def _append_pokemon(
 ) -> None:
     lines.extend(["## Wild held by", ""])
     if not record["wild_held_by"]:
-        lines.extend(["No wild held-item assignments.", ""])
+        lines.extend(empty_state("No wild held-item assignments found."))
         return
     lines.extend(
         [
@@ -354,7 +355,7 @@ def _append_trainers(
         for value in record["trainer_battle_items"]
     ]
     if not values:
-        lines.extend(["No trainer references.", ""])
+        lines.extend(empty_state("No trainer references found."))
         return
     lines.extend(
         [
@@ -379,7 +380,7 @@ def _append_gifts_and_trades(
         (value, "Gift", value["pokemon"]) for value in record["gifts"]
     ] + [(value, "Trade", value["pokemon"]) for value in record["trades"]]
     if not values:
-        lines.extend(["No gift or trade references.", ""])
+        lines.extend(empty_state("No gift or trade references found."))
         return
     lines.extend(
         [
@@ -402,7 +403,7 @@ def _append_evolutions(
 ) -> None:
     lines.extend(["## Evolutions", ""])
     if not evolutions:
-        lines.extend(["No extracted evolutions use this item.", ""])
+        lines.extend(empty_state("No extracted evolutions use this item."))
         return
     lines.extend(
         [
