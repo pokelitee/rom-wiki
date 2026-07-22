@@ -4,7 +4,13 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.gen4_dppt import PERSONAL_FORM_MEMBERS, PERSONAL_INTERNAL_MEMBERS
+from romwiki.engines.gen4_dppt import (
+    GEN4_FISHING_SLOT_CHANCES,
+    GEN4_WALKING_SLOT_CHANCES,
+    GEN4_WATER_SLOT_CHANCES,
+    PERSONAL_FORM_MEMBERS,
+    PERSONAL_INTERNAL_MEMBERS,
+)
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.sources import PokeDBGeneration
@@ -154,7 +160,10 @@ def enrich_personal_dataset(
 
 
 def enrich_encounter_dataset(
-    dataset: dict[str, Any], pokedb: PokeDBGeneration
+    dataset: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    *,
+    sprite_version: str | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
@@ -164,7 +173,7 @@ def enrich_encounter_dataset(
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
-        records.append(_enrich_encounter_area(source, pokedb))
+        records.append(_enrich_encounter_area(source, pokedb, sprite_version))
     return {
         "schema_version": 1,
         "game": dataset["game"],
@@ -321,38 +330,62 @@ def write_enriched_dataset(dataset: dict[str, Any], output_path: Path) -> None:
 
 
 def _enrich_encounter_area(
-    source: dict[str, Any], pokedb: PokeDBGeneration
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None = None,
 ) -> dict[str, Any]:
     walking = {
         "rate": source["walking_rate"],
         "slots": [
-            {**slot, "pokemon": _encounter_pokemon(slot["species_id"], pokedb)}
-            for slot in source["walking_slots"]
+            {
+                **slot,
+                "chance": GEN4_WALKING_SLOT_CHANCES[index],
+                "pokemon": _encounter_pokemon(
+                    slot["species_id"], pokedb, sprite_version
+                ),
+            }
+            for index, slot in enumerate(source["walking_slots"])
         ],
     }
     methods = {
         name: {
             "rate": method["rate"],
             "slots": [
-                {**slot, "pokemon": _encounter_pokemon(slot["species_id"], pokedb)}
-                for slot in method["slots"]
+                {
+                    **slot,
+                    "chance": chances[index],
+                    "pokemon": _encounter_pokemon(
+                        slot["species_id"], pokedb, sprite_version
+                    ),
+                }
+                for index, slot in enumerate(method["slots"])
             ],
         }
-        for name, method in (
-            ("surf", source["surf"]),
-            ("old_rod", source["old_rod"]),
-            ("good_rod", source["good_rod"]),
-            ("super_rod", source["super_rod"]),
+        for name, method, chances in (
+            ("surf", source["surf"], GEN4_WATER_SLOT_CHANCES),
+            ("old_rod", source["old_rod"], GEN4_FISHING_SLOT_CHANCES),
+            ("good_rod", source["good_rod"], GEN4_FISHING_SLOT_CHANCES),
+            ("super_rod", source["super_rod"], GEN4_FISHING_SLOT_CHANCES),
         )
     }
     special = {
-        "swarm": _encounter_pokemon_list(source["swarm_species_ids"], pokedb),
-        "day": _encounter_pokemon_list(source["day_species_ids"], pokedb),
-        "night": _encounter_pokemon_list(source["night_species_ids"], pokedb),
-        "radar": _encounter_pokemon_list(source["radar_species_ids"], pokedb),
-        "forms": _encounter_pokemon_list(source["form_species_ids"], pokedb),
+        "swarm": _encounter_pokemon_list(
+            source["swarm_species_ids"], pokedb, sprite_version
+        ),
+        "day": _encounter_pokemon_list(
+            source["day_species_ids"], pokedb, sprite_version
+        ),
+        "night": _encounter_pokemon_list(
+            source["night_species_ids"], pokedb, sprite_version
+        ),
+        "radar": _encounter_pokemon_list(
+            source["radar_species_ids"], pokedb, sprite_version
+        ),
+        "forms": _encounter_pokemon_list(
+            source["form_species_ids"], pokedb, sprite_version
+        ),
         "dual_slot": {
-            game: _encounter_pokemon_list(species_ids, pokedb)
+            game: _encounter_pokemon_list(species_ids, pokedb, sprite_version)
             for game, species_ids in source["dual_slot_species_ids"].items()
         },
     }
@@ -461,13 +494,20 @@ def _enrich_trainer(
 
 
 def _encounter_pokemon_list(
-    species_ids: list[int], pokedb: PokeDBGeneration
+    species_ids: list[int],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None = None,
 ) -> list[dict[str, Any] | None]:
-    return [_encounter_pokemon(species_id, pokedb) for species_id in species_ids]
+    return [
+        _encounter_pokemon(species_id, pokedb, sprite_version)
+        for species_id in species_ids
+    ]
 
 
 def _encounter_pokemon(
-    species_id: int, pokedb: PokeDBGeneration
+    species_id: int,
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None = None,
 ) -> dict[str, Any] | None:
     if species_id == 0:
         return None
@@ -476,6 +516,7 @@ def _encounter_pokemon(
         "id": species_id,
         "slug": reference["name"],
         "name": title_case_slug(reference["name"]),
+        "sprite": pokedb.pokemon_sprite(reference, sprite_version),
     }
 
 

@@ -50,10 +50,12 @@
 .rw-move-summary,
 .rw-location-summary,
 .rw-trainer-summary,
-.rw-ability-summary { margin-bottom: 1.4rem; padding: .85rem; border: 1px solid var(--rw-border); border-radius: var(--rw-radius); background: var(--rw-surface); }
+.rw-ability-summary,
+.rw-encounter-summary { margin-bottom: 1.4rem; padding: .85rem; border: 1px solid var(--rw-border); border-radius: var(--rw-radius); background: var(--rw-surface); }
 .rw-move-summary > .rw-summary__facts { margin-top: .7rem; }
 .rw-trainer-summary > .rw-summary__facts,
-.rw-ability-summary > .rw-summary__facts { margin-top: 0; }
+.rw-ability-summary > .rw-summary__facts,
+.rw-encounter-summary > .rw-summary__facts { margin-top: 0; }
 .rw-table-sprite {
   display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem;
   padding: .15rem; border-radius: .35rem; background: var(--rw-surface-muted);

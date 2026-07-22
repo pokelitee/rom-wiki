@@ -10,7 +10,11 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
-from romwiki.renderers.mkdocs.components import record_nav_link, record_navigation
+from romwiki.renderers.mkdocs.components import (
+    record_nav_link,
+    record_navigation,
+    table_sprite_cell,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -144,7 +148,8 @@ def _render_record(
                 "| ---- | ------- | ---------------: | ------------ |",
                 *[
                     (
-                        f"| {_sprite_cell(pokemon)} | {_pokemon_link(pokemon, source_file)} | "
+                        f"| {table_sprite_cell(pokemon.get('sprite'))} | "
+                        f"{_pokemon_link(pokemon, source_file)} | "
                         f"#{pokemon['national_dex_id']:03} | "
                         f"{', '.join(str(slot) for slot in pokemon['slots'])} |"
                     )
@@ -214,16 +219,6 @@ def _ability_description(record: dict[str, Any]) -> list[str]:
     if not lines:
         lines = ["No PokéDB reference data is available for this ability.", ""]
     return lines
-
-
-def _sprite_cell(pokemon: dict[str, Any]) -> str:
-    sprite = pokemon.get("sprite")
-    if not sprite or not sprite.get("url"):
-        return '<span class="rw-table-sprite rw-table-sprite--empty" aria-hidden="true">—</span>'
-    return (
-        f'<img class="rw-table-sprite" src="{escape(sprite["url"], quote=True)}" '
-        f'alt="" loading="lazy">'
-    )
 
 
 def _label(value: str) -> str:

@@ -260,6 +260,15 @@ def display_name(value: str) -> str:
     )
 
 
+def table_sprite_cell(sprite: dict[str, Any] | None) -> str:
+    if not sprite or not sprite.get("url"):
+        return '<span class="rw-table-sprite rw-table-sprite--empty" aria-hidden="true">—</span>'
+    return (
+        f'<img class="rw-table-sprite" src="{escape(sprite["url"], quote=True)}" '
+        'alt="" loading="lazy">'
+    )
+
+
 def fact_grid(
     facts: tuple[tuple[str, str], ...], *, class_name: str = "rw-data-grid"
 ) -> list[str]:

@@ -15,6 +15,9 @@ from romwiki.engines.gen4_dppt.constants import (
 from romwiki.engines.gen4_dppt.encounters import (
     DUAL_SLOT_GAMES,
     ENCOUNTER_RECORD_SIZES,
+    GEN4_FISHING_SLOT_CHANCES,
+    GEN4_WALKING_SLOT_CHANCES,
+    GEN4_WATER_SLOT_CHANCES,
     parse_encounter_record,
 )
 from romwiki.engines.gen4_dppt.map_headers import (
@@ -130,6 +133,9 @@ __all__ = [
     "parse_personal_record",
     "DUAL_SLOT_GAMES",
     "ENCOUNTER_RECORD_SIZES",
+    "GEN4_FISHING_SLOT_CHANCES",
+    "GEN4_WALKING_SLOT_CHANCES",
+    "GEN4_WATER_SLOT_CHANCES",
     "parse_encounter_record",
     "MAP_HEADER_SIZE",
     "PlatinumMapHeader",

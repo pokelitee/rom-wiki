@@ -264,10 +264,19 @@ def _format_change(
     if kind == "abilities" and change.get("field") == "pokemon":
         return _format_ability_pokemon_change(before, after, source_url, references)
     if isinstance(before, dict) and isinstance(after, dict):
-        return _format_mapping_change(before, after)
+        return _format_mapping_change(before, after, kind=kind)
     if not isinstance(before, list) or not isinstance(after, list):
         return _diff(_format_value(before), _format_value(after))
-    field = change.get("field")
+    return _format_list_change(before, after, kind=kind, field=change.get("field"))
+
+
+def _format_list_change(
+    before: list[Any],
+    after: list[Any],
+    *,
+    kind: str | None = None,
+    field: str | None = None,
+) -> str:
     before_values = {
         _canonical(normalize_comparison_value(item, kind=kind, field=field)): item
         for item in before
@@ -352,7 +361,7 @@ def _format_pokemon_change(
     if field == "evolutions":
         return _format_evolutions(before, after, source_url, references)
     if field in {"base_stats", "ev_yields"}:
-        return _format_mapping_change(before, after)
+        return _format_mapping_change(before, after, kind="pokemon")
     return None
 
 
@@ -550,16 +559,22 @@ def _level_label(levels: tuple[int, ...]) -> str:
 
 
 def _format_mapping_change(
-    before: dict[str, Any], after: dict[str, Any]
+    before: dict[str, Any], after: dict[str, Any], *, kind: str | None = None
 ) -> str:
     lines = []
     for key in sorted(before.keys() | after.keys()):
-        if before.get(key) == after.get(key):
+        old_value = before.get(key)
+        new_value = after.get(key)
+        if old_value == new_value:
             continue
         label = escape(key.replace("_", " ").title())
-        old_value = escape(_plain_value(before.get(key)))
-        new_value = escape(_plain_value(after.get(key)))
-        lines.append(f"{label}: {_diff(old_value, new_value)}")
+        if isinstance(old_value, list) and isinstance(new_value, list):
+            value = _format_list_change(old_value, new_value, kind=kind, field=key)
+        else:
+            value = _diff(
+                escape(_plain_value(old_value)), escape(_plain_value(new_value))
+            )
+        lines.append(f"{label}: {value}")
     return _format_lines(lines, True)
 
 
@@ -585,15 +600,23 @@ def _format_change_groups(groups: list[tuple[str, list[str]]]) -> str:
     return "".join(parts)
 
 
+def _level_suffix(value: dict[str, Any]) -> str:
+    if value.get("level") is not None:
+        return f" — Lv. {value['level']}"
+    minimum = value.get("minimum_level")
+    maximum = value.get("maximum_level")
+    if minimum is not None and maximum is not None:
+        return f" — Lv. {minimum}" if minimum == maximum else f" — Lv. {minimum}–{maximum}"
+    return ""
+
+
 def _mapping_summary(value: dict[str, Any]) -> str:
     pokemon = value.get("pokemon")
     if isinstance(pokemon, dict) and pokemon.get("name"):
-        level = f" — Lv. {value['level']}" if value.get("level") is not None else ""
-        return f"{pokemon['name']}{level}"
+        return f"{pokemon['name']}{_level_suffix(value)}"
     move = value.get("move")
     if isinstance(move, dict) and move.get("name"):
-        level = f" — Lv. {value['level']}" if value.get("level") is not None else ""
-        return f"{move['name']}{level}"
+        return f"{move['name']}{_level_suffix(value)}"
     target = value.get("target")
     if isinstance(target, dict) and target.get("name"):
         method = value.get("method")

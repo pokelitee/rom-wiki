@@ -15,6 +15,16 @@ from romwiki.schema import (
 ENCOUNTER_RECORD_SIZES = (380, 424)
 DUAL_SLOT_GAMES = ("ruby", "sapphire", "emerald", "fire-red", "leaf-green")
 
+# Fixed per-slot encounter-chance weights (percent) for the Generation III/IV
+# wild-encounter engine. These are not stored in the ROM's encounter tables —
+# only each slot's species and level(s) are ROM data — the percentages are
+# fixed logic in the game's RNG selection routine and are identical across
+# every Gen III/IV game. Publicly documented (e.g. Bulbapedia's "Wild
+# Pokémon" article) rather than ROM- or PokéDB-sourced.
+GEN4_WALKING_SLOT_CHANCES = (20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1)
+GEN4_WATER_SLOT_CHANCES = (60, 30, 5, 4, 1)
+GEN4_FISHING_SLOT_CHANCES = (40, 40, 15, 4, 1)
+
 
 def parse_encounter_record(
     data: bytes,

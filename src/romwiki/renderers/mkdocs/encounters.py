@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 from collections import Counter
@@ -9,6 +10,11 @@ from romwiki.renderers.mkdocs.catalog import (
     prune_catalog_pages,
     write_catalog,
     write_text as _write_text,
+)
+from romwiki.renderers.mkdocs.components import (
+    record_nav_link,
+    record_navigation,
+    table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
@@ -50,9 +56,14 @@ def render_encounter_pages(
     linked = [record for record in records if record.get("locations")]
     unlinked = [record for record in records if not record.get("locations")]
     name_counts = Counter(record["name"] for record in linked)
-    for record in sorted(linked, key=lambda item: (item["name"], item["area_id"])):
+    sorted_linked = sorted(linked, key=lambda item: (item["name"], item["area_id"]))
+    for index, record in enumerate(sorted_linked):
         change = record_comparison(comparison, record["area_id"])
         filename = f"area-{record['area_id']:03}.md"
+        previous = sorted_linked[index - 1] if index else None
+        following = (
+            sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
+        )
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             _write_text(
                 output_root / filename,
@@ -61,6 +72,8 @@ def render_encounter_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    previous,
+                    following,
                 ),
             )
             page_count += 1
@@ -85,9 +98,11 @@ def render_encounter_pages(
             )
         )
     if unlinked:
-        for record in unlinked:
+        for index, record in enumerate(unlinked):
             change = record_comparison(comparison, record["area_id"])
             filename = f"area-{record['area_id']:03}.md"
+            previous = unlinked[index - 1] if index else None
+            following = unlinked[index + 1] if index + 1 < len(unlinked) else None
             if only_pages is None or filename.removesuffix(".md") in only_pages:
                 _write_text(
                     output_root / filename,
@@ -95,6 +110,9 @@ def render_encounter_pages(
                         record,
                         change,
                         comparison.get("baseline") if comparison else None,
+                        None,
+                        previous,
+                        following,
                     ),
                 )
                 page_count += 1
@@ -226,11 +244,14 @@ def _render_area(
     change: dict[str, Any] | None = None,
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"encounters/area-{record['area_id']:03}.md"
     lines = [
         f"# {record['name']}",
         "",
+        *_area_summary(record),
         *comparison_section(change, baseline_name, source_file, references),
     ]
     _append_locations(lines, record.get("locations", []), source_file)
@@ -251,14 +272,78 @@ def _render_area(
             (
                 "Source: exact ROM record from "
                 f"`{record['provenance']['archive']}` member "
-                f"`{record['provenance']['member']}`."
+                f"`{record['provenance']['member']}`. Chance percentages are not "
+                "stored in the ROM's encounter tables — only each slot's species "
+                "and level(s) are ROM data — they are fixed, publicly documented "
+                "Generation III/IV engine weights applied by slot position."
             ),
             "",
             "</details>",
             "",
         ]
     )
+    _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _area_summary(record: dict[str, Any]) -> list[str]:
+    methods = [
+        label
+        for label, key in (
+            ("Walking", "walking"),
+            ("Surf", "surf"),
+            ("Old Rod", "old_rod"),
+            ("Good Rod", "good_rod"),
+            ("Super Rod", "super_rod"),
+        )
+        if record[key]["rate"]
+    ]
+    locations = record.get("locations", [])
+    facts = [
+        ("Area ID", str(record["area_id"])),
+        ("Methods", ", ".join(methods) if methods else "None"),
+    ]
+    if locations:
+        facts.append(("Map headers", str(len(locations))))
+    return [
+        '<section class="rw-encounter-summary">',
+        '<dl class="rw-summary__facts">',
+        *(
+            f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
+            for label, value in facts
+        ),
+        "</dl>",
+        "</section>",
+        "",
+    ]
+
+
+def _append_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> None:
+    source_url = f"encounters/area-{record['area_id']:03}/"
+    previous_link = None
+    if previous is not None:
+        label = f"← {previous['name']}"
+        href = ROUTES.published_href(
+            entity_reference("encounter", previous["area_id"], label, previous["area_id"]),
+            source_url,
+        )
+        previous_link = record_nav_link(href, label, "prev")
+    following_link = None
+    if following is not None:
+        label = f"{following['name']} →"
+        href = ROUTES.published_href(
+            entity_reference("encounter", following["area_id"], label, following["area_id"]),
+            source_url,
+        )
+        following_link = record_nav_link(href, label, "next")
+    lines.extend(
+        record_navigation(previous_link, following_link, "Wild encounter navigation")
+    )
 
 
 def _append_locations(
@@ -266,20 +351,44 @@ def _append_locations(
 ) -> None:
     if not locations:
         return
-    lines.extend(["## Map headers", "", "| Header | Location | Internal map |", "| -----: | -------- | ------------ |"])
+    lines.extend(["## Map headers", "", "| Location | Header | Internal map |", "| -------- | -----: | ------------ |"])
     for location in locations:
         reference = entity_reference(
             "location",
             location["header_id"],
-            str(location["header_id"]),
+            location["name"],
             location.get("header_id"),
         )
         lines.append(
             f"| {ROUTES.markdown_link(reference, source_file)} "
-            f"| {location['name']} | "
+            f"| {location['header_id']} | "
             f"`{location['internal_name']}` |"
         )
     lines.append("")
+
+
+def _merge_slots(
+    slots: list[dict[str, Any]], level_keys: tuple[str, ...]
+) -> list[dict[str, Any]]:
+    """Combine slots for the same species and level(s) into one row.
+
+    The ROM assigns a species to multiple fixed-probability slots to give it
+    a higher overall chance rather than storing a single percentage per
+    species, so the same Pokémon at the same level(s) commonly repeats across
+    several slots (see the Gen III/IV slot-chance tables). Slots that share a
+    species but differ in level are kept separate, since that's a real
+    distinction the table would otherwise hide.
+    """
+    merged: dict[tuple[Any, ...], dict[str, Any]] = {}
+    order: list[tuple[Any, ...]] = []
+    for slot in slots:
+        key = (slot["species_id"], *(slot[level_key] for level_key in level_keys))
+        if key not in merged:
+            merged[key] = dict(slot)
+            order.append(key)
+        else:
+            merged[key]["chance"] += slot["chance"]
+    return [merged[key] for key in order]
 
 
 def _append_walking(
@@ -293,14 +402,15 @@ def _append_walking(
             "",
             f"Encounter rate: {method['rate']}",
             "",
-            "| Slot | Pokémon | Level |",
-            "| ---: | ------- | ----: |",
+            "| <span class=\"rw-visually-hidden\">Sprite</span> | Pokémon | Level | Chance |",
+            "| ---- | ------- | ----: | -----: |",
         ]
     )
-    for index, slot in enumerate(method["slots"]):
+    for slot in _merge_slots(method["slots"], ("level",)):
         lines.append(
-            f"| {index + 1} | {_pokemon_link(slot['pokemon'], source_file)} | "
-            f"{slot['level']} |"
+            f"| {table_sprite_cell((slot['pokemon'] or {}).get('sprite'))} | "
+            f"{_pokemon_link(slot['pokemon'], source_file)} | "
+            f"{slot['level']} | {slot['chance']}% |"
         )
     lines.append("")
 
@@ -316,14 +426,16 @@ def _append_water(
             "",
             f"Encounter rate: {method['rate']}",
             "",
-            "| Slot | Pokémon | Levels |",
-            "| ---: | ------- | -----: |",
+            "| <span class=\"rw-visually-hidden\">Sprite</span> | Pokémon | Levels | Chance |",
+            "| ---- | ------- | -----: | -----: |",
         ]
     )
-    for index, slot in enumerate(method["slots"]):
+    for slot in _merge_slots(method["slots"], ("minimum_level", "maximum_level")):
         levels = _level_range(slot["minimum_level"], slot["maximum_level"])
         lines.append(
-            f"| {index + 1} | {_pokemon_link(slot['pokemon'], source_file)} | {levels} |"
+            f"| {table_sprite_cell((slot['pokemon'] or {}).get('sprite'))} | "
+            f"{_pokemon_link(slot['pokemon'], source_file)} | {levels} | "
+            f"{slot['chance']}% |"
         )
     lines.append("")
 

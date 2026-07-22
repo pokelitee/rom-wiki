@@ -134,7 +134,11 @@ class GameBuildContext:
     def encounters(self) -> dict[str, Any]:
         return self._memo(
             "encounters/enriched",
-            lambda: enrich_encounter_dataset(self.encounters_raw(), self.pokedb),
+            lambda: enrich_encounter_dataset(
+                self.encounters_raw(),
+                self.pokedb,
+                sprite_version=self.profile.sprite_version,
+            ),
         )
 
     def trainers(self) -> dict[str, Any]:
