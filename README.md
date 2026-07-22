@@ -202,7 +202,9 @@ PokéDB to resolve stable Pokémon and move names and links.
 This keeps the enriched audit dataset under `build/` and renders publishable
 Markdown into `sites/games/renegade-platinum/wiki/pokemon/`. The same command also
 derives the normalized ability catalog from ROM names and personal-data assignments,
-then renders it under `sites/games/renegade-platinum/wiki/abilities/`.
+then renders it under `sites/games/renegade-platinum/wiki/abilities/`. The ROM only
+stores an ability's name and which Pokémon have it — never what it does — so
+ability pages also carry PokéDB's effect description and flavor-text quote.
 
 Extract and render wild encounter tables:
 
@@ -214,7 +216,11 @@ romwiki build-encounters ".local/roms/Pokemon - Platinum Version (USA).nds"
 Encounter pages use archive member IDs as stable file names while displaying the
 in-game location names resolved through Platinum's map headers. Populated archive
 members without a static map-header reference remain available in a separate
-unreferenced section for auditing.
+unreferenced section for auditing. Each slot's catch chance is derived from the
+fixed, publicly documented Generation III/IV per-slot weight tables (not stored
+in the ROM's encounter records, which only hold each slot's species and
+level(s)); slots for the same species and level(s) are combined into one row
+with their chances summed rather than shown as repeated rows.
 
 Extract and render trainer parties:
 
@@ -223,10 +229,15 @@ romwiki extract-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
 romwiki build-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-Trainer pages include battle type, levels, held items, custom moves, and exact
-map locations resolved from standard trainer objects and literal scripted battle
-commands. Archive member IDs provide stable page names even when several trainers
-share a name. Dynamically selected facility and rematch trainers, along with unused
+Trainer pages include battle type, levels, held items, custom moves, the
+trainer's own AI battle items (consumables and stat boosters its AI may use on
+its own party mid-battle — never given to the player), and exact map locations
+resolved from standard trainer objects and literal scripted battle commands.
+Archive member IDs provide stable page names even when several trainers share
+a name; the catalog's static fallback list also appends each trainer's level
+range and party preview so genuinely identical-looking entries (e.g. many
+unrelated grunts of the same class) stay distinguishable without opening a
+page. Dynamically selected facility and rematch trainers, along with unused
 records, remain in a separate unlinked section until their invocation paths can be
 resolved without guessing.
 
@@ -253,10 +264,12 @@ romwiki build-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
 Move pages report the exact type, damage class, power, accuracy, PP, priority,
-effect, targeting, flag, and contest fields stored in the hack's active move
-archive. Move and type names come from configured ROM message tables. PokéDB
-provides canonical comparison names and fallback metadata; ROM-derived values
-remain authoritative.
+effect ID, targeting, flag, and contest fields stored in the hack's active move
+archive. Move and type names come from configured ROM message tables. The ROM
+does not store a human-readable description of what a move does — PokéDB
+supplies that effect text and flavor-text quote, alongside canonical
+comparison names and fallback metadata; ROM-derived values remain
+authoritative for every field the ROM does store.
 
 Extract and render the item catalog:
 
@@ -267,8 +280,11 @@ romwiki build-items ".local/roms/Pokemon - Platinum Version (USA).nds"
 
 Item pages combine the ROM item-name table, the 34-byte item mechanics records,
 and the ARM9 item-to-archive-member map. The enriched build links overworld and
-hidden pickups, shops, wild and trainer held items, trainer rewards, gifts,
-trades, and item-based evolutions.
+hidden pickups, shops, wild and trainer held items, trainers' own AI battle
+items, gifts, trades, and item-based evolutions. As with abilities and moves,
+PokéDB supplies the item's effect description, flavor-text quote, and icon,
+since the ROM's item records store mechanics but not a human-readable
+description.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.
@@ -342,14 +358,23 @@ content. It never requires or downloads a game image.
 
 ## PokéDB
 
-PokéDB will be consumed as an external reference dataset rather than imported
-through its internal implementation. The planned default local path is
-`../pokedb/.output/gen4`, with a configurable remote data-branch fallback for CI.
+PokéDB is consumed as an external reference dataset rather than imported through
+its internal implementation. The default local path is `../pokedb/.output/gen4`,
+with a configurable remote data-branch fallback for CI.
 
-Pokémon pages may also reference the generation-specific sprite URL selected from
-PokéDB. Sprites are loaded lazily from the upstream PokéAPI sprites repository;
-ROM Wiki does not download, cache, or publish copies of those image files. Missing
-or unreachable images degrade to a text placeholder.
+Beyond canonical names and links, PokéDB is the sole source for anything the ROM
+itself does not store as data: Pokémon genus/height/weight/flavor text, and — for
+abilities, moves, and items — the human-readable effect description and
+Pokédex-style flavor-text quote, version-matched to the profile's `base_game`
+where PokéDB has per-version text. ROM-derived values remain authoritative for
+every field the ROM does store; PokéDB never overrides one and is never the
+mechanic baseline for hack-changes comparisons.
+
+Pokémon pages, trainer party members, and items may also reference a sprite or
+icon URL selected from PokéDB. Sprites and icons are loaded lazily from the
+upstream PokéAPI sprites repository; ROM Wiki does not download, cache, or
+publish copies of those image files. Missing or unreachable images degrade to a
+text placeholder.
 
 ## Legal notice
 

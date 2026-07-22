@@ -124,14 +124,26 @@ ensures catalog and detail-page links share one implementation.
 
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
 ROM message tables supply names when configured; PokéDB supplies canonical names
-for comparison and fallback, plus stable links and optional sprite URLs. It must
-not override a value extracted from the game. A profile's
+for comparison and fallback, plus stable links and optional sprite/icon URLs. It
+must not override a value extracted from the game. A profile's
 `reference.sprite_version` selects matching version sprites; enrichment keeps a
 default sprite for compact cards plus every available front/back, normal/shiny,
 and gender variant for detail-page galleries. Pokémon records also keep a
 deliberately small `reference` object containing descriptive species metadata.
-PokéDB is never the mechanic baseline: exact change sections compare the parsed
-clean ROM with the parsed hack, and ROM-derived values remain authoritative.
+
+The same `reference` pattern extends to abilities, moves, and items: the ROM
+stores their names, ROM-native mechanics, and assignments, but never a
+human-readable description of what they do, so `PokeDBGeneration.ability_reference`
+/ `move_reference` / `item_reference` (keyed by ROM ID for abilities/moves, by
+resolved slug for items, since their ROM item IDs don't align with PokéDB's) are
+the sole source for effect text and Pokédex-style flavor-text quotes, matched to
+a profile's `base_game` version where PokéDB carries per-version text. Trainer
+party members carry a Pokémon sprite and, when applicable, a held-item icon
+through the same lookups. PokéDB is never the mechanic baseline: exact change
+sections compare the parsed clean ROM with the parsed hack, and ROM-derived
+values remain authoritative; the `_clean()` comparison step strips every
+`reference`/`sprite`/`sprites` object before diffing so presentation data never
+produces a false "changed" result.
 
 ### Renderers and sites
 

@@ -143,6 +143,24 @@ front/back, normal/shiny, and gender variants. Pages use lazy loading, an explic
 source link, and a visible fallback after load failure. The build must not download
 or copy sprites.
 
+The "do not put sprites in catalog rows" rule above applies to the large,
+paginated `catalog.json`-driven tables only. A small, single-record detail
+page's own bounded sub-table — an ability's assigned-Pokémon list, one wild
+encounter area's per-method slot table, one trainer's party cards — has at
+most a few dozen rows and renders a shared `table_sprite_cell()` icon column;
+this is a deliberate exception, not an inconsistency with the catalog rule.
+
+Trainer party cards show each Pokémon's sprite and, when the slot has one, the
+held item's icon. Trainers also carry an "AI battle items" section: the ROM's
+4-slot `reward_item_ids` array holds items the trainer's own AI may use on its
+party mid-battle (Full Restores, X-stat items), never a reward for the player,
+so the field and its UI are both named for what it actually is. Wild encounter
+slot tables show a per-slot catch-rate percentage from the fixed Generation
+III/IV engine weight tables (not ROM data) and combine slots that share a
+species and level(s) into one row with their chances summed, since the ROM
+encodes higher odds by repeating a species across more slots rather than
+storing a percentage.
+
 Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
 These are labeled reference content. Stat, type, ability, training, breeding,
 evolution, held-item, and learnset values shown for the hack remain ROM-derived.
