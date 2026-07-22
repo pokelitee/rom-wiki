@@ -20,7 +20,9 @@ class DevPagesTests(unittest.TestCase):
 
         self.assertEqual(
             pages.pages_for("pokemon"),
-            frozenset({"bulbasaur", "eevee", "wurmple"}),
+            frozenset(
+                {"bulbasaur", "eevee", "wurmple", "slowpoke", "deoxys-attack"}
+            ),
         )
         self.assertEqual(pages.pages_for("generation-specific"), frozenset())
 
