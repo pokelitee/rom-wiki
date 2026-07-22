@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import (
     GEN4_ARCHIVE_MEMBER_NONE,
@@ -429,7 +430,7 @@ def extract_location_dataset(
             ).to_dict()
         )
     return {
-        "schema_version": 1,
+        "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "locations",
         "record_count": len(records),

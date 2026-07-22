@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import (
     GEN4_BASE_SPECIES_COUNT,
@@ -74,7 +75,7 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         start_tutor_id=len(tutors) + 1,
     )
     return {
-        "schema_version": 1,
+        "schema_version": TUTORS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "move_tutors",
         "record_count": len(tutors),

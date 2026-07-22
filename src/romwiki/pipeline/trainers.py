@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import TRAINERS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import (
     GEN4_ARCHIVE_MEMBER_NONE,
@@ -87,7 +88,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         for record in parsed_records
     ]
     return {
-        "schema_version": 1,
+        "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "engine": profile.engine,
         "dataset": "trainers",

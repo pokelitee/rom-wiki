@@ -18,7 +18,13 @@ from romwiki.pipeline.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
-from romwiki.schema.trainers import TRAINER_PARTY_SCHEMA_VERSION
+from romwiki.schema.versions import (
+    ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
+    MOVES_ENRICHED_SCHEMA_VERSION,
+    POKEMON_ENRICHED_SCHEMA_VERSION,
+    TRAINERS_ENRICHED_SCHEMA_VERSION,
+    TRAINER_PARTY_SCHEMA_VERSION,
+)
 from romwiki.util.text import name_slug, title_case_slug
 
 
@@ -129,7 +135,7 @@ def enrich_personal_dataset(
             )
         )
     enriched = {
-        "schema_version": 1,
+        "schema_version": POKEMON_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "dataset": "pokemon",
         "record_count": len(records),
@@ -180,7 +186,7 @@ def enrich_encounter_dataset(
             raise DataSourceError("Encounter records must be ordered by area ID")
         records.append(_enrich_encounter_area(source, pokedb, sprite_version))
     return {
-        "schema_version": 1,
+        "schema_version": ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "dataset": "wild_encounters",
         "record_count": len(records),
@@ -225,7 +231,7 @@ def enrich_trainer_dataset(
             )
         )
     enriched = {
-        "schema_version": 1,
+        "schema_version": TRAINERS_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "engine": engine,
         "dataset": "trainers",
@@ -327,7 +333,7 @@ def enrich_move_dataset(
             }
         )
     enriched = {
-        "schema_version": 1,
+        "schema_version": MOVES_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "dataset": "moves",
         "record_count": len(records),

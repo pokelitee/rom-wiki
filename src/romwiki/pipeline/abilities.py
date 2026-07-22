@@ -6,6 +6,7 @@ from typing import Any
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.sources import PokeDBGeneration
+from romwiki.schema.versions import ABILITIES_ENRICHED_SCHEMA_VERSION
 
 
 def build_ability_dataset(
@@ -52,7 +53,7 @@ def build_ability_dataset(
         for ability_id in range(1, len(ability_names))
     ]
     return {
-        "schema_version": 1,
+        "schema_version": ABILITIES_ENRICHED_SCHEMA_VERSION,
         "game": pokemon_dataset["game"],
         "dataset": "abilities",
         "record_count": len(records),

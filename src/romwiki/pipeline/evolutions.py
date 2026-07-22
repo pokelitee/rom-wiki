@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import (
     parse_english_message_archive,
@@ -41,7 +42,7 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
         for member in archive.members
     ]
     return {
-        "schema_version": 1,
+        "schema_version": POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "evolutions",
         "record_count": len(records),

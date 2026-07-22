@@ -6,6 +6,7 @@ from typing import Any
 
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
+from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 
 
 _KEYS = {
@@ -181,7 +182,7 @@ def compare_datasets(
             value["baseline_record"] = _snapshot(kind, before)
         records.append(value)
     return {
-        "schema_version": 1,
+        "schema_version": COMPARISON_SCHEMA_VERSION,
         "dataset": f"{kind}_comparison",
         "kind": kind,
         "game": current["game"],

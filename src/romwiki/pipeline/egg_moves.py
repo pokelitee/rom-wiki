@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import parse_egg_move_table
 from romwiki.util.errors import ProfileError
@@ -25,7 +26,7 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
     overlay, data = read_arm9_overlay(result.image, overlay_id)
     records = parse_egg_move_table(data, table_offset=table_offset)
     return {
-        "schema_version": 1,
+        "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "egg_moves",
         "record_count": len(records),

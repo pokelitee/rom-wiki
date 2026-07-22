@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import (
     GEN4_MACHINE_COUNT,
@@ -41,7 +42,7 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
         )
     ]
     return {
-        "schema_version": 1,
+        "schema_version": MACHINES_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "machines",
         "record_count": len(records),

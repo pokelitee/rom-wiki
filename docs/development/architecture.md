@@ -120,6 +120,13 @@ moves, encounters, trainers, and locations. Datasets carry a `schema_version`, a
 game identifier, record counts, source metadata, and record-level provenance where
 appropriate.
 
+Schema versions for independently emitted contracts are declared centrally in
+`schema/versions.py`. Raw and enriched forms have separate constants even when
+both are currently version 1. Raw-cache validation selects the expected version
+by cache key, so changing one dataset contract does not invalidate unrelated raw
+datasets. Independently evolving nested contracts, such as trainer parties, keep
+their own schema version alongside the containing dataset's version.
+
 Normalized records use stable semantic fields such as `species_id`, `base_stats`,
 or `held_item_id`; they do not expose where a value happened to live in one ROM.
 Engine-only details needed for auditing belong in provenance fields.

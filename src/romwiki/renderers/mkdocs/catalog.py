@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import CATALOG_SCHEMA_VERSION
 
 
 def write_catalog(output_root: Path, kind: str, records: list[dict[str, Any]]) -> None:
-    payload = {"schema_version": 1, "kind": kind, "records": records}
+    payload = {
+        "schema_version": CATALOG_SCHEMA_VERSION,
+        "kind": kind,
+        "records": records,
+    }
     value = json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
     write_text(output_root / "catalog.json", value)
 

@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import (
+    ITEMS_ENRICHED_SCHEMA_VERSION,
+    ITEMS_RAW_SCHEMA_VERSION,
+)
 
 from romwiki.engines.gen4_dppt import (
     GEN4_ITEM_FIELD_USE_NAMES,
@@ -91,7 +95,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         )
 
     return {
-        "schema_version": 1,
+        "schema_version": ITEMS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "items_raw",
         "record_count": len(records),
@@ -278,7 +282,7 @@ def build_item_dataset(
     if len(slugs) != len(set(slugs)):
         raise DataSourceError("ROM item names do not produce unique page slugs")
     return {
-        "schema_version": 1,
+        "schema_version": ITEMS_ENRICHED_SCHEMA_VERSION,
         "game": game,
         "dataset": "items",
         "record_count": len(records),

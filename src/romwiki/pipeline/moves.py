@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import MOVES_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import parse_move_record
 from romwiki.util.errors import ProfileError
@@ -32,7 +33,7 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
         for member in archive.members
     ]
     return {
-        "schema_version": 1,
+        "schema_version": MOVES_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "moves_raw",
         "record_count": len(records),

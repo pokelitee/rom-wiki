@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import POKEMON_LEARNSETS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import parse_level_up_learnset
 from romwiki.util.errors import ProfileError
@@ -32,7 +33,7 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
         for member in archive.members
     ]
     return {
-        "schema_version": 1,
+        "schema_version": POKEMON_LEARNSETS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "level_up_learnsets",
         "record_count": len(records),

@@ -27,6 +27,10 @@ from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.sources import PokeDBGeneration
+from romwiki.schema.versions import (
+    CACHE_MANIFEST_SCHEMA_VERSION,
+    RAW_SCHEMA_VERSION_BY_CACHE_KEY,
+)
 
 
 CACHE_REVISION = 3
@@ -191,7 +195,7 @@ class GameBuildContext:
             return self._values[key]
         path = self.cache_root / f"{key}.json" if self.cache_root else None
         if path is not None and not self.refresh:
-            cached = self._read_cache(path)
+            cached = self._read_cache(key, path)
             if cached is not None:
                 self._values[key] = cached
                 return cached
@@ -209,7 +213,7 @@ class GameBuildContext:
             self._values[key] = factory()
         return self._values[key]
 
-    def _read_cache(self, path: Path) -> dict[str, Any] | None:
+    def _read_cache(self, key: str, path: Path) -> dict[str, Any] | None:
         if not self._initial_cache_valid or not path.is_file():
             return None
         try:
@@ -217,7 +221,7 @@ class GameBuildContext:
         except (json.JSONDecodeError, OSError):
             return None
         source = value.get("source", {}) if isinstance(value, dict) else {}
-        if value.get("schema_version") != 1:
+        if value.get("schema_version") != RAW_SCHEMA_VERSION_BY_CACHE_KEY[key]:
             return None
         if value.get("dataset") == "trainers" and not isinstance(
             value.get("engine"), str
@@ -243,7 +247,7 @@ class GameBuildContext:
 
     def _manifest(self) -> dict[str, Any]:
         return {
-            "schema_version": 1,
+            "schema_version": CACHE_MANIFEST_SCHEMA_VERSION,
             "cache_revision": CACHE_REVISION,
             "profile": self.profile.id,
             "rom_sha256": self.result.image.hashes.sha256,

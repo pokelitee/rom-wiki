@@ -42,10 +42,10 @@ class GameBuildContextCacheTests(unittest.TestCase):
             cache_root = Path(directory)
 
             first = _context(cache_root)
-            first_value = first._raw("kind/key", extractor)
+            first_value = first._raw("moves/raw", extractor)
 
             second = _context(cache_root)
-            second_value = second._raw("kind/key", extractor)
+            second_value = second._raw("moves/raw", extractor)
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(first_value, second_value)
@@ -56,8 +56,8 @@ class GameBuildContextCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             cache_root = Path(directory)
 
-            _context(cache_root, "hash-a")._raw("kind/key", extractor)
-            _context(cache_root, "hash-b")._raw("kind/key", extractor)
+            _context(cache_root, "hash-a")._raw("moves/raw", extractor)
+            _context(cache_root, "hash-b")._raw("moves/raw", extractor)
 
         self.assertEqual(len(calls), 2)
 
@@ -67,8 +67,8 @@ class GameBuildContextCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             cache_root = Path(directory)
 
-            _context(cache_root)._raw("kind/key", extractor)
-            _context(cache_root, refresh=True)._raw("kind/key", extractor)
+            _context(cache_root)._raw("moves/raw", extractor)
+            _context(cache_root, refresh=True)._raw("moves/raw", extractor)
 
         self.assertEqual(len(calls), 2)
 
@@ -78,16 +78,16 @@ class GameBuildContextCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             cache_root = Path(directory)
             initial = _context(cache_root)
-            initial._raw("first", extractor)
-            initial._raw("second", extractor)
+            initial._raw("moves/raw", extractor)
+            initial._raw("items/raw", extractor)
             manifest_path = cache_root / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["cache_revision"] = 0
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
             rebuilt = _context(cache_root)
-            rebuilt._raw("first", extractor)
-            rebuilt._raw("second", extractor)
+            rebuilt._raw("moves/raw", extractor)
+            rebuilt._raw("items/raw", extractor)
 
         self.assertEqual(len(calls), 4)
 
@@ -96,9 +96,24 @@ class GameBuildContextCacheTests(unittest.TestCase):
         extractor = _extractor(calls)
         context = GameBuildContext(_result("hash-a"), Mock())
 
-        context._raw("kind/key", extractor)
+        context._raw("moves/raw", extractor)
         context_two = GameBuildContext(_result("hash-a"), Mock())
-        context_two._raw("kind/key", extractor)
+        context_two._raw("moves/raw", extractor)
+
+        self.assertEqual(len(calls), 2)
+
+    def test_a_changed_dataset_schema_invalidates_only_that_cache(self) -> None:
+        calls: list = []
+        extractor = _extractor(calls)
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+            _context(cache_root)._raw("moves/raw", extractor)
+            path = cache_root / "moves" / "raw.json"
+            cached = json.loads(path.read_text(encoding="utf-8"))
+            cached["schema_version"] = 0
+            path.write_text(json.dumps(cached), encoding="utf-8")
+
+            _context(cache_root)._raw("moves/raw", extractor)
 
         self.assertEqual(len(calls), 2)
 

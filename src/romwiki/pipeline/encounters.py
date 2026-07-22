@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.gen4_dppt import (
     GEN4_ARCHIVE_MEMBER_NONE,
@@ -50,7 +51,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
         for record in parsed_records
     ]
     return {
-        "schema_version": 1,
+        "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "dataset": "wild_encounters",
         "record_count": len(records),
