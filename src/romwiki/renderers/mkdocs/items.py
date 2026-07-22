@@ -538,7 +538,9 @@ def _append_record_navigation(
             entity_reference("item", previous["item_id"], label, previous["slug"]),
             source_url,
         )
-        previous_link = record_nav_link(href, label, "prev")
+        previous_link = record_nav_link(
+            href, label, "prev", (previous.get("reference") or {}).get("sprite_url")
+        )
     following_link = None
     if following is not None:
         label = f"{following['name']} →"
@@ -546,5 +548,7 @@ def _append_record_navigation(
             entity_reference("item", following["item_id"], label, following["slug"]),
             source_url,
         )
-        following_link = record_nav_link(href, label, "next")
+        following_link = record_nav_link(
+            href, label, "next", (following.get("reference") or {}).get("sprite_url")
+        )
     lines.extend(record_navigation(previous_link, following_link, "Item navigation"))
