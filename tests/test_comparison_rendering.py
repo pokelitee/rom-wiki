@@ -65,12 +65,12 @@ class ComparisonRenderingTests(unittest.TestCase):
         # Only the delta entries (1 removed, 3 added) render — the shared
         # entry (2) is excluded. No raw JSON "Exact data" dump: that is
         # reserved for the standalone removed-record snapshot page.
-        self.assertIn("Entry removed:</strong> Id: 1", value)
-        self.assertIn("Entry added:</strong> Id: 3", value)
+        self.assertIn("<summary>1 entry removed</summary>", value)
+        self.assertIn("<summary>1 entry added</summary>", value)
         self.assertNotIn("Id: 2", value)
         self.assertNotIn("Exact data", value)
 
-    def test_uses_one_disclosure_threshold_for_change_collections(self) -> None:
+    def test_all_change_collections_are_disclosable(self) -> None:
         def section(count: int) -> str:
             return "\n".join(
                 comparison_section(
@@ -88,10 +88,11 @@ class ComparisonRenderingTests(unittest.TestCase):
                 )
             )
 
-        self.assertNotIn("<details>", section(2))
+        self.assertIn("<details><summary>1 entry added</summary>", section(1))
+        self.assertIn("<details><summary>2 entries added</summary>", section(2))
         self.assertIn("<details><summary>3 entries added</summary>", section(3))
 
-    def test_specialized_groups_use_the_same_disclosure_threshold(self) -> None:
+    def test_specialized_groups_are_disclosable(self) -> None:
         def section(count: int) -> str:
             pokemon = [
                 {
@@ -120,7 +121,8 @@ class ComparisonRenderingTests(unittest.TestCase):
                 )
             )
 
-        self.assertNotIn("<details>", section(2))
+        self.assertIn("<summary>2 ", section(2))
+        self.assertIn("gained this ability</summary>", section(2))
         self.assertIn(
             "<details><summary>3 Pokémon that gained this ability</summary>",
             section(3),
@@ -213,8 +215,7 @@ class ComparisonRenderingTests(unittest.TestCase):
 
         value = "\n".join(section)
         self.assertIn("Ivysaur — use-item", value)
-        self.assertIn("Entry added:</strong>", value)
-        self.assertNotIn("1 entries added", value)
+        self.assertIn("<summary>1 entry added</summary>", value)
 
     def test_renders_overview_and_removed_snapshot(self) -> None:
         comparison = {

@@ -44,9 +44,6 @@ _ROUTE_KINDS = {
     "locations": "location",
 }
 
-_DISCLOSURE_THRESHOLD = 3
-
-
 def record_comparison(
     comparison: dict[str, Any] | None, key: int | str
 ) -> dict[str, Any] | None:
@@ -706,15 +703,10 @@ def _format_lines(values: list[str], trusted: bool = False) -> str:
 def _format_collection(values: list[str], plural: str) -> str:
     if not values:
         return "No changes"
-    if len(values) == 1:
-        return values[0]
     entries = "".join(f"<li>{value}</li>" for value in values)
-    listing = f'<ul class="rw-comparison-list">{entries}</ul>'
-    if len(values) < _DISCLOSURE_THRESHOLD:
-        return listing
     return (
         f"<details><summary>{len(values)} {plural}</summary>"
-        f"{listing}</details>"
+        f'<ul class="rw-comparison-list">{entries}</ul></details>'
     )
 
 
@@ -726,16 +718,7 @@ def _format_change_groups(
         if not values:
             continue
         label = singular if len(values) == 1 else plural
-        content = _format_collection(values, plural)
-        if len(values) >= _DISCLOSURE_THRESHOLD:
-            parts.append(content)
-            continue
-        parts.append(
-            '<div class="rw-comparison-group">'
-            f'<strong class="rw-comparison-group__label">'
-            f"{escape(label[:1].upper() + label[1:])}:</strong>"
-            f" {content}</div>"
-        )
+        parts.append(_format_collection(values, label))
     return "".join(parts) or "No changes"
 
 
