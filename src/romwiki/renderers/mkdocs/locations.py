@@ -10,6 +10,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text as _write_text,
 )
+from romwiki.renderers.mkdocs.components import record_nav_link, record_navigation
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -60,16 +61,21 @@ def render_location_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    for record in sorted(
+    sorted_records = sorted(
         records,
         key=lambda item: (
             item["name"],
             item["internal_name"],
             item["header_id"],
         ),
-    ):
+    )
+    for index, record in enumerate(sorted_records):
         change = record_comparison(comparison, record["header_id"])
         filename = _filename(record["header_id"])
+        previous = sorted_records[index - 1] if index else None
+        following = (
+            sorted_records[index + 1] if index + 1 < len(sorted_records) else None
+        )
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             _write_text(
                 output_root / filename,
@@ -78,6 +84,8 @@ def render_location_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    previous,
+                    following,
                 ),
             )
             page_count += 1
@@ -139,6 +147,8 @@ def _render_location(
     change: dict[str, Any] | None = None,
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"locations/{_filename(record['header_id'])}"
     lines = [
@@ -194,13 +204,50 @@ def _render_location(
             "",
         ]
     )
+    _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _append_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> None:
+    source_url = f"locations/{_filename(record['header_id']).removesuffix('.md')}/"
+    previous_link = None
+    if previous is not None:
+        label = f"← {previous['name']}"
+        href = ROUTES.published_href(
+            entity_reference(
+                "location", previous["header_id"], label, previous["header_id"]
+            ),
+            source_url,
+        )
+        previous_link = record_nav_link(href, label, "prev")
+    following_link = None
+    if following is not None:
+        label = f"{following['name']} →"
+        href = ROUTES.published_href(
+            entity_reference(
+                "location", following["header_id"], label, following["header_id"]
+            ),
+            source_url,
+        )
+        following_link = record_nav_link(href, label, "next")
+    lines.extend(
+        record_navigation(previous_link, following_link, "Location navigation")
+    )
 
 
 def _location_summary(record: dict[str, Any]) -> list[str]:
     facts = (
+        ("Wild encounters", "Yes" if record["encounter_id"] is not None else "No"),
         ("Items", len(record.get("items", []))),
         ("Shops", len(record.get("shops", []))),
+        ("Gifts", len(record.get("pokemon_gifts", []))),
+        ("Trades", len(record.get("npc_trades", []))),
+        ("Static encounters", len(record.get("static_encounters", []))),
         ("Trainers", len(record.get("trainers", []))),
         ("Warps", len(record.get("warps", []))),
         ("Connections", len(record.get("connections", []))),
@@ -322,10 +369,8 @@ def _append_trainers(
             ),
             source_file,
         )
-        lines.append(
-            f"- {link} ({source})"
-        )
-        lines.append("")
+        lines.append(f"- {link} ({source})")
+    lines.append("")
 
 
 def _append_pokemon_gifts(
@@ -420,8 +465,8 @@ def _append_npc_trades(
             "",
             "The received Pokémon keeps the level of the Pokémon you trade away.",
             "",
-            "| Give | Receive | Nickname | Nature | Held item | IVs |",
-            "| ---- | ------- | -------- | ------ | --------- | --- |",
+            "| Give | Receive | Nickname | Nature | Held item | IVs | OT |",
+            "| ---- | ------- | -------- | ------ | --------- | --- | -- |",
         ]
     )
     stat_names = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
@@ -454,14 +499,13 @@ def _append_npc_trades(
             if trade["held_item_id"] is not None and trade["held_item_name"]
             else "—"
         )
+        ot = (
+            f"{trade['ot_name']} (ID {trade['ot_id']:05}), "
+            f"{trade['ot_gender'].lower()}, {trade['language']}"
+        )
         lines.append(
             f"| {requested} | {offered} | {trade['nickname']} | "
-            f"{trade['nature']} | {held_item} | {ivs} |"
-        )
-        lines.append("")
-        lines.append(
-            f"OT: {trade['ot_name']} (ID {trade['ot_id']:05}), "
-            f"{trade['ot_gender'].lower()}, {trade['language']}."
+            f"{trade['nature']} | {held_item} | {ivs} | {ot} |"
         )
     lines.append("")
 
