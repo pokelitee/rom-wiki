@@ -41,10 +41,10 @@ class ComparisonRenderingTests(unittest.TestCase):
         )
 
         self.assertIn("Verified unchanged", "\n".join(unchanged))
-        self.assertIn(
-            '| Power | 40<span class="rw-diff-arrow">→</span>60 |',
-            "\n".join(changed),
-        )
+        value = "\n".join(changed)
+        self.assertIn('<h3 class="rw-change__field">Power</h3>', value)
+        self.assertIn('40<span class="rw-diff-arrow">→</span>60', value)
+        self.assertNotIn("| Field | Change |", value)
 
     def test_complex_changes_render_only_summary_list_deltas(self) -> None:
         section = comparison_section(
@@ -65,10 +65,66 @@ class ComparisonRenderingTests(unittest.TestCase):
         # Only the delta entries (1 removed, 3 added) render — the shared
         # entry (2) is excluded. No raw JSON "Exact data" dump: that is
         # reserved for the standalone removed-record snapshot page.
-        self.assertIn("Removed: Id: 1", value)
-        self.assertIn("Added: Id: 3", value)
+        self.assertIn("Entry removed:</strong> Id: 1", value)
+        self.assertIn("Entry added:</strong> Id: 3", value)
         self.assertNotIn("Id: 2", value)
         self.assertNotIn("Exact data", value)
+
+    def test_uses_one_disclosure_threshold_for_change_collections(self) -> None:
+        def section(count: int) -> str:
+            return "\n".join(
+                comparison_section(
+                    {
+                        "status": "changed",
+                        "changes": [
+                            {
+                                "label": "Moves",
+                                "before": [],
+                                "after": [{"id": value} for value in range(count)],
+                            }
+                        ],
+                    },
+                    "Base",
+                )
+            )
+
+        self.assertNotIn("<details>", section(2))
+        self.assertIn("<details><summary>3 entries added</summary>", section(3))
+
+    def test_specialized_groups_use_the_same_disclosure_threshold(self) -> None:
+        def section(count: int) -> str:
+            pokemon = [
+                {
+                    "member": value,
+                    "name": f"Pokémon {value}",
+                    "slug": f"pokemon-{value}",
+                    "slots": [1],
+                }
+                for value in range(1, count + 1)
+            ]
+            return "\n".join(
+                comparison_section(
+                    {
+                        "kind": "abilities",
+                        "status": "changed",
+                        "changes": [
+                            {
+                                "field": "pokemon",
+                                "label": "Pokémon",
+                                "before": [],
+                                "after": pokemon,
+                            }
+                        ],
+                    },
+                    "Base",
+                )
+            )
+
+        self.assertNotIn("<details>", section(2))
+        self.assertIn(
+            "<details><summary>3 Pokémon that gained this ability</summary>",
+            section(3),
+        )
 
     def test_pokemon_changes_use_readable_field_specific_summaries(self) -> None:
         references = ReferenceIndex(
@@ -155,7 +211,10 @@ class ComparisonRenderingTests(unittest.TestCase):
             "Platinum",
         )
 
-        self.assertIn("Ivysaur — use-item", "\n".join(section))
+        value = "\n".join(section)
+        self.assertIn("Ivysaur — use-item", value)
+        self.assertIn("Entry added:</strong>", value)
+        self.assertNotIn("1 entries added", value)
 
     def test_renders_overview_and_removed_snapshot(self) -> None:
         comparison = {

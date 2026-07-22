@@ -109,7 +109,7 @@ _LABELS = {
     "natural_gift_type": "Natural Gift type",
     "party_use": "Party use",
     "party_effects": "Party effects",
-    "prevent_toss": "Can be tossed",
+    "prevent_toss": "Prevents tossing",
     "location_name_id": "Location-name ID",
     "matrix_id": "Matrix ID",
     "event_file_id": "Event file",

@@ -44,6 +44,8 @@ _ROUTE_KINDS = {
     "locations": "location",
 }
 
+_DISCLOSURE_THRESHOLD = 3
+
 
 def record_comparison(
     comparison: dict[str, Any] | None, key: int | str
@@ -81,12 +83,7 @@ def comparison_section(
             "",
         ]
     lines.extend(
-        [
-            f"Compared with **{escape(baseline)}**.",
-            "",
-            "| Field | Change |",
-            "| ----- | ------ |",
-        ]
+        [f"Compared with **{escape(baseline)}**.", "", '<div class="rw-changes">']
     )
     for change in entry["changes"]:
         value = _format_change(
@@ -95,8 +92,16 @@ def comparison_section(
             source_file.removesuffix(".md") + ("/" if source_file else ""),
             references,
         )
-        lines.append(f"| {escape(str(change['label']))} | {value} |")
-    lines.append("")
+        label = escape(str(change["label"]))
+        lines.extend(
+            [
+                '<section class="rw-change">',
+                f'<h3 class="rw-change__field">{label}</h3>',
+                f'<div class="rw-change__value">{value}</div>',
+                "</section>",
+            ]
+        )
+    lines.extend(["</div>", ""])
     return lines
 
 
@@ -345,35 +350,20 @@ def _format_list_change(
 
 
 def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
-    groups = [
-        (label, values)
-        for label, values in (("removed", removed), ("added", added))
-        if values
-    ]
-    if not groups:
-        return "No changes"
-    # If either side needs a dropdown (2+ entries), use one for both sides —
-    # a lone "Removed: X" sitting inline next to a "6 added" dropdown in the
-    # same cell reads as a mistake, not a deliberate size difference. Only
-    # skip the dropdown entirely when every side is a single, simple entry.
-    use_details = any(len(values) > 1 for _, values in groups)
-    parts = []
-    for label, values in groups:
-        ordered = sorted(values, key=_canonical)
-        if use_details:
-            entries = "".join(
-                f"<li>{_format_value_summary(value)}</li>" for value in ordered
+    groups = []
+    for label, values in (("removed", removed), ("added", added)):
+        if values:
+            groups.append(
+                (
+                    f"entry {label}",
+                    f"entries {label}",
+                    [
+                        _format_value_summary(value)
+                        for value in sorted(values, key=_canonical)
+                    ],
+                )
             )
-            parts.append(
-                f"<details><summary>{len(ordered)} {label}</summary>"
-                f'<ul class="rw-comparison-list">{entries}</ul></details>'
-            )
-        else:
-            parts.append(f"{label.title()}: {_format_value_summary(ordered[0])}")
-    # <details> is already block-level (and Material gives it its own
-    # margin), so an explicit <br> before one just doubles the gap.
-    separator = "" if use_details else "<br>"
-    return separator.join(parts)
+    return _format_change_groups(groups)
 
 
 def _format_value_summary(value: Any) -> str:
@@ -452,11 +442,19 @@ def _format_ability_pokemon_change(
         else:
             added.append(_reference_html(new, "pokemon", source_url, references))
     groups = [
-        ("ability slot changes", changed),
-        ("Pokémon that lost this ability", removed),
-        ("Pokémon that gained this ability", added),
+        ("ability slot change", "ability slot changes", changed),
+        (
+            "Pokémon that lost this ability",
+            "Pokémon that lost this ability",
+            removed,
+        ),
+        (
+            "Pokémon that gained this ability",
+            "Pokémon that gained this ability",
+            added,
+        ),
     ]
-    groups = [group for group in groups if group[1]]
+    groups = [group for group in groups if group[2]]
     if not groups:
         return "Order changed"
     return _format_change_groups(groups)
@@ -506,11 +504,11 @@ def _format_trainer_location_change(
                 )
             )
     groups = [
-        ("position changes", changed),
-        ("locations removed", removed),
-        ("locations added", added),
+        ("position change", "position changes", changed),
+        ("location removed", "locations removed", removed),
+        ("location added", "locations added", added),
     ]
-    groups = [group for group in groups if group[1]]
+    groups = [group for group in groups if group[2]]
     if not groups:
         return "Order changed"
     return _format_change_groups(groups)
@@ -610,11 +608,11 @@ def _format_level_up_moves(
         else:
             added.append(line)
     groups = [
-        ("level changes", changed),
-        ("moves removed", removed),
-        ("moves added", added),
+        ("level change", "level changes", changed),
+        ("move removed", "moves removed", removed),
+        ("move added", "moves added", added),
     ]
-    groups = [group for group in groups if group[1]]
+    groups = [group for group in groups if group[2]]
     if not groups:
         return "Order changed"
     return _format_change_groups(groups)
@@ -647,11 +645,11 @@ def _format_evolutions(
         else:
             added.append(f"{display}: {evolution_condition(new, source_url)}")
     groups = [
-        ("evolution changes", changed),
-        ("evolutions removed", removed),
-        ("evolutions added", added),
+        ("evolution change", "evolution changes", changed),
+        ("evolution removed", "evolutions removed", removed),
+        ("evolution added", "evolutions added", added),
     ]
-    groups = [group for group in groups if group[1]]
+    groups = [group for group in groups if group[2]]
     if not groups:
         return "Order changed"
     return _format_change_groups(groups)
@@ -698,23 +696,47 @@ def _format_mapping_change(
 def _format_lines(values: list[str], trusted: bool = False) -> str:
     if not values:
         return "No changes"
-    if len(values) == 1:
-        return values[0] if trusted else escape(values[0]).replace("|", "&#124;")
-    return '<ul class="rw-comparison-list">' + "".join(
-        f"<li>{value if trusted else escape(value).replace('|', '&#124;')}</li>"
+    rendered = [
+        value if trusted else escape(value).replace("|", "&#124;")
         for value in values
-    ) + "</ul>"
+    ]
+    return _format_collection(rendered, "changes")
 
 
-def _format_change_groups(groups: list[tuple[str, list[str]]]) -> str:
+def _format_collection(values: list[str], plural: str) -> str:
+    if not values:
+        return "No changes"
+    if len(values) == 1:
+        return values[0]
+    entries = "".join(f"<li>{value}</li>" for value in values)
+    listing = f'<ul class="rw-comparison-list">{entries}</ul>'
+    if len(values) < _DISCLOSURE_THRESHOLD:
+        return listing
+    return (
+        f"<details><summary>{len(values)} {plural}</summary>"
+        f"{listing}</details>"
+    )
+
+
+def _format_change_groups(
+    groups: list[tuple[str, str, list[str]]],
+) -> str:
     parts = []
-    for label, lines in groups:
-        entries = "".join(f"<li>{line}</li>" for line in lines)
+    for singular, plural, values in groups:
+        if not values:
+            continue
+        label = singular if len(values) == 1 else plural
+        content = _format_collection(values, plural)
+        if len(values) >= _DISCLOSURE_THRESHOLD:
+            parts.append(content)
+            continue
         parts.append(
-            f"<details><summary>{len(lines)} {label}</summary>"
-            f'<ul class="rw-comparison-list">{entries}</ul></details>'
+            '<div class="rw-comparison-group">'
+            f'<strong class="rw-comparison-group__label">'
+            f"{escape(label[:1].upper() + label[1:])}:</strong>"
+            f" {content}</div>"
         )
-    return "".join(parts)
+    return "".join(parts) or "No changes"
 
 
 def _level_suffix(value: dict[str, Any]) -> str:

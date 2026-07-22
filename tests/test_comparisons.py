@@ -128,6 +128,24 @@ class DatasetComparisonTests(unittest.TestCase):
                 _dataset("pokemon", "base", []),
             )
 
+    def test_labels_prevent_toss_without_inverting_its_meaning(self) -> None:
+        baseline = _dataset(
+            "items",
+            "base",
+            [{"item_id": 1, "name": "Item", "prevent_toss": False}],
+        )
+        current = _dataset(
+            "items",
+            "hack",
+            [{"item_id": 1, "name": "Item", "prevent_toss": True}],
+        )
+
+        comparison = compare_datasets(current, baseline)
+
+        change = comparison["records"][0]["changes"][0]
+        self.assertEqual(change["label"], "Prevents tossing")
+        self.assertEqual((change["before"], change["after"]), (False, True))
+
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:
     return {
