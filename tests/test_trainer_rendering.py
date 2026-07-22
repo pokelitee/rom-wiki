@@ -56,6 +56,31 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertNotIn('<ol class="rw-party-card__moves"', page)
         self.assertIn("Uses default level-up moves.", page)
 
+    def test_renders_available_party_attributes_compactly(self) -> None:
+        member = _party_member([])
+        member.update({
+            "ability": {
+                "id": 65,
+                "name": "Overgrow",
+                "slug": "overgrow",
+                "slot": 1,
+                "source": "derived",
+            },
+            "ivs": {"source": "derived", "values": _stats(12)},
+            "evs": {"source": "engine-default", "values": _stats(0)},
+            "calculated_stats": {"source": "derived", "values": _stats(42)},
+        })
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertIn('href="../../abilities/overgrow/">Overgrow</a>', page)
+        self.assertIn('<p class="rw-party-card__meta"><span>Lv. 5</span>', page)
+        self.assertIn('<dl class="rw-party-card__details">', page)
+        self.assertIn('<table class="rw-party-card__stats">', page)
+        self.assertIn('<tr><th scope="row">Value</th><td>42</td>', page)
+        self.assertIn('<tr><th scope="row">IV</th><td>12</td>', page)
+        self.assertIn('<tr><th scope="row">EV</th><td>0</td>', page)
+
 
 def _party_member(moves: list[str]) -> dict[str, object]:
     return {
@@ -69,6 +94,23 @@ def _party_member(moves: list[str]) -> dict[str, object]:
         },
         "moves": [{"id": index, "name": name} for index, name in enumerate(moves)],
         "moves_source": "explicit" if moves else "level-up",
+        "ability": None,
+        "nature": None,
+        "gender": None,
+        "ivs": None,
+        "evs": None,
+        "calculated_stats": None,
+    }
+
+
+def _stats(value: int) -> dict[str, int]:
+    return {
+        "hp": value,
+        "attack": value,
+        "defense": value,
+        "special_attack": value,
+        "special_defense": value,
+        "speed": value,
     }
 
 

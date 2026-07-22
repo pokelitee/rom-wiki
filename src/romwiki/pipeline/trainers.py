@@ -10,6 +10,7 @@ from romwiki.engines.gen4_dppt import (
     parse_english_message_archive,
     parse_object_events,
     parse_platinum_map_headers,
+    parse_trainer_class_genders,
     parse_trainer_battle_commands,
     parse_trainer_record,
 )
@@ -31,6 +32,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         messages_path = profile.layout["messages"]
         names_member = profile.parameters["trainer_names_member"]
         classes_member = profile.parameters["trainer_classes_member"]
+        class_gender_offset = profile.parameters["trainer_class_gender_offset"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing trainer metadata: {error.args[0]}"
@@ -45,6 +47,12 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         raise InvalidRomError("Trainer data and party archives have different counts")
     names = parse_english_message_archive(messages.read(names_member))
     classes = parse_english_message_archive(messages.read(classes_member))
+    with result.image.path.open("rb") as stream:
+        stream.seek(result.image.header.arm9_offset + class_gender_offset)
+        class_gender_data = stream.read(len(classes))
+    class_genders = parse_trainer_class_genders(
+        class_gender_data, count=len(classes)
+    )
     if len(names) < len(trainers.members):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
 
@@ -55,6 +63,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             trainer_id=member.index,
             name=names[member.index],
             class_names=classes,
+            class_genders=class_genders,
             trainer_archive=trainer_path,
             party_archive=party_path,
         )
@@ -97,6 +106,10 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             "party_archive": party_path,
             "trainer_names": {"archive": messages_path, "member": names_member},
             "trainer_classes": {"archive": messages_path, "member": classes_member},
+            "trainer_class_genders": {
+                "arm9_offset": class_gender_offset,
+                "count": len(class_genders),
+            },
             **location_source,
         },
         **reference_names,

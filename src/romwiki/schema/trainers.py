@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict
 from romwiki.schema.pokemon import RecordProvenance
 
 
-TRAINER_PARTY_SCHEMA_VERSION = 1
+TRAINER_PARTY_SCHEMA_VERSION = 2
 
 
 class TrainerAttribute(TypedDict):
@@ -29,6 +29,7 @@ class NormalizedTrainerPokemon(TypedDict):
     gender: TrainerAttribute | None
     ivs: TrainerAttribute | None
     evs: TrainerAttribute | None
+    calculated_stats: TrainerAttribute | None
     source_fields: dict[str, Any]
 
 
@@ -77,6 +78,7 @@ class Gen4Trainer:
     name: str
     class_id: int
     class_name: str
+    class_gender: Literal["male", "female"]
     has_custom_moves: bool
     has_held_items: bool
     unknown_byte: int

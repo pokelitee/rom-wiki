@@ -22,10 +22,14 @@ class TrainerEnrichmentTests(unittest.TestCase):
             items_by_id={},
         )
         source = {
+            "trainer_id": 0,
+            "class_id": 0,
+            "class_gender": "male",
             "has_custom_moves": False,
             "reward_item_ids": [],
             "party": [
                 {
+                    "difficulty": 0,
                     "species_id": 412,
                     "form_id": 1,
                     "level": 5,
@@ -47,6 +51,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             "name": "Tristan",
             "class_id": 2,
             "class_name": "Youngster",
+            "class_gender": "male",
             "has_custom_moves": True,
             "has_held_items": True,
             "unknown_byte": 0,
@@ -109,6 +114,19 @@ class TrainerEnrichmentTests(unittest.TestCase):
                         "name": "Bulbasaur",
                         "slug": "bulbasaur",
                         "sprite": {"url": "https://example.test/bulbasaur.png"},
+                        "gender_ratio": 31,
+                        "base_stats": {
+                            "hp": 45,
+                            "attack": 49,
+                            "defense": 49,
+                            "special_attack": 65,
+                            "special_defense": 65,
+                            "speed": 45,
+                        },
+                        "abilities": [
+                            {"id": 65, "name": "Overgrow", "slug": "overgrow"},
+                            {"id": 34, "name": "Chlorophyll", "slug": "chlorophyll"},
+                        ],
                     }
                 ],
             },
@@ -124,13 +142,18 @@ class TrainerEnrichmentTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
-        self.assertEqual(enriched["party_schema_version"], 1)
+        self.assertEqual(enriched["party_schema_version"], 2)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn('src="https://example.test/bulbasaur.png"', page)
         self.assertIn("Master Ball", page)
         self.assertIn("Play Rough", page)
+        self.assertIn(
+            '<p class="rw-party-card__meta"><span>Lv. 5</span>'
+            "<span>Timid</span><span>Male</span></p>",
+            page,
+        )
         self.assertIn(
             "| [Route 202](../locations/header-343.md) | 343 | `R202` | "
             "(181, 818) | `329:0` |",
@@ -145,6 +168,31 @@ class TrainerEnrichmentTests(unittest.TestCase):
             {"difficulty": 0, "gender_ability": 0, "ball_seal": 0},
         )
         self.assertNotIn("difficulty", party_member)
+        self.assertEqual(
+            party_member["ability"],
+            {
+                "id": 65,
+                "name": "Overgrow",
+                "slug": "overgrow",
+                "slot": 1,
+                "source": "derived",
+            },
+        )
+        self.assertEqual(party_member["ivs"]["values"]["speed"], 0)
+        self.assertEqual(set(party_member["evs"]["values"].values()), {0})
+        self.assertEqual(party_member["nature"]["name"], "Timid")
+        self.assertEqual(party_member["gender"]["name"], "Male")
+        self.assertEqual(
+            party_member["calculated_stats"]["values"],
+            {
+                "hp": 19,
+                "attack": 8,
+                "defense": 9,
+                "special_attack": 11,
+                "special_defense": 11,
+                "speed": 9,
+            },
+        )
         self.assertEqual(
             catalog["records"][0]["party"],
             [{

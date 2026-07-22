@@ -98,6 +98,35 @@ class DatasetComparisonTests(unittest.TestCase):
 
         self.assertEqual(comparison["counts"]["unchanged"], 1)
 
+    def test_compares_normalized_trainer_party_attributes(self) -> None:
+        baseline_member = {
+            "pokemon": {"id": 1, "slug": "bulbasaur", "name": "Bulbasaur"},
+            "level": 5,
+            "moves": [],
+            "moves_source": "level-up",
+            "ability": {"id": 65, "name": "Overgrow", "slot": 1},
+            "ivs": {"source": "derived", "values": {"hp": 0}},
+        }
+        current_member = {
+            **baseline_member,
+            "ivs": {"source": "derived", "values": {"hp": 12}},
+        }
+        comparison = compare_datasets(
+            _dataset(
+                "trainers",
+                "hack",
+                [{"trainer_id": 1, "name": "Sam", "party": [current_member]}],
+            ),
+            _dataset(
+                "trainers",
+                "base",
+                [{"trainer_id": 1, "name": "Sam", "party": [baseline_member]}],
+            ),
+        )
+
+        self.assertEqual(comparison["counts"]["changed"], 1)
+        self.assertEqual(comparison["records"][0]["changes"][0]["field"], "party")
+
     def test_nested_reference_names_do_not_create_mechanical_changes(self) -> None:
         baseline = _dataset(
             "pokemon",

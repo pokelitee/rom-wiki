@@ -14,7 +14,10 @@ from romwiki.engines.gen4_dppt import (
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.sources import PokeDBGeneration
-from romwiki.pipeline.trainer_party import normalize_trainer_party_member
+from romwiki.pipeline.trainer_party import (
+    derive_trainer_party_attributes,
+    normalize_trainer_party_member,
+)
 from romwiki.schema.trainers import TRAINER_PARTY_SCHEMA_VERSION
 from romwiki.util.text import name_slug, title_case_slug
 
@@ -496,6 +499,15 @@ def _enrich_trainer(
         game_record = None
         if pokemon_records is not None:
             game_record = pokemon_records.get(slug if form_id and slug else species_id)
+        pokemon = derive_trainer_party_attributes(
+            engine,
+            pokemon,
+            trainer_id=source["trainer_id"],
+            class_id=source["class_id"],
+            class_gender=source["class_gender"],
+            gender_ratio=(game_record.get("gender_ratio") if game_record else None),
+            base_stats=(game_record.get("base_stats") if game_record else None),
+        )
         pokemon_slug = game_record["slug"] if game_record else reference["name"]
         pokemon_name = game_record["name"] if game_record else title_case_slug(
             reference["name"]
@@ -505,6 +517,7 @@ def _enrich_trainer(
             if game_record
             else pokedb.pokemon_sprite(reference, sprite_version)
         )
+        ability = _trainer_ability(pokemon.get("ability"), game_record)
         held_item = (
             _item_reference(pokemon["held_item_id"], pokedb, item_names)
             if pokemon["held_item_id"] is not None
@@ -525,6 +538,7 @@ def _enrich_trainer(
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
                     "sprite": pokemon_sprite,
                 },
+                "ability": ability,
                 "held_item": (
                     _with_item_sprite(held_item, pokedb, reference_version)
                     if held_item is not None
@@ -574,6 +588,24 @@ def _trainer_pokemon_index(
         if isinstance(slug, str):
             index[slug] = record
     return index
+
+
+def _trainer_ability(
+    value: dict[str, Any] | None,
+    pokemon_record: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if value is None or pokemon_record is None:
+        return None
+    slot = value.get("slot")
+    abilities = pokemon_record.get("abilities")
+    if not isinstance(slot, int) or not isinstance(abilities, list):
+        raise DataSourceError("Normalized trainer ability is missing its slot")
+    if not 1 <= slot <= len(abilities):
+        raise DataSourceError(f"Trainer ability slot {slot} is out of range")
+    ability = abilities[slot - 1]
+    if not isinstance(ability, dict) or not ability.get("name"):
+        return None
+    return {**ability, "slot": slot, "source": value["source"]}
 
 
 def _with_item_sprite(

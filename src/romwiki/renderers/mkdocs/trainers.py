@@ -459,20 +459,50 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             if pokemon_sprite and pokemon_sprite.get("url")
             else ""
         )
+        metadata = [f"Lv. {member['level']}"]
+        ability = member.get("ability")
+        ability_link = None
+        if ability and ability.get("name"):
+            ability_link = ROUTES.html_link(
+                entity_reference(
+                    "ability",
+                    ability.get("id", ability["name"]),
+                    ability["name"],
+                    ability.get("slug"),
+                ),
+                source_url,
+            )
+        for field in ("nature", "gender"):
+            value = member.get(field)
+            if value:
+                display_value = value.get("name", value.get("value"))
+                if display_value is not None:
+                    metadata.append(escape(str(display_value)))
+        details = []
+        if ability_link is not None:
+            details.append(("Ability", ability_link))
+        details.append(("Held item", item_name))
+        metadata_html = "".join(f"<span>{value}</span>" for value in metadata)
         lines.extend(
             [
                 '<article class="rw-party-card">',
                 f'<span class="rw-party-card__slot">Slot {index}</span>',
                 '<div class="rw-party-card__header">',
                 sprite_icon,
+                '<div class="rw-party-card__identity">',
                 f"<h3>{pokemon_link}</h3>",
+                f'<p class="rw-party-card__meta">{metadata_html}</p>',
                 "</div>",
-                '<dl class="rw-summary__facts">',
-                f"<div><dt>Level</dt><dd>{member['level']}</dd></div>",
-                f"<div><dt>Held item</dt><dd>{item_name}</dd></div>",
+                "</div>",
+                '<dl class="rw-party-card__details">',
+                *[
+                    f"<div><dt>{label}</dt><dd>{value}</dd></div>"
+                    for label, value in details
+                ],
                 "</dl>",
             ]
         )
+        lines.extend(_party_stat_table(member))
         if member["moves_source"] == "explicit":
             lines.append('<ol class="rw-party-card__moves" aria-label="Moves">')
             for move in member["moves"]:
@@ -501,6 +531,45 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
         lines.append("</article>")
     lines.extend(["</div>", ""])
     return lines
+
+
+def _party_stat_table(member: dict[str, Any]) -> list[str]:
+    ordered = (
+        ("HP", "hp"),
+        ("Atk", "attack"),
+        ("Def", "defense"),
+        ("SpA", "special_attack"),
+        ("SpD", "special_defense"),
+        ("Spe", "speed"),
+    )
+    rows = []
+    for label, field in (
+        ("Value", "calculated_stats"),
+        ("IV", "ivs"),
+        ("EV", "evs"),
+    ):
+        attribute = member.get(field)
+        values = attribute.get("values") if attribute else None
+        if isinstance(values, dict) and all(key in values for _, key in ordered):
+            rows.append((label, values))
+    if not rows:
+        return []
+    return [
+        '<table class="rw-party-card__stats">',
+        "<caption>Stats, IVs, and EVs</caption>",
+        "<thead><tr><th></th>"
+        + "".join(f'<th scope="col">{label}</th>' for label, _ in ordered)
+        + "</tr></thead>",
+        "<tbody>",
+        *[
+            f'<tr><th scope="row">{label}</th>'
+            + "".join(f"<td>{values[key]}</td>" for _, key in ordered)
+            + "</tr>"
+            for label, values in rows
+        ],
+        "</tbody>",
+        "</table>",
+    ]
 
 
 def _append_locations(

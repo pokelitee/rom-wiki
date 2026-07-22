@@ -3,7 +3,10 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4_dppt import parse_trainer_record
+from romwiki.engines.gen4_dppt import (
+    parse_trainer_class_genders,
+    parse_trainer_record,
+)
 from romwiki.util.errors import InvalidRomError
 
 
@@ -21,6 +24,7 @@ class Gen4TrainerTests(unittest.TestCase):
             trainer_id=12,
             name="Tristan",
             class_names=("Pokémon Trainer", "Youngster", "Ace Trainer"),
+            class_genders=("female", "male", "male"),
             trainer_archive="trdata.narc",
             party_archive="trpoke.narc",
         )
@@ -28,6 +32,7 @@ class Gen4TrainerTests(unittest.TestCase):
         self.assertTrue(result.has_custom_moves)
         self.assertTrue(result.has_held_items)
         self.assertTrue(result.double_battle)
+        self.assertEqual(result.class_gender, "male")
         self.assertEqual(result.party[0].species_id, 479)
         self.assertEqual(result.party[0].form_id, 2)
         self.assertEqual(result.party[0].move_ids, (85, 86, 87, 88))
@@ -43,9 +48,18 @@ class Gen4TrainerTests(unittest.TestCase):
                 trainer_id=1,
                 name="",
                 class_names=("Pokémon Trainer",),
+                class_genders=("male",),
                 trainer_archive="trdata.narc",
                 party_archive="trpoke.narc",
             )
+
+    def test_decodes_trainer_class_gender_table(self) -> None:
+        self.assertEqual(
+            parse_trainer_class_genders(b"\x00\x01\x02", count=3),
+            ("male", "female", "male"),
+        )
+        with self.assertRaisesRegex(InvalidRomError, "unknown values"):
+            parse_trainer_class_genders(b"\x03", count=1)
 
 
 if __name__ == "__main__":

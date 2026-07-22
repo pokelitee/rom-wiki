@@ -35,7 +35,11 @@ from romwiki.engines.gen4_dppt.items import (
     find_item_archive_members,
     parse_item_record,
 )
-from romwiki.engines.gen4_dppt.trainers import TRAINER_RECORD_SIZE, parse_trainer_record
+from romwiki.engines.gen4_dppt.trainers import (
+    TRAINER_RECORD_SIZE,
+    parse_trainer_class_genders,
+    parse_trainer_record,
+)
 from romwiki.engines.gen4_dppt.events import (
     Gen4BackgroundEvent,
     Gen4MapEvents,
@@ -150,6 +154,7 @@ __all__ = [
     "Gen4MapMatrix",
     "parse_map_matrix",
     "TRAINER_RECORD_SIZE",
+    "parse_trainer_class_genders",
     "parse_trainer_record",
     "Gen4ObjectEvent",
     "Gen4BackgroundEvent",

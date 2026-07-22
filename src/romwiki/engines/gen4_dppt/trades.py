@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import struct
 
+from romwiki.engines.gen4_dppt.constants import NATURE_NAMES
 from romwiki.util.errors import InvalidRomError
 
 
@@ -11,15 +12,6 @@ INIT_NPC_TRADE = 0x0226
 START_NPC_TRADE = 0x0229
 FINISH_NPC_TRADE = 0x022A
 _NPC_TRADE_SEQUENCE_LIMIT = 64
-
-NATURE_NAMES = (
-    "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
-    "Bold", "Docile", "Relaxed", "Impish", "Lax",
-    "Timid", "Hasty", "Serious", "Jolly", "Naive",
-    "Modest", "Mild", "Quiet", "Bashful", "Rash",
-    "Calm", "Gentle", "Sassy", "Careful", "Quirky",
-)
-
 
 @dataclass(frozen=True, slots=True)
 class Gen4NpcTrade:

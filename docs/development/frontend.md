@@ -155,7 +155,9 @@ and, when the slot has one, the held item's icon. Explicit moves retain their st
 order in a numbered list; `level-up` moves render as a distinct default-moves
 state rather than a numbered move. Optional ability, nature, gender, IV, and EV
 fields must be omitted cleanly when an engine cannot provide them. Renderer code
-must never derive those mechanics from raw engine fields.
+must never derive those mechanics from raw engine fields. Cards group level,
+nature, and gender into one identity line, use a compact aligned list for ability
+and held item, and show final stats, IVs, and EVs in a six-column stat matrix.
 
 Trainers also carry an "AI battle items" section: the ROM's
 4-slot `reward_item_ids` array holds items the trainer's own AI may use on its

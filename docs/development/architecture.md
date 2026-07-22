@@ -127,11 +127,20 @@ Engine-only details needed for auditing belong in provenance fields.
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract
 is defined in `schema/trainers.py`. Normalized members state their move source
-as `explicit`, `level-up`, or `unavailable` and reserve optional ability, nature,
+as `explicit`, `level-up`, or `unavailable` and provide optional ability, nature,
 gender, IV, and EV attributes. Present attributes identify their source as
 `stored`, `derived`, or `engine-default`; unknown values remain absent rather than
-being guessed. Raw bytes such as Gen IV `difficulty` remain under `source_fields`;
-renderers and semantic comparisons never consume that mapping.
+being guessed. The Gen IV adapter derives uniform IVs, the deterministic first
+ability slot, zero-EV defaults, nature, and Pokémon gender. Nature and gender use
+the engine's deterministic personality algorithm plus the trainer-class gender
+table read from ARM9; Pokémon gender also uses the current game's species ratio.
+The two-byte Gen IV difficulty value also reproduces the deterministic random-IV
+fallback used when its scaled value exceeds 31. The adapter calculates unmodified
+summary stats from the current game's base stats, level, IVs, EVs, and nature;
+renderers consume those normalized values without implementing a generation's
+stat formula.
+Raw bytes such as Gen IV `difficulty` remain under `source_fields`; renderers and
+semantic comparisons never consume that mapping.
 
 Trainer enrichment resolves Pokémon through the current game's enriched Pokémon
 dataset. This is required for hacks that change forms, names, sprites, or ability

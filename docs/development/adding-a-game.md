@@ -162,6 +162,14 @@ fields, and attach `stored`, `derived`, or `engine-default` provenance. Mark mov
 behavior as `explicit`, `level-up`, or `unavailable`, and increment
 `TRAINER_PARTY_SCHEMA_VERSION` for a breaking party-contract change.
 
+If party pages expose calculated stats, implement the generation's formula in its
+engine adapter and emit normalized `calculated_stats`; do not calculate them in a
+renderer. This keeps DV/Stat Experience generations separate from IV/EV formulas.
+
+When a mechanic depends on an engine table outside the party record, expose its
+location through the game profile. For D/P/Pt, `trainer_class_gender_offset`
+locates the ARM9 class-gender table used by deterministic trainer Pokémon PIDs.
+
 At minimum, each dataset should include:
 
 - `schema_version`;

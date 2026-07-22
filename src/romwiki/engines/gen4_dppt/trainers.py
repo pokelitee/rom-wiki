@@ -9,6 +9,20 @@ from romwiki.schema import Gen4Trainer, RecordProvenance, TrainerPokemon
 TRAINER_RECORD_SIZE = 20
 
 
+def parse_trainer_class_genders(data: bytes, *, count: int) -> tuple[str, ...]:
+    if len(data) != count:
+        raise InvalidRomError(
+            f"Gen IV trainer class gender table has size {len(data)}; expected {count}"
+        )
+    if invalid := sorted(set(data) - {0, 1, 2}):
+        raise InvalidRomError(
+            f"Gen IV trainer class gender table contains unknown values: {invalid}"
+        )
+    # The engine treats only 1 as female; 0 and the mixed/double class value 2
+    # both take the male PID path.
+    return tuple("female" if value == 1 else "male" for value in data)
+
+
 def parse_trainer_record(
     data: bytes,
     party_data: bytes,
@@ -16,6 +30,7 @@ def parse_trainer_record(
     trainer_id: int,
     name: str,
     class_names: tuple[str, ...],
+    class_genders: tuple[str, ...],
     trainer_archive: str,
     party_archive: str,
 ) -> Gen4Trainer:
@@ -27,6 +42,10 @@ def parse_trainer_record(
     if class_id >= len(class_names):
         raise InvalidRomError(
             f"Trainer {trainer_id} references missing class name {class_id}"
+        )
+    if class_id >= len(class_genders):
+        raise InvalidRomError(
+            f"Trainer {trainer_id} references missing class gender {class_id}"
         )
     reward_items = struct.unpack_from("<4H", data, 4)
     ai_flags, battle_type = struct.unpack_from("<II", data, 12)
@@ -76,6 +95,7 @@ def parse_trainer_record(
         name=name,
         class_id=class_id,
         class_name=class_names[class_id],
+        class_gender=class_genders[class_id],
         has_custom_moves=has_custom_moves,
         has_held_items=has_held_items,
         unknown_byte=unknown_byte,

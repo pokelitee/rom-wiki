@@ -29,7 +29,7 @@ from romwiki.pipeline.identify import InspectionResult
 from romwiki.sources import PokeDBGeneration
 
 
-CACHE_REVISION = 2
+CACHE_REVISION = 3
 
 
 class GameBuildContext:
