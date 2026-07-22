@@ -1,8 +1,46 @@
 [pages]
-pokemon = ["bulbasaur", "eevee", "wurmple"]
-abilities = ["overgrow"]
-items = ["master-ball"]
-moves = ["pound"]
-encounters = ["area-000"]
-trainers = ["trainer-0001"]
-locations = ["header-000"]
+pokemon = [
+    "bulbasaur",
+    "eevee",
+    "wurmple",
+    "slowpoke",
+    "deoxys-attack",
+]
+abilities = [
+    "overgrow",
+    "water-absorb",
+    "klutz",
+]
+moves = [
+    "pound",
+    "hurricane",
+    "whirlwind",
+    "fire-punch",
+]
+items = [
+    "master-ball",
+    "oran-berry",
+    "full-restore",
+    "hp-up",
+    "never-melt-ice",
+    "sun-stone",
+]
+encounters = [
+    "area-000",
+    "area-060",
+    "area-134",
+]
+trainers = [
+    "trainer-0001",
+    "trainer-0005",
+    "trainer-0015",
+    "trainer-1028",
+]
+locations = [
+    "header-000",
+    "header-004",
+    "header-018",
+    "header-054",
+    "header-065",
+    "header-132",
+]
