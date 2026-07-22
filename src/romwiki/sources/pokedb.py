@@ -21,11 +21,15 @@ class PokeDBGeneration:
         items_by_id: dict[int, str],
         items_by_lookup: dict[str, str] | None = None,
         moves_by_id: dict[int, str] | None = None,
+        abilities_reference: dict[int, dict[str, Any]] | None = None,
+        items_reference: dict[str, dict[str, Any]] | None = None,
     ) -> None:
         self.pokemon_by_id = pokemon_by_id
         self.pokemon_by_name = pokemon_by_name
         self.pokemon_by_species = pokemon_by_species
         self.abilities_by_id = abilities_by_id
+        self.abilities_reference = abilities_reference or {}
+        self.items_reference = items_reference or {}
         self.items_by_id = items_by_id
         self.items_by_lookup = items_by_lookup or {
             _lookup_key(name): name for name in items_by_id.values()
@@ -52,6 +56,8 @@ class PokeDBGeneration:
             items_by_id=_id_name_map(items, "item"),
             items_by_lookup={_lookup_key(item["name"]): item["name"] for item in items},
             moves_by_id=_id_name_map(moves, "move"),
+            abilities_reference={item["id"]: item for item in abilities},
+            items_reference={item["name"]: item for item in items},
         )
 
     def pokemon_for_id(self, pokemon_id: int) -> dict[str, Any]:
@@ -79,6 +85,32 @@ class PokeDBGeneration:
             return self.abilities_by_id[ability_id]
         except KeyError as error:
             raise DataSourceError(f"PokéDB ability ID does not exist: {ability_id}") from error
+
+    def ability_reference(
+        self, ability_id: int, version: str | None
+    ) -> dict[str, Any] | None:
+        """Return version-aware ability effect text, if PokéDB has it.
+
+        Ability behavior is never inferred from the ROM (only the name and
+        per-species assignment are ROM facts), so this is the sole source for
+        what an ability actually does.
+        """
+        reference = self.abilities_reference.get(ability_id)
+        if reference is None:
+            return None
+        effect_version, effect = _pick_versioned_text(reference.get("effect"), version)
+        _, short_effect = _pick_versioned_text(reference.get("short_effect"), version)
+        _, flavor_text = _pick_versioned_text(reference.get("flavor_text"), version)
+        if not effect and not short_effect and not flavor_text:
+            return None
+        return {
+            "version": effect_version,
+            "source": "PokéDB / PokéAPI",
+            "source_url": reference.get("source_url"),
+            "effect": effect,
+            "short_effect": short_effect,
+            "flavor_text": flavor_text,
+        }
 
     def item_name(self, item_id: int) -> str | None:
         if item_id == 0:
@@ -267,6 +299,23 @@ class PokeDBGeneration:
             "habitat": reference.get("habitat"),
             "shape": reference.get("shape"),
         }
+
+
+def _pick_versioned_text(
+    mapping: Any, version: str | None
+) -> tuple[str | None, str | None]:
+    if not isinstance(mapping, dict):
+        return None, None
+    if version and isinstance(mapping.get(version), str):
+        return version, mapping[version]
+    return next(
+        (
+            (key, value)
+            for key, value in mapping.items()
+            if isinstance(key, str) and isinstance(value, str)
+        ),
+        (None, None),
+    )
 
 
 def _load_objects(directory: Path) -> list[dict[str, Any]]:

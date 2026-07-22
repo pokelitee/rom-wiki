@@ -14,6 +14,8 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     evolution_condition,
     pokemon_summary,
+    record_nav_link,
+    record_navigation,
     stat_list,
     tutor_requirement,
     type_badges,
@@ -718,21 +720,18 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    if previous is None and following is None:
-        return
     source_url = f"pokemon/{record['slug']}/"
-    lines.extend(['<nav class="rw-record-nav" aria-label="Pokémon navigation">'])
-    lines.append(
+    previous_link = (
         _record_nav_link(previous, f"← {previous['name']}", source_url, "prev")
         if previous is not None
-        else "<span></span>"
+        else None
     )
-    lines.append(
+    following_link = (
         _record_nav_link(following, f"{following['name']} →", source_url, "next")
         if following is not None
-        else "<span></span>"
+        else None
     )
-    lines.extend(["</nav>", ""])
+    lines.extend(record_navigation(previous_link, following_link, "Pokémon navigation"))
 
 
 def _record_nav_link(
@@ -747,22 +746,8 @@ def _record_nav_link(
         ),
         source_url,
     )
-    if href is None:
-        return escape(label)
-    sprite_data = record.get("sprite")
-    sprite = (
-        f'<img class="rw-record-nav__sprite" src="{escape(sprite_data["url"], quote=True)}" '
-        f'alt="" loading="lazy" referrerpolicy="no-referrer">'
-        if sprite_data and sprite_data.get("url")
-        else ""
-    )
-    return (
-        f'<a class="rw-record-nav__link rw-record-nav__link--{direction}" '
-        f'href="{escape(href, quote=True)}">'
-        f"{sprite}"
-        f'<span class="rw-record-nav__label">{escape(label)}</span>'
-        "</a>"
-    )
+    sprite_data = record.get("sprite") or {}
+    return record_nav_link(href, label, direction, sprite_data.get("url"))
 
 
 def _item_link(item: dict[str, Any], source_file: str) -> str:

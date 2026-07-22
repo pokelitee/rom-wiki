@@ -261,6 +261,8 @@ def _format_change(
         specialized = _format_pokemon_change(change, source_url, references)
         if specialized is not None:
             return specialized
+    if kind == "abilities" and change.get("field") == "pokemon":
+        return _format_ability_pokemon_change(before, after, source_url, references)
     if isinstance(before, dict) and isinstance(after, dict):
         return _format_mapping_change(before, after)
     if not isinstance(before, list) or not isinstance(after, list):
@@ -336,6 +338,50 @@ def _format_pokemon_change(
     if field in {"base_stats", "ev_yields"}:
         return _format_mapping_change(before, after)
     return None
+
+
+def _format_ability_pokemon_change(
+    before: list[dict[str, Any]],
+    after: list[dict[str, Any]],
+    source_url: str,
+    references: ReferenceIndex | None,
+) -> str:
+    previous = {item["member"]: {**item, "id": item["member"]} for item in before}
+    current = {item["member"]: {**item, "id": item["member"]} for item in after}
+    changed = []
+    removed = []
+    added = []
+    for member in sorted(set(previous) | set(current)):
+        old = previous.get(member)
+        new = current.get(member)
+        if old is not None and new is not None:
+            if old["slots"] == new["slots"]:
+                continue
+            display = _reference_html(old, "pokemon", source_url, references)
+            changed.append(
+                f"{display}: "
+                f"{_diff(_ability_slot_label(old['slots']), _ability_slot_label(new['slots']))}"
+            )
+        elif old is not None:
+            removed.append(_reference_html(old, "pokemon", source_url, references))
+        else:
+            added.append(_reference_html(new, "pokemon", source_url, references))
+    groups = [
+        ("ability slot changes", changed),
+        ("Pokémon that lost this ability", removed),
+        ("Pokémon that gained this ability", added),
+    ]
+    groups = [group for group in groups if group[1]]
+    if not groups:
+        return "Order changed"
+    return _format_change_groups(groups)
+
+
+def _ability_slot_label(slots: list[int]) -> str:
+    if not slots:
+        return "Not assigned"
+    label = "Slot" if len(slots) == 1 else "Slots"
+    return f"{label} {', '.join(str(slot) for slot in slots)}"
 
 
 def _format_slots(

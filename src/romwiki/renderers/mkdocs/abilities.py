@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.components import record_nav_link, record_navigation
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -128,8 +130,8 @@ def _render_record(
     lines = [
         f"# {record['name']}",
         "",
-        f"- Ability ID: {record['ability_id']}",
-        "",
+        *_ability_summary(record),
+        *_ability_description(record),
         *comparison_section(change, baseline_name, source_file, references),
         "## Pokémon",
         "",
@@ -137,11 +139,12 @@ def _render_record(
     if record["pokemon"]:
         lines.extend(
             [
-                "| Pokémon | National Pokédex | Ability slot |",
-                "| ------- | ---------------: | ------------ |",
+                "| <span class=\"rw-visually-hidden\">Sprite</span> | Pokémon | "
+                "National Pokédex | Ability slot |",
+                "| ---- | ------- | ---------------: | ------------ |",
                 *[
                     (
-                        f"| {_pokemon_link(pokemon, source_file)} | "
+                        f"| {_sprite_cell(pokemon)} | {_pokemon_link(pokemon, source_file)} | "
                         f"#{pokemon['national_dex_id']:03} | "
                         f"{', '.join(str(slot) for slot in pokemon['slots'])} |"
                     )
@@ -155,16 +158,76 @@ def _render_record(
 
     lines.extend(
         [
-            "## Source",
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Data provenance</summary>",
             "",
-            "The ability name and Pokémon assignments are extracted from the ROM. "
-            "Ability behavior is not inferred from the name or from external "
-            "reference data.",
+            "The ability name and Pokémon assignments are exact ROM facts. Ability "
+            "behavior is never inferred from the ROM or the name; effect and "
+            "flavor text come from PokéDB / PokéAPI reference data.",
+            "",
+            "</details>",
             "",
         ]
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _ability_summary(record: dict[str, Any]) -> list[str]:
+    return [
+        '<section class="rw-ability-summary">',
+        '<dl class="rw-summary__facts">',
+        f"<div><dt>Ability ID</dt><dd>{record['ability_id']}</dd></div>",
+        f"<div><dt>Pokémon with this ability</dt><dd>{len(record['pokemon'])}</dd></div>",
+        "</dl>",
+        "</section>",
+        "",
+    ]
+
+
+def _ability_description(record: dict[str, Any]) -> list[str]:
+    reference = record.get("reference") or {}
+    short_effect = reference.get("short_effect")
+    effect = reference.get("effect")
+    flavor_text = reference.get("flavor_text")
+    lines: list[str] = []
+    if short_effect or effect:
+        lines.extend(["## Effect", ""])
+        if short_effect:
+            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
+        if effect and effect != short_effect:
+            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
+        lines.append("")
+    if flavor_text:
+        version_label = (
+            f"{_label(reference['version'])} Pokédex" if reference.get("version") else "Pokédex"
+        )
+        lines.extend(
+            [
+                '<figure class="rw-pokedex-entry">',
+                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
+                f"<figcaption>{escape(version_label)}</figcaption>",
+                "</figure>",
+                "",
+            ]
+        )
+    if not lines:
+        lines = ["No PokéDB reference data is available for this ability.", ""]
+    return lines
+
+
+def _sprite_cell(pokemon: dict[str, Any]) -> str:
+    sprite = pokemon.get("sprite")
+    if not sprite or not sprite.get("url"):
+        return '<span class="rw-table-sprite rw-table-sprite--empty" aria-hidden="true">—</span>'
+    return (
+        f'<img class="rw-table-sprite" src="{escape(sprite["url"], quote=True)}" '
+        f'alt="" loading="lazy">'
+    )
+
+
+def _label(value: str) -> str:
+    return " ".join(part.capitalize() for part in value.split("-"))
 
 
 def _pokemon_link(pokemon: dict[str, Any], source_file: str) -> str:
@@ -182,30 +245,21 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    if previous is None and following is None:
-        return
     source_url = f"abilities/{record['slug']}/"
-    lines.extend(['<nav class="rw-record-nav" aria-label="Ability navigation">'])
+    previous_link = None
     if previous is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "ability",
-                previous["ability_id"],
-                f"← {previous['name']}",
-                previous["slug"],
-            ),
+        label = f"← {previous['name']}"
+        href = ROUTES.published_href(
+            entity_reference("ability", previous["ability_id"], label, previous["slug"]),
             source_url,
-        ))
-    else:
-        lines.append("<span></span>")
+        )
+        previous_link = record_nav_link(href, label, "prev")
+    following_link = None
     if following is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "ability",
-                following["ability_id"],
-                f"{following['name']} →",
-                following["slug"],
-            ),
+        label = f"{following['name']} →"
+        href = ROUTES.published_href(
+            entity_reference("ability", following["ability_id"], label, following["slug"]),
             source_url,
-        ))
-    lines.extend(["</nav>", ""])
+        )
+        following_link = record_nav_link(href, label, "next")
+    lines.extend(record_navigation(previous_link, following_link, "Ability navigation"))

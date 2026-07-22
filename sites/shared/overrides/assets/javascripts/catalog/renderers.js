@@ -63,6 +63,10 @@ export function typeList(record) {
   return wrap;
 }
 
+export function classBadge(value) {
+  return text(title(value), `rw-class rw-class--${value}`);
+}
+
 export function numberOrDash(value) {
   return text(value || "—", "rw-catalog__number");
 }

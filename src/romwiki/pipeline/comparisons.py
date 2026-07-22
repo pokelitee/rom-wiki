@@ -73,6 +73,7 @@ _UNORDERED = {
 }
 
 _LABELS = {
+    "pokemon": "Pokémon",
     "base_stats": "Base stats",
     "base_experience": "Base experience",
     "ev_yields": "EV yield",

@@ -1,6 +1,7 @@
 import { title } from "../formatting.js";
 import {
   accessMethods,
+  classBadge,
   locationIdentifier,
   numberOrDash,
   pokemonName,
@@ -40,7 +41,7 @@ export const CATALOGS = {
     filters: [{ key: "type", label: "Type" }, { key: "damage_class", label: "Class" }, { key: "access_methods", label: "Available as", multi: true }],
     ranges: [{ key: "power", label: "Power" }],
     sorts: [["label", "Name"], ["id", "Move ID"], ["power", "Power"], ["accuracy", "Accuracy"], ["pp", "PP"]],
-    columns: [["Move", recordLink], ["Type", (record) => typeBadge(record.type)], ["Class", (record) => text(title(record.damage_class))], ["Power", (record) => numberOrDash(record.power)], ["Accuracy", (record) => text(record.accuracy ? `${record.accuracy}%` : "Always")], ["PP", (record) => text(record.pp, "rw-catalog__number")], ["Available as", accessMethods]],
+    columns: [["Move", recordLink], ["Type", (record) => typeBadge(record.type)], ["Class", (record) => classBadge(record.damage_class)], ["Power", (record) => numberOrDash(record.power)], ["Accuracy", (record) => text(record.accuracy ? `${record.accuracy}%` : "Always")], ["PP", (record) => text(record.pp, "rw-catalog__number")], ["Available as", accessMethods]],
   },
   trainers: {
     searchPlaceholder: "Search trainers, locations, or party Pokémon",

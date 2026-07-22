@@ -231,12 +231,9 @@ def _render_trainer(
     lines = [
         f"# {label}",
         "",
-        f"Trainer ID: `{record['trainer_id']}`",
-        "",
+        *_trainer_summary(record),
         *comparison_section(change, baseline_name, source_file, references),
     ]
-    if record["double_battle"]:
-        lines.extend(["Battle type: Double battle", ""])
     _append_locations(lines, record["locations"], source_file)
     _append_script_references(
         lines, record.get("script_references", []), source_file
@@ -260,6 +257,38 @@ def _render_trainer(
         ]
     )
     return "\n".join(lines)
+
+
+def _trainer_summary(record: dict[str, Any]) -> list[str]:
+    location_names = list(
+        dict.fromkeys(
+            location["name"]
+            for location in record["locations"] + record.get("script_references", [])
+        )
+    )
+    levels = [member["level"] for member in record["party"]]
+    level_range = (
+        f"{min(levels)}" if min(levels) == max(levels) else f"{min(levels)}–{max(levels)}"
+    )
+    return [
+        '<section class="rw-trainer-summary">',
+        '<dl class="rw-summary__facts">',
+        f"<div><dt>Trainer ID</dt><dd>{record['trainer_id']}</dd></div>",
+        f"<div><dt>Class</dt><dd>{display_name(record['class_name'])}</dd></div>",
+        (
+            "<div><dt>Location</dt><dd>"
+            f"{' / '.join(location_names) if location_names else 'Unlinked'}</dd></div>"
+        ),
+        (
+            "<div><dt>Battle format</dt><dd>"
+            f"{'Double battle' if record['double_battle'] else 'Single battle'}</dd></div>"
+        ),
+        f"<div><dt>Party size</dt><dd>{len(record['party'])}</dd></div>",
+        f"<div><dt>Level range</dt><dd>{level_range}</dd></div>",
+        "</dl>",
+        "</section>",
+        "",
+    ]
 
 
 def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:

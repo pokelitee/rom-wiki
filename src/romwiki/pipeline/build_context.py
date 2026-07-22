@@ -109,7 +109,11 @@ class GameBuildContext:
     def abilities(self) -> dict[str, Any]:
         return self._memo(
             "abilities/enriched",
-            lambda: build_ability_dataset(self.pokemon(), self.pokedb),
+            lambda: build_ability_dataset(
+                self.pokemon(),
+                self.pokedb,
+                reference_version=self.profile.base_game,
+            ),
         )
 
     def moves(self) -> dict[str, Any]:

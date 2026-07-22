@@ -10,7 +10,10 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text as _write_text,
 )
 from romwiki.renderers.mkdocs.components import (
+    class_badge,
     display_name,
+    record_nav_link,
+    record_navigation,
     tutor_requirement,
     type_badges,
 )
@@ -148,7 +151,7 @@ def _render_record(
         '<section class="rw-move-summary">',
         type_badges([record["type"]]),
         '<dl class="rw-summary__facts">',
-        f"<div><dt>Class</dt><dd>{display_name(record['damage_class']['name'])}</dd></div>",
+        f"<div><dt>Class</dt><dd>{class_badge(record['damage_class'])}</dd></div>",
         f"<div><dt>Power</dt><dd>{_optional_value(record['power'])}</dd></div>",
         f"<div><dt>Accuracy</dt><dd>{_accuracy(record['accuracy'])}</dd></div>",
         f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
@@ -220,33 +223,24 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    if previous is None and following is None:
-        return
     source_url = f"moves/{record['slug']}/"
-    lines.extend(['<nav class="rw-record-nav" aria-label="Move navigation">'])
+    previous_link = None
     if previous is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "move",
-                previous["move_id"],
-                f"← {previous['name']}",
-                previous["slug"],
-            ),
+        label = f"← {previous['name']}"
+        href = ROUTES.published_href(
+            entity_reference("move", previous["move_id"], label, previous["slug"]),
             source_url,
-        ))
-    else:
-        lines.append("<span></span>")
+        )
+        previous_link = record_nav_link(href, label, "prev")
+    following_link = None
     if following is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "move",
-                following["move_id"],
-                f"{following['name']} →",
-                following["slug"],
-            ),
+        label = f"{following['name']} →"
+        href = ROUTES.published_href(
+            entity_reference("move", following["move_id"], label, following["slug"]),
             source_url,
-        ))
-    lines.extend(["</nav>", ""])
+        )
+        following_link = record_nav_link(href, label, "next")
+    lines.extend(record_navigation(previous_link, following_link, "Move navigation"))
 
 
 def _optional_value(value: int) -> str:

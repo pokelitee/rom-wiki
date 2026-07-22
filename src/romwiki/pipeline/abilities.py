@@ -9,7 +9,10 @@ from romwiki.sources import PokeDBGeneration
 
 
 def build_ability_dataset(
-    pokemon_dataset: dict[str, Any], pokedb: PokeDBGeneration
+    pokemon_dataset: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    *,
+    reference_version: str | None = None,
 ) -> dict[str, Any]:
     if pokemon_dataset.get("dataset") != "pokemon":
         raise DataSourceError("Abilities require an enriched Pokémon dataset")
@@ -33,6 +36,7 @@ def build_ability_dataset(
                     "national_dex_id": pokemon["national_dex_id"],
                     "slug": pokemon["slug"],
                     "name": pokemon["name"],
+                    "sprite": pokemon.get("sprite"),
                     "slots": slots,
                 }
             )
@@ -42,6 +46,7 @@ def build_ability_dataset(
             "ability_id": ability_id,
             "slug": pokedb.ability_name(ability_id),
             "name": ability_names[ability_id],
+            "reference": pokedb.ability_reference(ability_id, reference_version),
             "pokemon": pokemon_by_ability.get(ability_id, []),
         }
         for ability_id in range(1, len(ability_names))

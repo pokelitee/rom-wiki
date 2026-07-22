@@ -260,6 +260,45 @@ def display_name(value: str) -> str:
     )
 
 
+def record_nav_link(
+    href: str | None,
+    label: str,
+    direction: str,
+    sprite_url: str | None = None,
+) -> str:
+    if href is None:
+        return escape(label)
+    sprite_html = (
+        f'<img class="rw-record-nav__sprite" src="{escape(sprite_url, quote=True)}" '
+        'alt="" loading="lazy" referrerpolicy="no-referrer">'
+        if sprite_url
+        else ""
+    )
+    return (
+        f'<a class="rw-record-nav__link rw-record-nav__link--{direction}" '
+        f'href="{escape(href, quote=True)}">'
+        f"{sprite_html}"
+        f'<span class="rw-record-nav__label">{escape(label)}</span>'
+        "</a>"
+    )
+
+
+def record_navigation(
+    previous_link: str | None,
+    following_link: str | None,
+    aria_label: str,
+) -> list[str]:
+    if previous_link is None and following_link is None:
+        return []
+    return [
+        f'<nav class="rw-record-nav" aria-label="{escape(aria_label)}">',
+        previous_link or "<span></span>",
+        following_link or "<span></span>",
+        "</nav>",
+        "",
+    ]
+
+
 def shard_cost(costs: dict[str, int]) -> str:
     return ", ".join(
         f"{amount} {color.title()}"
