@@ -150,8 +150,14 @@ encounter area's per-method slot table, one trainer's party cards — has at
 most a few dozen rows and renders a shared `table_sprite_cell()` icon column;
 this is a deliberate exception, not an inconsistency with the catalog rule.
 
-Trainer party cards show each Pokémon's sprite and, when the slot has one, the
-held item's icon. Trainers also carry an "AI battle items" section: the ROM's
+Trainer party cards consume only normalized data. They show each Pokémon's sprite
+and, when the slot has one, the held item's icon. Explicit moves retain their stored
+order in a numbered list; `level-up` moves render as a distinct default-moves
+state rather than a numbered move. Optional ability, nature, gender, IV, and EV
+fields must be omitted cleanly when an engine cannot provide them. Renderer code
+must never derive those mechanics from raw engine fields.
+
+Trainers also carry an "AI battle items" section: the ROM's
 4-slot `reward_item_ids` array holds items the trainer's own AI may use on its
 party mid-battle (Full Restores, X-stat items), never a reward for the player,
 so the field and its UI are both named for what it actually is. Wild encounter

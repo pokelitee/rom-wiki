@@ -7,18 +7,24 @@ those records as static documentation. The intended flow is:
 configured clean ROM                configured patched ROM
         |                                   |
         v                                   v
-identify -> decode -> normalized raw cache  identify -> decode -> normalized data
+identify -> decode -> normalized raw cache  identify -> decode -> normalized raw data
         |                                   |
         +----------------+------------------+
+                         v
+          engine normalization and enrichment
+                         |
                          v
               semantic dataset comparison
                          |
                          v
-       enrichment/presentation -> renderer -> MkDocs site
+                 renderer -> MkDocs site
 ```
 
 The key design rule is that renderers consume normalized data. They must not read
 ROM offsets, archive members, script opcodes, or other engine-specific structures.
+Engine-specific encodings are translated before enrichment; enrichment resolves
+cross-dataset identities and optional reference media without interpreting binary
+mechanics.
 
 ## Local input registry
 
@@ -52,8 +58,9 @@ configured builds fail clearly when their clean base image is missing.
 Comparisons operate on stable normalized keys: Pokémon personal member, numeric
 ability/move/item/trainer IDs, encounter area ID, and location header ID. They
 classify records as unchanged, changed, added, or removed and retain exact field
-deltas. Presentation-only reference objects, sprites, and provenance do not count
-as game-mechanic changes. Nested relationships compare stable numeric identities,
+deltas. Presentation-only reference objects, sprites, provenance, and engine-only
+`source_fields` do not count as game-mechanic changes. Nested relationships compare
+stable numeric identities,
 so spelling, spacing, or slug changes are reported on the referenced entity rather
 than falsely changing every record that links to it. Removed records receive
 comparison-only snapshot pages.
@@ -98,6 +105,13 @@ Engine decoders should return typed facts, validate bounds and identifiers, and
 avoid page-layout decisions. Exact ROM-derived values take priority over external
 documentation.
 
+When an engine stores a semantic value indirectly, its engine package also owns
+the translator for that encoding. For example,
+`engines/gen4_dppt/trainer_party.py` translates Gen IV trainer-party records into
+the shared party contract. `pipeline/trainer_party.py` dispatches by the explicit
+`engine` field on the raw dataset; it must not accumulate generation-specific
+branches itself.
+
 ### Pipelines and normalized schemas
 
 `src/romwiki/pipeline/` joins decoded records into datasets. The dataclasses under
@@ -109,6 +123,20 @@ appropriate.
 Normalized records use stable semantic fields such as `species_id`, `base_stats`,
 or `held_item_id`; they do not expose where a value happened to live in one ROM.
 Engine-only details needed for auditing belong in provenance fields.
+
+Trainer party data has its own `party_schema_version` because its optional mechanics
+will expand independently of the surrounding trainer dataset. The shared contract
+is defined in `schema/trainers.py`. Normalized members state their move source
+as `explicit`, `level-up`, or `unavailable` and reserve optional ability, nature,
+gender, IV, and EV attributes. Present attributes identify their source as
+`stored`, `derived`, or `engine-default`; unknown values remain absent rather than
+being guessed. Raw bytes such as Gen IV `difficulty` remain under `source_fields`;
+renderers and semantic comparisons never consume that mapping.
+
+Trainer enrichment resolves Pokémon through the current game's enriched Pokémon
+dataset. This is required for hacks that change forms, names, sprites, or ability
+slots. PokéDB remains a reference and fallback source, not the authority for a
+game's mechanics.
 
 Derived datasets may invert normalized relationships without parsing the ROM again.
 For example, the ability dataset combines the ROM ability-name table with ability
@@ -193,8 +221,9 @@ currently depend on the NDS image type, and the extraction commands call the
 `gen4_dppt` pipelines directly. Before adding the first non-NDS engine, these entry
 points should be generalized behind platform and engine adapter interfaces.
 
-Likewise, normalized schemas are implemented as Python dataclasses and serialized
-JSON, but formal cross-engine compatibility fixtures are still needed. The first
+Likewise, normalized schemas are implemented as Python dataclasses and typed
+contracts serialized to JSON, but formal cross-engine compatibility fixtures are
+still needed. The first
 new engine should add contract tests proving that its output can be consumed by the
 existing enrichment and rendering layers without game-specific branches there.
 

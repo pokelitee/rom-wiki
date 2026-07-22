@@ -152,6 +152,16 @@ Add an adapter or pipeline that maps engine records into the schemas under
 `src/romwiki/schema/`. Reuse semantic fields and IDs already consumed by enrichment
 and rendering.
 
+Trainer party formats require an engine translator under
+`src/romwiki/engines/<engine>/trainer_party.py`. Register it in
+`pipeline/trainer_party.py` and emit the shared contract from
+`schema/trainers.py`. Do not teach the shared trainer renderer about a generation's
+difficulty byte, PID algorithm, ability flags, or EV defaults. Preserve those raw
+inputs under `source_fields`, expose their semantic result through the canonical
+fields, and attach `stored`, `derived`, or `engine-default` provenance. Mark move
+behavior as `explicit`, `level-up`, or `unavailable`, and increment
+`TRAINER_PARTY_SCHEMA_VERSION` for a breaking party-contract change.
+
 At minimum, each dataset should include:
 
 - `schema_version`;
@@ -230,6 +240,9 @@ fallback so new categories remain usable without JavaScript.
 - Add profile identification tests for supported hashes and rejection tests for
   near matches.
 - Add normalized contract and renderer tests.
+- For trainer support, test explicit/default move provenance, unavailable optional
+  attributes, engine-derived attributes, and resolution against the game's own
+  Pokémon dataset.
 - Add baseline-versus-hack comparison fixtures for every supported dataset.
 - Extract the complete target and reconcile record counts against its archives.
 - Manually verify representative records from every content category.
