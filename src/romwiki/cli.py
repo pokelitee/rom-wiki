@@ -49,7 +49,7 @@ from romwiki.renderers.mkdocs import (
     render_trainer_pages,
 )
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
-from romwiki.renderers.mkdocs.dev_fixtures import DEV_FIXTURE_PAGES
+from romwiki.sites.dev_pages import DevPages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sources import PokeDBGeneration
@@ -567,8 +567,8 @@ def _add_dev_argument(parser: argparse.ArgumentParser) -> None:
         "--dev",
         action="store_true",
         help=(
-            "only render the representative detail pages used by "
-            "mkdocs.dev.yml, keeping full catalog data; speeds up local "
+            "only render the representative detail pages in the game's "
+            "dev-pages.toml, keeping full catalog data; speeds up local "
             "iteration on renderer changes"
         ),
     )
@@ -653,6 +653,9 @@ def _run_section_build(
         if args.wiki_output is not None
         else Path("sites/games") / game / "wiki"
     )
+    dev_pages = (
+        DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
+    )
     data_root = (
         args.data_output.parent.parent
         if args.data_output is not None
@@ -695,7 +698,7 @@ def _run_section_build(
             wiki_output,
             move_dataset=move_dataset,
             reference_index=reference_index,
-            only_pages=DEV_FIXTURE_PAGES.get(kind) if args.dev else None,
+            only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
             comparisons[kind] = build.comparison
@@ -714,6 +717,9 @@ def _run_full_game_build(
     game = workflow.current.profile.id
     data_root = args.data_root / game
     wiki_root = args.wiki_root or Path("sites/games") / game / "wiki"
+    dev_pages = (
+        DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
+    )
     builds = workflow.build_all()
     reference_index = ReferenceIndex.from_datasets(
         {kind: build.current for kind, build in builds.items()}
@@ -727,7 +733,7 @@ def _run_full_game_build(
             wiki_root / _section_name(kind),
             move_dataset=builds["moves"].current,
             reference_index=reference_index,
-            only_pages=DEV_FIXTURE_PAGES.get(kind) if args.dev else None,
+            only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
             comparisons[kind] = build.comparison

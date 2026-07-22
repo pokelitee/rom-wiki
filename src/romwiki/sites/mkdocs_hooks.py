@@ -5,18 +5,21 @@ from pathlib import Path
 from typing import Any
 
 from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.structure.files import Files
 from mkdocs.structure.pages import Page
 
 from romwiki.util.errors import SiteError
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
+from romwiki.sites.dev_pages import DevPages
 
 
 _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None
+_dev_pages: DevPages | None = None
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
-    global _catalog, _current_site
+    global _catalog, _current_site, _dev_pages
     config_path = Path(config.config_file_path).resolve()
     root = _find_repository_root(config_path.parent)
     catalog = SiteCatalog.load(root)
@@ -33,6 +36,12 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         raise SiteError(f"MkDocs configuration is not registered: {config_path}")
     _catalog = catalog
     _current_site = current
+    dev_pages_path = config.extra.get("romwiki_dev_pages")
+    _dev_pages = (
+        DevPages.load(config_path.parent / dev_pages_path)
+        if isinstance(dev_pages_path, str)
+        else None
+    )
     config.extra["romwiki_site"] = _site_context(current)
     config.extra["romwiki_games"] = [
         _site_context(site)
@@ -43,6 +52,14 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
     if deployment_url:
         config.site_url = _deployment_site_url(deployment_url, current)
     return config
+
+
+def on_files(files: Files, config: MkDocsConfig) -> Files:
+    if _dev_pages is None:
+        return files
+    return Files(
+        file for file in files if _dev_pages.includes_document(file.src_uri)
+    )
 
 
 def on_page_context(

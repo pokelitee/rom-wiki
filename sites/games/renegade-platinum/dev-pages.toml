@@ -1,0 +1,8 @@
+[pages]
+pokemon = ["bulbasaur", "eevee", "wurmple"]
+abilities = ["overgrow"]
+items = ["master-ball"]
+moves = ["pound"]
+encounters = ["area-000"]
+trainers = ["trainer-0001"]
+locations = ["header-000"]
