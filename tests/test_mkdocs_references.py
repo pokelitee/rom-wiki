@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    ReferenceIndex,
+    entity_reference,
+)
 
 
 class RouteResolverTests(unittest.TestCase):
@@ -43,6 +47,34 @@ class RouteResolverTests(unittest.TestCase):
         self.assertNotIn(
             "url", ROUTES.catalog_reference(unresolved, "items/")
         )
+
+    def test_indexes_dataset_sprite_urls_without_assuming_a_generation(self) -> None:
+        index = ReferenceIndex.from_datasets({
+            "pokemon": {"records": [{
+                "public": True,
+                "member": 25,
+                "national_dex_id": 25,
+                "name": "Pikachu",
+                "slug": "pikachu",
+                "sprite": {"url": "https://example.test/gen-2/pikachu.png"},
+            }]},
+            "items": {"records": [{
+                "item_id": 17,
+                "name": "Potion",
+                "slug": "potion",
+                "reference": {"sprite_url": "https://example.test/gen-2/potion.png"},
+            }]},
+        })
+
+        self.assertEqual(
+            index.sprite_url("pokemon", 25),
+            "https://example.test/gen-2/pikachu.png",
+        )
+        self.assertEqual(
+            index.sprite_url("item", 17),
+            "https://example.test/gen-2/potion.png",
+        )
+        self.assertIsNone(index.sprite_url("item", 999))
 
 
 if __name__ == "__main__":

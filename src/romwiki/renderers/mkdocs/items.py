@@ -16,6 +16,7 @@ from romwiki.renderers.mkdocs.components import (
     fact_grid,
     record_nav_link,
     record_navigation,
+    table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
@@ -183,7 +184,7 @@ def _render_record(
 
     _append_locations(lines, record, source_file)
     _append_shops(lines, record["shops"], source_file)
-    _append_pokemon(lines, record, source_file)
+    _append_pokemon(lines, record, source_file, references)
     _append_trainers(lines, record, source_file)
     _append_gifts_and_trades(lines, record, source_file)
     _append_evolutions(lines, record["evolutions"], source_file)
@@ -324,7 +325,10 @@ def _append_shops(
 
 
 def _append_pokemon(
-    lines: list[str], record: dict[str, Any], source_file: str
+    lines: list[str],
+    record: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
     lines.extend(["## Wild held by", ""])
     if not record["wild_held_by"]:
@@ -332,15 +336,25 @@ def _append_pokemon(
         return
     lines.extend(
         [
-            "| Pokémon | Slot |",
-            "| ------- | ---- |",
+            "| Sprite | Pokémon | Slot |",
+            "| ------ | ------- | ---- |",
             *[
+                f"| {_pokemon_sprite_cell(value, references)} "
                 f"| {_pokemon_link(value, source_file)} | {value['rarity'].title()} |"
                 for value in record["wild_held_by"]
             ],
             "",
         ]
     )
+
+
+def _pokemon_sprite_cell(
+    pokemon: dict[str, Any], references: ReferenceIndex | None
+) -> str:
+    sprite_url = (
+        references.sprite_url("pokemon", pokemon["member"]) if references else None
+    )
+    return table_sprite_cell(sprite_url)
 
 
 def _append_trainers(

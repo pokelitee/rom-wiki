@@ -78,8 +78,9 @@
 .rw-party-card__item-icon {
   flex-shrink: 0; width: 1.3rem; height: 1.3rem; image-rendering: pixelated; object-fit: contain;
 }
-.rw-party-card__moves { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; margin: .7rem 0 0 !important; padding: 0 !important; list-style: none !important; }
-.rw-party-card__moves li { margin: 0 !important; padding: .28rem .38rem; border-radius: .3rem; background: var(--rw-surface-muted); font-size: .63rem; list-style: none !important; }
+.rw-party-card__moves { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; margin: .7rem 0 0 !important; padding: 0 !important; list-style: decimal inside !important; }
+.rw-party-card__moves li { margin: 0 !important; padding: .28rem .38rem; border-radius: .3rem; background: var(--rw-surface-muted); font-size: .63rem; list-style-position: inside !important; }
+.rw-party-card__default-moves { margin: .7rem 0 0 !important; padding: .4rem; border-radius: .3rem; background: var(--rw-surface-muted); color: var(--rw-text-muted); font-size: .63rem; }
 
 @media (max-width: 44rem) {
   .rw-summary { grid-template-columns: 1fr; }

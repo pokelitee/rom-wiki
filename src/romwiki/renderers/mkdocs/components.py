@@ -264,12 +264,13 @@ def display_name(value: str) -> str:
     )
 
 
-def table_sprite_cell(sprite: dict[str, Any] | None) -> str:
-    if not sprite or not sprite.get("url"):
+def table_sprite_cell(sprite: dict[str, Any] | str | None) -> str:
+    url = sprite if isinstance(sprite, str) else sprite.get("url") if sprite else None
+    if not url:
         return '<span class="rw-table-sprite rw-table-sprite--empty" aria-hidden="true">—</span>'
     return (
-        f'<img class="rw-table-sprite" src="{escape(sprite["url"], quote=True)}" '
-        'alt="" loading="lazy">'
+        f'<img class="rw-table-sprite" src="{escape(url, quote=True)}" '
+        'alt="" loading="lazy" referrerpolicy="no-referrer">'
     )
 
 

@@ -15,6 +15,7 @@ from romwiki.renderers.mkdocs.components import (
     display_name,
     record_nav_link,
     record_navigation,
+    table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
@@ -290,9 +291,7 @@ def _append_ai_battle_items(
         [
             "## AI battle items",
             "",
-            "Items the trainer's own AI may use on its Pokémon mid-battle (for "
-            "example, healing with a carried Full Restore) — not given to the "
-            "player for winning.",
+            "Items the trainer AI may use during battle. These are not prize items.",
             "",
         ]
     )
@@ -300,19 +299,34 @@ def _append_ai_battle_items(
     if not items:
         lines.extend(empty_state("No AI battle items."))
         return
-    names = ", ".join(
-        ROUTES.markdown_link(
+    grouped_items: dict[int | str, dict[str, Any]] = {}
+    for item in items:
+        identity = item.get("id", item.get("slug", item["name"]))
+        grouped = grouped_items.setdefault(identity, {"item": item, "quantity": 0})
+        grouped["quantity"] += 1
+
+    lines.extend(
+        [
+            "| Icon | Item | Quantity |",
+            "| ---- | ---- | -------: |",
+        ]
+    )
+    for identity, grouped in grouped_items.items():
+        item = grouped["item"]
+        item_link = ROUTES.markdown_link(
             entity_reference(
                 "item",
-                item.get("id", item.get("slug", item["name"])),
+                identity,
                 item["name"],
                 item.get("slug"),
             ),
             source_file,
         )
-        for item in items
-    )
-    lines.extend([names, ""])
+        lines.append(
+            f"| {table_sprite_cell(item.get('sprite_url'))} | {item_link} | "
+            f"{grouped['quantity']} |"
+        )
+    lines.append("")
 
 
 def _append_record_navigation(
@@ -457,10 +471,10 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 f"<div><dt>Level</dt><dd>{member['level']}</dd></div>",
                 f"<div><dt>Held item</dt><dd>{item_name}</dd></div>",
                 "</dl>",
-                '<ul class="rw-party-card__moves" aria-label="Moves">',
             ]
         )
         if member["moves"]:
+            lines.append('<ol class="rw-party-card__moves" aria-label="Moves">')
             for move in member["moves"]:
                 slug = move["name"]
                 move_link = ROUTES.html_link(
@@ -472,12 +486,13 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                     ),
                     source_url,
                 )
-                lines.append(
-                    f"<li>{move_link}</li>"
-                )
+                lines.append(f"<li>{move_link}</li>")
+            lines.append("</ol>")
         else:
-            lines.append("<li>Default moves</li>")
-        lines.extend(["</ul>", "</article>"])
+            lines.append(
+                '<p class="rw-party-card__default-moves">Uses default level-up moves.</p>'
+            )
+        lines.append("</article>")
     lines.extend(["</div>", ""])
     return lines
 

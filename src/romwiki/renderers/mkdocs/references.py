@@ -13,6 +13,7 @@ class EntityReference:
     id: int | str
     label: str
     route_key: int | str | None
+    sprite_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +105,7 @@ class ReferenceIndex:
                                 dex,
                                 reference.label,
                                 reference.route_key,
+                                reference.sprite_url,
                             )
                         )
         return index
@@ -125,7 +127,12 @@ class ReferenceIndex:
             identifier,
             label,
             indexed.route_key if indexed is not None else route_key,
+            indexed.sprite_url if indexed is not None else None,
         )
+
+    def sprite_url(self, kind: str, identifier: int | str) -> str | None:
+        reference = self._references.get((kind, identifier))
+        return reference.sprite_url if reference is not None else None
 
 
 def entity_reference(
@@ -245,7 +252,21 @@ def _record_reference(
     label = record.get("name") or record.get("label")
     if identity is None or route_key is None or not isinstance(label, str):
         return None
-    return EntityReference(kind, identity, label, route_key)
+    return EntityReference(
+        kind, identity, label, route_key, _record_sprite_url(kind, record)
+    )
+
+
+def _record_sprite_url(kind: str, record: Mapping[str, Any]) -> str | None:
+    if kind == "pokemon":
+        sprite = record.get("sprite") or record.get("portrait")
+        return sprite.get("url") if isinstance(sprite, Mapping) else None
+    if kind == "item":
+        reference = record.get("reference")
+        if isinstance(reference, Mapping):
+            sprite_url = reference.get("sprite_url")
+            return sprite_url if isinstance(sprite_url, str) else None
+    return None
 
 
 def escape_markdown(value: str) -> str:

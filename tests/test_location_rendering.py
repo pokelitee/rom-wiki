@@ -135,6 +135,7 @@ class LocationRenderingTests(unittest.TestCase):
                             "national_dex_id": 175,
                             "name": "Togepi",
                             "slug": "togepi",
+                            "sprite": {"url": "https://example.test/togepi.png"},
                         },
                         {
                             "public": True,
@@ -142,12 +143,20 @@ class LocationRenderingTests(unittest.TestCase):
                             "national_dex_id": 479,
                             "name": "Rotom",
                             "slug": "rotom",
+                            "sprite": {"url": "https://example.test/rotom.png"},
                         },
                     ]
                 },
                 "items": {
                     "records": [
-                        {"item_id": 17, "name": "Potion", "slug": "potion"},
+                        {
+                            "item_id": 17,
+                            "name": "Potion",
+                            "slug": "potion",
+                            "reference": {
+                                "sprite_url": "https://example.test/potion.png"
+                            },
+                        },
                         {"item_id": 81, "name": "Moon Stone", "slug": "moon-stone"},
                         {"item_id": 46, "name": "Protein", "slug": "protein"},
                         {"item_id": 333, "name": "TM06", "slug": "tm06"},
@@ -171,6 +180,10 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("../trainers/trainer-0246.md", page)
         self.assertIn("| Visible | [Potion](../items/potion.md) | 17 | (8, 11) |", page)
         self.assertIn("[Moon Stone](../items/moon-stone.md)", page)
+        self.assertIn('src="https://example.test/potion.png"', page)
+        self.assertIn('src="https://example.test/togepi.png"', page)
+        self.assertIn('src="https://example.test/rotom.png"', page)
+        self.assertIn("rw-table-sprite--empty", page)
         self.assertIn("| [Protein](../items/protein.md) | 46 | ₽9,800 | Always |", page)
         self.assertIn("### Battle Frontier shop", page)
         self.assertIn("| [TM06](../items/tm06.md) | 333 | 32 BP | Always |", page)

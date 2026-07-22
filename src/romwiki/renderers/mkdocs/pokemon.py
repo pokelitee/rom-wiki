@@ -19,6 +19,7 @@ from romwiki.renderers.mkdocs.components import (
     record_nav_link,
     record_navigation,
     stat_list,
+    table_sprite_cell,
     tutor_requirement,
     type_badges,
 )
@@ -221,10 +222,11 @@ def _render_record(
     if held_items:
         lines.extend(
             [
-                "| Slot | Item | Item ID |",
-                "| ---- | ---- | ------: |",
+                "| Icon | Slot | Item | Item ID |",
+                "| ---- | ---- | ---- | ------: |",
                 *[
                     (
+                        f"| {_item_sprite_cell(item, references)} "
                         f"| {item['rarity'].title()} | "
                         f"{_item_link(item, source_file)} | {item['id']} |"
                     )
@@ -310,6 +312,13 @@ def _render_record(
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _item_sprite_cell(
+    item: dict[str, Any], references: ReferenceIndex | None
+) -> str:
+    sprite_url = references.sprite_url("item", item["id"]) if references else None
+    return table_sprite_cell(sprite_url)
 
 
 _SPRITE_MATRIX_ROWS = (
