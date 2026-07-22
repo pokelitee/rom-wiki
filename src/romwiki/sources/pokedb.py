@@ -23,6 +23,7 @@ class PokeDBGeneration:
         moves_by_id: dict[int, str] | None = None,
         abilities_reference: dict[int, dict[str, Any]] | None = None,
         items_reference: dict[str, dict[str, Any]] | None = None,
+        moves_reference: dict[int, dict[str, Any]] | None = None,
     ) -> None:
         self.pokemon_by_id = pokemon_by_id
         self.pokemon_by_name = pokemon_by_name
@@ -30,6 +31,7 @@ class PokeDBGeneration:
         self.abilities_by_id = abilities_by_id
         self.abilities_reference = abilities_reference or {}
         self.items_reference = items_reference or {}
+        self.moves_reference = moves_reference or {}
         self.items_by_id = items_by_id
         self.items_by_lookup = items_by_lookup or {
             _lookup_key(name): name for name in items_by_id.values()
@@ -58,6 +60,7 @@ class PokeDBGeneration:
             moves_by_id=_id_name_map(moves, "move"),
             abilities_reference={item["id"]: item for item in abilities},
             items_reference={item["name"]: item for item in items},
+            moves_reference={item["id"]: item for item in moves},
         )
 
     def pokemon_for_id(self, pokemon_id: int) -> dict[str, Any]:
@@ -124,6 +127,40 @@ class PokeDBGeneration:
         key = _lookup_key(rom_name)
         return self.items_by_lookup.get(key, name_slug(rom_name))
 
+    def item_reference(
+        self, slug: str, version: str | None
+    ) -> dict[str, Any] | None:
+        """Return item effect text and icon, if PokéDB has it.
+
+        Item mechanics (price, pocket, hold effects, etc.) are exact ROM
+        facts; the human-readable description of what an item does is not
+        stored in the ROM's item records, so this is the sole source for it.
+        """
+        reference = self.items_reference.get(slug)
+        if reference is None:
+            return None
+        effect = reference.get("effect")
+        effect = effect if isinstance(effect, str) else None
+        short_effect = reference.get("short_effect")
+        short_effect = short_effect if isinstance(short_effect, str) else None
+        flavor_version, flavor_text = _pick_versioned_text(
+            reference.get("flavor_text"), version
+        )
+        sprite_url = reference.get("sprite")
+        sprite_url = sprite_url if isinstance(sprite_url, str) else None
+        if not effect and not short_effect and not flavor_text and not sprite_url:
+            return None
+        return {
+            "version": flavor_version,
+            "source": "PokéDB / PokéAPI",
+            "source_url": reference.get("source_url"),
+            "category": reference.get("category"),
+            "effect": effect,
+            "short_effect": short_effect,
+            "flavor_text": flavor_text,
+            "sprite_url": sprite_url,
+        }
+
     def move_name(self, move_id: int) -> str | None:
         if move_id == 0:
             return None
@@ -131,6 +168,33 @@ class PokeDBGeneration:
             return self.moves_by_id[move_id]
         except KeyError as error:
             raise DataSourceError(f"PokéDB move ID does not exist: {move_id}") from error
+
+    def move_reference(
+        self, move_id: int, version: str | None
+    ) -> dict[str, Any] | None:
+        """Return version-aware move effect text, if PokéDB has it.
+
+        Battle mechanics (power, accuracy, PP, flags, etc.) are exact ROM
+        facts; the human-readable description of what a move actually does
+        is not stored in the ROM's move records, so this is the sole source
+        for it.
+        """
+        reference = self.moves_reference.get(move_id)
+        if reference is None:
+            return None
+        effect_version, effect = _pick_versioned_text(reference.get("effect"), version)
+        _, short_effect = _pick_versioned_text(reference.get("short_effect"), version)
+        _, flavor_text = _pick_versioned_text(reference.get("flavor_text"), version)
+        if not effect and not short_effect and not flavor_text:
+            return None
+        return {
+            "version": effect_version,
+            "source": "PokéDB / PokéAPI",
+            "source_url": reference.get("source_url"),
+            "effect": effect,
+            "short_effect": short_effect,
+            "flavor_text": flavor_text,
+        }
 
     def pokemon_sprite(
         self, reference: dict[str, Any], version: str | None

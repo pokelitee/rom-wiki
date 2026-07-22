@@ -13,6 +13,7 @@ from romwiki.renderers.mkdocs.catalog import (
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     evolution_condition,
+    fact_grid,
     pokemon_summary,
     record_nav_link,
     record_navigation,
@@ -180,7 +181,7 @@ def _render_record(
         "",
         "## Training",
         "",
-        *_fact_grid(
+        *fact_grid(
             (
                 ("EV yield", _ev_yield(record.get("ev_yields", {}))),
                 ("Catch rate", str(record["catch_rate"])),
@@ -197,7 +198,7 @@ def _render_record(
         "",
         "## Breeding",
         "",
-        *_fact_grid(
+        *fact_grid(
             (
                 ("Gender", _gender_ratio(record.get("gender_ratio"))),
                 ("Hatch cycles", str(record["hatch_cycles"])),
@@ -665,18 +666,6 @@ def _reference_entry(reference: dict[str, Any]) -> list[str]:
         "</figure>",
         "",
     ]
-
-
-def _fact_grid(
-    facts: tuple[tuple[str, str], ...], *, class_name: str = "rw-data-grid"
-) -> list[str]:
-    lines = [f'<dl class="{class_name}">']
-    for name, value in facts:
-        lines.append(
-            f"<div><dt>{escape(name)}</dt><dd>{escape(value)}</dd></div>"
-        )
-    lines.append("</dl>")
-    return lines
 
 
 def _ev_yield(yields: dict[str, int]) -> str:

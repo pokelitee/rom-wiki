@@ -290,9 +290,11 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
             continue
         ordered = sorted(values, key=_canonical)
         if len(ordered) == 1:
-            parts.append(f"{label.title()}: {_format_value(ordered[0])}")
+            parts.append(f"{label.title()}: {_format_value_summary(ordered[0])}")
         else:
-            entries = "".join(f"<li>{_format_value(value)}</li>" for value in ordered)
+            entries = "".join(
+                f"<li>{_format_value_summary(value)}</li>" for value in ordered
+            )
             parts.append(
                 f"<details><summary>{len(ordered)} {label}</summary>"
                 f'<ul class="rw-comparison-list">{entries}</ul></details>'
@@ -303,6 +305,20 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
     # margin), so an explicit <br> before one just doubles the gap.
     separator = "" if any("<details" in part for part in parts) else "<br>"
     return separator.join(parts)
+
+
+def _format_value_summary(value: Any) -> str:
+    """Render a per-item change-list value without a raw JSON dump.
+
+    Every candidate here already has a readable label (from
+    ``_mapping_summary``) and, in practice, its own detail page — the "Exact
+    data" JSON dump ``_format_value`` adds for dicts is reserved for the
+    standalone removed-record snapshot page, where there is no better
+    alternative and no detail page to link to instead.
+    """
+    if isinstance(value, dict):
+        return escape(_mapping_summary(value)).replace("|", "&#124;")
+    return _format_value(value)
 
 
 def _format_pokemon_change(

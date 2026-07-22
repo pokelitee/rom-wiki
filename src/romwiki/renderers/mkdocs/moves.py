@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -158,13 +159,14 @@ def _render_record(
         "</dl>",
         "</section>",
         "",
+        *_move_description(record),
         *comparison_section(change, baseline_name, source_file, references),
         "## Battle properties",
         "",
         "| Property | Value |",
         "| -------- | ----- |",
-        f"| Type | {display_name(record['type']['name'])} |",
-        f"| Damage class | {display_name(record['damage_class']['name'])} |",
+        f"| Type | {type_badges([record['type']])} |",
+        f"| Damage class | {class_badge(record['damage_class'])} |",
         f"| Power | {_optional_value(record['power'])} |",
         f"| Accuracy | {_accuracy(record['accuracy'])} |",
         f"| PP | {record['pp']} |",
@@ -199,7 +201,9 @@ def _render_record(
             "Source: exact ROM record from "
             f"`{record['provenance']['archive']}` member "
             f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
-            "shown in their native engine representation."
+            "shown in their native engine representation. The ROM does not store a "
+            "human-readable effect description; the Effect section and Pokédex "
+            "quote above come from PokéDB / PokéAPI reference data."
         ),
         *(
             [
@@ -241,6 +245,39 @@ def _append_record_navigation(
         )
         following_link = record_nav_link(href, label, "next")
     lines.extend(record_navigation(previous_link, following_link, "Move navigation"))
+
+
+def _move_description(record: dict[str, Any]) -> list[str]:
+    reference = record.get("reference") or {}
+    short_effect = reference.get("short_effect")
+    effect = reference.get("effect")
+    flavor_text = reference.get("flavor_text")
+    lines: list[str] = []
+    if short_effect or effect:
+        lines.extend(["## Effect", ""])
+        if short_effect:
+            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
+        if effect and effect != short_effect:
+            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
+        lines.append("")
+    if flavor_text:
+        version_label = (
+            f"{display_name(reference['version'])} Pokédex"
+            if reference.get("version")
+            else "Pokédex"
+        )
+        lines.extend(
+            [
+                '<figure class="rw-pokedex-entry">',
+                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
+                f"<figcaption>{escape(version_label)}</figcaption>",
+                "</figure>",
+                "",
+            ]
+        )
+    if not lines:
+        lines = ["No PokéDB reference data is available for this move.", ""]
+    return lines
 
 
 def _optional_value(value: int) -> str:

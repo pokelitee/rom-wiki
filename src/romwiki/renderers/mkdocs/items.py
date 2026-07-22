@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,12 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
-from romwiki.renderers.mkdocs.components import display_name
+from romwiki.renderers.mkdocs.components import (
+    display_name,
+    fact_grid,
+    record_nav_link,
+    record_navigation,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -137,44 +143,42 @@ def _render_record(
     references: ReferenceIndex | None = None,
 ) -> str:
     source_file = f"items/{record['slug']}.md"
-    price = f"₽{record['price']:,}" if record["price"] else "Not sold"
-    lines = [
-        f"# {record['name']}",
-        "",
-        "| Item ID | Pocket | Price | Selectable | Can be discarded |",
-        "| ------: | ------ | -----: | ---------- | ---------------- |",
-        (
-            f"| {record['item_id']} | {display_name(record['pocket']['name'])} | "
-            f"{price} | {_yes_no(record['selectable'])} | "
-            f"{_yes_no(not record['prevent_toss'])} |"
-        ),
-        "",
-        *comparison_section(change, baseline_name, source_file, references),
-        "## Mechanics",
-        "",
-        f"- Field use: {display_name(record['field_use']['name'])}",
-        f"- Held effect ID: {record['hold_effect_id']}",
-        f"- Held effect parameter: {record['hold_effect_parameter']}",
-        f"- Battle use function ID: {record['battle_use_function_id']}",
-        f"- Battle pocket mask: `{record['battle_pocket_mask']:#04x}`",
+    mechanics = [
+        ("Field use", display_name(record["field_use"]["name"])),
+        ("Held effect ID", str(record["hold_effect_id"])),
+        ("Held effect parameter", str(record["hold_effect_parameter"])),
+        ("Battle use function ID", str(record["battle_use_function_id"])),
+        ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}"),
     ]
     if record["fling_power"]:
-        lines.extend(
+        mechanics.extend(
             [
-                f"- Fling power: {record['fling_power']}",
-                f"- Fling effect ID: {record['fling_effect_id']}",
+                ("Fling power", str(record["fling_power"])),
+                ("Fling effect ID", str(record["fling_effect_id"])),
             ]
         )
     if record["natural_gift_power"]:
         gift_type = record["natural_gift_type"]
-        lines.append(
-            f"- Natural Gift: {record['natural_gift_power']} power, "
-            f"{gift_type['name']} type"
+        mechanics.append(
+            (
+                "Natural Gift",
+                f"{record['natural_gift_power']} power, {gift_type['name']} type",
+            )
         )
     party_effects = _party_effects(record)
     if party_effects:
-        lines.extend(["- Party-use effects: " + ", ".join(party_effects)])
-    lines.append("")
+        mechanics.append(("Party-use effects", ", ".join(party_effects)))
+    lines = [
+        f"# {record['name']}",
+        "",
+        *_item_summary(record),
+        *_item_description(record),
+        *comparison_section(change, baseline_name, source_file, references),
+        "## Mechanics",
+        "",
+        *fact_grid(tuple(mechanics)),
+        "",
+    ]
 
     _append_locations(lines, record, source_file)
     _append_shops(lines, record["shops"], source_file)
@@ -184,18 +188,91 @@ def _render_record(
     _append_evolutions(lines, record["evolutions"], source_file)
     lines.extend(
         [
-            "## Source",
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Data provenance</summary>",
             "",
-            (
-                "The name, item-data member mapping, mechanics, and references are "
-                "extracted from the ROM. Numeric effect IDs are retained when their "
-                "behavior is implemented by game code rather than the item record."
-            ),
+            "The name, item-data member mapping, mechanics, and references are exact "
+            "ROM facts. Numeric effect IDs are retained when their behavior is "
+            "implemented by game code rather than the item record. Effect "
+            "description, flavor text, and icon come from PokéDB / PokéAPI "
+            "reference data.",
+            "",
+            "</details>",
             "",
         ]
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _item_summary(record: dict[str, Any]) -> list[str]:
+    reference = record.get("reference") or {}
+    sprite_url = reference.get("sprite_url")
+    if sprite_url:
+        media = (
+            f'<img src="{escape(sprite_url, quote=True)}" '
+            f'alt="{escape(record["name"], quote=True)} icon" loading="lazy" '
+            'referrerpolicy="no-referrer">'
+        )
+    else:
+        media = '<span class="rw-summary__placeholder">Icon unavailable</span>'
+    price = f"₽{record['price']:,}" if record["price"] else "Not sold"
+    facts = [
+        ("Item ID", str(record["item_id"])),
+        ("Pocket", display_name(record["pocket"]["name"])),
+        ("Price", price),
+        ("Selectable", _yes_no(record["selectable"])),
+        ("Can be discarded", _yes_no(not record["prevent_toss"])),
+    ]
+    if record["fling_power"]:
+        facts.append(("Fling power", str(record["fling_power"])))
+    return [
+        '<section class="rw-summary">',
+        f'<div class="rw-summary__media">{media}</div>',
+        '<div class="rw-summary__body">',
+        '<dl class="rw-summary__facts">',
+        *(
+            f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
+            for label, value in facts
+        ),
+        "</dl>",
+        "</div>",
+        "</section>",
+        "",
+    ]
+
+
+def _item_description(record: dict[str, Any]) -> list[str]:
+    reference = record.get("reference") or {}
+    short_effect = reference.get("short_effect")
+    effect = reference.get("effect")
+    flavor_text = reference.get("flavor_text")
+    lines: list[str] = []
+    if short_effect or effect:
+        lines.extend(["## Effect", ""])
+        if short_effect:
+            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
+        if effect and effect != short_effect:
+            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
+        lines.append("")
+    if flavor_text:
+        version_label = (
+            f"{display_name(reference['version'])} Pokédex"
+            if reference.get("version")
+            else "Pokédex"
+        )
+        lines.extend(
+            [
+                '<figure class="rw-pokedex-entry">',
+                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
+                f"<figcaption>{escape(version_label)}</figcaption>",
+                "</figure>",
+                "",
+            ]
+        )
+    if not lines:
+        lines = ["No PokéDB reference data is available for this item.", ""]
+    return lines
 
 
 def _append_locations(
@@ -450,30 +527,21 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    if previous is None and following is None:
-        return
     source_url = f"items/{record['slug']}/"
-    lines.extend(['<nav class="rw-record-nav" aria-label="Item navigation">'])
+    previous_link = None
     if previous is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "item",
-                previous["item_id"],
-                f"← {previous['name']}",
-                previous["slug"],
-            ),
+        label = f"← {previous['name']}"
+        href = ROUTES.published_href(
+            entity_reference("item", previous["item_id"], label, previous["slug"]),
             source_url,
-        ))
-    else:
-        lines.append("<span></span>")
+        )
+        previous_link = record_nav_link(href, label, "prev")
+    following_link = None
     if following is not None:
-        lines.append(ROUTES.html_link(
-            entity_reference(
-                "item",
-                following["item_id"],
-                f"{following['name']} →",
-                following["slug"],
-            ),
+        label = f"{following['name']} →"
+        href = ROUTES.published_href(
+            entity_reference("item", following["item_id"], label, following["slug"]),
             source_url,
-        ))
-    lines.extend(["</nav>", ""])
+        )
+        following_link = record_nav_link(href, label, "next")
+    lines.extend(record_navigation(previous_link, following_link, "Item navigation"))

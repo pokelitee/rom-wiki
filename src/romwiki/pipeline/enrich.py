@@ -217,6 +217,7 @@ def enrich_move_dataset(
     *,
     type_names: Mapping[int, str] | None = None,
     move_names: Mapping[int, str] | None = None,
+    reference_version: str | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 471:
@@ -275,6 +276,11 @@ def enrich_move_dataset(
                 ),
                 "replaces": (
                     _replaced_move(expected_id, slug, pokedb) if public else None
+                ),
+                "reference": (
+                    pokedb.move_reference(expected_id, reference_version)
+                    if public
+                    else None
                 ),
                 "public": public,
                 "damage_class": _named_id(

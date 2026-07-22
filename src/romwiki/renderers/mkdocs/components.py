@@ -260,6 +260,16 @@ def display_name(value: str) -> str:
     )
 
 
+def fact_grid(
+    facts: tuple[tuple[str, str], ...], *, class_name: str = "rw-data-grid"
+) -> list[str]:
+    lines = [f'<dl class="{class_name}">']
+    for name, value in facts:
+        lines.append(f"<div><dt>{escape(name)}</dt><dd>{escape(value)}</dd></div>")
+    lines.append("</dl>")
+    return lines
+
+
 def record_nav_link(
     href: str | None,
     label: str,

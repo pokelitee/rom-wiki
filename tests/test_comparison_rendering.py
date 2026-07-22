@@ -46,7 +46,7 @@ class ComparisonRenderingTests(unittest.TestCase):
             "\n".join(changed),
         )
 
-    def test_complex_changes_render_only_exact_list_deltas(self) -> None:
+    def test_complex_changes_render_only_summary_list_deltas(self) -> None:
         section = comparison_section(
             {
                 "status": "changed",
@@ -62,9 +62,13 @@ class ComparisonRenderingTests(unittest.TestCase):
         )
         value = "\n".join(section)
 
-        self.assertIn('{&quot;id&quot;:1}', value)
-        self.assertIn('{&quot;id&quot;:3}', value)
-        self.assertNotIn('{&quot;id&quot;:2}', value)
+        # Only the delta entries (1 removed, 3 added) render — the shared
+        # entry (2) is excluded. No raw JSON "Exact data" dump: that is
+        # reserved for the standalone removed-record snapshot page.
+        self.assertIn("Removed: Id: 1", value)
+        self.assertIn("Added: Id: 3", value)
+        self.assertNotIn("Id: 2", value)
+        self.assertNotIn("Exact data", value)
 
     def test_pokemon_changes_use_readable_field_specific_summaries(self) -> None:
         references = ReferenceIndex(

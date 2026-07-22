@@ -127,6 +127,8 @@ def build_item_dataset(
     pokemon_dataset: dict[str, Any],
     trainer_dataset: dict[str, Any],
     location_dataset: dict[str, Any],
+    *,
+    reference_version: str | None = None,
 ) -> dict[str, Any]:
     game = item_dataset.get("game")
     for label, dataset in (
@@ -256,10 +258,12 @@ def build_item_dataset(
             continue
         item_id = source["item_id"]
         relation = relationships.get(item_id, {})
+        slug = pokedb.item_slug(source["name"])
         records.append(
             {
                 **source,
-                "slug": pokedb.item_slug(source["name"]),
+                "slug": slug,
+                "reference": pokedb.item_reference(slug, reference_version),
                 "wild_held_by": relation.get("wild_held_by", []),
                 "trainer_held_by": relation.get("trainer_held_by", []),
                 "trainer_rewards": relation.get("trainer_rewards", []),

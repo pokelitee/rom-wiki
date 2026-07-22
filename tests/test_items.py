@@ -101,7 +101,8 @@ class ItemDatasetTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertIn("# Master Ball", page)
-        self.assertIn("| 1 | Poké Balls |", page)
+        self.assertIn("<dt>Item ID</dt><dd>1</dd>", page)
+        self.assertIn("<dt>Pocket</dt><dd>Poké Balls</dd>", page)
         self.assertIn("[Route 1](../locations/header-010.md)", page)
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("trainer-0002.md", page)

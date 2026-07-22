@@ -127,6 +127,7 @@ class GameBuildContext:
                 self.egg_moves_raw(),
                 type_names=self.profile.type_names,
                 move_names=self.profile.move_names,
+                reference_version=self.profile.base_game,
             ),
         )
 
@@ -158,6 +159,7 @@ class GameBuildContext:
                 self.pokemon(),
                 self.trainers(),
                 self.locations(),
+                reference_version=self.profile.base_game,
             ),
         )
 
