@@ -349,7 +349,10 @@ def _append_trainers(
     values = [
         (value, f"Held by {value['pokemon']['name']}")
         for value in record["trainer_held_by"]
-    ] + [(value, "Battle reward") for value in record["trainer_rewards"]]
+    ] + [
+        (value, "AI battle item")
+        for value in record["trainer_battle_items"]
+    ]
     if not values:
         lines.extend(["No trainer references.", ""])
         return
@@ -491,7 +494,7 @@ def _features(record: dict[str, Any]) -> list[str]:
         ("shops", "shop"),
         ("wild_held_by", "wild-held"),
         ("trainer_held_by", "trainer-held"),
-        ("trainer_rewards", "trainer-reward"),
+        ("trainer_battle_items", "trainer-ai-item"),
         ("gifts", "gift"),
         ("trades", "trade"),
         ("evolutions", "evolution"),

@@ -57,7 +57,7 @@ class ItemDatasetTests(unittest.TestCase):
                             },
                         }
                     ],
-                    "reward_items": [],
+                    "ai_battle_items": [],
                 }
             ],
         }

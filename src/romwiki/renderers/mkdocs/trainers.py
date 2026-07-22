@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,11 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text as _write_text,
 )
-from romwiki.renderers.mkdocs.components import display_name
+from romwiki.renderers.mkdocs.components import (
+    display_name,
+    record_nav_link,
+    record_navigation,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
@@ -58,17 +63,22 @@ def render_trainer_pages(
         for record in records
         if not record["locations"] and not record.get("script_references", [])
     ]
-    for record in sorted(
+    sorted_linked = sorted(
         linked,
         key=lambda item: (
             (item["locations"] or item.get("script_references", []))[0]["name"],
             _trainer_label(item),
             item["trainer_id"],
         ),
-    ):
+    )
+    for index, record in enumerate(sorted_linked):
         change = record_comparison(comparison, record["trainer_id"])
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
+        previous = sorted_linked[index - 1] if index else None
+        following = (
+            sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
+        )
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             _write_text(
                 output_root / filename,
@@ -77,6 +87,8 @@ def render_trainer_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    previous,
+                    following,
                 ),
             )
             page_count += 1
@@ -93,7 +105,7 @@ def render_trainer_pages(
                 entity_reference(
                     "trainer",
                     record["trainer_id"],
-                    f"{location_names} — {label}",
+                    f"{location_names} — {label} ({_trainer_disambiguator(record)})",
                     record["trainer_id"],
                 ),
                 "trainers/index.md",
@@ -108,10 +120,12 @@ def render_trainer_pages(
                 change,
             )
         )
-    for record in unlinked:
+    for index, record in enumerate(unlinked):
         change = record_comparison(comparison, record["trainer_id"])
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
+        previous = unlinked[index - 1] if index else None
+        following = unlinked[index + 1] if index + 1 < len(unlinked) else None
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             _write_text(
                 output_root / filename,
@@ -119,6 +133,9 @@ def render_trainer_pages(
                     record,
                     change,
                     comparison.get("baseline") if comparison else None,
+                    None,
+                    previous,
+                    following,
                 ),
             )
             page_count += 1
@@ -126,7 +143,10 @@ def render_trainer_pages(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "trainer", record["trainer_id"], label, record["trainer_id"]
+                    "trainer",
+                    record["trainer_id"],
+                    f"{label} ({_trainer_disambiguator(record)})",
+                    record["trainer_id"],
                 ),
                 "trainers/index.md",
             )
@@ -224,6 +244,8 @@ def _render_trainer(
     change: dict[str, Any] | None = None,
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
 ) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
@@ -239,9 +261,9 @@ def _render_trainer(
         lines, record.get("script_references", []), source_file
     )
     lines.extend(["## Party", "", *_party_cards(record["party"], source_url)])
+    _append_ai_battle_items(lines, record, source_file)
     lines.extend(
         [
-            "",
             '<details class="rw-source-details" markdown="1">',
             "<summary>Data provenance</summary>",
             "",
@@ -256,7 +278,100 @@ def _render_trainer(
             "",
         ]
     )
+    _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _append_ai_battle_items(
+    lines: list[str], record: dict[str, Any], source_file: str
+) -> None:
+    lines.extend(
+        [
+            "## AI battle items",
+            "",
+            "Items the trainer's own AI may use on its Pokémon mid-battle (for "
+            "example, healing with a carried Full Restore) — not given to the "
+            "player for winning.",
+            "",
+        ]
+    )
+    items = [item for item in record.get("ai_battle_items", []) if item.get("name")]
+    if not items:
+        lines.extend(["None.", ""])
+        return
+    names = ", ".join(
+        ROUTES.markdown_link(
+            entity_reference(
+                "item",
+                item.get("id", item.get("slug", item["name"])),
+                item["name"],
+                item.get("slug"),
+            ),
+            source_file,
+        )
+        for item in items
+    )
+    lines.extend([names, ""])
+
+
+def _append_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> None:
+    source_url = f"trainers/trainer-{record['trainer_id']:04}/"
+    previous_link = None
+    if previous is not None:
+        label = f"← {_trainer_label(previous)}"
+        href = ROUTES.published_href(
+            entity_reference(
+                "trainer", previous["trainer_id"], label, previous["trainer_id"]
+            ),
+            source_url,
+        )
+        previous_link = record_nav_link(href, label, "prev")
+    following_link = None
+    if following is not None:
+        label = f"{_trainer_label(following)} →"
+        href = ROUTES.published_href(
+            entity_reference(
+                "trainer", following["trainer_id"], label, following["trainer_id"]
+            ),
+            source_url,
+        )
+        following_link = record_nav_link(href, label, "next")
+    lines.extend(
+        record_navigation(previous_link, following_link, "Trainer navigation")
+    )
+
+
+def _trainer_level_range(record: dict[str, Any]) -> str:
+    levels = [member["level"] for member in record["party"]]
+    return (
+        f"{min(levels)}" if min(levels) == max(levels) else f"{min(levels)}–{max(levels)}"
+    )
+
+
+def _party_preview(record: dict[str, Any], limit: int = 3) -> str:
+    species = [member["pokemon"]["name"] for member in record["party"]]
+    preview = ", ".join(species[:limit])
+    remaining = len(species) - limit
+    return f"{preview}, +{remaining} more" if remaining > 0 else preview
+
+
+def _trainer_disambiguator(record: dict[str, Any]) -> str:
+    """A compact "which one is this" hint for trainers sharing a display name.
+
+    Many trainers share a class + name — some legitimately are the same
+    story character rematched later with a stronger team (Gym Leaders, the
+    Sinnoh trio, Cyrus), but most are simply distinct NPCs the game never
+    gave individual names (dozens of unrelated "Galactic Grunt" trainers).
+    The ROM has no field distinguishing the two, so rather than guess, every
+    entry gets its level range and party species — usually enough to tell
+    apart trainers that share both a name and a location.
+    """
+    return f"Lv. {_trainer_level_range(record)}: {_party_preview(record)}"
 
 
 def _trainer_summary(record: dict[str, Any]) -> list[str]:
@@ -266,10 +381,7 @@ def _trainer_summary(record: dict[str, Any]) -> list[str]:
             for location in record["locations"] + record.get("script_references", [])
         )
     )
-    levels = [member["level"] for member in record["party"]]
-    level_range = (
-        f"{min(levels)}" if min(levels) == max(levels) else f"{min(levels)}–{max(levels)}"
-    )
+    level_range = _trainer_level_range(record)
     return [
         '<section class="rw-trainer-summary">',
         '<dl class="rw-summary__facts">',
@@ -297,7 +409,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
         pokemon = member["pokemon"]
         held_item = member["held_item"]
         if held_item and held_item["name"]:
-            item_name = ROUTES.html_link(
+            item_link = ROUTES.html_link(
                 entity_reference(
                     "item",
                     held_item.get("id", held_item["name"]),
@@ -306,6 +418,14 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 ),
                 source_url,
             )
+            item_sprite = held_item.get("sprite_url")
+            item_icon = (
+                f'<img class="rw-party-card__item-icon" src="{escape(item_sprite, quote=True)}" '
+                'alt="" loading="lazy">'
+                if item_sprite
+                else ""
+            )
+            item_name = f'<span class="rw-party-card__item">{item_icon}{item_link}</span>'
         else:
             item_name = "—"
         pokemon_link = ROUTES.html_link(
@@ -317,11 +437,21 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             ),
             source_url,
         )
+        pokemon_sprite = pokemon.get("sprite")
+        sprite_icon = (
+            f'<img class="rw-party-card__sprite" src="{escape(pokemon_sprite["url"], quote=True)}" '
+            f'alt="" loading="lazy">'
+            if pokemon_sprite and pokemon_sprite.get("url")
+            else ""
+        )
         lines.extend(
             [
                 '<article class="rw-party-card">',
                 f'<span class="rw-party-card__slot">Slot {index}</span>',
+                '<div class="rw-party-card__header">',
+                sprite_icon,
                 f"<h3>{pokemon_link}</h3>",
+                "</div>",
                 '<dl class="rw-summary__facts">',
                 f"<div><dt>Level</dt><dd>{member['level']}</dd></div>",
                 f"<div><dt>Held item</dt><dd>{item_name}</dd></div>",

@@ -190,12 +190,12 @@ def build_item_dataset(
                     "trainer_held_by",
                     {**trainer_reference, "pokemon": party_member["pokemon"]},
                 )
-        reward_items = {
-            reward_item["id"]: reward_item
-            for reward_item in trainer.get("reward_items", [])
+        battle_items = {
+            battle_item["id"]: battle_item
+            for battle_item in trainer.get("ai_battle_items", [])
         }
-        for reward_item in reward_items.values():
-            add(reward_item["id"], "trainer_rewards", trainer_reference)
+        for battle_item in battle_items.values():
+            add(battle_item["id"], "trainer_battle_items", trainer_reference)
 
     for location in location_dataset["records"]:
         location_reference = {
@@ -266,7 +266,7 @@ def build_item_dataset(
                 "reference": pokedb.item_reference(slug, reference_version),
                 "wild_held_by": relation.get("wild_held_by", []),
                 "trainer_held_by": relation.get("trainer_held_by", []),
-                "trainer_rewards": relation.get("trainer_rewards", []),
+                "trainer_battle_items": relation.get("trainer_battle_items", []),
                 "locations": relation.get("locations", []),
                 "shops": relation.get("shops", []),
                 "gifts": relation.get("gifts", []),
@@ -299,7 +299,7 @@ def _item_is_referenced(record: dict[str, Any]) -> bool:
         for field in (
             "wild_held_by",
             "trainer_held_by",
-            "trainer_rewards",
+            "trainer_battle_items",
             "locations",
             "shops",
             "gifts",

@@ -40,7 +40,7 @@ _FIELDS = {
         "fling_effect_id", "fling_power", "natural_gift_power",
         "natural_gift_type", "party_use", "party_effects", "prevent_toss",
         "selectable", "locations", "shops", "wild_held_by", "trainer_held_by",
-        "trainer_rewards", "gifts", "trades", "evolutions",
+        "trainer_battle_items", "gifts", "trades", "evolutions",
     ),
     "wild_encounters": (
         "active", "name", "locations", "walking", "surf", "old_rod",
@@ -48,7 +48,7 @@ _FIELDS = {
     ),
     "trainers": (
         "name", "class_id", "class_name", "double_battle", "ai_flags",
-        "reward_items", "party", "locations", "script_references",
+        "ai_battle_items", "party", "locations", "script_references",
     ),
     "locations": (
         "name", "internal_name", "location_name_id", "matrix_id",
@@ -63,7 +63,7 @@ _UNORDERED = {
     "moves": {"machines", "tutors", "egg_move_pokemon"},
     "items": {
         "locations", "shops", "wild_held_by", "trainer_held_by",
-        "trainer_rewards", "gifts", "trades", "evolutions",
+        "trainer_battle_items", "gifts", "trades", "evolutions",
     },
     "trainers": {"locations", "script_references"},
     "locations": {
@@ -119,7 +119,8 @@ _LABELS = {
     "super_rod": "Super Rod",
     "unknown_value": "Unknown engine value",
     "ai_flags": "AI flags",
-    "reward_items": "Reward items",
+    "ai_battle_items": "AI battle items",
+    "trainer_battle_items": "Trainer battle items",
     "script_references": "Script references",
 }
 

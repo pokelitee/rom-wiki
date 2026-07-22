@@ -263,6 +263,8 @@ def _format_change(
             return specialized
     if kind == "abilities" and change.get("field") == "pokemon":
         return _format_ability_pokemon_change(before, after, source_url, references)
+    if kind == "trainers" and change.get("field") in {"locations", "script_references"}:
+        return _format_trainer_location_change(before, after, source_url, references)
     if isinstance(before, dict) and isinstance(after, dict):
         return _format_mapping_change(before, after, kind=kind)
     if not isinstance(before, list) or not isinstance(after, list):
@@ -400,6 +402,68 @@ def _format_ability_pokemon_change(
     if not groups:
         return "Order changed"
     return _format_change_groups(groups)
+
+
+def _format_trainer_location_change(
+    before: list[dict[str, Any]],
+    after: list[dict[str, Any]],
+    source_url: str,
+    references: ReferenceIndex | None,
+) -> str:
+    previous = {_trainer_location_identity(item): item for item in before}
+    current = {_trainer_location_identity(item): item for item in after}
+    changed = []
+    removed = []
+    added = []
+    for key in sorted(set(previous) | set(current), key=str):
+        old = previous.get(key)
+        new = current.get(key)
+        if old is not None and new is not None:
+            old_position = (old.get("x"), old.get("z"))
+            new_position = (new.get("x"), new.get("z"))
+            if old_position == new_position:
+                continue
+            display = _reference_html(
+                {**old, "id": old.get("header_id")}, "location", source_url, references
+            )
+            changed.append(
+                f"{display}: {_diff(str(old_position), str(new_position))}"
+            )
+        elif old is not None:
+            removed.append(
+                _reference_html(
+                    {**old, "id": old.get("header_id")},
+                    "location",
+                    source_url,
+                    references,
+                )
+            )
+        else:
+            added.append(
+                _reference_html(
+                    {**new, "id": new.get("header_id")},
+                    "location",
+                    source_url,
+                    references,
+                )
+            )
+    groups = [
+        ("position changes", changed),
+        ("locations removed", removed),
+        ("locations added", added),
+    ]
+    groups = [group for group in groups if group[1]]
+    if not groups:
+        return "Order changed"
+    return _format_change_groups(groups)
+
+
+def _trainer_location_identity(value: dict[str, Any]) -> Any:
+    return (
+        value.get("header_id"),
+        value.get("object_index"),
+        value.get("event_file_id"),
+    )
 
 
 def _ability_slot_label(slots: list[int]) -> str:

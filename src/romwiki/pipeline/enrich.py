@@ -190,6 +190,8 @@ def enrich_trainer_dataset(
     pokedb: PokeDBGeneration,
     *,
     move_names: Mapping[int, str] | None = None,
+    sprite_version: str | None = None,
+    reference_version: str | None = None,
 ) -> dict[str, Any]:
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
@@ -200,7 +202,16 @@ def enrich_trainer_dataset(
     for expected_id, source in enumerate(source_records):
         if source.get("trainer_id") != expected_id:
             raise DataSourceError("Trainer records must be ordered by trainer ID")
-        records.append(_enrich_trainer(source, pokedb, move_names, item_names))
+        records.append(
+            _enrich_trainer(
+                source,
+                pokedb,
+                move_names,
+                item_names,
+                sprite_version,
+                reference_version,
+            )
+        )
     enriched = {
         "schema_version": 1,
         "game": dataset["game"],
@@ -442,6 +453,8 @@ def _enrich_trainer(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     item_names: list[str] | None,
+    sprite_version: str | None = None,
+    reference_version: str | None = None,
 ) -> dict[str, Any]:
     party = []
     for pokemon in source["party"]:
@@ -461,6 +474,11 @@ def _enrich_trainer(
         else:
             reference = pokedb.pokemon_for_id(species_id)
             cosmetic_form = None
+        held_item = (
+            _item_reference(pokemon["held_item_id"], pokedb, item_names)
+            if pokemon["held_item_id"] is not None
+            else None
+        )
         party.append(
             {
                 **pokemon,
@@ -469,12 +487,13 @@ def _enrich_trainer(
                     "slug": reference["name"],
                     "name": title_case_slug(reference["name"])
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
+                    "sprite": pokedb.pokemon_sprite(reference, sprite_version),
                 },
-                "held_item": {
-                    **_item_reference(pokemon["held_item_id"], pokedb, item_names),
-                }
-                if pokemon["held_item_id"] is not None
-                else None,
+                "held_item": (
+                    _with_item_sprite(held_item, pokedb, reference_version)
+                    if held_item is not None
+                    else None
+                ),
                 "moves": [
                     {"id": move_id, "name": _move_name(move_id, pokedb, move_names)}
                     for move_id in pokemon["move_ids"]
@@ -485,12 +504,34 @@ def _enrich_trainer(
     return {
         **source,
         "party": party,
-        "reward_items": [
-            _item_reference(item_id, pokedb, item_names)
+        # The ROM's "reward_item_ids" slots are the trainer's own AI battle
+        # items (e.g. a carried Full Restore the AI uses on itself mid-fight)
+        # — not something given to the player. See pokeemerald/pokeplatinum
+        # decompilations for the equivalent trainer-struct field.
+        "ai_battle_items": [
+            _with_item_sprite(
+                _item_reference(item_id, pokedb, item_names), pokedb, reference_version
+            )
             for item_id in source["reward_item_ids"]
             if item_id
         ],
     }
+
+
+def _with_item_sprite(
+    item: dict[str, Any], pokedb: PokeDBGeneration, reference_version: str | None
+) -> dict[str, Any]:
+    return {**item, "sprite_url": _item_sprite_url(item, pokedb, reference_version)}
+
+
+def _item_sprite_url(
+    item: dict[str, Any], pokedb: PokeDBGeneration, reference_version: str | None
+) -> str | None:
+    slug = item.get("slug")
+    if not slug:
+        return None
+    reference = pokedb.item_reference(slug, reference_version)
+    return reference.get("sprite_url") if reference else None
 
 
 def _encounter_pokemon_list(

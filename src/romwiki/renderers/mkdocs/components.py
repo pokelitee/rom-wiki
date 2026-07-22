@@ -12,6 +12,7 @@ DISPLAY_NAMES = {
     "tm-hm": "TM / HM",
     "vs-recorder": "Vs. Recorder",
     "vs-seeker": "Vs. Seeker",
+    "trainer-ai-item": "Trainer AI item",
 }
 
 

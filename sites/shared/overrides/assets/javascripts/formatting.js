@@ -4,6 +4,7 @@ const DISPLAY_NAMES = Object.freeze({
   "tm-hm": "TM / HM",
   "vs-recorder": "Vs. Recorder",
   "vs-seeker": "Vs. Seeker",
+  "trainer-ai-item": "Trainer AI item",
 });
 
 export function displayFilter(key, value) {

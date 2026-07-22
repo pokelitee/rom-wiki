@@ -148,6 +148,8 @@ class GameBuildContext:
                 self.trainers_raw(),
                 self.pokedb,
                 move_names=self.profile.move_names,
+                sprite_version=self.profile.sprite_version,
+                reference_version=self.profile.base_game,
             ),
         )
 
