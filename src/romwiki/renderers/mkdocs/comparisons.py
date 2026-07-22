@@ -10,7 +10,7 @@ from romwiki.pipeline.comparisons import (
     normalize_comparison_value,
 )
 from romwiki.renderers.mkdocs.catalog import write_text
-from romwiki.renderers.mkdocs.components import evolution_condition
+from romwiki.renderers.mkdocs.components import display_name, evolution_condition
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
@@ -265,11 +265,61 @@ def _format_change(
         return _format_ability_pokemon_change(before, after, source_url, references)
     if kind == "trainers" and change.get("field") in {"locations", "script_references"}:
         return _format_trainer_location_change(before, after, source_url, references)
-    if isinstance(before, dict) and isinstance(after, dict):
-        return _format_mapping_change(before, after, kind=kind)
-    if not isinstance(before, list) or not isinstance(after, list):
-        return _diff(_format_value(before), _format_value(after))
-    return _format_list_change(before, after, kind=kind, field=change.get("field"))
+    return _format_value_change(before, after, kind=kind, field=change.get("field"))
+
+
+def _format_value_change(
+    old_value: Any,
+    new_value: Any,
+    *,
+    kind: str | None = None,
+    field: str | None = None,
+) -> str:
+    """Shared recursive formatter for a single field's before/after values.
+
+    Used both at the top level (after the kind-specific specializations in
+    ``_format_change`` have had a chance to run) and recursively for nested
+    fields inside ``_format_mapping_change`` — so a dict-of-dicts or
+    dict-of-lists (e.g. wild encounters' "special.dual_slot") gets the same
+    treatment at every level instead of falling back to a raw Python repr.
+    """
+    named_reference = _format_named_reference_change(old_value, new_value)
+    if named_reference is not None:
+        return named_reference
+    if isinstance(old_value, dict) and isinstance(new_value, dict):
+        return _format_mapping_change(old_value, new_value, kind=kind)
+    if isinstance(old_value, list) and isinstance(new_value, list):
+        return _format_list_change(old_value, new_value, kind=kind, field=field)
+    return _diff(_format_value(old_value), _format_value(new_value))
+
+
+def _format_named_reference_change(before: Any, after: Any) -> str | None:
+    """Render a change to a simple ``{id, name}`` enum reference as one diff.
+
+    Fields like growth_rate/body_color/damage_class/type/pocket/field_use/
+    natural_gift_type are ROM-derived ``{"id": int, "name": str}`` lookups
+    (see ``_named_id``/``_type_id`` in enrich.py and the equivalent item
+    pipeline dict literals). Diffing them key-by-key produces a redundant
+    "Id: 2 → 3" line alongside "Name: A → B" for what is really one change;
+    this collapses both into a single name-to-name diff. A field can also go
+    from ``None`` to populated (e.g. an item gaining a Natural Gift type), so
+    both sides are optional.
+    """
+
+    def is_reference_like(value: Any) -> bool:
+        return value is None or (
+            isinstance(value, dict)
+            and "name" in value
+            and set(value) <= {"id", "name"}
+        )
+
+    if not is_reference_like(before) or not is_reference_like(after):
+        return None
+    if before is None and after is None:
+        return None
+    before_label = display_name(before["name"]) if isinstance(before, dict) and before.get("name") else "—"
+    after_label = display_name(after["name"]) if isinstance(after, dict) and after.get("name") else "—"
+    return _diff(escape(before_label), escape(after_label))
 
 
 def _format_list_change(
@@ -295,14 +345,22 @@ def _format_list_change(
 
 
 def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
+    groups = [
+        (label, values)
+        for label, values in (("removed", removed), ("added", added))
+        if values
+    ]
+    if not groups:
+        return "No changes"
+    # If either side needs a dropdown (2+ entries), use one for both sides —
+    # a lone "Removed: X" sitting inline next to a "6 added" dropdown in the
+    # same cell reads as a mistake, not a deliberate size difference. Only
+    # skip the dropdown entirely when every side is a single, simple entry.
+    use_details = any(len(values) > 1 for _, values in groups)
     parts = []
-    for label, values in (("removed", removed), ("added", added)):
-        if not values:
-            continue
+    for label, values in groups:
         ordered = sorted(values, key=_canonical)
-        if len(ordered) == 1:
-            parts.append(f"{label.title()}: {_format_value_summary(ordered[0])}")
-        else:
+        if use_details:
             entries = "".join(
                 f"<li>{_format_value_summary(value)}</li>" for value in ordered
             )
@@ -310,11 +368,11 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
                 f"<details><summary>{len(ordered)} {label}</summary>"
                 f'<ul class="rw-comparison-list">{entries}</ul></details>'
             )
-    if not parts:
-        return "No changes"
+        else:
+            parts.append(f"{label.title()}: {_format_value_summary(ordered[0])}")
     # <details> is already block-level (and Material gives it its own
     # margin), so an explicit <br> before one just doubles the gap.
-    separator = "" if any("<details" in part for part in parts) else "<br>"
+    separator = "" if use_details else "<br>"
     return separator.join(parts)
 
 
@@ -632,12 +690,7 @@ def _format_mapping_change(
         if old_value == new_value:
             continue
         label = escape(key.replace("_", " ").title())
-        if isinstance(old_value, list) and isinstance(new_value, list):
-            value = _format_list_change(old_value, new_value, kind=kind, field=key)
-        else:
-            value = _diff(
-                escape(_plain_value(old_value)), escape(_plain_value(new_value))
-            )
+        value = _format_value_change(old_value, new_value, kind=kind, field=key)
         lines.append(f"{label}: {value}")
     return _format_lines(lines, True)
 
@@ -689,22 +742,15 @@ def _mapping_summary(value: dict[str, Any]) -> str:
         return f"{target['name']}{suffix}"
     if value.get("name"):
         return str(value["name"])
+    location = value.get("location")
+    if isinstance(location, dict) and location.get("name"):
+        return str(location["name"])
     identifiers = [
         f"{key.replace('_', ' ').title()}: {item}"
         for key, item in value.items()
         if key == "id" or key.endswith("_id")
     ]
     return ", ".join(identifiers) or "Structured value"
-
-
-def _plain_value(value: Any) -> str:
-    if value is None:
-        return "None"
-    if value is True:
-        return "Yes"
-    if value is False:
-        return "No"
-    return str(value)
 
 
 def _reference_id(value: dict[str, Any] | None) -> Any:
