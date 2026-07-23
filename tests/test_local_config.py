@@ -156,6 +156,54 @@ base_rom = "base.nds"
                 _resolve_build_baseline(args)
             self.assertIsNone(_resolve_build_baseline(hack_only))
 
+    def test_resolves_an_explicit_base_rom_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / "base.nds"
+            base.touch()
+            args = build_parser().parse_args(
+                ["build-game", "--game", "test", "--base-rom", str(base)]
+            )
+
+            self.assertEqual(_resolve_build_baseline(args), base.resolve())
+
+    def test_rejects_a_missing_explicit_base_rom_path(self) -> None:
+        args = build_parser().parse_args(
+            ["build-game", "--game", "test", "--base-rom", "missing-base.nds"]
+        )
+
+        with self.assertRaisesRegex(LocalConfigError, "does not exist"):
+            _resolve_build_baseline(args)
+
+    def test_rejects_base_rom_combined_with_hack_only_or_base(self) -> None:
+        hack_only_args = build_parser().parse_args(
+            ["build-game", "--game", "test", "--base-rom", "base.nds", "--hack-only"]
+        )
+        base_args = build_parser().parse_args(
+            ["build-game", "--game", "test", "--base-rom", "base.nds", "--base"]
+        )
+
+        for args in (hack_only_args, base_args):
+            with self.assertRaisesRegex(
+                LocalConfigError, "cannot be combined with --hack-only or --base"
+            ):
+                _resolve_build_baseline(args)
+
+    def test_comparative_build_without_game_or_base_rom_is_rejected(self) -> None:
+        args = build_parser().parse_args(["build-game"])
+
+        with self.assertRaisesRegex(
+            LocalConfigError, "require --game or --base-rom"
+        ):
+            _resolve_build_baseline(args)
+
+    def test_missing_game_and_rom_is_rejected(self) -> None:
+        args = build_parser().parse_args(["inspect"])
+
+        with self.assertRaisesRegex(
+            LocalConfigError, "Specify a ROM path or select a configured game"
+        ):
+            _resolve_input_rom(args)
+
 
 if __name__ == "__main__":
     unittest.main()

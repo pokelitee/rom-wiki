@@ -70,6 +70,8 @@ __all__ = [
     "Gen4LevelUpLearnset",
     "LevelUpMove",
     "Gen4EggMoveSet",
+    "Gen4Item",
+    "ItemPartyEffects",
     "EvolutionEntry",
     "Gen4EvolutionSet",
     "Gen4Machine",

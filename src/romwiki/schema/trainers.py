@@ -4,7 +4,6 @@ from dataclasses import asdict, dataclass
 from typing import Any, Literal, TypedDict
 
 from romwiki.schema.pokemon import RecordProvenance
-from romwiki.schema.versions import TRAINER_PARTY_SCHEMA_VERSION
 
 
 class TrainerAttribute(TypedDict):

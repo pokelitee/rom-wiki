@@ -12,7 +12,12 @@ import types
 import unittest
 
 from romwiki.engines.gen4_dppt import parse_encounter_record
-from romwiki.engines.registry import EngineAdapter, get_engine, _ENGINES
+from romwiki.engines.registry import (
+    EngineAdapter,
+    get_engine,
+    register_engine,
+    unregister_engine,
+)
 from romwiki.pipeline.enrich import enrich_encounter_dataset, enrich_personal_dataset
 from romwiki.renderers.mkdocs import render_encounter_pages, render_pokemon_pages
 from romwiki.sources import PokeDBGeneration
@@ -38,12 +43,12 @@ def _register_fake_engine(constants: types.SimpleNamespace) -> None:
         reference_names=constants,
         enrich=constants,
     )
-    _ENGINES[_FAKE_ENGINE_ID] = adapter
+    register_engine(_FAKE_ENGINE_ID, adapter)
 
 
 class EngineContractTests(unittest.TestCase):
     def tearDown(self) -> None:
-        _ENGINES.pop(_FAKE_ENGINE_ID, None)
+        unregister_engine(_FAKE_ENGINE_ID)
 
     def test_personal_enrichment_uses_the_registered_engines_member_maps(self) -> None:
         _register_fake_engine(

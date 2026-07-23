@@ -803,7 +803,6 @@ def _format_change_groups(
     for singular, plural, values in groups:
         if not values:
             continue
-        label = singular if len(values) == 1 else plural
         parts.append(_format_collection(values, singular, plural))
     return "".join(parts) or "No changes"
 

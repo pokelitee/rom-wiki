@@ -56,3 +56,17 @@ def get_engine(engine: str) -> EngineAdapter:
         return _ENGINES[engine]
     except KeyError as error:
         raise DataSourceError(f"Unsupported engine: {engine!r}") from error
+
+
+def register_engine(engine: str, adapter: EngineAdapter) -> None:
+    """Register an engine adapter under `engine`, replacing any existing entry.
+
+    Intended for tests exercising the enrichment/rendering contract against a
+    throwaway fake engine; real engines register themselves in `_ENGINES` above.
+    """
+    _ENGINES[engine] = adapter
+
+
+def unregister_engine(engine: str) -> None:
+    """Remove a previously registered engine, e.g. in a test's tearDown."""
+    _ENGINES.pop(engine, None)

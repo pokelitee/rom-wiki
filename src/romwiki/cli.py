@@ -735,7 +735,7 @@ def _run_section_build(
         wiki_output = (
             args.wiki_output
             if index == 0 and args.wiki_output is not None
-            else wiki_root / _section_name(kind)
+            else wiki_root / kind
         )
         _write_dataset_build(
             kind,
@@ -776,7 +776,7 @@ def _run_full_game_build(
             kind,
             build,
             _dataset_output(data_root, kind),
-            wiki_root / _section_name(kind),
+            wiki_root / kind,
             move_dataset=builds["moves"].current,
             reference_index=reference_index,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
@@ -856,11 +856,7 @@ def _write_dataset_build(
 
 def _dataset_output(data_root: Path, kind: str) -> Path:
     filename = "raw.json" if kind == "locations" else "enriched.json"
-    return data_root / _section_name(kind) / filename
-
-
-def _section_name(kind: str) -> str:
-    return "encounters" if kind == "encounters" else kind
+    return data_root / kind / filename
 
 
 def _load_comparisons(root: Path) -> dict[str, dict]:
