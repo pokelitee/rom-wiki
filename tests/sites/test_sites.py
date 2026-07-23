@@ -9,7 +9,7 @@ from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class SiteCatalogTests(unittest.TestCase):

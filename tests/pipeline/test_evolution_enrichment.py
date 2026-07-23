@@ -4,7 +4,7 @@ import unittest
 
 from romwiki.pipeline.enrich import enrich_personal_dataset
 from romwiki.sources import PokeDBGeneration
-from tests.test_enrichment import FORM_SPECIES, _source_record
+from tests.pipeline.test_enrichment import FORM_SPECIES, _source_record
 
 
 class EvolutionEnrichmentTests(unittest.TestCase):

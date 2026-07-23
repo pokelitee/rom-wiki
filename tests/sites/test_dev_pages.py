@@ -8,7 +8,7 @@ from romwiki.sites.dev_pages import DevPages
 from romwiki.util.errors import SiteError
 
 
-_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 _MANIFEST = (
     _REPOSITORY_ROOT / "sites" / "games" / "renegade-platinum" / "dev-pages.toml"
 )

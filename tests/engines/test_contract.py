@@ -21,7 +21,7 @@ from romwiki.engines.registry import (
 from romwiki.pipeline.enrich import enrich_encounter_dataset, enrich_personal_dataset
 from romwiki.renderers.mkdocs import render_encounter_pages, render_pokemon_pages
 from romwiki.sources import PokeDBGeneration
-from tests.test_enrichment import _source_record
+from tests.pipeline.test_enrichment import _source_record
 
 
 _FAKE_ENGINE_ID = "fake_test_engine"

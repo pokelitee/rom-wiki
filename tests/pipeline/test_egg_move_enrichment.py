@@ -3,9 +3,9 @@ from __future__ import annotations
 import unittest
 
 from romwiki.pipeline.enrich import enrich_move_dataset, enrich_personal_dataset
-from tests.test_enrichment import _source_record
-from tests.test_evolution_enrichment import _reference_pokedb
-from tests.test_move_enrichment import _source_record as _move_source_record
+from tests.pipeline.test_enrichment import _source_record
+from tests.pipeline.test_evolution_enrichment import _reference_pokedb
+from tests.pipeline.test_move_enrichment import _source_record as _move_source_record
 
 
 class EggMoveEnrichmentTests(unittest.TestCase):

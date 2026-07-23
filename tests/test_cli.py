@@ -9,8 +9,12 @@ from romwiki.cli import (
     _comparison_workflow_kind,
     _dataset_output,
     _load_comparisons,
+    _resolve_build_baseline,
+    _resolve_input_rom,
+    build_parser,
     main,
 )
+from romwiki.util.errors import LocalConfigError
 
 
 class MainErrorHandlingTests(unittest.TestCase):
@@ -89,6 +93,138 @@ class LoadComparisonsTests(unittest.TestCase):
             comparisons = _load_comparisons(root)
 
         self.assertEqual(comparisons, {})
+
+
+class CliInputResolutionTests(unittest.TestCase):
+    def test_resolves_configured_game_and_base_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            patched = root / "patched.nds"
+            base = root / "base.nds"
+            patched.touch()
+            base.touch()
+            config = root / "games.toml"
+            config.write_text(
+                """
+[games.test-game]
+patched_rom = "patched.nds"
+base_rom = "base.nds"
+""".strip(),
+                encoding="utf-8",
+            )
+            patched_args = build_parser().parse_args(
+                ["inspect", "--game", "test-game", "--games-config", str(config)]
+            )
+            base_args = build_parser().parse_args(
+                [
+                    "inspect",
+                    "--game",
+                    "test-game",
+                    "--base",
+                    "--games-config",
+                    str(config),
+                ]
+            )
+
+            self.assertEqual(_resolve_input_rom(patched_args), patched.resolve())
+            self.assertEqual(_resolve_input_rom(base_args), base.resolve())
+
+    def test_preserves_positional_input_and_supports_explicit_override(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            rom = Path(directory) / "explicit.nds"
+            rom.touch()
+            positional = build_parser().parse_args(["inspect", str(rom)])
+            optional = build_parser().parse_args(["inspect", "--rom", str(rom)])
+
+            self.assertEqual(_resolve_input_rom(positional), rom.resolve())
+            self.assertEqual(_resolve_input_rom(optional), rom.resolve())
+
+    def test_rejects_conflicting_explicit_inputs(self) -> None:
+        args = build_parser().parse_args(
+            ["inspect", "positional.nds", "--rom", "override.nds"]
+        )
+
+        with self.assertRaisesRegex(LocalConfigError, "not both"):
+            _resolve_input_rom(args)
+
+    def test_configured_build_uses_base_rom_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            patched = root / "patched.nds"
+            base = root / "base.nds"
+            patched.touch()
+            base.touch()
+            config = root / "games.toml"
+            config.write_text(
+                "[games.test]\npatched_rom='patched.nds'\nbase_rom='base.nds'\n",
+                encoding="utf-8",
+            )
+            args = build_parser().parse_args(
+                ["build-game", "--game", "test", "--games-config", str(config)]
+            )
+
+            self.assertEqual(_resolve_build_baseline(args), base.resolve())
+
+    def test_explicit_build_requires_base_or_hack_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            rom = Path(directory) / "hack.nds"
+            rom.touch()
+            args = build_parser().parse_args(["build-moves", str(rom)])
+            hack_only = build_parser().parse_args(
+                ["build-moves", str(rom), "--hack-only"]
+            )
+
+            with self.assertRaisesRegex(LocalConfigError, "require --base-rom"):
+                _resolve_build_baseline(args)
+            self.assertIsNone(_resolve_build_baseline(hack_only))
+
+    def test_resolves_an_explicit_base_rom_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / "base.nds"
+            base.touch()
+            args = build_parser().parse_args(
+                ["build-game", "--game", "test", "--base-rom", str(base)]
+            )
+
+            self.assertEqual(_resolve_build_baseline(args), base.resolve())
+
+    def test_rejects_a_missing_explicit_base_rom_path(self) -> None:
+        args = build_parser().parse_args(
+            ["build-game", "--game", "test", "--base-rom", "missing-base.nds"]
+        )
+
+        with self.assertRaisesRegex(LocalConfigError, "does not exist"):
+            _resolve_build_baseline(args)
+
+    def test_rejects_base_rom_combined_with_hack_only_or_base(self) -> None:
+        hack_only_args = build_parser().parse_args(
+            ["build-game", "--game", "test", "--base-rom", "base.nds", "--hack-only"]
+        )
+        base_args = build_parser().parse_args(
+            ["build-game", "--game", "test", "--base-rom", "base.nds", "--base"]
+        )
+
+        for args in (hack_only_args, base_args):
+            with self.assertRaisesRegex(
+                LocalConfigError, "cannot be combined with --hack-only or --base"
+            ):
+                _resolve_build_baseline(args)
+
+    def test_comparative_build_without_game_or_base_rom_is_rejected(self) -> None:
+        args = build_parser().parse_args(["build-game"])
+
+        with self.assertRaisesRegex(
+            LocalConfigError, "require --game or --base-rom"
+        ):
+            _resolve_build_baseline(args)
+
+    def test_missing_game_and_rom_is_rejected(self) -> None:
+        args = build_parser().parse_args(["inspect"])
+
+        with self.assertRaisesRegex(
+            LocalConfigError, "Specify a ROM path or select a configured game"
+        ):
+            _resolve_input_rom(args)
 
 
 if __name__ == "__main__":
