@@ -69,6 +69,8 @@ frontier_mart_inventory_count = 2
 frontier_price_overlay_id = 7
 frontier_price_table_offset = 0x5A98
 frontier_price_record_count = 41
+game_corner_prize_table_offset = 0xEC018
+game_corner_prize_count = 19
 
 [[parameters.special_tutors]]
 script_member = 450

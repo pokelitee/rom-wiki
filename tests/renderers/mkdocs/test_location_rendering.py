@@ -150,6 +150,9 @@ class LocationRenderingTests(unittest.TestCase):
                 "species": [{"species_id": 479, "name": "Rotom"}],
                 "pre_national_dex_species": None,
             },
+            "game_corner_prizes": [
+                {"item_id": 17, "name": "Potion", "price": 1000},
+            ],
         }
         dataset = {"records": [record]}
         references = ReferenceIndex.from_datasets(
@@ -269,6 +272,12 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("**Rare:**", page)
         self.assertIn("## Trophy Garden daily rotation", page)
         self.assertNotIn("After National Dex", page)
+        self.assertIn("## Game Corner prizes", page)
+        self.assertIn(
+            '[Potion](../items/potion.md)</span> | 17 | 1,000 coins |', page
+        )
+        self.assertIn('<a href="#game-corner-prizes">1</a>', page)
+        self.assertIn("game corner", catalog["records"][0]["features"])
         self.assertIn(
             "[Togepi](../pokemon/togepi.md)</span> | — |",
             page,

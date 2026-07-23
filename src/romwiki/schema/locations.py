@@ -115,6 +115,13 @@ class LocationDailyEncounterPool:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationGameCornerPrize:
+    item_id: int
+    name: str
+    price: int
+
+
+@dataclass(frozen=True, slots=True)
 class LocationNpcTrade:
     trade_id: int
     requested_species_id: int
@@ -164,6 +171,7 @@ class Gen4Location:
     npc_trades: tuple[LocationNpcTrade, ...]
     honey_tree: LocationHoneyTree | None
     daily_encounter_pool: LocationDailyEncounterPool | None
+    game_corner_prizes: tuple[LocationGameCornerPrize, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

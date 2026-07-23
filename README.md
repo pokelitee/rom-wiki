@@ -17,8 +17,9 @@ Nintendo DS images, reads their filesystem and NARC archives, and generates
 normalized datasets and wiki pages for Pokémon, moves, wild encounters,
 trainers, and locations. The location dataset also includes items, shops,
 warps, connections, gifts, static encounters, roaming activations,
-in-game trades, honey tree encounter pools, and Great Marsh/Trophy Garden
-daily rotation pools. Extracted records retain ROM provenance where practical.
+in-game trades, honey tree encounter pools, Great Marsh/Trophy Garden daily
+rotation pools, and Game Corner prize exchanges. Extracted records retain ROM
+provenance where practical.
 
 Honey trees and the Great Marsh/Trophy Garden dailies read from
 `arc/encdata_ex.narc`, a second encounter archive separate from the wild
@@ -40,10 +41,16 @@ intentionally left unrendered rather than guessed — a hack that rebalances
 difficulty could plausibly have changed it. Renegade Platinum removes all
 three scripted roaming activations that exist in the base game.
 
-Some Gen IV data categories are known but not yet extracted: Game Corner
-prize exchanges and the ROM's own Pokédex/description text banks. Each needs
-dedicated offset research and is tracked as follow-up work rather than
-silently approximated.
+The Game Corner's Prize Exchange counter reads a fixed 19-entry {item, price}
+table at a literal ARM9 code offset (`game_corner_prize_table_offset`), not a
+NARC table — verified byte-for-byte against the decompilation for the retail
+ROM, then located at the identical offset in Renegade Platinum, which patches
+the same table in place with an entirely different, held-item-focused prize
+list (e.g. Life Orb, Leftovers, Focus Sash) rather than vanilla Platinum's TMs.
+
+Some Gen IV data categories are known but not yet extracted: the ROM's own
+Pokédex/description text banks. This needs dedicated offset research and is
+tracked as follow-up work rather than silently approximated.
 
 The exact USA retail release of Pokémon Platinum is also registered as the
 `platinum-us` profile. It reuses the Generation IV engine and has been validated
@@ -294,8 +301,9 @@ common, specialty, decoration, weekday seal-shop, and Battle Frontier BP
 inventories and prices; event warps; outdoor map-matrix connections; wild
 encounter tables; literal Pokémon and egg gifts; in-game trades; scripted static
 encounters; roaming Pokémon activations; honey tree and Great Marsh/Trophy
-Garden daily encounter pools; and trainer references. Each map header keeps a stable
-page even when several interiors share the same displayed location name.
+Garden daily encounter pools; Game Corner prize exchanges; and trainer
+references. Each map header keeps a stable page even when several interiors
+share the same displayed location name.
 
 Extract and render move mechanics:
 

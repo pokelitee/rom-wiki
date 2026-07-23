@@ -127,6 +127,7 @@ def render_location_pages(
                 ("roaming", bool(record.get("roaming_activations"))),
                 ("honey tree", bool(record.get("honey_tree"))),
                 ("daily rotation", bool(record.get("daily_encounter_pool"))),
+                ("game corner", bool(record.get("game_corner_prizes"))),
                 ("trainers", bool(record.get("trainers"))),
                 ("warps", bool(record.get("warps"))),
                 ("connections", bool(record.get("connections"))),
@@ -204,6 +205,9 @@ def _render_location(
     _append_honey_tree(lines, record.get("honey_tree"), source_file, references)
     _append_daily_encounter_pool(
         lines, record.get("daily_encounter_pool"), source_file, references
+    )
+    _append_game_corner_prizes(
+        lines, record.get("game_corner_prizes", []), source_file, references
     )
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
@@ -304,6 +308,7 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
         ("In-game trades", "npc_trades", "in-game-trades"),
         ("Static encounters", "static_encounters", "static-encounters"),
         ("Roaming activations", "roaming_activations", "roaming-activations"),
+        ("Game Corner prizes", "game_corner_prizes", "game-corner-prizes"),
         ("Trainers", "trainers", "trainers"),
         ("Warps", "warps", "warps"),
         ("Outdoor connections", "connections", "outdoor-connections"),
@@ -652,6 +657,35 @@ def _append_daily_encounter_pool(
         lines.extend(
             pokemon_table(["| Pokémon | Type |", "| ------- | ---- |"], rows)
         )
+
+
+def _append_game_corner_prizes(
+    lines: list[str],
+    prizes: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not prizes:
+        return
+    lines.extend(
+        [
+            "## Game Corner prizes",
+            "",
+            "Coin prices from the Prize Exchange counter's fixed prize table.",
+            "",
+            "| Item | Item ID | Price |",
+            "| ---- | ------: | ----: |",
+        ]
+    )
+    for prize in prizes:
+        item_link = _entity_link(
+            "item", prize["item_id"], prize["name"], source_file, references
+        )
+        lines.append(
+            f"| {sprite_with_link(_entity_sprite('item', prize['item_id'], references), item_link)} "
+            f"| {prize['item_id']} | {prize['price']:,} coins |"
+        )
+    lines.append("")
 
 
 def _append_npc_trades(

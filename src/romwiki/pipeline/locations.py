@@ -18,6 +18,7 @@ from romwiki.schema import (
     Gen4Location,
     LocationConnection,
     LocationDailyEncounterPool,
+    LocationGameCornerPrize,
     LocationHoneyTree,
     LocationItem,
     LocationNpcTrade,
@@ -104,6 +105,10 @@ def extract_location_dataset(
         frontier_price_record_count = profile.parameters[
             "frontier_price_record_count"
         ]
+        game_corner_prize_table_offset = profile.parameters[
+            "game_corner_prize_table_offset"
+        ]
+        game_corner_prize_count = profile.parameters["game_corner_prize_count"]
         egg_gift_metadata = profile.parameters["egg_gifts"]
         static_encounter_location_metadata = profile.parameters.get(
             "static_encounter_locations", []
@@ -144,6 +149,10 @@ def extract_location_dataset(
     trophy_garden_header_id = profile.parameters.get(
         "trophy_garden_header_id", engine.TROPHY_GARDEN_HEADER_ID
     )
+    game_corner_header_id = profile.parameters.get(
+        "game_corner_prize_exchange_header_id",
+        engine.GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID,
+    )
     arm9_load_address = code_load_address(platform, result.image)
 
     filesystem = platform.filesystem_from_image(result.image)
@@ -157,6 +166,19 @@ def extract_location_dataset(
         messages.read(location_names_member)
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    game_corner_prizes = tuple(
+        LocationGameCornerPrize(
+            item_id=prize.item_id,
+            name=item_names[prize.item_id],
+            price=prize.price,
+        )
+        for prize in engine.parse_game_corner_prizes(
+            arm9_data,
+            offset=game_corner_prize_table_offset,
+            count=game_corner_prize_count,
+            item_count=len(item_names),
+        )
+    )
     pokemon_names = engine.parse_english_message_archive(
         messages.read(pokemon_names_member)
     )
@@ -485,6 +507,11 @@ def extract_location_dataset(
                     else trophy_garden_pool
                     if header.header_id == trophy_garden_header_id
                     else None
+                ),
+                game_corner_prizes=(
+                    game_corner_prizes
+                    if header.header_id == game_corner_header_id
+                    else ()
                 ),
             ).to_dict()
         )

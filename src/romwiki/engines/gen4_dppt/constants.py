@@ -26,6 +26,12 @@ PLATINUM_TROPHY_GARDEN_HEADER_ID = 287
 # 3/4). Level is also a compiled constant but was not verified per-ROM and is
 # intentionally not exposed here — see README.
 PLATINUM_ROAMING_SLOT_SPECIES_IDS = (481, 488, 491, 146, 145)
+
+# Veilstone City's Prize Exchange counter (src/scrcmd_game_corner_prize.c
+# reads a 19-entry {item, price} table at a fixed ARM9 offset, configured per
+# profile as game_corner_prize_table_offset/game_corner_prize_count since it's
+# a raw code address, not ROM archive data).
+PLATINUM_GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID = 144
 NATURE_NAMES = (
     "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
     "Bold", "Docile", "Relaxed", "Impish", "Lax",
