@@ -34,6 +34,7 @@ trainers = [
     "trainer-0001",
     "trainer-0005",
     "trainer-0015",
+    "trainer-0063",
     "trainer-1028",
 ]
 locations = [

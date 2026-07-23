@@ -123,10 +123,24 @@ class TrainerEnrichmentTests(unittest.TestCase):
                             "special_defense": 65,
                             "speed": 45,
                         },
+                        "types": [
+                            {"id": 12, "name": "grass"},
+                            {"id": 3, "name": "poison"},
+                        ],
                         "abilities": [
                             {"id": 65, "name": "Overgrow", "slug": "overgrow"},
                             {"id": 34, "name": "Chlorophyll", "slug": "chlorophyll"},
                         ],
+                    }
+                ],
+            },
+            move_dataset={
+                "game": "test",
+                "records": [
+                    {
+                        "move_id": 33,
+                        "type": {"id": 0, "name": "normal"},
+                        "damage_class": {"id": 0, "name": "physical"},
                     }
                 ],
             },
@@ -142,18 +156,21 @@ class TrainerEnrichmentTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
-        self.assertEqual(enriched["party_schema_version"], 2)
+        self.assertEqual(enriched["party_schema_version"], 3)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn('src="https://example.test/bulbasaur.png"', page)
+        self.assertIn('width="48" height="48" loading="lazy"', page)
         self.assertIn("Master Ball", page)
         self.assertIn("Play Rough", page)
-        self.assertIn(
-            '<p class="rw-party-card__meta"><span>Lv. 5</span>'
-            "<span>Timid</span><span>Male</span></p>",
-            page,
-        )
+        self.assertIn("rw-type--grass", page)
+        self.assertIn("rw-type--poison", page)
+        self.assertIn("rw-type--normal", page)
+        self.assertIn("rw-class--physical", page)
+        self.assertIn('<span class="rw-party-card__level">Lv. 5</span>', page)
+        self.assertIn('<dt>Nature</dt><dd>Timid</dd>', page)
+        self.assertIn('aria-label="Male" title="Male">♂</span>', page)
         self.assertIn(
             "| [Route 202](../locations/header-343.md) | 343 | `R202` | "
             "(181, 818) | `329:0` |",
@@ -163,6 +180,11 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["min_level"], 5)
         party_member = enriched["records"][0]["party"][0]
         self.assertEqual(party_member["moves_source"], "explicit")
+        self.assertEqual(party_member["pokemon"]["types"][0]["name"], "grass")
+        self.assertEqual(party_member["moves"][0]["type"]["name"], "normal")
+        self.assertEqual(
+            party_member["moves"][0]["damage_class"]["name"], "physical"
+        )
         self.assertEqual(
             party_member["source_fields"],
             {"difficulty": 0, "gender_ability": 0, "ball_seal": 0},

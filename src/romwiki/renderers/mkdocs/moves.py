@@ -14,8 +14,12 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
     empty_state,
+    machine_link,
     record_nav_link,
     record_navigation,
+    sprite_with_link,
+    summary_section,
+    table_sprite_cell,
     tutor_requirement,
     type_badges,
 )
@@ -147,77 +151,108 @@ def _render_record(
     references: ReferenceIndex | None = None,
 ) -> str:
     source_file = f"moves/{record['slug']}.md"
+    additional_properties = []
+    if record.get("machines"):
+        additional_properties.append(
+            (
+                "Machine",
+                ", ".join(
+                    machine_link(machine, source_file, references)
+                    for machine in record["machines"]
+                ),
+            )
+        )
+    if record.get("tutors"):
+        additional_properties.append(
+            (
+                "Move tutor",
+                ", ".join(tutor["location"]["name"] for tutor in record["tutors"]),
+            )
+        )
+    if record.get("replaces") and change is None:
+        additional_properties.append(("Replaces", record["replaces"]["name"]))
+    if record["priority"]:
+        additional_properties.append(("Priority", f"{record['priority']:+d}"))
+    if record["effect_chance"]:
+        additional_properties.append(("Effect chance", f"{record['effect_chance']}%"))
     lines = [
         f"# {record['name']}",
         "",
-        '<section class="rw-move-summary">',
-        type_badges([record["type"]]),
-        '<dl class="rw-summary__facts">',
-        f"<div><dt>Class</dt><dd>{class_badge(record['damage_class'])}</dd></div>",
-        f"<div><dt>Power</dt><dd>{_optional_value(record['power'])}</dd></div>",
-        f"<div><dt>Accuracy</dt><dd>{_accuracy(record['accuracy'])}</dd></div>",
-        f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
-        "</dl>",
-        "</section>",
-        "",
-        *_move_description(record),
-        *comparison_section(change, baseline_name, source_file, references),
-        "## Battle properties",
-        "",
-        "| Property | Value |",
-        "| -------- | ----- |",
-        f"| Type | {type_badges([record['type']])} |",
-        f"| Damage class | {class_badge(record['damage_class'])} |",
-        f"| Power | {_optional_value(record['power'])} |",
-        f"| Accuracy | {_accuracy(record['accuracy'])} |",
-        f"| PP | {record['pp']} |",
-        f"| Machine | {_machine_names(record)} |",
-        f"| Move tutor | {_tutor_locations(record)} |",
-        *(
-            [f"| Replaces | {record['replaces']['name']} |"]
-            if record.get("replaces")
-            else []
-        ),
-        f"| Priority | {record['priority']:+d} |",
-        f"| Effect chance | {_effect_chance(record['effect_chance'])} |",
-        "",
-        "## Tutor compatibility",
-        "",
-        *_tutor_compatibility(record, source_file),
-        "## Egg move learners",
-        "",
-        *_egg_move_learners(record, source_file),
-        '<details class="rw-source-details" markdown="1">',
-        "<summary>Engine details and provenance</summary>",
-        "",
-        "| Native field | Value |",
-        "| ------------ | ----- |",
-        f"| Effect ID | `{record['effect_id']}` |",
-        f"| Target ID | `0x{record['target_id']:04X}` |",
-        f"| Flags | `0x{record['flags']:02X}` |",
-        f"| Contest effect ID | `{record['contest_effect_id']}` |",
-        f"| Contest type ID | `{record['contest_type_id']}` |",
-        "",
-        (
-            "Source: exact ROM record from "
-            f"`{record['provenance']['archive']}` member "
-            f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
-            "shown in their native engine representation. The ROM does not store a "
-            "human-readable effect description; the Effect section and Pokédex "
-            "quote above come from PokéDB / PokéAPI reference data."
-        ),
-        *(
+        *summary_section(
+            "rw-move-summary",
             [
-                "Move name source: ROM message table "
-                f"`{name_source['archive']}` member `{name_source['member']}`."
-            ]
-            if name_source is not None
-            else []
+                f"<div><dt>Move ID</dt><dd>{record['move_id']}</dd></div>",
+                f"<div><dt>Type</dt><dd>{type_badges([record['type']])}</dd></div>",
+                f"<div><dt>Class</dt><dd>{class_badge(record['damage_class'])}</dd></div>",
+                f"<div><dt>Power</dt><dd>{_optional_value(record['power'])}</dd></div>",
+                f"<div><dt>Accuracy</dt><dd>{_accuracy(record['accuracy'])}</dd></div>",
+                f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
+            ],
         ),
-        "",
-        "</details>",
-        "",
+        *_move_description(record),
     ]
+    if additional_properties:
+        lines.extend(
+            [
+                "## Additional battle properties",
+                "",
+                "| Property | Value |",
+                "| -------- | ----- |",
+                *(f"| {label} | {value} |" for label, value in additional_properties),
+                "",
+            ]
+        )
+    if record.get("tutors"):
+        lines.extend(
+            [
+                "## Tutor compatibility",
+                "",
+                *_tutor_compatibility(record, source_file, references),
+            ]
+        )
+    if record.get("egg_move_pokemon"):
+        lines.extend(
+            [
+                "## Egg move learners",
+                "",
+                *_egg_move_learners(record, source_file, references),
+            ]
+        )
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
+    lines.extend(
+        [
+            '<details class="rw-source-details" markdown="1">',
+            "<summary>Engine details and provenance</summary>",
+            "",
+            "| Native field | Value |",
+            "| ------------ | ----- |",
+            f"| Effect ID | `{record['effect_id']}` |",
+            f"| Target ID | `0x{record['target_id']:04X}` |",
+            f"| Flags | `0x{record['flags']:02X}` |",
+            f"| Contest effect ID | `{record['contest_effect_id']}` |",
+            f"| Contest type ID | `{record['contest_type_id']}` |",
+            "",
+            (
+                "Source: exact ROM record from "
+                f"`{record['provenance']['archive']}` member "
+                f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
+                "shown in their native engine representation. The ROM does not store a "
+                "human-readable effect description; the Effect section and Pokédex "
+                "quote above come from PokéDB / PokéAPI reference data."
+            ),
+            *(
+                [
+                    "Move name source: ROM message table "
+                    f"`{name_source['archive']}` member `{name_source['member']}`."
+                ]
+                if name_source is not None
+                else []
+            ),
+            "",
+            "</details>",
+            "",
+        ]
+    )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
 
@@ -277,7 +312,7 @@ def _move_description(record: dict[str, Any]) -> list[str]:
             ]
         )
     if not lines:
-        lines = ["No PokéDB reference data is available for this move.", ""]
+        lines = empty_state("No PokéDB reference data is available for this move.")
     return lines
 
 
@@ -289,56 +324,63 @@ def _accuracy(value: int) -> str:
     return f"{value}%" if value else "Always hits"
 
 
-def _effect_chance(value: int) -> str:
-    return f"{value}%" if value else "—"
-
-
-def _machine_names(record: dict[str, Any]) -> str:
-    return ", ".join(machine["name"] for machine in record.get("machines", [])) or "—"
-
-
-def _tutor_locations(record: dict[str, Any]) -> str:
-    return ", ".join(
-        tutor["location"]["name"] for tutor in record.get("tutors", [])
-    ) or "—"
-
-
 def _tutor_compatibility(
-    record: dict[str, Any], source_file: str
+    record: dict[str, Any], source_file: str, references: ReferenceIndex | None
 ) -> list[str]:
-    tutors = record.get("tutors", [])
-    if not tutors:
-        return empty_state("Not taught by a shard move tutor.")
     lines = []
-    for tutor in tutors:
+    for tutor in record["tutors"]:
         costs = tutor_requirement(tutor)
-        pokemon = ", ".join(
-            _pokemon_link(value, source_file)
-            for value in tutor["compatible_pokemon"]
-        ) or "None"
+        lines.extend([f"**{tutor['location']['name']} — {costs}:**", ""])
         lines.extend(
-            [
-                f"**{tutor['location']['name']} — {costs}:**",
-                "",
-                pokemon,
-                "",
-            ]
+            _pokemon_sprite_table(
+                tutor["compatible_pokemon"],
+                source_file,
+                references,
+                "No compatible Pokémon.",
+            )
         )
     return lines
 
 
 def _egg_move_learners(
-    record: dict[str, Any], source_file: str
+    record: dict[str, Any], source_file: str, references: ReferenceIndex | None
 ) -> list[str]:
-    pokemon = record.get("egg_move_pokemon", [])
+    return _pokemon_sprite_table(
+        record["egg_move_pokemon"], source_file, references, "No egg move learners."
+    )
+
+
+def _pokemon_sprite_table(
+    pokemon: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+    empty_message: str,
+) -> list[str]:
     if not pokemon:
-        return empty_state("No egg-move learners.")
+        return empty_state(empty_message)
     return [
-        ", ".join(
-            _pokemon_link(value, source_file) for value in pokemon
-        ),
+        "| Pokémon | National Pokédex |",
+        "| ------- | ---------------: |",
+        *[
+            (
+                f"| {sprite_with_link(table_sprite_cell(_pokemon_sprite(value, references)), _pokemon_link(value, source_file))} | "
+                f"{_dex_number(value)} |"
+            )
+            for value in pokemon
+        ],
         "",
     ]
+
+
+def _dex_number(value: dict[str, Any]) -> str:
+    dex_id = value.get("national_dex_id")
+    return f"#{dex_id:03}" if isinstance(dex_id, int) else "—"
+
+
+def _pokemon_sprite(
+    value: dict[str, Any], references: ReferenceIndex | None
+) -> str | None:
+    return references.sprite_url("pokemon", value["member"]) if references else None
 
 
 def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
@@ -348,5 +390,4 @@ def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
         value.get("slug"),
         source_file,
     )
-
 

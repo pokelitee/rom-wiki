@@ -135,7 +135,12 @@ class PersonalEnrichmentTests(unittest.TestCase):
         )
         self.assertIn("[Focus Punch](../moves/focus-punch.md)", page)
         self.assertIn("## Wild held items", page)
-        self.assertIn("| Rare | Moon Stone | 81 |", page)
+        self.assertIn(
+            '| Rare | <span class="rw-cell-media">'
+            '<span class="rw-table-sprite rw-table-sprite--empty" '
+            'aria-hidden="true">—</span>Moon Stone</span> | 81 |',
+            page,
+        )
         self.assertIn("[Seed Bomb](../moves/seed-bomb.md)", page)
         self.assertIn("4 Red, 4 Green", page)
         self.assertIn("[Frenzy Plant](../moves/frenzy-plant.md)", page)

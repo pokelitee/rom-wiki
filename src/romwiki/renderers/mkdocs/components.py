@@ -3,7 +3,13 @@ from __future__ import annotations
 from html import escape
 from typing import Any
 
-from romwiki.renderers.mkdocs.references import ROUTES, entity_reference
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    ReferenceIndex,
+    entity_reference,
+    escape_markdown,
+    resolved_reference,
+)
 
 
 DISPLAY_NAMES = {
@@ -272,6 +278,31 @@ def table_sprite_cell(sprite: dict[str, Any] | str | None) -> str:
         f'<img class="rw-table-sprite" src="{escape(url, quote=True)}" '
         'alt="" loading="lazy" referrerpolicy="no-referrer">'
     )
+
+
+def sprite_with_link(sprite_html: str, link_html: str) -> str:
+    return f'<span class="rw-cell-media">{sprite_html}{link_html}</span>'
+
+
+def machine_link(
+    machine: dict[str, Any], source_file: str, references: ReferenceIndex | None
+) -> str:
+    item_id = machine.get("item_id")
+    if item_id is None:
+        return escape_markdown(str(machine["name"]))
+    reference = resolved_reference("item", item_id, machine["name"], index=references)
+    return ROUTES.markdown_link(reference, source_file)
+
+
+def summary_section(class_name: str, fact_lines: list[str]) -> list[str]:
+    return [
+        f'<section class="{class_name}">',
+        '<dl class="rw-summary__facts">',
+        *fact_lines,
+        "</dl>",
+        "</section>",
+        "",
+    ]
 
 
 def fact_grid(

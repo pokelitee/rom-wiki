@@ -177,18 +177,50 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertFalse(stale_page.exists())
         self.assertIn("../encounters/area-003.md", page)
+        self.assertIn('<a href="#wild-encounters">Yes</a>', page)
+        self.assertIn('<a href="#item-pickups">2</a>', page)
+        self.assertIn('<a href="#shops">2</a>', page)
+        self.assertIn('<span class="rw-summary__empty">0</span>', page)
         self.assertIn("../trainers/trainer-0246.md", page)
-        self.assertIn("| Visible | [Potion](../items/potion.md) | 17 | (8, 11) |", page)
+        self.assertIn(
+            '| Visible | <span class="rw-cell-media">'
+            '<img class="rw-table-sprite" src="https://example.test/potion.png" '
+            'alt="" loading="lazy" referrerpolicy="no-referrer">'
+            "[Potion](../items/potion.md)</span> | 17 | (8, 11) |",
+            page,
+        )
         self.assertIn("[Moon Stone](../items/moon-stone.md)", page)
         self.assertIn('src="https://example.test/potion.png"', page)
         self.assertIn('src="https://example.test/togepi.png"', page)
         self.assertIn('src="https://example.test/rotom.png"', page)
         self.assertIn("rw-table-sprite--empty", page)
-        self.assertIn("| [Protein](../items/protein.md) | 46 | ₽9,800 | Always |", page)
+        self.assertIn(
+            '| <span class="rw-cell-media">'
+            '<span class="rw-table-sprite rw-table-sprite--empty" aria-hidden="true">'
+            "—</span>[Protein](../items/protein.md)</span> | 46 | ₽9,800 | Always |",
+            page,
+        )
         self.assertIn("### Battle Frontier shop", page)
-        self.assertIn("| [TM06](../items/tm06.md) | 333 | 32 BP | Always |", page)
-        self.assertIn("| [Togepi](../pokemon/togepi.md) | Egg | 1 | — |", page)
-        self.assertIn("| [Rotom](../pokemon/rotom.md) | 20 |", page)
+        self.assertIn(
+            '| <span class="rw-cell-media">'
+            '<span class="rw-table-sprite rw-table-sprite--empty" aria-hidden="true">'
+            "—</span>[TM06](../items/tm06.md)</span> | 333 | 32 BP | Always |",
+            page,
+        )
+        self.assertIn(
+            '| <span class="rw-cell-media">'
+            '<img class="rw-table-sprite" src="https://example.test/togepi.png" '
+            'alt="" loading="lazy" referrerpolicy="no-referrer">'
+            "[Togepi](../pokemon/togepi.md)</span> | Egg | 1 | — |",
+            page,
+        )
+        self.assertIn(
+            '| <span class="rw-cell-media">'
+            '<img class="rw-table-sprite" src="https://example.test/rotom.png" '
+            'alt="" loading="lazy" referrerpolicy="no-referrer">'
+            "[Rotom](../pokemon/rotom.md)</span> | 20 |",
+            page,
+        )
         self.assertIn("header-047.md", page)
         self.assertIn("header-344.md", page)
         self.assertEqual(catalog["kind"], "locations")

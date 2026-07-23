@@ -2,10 +2,71 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.renderers.mkdocs.trainers import _append_ai_battle_items, _party_cards
+from romwiki.renderers.mkdocs.trainers import (
+    _append_ai_battle_items,
+    _append_same_name_trainers,
+    _group_ai_battle_items,
+    _party_cards,
+    _party_gender,
+    _trainer_provenance,
+    _trainer_summary,
+)
 
 
 class TrainerRenderingTests(unittest.TestCase):
+    def test_consolidates_location_methods_in_data_provenance(self) -> None:
+        lines = _trainer_provenance({
+            "provenance": {"archive": "trdata.narc", "member": 5},
+            "party_provenance": {"archive": "trpoke.narc", "member": 5},
+            "locations": [{"name": "Route 202"}],
+            "script_references": [{"name": "Route 203"}],
+        })
+        provenance = "\n".join(lines)
+
+        self.assertIn("**Trainer and party:**", provenance)
+        self.assertIn("**Overworld locations:**", provenance)
+        self.assertIn("**Scripted battle locations:**", provenance)
+        self.assertIn("`StartTrainerBattle`", provenance)
+
+    def test_renders_same_name_trainers_without_assuming_identity(self) -> None:
+        current = _related_trainer(5, "Route 202", 8, "Starly")
+        related = _related_trainer(19, "Route 204", 12, "Staravia")
+        lines: list[str] = []
+
+        _append_same_name_trainers(
+            lines,
+            current,
+            [current, related],
+            "trainers/trainer-0005.md",
+        )
+        page = "\n".join(lines)
+
+        self.assertIn("## Same-name trainers", page)
+        self.assertNotIn("<details", page)
+        self.assertIn("does not establish that they represent the same character", page)
+        self.assertIn("ID 19", page)
+        self.assertIn("Route 204", page)
+        self.assertIn("Staravia", page)
+
+    def test_collapses_large_same_name_groups(self) -> None:
+        current = _related_trainer(1, "Route 201", 5, "Bidoof")
+        related = [
+            _related_trainer(trainer_id, "Galactic HQ", 20, "Zubat")
+            for trainer_id in range(2, 8)
+        ]
+        lines: list[str] = []
+
+        _append_same_name_trainers(
+            lines,
+            current,
+            [current, *related],
+            "trainers/trainer-0001.md",
+        )
+        page = "\n".join(lines)
+
+        self.assertIn('<details markdown="1">', page)
+        self.assertIn("<summary>6 other parties</summary>", page)
+
     def test_groups_ai_battle_item_slots_and_renders_icons(self) -> None:
         record = {
             "ai_battle_items": [
@@ -25,19 +86,39 @@ class TrainerRenderingTests(unittest.TestCase):
         }
         lines: list[str] = []
 
-        _append_ai_battle_items(lines, record, "trainers/trainer-0005.md")
+        _append_ai_battle_items(
+            lines, _group_ai_battle_items(record), "trainers/trainer-0005.md"
+        )
         page = "\n".join(lines)
 
         self.assertEqual(page.count("[Full Restore](../items/full-restore.md)"), 1)
         self.assertIn('src="https://example.test/full-restore.png"', page)
         self.assertIn("| 2 |", page)
 
-    def test_renders_contextual_empty_state(self) -> None:
+    def test_omits_empty_ai_battle_item_section(self) -> None:
         lines: list[str] = []
 
-        _append_ai_battle_items(lines, {"ai_battle_items": []}, "trainers/test.md")
+        _append_ai_battle_items(lines, [], "trainers/test.md")
 
-        self.assertIn("No AI battle items.", lines)
+        self.assertEqual(lines, [])
+
+    def test_summarizes_grouped_ai_battle_items(self) -> None:
+        record = {
+            "trainer_id": 5,
+            "class_name": "leader",
+            "locations": [],
+            "script_references": [],
+            "double_battle": False,
+            "party": [_party_member([])],
+            "ai_battle_items": [
+                {"id": 23, "name": "Full Restore"},
+                {"id": 23, "name": "Full Restore"},
+            ],
+        }
+
+        page = "\n".join(_trainer_summary(record, _group_ai_battle_items(record)))
+
+        self.assertIn("<dt>AI items</dt><dd>Full Restore ×2</dd>", page)
 
     def test_numbers_explicit_moves_in_rom_order(self) -> None:
         party = [_party_member(["tackle", "growl"])]
@@ -45,8 +126,35 @@ class TrainerRenderingTests(unittest.TestCase):
         page = "\n".join(_party_cards(party, "trainers/trainer-0001/"))
 
         self.assertIn('<ol class="rw-party-card__moves"', page)
+        self.assertIn('aria-label="Bulbasaur moves"', page)
         self.assertLess(page.index("Tackle"), page.index("Growl"))
+        self.assertIn('<span class="rw-party-card__move-name">', page)
         self.assertNotIn("default level-up moves", page)
+
+    def test_formats_gender_symbols_with_accessible_labels(self) -> None:
+        self.assertIn('aria-label="Male"', _party_gender({"name": "Male"}))
+        self.assertIn("♂", _party_gender({"name": "Male"}))
+        self.assertIn('aria-label="Female"', _party_gender({"name": "Female"}))
+        self.assertIn("♀", _party_gender({"name": "Female"}))
+        self.assertIn(
+            'aria-label="Genderless"', _party_gender({"name": "Genderless"})
+        )
+        self.assertIn("⚲", _party_gender({"name": "Genderless"}))
+        unknown = _party_gender({"name": 'Future & "variant"'})
+        self.assertIn('aria-label="Future &amp; &quot;variant&quot;"', unknown)
+        self.assertIn("rw-party-card__gender--unknown", unknown)
+
+    def test_omits_optional_fields_missing_from_another_engine(self) -> None:
+        member = _party_member([])
+        for key in ("ability", "nature", "gender", "ivs", "evs", "calculated_stats"):
+            member.pop(key)
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertIn("Bulbasaur", page)
+        self.assertNotIn("<dt>Nature</dt>", page)
+        self.assertNotIn("<dt>Ability</dt>", page)
+        self.assertNotIn("<h4 class=\"rw-party-card__section-title\">Stats</h4>", page)
 
     def test_formats_default_moves_without_a_numbered_slot(self) -> None:
         page = "\n".join(
@@ -74,8 +182,12 @@ class TrainerRenderingTests(unittest.TestCase):
         page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn('href="../../abilities/overgrow/">Overgrow</a>', page)
-        self.assertIn('<p class="rw-party-card__meta"><span>Lv. 5</span>', page)
-        self.assertIn('<dl class="rw-party-card__details">', page)
+        self.assertIn('<span class="rw-party-card__level">Lv. 5</span>', page)
+        self.assertIn(
+            '<dl class="rw-party-card__details rw-party-card__section">', page
+        )
+        self.assertIn('<h4 class="rw-party-card__section-title">Stats</h4>', page)
+        self.assertIn('<h4 class="rw-party-card__section-title">Moves</h4>', page)
         self.assertIn('<table class="rw-party-card__stats">', page)
         self.assertIn('<tr><th scope="row">Value</th><td>42</td>', page)
         self.assertIn('<tr><th scope="row">IV</th><td>12</td>', page)
@@ -91,6 +203,7 @@ def _party_member(moves: list[str]) -> dict[str, object]:
             "name": "Bulbasaur",
             "slug": "bulbasaur",
             "sprite": None,
+            "types": [],
         },
         "moves": [{"id": index, "name": name} for index, name in enumerate(moves)],
         "moves_source": "explicit" if moves else "level-up",
@@ -111,6 +224,17 @@ def _stats(value: int) -> dict[str, int]:
         "special_attack": value,
         "special_defense": value,
         "speed": value,
+    }
+
+
+def _related_trainer(
+    trainer_id: int, location: str, level: int, pokemon: str
+) -> dict[str, object]:
+    return {
+        "trainer_id": trainer_id,
+        "locations": [{"name": location}],
+        "script_references": [],
+        "party": [{"level": level, "pokemon": {"name": pokemon}}],
     }
 
 

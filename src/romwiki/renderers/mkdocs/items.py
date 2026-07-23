@@ -16,6 +16,7 @@ from romwiki.renderers.mkdocs.components import (
     fact_grid,
     record_nav_link,
     record_navigation,
+    sprite_with_link,
     table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
@@ -153,12 +154,7 @@ def _render_record(
         ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}"),
     ]
     if record["fling_power"]:
-        mechanics.extend(
-            [
-                ("Fling power", str(record["fling_power"])),
-                ("Fling effect ID", str(record["fling_effect_id"])),
-            ]
-        )
+        mechanics.append(("Fling effect ID", str(record["fling_effect_id"])))
     if record["natural_gift_power"]:
         gift_type = record["natural_gift_type"]
         mechanics.append(
@@ -175,7 +171,6 @@ def _render_record(
         "",
         *_item_summary(record),
         *_item_description(record),
-        *comparison_section(change, baseline_name, source_file, references),
         "## Mechanics",
         "",
         *fact_grid(tuple(mechanics)),
@@ -186,8 +181,9 @@ def _render_record(
     _append_shops(lines, record["shops"], source_file)
     _append_pokemon(lines, record, source_file, references)
     _append_trainers(lines, record, source_file)
-    _append_gifts_and_trades(lines, record, source_file)
-    _append_evolutions(lines, record["evolutions"], source_file)
+    _append_gifts_and_trades(lines, record, source_file, references)
+    _append_evolutions(lines, record["evolutions"], source_file, references)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -218,11 +214,11 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
         )
     else:
         media = '<span class="rw-summary__placeholder">Icon unavailable</span>'
-    price = f"₽{record['price']:,}" if record["price"] else "Not sold"
+    price = f"₽{record['price']:,}"
     facts = [
         ("Item ID", str(record["item_id"])),
         ("Pocket", display_name(record["pocket"]["name"])),
-        ("Price", price),
+        ("Base price", price),
         ("Selectable", _yes_no(record["selectable"])),
         ("Can be discarded", _yes_no(not record["prevent_toss"])),
     ]
@@ -273,17 +269,16 @@ def _item_description(record: dict[str, Any]) -> list[str]:
             ]
         )
     if not lines:
-        lines = ["No PokéDB reference data is available for this item.", ""]
+        lines = empty_state("No PokéDB reference data is available for this item.")
     return lines
 
 
 def _append_locations(
     lines: list[str], record: dict[str, Any], source_file: str
 ) -> None:
-    lines.extend(["## Overworld locations", ""])
     if not record["locations"]:
-        lines.extend(empty_state("No overworld locations found."))
         return
+    lines.extend(["## Overworld locations", ""])
     lines.extend(
         [
             "| Location | Kind | Coordinates |",
@@ -303,10 +298,9 @@ def _append_locations(
 def _append_shops(
     lines: list[str], shops: list[dict[str, Any]], source_file: str
 ) -> None:
-    lines.extend(["## Shops", ""])
     if not shops:
-        lines.extend(empty_state("Not sold in any extracted shop."))
         return
+    lines.extend(["## Shops", ""])
     lines.extend(
         [
             "| Location | Shop | Price | Availability |",
@@ -330,17 +324,16 @@ def _append_pokemon(
     source_file: str,
     references: ReferenceIndex | None,
 ) -> None:
-    lines.extend(["## Wild held by", ""])
     if not record["wild_held_by"]:
-        lines.extend(empty_state("No wild held-item assignments found."))
         return
+    lines.extend(["## Wild held by", ""])
     lines.extend(
         [
-            "| Sprite | Pokémon | Slot |",
-            "| ------ | ------- | ---- |",
+            "| Pokémon | Rarity |",
+            "| ------- | ------ |",
             *[
-                f"| {_pokemon_sprite_cell(value, references)} "
-                f"| {_pokemon_link(value, source_file)} | {value['rarity'].title()} |"
+                f"| {sprite_with_link(_pokemon_sprite_cell(value, references), _pokemon_link(value, source_file))} "
+                f"| {value['rarity'].title()} |"
                 for value in record["wild_held_by"]
             ],
             "",
@@ -351,8 +344,11 @@ def _append_pokemon(
 def _pokemon_sprite_cell(
     pokemon: dict[str, Any], references: ReferenceIndex | None
 ) -> str:
+    identifier = pokemon.get("member", pokemon.get("id"))
     sprite_url = (
-        references.sprite_url("pokemon", pokemon["member"]) if references else None
+        references.sprite_url("pokemon", identifier)
+        if references and identifier is not None
+        else None
     )
     return table_sprite_cell(sprite_url)
 
@@ -360,7 +356,6 @@ def _pokemon_sprite_cell(
 def _append_trainers(
     lines: list[str], record: dict[str, Any], source_file: str
 ) -> None:
-    lines.extend(["## Trainer references", ""])
     values = [
         (value, f"Held by {value['pokemon']['name']}")
         for value in record["trainer_held_by"]
@@ -369,8 +364,8 @@ def _append_trainers(
         for value in record["trainer_battle_items"]
     ]
     if not values:
-        lines.extend(empty_state("No trainer references found."))
         return
+    lines.extend(["## Trainer references", ""])
     lines.extend(
         [
             "| Trainer | Reference |",
@@ -387,15 +382,17 @@ def _append_trainers(
 
 
 def _append_gifts_and_trades(
-    lines: list[str], record: dict[str, Any], source_file: str
+    lines: list[str],
+    record: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
-    lines.extend(["## Gifts and trades", ""])
     values = [
         (value, "Gift", value["pokemon"]) for value in record["gifts"]
     ] + [(value, "Trade", value["pokemon"]) for value in record["trades"]]
     if not values:
-        lines.extend(empty_state("No gift or trade references found."))
         return
+    lines.extend(["## Gifts and trades", ""])
     lines.extend(
         [
             "| Location | Kind | Pokémon |",
@@ -403,7 +400,7 @@ def _append_gifts_and_trades(
             *[
                 (
                     f"| {_location_link(value, source_file)} "
-                    f"| {kind} | {_pokemon_link(pokemon, source_file)} |"
+                    f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), _pokemon_link(pokemon, source_file))} |"
                 )
                 for value, kind, pokemon in values
             ],
@@ -413,20 +410,22 @@ def _append_gifts_and_trades(
 
 
 def _append_evolutions(
-    lines: list[str], evolutions: list[dict[str, Any]], source_file: str
+    lines: list[str],
+    evolutions: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
-    lines.extend(["## Evolutions", ""])
     if not evolutions:
-        lines.extend(empty_state("No extracted evolutions use this item."))
         return
+    lines.extend(["## Evolutions", ""])
     lines.extend(
         [
             "| From | To | Method |",
             "| ---- | -- | ------ |",
             *[
                 (
-                    f"| {_pokemon_link(value['source'], source_file)} | "
-                    f"{_pokemon_link(value['target'], source_file)} | "
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value['source'], references), _pokemon_link(value['source'], source_file))} "
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value['target'], references), _pokemon_link(value['target'], source_file))} | "
                     f"{display_name(value['method'])} |"
                 )
                 for value in evolutions

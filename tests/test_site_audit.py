@@ -1,0 +1,105 @@
+from __future__ import annotations
+
+from pathlib import Path
+import tempfile
+import unittest
+
+from romwiki.sites.audit import audit_site
+
+
+class SiteAuditTests(unittest.TestCase):
+    def test_accepts_accessible_pages_and_valid_local_links(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(
+                root / "index.html",
+                '<a class="rw-link" href="detail/#facts">Detail</a>',
+            )
+            _write_page(
+                root / "detail" / "index.html",
+                """
+                <h2 id="facts">Facts</h2>
+                <img src="https://example.test/sprite.png" alt="Sprite" loading="lazy">
+                <details><summary>Source</summary><p>ROM</p></details>
+                <table><thead><tr><th>Field</th></tr></thead></table>
+                """,
+            )
+            assets = root / "assets"
+            assets.mkdir()
+            (assets / "site.css").write_text(".rw-link { color: blue; }", encoding="utf-8")
+
+            report = audit_site(root)
+
+        self.assertTrue(report.ok)
+        self.assertEqual(report.page_count, 2)
+        self.assertEqual(report.link_count, 1)
+
+    def test_reports_broken_structure_links_and_custom_styles(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.html").write_text(
+                """
+                <!doctype html><html><head><title>Broken</title></head><body>
+                <main><h1 id="same">Broken</h1><h3 id="same">Jump</h3>
+                <a href="missing/#nowhere">Missing</a>
+                <img class="rw-unstyled" src="image.png">
+                <details><p>No summary</p></details>
+                <table><tr><td>No heading</td></tr></table>
+                </main></body></html>
+                """,
+                encoding="utf-8",
+            )
+            (root / "site.css").write_text(".rw-unused {}", encoding="utf-8")
+
+            report = audit_site(root)
+
+        codes = {issue.code for issue in (*report.errors, *report.warnings)}
+        self.assertIn("document-lang", codes)
+        self.assertIn("duplicate-id", codes)
+        self.assertIn("heading-order", codes)
+        self.assertIn("link-target", codes)
+        self.assertIn("image-alt", codes)
+        self.assertIn("details-summary", codes)
+        self.assertIn("table-header", codes)
+        self.assertIn("css-unused", codes)
+
+    def test_enforces_page_and_image_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", '<img src="one.png" alt=""><img src="two.png" alt="">')
+
+            report = audit_site(root, max_html_bytes=10, max_images_per_page=1)
+
+        self.assertEqual(
+            {issue.code for issue in report.errors}, {"image-count", "page-size"}
+        )
+
+    def test_resolves_directory_and_site_root_links_in_combined_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", '<a href="./">Home</a>')
+            _write_page(
+                root / "game" / "index.html",
+                '<a href="../">Portal</a><a href="/pokemon/">Pokémon</a>',
+            )
+            _write_page(
+                root / "game" / "pokemon" / "index.html",
+                '<a href="../../">Portal</a>',
+            )
+
+            report = audit_site(root)
+
+        self.assertTrue(report.ok, [issue.format() for issue in report.errors])
+
+
+def _write_page(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "<!doctype html><html lang=\"en\"><head><title>Test</title></head>"
+        f"<body><main><h1>Test</h1>{content}</main></body></html>",
+        encoding="utf-8",
+    )
+
+
+if __name__ == "__main__":
+    unittest.main()

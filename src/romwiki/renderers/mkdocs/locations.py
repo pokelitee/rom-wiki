@@ -13,6 +13,8 @@ from romwiki.renderers.mkdocs.catalog import (
 from romwiki.renderers.mkdocs.components import (
     record_nav_link,
     record_navigation,
+    sprite_with_link,
+    summary_section,
     table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
@@ -159,7 +161,6 @@ def _render_location(
         f"# {record['name']}",
         "",
         *_location_summary(record),
-        *comparison_section(change, baseline_name, source_file, references),
     ]
     if record["encounter_id"] is not None:
         lines.extend(
@@ -192,6 +193,7 @@ def _render_location(
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
     _append_connections(lines, record["connections"], source_file)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -245,22 +247,36 @@ def _append_record_navigation(
 
 
 def _location_summary(record: dict[str, Any]) -> list[str]:
-    facts = (
-        ("Wild encounters", "Yes" if record["encounter_id"] is not None else "No"),
-        ("Items", len(record.get("items", []))),
-        ("Shops", len(record.get("shops", []))),
-        ("Gifts", len(record.get("pokemon_gifts", []))),
-        ("Trades", len(record.get("npc_trades", []))),
-        ("Static encounters", len(record.get("static_encounters", []))),
-        ("Trainers", len(record.get("trainers", []))),
-        ("Warps", len(record.get("warps", []))),
-        ("Connections", len(record.get("connections", []))),
-    )
-    lines = ['<section class="rw-location-summary">', '<dl class="rw-summary__facts">']
-    for label, value in facts:
-        lines.append(f"<div><dt>{label}</dt><dd>{value}</dd></div>")
-    lines.extend(["</dl>", "</section>", ""])
-    return lines
+    has_encounters = record["encounter_id"] is not None
+    facts: list[tuple[str, int | str, str, bool]] = [
+        (
+            "Wild encounters",
+            "Yes" if has_encounters else "No",
+            "wild-encounters",
+            has_encounters,
+        )
+    ]
+    for label, key, anchor in (
+        ("Items", "items", "item-pickups"),
+        ("Shops", "shops", "shops"),
+        ("Gifts", "pokemon_gifts", "gift-pokemon"),
+        ("Trades", "npc_trades", "in-game-trades"),
+        ("Static encounters", "static_encounters", "static-encounters"),
+        ("Trainers", "trainers", "trainers"),
+        ("Warps", "warps", "warps"),
+        ("Connections", "connections", "outdoor-connections"),
+    ):
+        count = len(record.get(key, []))
+        facts.append((label, count, anchor, count > 0))
+    fact_lines = []
+    for label, value, anchor, populated in facts:
+        rendered_value = (
+            f'<a href="#{anchor}">{value}</a>'
+            if populated
+            else f'<span class="rw-summary__empty">{value}</span>'
+        )
+        fact_lines.append(f"<div><dt>{label}</dt><dd>{rendered_value}</dd></div>")
+    return summary_section("rw-location-summary", fact_lines)
 
 
 def _append_items(
@@ -275,8 +291,8 @@ def _append_items(
         [
             "## Item pickups",
             "",
-            "| Icon | Kind | Item | Item ID | Position |",
-            "| ---- | ---- | ---- | ------: | -------- |",
+            "| Kind | Item | Item ID | Position |",
+            "| ---- | ---- | ------: | -------- |",
         ]
     )
     for item in items:
@@ -284,9 +300,9 @@ def _append_items(
             "item", item["item_id"], item["name"], source_file, references
         )
         lines.append(
-            f"| {_entity_sprite('item', item['item_id'], references)} "
-            f"| {item['kind'].title()} | {item_link} | {item['item_id']} | "
-            f"({item['x']}, {item['z']}) |"
+            f"| {item['kind'].title()} | "
+            f"{sprite_with_link(_entity_sprite('item', item['item_id'], references), item_link)} "
+            f"| {item['item_id']} | ({item['x']}, {item['z']}) |"
         )
     lines.append("")
 
@@ -319,8 +335,8 @@ def _append_shops(
             [
                 f"### {label}",
                 "",
-                "| Icon | Item | Item ID | Price | Available after |",
-                "| ---- | ---- | ------: | ----: | --------------- |",
+                "| Item | Item ID | Price | Available after |",
+                "| ---- | ------: | ----: | --------------- |",
             ]
         )
         currency = shop.get("currency", "money")
@@ -344,8 +360,8 @@ def _append_shops(
             else:
                 availability = f"{badges} badges"
             lines.append(
-                f"| {_entity_sprite('item', item['item_id'], references)} "
-                f"| {item_link} | {item['item_id']} | {price} | "
+                f"| {sprite_with_link(_entity_sprite('item', item['item_id'], references), item_link)} "
+                f"| {item['item_id']} | {price} | "
                 f"{availability} |"
             )
         lines.append("")
@@ -394,8 +410,8 @@ def _append_pokemon_gifts(
             "These are literal gift outcomes in this map's scripts; conditional "
             "branches may be mutually exclusive.",
             "",
-            "| Sprite | Pokémon | Kind | Level | Item icon | Held item |",
-            "| ------ | ------- | ---- | ----: | --------- | --------- |",
+            "| Pokémon | Kind | Level | Held item |",
+            "| ------- | ---- | ----: | --------- |",
         ]
     )
     for gift in gifts:
@@ -424,9 +440,14 @@ def _append_pokemon_gifts(
             if gift["held_item_id"] is not None and gift["held_item_name"]
             else "—"
         )
+        held_item_cell = (
+            sprite_with_link(held_item_sprite, held_item)
+            if gift["held_item_id"] is not None and gift["held_item_name"]
+            else "—"
+        )
         lines.append(
-            f"| {pokemon_sprite} | {pokemon} | {kind} | {gift['level']} | "
-            f"{held_item_sprite} | {held_item} |"
+            f"| {sprite_with_link(pokemon_sprite, pokemon)} | {kind} | {gift['level']} | "
+            f"{held_item_cell} |"
         )
     lines.append("")
 
@@ -446,8 +467,8 @@ def _append_static_encounters(
             "These are literal wild-battle commands in this map's scripts; "
             "conditional branches may make encounters unavailable.",
             "",
-            "| Sprite | Pokémon | Level |",
-            "| ------ | ------- | ----: |",
+            "| Pokémon | Level |",
+            "| ------- | ----: |",
         ]
     )
     rendered_outcomes = set()
@@ -466,7 +487,7 @@ def _append_static_encounters(
         sprite = _entity_sprite(
             "pokemon", encounter["species_id"], references
         )
-        lines.append(f"| {sprite} | {pokemon} | {encounter['level']} |")
+        lines.append(f"| {sprite_with_link(sprite, pokemon)} | {encounter['level']} |")
     lines.append("")
 
 
@@ -484,10 +505,8 @@ def _append_npc_trades(
             "",
             "The received Pokémon keeps the level of the Pokémon you trade away.",
             "",
-            "| Give sprite | Give | Receive sprite | Receive | Nickname | "
-            "Nature | Item icon | Held item | IVs | OT |",
-            "| ----------- | ---- | -------------- | ------- | -------- | "
-            "------ | --------- | --------- | --- | -- |",
+            "| Give | Receive | Nickname | Nature | Held item | IVs | OT |",
+            "| ---- | ------- | -------- | ------ | --------- | --- | -- |",
         ]
     )
     stat_names = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
@@ -539,10 +558,15 @@ def _append_npc_trades(
             if trade["held_item_id"] is not None and trade["held_item_name"]
             else "—"
         )
+        held_item_cell = (
+            sprite_with_link(held_item_sprite, held_item)
+            if trade["held_item_id"] is not None and trade["held_item_name"]
+            else "—"
+        )
         lines.append(
-            f"| {requested_sprite} | {requested} | {offered_sprite} "
-            f"| {offered} | {trade['nickname']} | {trade['nature']} | "
-            f"{held_item_sprite} | {held_item} | {ivs} | {ot} |"
+            f"| {sprite_with_link(requested_sprite, requested)} "
+            f"| {sprite_with_link(offered_sprite, offered)} | {trade['nickname']} | "
+            f"{trade['nature']} | {held_item_cell} | {ivs} | {ot} |"
         )
     lines.append("")
 

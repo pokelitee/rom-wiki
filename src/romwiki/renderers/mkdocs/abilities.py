@@ -11,9 +11,12 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text,
 )
 from romwiki.renderers.mkdocs.components import (
+    display_name,
     empty_state,
     record_nav_link,
     record_navigation,
+    sprite_with_link,
+    summary_section,
     table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
@@ -137,20 +140,17 @@ def _render_record(
         "",
         *_ability_summary(record),
         *_ability_description(record),
-        *comparison_section(change, baseline_name, source_file, references),
         "## Pokémon",
         "",
     ]
     if record["pokemon"]:
         lines.extend(
             [
-                "| <span class=\"rw-visually-hidden\">Sprite</span> | Pokémon | "
-                "National Pokédex | Ability slot |",
-                "| ---- | ------- | ---------------: | ------------ |",
+                "| Pokémon | National Pokédex | Ability slot |",
+                "| ------- | ---------------: | ------------ |",
                 *[
                     (
-                        f"| {table_sprite_cell(pokemon.get('sprite'))} | "
-                        f"{_pokemon_link(pokemon, source_file)} | "
+                        f"| {sprite_with_link(table_sprite_cell(pokemon.get('sprite')), _pokemon_link(pokemon, source_file))} | "
                         f"#{pokemon['national_dex_id']:03} | "
                         f"{', '.join(str(slot) for slot in pokemon['slots'])} |"
                     )
@@ -160,8 +160,9 @@ def _render_record(
             ]
         )
     else:
-        lines.extend(empty_state("No PokÃ©mon are assigned this ability."))
+        lines.extend(empty_state("No Pokémon are assigned this ability."))
 
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -180,15 +181,14 @@ def _render_record(
 
 
 def _ability_summary(record: dict[str, Any]) -> list[str]:
-    return [
-        '<section class="rw-ability-summary">',
-        '<dl class="rw-summary__facts">',
-        f"<div><dt>Ability ID</dt><dd>{record['ability_id']}</dd></div>",
-        f"<div><dt>Pokémon with this ability</dt><dd>{len(record['pokemon'])}</dd></div>",
-        "</dl>",
-        "</section>",
-        "",
-    ]
+    return summary_section(
+        "rw-ability-summary",
+        [
+            f"<div><dt>Ability ID</dt><dd>{record['ability_id']}</dd></div>",
+            f"<div><dt>Pokémon with this ability</dt>"
+            f"<dd>{len(record['pokemon'])}</dd></div>",
+        ],
+    )
 
 
 def _ability_description(record: dict[str, Any]) -> list[str]:
@@ -206,7 +206,7 @@ def _ability_description(record: dict[str, Any]) -> list[str]:
         lines.append("")
     if flavor_text:
         version_label = (
-            f"{_label(reference['version'])} Pokédex" if reference.get("version") else "Pokédex"
+            f"{display_name(reference['version'])} Pokédex" if reference.get("version") else "Pokédex"
         )
         lines.extend(
             [
@@ -218,12 +218,8 @@ def _ability_description(record: dict[str, Any]) -> list[str]:
             ]
         )
     if not lines:
-        lines = ["No PokéDB reference data is available for this ability.", ""]
+        lines = empty_state("No PokéDB reference data is available for this ability.")
     return lines
-
-
-def _label(value: str) -> str:
-    return " ".join(part.capitalize() for part in value.split("-"))
 
 
 def _pokemon_link(pokemon: dict[str, Any], source_file: str) -> str:

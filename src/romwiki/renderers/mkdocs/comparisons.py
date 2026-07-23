@@ -70,17 +70,28 @@ def comparison_section(
     if status == "added":
         return [
             *lines,
-            f"This record was added and does not exist in **{escape(baseline)}**.",
+            '!!! success "Added in this hack"',
+            f"    This record was added and does not exist in **{escape(baseline)}**.",
             "",
         ]
     if status == "removed":
         return [
             *lines,
-            f"This record exists in **{escape(baseline)}** but not in this hack.",
+            '!!! warning "Removed in this hack"',
+            f"    This record exists in **{escape(baseline)}** but not in this hack.",
             "",
         ]
+    change_count = len(entry["changes"])
+    noun = "field changed" if change_count == 1 else "fields changed"
     lines.extend(
-        [f"Compared with **{escape(baseline)}**.", "", '<div class="rw-changes">']
+        [
+            f"Compared with **{escape(baseline)}**.",
+            "",
+            '<details markdown="1">',
+            f"<summary>{change_count} {noun}</summary>",
+            "",
+            '<div class="rw-changes">',
+        ]
     )
     for change in entry["changes"]:
         value = _format_change(
@@ -93,12 +104,12 @@ def comparison_section(
         lines.extend(
             [
                 '<section class="rw-change">',
-                f'<h3 class="rw-change__field">{label}</h3>',
+                f'<p class="rw-change__field">{label}</p>',
                 f'<div class="rw-change__value">{value}</div>',
                 "</section>",
             ]
         )
-    lines.extend(["</div>", ""])
+    lines.extend(["</div>", "", "</details>", ""])
     return lines
 
 
@@ -777,11 +788,11 @@ def _format_plain_lines(values: list[str]) -> str:
 def _format_collection(values: list[str], singular: str, plural: str) -> str:
     if not values:
         return "No changes"
+    label = singular if len(values) == 1 else plural
     entries = "".join(f"<li>{value}</li>" for value in values)
     return (
-        f"<details><summary>{len(values)} "
-        f"{singular if len(values) == 1 else plural}</summary>"
-        f'<ul class="rw-comparison-list">{entries}</ul></details>'
+        f'<p class="rw-comparison-count">{len(values)} {label}</p>'
+        f'<ul class="rw-comparison-list">{entries}</ul>'
     )
 
 

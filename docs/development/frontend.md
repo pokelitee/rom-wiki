@@ -121,6 +121,26 @@ written below `build/mkdocs-dev/`. Link validation for excluded detail pages is
 disabled only in this configuration.
 
 Always use the production configuration or the multi-site build before deployment.
+The deploy workflow runs the unit suite, builds the combined artifact, and audits
+the rendered result. Run the same artifact checks locally with:
+
+```console
+romwiki site build --all --output dist
+romwiki site audit dist
+```
+
+The audit validates local links and fragments, document landmarks and headings,
+image alternatives and loading behavior, table and disclosure semantics, custom
+CSS usage, and conservative page-size and image-count budgets. It operates on the
+combined artifact so portal links and links between independently built game sites
+are resolved in their deployment context.
+
+`tests/test_frontend_contract.py` provides a browser-independent visual contract
+for the shared palettes, focus treatment, reduced-motion behavior, responsive
+breakpoint, and dense party-card layout. Renderer tests cover the corresponding
+semantic markup. This keeps layout regressions deterministic in CI; manual review
+at the two documented viewport classes remains appropriate for changes whose
+appearance depends on browser font rasterization.
 
 ## Record components
 
@@ -159,7 +179,8 @@ must never derive those mechanics from raw engine fields. Cards group level,
 nature, and gender into one identity line, use a compact aligned list for ability
 and held item, and show final stats, IVs, and EVs in a six-column stat matrix.
 
-Trainers also carry an "AI battle items" section: the ROM's
+Trainers also carry an "AI battle items" summary and, when populated, detail
+section: the ROM's
 4-slot `reward_item_ids` array holds items the trainer's own AI may use on its
 party mid-battle (Full Restores, X-stat items), never a reward for the player,
 so the field and its UI are both named for what it actually is. Wild encounter
@@ -180,6 +201,7 @@ syntax follows the surrounding component rather than defining link identity.
 
 ## Review checklist
 
+- Run the unit suite and `romwiki site audit` against the combined artifact.
 - Test keyboard focus, labels, and the live catalog result count.
 - Verify the full index remains usable when JavaScript is disabled.
 - Verify failed catalog and sprite requests reveal their fallbacks.

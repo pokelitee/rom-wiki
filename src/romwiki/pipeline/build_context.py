@@ -153,6 +153,7 @@ class GameBuildContext:
                 self.trainers_raw(),
                 self.pokedb,
                 pokemon_dataset=self.pokemon(),
+                move_dataset=self.moves(),
                 move_names=self.profile.move_names,
                 sprite_version=self.profile.sprite_version,
                 reference_version=self.profile.base_game,

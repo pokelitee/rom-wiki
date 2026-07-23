@@ -103,9 +103,15 @@ class ItemDatasetTests(unittest.TestCase):
         self.assertIn("# Master Ball", page)
         self.assertIn("<dt>Item ID</dt><dd>1</dd>", page)
         self.assertIn("<dt>Pocket</dt><dd>Poké Balls</dd>", page)
+        self.assertIn("<dt>Base price</dt><dd>₽0</dd>", page)
+        self.assertEqual(page.count("<dt>Fling power</dt>"), 1)
+        self.assertIn("<dt>Fling effect ID</dt><dd>7</dd>", page)
         self.assertIn("[Route 1](../locations/header-010.md)", page)
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("trainer-0002.md", page)
+        self.assertNotIn("## Shops", page)
+        self.assertNotIn("## Gifts and trades", page)
+        self.assertNotIn("## Evolutions", page)
         self.assertEqual(catalog["kind"], "items")
         self.assertEqual(
             catalog["records"][0]["features"],
@@ -132,8 +138,8 @@ def _item_record() -> dict:
         "hold_effect_id": 0,
         "hold_effect_parameter": 0,
         "pluck_effect_id": 0,
-        "fling_effect_id": 0,
-        "fling_power": 0,
+        "fling_effect_id": 7,
+        "fling_power": 30,
         "natural_gift_power": 0,
         "natural_gift_type_id": 0,
         "natural_gift_type": {"id": 0, "name": "Normal"},

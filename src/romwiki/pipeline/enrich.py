@@ -201,6 +201,7 @@ def enrich_trainer_dataset(
     pokedb: PokeDBGeneration,
     *,
     pokemon_dataset: dict[str, Any] | None = None,
+    move_dataset: dict[str, Any] | None = None,
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
     reference_version: str | None = None,
@@ -212,6 +213,7 @@ def enrich_trainer_dataset(
     if not isinstance(engine, str):
         raise DataSourceError("Trainer dataset must declare its source engine")
     pokemon_records = _trainer_pokemon_index(dataset, pokemon_dataset)
+    move_records = _trainer_move_index(dataset, move_dataset)
     move_names = _resolve_move_names(dataset, move_names)
     item_names = _resolve_item_names(dataset)
     records = []
@@ -228,6 +230,7 @@ def enrich_trainer_dataset(
                 reference_version,
                 engine=engine,
                 pokemon_records=pokemon_records,
+                move_records=move_records,
             )
         )
     enriched = {
@@ -478,6 +481,7 @@ def _enrich_trainer(
     *,
     engine: str = "gen4_dppt",
     pokemon_records: Mapping[int | str, dict[str, Any]] | None = None,
+    move_records: Mapping[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     party = []
     for raw_member in source["party"]:
@@ -543,6 +547,7 @@ def _enrich_trainer(
                     "name": pokemon_name
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
                     "sprite": pokemon_sprite,
+                    "types": game_record.get("types", []) if game_record else [],
                 },
                 "ability": ability,
                 "held_item": (
@@ -551,7 +556,18 @@ def _enrich_trainer(
                     else None
                 ),
                 "moves": [
-                    {"id": move_id, "name": _move_name(move_id, pokedb, move_names)}
+                    {
+                        "id": move_id,
+                        "name": _move_name(move_id, pokedb, move_names),
+                        **(
+                            {
+                                "type": move_records[move_id]["type"],
+                                "damage_class": move_records[move_id]["damage_class"],
+                            }
+                            if move_records is not None and move_id in move_records
+                            else {}
+                        ),
+                    }
                     for move_id in pokemon["move_ids"]
                     if move_id
                 ],
@@ -594,6 +610,24 @@ def _trainer_pokemon_index(
         if isinstance(slug, str):
             index[slug] = record
     return index
+
+
+def _trainer_move_index(
+    trainer_dataset: Mapping[str, Any],
+    move_dataset: dict[str, Any] | None,
+) -> dict[int, dict[str, Any]] | None:
+    if move_dataset is None:
+        return None
+    if move_dataset.get("game") != trainer_dataset.get("game"):
+        raise DataSourceError("Trainer and move datasets must be for the same game")
+    records = move_dataset.get("records")
+    if not isinstance(records, list):
+        raise DataSourceError("Move dataset records must be a list")
+    return {
+        record["move_id"]: record
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("move_id"), int)
+    }
 
 
 def _trainer_ability(
@@ -1018,6 +1052,7 @@ def _enrich_compatible_machines(
                 "name": machine["name"],
                 "kind": machine["kind"],
                 "number": machine["number"],
+                "item_id": machine.get("item_id"),
                 "move": {
                     "id": machine["move_id"],
                     "slug": slug,

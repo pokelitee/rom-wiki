@@ -10,8 +10,7 @@
 .md-footer-meta__inner { justify-content: center; }
 .rw-footer { min-width: 0; max-width: 100%; padding: 0.3rem 0; text-align: center; }
 .rw-footer__disclaimer { max-width: 34rem; margin: 0 auto; font-size: 0.6rem; line-height: 1.55; }
-.rw-footer__credit,
-.rw-footer__generator { margin: 0.35rem 0 0; font-size: 0.62rem; }
+.rw-footer__credit { margin: 0.35rem 0 0; font-size: 0.62rem; }
 .rw-footer__link {
   color: inherit;
   text-decoration: underline;

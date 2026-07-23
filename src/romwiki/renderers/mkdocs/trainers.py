@@ -11,11 +11,14 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text as _write_text,
 )
 from romwiki.renderers.mkdocs.components import (
-    empty_state,
+    class_badge,
     display_name,
     record_nav_link,
     record_navigation,
+    sprite_with_link,
+    summary_section,
     table_sprite_cell,
+    type_badges,
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
@@ -30,6 +33,9 @@ from romwiki.renderers.mkdocs.references import (
 )
 
 
+_SAME_NAME_COLLAPSE_THRESHOLD = 5
+
+
 def render_trainer_pages(
     dataset: dict[str, Any],
     output_root: Path,
@@ -39,6 +45,10 @@ def render_trainer_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     records = [record for record in dataset["records"] if record["party"]]
+    same_name_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for record in records:
+        key = (record["class_name"], record["name"])
+        same_name_groups.setdefault(key, []).append(record)
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -91,16 +101,11 @@ def render_trainer_pages(
                     references,
                     previous,
                     following,
+                    same_name_groups[(record["class_name"], record["name"])],
                 ),
             )
             page_count += 1
-        location_names = " / ".join(
-            dict.fromkeys(
-                location["name"]
-                for location in record["locations"]
-                + record.get("script_references", [])
-            )
-        )
+        location_names = " / ".join(_location_names(record))
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -138,6 +143,7 @@ def render_trainer_pages(
                     None,
                     previous,
                     following,
+                    same_name_groups[(record["class_name"], record["name"])],
                 ),
             )
             page_count += 1
@@ -183,12 +189,7 @@ def _catalog_record(
     change: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     levels = [member["level"] for member in record["party"]]
-    location_names = list(
-        dict.fromkeys(
-            location["name"]
-            for location in record["locations"] + record.get("script_references", [])
-        )
-    )
+    location_names = _location_names(record)
     party = [
         {
             "name": member["pokemon"]["name"],
@@ -213,7 +214,7 @@ def _catalog_record(
                 location["name"],
                 location.get("header_id"),
             )
-            for location in record["locations"] + record.get("script_references", [])
+            for location in _combined_locations(record)
         ]
     )
     species = [member["name"] for member in party]
@@ -248,33 +249,35 @@ def _render_trainer(
     references: ReferenceIndex | None = None,
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
+    same_name_records: list[dict[str, Any]] | None = None,
 ) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
     source_url = f"trainers/trainer-{record['trainer_id']:04}/"
+    grouped_ai_items = _group_ai_battle_items(record)
     lines = [
         f"# {label}",
         "",
-        *_trainer_summary(record),
-        *comparison_section(change, baseline_name, source_file, references),
+        *_trainer_summary(record, grouped_ai_items),
+        "## Party",
+        "",
+        *_party_cards(record["party"], source_url),
     ]
+    _append_ai_battle_items(lines, grouped_ai_items, source_file)
     _append_locations(lines, record["locations"], source_file)
     _append_script_references(
         lines, record.get("script_references", []), source_file
     )
-    lines.extend(["## Party", "", *_party_cards(record["party"], source_url)])
-    _append_ai_battle_items(lines, record, source_file)
+    _append_same_name_trainers(
+        lines, record, same_name_records or [], source_file
+    )
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
             "<summary>Data provenance</summary>",
             "",
-            (
-                f"Source: exact ROM trainer record from `{record['provenance']['archive']}` "
-                f"member `{record['provenance']['member']}` and party record from "
-                f"`{record['party_provenance']['archive']}` member "
-                f"`{record['party_provenance']['member']}`."
-            ),
+            *_trainer_provenance(record),
             "",
             "</details>",
             "",
@@ -284,35 +287,35 @@ def _render_trainer(
     return "\n".join(lines)
 
 
+def _group_ai_battle_items(record: dict[str, Any]) -> list[dict[str, Any]]:
+    grouped_items: dict[int | str, dict[str, Any]] = {}
+    for item in record.get("ai_battle_items", []):
+        if not item.get("name"):
+            continue
+        identity = item.get("id", item.get("slug", item["name"]))
+        grouped = grouped_items.setdefault(identity, {"item": item, "quantity": 0})
+        grouped["quantity"] += 1
+    return list(grouped_items.values())
+
+
 def _append_ai_battle_items(
-    lines: list[str], record: dict[str, Any], source_file: str
+    lines: list[str], grouped_items: list[dict[str, Any]], source_file: str
 ) -> None:
+    if not grouped_items:
+        return
     lines.extend(
         [
             "## AI battle items",
             "",
             "Items the trainer AI may use during battle. These are not prize items.",
             "",
+            "| Item | Quantity |",
+            "| ---- | -------: |",
         ]
     )
-    items = [item for item in record.get("ai_battle_items", []) if item.get("name")]
-    if not items:
-        lines.extend(empty_state("No AI battle items."))
-        return
-    grouped_items: dict[int | str, dict[str, Any]] = {}
-    for item in items:
-        identity = item.get("id", item.get("slug", item["name"]))
-        grouped = grouped_items.setdefault(identity, {"item": item, "quantity": 0})
-        grouped["quantity"] += 1
-
-    lines.extend(
-        [
-            "| Icon | Item | Quantity |",
-            "| ---- | ---- | -------: |",
-        ]
-    )
-    for identity, grouped in grouped_items.items():
+    for grouped in grouped_items:
         item = grouped["item"]
+        identity = item.get("id", item.get("slug", item["name"]))
         item_link = ROUTES.markdown_link(
             entity_reference(
                 "item",
@@ -323,7 +326,7 @@ def _append_ai_battle_items(
             source_file,
         )
         lines.append(
-            f"| {table_sprite_cell(item.get('sprite_url'))} | {item_link} | "
+            f"| {sprite_with_link(table_sprite_cell(item.get('sprite_url')), item_link)} | "
             f"{grouped['quantity']} |"
         )
     lines.append("")
@@ -361,6 +364,29 @@ def _append_record_navigation(
     )
 
 
+def _trainer_provenance(record: dict[str, Any]) -> list[str]:
+    entries = [
+        (
+            "- **Trainer and party:** Exact ROM trainer record from "
+            f"`{record['provenance']['archive']}` member "
+            f"`{record['provenance']['member']}` and party record from "
+            f"`{record['party_provenance']['archive']}` member "
+            f"`{record['party_provenance']['member']}`."
+        )
+    ]
+    if record.get("locations"):
+        entries.append(
+            "- **Overworld locations:** Trainer event objects whose script IDs "
+            "resolve directly to this trainer record."
+        )
+    if record.get("script_references"):
+        entries.append(
+            "- **Scripted battle locations:** Literal `StartTrainerBattle` commands "
+            "followed by `CheckWonBattle`; only literal trainer IDs are linked."
+        )
+    return entries
+
+
 def _trainer_level_range(record: dict[str, Any]) -> str:
     levels = [member["level"] for member in record["party"]]
     return (
@@ -389,33 +415,34 @@ def _trainer_disambiguator(record: dict[str, Any]) -> str:
     return f"Lv. {_trainer_level_range(record)}: {_party_preview(record)}"
 
 
-def _trainer_summary(record: dict[str, Any]) -> list[str]:
-    location_names = list(
-        dict.fromkeys(
-            location["name"]
-            for location in record["locations"] + record.get("script_references", [])
-        )
-    )
+def _trainer_summary(
+    record: dict[str, Any], grouped_ai_items: list[dict[str, Any]]
+) -> list[str]:
+    location_names = _location_names(record)
     level_range = _trainer_level_range(record)
-    return [
-        '<section class="rw-trainer-summary">',
-        '<dl class="rw-summary__facts">',
-        f"<div><dt>Trainer ID</dt><dd>{record['trainer_id']}</dd></div>",
-        f"<div><dt>Class</dt><dd>{display_name(record['class_name'])}</dd></div>",
-        (
-            "<div><dt>Location</dt><dd>"
-            f"{' / '.join(location_names) if location_names else 'Unlinked'}</dd></div>"
-        ),
-        (
-            "<div><dt>Battle format</dt><dd>"
-            f"{'Double battle' if record['double_battle'] else 'Single battle'}</dd></div>"
-        ),
-        f"<div><dt>Party size</dt><dd>{len(record['party'])}</dd></div>",
-        f"<div><dt>Level range</dt><dd>{level_range}</dd></div>",
-        "</dl>",
-        "</section>",
-        "",
-    ]
+    ai_items = ", ".join(
+        escape(grouped["item"]["name"])
+        + (f" ×{grouped['quantity']}" if grouped["quantity"] > 1 else "")
+        for grouped in grouped_ai_items
+    ) or '<span class="rw-summary__empty">None</span>'
+    return summary_section(
+        "rw-trainer-summary",
+        [
+            f"<div><dt>Trainer ID</dt><dd>{record['trainer_id']}</dd></div>",
+            f"<div><dt>Class</dt><dd>{display_name(record['class_name'])}</dd></div>",
+            (
+                "<div><dt>Location</dt><dd>"
+                f"{' / '.join(location_names) if location_names else 'Unlinked'}</dd></div>"
+            ),
+            (
+                "<div><dt>Battle format</dt><dd>"
+                f"{'Double battle' if record['double_battle'] else 'Single battle'}</dd></div>"
+            ),
+            f"<div><dt>Party size</dt><dd>{len(record['party'])}</dd></div>",
+            f"<div><dt>Level range</dt><dd>{level_range}</dd></div>",
+            f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>",
+        ],
+    )
 
 
 def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
@@ -436,7 +463,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             item_sprite = held_item.get("sprite_url")
             item_icon = (
                 f'<img class="rw-party-card__item-icon" src="{escape(item_sprite, quote=True)}" '
-                'alt="" loading="lazy">'
+                'alt="" width="21" height="21" loading="lazy">'
                 if item_sprite
                 else ""
             )
@@ -455,11 +482,10 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
         pokemon_sprite = pokemon.get("sprite")
         sprite_icon = (
             f'<img class="rw-party-card__sprite" src="{escape(pokemon_sprite["url"], quote=True)}" '
-            f'alt="" loading="lazy">'
+            f'alt="" width="48" height="48" loading="lazy">'
             if pokemon_sprite and pokemon_sprite.get("url")
             else ""
         )
-        metadata = [f"Lv. {member['level']}"]
         ability = member.get("ability")
         ability_link = None
         if ability and ability.get("name"):
@@ -472,17 +498,22 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 ),
                 source_url,
             )
-        for field in ("nature", "gender"):
-            value = member.get(field)
-            if value:
-                display_value = value.get("name", value.get("value"))
-                if display_value is not None:
-                    metadata.append(escape(str(display_value)))
         details = []
+        pokemon_types = pokemon.get("types", [])
+        nature = member.get("nature")
+        if nature:
+            nature_name = nature.get("name", nature.get("value"))
+            if nature_name is not None:
+                details.append(("Nature", escape(str(nature_name))))
         if ability_link is not None:
             details.append(("Ability", ability_link))
         details.append(("Held item", item_name))
-        metadata_html = "".join(f"<span>{value}</span>" for value in metadata)
+        gender_html = _party_gender(member.get("gender"))
+        types_html = (
+            f'<div class="rw-party-card__types">{type_badges(pokemon_types)}</div>'
+            if pokemon_types
+            else ""
+        )
         lines.extend(
             [
                 '<article class="rw-party-card">',
@@ -490,11 +521,15 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 '<div class="rw-party-card__header">',
                 sprite_icon,
                 '<div class="rw-party-card__identity">',
+                '<div class="rw-party-card__heading">',
+                f'<span class="rw-party-card__level">Lv. {member["level"]}</span>',
                 f"<h3>{pokemon_link}</h3>",
-                f'<p class="rw-party-card__meta">{metadata_html}</p>',
+                gender_html,
+                "</div>",
+                types_html,
                 "</div>",
                 "</div>",
-                '<dl class="rw-party-card__details">',
+                '<dl class="rw-party-card__details rw-party-card__section">',
                 *[
                     f"<div><dt>{label}</dt><dd>{value}</dd></div>"
                     for label, value in details
@@ -502,10 +537,24 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 "</dl>",
             ]
         )
-        lines.extend(_party_stat_table(member))
+        stat_table = _party_stat_table(member)
+        if stat_table:
+            lines.append('<section class="rw-party-card__section">')
+            lines.append('<h4 class="rw-party-card__section-title">Stats</h4>')
+            lines.extend(stat_table)
+            lines.append("</section>")
+        lines.extend(
+            [
+                '<section class="rw-party-card__section">',
+                '<h4 class="rw-party-card__section-title">Moves</h4>',
+            ]
+        )
         if member["moves_source"] == "explicit":
-            lines.append('<ol class="rw-party-card__moves" aria-label="Moves">')
-            for move in member["moves"]:
+            move_label = escape(f'{pokemon["name"]} moves', quote=True)
+            lines.append(
+                f'<ol class="rw-party-card__moves" aria-label="{move_label}">'
+            )
+            for move_index, move in enumerate(member["moves"], start=1):
                 slug = move["name"]
                 move_link = ROUTES.html_link(
                     entity_reference(
@@ -516,7 +565,23 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                     ),
                     source_url,
                 )
-                lines.append(f"<li>{move_link}</li>")
+                move_metadata = []
+                if move.get("type"):
+                    move_metadata.append(type_badges([move["type"]]))
+                if move.get("damage_class"):
+                    move_metadata.append(class_badge(move["damage_class"]))
+                metadata_html = (
+                    '<span class="rw-party-card__move-meta">'
+                    + "".join(move_metadata)
+                    + "</span>"
+                    if move_metadata
+                    else ""
+                )
+                lines.append(
+                    '<li><span class="rw-party-card__move-name">'
+                    f'<span aria-hidden="true">{move_index}. </span>{move_link}'
+                    f"</span>{metadata_html}</li>"
+                )
             if not member["moves"]:
                 lines.append('<li class="rw-party-card__moves-empty">No moves</li>')
             lines.append("</ol>")
@@ -528,9 +593,29 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             lines.append(
                 '<p class="rw-party-card__default-moves">Moves unavailable.</p>'
             )
+        lines.append("</section>")
         lines.append("</article>")
     lines.extend(["</div>", ""])
     return lines
+
+
+def _party_gender(gender: dict[str, Any] | None) -> str:
+    if not gender:
+        return ""
+    name = gender.get("name", gender.get("value"))
+    if name is None:
+        return ""
+    label = str(name)
+    symbol, modifier = {
+        "male": ("♂", "male"),
+        "female": ("♀", "female"),
+        "genderless": ("⚲", "genderless"),
+    }.get(label.lower(), ("•", "unknown"))
+    return (
+        f'<span class="rw-party-card__gender rw-party-card__gender--{modifier}" '
+        f'aria-label="{escape(label, quote=True)}" title="{escape(label, quote=True)}">'
+        f"{symbol}</span>"
+    )
 
 
 def _party_stat_table(member: dict[str, Any]) -> list[str]:
@@ -634,17 +719,79 @@ def _append_script_references(
             f"`{reference['script_file_id']}@0x{reference['command_offset']:X}` | "
             f"{reference['opponent_slot']} |"
         )
+    lines.append("")
+
+
+def _append_same_name_trainers(
+    lines: list[str],
+    record: dict[str, Any],
+    same_name_records: list[dict[str, Any]],
+    source_file: str,
+) -> None:
+    related = sorted(
+        (
+            candidate
+            for candidate in same_name_records
+            if candidate["trainer_id"] != record["trainer_id"]
+        ),
+        key=lambda candidate: candidate["trainer_id"],
+    )
+    if not related:
+        return
+    count = len(related)
     lines.extend(
         [
+            "## Same-name trainers",
             "",
-            "Source: literal `StartTrainerBattle` command followed by "
-            "`CheckWonBattle` in the map's script archive member.",
+            (
+                "These records share the exact trainer class and name. The ROM does "
+                "not establish that they represent the same character."
+            ),
             "",
         ]
     )
+    collapsed = count > _SAME_NAME_COLLAPSE_THRESHOLD
+    if collapsed:
+        lines.extend(
+            [
+                '<details markdown="1">',
+                f"<summary>{count} other parties</summary>",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "| Trainer | Location | Levels | Party |",
+            "| ------- | -------- | ------ | ----- |",
+        ]
+    )
+    for candidate in related:
+        trainer_id = candidate["trainer_id"]
+        trainer_link = ROUTES.markdown_link(
+            entity_reference("trainer", trainer_id, f"ID {trainer_id}", trainer_id),
+            source_file,
+        )
+        locations = _location_names(candidate)
+        lines.append(
+            f"| {trainer_link} | {' / '.join(locations) or 'Unlinked'} | "
+            f"{_trainer_level_range(candidate)} | {_party_preview(candidate)} |"
+        )
+    lines.append("")
+    if collapsed:
+        lines.extend(["</details>", ""])
 
 
 def _trainer_label(record: dict[str, Any]) -> str:
     return " ".join(value for value in (record["class_name"], record["name"]) if value)
+
+
+def _combined_locations(record: dict[str, Any]) -> list[dict[str, Any]]:
+    return record["locations"] + record.get("script_references", [])
+
+
+def _location_names(record: dict[str, Any]) -> list[str]:
+    return list(
+        dict.fromkeys(location["name"] for location in _combined_locations(record))
+    )
 
 

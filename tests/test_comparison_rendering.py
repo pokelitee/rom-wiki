@@ -42,7 +42,7 @@ class ComparisonRenderingTests(unittest.TestCase):
 
         self.assertIn("Verified unchanged", "\n".join(unchanged))
         value = "\n".join(changed)
-        self.assertIn('<h3 class="rw-change__field">Power</h3>', value)
+        self.assertIn('<p class="rw-change__field">Power</p>', value)
         self.assertIn('40<span class="rw-diff-arrow">→</span>60', value)
         self.assertNotIn("| Field | Change |", value)
 
@@ -65,12 +65,12 @@ class ComparisonRenderingTests(unittest.TestCase):
         # Only the delta entries (1 removed, 3 added) render — the shared
         # entry (2) is excluded. No raw JSON "Exact data" dump: that is
         # reserved for the standalone removed-record snapshot page.
-        self.assertIn("<summary>1 entry removed</summary>", value)
-        self.assertIn("<summary>1 entry added</summary>", value)
+        self.assertIn('<p class="rw-comparison-count">1 entry removed</p>', value)
+        self.assertIn('<p class="rw-comparison-count">1 entry added</p>', value)
         self.assertNotIn("Id: 2", value)
         self.assertNotIn("Exact data", value)
 
-    def test_all_change_collections_are_disclosable(self) -> None:
+    def test_all_change_collections_show_counts(self) -> None:
         def section(count: int) -> str:
             return "\n".join(
                 comparison_section(
@@ -88,11 +88,11 @@ class ComparisonRenderingTests(unittest.TestCase):
                 )
             )
 
-        self.assertIn("<details><summary>1 entry added</summary>", section(1))
-        self.assertIn("<details><summary>2 entries added</summary>", section(2))
-        self.assertIn("<details><summary>3 entries added</summary>", section(3))
+        self.assertIn('<p class="rw-comparison-count">1 entry added</p>', section(1))
+        self.assertIn('<p class="rw-comparison-count">2 entries added</p>', section(2))
+        self.assertIn('<p class="rw-comparison-count">3 entries added</p>', section(3))
 
-    def test_specialized_groups_are_disclosable(self) -> None:
+    def test_specialized_groups_show_counts(self) -> None:
         def section(count: int) -> str:
             pokemon = [
                 {
@@ -121,10 +121,12 @@ class ComparisonRenderingTests(unittest.TestCase):
                 )
             )
 
-        self.assertIn("<summary>2 ", section(2))
-        self.assertIn("gained this ability</summary>", section(2))
         self.assertIn(
-            "<details><summary>3 Pokémon that gained this ability</summary>",
+            '<p class="rw-comparison-count">2 Pokémon that gained this ability</p>',
+            section(2),
+        )
+        self.assertIn(
+            '<p class="rw-comparison-count">3 Pokémon that gained this ability</p>',
             section(3),
         )
 
@@ -215,7 +217,7 @@ class ComparisonRenderingTests(unittest.TestCase):
 
         value = "\n".join(section)
         self.assertIn("Ivysaur — use-item", value)
-        self.assertIn("<summary>1 entry added</summary>", value)
+        self.assertIn('<p class="rw-comparison-count">1 entry added</p>', value)
 
     def test_renders_overview_and_removed_snapshot(self) -> None:
         comparison = {

@@ -12,12 +12,15 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
+    display_name,
     empty_state,
     evolution_condition,
     fact_grid,
+    machine_link,
     pokemon_summary,
     record_nav_link,
     record_navigation,
+    sprite_with_link,
     stat_list,
     table_sprite_cell,
     tutor_requirement,
@@ -176,7 +179,6 @@ def _render_record(
         *pokemon_summary(record),
         *_reference_entry(reference),
         *_sprite_gallery(record),
-        *comparison_section(change, baseline_name, source_file, references),
         "## Base stats",
         "",
         *stat_list(stats, baseline_stats),
@@ -189,7 +191,7 @@ def _render_record(
                 ("Catch rate", str(record["catch_rate"])),
                 ("Base experience", str(record["base_experience"])),
                 ("Base friendship", str(record["base_friendship"])),
-                ("Growth rate", _label(record["growth_rate"]["name"])),
+                ("Growth rate", display_name(record["growth_rate"]["name"])),
                 *(
                     (("Safari flee rate", str(record["safari_flee_rate"])),)
                     if record.get("safari_flee_rate")
@@ -207,7 +209,7 @@ def _render_record(
                 (
                     "Egg groups",
                     " / ".join(
-                        _label(name)
+                        display_name(name)
                         for name in dict.fromkeys(
                             value["name"] for value in record["egg_groups"]
                         )
@@ -222,13 +224,13 @@ def _render_record(
     if held_items:
         lines.extend(
             [
-                "| Icon | Slot | Item | Item ID |",
-                "| ---- | ---- | ---- | ------: |",
+                "| Rarity | Item | Item ID |",
+                "| ------ | ---- | ------: |",
                 *[
                     (
-                        f"| {_item_sprite_cell(item, references)} "
                         f"| {item['rarity'].title()} | "
-                        f"{_item_link(item, source_file)} | {item['id']} |"
+                        f"{sprite_with_link(_item_sprite_cell(item, references), _item_link(item, source_file))} "
+                        f"| {item['id']} |"
                     )
                     for item in held_items
                 ],
@@ -249,11 +251,12 @@ def _render_record(
     move_lookup = move_lookup or {}
     _append_level_up_moves(lines, level_up_moves, source_file, move_lookup)
     lines.extend(["### Machines", ""])
-    _append_machines(lines, machines, source_file, move_lookup)
+    _append_machines(lines, machines, source_file, move_lookup, references)
     lines.extend(["### Move tutors", ""])
     _append_tutor_moves(lines, tutor_moves, source_file, move_lookup)
     lines.extend(["### Egg moves", ""])
     _append_egg_moves(lines, egg_moves, source_file, move_lookup)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -580,6 +583,7 @@ def _append_machines(
     machines: list[dict[str, Any]],
     source_file: str,
     move_lookup: dict[int, dict[str, Any]],
+    references: ReferenceIndex | None,
 ) -> None:
     if machines and all("move" in machine for machine in machines):
         lines.extend(
@@ -588,7 +592,7 @@ def _append_machines(
                 "| ------- | ---- | ---- | ----- | ----: | -------: | -: |",
                 *[
                     (
-                        f"| {machine['name']} | "
+                        f"| {machine_link(machine, source_file, references)} | "
                         f"{_record_link('move', machine['move'], source_file)} | "
                         f"{_move_cells(machine['move'], move_lookup)} |"
                     )
@@ -601,7 +605,15 @@ def _append_machines(
     if not machines:
         lines.extend(empty_state("No compatible machines."))
         return
-    lines.extend([", ".join(machine["name"] for machine in machines), ""])
+    lines.extend(
+        [
+            ", ".join(
+                machine_link(machine, source_file, references)
+                for machine in machines
+            ),
+            "",
+        ]
+    )
 
 
 def _append_tutor_moves(
@@ -671,7 +683,7 @@ def _reference_entry(reference: dict[str, Any]) -> list[str]:
     if not isinstance(text, str) or not text.strip():
         return []
     version = reference.get("flavor_text_version") or reference.get("version")
-    version_label = f"{_label(version)} Pokédex" if version else "Pokédex"
+    version_label = f"{display_name(version)} Pokédex" if version else "Pokédex"
     return [
         '<figure class="rw-pokedex-entry">',
         f"<blockquote>{escape(' '.join(text.split()))}</blockquote>",
@@ -710,10 +722,6 @@ def _gender_ratio(value: int | None) -> str:
     female = (value + 1) / 256 * 100
     male = 100 - female
     return f"{male:g}% male / {female:g}% female"
-
-
-def _label(value: str) -> str:
-    return " ".join(part.capitalize() for part in value.split("-"))
 
 
 def _append_record_navigation(

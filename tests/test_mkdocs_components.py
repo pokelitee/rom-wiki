@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.renderers.mkdocs.components import display_name, evolution_condition
+from romwiki.renderers.mkdocs.components import (
+    class_badge,
+    display_name,
+    evolution_condition,
+    fact_grid,
+    record_nav_link,
+    type_badges,
+)
 
 
 class DisplayNameTests(unittest.TestCase):
@@ -41,6 +48,19 @@ class EvolutionConditionTests(unittest.TestCase):
             condition,
             'Level up with <a href="../remoraid/">Remoraid</a> in the party',
         )
+
+
+class ComponentEscapingTests(unittest.TestCase):
+    def test_escapes_text_and_attribute_values(self) -> None:
+        hostile = 'fire" onmouseover="alert(1)&<script>'
+
+        self.assertNotIn("<script>", type_badges([{"name": hostile}]))
+        self.assertNotIn("<script>", class_badge({"name": hostile}))
+        self.assertIn("A&amp;B", "".join(fact_grid((("A&B", "<value>"),))))
+        self.assertIn("&lt;value&gt;", "".join(fact_grid((("A&B", "<value>"),))))
+        link = record_nav_link('next/" onclick="alert(1)', "A < B", "next")
+        self.assertIn("&quot; onclick=&quot;", link)
+        self.assertIn("A &lt; B", link)
 
 
 if __name__ == "__main__":

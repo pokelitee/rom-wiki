@@ -14,6 +14,8 @@ from romwiki.renderers.mkdocs.catalog import (
 from romwiki.renderers.mkdocs.components import (
     record_nav_link,
     record_navigation,
+    sprite_with_link,
+    summary_section,
     table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.comparisons import (
@@ -252,7 +254,6 @@ def _render_area(
         f"# {record['name']}",
         "",
         *_area_summary(record),
-        *comparison_section(change, baseline_name, source_file, references),
     ]
     _append_locations(lines, record.get("locations", []), source_file)
     _append_walking(lines, record["walking"], source_file)
@@ -264,6 +265,7 @@ def _render_area(
     ):
         _append_water(lines, heading, record[key], source_file)
     _append_special(lines, record["special"], source_file)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         [
             '<details class="rw-source-details" markdown="1">',
@@ -305,17 +307,13 @@ def _area_summary(record: dict[str, Any]) -> list[str]:
     ]
     if locations:
         facts.append(("Map headers", str(len(locations))))
-    return [
-        '<section class="rw-encounter-summary">',
-        '<dl class="rw-summary__facts">',
-        *(
+    return summary_section(
+        "rw-encounter-summary",
+        [
             f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
             for label, value in facts
-        ),
-        "</dl>",
-        "</section>",
-        "",
-    ]
+        ],
+    )
 
 
 def _append_record_navigation(
@@ -402,14 +400,13 @@ def _append_walking(
             "",
             f"Encounter rate: {method['rate']}",
             "",
-            "| <span class=\"rw-visually-hidden\">Sprite</span> | Pokémon | Level | Chance |",
-            "| ---- | ------- | ----: | -----: |",
+            "| Pokémon | Level | Chance |",
+            "| ------- | ----: | -----: |",
         ]
     )
     for slot in _merge_slots(method["slots"], ("level",)):
         lines.append(
-            f"| {table_sprite_cell((slot['pokemon'] or {}).get('sprite'))} | "
-            f"{_pokemon_link(slot['pokemon'], source_file)} | "
+            f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
             f"{slot['level']} | {slot['chance']}% |"
         )
     lines.append("")
@@ -426,15 +423,14 @@ def _append_water(
             "",
             f"Encounter rate: {method['rate']}",
             "",
-            "| <span class=\"rw-visually-hidden\">Sprite</span> | Pokémon | Levels | Chance |",
-            "| ---- | ------- | -----: | -----: |",
+            "| Pokémon | Levels | Chance |",
+            "| ------- | -----: | -----: |",
         ]
     )
     for slot in _merge_slots(method["slots"], ("minimum_level", "maximum_level")):
         levels = _level_range(slot["minimum_level"], slot["maximum_level"])
         lines.append(
-            f"| {table_sprite_cell((slot['pokemon'] or {}).get('sprite'))} | "
-            f"{_pokemon_link(slot['pokemon'], source_file)} | {levels} | "
+            f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | {levels} | "
             f"{slot['chance']}% |"
         )
     lines.append("")
@@ -458,11 +454,20 @@ def _append_special(
         return
     lines.extend(["## Special encounters", ""])
     for label, values in populated:
-        names = ", ".join(
-            _pokemon_link(value, source_file) for value in values if value
+        lines.extend(
+            [
+                f"**{label}:**",
+                "",
+                "| Pokémon |",
+                "| ------- |",
+                *[
+                    f"| {sprite_with_link(table_sprite_cell((value or {}).get('sprite')), _pokemon_link(value, source_file))} |"
+                    for value in values
+                    if value
+                ],
+                "",
+            ]
         )
-        lines.append(f"- {label}: {names}")
-    lines.append("")
 
 
 def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:

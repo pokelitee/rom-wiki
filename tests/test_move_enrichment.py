@@ -89,7 +89,9 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Thunderbolt", page)
-        self.assertIn("| Power | 90 |", page)
+        self.assertIn("<dt>Power</dt><dd>90</dd>", page)
+        self.assertIn("## Additional battle properties", page)
+        self.assertNotIn("## Battle properties", page)
         self.assertIn("`0x0010`", page)
         self.assertIn("| Machine | TM24 |", page)
         self.assertIn("Route 210 — Friendship 255", page)
@@ -103,6 +105,28 @@ class MoveEnrichmentTests(unittest.TestCase):
             ["machine", "move tutor", "egg move"],
         )
         self.assertEqual(catalog["records"][0]["url"], "thunderbolt/")
+
+    def test_omits_empty_move_compatibility_sections(self) -> None:
+        record = {
+            **_source_record(1),
+            "slug": "pound",
+            "name": "Pound",
+            "public": True,
+            "type": {"id": 0, "name": "normal"},
+            "damage_class": {"id": 0, "name": "physical"},
+            "machines": [],
+            "tutors": [],
+            "egg_move_pokemon": [],
+            "effect_chance": 0,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_move_pages({"records": [record]}, output)
+            page = (output / "pound.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("## Tutor compatibility", page)
+        self.assertNotIn("## Egg move learners", page)
+        self.assertNotIn("## Additional battle properties", page)
 
 
 def _source_record(move_id: int) -> dict:

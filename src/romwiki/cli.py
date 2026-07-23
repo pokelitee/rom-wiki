@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 from typing import Sequence
 
-from romwiki.util.errors import LocalConfigError, RomWikiError
+from romwiki.util.errors import LocalConfigError, RomWikiError, SiteError
 from romwiki.util.local_config import LocalGameRegistry
 from romwiki.pipeline.encounters import (
     extract_encounter_dataset,
@@ -51,7 +51,7 @@ from romwiki.renderers.mkdocs import (
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
 from romwiki.sites.dev_pages import DevPages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
-from romwiki.sites import SiteCatalog, build_sites
+from romwiki.sites import SiteCatalog, audit_site, build_sites
 from romwiki.sources import PokeDBGeneration
 
 
@@ -343,6 +343,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", type=Path, default=Path("dist"), help="artifact output directory"
     )
     _add_site_root_argument(build_site_parser)
+    audit_site_parser = site_subparsers.add_parser(
+        "audit", help="validate a rendered multi-site artifact"
+    )
+    audit_site_parser.add_argument("artifact", type=Path)
+    audit_site_parser.add_argument(
+        "--max-page-kb",
+        type=int,
+        default=512,
+        help="maximum rendered HTML page size in KiB (default: 512)",
+    )
+    audit_site_parser.add_argument(
+        "--max-images",
+        type=int,
+        default=100,
+        help="maximum images on one page (default: 100)",
+    )
     return parser
 
 
@@ -490,10 +506,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "baseline":
             _run_baseline_build(args)
         elif args.command == "site":
-            catalog = SiteCatalog.load(args.root)
-            if args.site_command == "list":
+            if args.site_command == "audit":
+                report = audit_site(
+                    args.artifact,
+                    max_html_bytes=args.max_page_kb * 1024,
+                    max_images_per_page=args.max_images,
+                )
+                displayed_errors = report.errors[:100]
+                for issue in (*report.warnings, *displayed_errors):
+                    print(issue.format(), file=sys.stderr)
+                if len(report.errors) > len(displayed_errors):
+                    print(
+                        f"... {len(report.errors) - len(displayed_errors):,} "
+                        "additional error(s) omitted",
+                        file=sys.stderr,
+                    )
+                largest = report.largest_page
+                largest_text = (
+                    f"; largest: {largest[0]} ({largest[1] / 1024:.1f} KiB)"
+                    if largest
+                    else ""
+                )
+                print(
+                    f"Audited {report.page_count:,} pages and "
+                    f"{report.link_count:,} links{largest_text}"
+                )
+                if not report.ok:
+                    raise SiteError(
+                        f"site audit found {len(report.errors):,} error(s)"
+                    )
+            elif args.site_command == "list":
+                catalog = SiteCatalog.load(args.root)
                 _print_sites(catalog)
             elif args.site_command == "build":
+                catalog = SiteCatalog.load(args.root)
                 built = build_sites(
                     catalog,
                     args.output,
