@@ -4,11 +4,7 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_MACHINE_COUNT,
-    GEN4_TM_COUNT,
-    parse_machine_move_table,
-)
+from romwiki.engines.registry import get_engine
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
@@ -24,8 +20,9 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(
             f"Profile {profile.id} does not define a machine move table"
         ) from error
-    machine_count = profile.parameters.get("machine_count", GEN4_MACHINE_COUNT)
-    tm_count = profile.parameters.get("tm_count", GEN4_TM_COUNT)
+    engine = get_engine(profile.engine).machines
+    machine_count = profile.parameters.get("machine_count", engine.GEN4_MACHINE_COUNT)
+    tm_count = profile.parameters.get("tm_count", engine.GEN4_TM_COUNT)
 
     size = machine_count * 2
     if offset < 0 or offset + size > result.image.size:
@@ -35,7 +32,7 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
         data = stream.read(size)
     records = [
         machine.to_dict()
-        for machine in parse_machine_move_table(
+        for machine in engine.parse_machine_move_table(
             data,
             machine_count=machine_count,
             tm_count=tm_count,

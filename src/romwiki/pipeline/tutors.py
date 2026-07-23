@@ -4,26 +4,11 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_BASE_SPECIES_COUNT,
-    GEN4_MAX_FRIENDSHIP,
-    MAP_HEADER_SIZE,
-    PERSONAL_FORM_MEMBERS,
-    TUTOR_COMPATIBILITY_RECORD_SIZE,
-    TUTOR_RECORD_SIZE,
-    parse_personal_record,
-    parse_english_message_archive,
-    parse_platinum_map_headers,
-    parse_special_tutor_move,
-    parse_special_tutor_species,
-    parse_tutor_compatibility_table,
-    parse_tutor_move_table,
-)
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.platforms.nds.overlays import read_arm9_overlay
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 
 
 def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -42,11 +27,13 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     except KeyError as error:
         raise ProfileError(f"Profile {profile.id} does not define tutor data") from error
 
-    overlay, data = read_arm9_overlay(result.image, parameters["tutor_overlay_id"])
-    move_size = parameters["tutor_count"] * TUTOR_RECORD_SIZE
-    form_members = tuple(sorted(PERSONAL_FORM_MEMBERS))
-    compatibility_count = GEN4_BASE_SPECIES_COUNT + len(form_members)
-    compatibility_size = compatibility_count * TUTOR_COMPATIBILITY_RECORD_SIZE
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).tutors
+    overlay, data = platform.read_overlay(result.image, parameters["tutor_overlay_id"])
+    move_size = parameters["tutor_count"] * engine.TUTOR_RECORD_SIZE
+    form_members = tuple(sorted(engine.PERSONAL_FORM_MEMBERS))
+    compatibility_count = engine.GEN4_BASE_SPECIES_COUNT + len(form_members)
+    compatibility_size = compatibility_count * engine.TUTOR_COMPATIBILITY_RECORD_SIZE
     move_data = _slice_overlay(data, parameters["tutor_move_offset"], move_size, "move")
     compatibility_data = _slice_overlay(
         data,
@@ -54,7 +41,9 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         compatibility_size,
         "compatibility",
     )
-    tutors = parse_tutor_move_table(move_data, tutor_count=parameters["tutor_count"])
+    tutors = engine.parse_tutor_move_table(
+        move_data, tutor_count=parameters["tutor_count"]
+    )
     location_names = parameters["tutor_location_names"]
     if not isinstance(location_names, list) or any(
         not isinstance(name, str) or not name for name in location_names
@@ -63,10 +52,10 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     if any(tutor.location_id >= len(location_names) for tutor in tutors):
         raise InvalidRomError("Gen IV tutor references an unknown location ID")
 
-    compatibility = parse_tutor_compatibility_table(
+    compatibility = engine.parse_tutor_compatibility_table(
         compatibility_data,
         tutor_count=parameters["tutor_count"],
-        base_species_count=GEN4_BASE_SPECIES_COUNT,
+        base_species_count=engine.GEN4_BASE_SPECIES_COUNT,
         form_member_start=form_members[0],
         form_count=len(form_members),
     )
@@ -116,9 +105,11 @@ def _extract_special_tutors(
         raise ProfileError("Special tutor definitions must be a list")
     if not definitions:
         return [], []
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).tutors
     try:
         minimum_friendship = profile.parameters.get(
-            "special_tutor_minimum_friendship", GEN4_MAX_FRIENDSHIP
+            "special_tutor_minimum_friendship", engine.GEN4_MAX_FRIENDSHIP
         )
         script_path = profile.layout["scripts"]
         personal_path = profile.layout["personal"]
@@ -132,19 +123,19 @@ def _extract_special_tutors(
             f"Profile {profile.id} is missing special tutor metadata: {error.args[0]}"
         ) from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    scripts = NarcArchive.from_bytes(
+    filesystem = platform.filesystem_from_image(result.image)
+    scripts = platform.archive_cls.from_bytes(
         filesystem.read(script_path), allow_truncated=True
     )
-    personal = NarcArchive.from_bytes(filesystem.read(personal_path))
-    messages = NarcArchive.from_bytes(filesystem.read(messages_path))
-    location_names = parse_english_message_archive(
+    personal = platform.archive_cls.from_bytes(filesystem.read(personal_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    location_names = engine.parse_english_message_archive(
         messages.read(location_names_member)
     )
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset + map_header_offset)
-        map_header_data = stream.read(map_header_count * MAP_HEADER_SIZE)
-    headers = parse_platinum_map_headers(
+        map_header_data = stream.read(map_header_count * engine.MAP_HEADER_SIZE)
+    headers = engine.parse_platinum_map_headers(
         map_header_data,
         filesystem.read(map_names_path),
         count=map_header_count,
@@ -152,11 +143,11 @@ def _extract_special_tutors(
 
     records = []
     compatibility: dict[int, list[int]] = {}
-    public_members = tuple(range(1, GEN4_BASE_SPECIES_COUNT + 1)) + tuple(
-        PERSONAL_FORM_MEMBERS
+    public_members = tuple(range(1, engine.GEN4_BASE_SPECIES_COUNT + 1)) + tuple(
+        engine.PERSONAL_FORM_MEMBERS
     )
     personal_records = {
-        member: parse_personal_record(
+        member: engine.parse_personal_record(
             personal.read(member), species_id=member, archive_path=personal_path
         )
         for member in public_members
@@ -188,7 +179,7 @@ def _extract_special_tutors(
         script_data = scripts.read(script_member)
         if eligibility_kind == "species":
             try:
-                eligibility_value = parse_special_tutor_species(
+                eligibility_value = engine.parse_special_tutor_species(
                     script_data,
                     comparison_offset=definition["comparison_offset"],
                     species_count=definition["species_count"],
@@ -208,7 +199,7 @@ def _extract_special_tutors(
             raise ProfileError("Special tutor eligibility kind is unknown")
 
         tutor_id = start_tutor_id + index
-        tutor = parse_special_tutor_move(
+        tutor = engine.parse_special_tutor_move(
             script_data,
             tutor_id=tutor_id,
             script_member=script_member,

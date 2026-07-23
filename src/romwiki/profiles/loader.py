@@ -5,7 +5,7 @@ import re
 import tomllib
 
 from romwiki.util.errors import ProfileError
-from romwiki.platforms.nds.reader import NintendoDSImage
+from romwiki.platforms.registry import RomImage
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
 
 
@@ -27,7 +27,7 @@ class ProfileRepository:
             raise ProfileError("Profile identifiers must be unique")
         return cls(profiles)
 
-    def identify(self, image: NintendoDSImage) -> HashMatch | None:
+    def identify(self, image: RomImage) -> HashMatch | None:
         matches = [
             match
             for profile in self.profiles
@@ -80,6 +80,7 @@ def _load_profile(path: Path) -> GameProfile:
         return GameProfile(
             id=profile_data["id"],
             name=profile_data["name"],
+            platform=profile_data["platform"],
             engine=profile_data["engine"],
             base_game=profile_data["base_game"],
             game_codes=tuple(header_data["game_codes"]),

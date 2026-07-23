@@ -17,6 +17,7 @@ class ProfileRepositoryTests(unittest.TestCase):
 
         profile = next(value for value in profiles if value.id == "platinum-us")
 
+        self.assertEqual(profile.platform, "nintendo-ds")
         self.assertEqual(profile.engine, "gen4_dppt")
         self.assertEqual(profile.base_game, "platinum")
         self.assertEqual(profile.rom_versions, (0,))
@@ -30,6 +31,7 @@ class ProfileRepositoryTests(unittest.TestCase):
 [profile]
 id = "test"
 name = "Test Profile"
+platform = "nintendo-ds"
 engine = "gen4_dppt"
 base_game = "platinum"
 [header]
@@ -70,6 +72,7 @@ variant = "test"
 [profile]
 id = "test"
 name = "Test Profile"
+platform = "nintendo-ds"
 engine = "gen4_dppt"
 base_game = "platinum"
 [header]
@@ -96,6 +99,7 @@ variant = "test"
 [profile]
 id = "test"
 name = "Test Profile"
+platform = "nintendo-ds"
 engine = "gen4_dppt"
 base_game = "platinum"
 [header]
@@ -112,6 +116,30 @@ variant = "test"
             )
 
             with self.assertRaisesRegex(ProfileError, "Invalid type semantic"):
+                ProfileRepository.load(Path(directory))
+
+    def test_rejects_profile_missing_platform(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "test.toml"
+            profile_path.write_text(
+                """
+[profile]
+id = "test"
+name = "Test Profile"
+engine = "gen4_dppt"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [1]
+[[hashes]]
+algorithm = "sha256"
+value = "abcd"
+variant = "test"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "Invalid profile"):
                 ProfileRepository.load(Path(directory))
 
 

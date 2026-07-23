@@ -5,17 +5,11 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_ARCHIVE_MEMBER_NONE,
-    MAP_HEADER_SIZE,
-    parse_encounter_record,
-    parse_english_message_archive,
-    parse_platinum_map_headers,
-)
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 from romwiki.schema.encounters import EncounterLocation
 
 
@@ -30,10 +24,12 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} does not define an encounter archive"
         ) from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    archive = NarcArchive.from_bytes(filesystem.read(archive_path))
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).encounters
+    filesystem = platform.filesystem_from_image(result.image)
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
     parsed_records = [
-        parse_encounter_record(
+        engine.parse_encounter_record(
             archive.read(member.index),
             area_id=member.index,
             archive_path=archive_path,
@@ -53,6 +49,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "wild_encounters",
         "record_count": len(records),
         "source": {
@@ -66,7 +63,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
 
 def _extract_encounter_locations(
     result: InspectionResult,
-    filesystem: NintendoDSFileSystem,
+    filesystem: Any,
     *,
     encounter_count: int,
 ) -> tuple[dict[int, list[EncounterLocation]], dict[str, Any]]:
@@ -89,23 +86,25 @@ def _extract_encounter_locations(
             f"{error.args[0]}"
         ) from error
 
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).encounters
     count = parameters["map_header_count"]
     table_offset = parameters["map_header_offset"]
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset + table_offset)
-        header_data = stream.read(count * MAP_HEADER_SIZE)
-    headers = parse_platinum_map_headers(
+        header_data = stream.read(count * engine.MAP_HEADER_SIZE)
+    headers = engine.parse_platinum_map_headers(
         header_data,
         filesystem.read(layout["map_names"]),
         count=count,
     )
-    messages = NarcArchive.from_bytes(filesystem.read(layout["messages"]))
+    messages = platform.archive_cls.from_bytes(filesystem.read(layout["messages"]))
     member = parameters["location_names_member"]
-    location_names = parse_english_message_archive(messages.read(member))
+    location_names = engine.parse_english_message_archive(messages.read(member))
 
     locations: dict[int, list[EncounterLocation]] = {}
     null_encounter_id = profile.parameters.get(
-        "null_encounter_id", GEN4_ARCHIVE_MEMBER_NONE
+        "null_encounter_id", engine.GEN4_ARCHIVE_MEMBER_NONE
     )
     for header in headers:
         if header.encounter_id == null_encounter_id:

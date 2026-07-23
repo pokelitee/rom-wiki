@@ -5,21 +5,12 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import TRAINERS_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_ARCHIVE_MEMBER_NONE,
-    MAP_HEADER_SIZE,
-    parse_english_message_archive,
-    parse_object_events,
-    parse_platinum_map_headers,
-    parse_trainer_class_genders,
-    parse_trainer_battle_commands,
-    parse_trainer_record,
-)
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.reference_names import extract_reference_names
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 from romwiki.schema import TrainerLocation, TrainerScriptReference
 
 
@@ -39,26 +30,28 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} is missing trainer metadata: {error.args[0]}"
         ) from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    trainers = NarcArchive.from_bytes(filesystem.read(trainer_path))
-    parties = NarcArchive.from_bytes(filesystem.read(party_path))
-    messages = NarcArchive.from_bytes(filesystem.read(messages_path))
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).trainers
+    filesystem = platform.filesystem_from_image(result.image)
+    trainers = platform.archive_cls.from_bytes(filesystem.read(trainer_path))
+    parties = platform.archive_cls.from_bytes(filesystem.read(party_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     reference_names = extract_reference_names(profile, filesystem, messages)
     if len(trainers.members) != len(parties.members):
         raise InvalidRomError("Trainer data and party archives have different counts")
-    names = parse_english_message_archive(messages.read(names_member))
-    classes = parse_english_message_archive(messages.read(classes_member))
+    names = engine.parse_english_message_archive(messages.read(names_member))
+    classes = engine.parse_english_message_archive(messages.read(classes_member))
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset + class_gender_offset)
         class_gender_data = stream.read(len(classes))
-    class_genders = parse_trainer_class_genders(
+    class_genders = engine.parse_trainer_class_genders(
         class_gender_data, count=len(classes)
     )
     if len(names) < len(trainers.members):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
 
     parsed_records = [
-        parse_trainer_record(
+        engine.parse_trainer_record(
             trainers.read(member.index),
             parties.read(member.index),
             trainer_id=member.index,
@@ -120,8 +113,8 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
 
 def _extract_trainer_locations(
     result: InspectionResult,
-    filesystem: NintendoDSFileSystem,
-    messages: NarcArchive,
+    filesystem: Any,
+    messages: Any,
     *,
     trainer_count: int,
 ) -> tuple[
@@ -145,17 +138,25 @@ def _extract_trainer_locations(
         raise ProfileError(
             f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
         ) from error
-    null_event_id = profile.parameters.get("null_event_id", GEN4_ARCHIVE_MEMBER_NONE)
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).trainers
+    null_event_id = profile.parameters.get(
+        "null_event_id", engine.GEN4_ARCHIVE_MEMBER_NONE
+    )
 
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset + table_offset)
-        header_data = stream.read(count * MAP_HEADER_SIZE)
-    headers = parse_platinum_map_headers(
+        header_data = stream.read(count * engine.MAP_HEADER_SIZE)
+    headers = engine.parse_platinum_map_headers(
         header_data, filesystem.read(map_names_path), count=count
     )
-    location_names = parse_english_message_archive(messages.read(location_names_member))
-    events = NarcArchive.from_bytes(filesystem.read(events_path))
-    scripts = NarcArchive.from_bytes(filesystem.read(scripts_path), allow_truncated=True)
+    location_names = engine.parse_english_message_archive(
+        messages.read(location_names_member)
+    )
+    events = platform.archive_cls.from_bytes(filesystem.read(events_path))
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), allow_truncated=True
+    )
     object_cache: dict[int, tuple[Any, ...]] = {}
     script_cache: dict[int, tuple[Any, ...]] = {}
     locations: dict[int, list[TrainerLocation]] = {}
@@ -175,7 +176,7 @@ def _extract_trainer_locations(
                     f"{header.event_file_id}"
                 )
             if header.event_file_id not in object_cache:
-                object_cache[header.event_file_id] = parse_object_events(
+                object_cache[header.event_file_id] = engine.parse_object_events(
                     events.read(header.event_file_id), event_file_id=header.event_file_id
                 )
             objects = object_cache[header.event_file_id]
@@ -212,7 +213,7 @@ def _extract_trainer_locations(
                 f"{header.script_file_id}"
             )
         if header.script_file_id not in script_cache:
-            script_cache[header.script_file_id] = parse_trainer_battle_commands(
+            script_cache[header.script_file_id] = engine.parse_trainer_battle_commands(
                 scripts.read(header.script_file_id), trainer_count=trainer_count
             )
         for command in script_cache[header.script_file_id]:

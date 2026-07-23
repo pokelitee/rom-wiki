@@ -39,6 +39,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         enriched = enrich_encounter_dataset(
             {
                 "game": "test",
+                "engine": "gen4_dppt",
                 "source": {"archive": "encounters.narc"},
                 "records": [source],
             },
@@ -111,6 +112,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         enriched = enrich_encounter_dataset(
             {
                 "game": "test",
+                "engine": "gen4_dppt",
                 "source": {"archive": "encounters.narc"},
                 "records": [source],
             },

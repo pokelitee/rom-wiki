@@ -4,14 +4,11 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import (
-    parse_english_message_archive,
-    parse_evolution_record,
-)
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 
 
 def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -27,14 +24,18 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} does not define evolution item-name data"
         ) from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    archive = NarcArchive.from_bytes(filesystem.read(archive_path))
-    message_archive = NarcArchive.from_bytes(filesystem.read(message_archive_path))
-    item_names = parse_english_message_archive(
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).evolutions
+    filesystem = platform.filesystem_from_image(result.image)
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    message_archive = platform.archive_cls.from_bytes(
+        filesystem.read(message_archive_path)
+    )
+    item_names = engine.parse_english_message_archive(
         message_archive.read(item_names_member)
     )
     records = [
-        parse_evolution_record(
+        engine.parse_evolution_record(
             archive.read(member.index),
             species_id=member.index,
             archive_path=archive_path,

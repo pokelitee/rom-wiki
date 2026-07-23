@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import POKEMON_PERSONAL_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import parse_personal_record
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.reference_names import extract_reference_names
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 
 
 def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -21,11 +21,13 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
     except KeyError as error:
         raise ProfileError(f"Profile {profile.id} does not define a personal archive") from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    archive = NarcArchive.from_bytes(filesystem.read(archive_path))
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).personal
+    filesystem = platform.filesystem_from_image(result.image)
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
     reference_names = extract_reference_names(profile, filesystem)
     records = [
-        parse_personal_record(
+        engine.parse_personal_record(
             archive.read(member.index),
             species_id=member.index,
             archive_path=archive_path,
@@ -35,6 +37,7 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": POKEMON_PERSONAL_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "pokemon_personal",
         "record_count": len(records),
         "source": {

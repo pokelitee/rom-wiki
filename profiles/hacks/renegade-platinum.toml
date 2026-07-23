@@ -1,6 +1,7 @@
 [profile]
 id = "renegade-platinum"
 name = "Renegade Platinum"
+platform = "nintendo-ds"
 engine = "gen4_dppt"
 base_game = "platinum"
 

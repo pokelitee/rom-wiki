@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import POKEMON_LEARNSETS_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import parse_level_up_learnset
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 
 
 def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -22,10 +22,12 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} does not define a level-up learnset archive"
         ) from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    archive = NarcArchive.from_bytes(filesystem.read(archive_path))
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).learnsets
+    filesystem = platform.filesystem_from_image(result.image)
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
     records = [
-        parse_level_up_learnset(
+        engine.parse_level_up_learnset(
             archive.read(member.index),
             species_id=member.index,
             archive_path=archive_path,

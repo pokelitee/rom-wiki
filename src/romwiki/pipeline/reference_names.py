@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from romwiki.engines.gen4_dppt import parse_english_message_archive
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import DataSourceError, ProfileError
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 from romwiki.profiles.models import GameProfile
 
 
@@ -18,8 +18,8 @@ _NAME_TABLES = {
 
 def extract_reference_names(
     profile: GameProfile,
-    filesystem: NintendoDSFileSystem,
-    message_archive: NarcArchive | None = None,
+    filesystem: Any,
+    message_archive: Any | None = None,
 ) -> dict[str, Any]:
     configured = {
         field: (parameter, expected_count)
@@ -34,7 +34,11 @@ def extract_reference_names(
         raise ProfileError(
             f"Profile {profile.id} defines name tables without a message archive"
         ) from error
-    archive = message_archive or NarcArchive.from_bytes(filesystem.read(archive_path))
+    archive_cls = get_platform(profile.platform).archive_cls
+    parse_english_message_archive = get_engine(
+        profile.engine
+    ).reference_names.parse_english_message_archive
+    archive = message_archive or archive_cls.from_bytes(filesystem.read(archive_path))
     result: dict[str, Any] = {"name_sources": {}}
     for field, (parameter, expected_count) in configured.items():
         member = profile.parameters[parameter]

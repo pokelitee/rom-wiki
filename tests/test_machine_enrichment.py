@@ -21,6 +21,7 @@ class MachineEnrichmentTests(unittest.TestCase):
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
+                "engine": "gen4_dppt",
                 "source": {"archive": "personal.narc"},
                 "records": personal_records,
             },
@@ -30,6 +31,7 @@ class MachineEnrichmentTests(unittest.TestCase):
         moves = enrich_move_dataset(
             {
                 "game": "test",
+                "engine": "gen4_dppt",
                 "source": {"archive": "moves.narc"},
                 "records": [_move_source_record(move_id) for move_id in range(471)],
             },
@@ -65,6 +67,7 @@ def _machine_dataset() -> dict:
         )
     return {
         "game": "test",
+        "engine": "gen4_dppt",
         "source": {"offset": 100},
         "records": records,
     }

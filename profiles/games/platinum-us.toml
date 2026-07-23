@@ -1,6 +1,7 @@
 [profile]
 id = "platinum-us"
 name = "Pokémon Platinum (USA)"
+platform = "nintendo-ds"
 engine = "gen4_dppt"
 base_game = "platinum"
 

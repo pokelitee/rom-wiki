@@ -5,46 +5,12 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_ARCHIVE_MEMBER_NONE,
-    MAP_HEADER_SIZE,
-    Gen4CommonMartItem,
-    Gen4MapEvents,
-    Gen4NpcTrade,
-    Gen4WarpEvent,
-    PLATINUM_ROAMING_SLOT_COUNT,
-    PLATINUM_DYNAMIC_WARP_HEADER_ID,
-    PLATINUM_DYNAMIC_WARP_ID,
-    PLATINUM_MATRIX_VOID_HEADER_IDS,
-    PlatinumMapHeader,
-    parse_english_message_archive,
-    parse_map_matrix,
-    parse_map_events,
-    parse_common_mart_inventory,
-    parse_decoration_price_table,
-    parse_egg_gift_command,
-    parse_frontier_price_table,
-    find_item_archive_members,
-    parse_item_price,
-    parse_mart_commands,
-    parse_npc_trade_commands,
-    parse_npc_trade_record,
-    parse_pokemon_gift_commands,
-    parse_roaming_activation_commands,
-    parse_seal_price_table,
-    parse_static_encounter_commands,
-    parse_platinum_map_headers,
-    parse_specialty_mart_inventories,
-)
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.trainers import extract_trainer_dataset
-from romwiki.platforms.nds import (
-    NarcArchive,
-    NintendoDSFileSystem,
-    read_arm9_overlay,
-)
 from romwiki.schema import (
     Gen4Location,
     LocationConnection,
@@ -138,103 +104,112 @@ def extract_location_dataset(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
         ) from error
 
-    null_event_id = profile.parameters.get("null_event_id", GEN4_ARCHIVE_MEMBER_NONE)
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).locations
+
+    null_event_id = profile.parameters.get(
+        "null_event_id", engine.GEN4_ARCHIVE_MEMBER_NONE
+    )
     null_encounter_id = profile.parameters.get(
-        "null_encounter_id", GEN4_ARCHIVE_MEMBER_NONE
+        "null_encounter_id", engine.GEN4_ARCHIVE_MEMBER_NONE
     )
     dynamic_warp_header_id = profile.parameters.get(
-        "dynamic_warp_header_id", PLATINUM_DYNAMIC_WARP_HEADER_ID
+        "dynamic_warp_header_id", engine.PLATINUM_DYNAMIC_WARP_HEADER_ID
     )
     dynamic_warp_id = profile.parameters.get(
-        "dynamic_warp_id", PLATINUM_DYNAMIC_WARP_ID
+        "dynamic_warp_id", engine.PLATINUM_DYNAMIC_WARP_ID
     )
     matrix_void_header_ids = frozenset(
         profile.parameters.get(
-            "matrix_void_header_ids", PLATINUM_MATRIX_VOID_HEADER_IDS
+            "matrix_void_header_ids", engine.PLATINUM_MATRIX_VOID_HEADER_IDS
         )
     )
     arm9_load_address = result.image.header.arm9_ram_address
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
+    filesystem = platform.filesystem_from_image(result.image)
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset)
         arm9_data = stream.read(result.image.header.arm9_size)
-    header_data = arm9_data[table_offset : table_offset + count * MAP_HEADER_SIZE]
-    headers = parse_platinum_map_headers(
+    header_data = arm9_data[
+        table_offset : table_offset + count * engine.MAP_HEADER_SIZE
+    ]
+    headers = engine.parse_platinum_map_headers(
         header_data, filesystem.read(map_names_path), count=count
     )
-    messages = NarcArchive.from_bytes(filesystem.read(messages_path))
-    location_names = parse_english_message_archive(
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    location_names = engine.parse_english_message_archive(
         messages.read(location_names_member)
     )
-    item_names = parse_english_message_archive(messages.read(item_names_member))
-    pokemon_names = parse_english_message_archive(messages.read(pokemon_names_member))
-    npc_trade_names = parse_english_message_archive(
+    item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    pokemon_names = engine.parse_english_message_archive(
+        messages.read(pokemon_names_member)
+    )
+    npc_trade_names = engine.parse_english_message_archive(
         messages.read(npc_trade_names_member)
     )
-    decoration_names = parse_english_message_archive(
+    decoration_names = engine.parse_english_message_archive(
         messages.read(decoration_names_member), limit=decoration_name_count
     )
-    seal_names = parse_english_message_archive(messages.read(seal_names_member))
-    decoration_prices = parse_decoration_price_table(
+    seal_names = engine.parse_english_message_archive(messages.read(seal_names_member))
+    decoration_prices = engine.parse_decoration_price_table(
         arm9_data,
         offset=decoration_price_table_offset,
         decoration_count=len(decoration_names),
     )
-    seal_prices = parse_seal_price_table(
+    seal_prices = engine.parse_seal_price_table(
         arm9_data, offset=seal_price_table_offset, seal_count=len(seal_names)
     )
-    _, frontier_overlay = read_arm9_overlay(
+    _, frontier_overlay = platform.read_overlay(
         result.image, frontier_price_overlay_id
     )
-    frontier_prices = parse_frontier_price_table(
+    frontier_prices = engine.parse_frontier_price_table(
         frontier_overlay,
         offset=frontier_price_table_offset,
         record_count=frontier_price_record_count,
     )
-    item_data = NarcArchive.from_bytes(filesystem.read(item_data_path))
-    item_archive_map_offset, item_data_members = find_item_archive_members(
+    item_data = platform.archive_cls.from_bytes(filesystem.read(item_data_path))
+    item_archive_map_offset, item_data_members = engine.find_item_archive_members(
         arm9_data,
         item_count=len(item_names),
         data_member_count=len(item_data.members),
     )
     item_prices = tuple(
-        parse_item_price(item_data.read(data_member))
+        engine.parse_item_price(item_data.read(data_member))
         for data_member in item_data_members
     )
-    npc_trades = NarcArchive.from_bytes(filesystem.read(npc_trades_path))
+    npc_trades = platform.archive_cls.from_bytes(filesystem.read(npc_trades_path))
     if len(npc_trade_names) != len(npc_trades.members) * 2:
         raise InvalidRomError(
             "NPC trade name bank must contain one nickname and OT name per trade"
         )
     npc_trade_records = tuple(
-        parse_npc_trade_record(
+        engine.parse_npc_trade_record(
             npc_trades.read(index),
             species_count=len(pokemon_names),
             item_count=len(item_names),
         )
         for index in range(len(npc_trades.members))
     )
-    common_mart_items = parse_common_mart_inventory(
+    common_mart_items = engine.parse_common_mart_inventory(
         arm9_data, offset=common_mart_inventory_offset, item_count=len(item_names)
     )
-    specialty_mart_inventories = parse_specialty_mart_inventories(
+    specialty_mart_inventories = engine.parse_specialty_mart_inventories(
         arm9_data,
         pointer_table_offset=specialty_mart_pointer_table_offset,
         inventory_count=specialty_mart_inventory_count,
         load_address=arm9_load_address,
         item_count=len(item_names),
     )
-    scripts = NarcArchive.from_bytes(
+    scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path), allow_truncated=True
     )
     referenced_script_ids = {header.script_file_id for header in headers}
     roaming_activation_count = sum(
-        len(parse_roaming_activation_commands(scripts.read(script_file_id)))
+        len(engine.parse_roaming_activation_commands(scripts.read(script_file_id)))
         for script_file_id in referenced_script_ids
     )
-    events = NarcArchive.from_bytes(filesystem.read(events_path))
-    matrices = NarcArchive.from_bytes(filesystem.read(matrices_path))
+    events = platform.archive_cls.from_bytes(filesystem.read(events_path))
+    matrices = platform.archive_cls.from_bytes(filesystem.read(matrices_path))
     shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
     gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
     npc_trades_by_script: dict[int, tuple[LocationNpcTrade, ...]] = {}
@@ -258,9 +233,9 @@ def extract_location_dataset(
     for metadata in egg_gift_metadata:
         egg_gifts_by_script[metadata["script_member"]].append(metadata)
 
-    events_by_id: dict[int, Gen4MapEvents] = {}
+    events_by_id: dict[int, Any] = {}
     items_by_event: dict[int, tuple[LocationItem, ...]] = {}
-    raw_warps_by_header: dict[int, tuple[Gen4WarpEvent, ...]] = {}
+    raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
     raw_items_by_header: dict[int, tuple[LocationItem, ...]] = {}
     for header in headers:
         if header.location_name_id >= len(location_names):
@@ -278,7 +253,7 @@ def extract_location_dataset(
                 f"{header.event_file_id}"
             )
         if header.event_file_id not in events_by_id:
-            events_by_id[header.event_file_id] = parse_map_events(
+            events_by_id[header.event_file_id] = engine.parse_map_events(
                 events.read(header.event_file_id), event_file_id=header.event_file_id
             )
             items_by_event[header.event_file_id] = _extract_location_items(
@@ -290,7 +265,7 @@ def extract_location_dataset(
         raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
 
     connections = _extract_matrix_connections(
-        headers, matrices, location_names, matrix_void_header_ids
+        engine, headers, matrices, location_names, matrix_void_header_ids
     )
     trainers = _extract_trainer_references(result, trainer_dataset)
     records = []
@@ -302,6 +277,7 @@ def extract_location_dataset(
             )
         if header.script_file_id not in shops_by_script:
             shops_by_script[header.script_file_id] = _extract_location_shops(
+                engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
                 common_items=common_mart_items,
@@ -321,6 +297,7 @@ def extract_location_dataset(
             )
         if header.script_file_id not in gifts_by_script:
             gifts_by_script[header.script_file_id] = _extract_location_pokemon_gifts(
+                engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
                 pokemon_names=pokemon_names,
@@ -331,6 +308,7 @@ def extract_location_dataset(
             )
         if header.script_file_id not in npc_trades_by_script:
             npc_trades_by_script[header.script_file_id] = _extract_location_npc_trades(
+                engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
                 trade_records=npc_trade_records,
@@ -345,6 +323,7 @@ def extract_location_dataset(
         if static_encounter_location_key not in static_encounters_by_location:
             static_encounters_by_location[static_encounter_location_key] = (
                 _extract_location_static_encounters(
+                    engine,
                     scripts.read(header.script_file_id),
                     script_file_id=header.script_file_id,
                     map_header_id=header.header_id,
@@ -515,7 +494,7 @@ def extract_location_dataset(
             "roaming_pokemon": {
                 "scripts_archive": scripts_path,
                 "command": "ActivateRoamingPokemon",
-                "slot_count": PLATINUM_ROAMING_SLOT_COUNT,
+                "slot_count": engine.PLATINUM_ROAMING_SLOT_COUNT,
             },
             "decoration_names": {
                 "archive": messages_path,
@@ -550,10 +529,11 @@ def extract_location_dataset(
 
 
 def _extract_location_shops(
+    engine: Any,
     script: bytes,
     *,
     script_file_id: int,
-    common_items: tuple[Gen4CommonMartItem, ...],
+    common_items: tuple[Any, ...],
     specialty_inventories: tuple[tuple[int, ...], ...],
     decoration_inventory_start: int,
     decoration_inventory_count: int,
@@ -569,7 +549,7 @@ def _extract_location_shops(
     frontier_prices: dict[int, int],
 ) -> tuple[LocationShop, ...]:
     shops = []
-    for command in parse_mart_commands(script):
+    for command in engine.parse_mart_commands(script):
         price_by_item: dict[int, int] | None = None
         currency = "money"
         if command.kind == "common":
@@ -662,6 +642,7 @@ def _extract_location_shops(
 
 
 def _extract_location_pokemon_gifts(
+    engine: Any,
     script: bytes,
     *,
     script_file_id: int,
@@ -670,7 +651,7 @@ def _extract_location_pokemon_gifts(
     egg_gift_metadata: list[dict[str, Any]],
 ) -> tuple[LocationPokemonGift, ...]:
     gifts = []
-    for command in parse_pokemon_gift_commands(
+    for command in engine.parse_pokemon_gift_commands(
         script, species_count=len(pokemon_names), item_count=len(item_names)
     ):
         held_item_id = command.held_item_id or None
@@ -689,7 +670,7 @@ def _extract_location_pokemon_gifts(
             )
         )
     for metadata in egg_gift_metadata:
-        command = parse_egg_gift_command(
+        command = engine.parse_egg_gift_command(
             script,
             offset=metadata["command_offset"],
             species_count=len(pokemon_names),
@@ -710,6 +691,7 @@ def _extract_location_pokemon_gifts(
 
 
 def _extract_location_static_encounters(
+    engine: Any,
     script: bytes,
     *,
     script_file_id: int,
@@ -719,7 +701,7 @@ def _extract_location_static_encounters(
     pokemon_names: tuple[str, ...],
 ) -> tuple[LocationStaticEncounter, ...]:
     encounters = []
-    for command in parse_static_encounter_commands(
+    for command in engine.parse_static_encounter_commands(
         script, species_count=len(pokemon_names)
     ):
         command_key = (script_file_id, command.offset)
@@ -747,17 +729,18 @@ def _extract_location_static_encounters(
 
 
 def _extract_location_npc_trades(
+    engine: Any,
     script: bytes,
     *,
     script_file_id: int,
-    trade_records: tuple[Gen4NpcTrade, ...],
+    trade_records: tuple[Any, ...],
     trade_names: tuple[str, ...],
     pokemon_names: tuple[str, ...],
     item_names: tuple[str, ...],
 ) -> tuple[LocationNpcTrade, ...]:
     trades = []
     trade_count = len(trade_records)
-    for command in parse_npc_trade_commands(script, trade_count=trade_count):
+    for command in engine.parse_npc_trade_commands(script, trade_count=trade_count):
         trade = trade_records[command.trade_id]
         held_item_id = trade.held_item_id
         trades.append(
@@ -791,7 +774,7 @@ def _extract_location_npc_trades(
 
 
 def _extract_location_items(
-    events: Gen4MapEvents, item_names: tuple[str, ...]
+    events: Any, item_names: tuple[str, ...]
 ) -> tuple[LocationItem, ...]:
     items = []
     for event in events.objects:
@@ -834,8 +817,9 @@ def _extract_location_items(
 
 
 def _extract_matrix_connections(
-    headers: tuple[PlatinumMapHeader, ...],
-    matrices: NarcArchive,
+    engine: Any,
+    headers: tuple[Any, ...],
+    matrices: Any,
     location_names: tuple[str, ...],
     void_header_ids: frozenset[int],
 ) -> dict[int, list[LocationConnection]]:
@@ -845,7 +829,7 @@ def _extract_matrix_connections(
     for matrix_id in sorted({header.matrix_id for header in headers}):
         if matrix_id >= len(matrices.members):
             raise InvalidRomError(f"Map header references missing matrix {matrix_id}")
-        matrix = parse_map_matrix(matrices.read(matrix_id), matrix_id=matrix_id)
+        matrix = engine.parse_map_matrix(matrices.read(matrix_id), matrix_id=matrix_id)
         if matrix.header_ids is None:
             continue
         for index, source in enumerate(matrix.header_ids):

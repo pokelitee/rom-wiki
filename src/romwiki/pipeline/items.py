@@ -7,17 +7,11 @@ from romwiki.schema.versions import (
     ITEMS_RAW_SCHEMA_VERSION,
 )
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_ITEM_FIELD_USE_NAMES,
-    GEN4_ITEM_POCKET_NAMES,
-    find_item_archive_members,
-    parse_english_message_archive,
-    parse_item_record,
-)
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.platforms.nds import NarcArchive, NintendoDSFileSystem
 from romwiki.sources import PokeDBGeneration
 
 
@@ -35,15 +29,17 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} is missing item metadata: {error.args[0]}"
         ) from error
 
-    filesystem = NintendoDSFileSystem.from_image(result.image)
-    item_archive = NarcArchive.from_bytes(filesystem.read(item_archive_path))
-    messages = NarcArchive.from_bytes(filesystem.read(message_archive_path))
-    item_names = parse_english_message_archive(messages.read(item_names_member))
-    type_names = parse_english_message_archive(messages.read(type_names_member))
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).items
+    filesystem = platform.filesystem_from_image(result.image)
+    item_archive = platform.archive_cls.from_bytes(filesystem.read(item_archive_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(message_archive_path))
+    item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    type_names = engine.parse_english_message_archive(messages.read(type_names_member))
     with result.image.path.open("rb") as stream:
         stream.seek(result.image.header.arm9_offset)
         arm9_data = stream.read(result.image.header.arm9_size)
-    map_offset, data_members = find_item_archive_members(
+    map_offset, data_members = engine.find_item_archive_members(
         arm9_data,
         item_count=len(item_names),
         data_member_count=len(item_archive.members),
@@ -51,7 +47,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
 
     records = []
     for item_id, data_member in enumerate(data_members):
-        parsed = parse_item_record(
+        parsed = engine.parse_item_record(
             item_archive.read(data_member),
             item_id=item_id,
             data_archive_member=data_member,
@@ -60,9 +56,9 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         pocket_id = parsed["field_pocket_id"]
         field_use_id = parsed["field_use_function_id"]
         natural_gift_type_id = parsed["natural_gift_type_id"]
-        if pocket_id >= len(GEN4_ITEM_POCKET_NAMES):
+        if pocket_id >= len(engine.GEN4_ITEM_POCKET_NAMES):
             raise DataSourceError(f"Unknown Gen IV item pocket ID: {pocket_id}")
-        if field_use_id >= len(GEN4_ITEM_FIELD_USE_NAMES):
+        if field_use_id >= len(engine.GEN4_ITEM_FIELD_USE_NAMES):
             raise DataSourceError(
                 f"Unknown Gen IV item field-use function ID: {field_use_id}"
             )
@@ -77,11 +73,11 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
                 "public": item_id > 0 and data_member > 0,
                 "pocket": {
                     "id": pocket_id,
-                    "name": GEN4_ITEM_POCKET_NAMES[pocket_id],
+                    "name": engine.GEN4_ITEM_POCKET_NAMES[pocket_id],
                 },
                 "field_use": {
                     "id": field_use_id,
-                    "name": GEN4_ITEM_FIELD_USE_NAMES[field_use_id],
+                    "name": engine.GEN4_ITEM_FIELD_USE_NAMES[field_use_id],
                 },
                 "natural_gift_type": (
                     None

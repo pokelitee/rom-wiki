@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any
 from romwiki.schema.versions import POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION
 
-from romwiki.engines.gen4_dppt import parse_egg_move_table
+from romwiki.engines.registry import get_engine
+from romwiki.platforms.registry import get_platform
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.platforms.nds.overlays import read_arm9_overlay
 
 
 def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -23,8 +23,10 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} does not define an egg move table"
         ) from error
 
-    overlay, data = read_arm9_overlay(result.image, overlay_id)
-    records = parse_egg_move_table(data, table_offset=table_offset)
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).egg_moves
+    overlay, data = platform.read_overlay(result.image, overlay_id)
+    records = engine.parse_egg_move_table(data, table_offset=table_offset)
     return {
         "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
         "game": profile.id,

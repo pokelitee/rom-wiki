@@ -19,7 +19,7 @@ class ReferenceNameTests(unittest.TestCase):
         move_names = tuple(f"Move {index}" for index in range(468))
 
         with patch(
-            "romwiki.pipeline.reference_names.parse_english_message_archive",
+            "romwiki.engines.gen4_dppt.parse_english_message_archive",
             side_effect=[type_names, ability_names, item_names, move_names],
         ):
             result = extract_reference_names(profile, Mock(), archive)
@@ -37,7 +37,7 @@ class ReferenceNameTests(unittest.TestCase):
         profile = _profile()
         archive = Mock()
         with patch(
-            "romwiki.pipeline.reference_names.parse_english_message_archive",
+            "romwiki.engines.gen4_dppt.parse_english_message_archive",
             return_value=("Normal",),
         ):
             with self.assertRaisesRegex(DataSourceError, "exactly 18 names"):
@@ -48,6 +48,7 @@ def _profile() -> GameProfile:
     return GameProfile(
         id="test",
         name="Test",
+        platform="nintendo-ds",
         engine="gen4_dppt",
         base_game="platinum",
         game_codes=("CPUE",),

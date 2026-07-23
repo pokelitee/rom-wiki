@@ -4,13 +4,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.gen4_dppt import (
-    GEN4_FISHING_SLOT_CHANCES,
-    GEN4_WALKING_SLOT_CHANCES,
-    GEN4_WATER_SLOT_CHANCES,
-    PERSONAL_FORM_MEMBERS,
-    PERSONAL_INTERNAL_MEMBERS,
-)
+from romwiki.engines.registry import get_engine
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
 from romwiki.sources import PokeDBGeneration
@@ -97,6 +91,7 @@ def enrich_personal_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 508:
         raise DataSourceError("Expected exactly 508 Gen IV personal records")
+    engine = get_engine(dataset["engine"]).enrich
     type_names = _resolve_type_names(dataset, type_names)
     move_names = _resolve_move_names(dataset, move_names)
     ability_names = _resolve_ability_names(dataset)
@@ -116,6 +111,7 @@ def enrich_personal_dataset(
             raise DataSourceError("Personal records must be ordered by member ID")
         records.append(
             _enrich_record(
+                engine,
                 source,
                 pokedb,
                 learnsets[expected_member],
@@ -179,12 +175,13 @@ def enrich_encounter_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
         raise DataSourceError("Encounter dataset records must be a list")
+    engine = get_engine(dataset["engine"]).enrich
 
     records = []
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
-        records.append(_enrich_encounter_area(source, pokedb, sprite_version))
+        records.append(_enrich_encounter_area(engine, source, pokedb, sprite_version))
     return {
         "schema_version": ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
@@ -265,6 +262,7 @@ def enrich_move_dataset(
     source_records = dataset.get("records")
     if not isinstance(source_records, list) or len(source_records) != 471:
         raise DataSourceError("Expected exactly 471 Gen IV move records")
+    engine = get_engine(dataset["engine"]).enrich
     rom_move_names = _reference_name_table(dataset, "move_names", 468)
     type_names = _resolve_type_names(dataset, type_names)
     move_names = _resolve_move_names(dataset, move_names)
@@ -287,7 +285,7 @@ def enrich_move_dataset(
                 **tutor,
                 "location": _tutor_location(tutor, tutor_locations),
                 "compatible_pokemon": [
-                    _personal_member_reference(member, pokedb)
+                    _personal_member_reference(engine, member, pokedb)
                     for member in members_by_tutor[tutor_id]
                 ],
             }
@@ -295,7 +293,7 @@ def enrich_move_dataset(
     egg_moves = _validate_egg_moves(egg_move_dataset, dataset["game"])
     egg_move_pokemon: dict[int, list[dict[str, Any]]] = {}
     for species_id, egg_move_set in egg_moves.items():
-        pokemon = _personal_member_reference(species_id, pokedb)
+        pokemon = _personal_member_reference(engine, species_id, pokedb)
         for move_id in egg_move_set["move_ids"]:
             egg_move_pokemon.setdefault(move_id, []).append(pokemon)
     records = []
@@ -364,6 +362,7 @@ def write_enriched_dataset(dataset: dict[str, Any], output_path: Path) -> None:
 
 
 def _enrich_encounter_area(
+    engine: Any,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
@@ -373,7 +372,7 @@ def _enrich_encounter_area(
         "slots": [
             {
                 **slot,
-                "chance": GEN4_WALKING_SLOT_CHANCES[index],
+                "chance": engine.GEN4_WALKING_SLOT_CHANCES[index],
                 "pokemon": _encounter_pokemon(
                     slot["species_id"], pokedb, sprite_version
                 ),
@@ -396,10 +395,10 @@ def _enrich_encounter_area(
             ],
         }
         for name, method, chances in (
-            ("surf", source["surf"], GEN4_WATER_SLOT_CHANCES),
-            ("old_rod", source["old_rod"], GEN4_FISHING_SLOT_CHANCES),
-            ("good_rod", source["good_rod"], GEN4_FISHING_SLOT_CHANCES),
-            ("super_rod", source["super_rod"], GEN4_FISHING_SLOT_CHANCES),
+            ("surf", source["surf"], engine.GEN4_WATER_SLOT_CHANCES),
+            ("old_rod", source["old_rod"], engine.GEN4_FISHING_SLOT_CHANCES),
+            ("good_rod", source["good_rod"], engine.GEN4_FISHING_SLOT_CHANCES),
+            ("super_rod", source["super_rod"], engine.GEN4_FISHING_SLOT_CHANCES),
         )
     }
     special = {
@@ -692,6 +691,7 @@ def _encounter_pokemon(
 
 
 def _enrich_record(
+    engine: Any,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     learnset: dict[str, Any] | None,
@@ -710,8 +710,8 @@ def _enrich_record(
     reference_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
-    if member in PERSONAL_INTERNAL_MEMBERS:
-        slug = PERSONAL_INTERNAL_MEMBERS[member]
+    if member in engine.PERSONAL_INTERNAL_MEMBERS:
+        slug = engine.PERSONAL_INTERNAL_MEMBERS[member]
         identity = {"national_dex_id": None, "base_species": None, "form": None}
         sprite = None
         sprites = []
@@ -719,8 +719,8 @@ def _enrich_record(
         cry = None
         reference_data = None
         public = False
-    elif member in PERSONAL_FORM_MEMBERS:
-        slug = PERSONAL_FORM_MEMBERS[member]
+    elif member in engine.PERSONAL_FORM_MEMBERS:
+        slug = engine.PERSONAL_FORM_MEMBERS[member]
         reference = pokedb.pokemon_for_name(slug)
         base_species = reference["species"]
         identity = {
@@ -1007,10 +1007,10 @@ def _tutor_location(
 
 
 def _personal_member_reference(
-    member: int, pokedb: PokeDBGeneration
+    engine: Any, member: int, pokedb: PokeDBGeneration
 ) -> dict[str, Any]:
-    if member in PERSONAL_FORM_MEMBERS:
-        slug = PERSONAL_FORM_MEMBERS[member]
+    if member in engine.PERSONAL_FORM_MEMBERS:
+        slug = engine.PERSONAL_FORM_MEMBERS[member]
         reference = pokedb.pokemon_for_name(slug)
         national_dex_id = pokedb.pokemon_for_species(reference["species"])["id"]
     elif 1 <= member <= 493:
