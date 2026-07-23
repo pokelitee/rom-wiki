@@ -49,7 +49,7 @@ def parse_trainer_battle_commands(
     whose trainer ID is supplied through a script variable are intentionally not
     resolved here.
     """
-    code_offset = _parse_script_table(data)
+    code_offset = parse_script_table(data)
     commands = []
     signature = struct.pack("<H", START_TRAINER_BATTLE)
     win_check = struct.pack("<H", CHECK_WON_BATTLE)
@@ -83,7 +83,7 @@ def parse_static_encounter_commands(
     Species or level operands supplied through script variables are intentionally
     excluded until their control flow can be resolved without guessing.
     """
-    code_offset = _parse_script_table(data)
+    code_offset = parse_script_table(data)
     commands = []
     signatures = {
         START_WILD_BATTLE: "WildBattle",
@@ -136,7 +136,7 @@ def parse_roaming_activation_commands(
     other operands. Requiring both a valid Platinum slot and a valid following
     command avoids treating those byte sequences as roaming activations.
     """
-    code_offset = _parse_script_table(data)
+    code_offset = parse_script_table(data)
     commands = []
     signature = struct.pack("<H", ACTIVATE_ROAMING_POKEMON)
 
@@ -153,7 +153,7 @@ def parse_roaming_activation_commands(
     return tuple(commands)
 
 
-def _parse_script_table(data: bytes) -> int:
+def parse_script_table(data: bytes) -> int:
     cursor = 0
     targets = []
     table_end = len(data)

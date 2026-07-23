@@ -8,7 +8,7 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
-    write_text as _write_text,
+    write_text,
 )
 from romwiki.renderers.mkdocs.components import (
     record_nav_link,
@@ -83,7 +83,7 @@ def render_location_pages(
             sorted_records[index + 1] if index + 1 < len(sorted_records) else None
         )
         if only_pages is None or filename.removesuffix(".md") in only_pages:
-            _write_text(
+            write_text(
                 output_root / filename,
                 _render_location(
                     record,
@@ -136,7 +136,7 @@ def render_location_pages(
             }, change)
         )
     write_catalog(output_root, "locations", catalog_records)
-    _write_text(
+    write_text(
         output_root / "index.md",
         catalog_index(
             "Locations",

@@ -247,7 +247,7 @@ Adding a second platform or engine is additive: a new `platforms/<platform>/` or
 profile that declares the new `platform`/`engine` keys. No existing pipeline module
 needs to change.
 
-`tests/test_engine_contract.py` is the regression guard for this boundary: it
+`tests/engines/test_contract.py` is the regression guard for this boundary: it
 registers a throwaway fake engine at test time and asserts that enrichment and
 rendering consume its output correctly, with no gen4-specific branching. Extend
 that test file, rather than adding a first real second engine's assumptions to it,

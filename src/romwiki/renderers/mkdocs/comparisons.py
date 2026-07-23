@@ -130,6 +130,13 @@ def render_changes_pages(
         for path in changes_root.rglob("*.md"):
             if path.name != "index.md":
                 path.unlink()
+        for directory in sorted(
+            (path for path in changes_root.rglob("*") if path.is_dir()),
+            key=lambda path: len(path.parts),
+            reverse=True,
+        ):
+            if not any(directory.iterdir()):
+                directory.rmdir()
         write_text(
             changes_root / "index.md",
             "# Changes from base game\n\n"

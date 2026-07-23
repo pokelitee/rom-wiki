@@ -84,10 +84,9 @@ class NarcArchive:
         return cls(data, tuple(members))
 
     def read(self, index: int) -> bytes:
-        try:
-            member = self.members[index]
-        except IndexError as error:
-            raise InvalidRomError(f"NARC member does not exist: {index}") from error
+        if not 0 <= index < len(self.members):
+            raise InvalidRomError(f"NARC member does not exist: {index}")
+        member = self.members[index]
         return self._data[member.start : member.end]
 
 

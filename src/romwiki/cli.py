@@ -230,6 +230,12 @@ def build_parser() -> argparse.ArgumentParser:
         "build-locations", help="extract and render location navigation pages"
     )
     _add_input_arguments(build_locations_parser)
+    build_locations_parser.add_argument(
+        "--pokedb",
+        type=Path,
+        default=Path("../pokedb/.output/gen4"),
+        help="PokéDB generation output directory",
+    )
     build_locations_parser.add_argument("--data-output", type=Path)
     build_locations_parser.add_argument("--wiki-output", type=Path)
 
@@ -271,12 +277,6 @@ def build_parser() -> argparse.ArgumentParser:
         _add_comparison_arguments(build_parser)
         _add_dev_argument(build_parser)
         _add_cache_argument(build_parser)
-    build_locations_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
-    )
 
     build_game_parser = subparsers.add_parser(
         "build-game", help="build every dataset and wiki section for one game"
@@ -365,28 +365,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command in {
-            "inspect",
-            "manifest",
-            "extract-personal",
-            "extract-encounters",
-            "extract-trainers",
-            "extract-locations",
-            "extract-moves",
-            "extract-items",
-            "extract-learnsets",
-            "extract-egg-moves",
-            "extract-evolutions",
-            "extract-machines",
-            "extract-tutors",
-            "build-pokemon",
-            "build-encounters",
-            "build-trainers",
-            "build-locations",
-            "build-moves",
-            "build-items",
-            "build-game",
-        }:
+        # Every subcommand that needs a `result` below registers ROM input
+        # arguments via `_add_input_arguments`; keying off that attribute
+        # (rather than a hand-maintained command list) keeps this check in
+        # sync with the parser definitions by construction.
+        if hasattr(args, "rom_override"):
             result = inspect_rom(_resolve_input_rom(args), args.profiles_dir)
         if args.command == "inspect":
             _print_inspection(result, as_json=args.json)

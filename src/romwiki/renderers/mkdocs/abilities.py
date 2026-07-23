@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -11,10 +10,10 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text,
 )
 from romwiki.renderers.mkdocs.components import (
-    display_name,
     empty_state,
     record_nav_link,
     record_navigation,
+    reference_description,
     sprite_with_link,
     summary_section,
     table_sprite_cell,
@@ -139,7 +138,9 @@ def _render_record(
         f"# {record['name']}",
         "",
         *_ability_summary(record),
-        *_ability_description(record),
+        *reference_description(
+            record, "No PokéDB reference data is available for this ability."
+        ),
         "## Pokémon",
         "",
     ]
@@ -189,37 +190,6 @@ def _ability_summary(record: dict[str, Any]) -> list[str]:
             f"<dd>{len(record['pokemon'])}</dd></div>",
         ],
     )
-
-
-def _ability_description(record: dict[str, Any]) -> list[str]:
-    reference = record.get("reference") or {}
-    short_effect = reference.get("short_effect")
-    effect = reference.get("effect")
-    flavor_text = reference.get("flavor_text")
-    lines: list[str] = []
-    if short_effect or effect:
-        lines.extend(["## Effect", ""])
-        if short_effect:
-            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
-        if effect and effect != short_effect:
-            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
-        lines.append("")
-    if flavor_text:
-        version_label = (
-            f"{display_name(reference['version'])} Pokédex" if reference.get("version") else "Pokédex"
-        )
-        lines.extend(
-            [
-                '<figure class="rw-pokedex-entry">',
-                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
-                f"<figcaption>{escape(version_label)}</figcaption>",
-                "</figure>",
-                "",
-            ]
-        )
-    if not lines:
-        lines = empty_state("No PokéDB reference data is available for this ability.")
-    return lines
 
 
 def _pokemon_link(pokemon: dict[str, Any], source_file: str) -> str:

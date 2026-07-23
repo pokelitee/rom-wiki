@@ -12,10 +12,10 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.components import (
     display_name,
-    empty_state,
     fact_grid,
     record_nav_link,
     record_navigation,
+    reference_description,
     sprite_with_link,
     table_sprite_cell,
 )
@@ -170,7 +170,9 @@ def _render_record(
         f"# {record['name']}",
         "",
         *_item_summary(record),
-        *_item_description(record),
+        *reference_description(
+            record, "No PokéDB reference data is available for this item."
+        ),
         "## Mechanics",
         "",
         *fact_grid(tuple(mechanics)),
@@ -238,39 +240,6 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
         "</section>",
         "",
     ]
-
-
-def _item_description(record: dict[str, Any]) -> list[str]:
-    reference = record.get("reference") or {}
-    short_effect = reference.get("short_effect")
-    effect = reference.get("effect")
-    flavor_text = reference.get("flavor_text")
-    lines: list[str] = []
-    if short_effect or effect:
-        lines.extend(["## Effect", ""])
-        if short_effect:
-            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
-        if effect and effect != short_effect:
-            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
-        lines.append("")
-    if flavor_text:
-        version_label = (
-            f"{display_name(reference['version'])} Pokédex"
-            if reference.get("version")
-            else "Pokédex"
-        )
-        lines.extend(
-            [
-                '<figure class="rw-pokedex-entry">',
-                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
-                f"<figcaption>{escape(version_label)}</figcaption>",
-                "</figure>",
-                "",
-            ]
-        )
-    if not lines:
-        lines = empty_state("No PokéDB reference data is available for this item.")
-    return lines
 
 
 def _append_locations(

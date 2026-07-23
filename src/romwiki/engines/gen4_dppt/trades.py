@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import struct
 
 from romwiki.engines.gen4_dppt.constants import NATURE_NAMES
+from romwiki.engines.gen4_dppt.scripts import parse_script_table
 from romwiki.util.errors import InvalidRomError
 
 
@@ -84,13 +85,14 @@ def parse_npc_trade_commands(
     data: bytes, *, trade_count: int
 ) -> tuple[Gen4NpcTradeCommand, ...]:
     """Find literal NPC trade initializers used by complete trade sequences."""
+    code_offset = parse_script_table(data)
     signature = struct.pack("<H", INIT_NPC_TRADE)
     requested_species_signature = struct.pack("<H", 0x0228)
     start_signature = struct.pack("<H", START_NPC_TRADE)
     finish_signature = struct.pack("<H", FINISH_NPC_TRADE)
     commands = []
 
-    for offset in range(0, len(data) - 2):
+    for offset in range(code_offset, len(data) - 2):
         if data[offset : offset + 2] != signature:
             continue
         trade_id = data[offset + 2]

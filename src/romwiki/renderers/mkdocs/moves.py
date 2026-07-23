@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -8,15 +7,15 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
-    write_text as _write_text,
+    write_text,
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
-    display_name,
     empty_state,
     machine_link,
     record_nav_link,
     record_navigation,
+    reference_description,
     sprite_with_link,
     summary_section,
     table_sprite_cell,
@@ -67,7 +66,7 @@ def render_move_pages(
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
         if only_pages is None or record["slug"] in only_pages:
-            _write_text(
+            write_text(
                 output_root / filename,
                 _render_record(
                     record,
@@ -129,7 +128,7 @@ def render_move_pages(
             }, change)
         )
     write_catalog(output_root, "moves", catalog_records)
-    _write_text(
+    write_text(
         output_root / "index.md",
         catalog_index(
             "Moves",
@@ -189,7 +188,9 @@ def _render_record(
                 f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
             ],
         ),
-        *_move_description(record),
+        *reference_description(
+            record, "No PokéDB reference data is available for this move."
+        ),
     ]
     if additional_properties:
         lines.extend(
@@ -281,39 +282,6 @@ def _append_record_navigation(
         )
         following_link = record_nav_link(href, label, "next")
     lines.extend(record_navigation(previous_link, following_link, "Move navigation"))
-
-
-def _move_description(record: dict[str, Any]) -> list[str]:
-    reference = record.get("reference") or {}
-    short_effect = reference.get("short_effect")
-    effect = reference.get("effect")
-    flavor_text = reference.get("flavor_text")
-    lines: list[str] = []
-    if short_effect or effect:
-        lines.extend(["## Effect", ""])
-        if short_effect:
-            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
-        if effect and effect != short_effect:
-            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
-        lines.append("")
-    if flavor_text:
-        version_label = (
-            f"{display_name(reference['version'])} Pokédex"
-            if reference.get("version")
-            else "Pokédex"
-        )
-        lines.extend(
-            [
-                '<figure class="rw-pokedex-entry">',
-                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
-                f"<figcaption>{escape(version_label)}</figcaption>",
-                "</figure>",
-                "",
-            ]
-        )
-    if not lines:
-        lines = empty_state("No PokéDB reference data is available for this move.")
-    return lines
 
 
 def _optional_value(value: int) -> str:

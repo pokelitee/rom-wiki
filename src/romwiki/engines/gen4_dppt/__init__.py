@@ -55,6 +55,7 @@ from romwiki.engines.gen4_dppt.scripts import (
     Gen4TrainerBattleCommand,
     PLATINUM_ROAMING_SLOT_COUNT,
     parse_roaming_activation_commands,
+    parse_script_table,
     parse_static_encounter_commands,
     parse_trainer_battle_commands,
 )
@@ -123,6 +124,10 @@ from romwiki.engines.gen4_dppt.trades import (
     parse_npc_trade_commands,
     parse_npc_trade_record,
 )
+from romwiki.engines.gen4_dppt.trainer_party import (
+    derive_trainer_party_attributes,
+    normalize_trainer_party_member,
+)
 
 __all__ = [
     "GEN4_ARCHIVE_MEMBER_NONE",
@@ -168,6 +173,7 @@ __all__ = [
     "Gen4StaticEncounterCommand",
     "PLATINUM_ROAMING_SLOT_COUNT",
     "parse_roaming_activation_commands",
+    "parse_script_table",
     "parse_static_encounter_commands",
     "parse_trainer_battle_commands",
     "MOVE_RECORD_SIZE",
@@ -220,4 +226,6 @@ __all__ = [
     "Gen4NpcTradeCommand",
     "parse_npc_trade_commands",
     "parse_npc_trade_record",
+    "derive_trainer_party_attributes",
+    "normalize_trainer_party_member",
 ]

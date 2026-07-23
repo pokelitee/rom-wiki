@@ -9,7 +9,7 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
-    write_text as _write_text,
+    write_text,
 )
 from romwiki.renderers.mkdocs.components import (
     record_nav_link,
@@ -67,7 +67,7 @@ def render_encounter_pages(
             sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
         )
         if only_pages is None or filename.removesuffix(".md") in only_pages:
-            _write_text(
+            write_text(
                 output_root / filename,
                 _render_area(
                     record,
@@ -106,7 +106,7 @@ def render_encounter_pages(
             previous = unlinked[index - 1] if index else None
             following = unlinked[index + 1] if index + 1 < len(unlinked) else None
             if only_pages is None or filename.removesuffix(".md") in only_pages:
-                _write_text(
+                write_text(
                     output_root / filename,
                     _render_area(
                         record,
@@ -136,7 +136,7 @@ def render_encounter_pages(
                 )
             )
     write_catalog(output_root, "encounters", catalog_records)
-    _write_text(
+    write_text(
         output_root / "index.md",
         catalog_index(
             "Wild encounters",

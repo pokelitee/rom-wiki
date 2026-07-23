@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import struct
 
 from romwiki.util.errors import InvalidRomError
-from romwiki.engines.gen4_dppt.scripts import _parse_script_table
+from romwiki.engines.gen4_dppt.scripts import parse_script_table
 
 
 COMMON_MART_COMMAND = 0x0147
@@ -40,7 +40,7 @@ class Gen4CommonMartItem:
 
 
 def parse_mart_commands(data: bytes) -> tuple[Gen4MartCommand, ...]:
-    code_offset = _parse_script_table(data)
+    code_offset = parse_script_table(data)
     commands = []
     for offset in range(code_offset, len(data) - 3):
         opcode = struct.unpack_from("<H", data, offset)[0]

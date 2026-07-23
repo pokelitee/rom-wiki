@@ -3,8 +3,7 @@ from __future__ import annotations
 import struct
 
 from romwiki.util.errors import InvalidRomError
-from romwiki.schema.items import Gen4Item, ItemPartyEffects
-from romwiki.schema.pokemon import RecordProvenance
+from romwiki.schema import Gen4Item, ItemPartyEffects, RecordProvenance
 
 
 GEN4_ITEM_RECORD_SIZE = 34

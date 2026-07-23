@@ -18,6 +18,11 @@ def make_trade_record() -> bytes:
     )
 
 
+def make_script_table_prefix() -> bytes:
+    """A minimal valid script table pointing code at offset 4."""
+    return struct.pack("<i", 0)
+
+
 class Gen4NpcTradeTests(unittest.TestCase):
     def test_parses_trade_record(self) -> None:
         trade = parse_npc_trade_record(
@@ -39,7 +44,7 @@ class Gen4NpcTradeTests(unittest.TestCase):
             parse_npc_trade_record(b"\0" * 79, species_count=494, item_count=537)
 
     def test_extracts_signed_trade_sequence(self) -> None:
-        command = (
+        command = make_script_table_prefix() + (
             struct.pack("<HB", 0x0226, 2)
             + struct.pack("<HH", 0x0029, 0x8004)
             + struct.pack("<HH", 0x0228, 0x800C)
@@ -51,11 +56,13 @@ class Gen4NpcTradeTests(unittest.TestCase):
                 (result.offset, result.trade_id)
                 for result in parse_npc_trade_commands(command, trade_count=4)
             ],
-            [(0, 2)],
+            [(4, 2)],
         )
 
     def test_ignores_initializer_without_trade_sequence(self) -> None:
-        command = struct.pack("<HBHHH", 0x0226, 2, 0x0228, 0x800C, 0x022A)
+        command = make_script_table_prefix() + struct.pack(
+            "<HBHHH", 0x0226, 2, 0x0228, 0x800C, 0x022A
+        )
         self.assertEqual(parse_npc_trade_commands(command, trade_count=4), ())
 
 

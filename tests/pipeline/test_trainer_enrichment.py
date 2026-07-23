@@ -39,7 +39,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             ]
         }
 
-        trainer = _enrich_trainer(source, pokedb, None, None)
+        trainer = _enrich_trainer(source, pokedb, None, None, engine="gen4_dppt")
 
         self.assertEqual(
             trainer["party"][0]["pokemon"]["name"], "Burmy (Sandy Cloak)"

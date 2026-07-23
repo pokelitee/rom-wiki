@@ -8,6 +8,11 @@ from romwiki.schema import Gen4Machine
 
 GEN4_MACHINE_COUNT = 100
 GEN4_TM_COUNT = 92
+# TM01-TM92 and HM01-HM08 occupy a fixed, contiguous block of item IDs
+# (328-427) in every Gen IV game, in the same order as `machine_id`. This
+# layout is engine data, not ROM-hack-mutable, so it's derived rather than
+# read per-ROM.
+_GEN4_MACHINE_ITEM_ID_OFFSET = 327
 
 
 def parse_machine_move_table(
@@ -43,6 +48,7 @@ def parse_machine_move_table(
                 number=number,
                 move_id=move_id,
                 table_index=index,
+                item_id=index + 1 + _GEN4_MACHINE_ITEM_ID_OFFSET,
             )
         )
     return tuple(machines)

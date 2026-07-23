@@ -135,7 +135,7 @@ CSS usage, and conservative page-size and image-count budgets. It operates on th
 combined artifact so portal links and links between independently built game sites
 are resolved in their deployment context.
 
-`tests/test_frontend_contract.py` provides a browser-independent visual contract
+`tests/sites/test_frontend_contract.py` provides a browser-independent visual contract
 for the shared palettes, focus treatment, reduced-motion behavior, responsive
 breakpoint, and dense party-card layout. Renderer tests cover the corresponding
 semantic markup. This keeps layout regressions deterministic in CI; manual review

@@ -8,7 +8,7 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
-    write_text as _write_text,
+    write_text,
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
@@ -72,7 +72,7 @@ def render_pokemon_pages(
         previous = public_records[index - 1] if index else None
         following = public_records[index + 1] if index + 1 < len(public_records) else None
         if only_pages is None or record["slug"] in only_pages:
-            _write_text(
+            write_text(
                 output_root / filename,
                 _render_record(
                     record,
@@ -139,7 +139,7 @@ def render_pokemon_pages(
             }, change)
         )
     write_catalog(output_root, "pokemon", catalog_records)
-    _write_text(
+    write_text(
         output_root / "index.md",
         catalog_index(
             "Pokémon",

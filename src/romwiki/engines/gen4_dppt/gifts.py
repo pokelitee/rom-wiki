@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import struct
 
-from romwiki.engines.gen4_dppt.scripts import _parse_script_table
+from romwiki.engines.gen4_dppt.scripts import parse_script_table
 from romwiki.util.errors import InvalidRomError
 
 
@@ -28,7 +28,7 @@ class Gen4EggGiftCommand:
 def parse_pokemon_gift_commands(
     data: bytes, *, species_count: int, item_count: int
 ) -> tuple[Gen4PokemonGiftCommand, ...]:
-    code_offset = _parse_script_table(data)
+    code_offset = parse_script_table(data)
     commands = []
     for offset in range(code_offset, len(data) - 9):
         opcode, species_id, level, held_item_id, output_variable = (

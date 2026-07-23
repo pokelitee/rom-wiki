@@ -8,7 +8,7 @@ from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
     write_catalog,
-    write_text as _write_text,
+    write_text,
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
@@ -92,7 +92,7 @@ def render_trainer_pages(
             sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
         )
         if only_pages is None or filename.removesuffix(".md") in only_pages:
-            _write_text(
+            write_text(
                 output_root / filename,
                 _render_trainer(
                     record,
@@ -134,7 +134,7 @@ def render_trainer_pages(
         previous = unlinked[index - 1] if index else None
         following = unlinked[index + 1] if index + 1 < len(unlinked) else None
         if only_pages is None or filename.removesuffix(".md") in only_pages:
-            _write_text(
+            write_text(
                 output_root / filename,
                 _render_trainer(
                     record,
@@ -169,7 +169,7 @@ def render_trainer_pages(
             )
         )
     write_catalog(output_root, "trainers", catalog_records)
-    _write_text(
+    write_text(
         output_root / "index.md",
         catalog_index(
             "Trainers",

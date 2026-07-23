@@ -478,7 +478,7 @@ def _enrich_trainer(
     sprite_version: str | None = None,
     reference_version: str | None = None,
     *,
-    engine: str = "gen4_dppt",
+    engine: str,
     pokemon_records: Mapping[int | str, dict[str, Any]] | None = None,
     move_records: Mapping[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:

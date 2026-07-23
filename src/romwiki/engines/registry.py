@@ -30,6 +30,7 @@ class EngineAdapter:
     learnsets: Any
     reference_names: Any
     enrich: Any
+    trainer_party: Any
 
 
 _ENGINES: dict[str, EngineAdapter] = {
@@ -47,6 +48,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         learnsets=gen4_dppt,
         reference_names=gen4_dppt,
         enrich=gen4_dppt,
+        trainer_party=gen4_dppt,
     ),
 }
 

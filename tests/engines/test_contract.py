@@ -42,6 +42,7 @@ def _register_fake_engine(constants: types.SimpleNamespace) -> None:
         learnsets=constants,
         reference_names=constants,
         enrich=constants,
+        trainer_party=constants,
     )
     register_engine(_FAKE_ENGINE_ID, adapter)
 

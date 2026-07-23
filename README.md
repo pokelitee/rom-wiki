@@ -320,6 +320,18 @@ romwiki site build renegade-platinum --output dist
 romwiki site build --all --output dist
 ```
 
+Audit a built artifact for oversized pages and broken links before publishing:
+
+```console
+romwiki site audit dist
+romwiki site audit dist --max-page-kb 512 --max-images 100
+```
+
+`--max-page-kb` (default 512) and `--max-images` (default 100) flag pages that
+exceed the configured rendered-HTML size or image count. The command exits
+with an error if any issues are found; this is the same check the GitHub Pages
+workflow runs against the built artifact before deploying.
+
 Preview an individual site with live reload:
 
 ```console

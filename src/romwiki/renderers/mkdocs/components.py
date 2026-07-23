@@ -354,6 +354,39 @@ def record_navigation(
     ]
 
 
+def reference_description(record: dict[str, Any], empty_message: str) -> list[str]:
+    reference = record.get("reference") or {}
+    short_effect = reference.get("short_effect")
+    effect = reference.get("effect")
+    flavor_text = reference.get("flavor_text")
+    lines: list[str] = []
+    if short_effect or effect:
+        lines.extend(["## Effect", ""])
+        if short_effect:
+            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
+        if effect and effect != short_effect:
+            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
+        lines.append("")
+    if flavor_text:
+        version_label = (
+            f"{display_name(reference['version'])} Pokédex"
+            if reference.get("version")
+            else "Pokédex"
+        )
+        lines.extend(
+            [
+                '<figure class="rw-pokedex-entry">',
+                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
+                f"<figcaption>{escape(version_label)}</figcaption>",
+                "</figure>",
+                "",
+            ]
+        )
+    if not lines:
+        lines = empty_state(empty_message)
+    return lines
+
+
 def shard_cost(costs: dict[str, int]) -> str:
     return ", ".join(
         f"{amount} {color.title()}"

@@ -101,6 +101,7 @@ def _slice_overlay(data: bytes, offset: int, size: int, label: str) -> bytes:
 def _extract_special_tutors(
     engine: Any, platform: Any, result: InspectionResult, *, start_tutor_id: int
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    assert result.match is not None
     profile = result.match.profile
     definitions = profile.parameters.get("special_tutors", [])
     if not isinstance(definitions, list):

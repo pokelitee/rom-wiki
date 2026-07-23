@@ -15,6 +15,9 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError("A known game profile is required for machine extraction")
     profile = result.match.profile
     try:
+        # Unlike sibling extractors' ARM9-relative offsets (e.g. locations.py's
+        # `map_header_offset`), `machine_move_offset` is an absolute ROM-image
+        # file offset, bounds-checked against `result.image.size` below.
         offset = profile.parameters["machine_move_offset"]
     except KeyError as error:
         raise ProfileError(
