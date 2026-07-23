@@ -18,10 +18,10 @@ import {
 export const CATALOGS = {
   items: {
     searchPlaceholder: "Search items, locations, or uses",
-    filters: [{ key: "pocket", label: "Pocket" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by", multi: true }, { key: "locations", label: "Location", control: "combobox" }],
-    ranges: [{ key: "price", label: "Price" }, { key: "fling_power", label: "Fling power" }],
-    sorts: [["id", "Item ID"], ["label", "Name"], ["price", "Price"], ["fling_power", "Fling power"]],
-    columns: [["Item", recordLink], ["Pocket", (record) => text(title(record.pocket))], ["Price", (record) => text(record.price ? `₽${record.price.toLocaleString()}` : "Not sold", "rw-catalog__number")], ["Fling", (record) => numberOrDash(record.fling_power)], ["Referenced by", (record) => text(record.features.map(title).join(", ") || "—")], ["Locations", (record) => referencePreviewList(record.location_refs)]],
+    filters: [{ key: "pocket", label: "Pocket" }, { key: "category", label: "Category" }, { key: "field_use", label: "Field use" }, { key: "features", label: "Referenced by", multi: true }, { key: "locations", label: "Location", control: "combobox" }],
+    ranges: [{ key: "price", label: "Base price" }, { key: "fling_power", label: "Fling power" }],
+    sorts: [["id", "Item ID"], ["label", "Name"], ["price", "Base price"], ["fling_power", "Fling power"]],
+    columns: [["Item", recordLink], ["Pocket", (record) => text(title(record.pocket))], ["Base price", (record) => text(record.price ? `₽${record.price.toLocaleString()}` : "Not sold", "rw-catalog__number")], ["Fling power", (record) => numberOrDash(record.fling_power)], ["Referenced by", (record) => text(record.features.map(title).join(", ") || "—")], ["Locations", (record) => referencePreviewList(record.location_refs)]],
   },
   abilities: {
     searchPlaceholder: "Search abilities or Pokémon",
@@ -41,7 +41,7 @@ export const CATALOGS = {
     filters: [{ key: "type", label: "Type" }, { key: "damage_class", label: "Class" }, { key: "access_methods", label: "Available as", multi: true }],
     ranges: [{ key: "power", label: "Power" }],
     sorts: [["label", "Name"], ["id", "Move ID"], ["power", "Power"], ["accuracy", "Accuracy"], ["pp", "PP"]],
-    columns: [["Move", recordLink], ["Type", (record) => typeBadge(record.type)], ["Class", (record) => classBadge(record.damage_class)], ["Power", (record) => numberOrDash(record.power)], ["Accuracy", (record) => text(record.accuracy ? `${record.accuracy}%` : "Always")], ["PP", (record) => text(record.pp, "rw-catalog__number")], ["Available as", accessMethods]],
+    columns: [["Move", recordLink], ["Type", (record) => typeBadge(record.type)], ["Class", (record) => classBadge(record.damage_class)], ["Power", (record) => numberOrDash(record.power)], ["Accuracy", (record) => text(record.accuracy ? `${record.accuracy}%` : "Always hits")], ["PP", (record) => text(record.pp, "rw-catalog__number")], ["Available as", accessMethods]],
   },
   trainers: {
     searchPlaceholder: "Search trainers, locations, or party Pokémon",
@@ -54,15 +54,15 @@ export const CATALOGS = {
     searchPlaceholder: "Search location or internal map name",
     filters: [{ key: "features", label: "Contains", multi: true }],
     sorts: [["label", "Name"], ["id", "Header ID"]],
-    columns: [["Location", recordLink], ["Contains", (record) => text(record.features.map(title).join(", ") || "—")], ["Map ID", locationIdentifier]],
+    columns: [["Location", recordLink], ["Contains", (record) => text(record.features.map(title).join(", ") || "—")], ["Map header", locationIdentifier]],
   },
   encounters: {
     searchPlaceholder: "Search areas or wild Pokémon",
     filters: [{ key: "methods", label: "Method", multi: true }, { key: "pokemon", label: "Pokémon", control: "combobox" }],
     ranges: [{ key: "level", label: "Level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
     correlations: [{ left: "methods", right: "pokemon", path: "method_pokemon" }],
-    sorts: [["label", "Location"], ["id", "Area ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
-    columns: [["Area", recordLink], ["Methods", (record) => text(record.methods.map(title).join(", "))], ["Levels", (record) => text(record.min_level == null ? "—" : `${record.min_level}–${record.max_level}`, "rw-catalog__number")], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
+    sorts: [["label", "Area"], ["id", "Area ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
+    columns: [["Area", recordLink], ["Methods", (record) => text(record.methods.map(title).join(", ") || "—")], ["Levels", (record) => text(record.min_level == null ? "—" : record.min_level === record.max_level ? record.min_level : `${record.min_level}–${record.max_level}`, "rw-catalog__number")], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
   },
 };
 

@@ -30,6 +30,32 @@ PERSONAL_FORM_MEMBERS = {
 
 PERSONAL_INTERNAL_MEMBERS = {0: "none", 494: "egg", 495: "bad-egg"}
 
+# Trainer-party form operands that select a battle form with its own
+# personal record; slugs match the PERSONAL_FORM_MEMBERS entries above.
+TRAINER_FORM_SLUGS = {
+    (386, 1): "deoxys-attack",
+    (386, 2): "deoxys-defense",
+    (386, 3): "deoxys-speed",
+    (413, 1): "wormadam-sandy",
+    (413, 2): "wormadam-trash",
+    (479, 1): "rotom-heat",
+    (479, 2): "rotom-wash",
+    (479, 3): "rotom-frost",
+    (479, 4): "rotom-fan",
+    (479, 5): "rotom-mow",
+    (487, 1): "giratina-origin",
+    (492, 1): "shaymin-sky",
+}
+
+# Cosmetic form operands that reuse the base species' personal record but
+# change the displayed appearance.
+TRAINER_COSMETIC_FORM_LABELS = {
+    (412, 1): "Sandy Cloak",
+    (412, 2): "Trash Cloak",
+    (422, 1): "East Sea",
+    (423, 1): "East Sea",
+}
+
 
 def parse_personal_record(
     data: bytes,
@@ -44,6 +70,11 @@ def parse_personal_record(
         )
 
     ev_mask = struct.unpack_from("<H", data, 10)[0]
+    padding = struct.unpack_from("<H", data, 26)[0]
+    if padding:
+        raise InvalidRomError(
+            f"Gen IV personal record {species_id} has nonzero padding: {padding}"
+        )
     machine_masks = struct.unpack_from("<IIII", data, 28)
     machine_ids = tuple(
         machine_id

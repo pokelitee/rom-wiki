@@ -53,6 +53,18 @@ class NintendoDSImage:
         }
 
 
+def read_arm9_binary(image: NintendoDSImage) -> bytes:
+    """Read the full ARM9 code binary from a ROM image."""
+    with image.path.open("rb") as stream:
+        stream.seek(image.header.arm9_offset)
+        return stream.read(image.header.arm9_size)
+
+
+def arm9_load_address(image: NintendoDSImage) -> int:
+    """Return the RAM address the ARM9 binary is loaded at."""
+    return image.header.arm9_ram_address
+
+
 def _calculate_hashes(stream: BinaryIO) -> RomHashes:
     digests = {
         "md5": hashlib.md5(usedforsecurity=False),

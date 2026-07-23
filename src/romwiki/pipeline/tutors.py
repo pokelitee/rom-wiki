@@ -5,7 +5,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
+from romwiki.pipeline.map_headers import parse_map_header_table, read_code_binary
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
@@ -32,8 +32,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).tutors
     overlay, data = platform.read_overlay(result.image, parameters["tutor_overlay_id"])
     move_size = parameters["tutor_count"] * engine.TUTOR_RECORD_SIZE
-    form_members = tuple(sorted(engine.PERSONAL_FORM_MEMBERS))
-    compatibility_count = engine.GEN4_BASE_SPECIES_COUNT + len(form_members)
+    form_members = tuple(sorted(engine.FORM_MEMBERS))
+    compatibility_count = engine.BASE_SPECIES_COUNT + len(form_members)
     compatibility_size = compatibility_count * engine.TUTOR_COMPATIBILITY_RECORD_SIZE
     move_data = _slice_overlay(data, parameters["tutor_move_offset"], move_size, "move")
     compatibility_data = _slice_overlay(
@@ -56,7 +56,7 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     compatibility = engine.parse_tutor_compatibility_table(
         compatibility_data,
         tutor_count=parameters["tutor_count"],
-        base_species_count=engine.GEN4_BASE_SPECIES_COUNT,
+        base_species_count=engine.BASE_SPECIES_COUNT,
         form_member_start=form_members[0],
         form_count=len(form_members),
     )
@@ -111,7 +111,7 @@ def _extract_special_tutors(
         return [], []
     try:
         minimum_friendship = profile.parameters.get(
-            "special_tutor_minimum_friendship", engine.GEN4_MAX_FRIENDSHIP
+            "special_tutor_minimum_friendship", engine.MAX_FRIENDSHIP
         )
         script_path = profile.layout["scripts"]
         personal_path = profile.layout["personal"]
@@ -134,7 +134,7 @@ def _extract_special_tutors(
     location_names = engine.parse_english_message_archive(
         messages.read(location_names_member)
     )
-    arm9_data = read_arm9(result.image)
+    arm9_data = read_code_binary(platform, result.image)
     headers = parse_map_header_table(
         engine,
         arm9_data,
@@ -146,8 +146,8 @@ def _extract_special_tutors(
 
     records = []
     compatibility: dict[int, list[int]] = {}
-    public_members = tuple(range(1, engine.GEN4_BASE_SPECIES_COUNT + 1)) + tuple(
-        engine.PERSONAL_FORM_MEMBERS
+    public_members = tuple(range(1, engine.BASE_SPECIES_COUNT + 1)) + tuple(
+        engine.FORM_MEMBERS
     )
     personal_records = {
         member: engine.parse_personal_record(

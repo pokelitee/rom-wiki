@@ -14,24 +14,39 @@ from romwiki.util.errors import InvalidRomError
 class Gen4MapHeaderTests(unittest.TestCase):
     def test_decodes_header_linkage_and_internal_name(self) -> None:
         data = bytearray(24)
+        data[0x0] = 5
+        data[0x1] = 1
         struct.pack_into("<H", data, 0x2, 18)
         struct.pack_into("<HHH", data, 0x4, 427, 12, 433)
+        struct.pack_into("<HH", data, 0xA, 1103, 1119)
         struct.pack_into("<H", data, 0xE, 42)
         struct.pack_into("<H", data, 0x10, 328)
         data[0x12] = 7
+        data[0x13] = 3
+        data[0x14] = 2
+        data[0x15] = 4
+        struct.pack_into("<H", data, 0x16, 0x0304)
 
         headers = parse_platinum_map_headers(
             bytes(data), b"W201\0" + bytes(11), count=1
         )
 
         self.assertEqual(headers[0].header_id, 0)
+        self.assertEqual(headers[0].area_data_id, 5)
+        self.assertEqual(headers[0].unknown_value, 1)
         self.assertEqual(headers[0].matrix_id, 18)
         self.assertEqual(headers[0].encounter_id, 42)
         self.assertEqual(headers[0].script_file_id, 427)
         self.assertEqual(headers[0].level_script_id, 12)
         self.assertEqual(headers[0].text_archive_id, 433)
+        self.assertEqual(headers[0].day_music_id, 1103)
+        self.assertEqual(headers[0].night_music_id, 1119)
         self.assertEqual(headers[0].event_file_id, 328)
         self.assertEqual(headers[0].location_name_id, 7)
+        self.assertEqual(headers[0].map_label_window_id, 3)
+        self.assertEqual(headers[0].weather_id, 2)
+        self.assertEqual(headers[0].camera_id, 4)
+        self.assertEqual(headers[0].flags, 0x0304)
         self.assertEqual(headers[0].internal_name, "W201")
 
     def test_rejects_mismatched_table_size(self) -> None:

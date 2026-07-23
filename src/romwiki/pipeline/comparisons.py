@@ -44,16 +44,21 @@ _FIELDS = {
     ),
     "wild_encounters": (
         "active", "name", "locations", "walking", "surf", "old_rod",
-        "good_rod", "super_rod", "special", "unknown_value",
+        "good_rod", "super_rod", "special", "encounter_form_rates",
+        "unown_table_id",
     ),
     "trainers": (
-        "name", "class_id", "class_name", "double_battle", "ai_flags",
-        "ai_battle_items", "party", "locations", "script_references",
+        "name", "class_id", "class_name", "battle_type", "double_battle",
+        "ai_flags", "ai_battle_items", "party", "locations",
+        "script_references",
     ),
     "locations": (
         "name", "internal_name", "location_name_id", "matrix_id",
-        "event_file_id", "encounter_id", "connections", "warps", "items",
-        "shops", "pokemon_gifts", "npc_trades", "static_encounters", "trainers",
+        "area_data_id", "level_script_id", "text_archive_id",
+        "day_music_id", "night_music_id", "weather_id", "camera_id",
+        "map_flags", "event_file_id", "encounter_id", "connections",
+        "warps", "items", "shops", "pokemon_gifts", "npc_trades",
+        "static_encounters", "roaming_activations", "trainers",
     ),
 }
 
@@ -68,7 +73,7 @@ _UNORDERED = {
     "trainers": {"locations", "script_references"},
     "locations": {
         "connections", "warps", "items", "shops", "pokemon_gifts",
-        "npc_trades", "static_encounters", "trainers",
+        "npc_trades", "static_encounters", "roaming_activations", "trainers",
     },
 }
 
@@ -112,6 +117,14 @@ _LABELS = {
     "prevent_toss": "Prevents tossing",
     "location_name_id": "Location-name ID",
     "matrix_id": "Matrix ID",
+    "area_data_id": "Area data ID",
+    "level_script_id": "Level script",
+    "text_archive_id": "Text archive",
+    "day_music_id": "Day music",
+    "night_music_id": "Night music",
+    "weather_id": "Weather",
+    "camera_id": "Camera",
+    "map_flags": "Map flags",
     "event_file_id": "Event file",
     "encounter_id": "Encounter area",
     "old_rod": "Old Rod",
@@ -119,6 +132,8 @@ _LABELS = {
     "super_rod": "Super Rod",
     "unknown_value": "Unknown engine value",
     "ai_flags": "AI flags",
+    "battle_type": "Battle type",
+    "roaming_activations": "Roaming activations",
     "ai_battle_items": "AI battle items",
     "trainer_battle_items": "Trainer battle items",
     "script_references": "Script references",

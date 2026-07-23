@@ -7,11 +7,13 @@ from romwiki.platforms.registry import get_platform
 from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import DataSourceError, ProfileError
 
+# Each table's profile parameter and the engine constant naming its size.
 _NAME_TABLES = {
-    "type_names": ("type_names_member", 18),
-    "ability_names": ("ability_names_member", 124),
-    "item_names": ("item_names_member", 468),
-    "move_names": ("move_names_member", 468),
+    "type_names": ("type_names_member", "TYPE_NAME_COUNT"),
+    "ability_names": ("ability_names_member", "ABILITY_NAME_COUNT"),
+    "item_names": ("item_names_member", "ITEM_NAME_COUNT"),
+    "move_names": ("move_names_member", "MOVE_NAME_COUNT"),
+    "pokemon_names": ("pokemon_names_member", "POKEMON_NAME_COUNT"),
 }
 
 
@@ -20,9 +22,10 @@ def extract_reference_names(
     filesystem: Any,
     message_archive: Any | None = None,
 ) -> dict[str, Any]:
+    engine = get_engine(profile.engine).reference_names
     configured = {
-        field: (parameter, expected_count)
-        for field, (parameter, expected_count) in _NAME_TABLES.items()
+        field: (parameter, getattr(engine, count_attribute))
+        for field, (parameter, count_attribute) in _NAME_TABLES.items()
         if parameter in profile.parameters
     }
     if not configured:
@@ -34,9 +37,7 @@ def extract_reference_names(
             f"Profile {profile.id} defines name tables without a message archive"
         ) from error
     archive_cls = get_platform(profile.platform).archive_cls
-    parse_english_message_archive = get_engine(
-        profile.engine
-    ).reference_names.parse_english_message_archive
+    parse_english_message_archive = engine.parse_english_message_archive
     archive = message_archive or archive_cls.from_bytes(filesystem.read(archive_path))
     result: dict[str, Any] = {"name_sources": {}}
     for field, (parameter, expected_count) in configured.items():

@@ -170,8 +170,11 @@ class PokeDBSpriteTests(unittest.TestCase):
 
         self.assertEqual(result["flavor_text"], "Platinum entry.")
         self.assertEqual(result["flavor_text_version"], "platinum")
-        self.assertEqual(result["base_stats"]["special_attack"], 65)
-        self.assertEqual(result["abilities"], ["overgrow"])
+        self.assertEqual(result["genus"], "Seed Pokémon")
+        # Battle facts stay ROM-sourced and are not duplicated in the snapshot.
+        self.assertNotIn("base_stats", result)
+        self.assertNotIn("types", result)
+        self.assertNotIn("abilities", result)
 
 
 if __name__ == "__main__":

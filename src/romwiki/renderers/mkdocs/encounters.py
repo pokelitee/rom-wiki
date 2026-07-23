@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from collections import Counter
-from html import escape
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -17,11 +16,15 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    pokemon_table,
+    provenance_fact_table,
     provenance_section,
-    record_nav_link,
-    record_navigation,
+    record_navigation_for,
+    reference_type_cell,
+    rom_record_source,
     sprite_with_link,
     summary_section,
+    summary_section_link,
     table_sprite_cell,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -113,7 +116,7 @@ def render_encounter_pages(
                         record,
                         change,
                         comparison.get("baseline") if comparison else None,
-                        None,
+                        references,
                         previous,
                         following,
                     ),
@@ -187,6 +190,17 @@ def _catalog_record(
     special_species = [pokemon["name"] for pokemon in special_pokemon]
     pokemon_refs.extend(_pokemon_reference(pokemon) for pokemon in special_pokemon)
     species.extend(special_species)
+    levels.extend(
+        entry["level"]
+        for group in (
+            record["special"]["swarm"],
+            record["special"]["day"],
+            record["special"]["night"],
+            *record["special"]["dual_slot"].values(),
+        )
+        for entry in group
+        if entry["pokemon"]
+    )
     if special_species and "walking" in method_pokemon:
         method_pokemon["walking"] = list(
             dict.fromkeys((*method_pokemon["walking"], *special_species))
@@ -212,25 +226,32 @@ def _catalog_record(
 
 
 def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
-    pokemon = []
-    seen = set()
-    groups = (
+    slotted_groups = (
         special["swarm"],
         special["day"],
         special["night"],
-        special["radar"],
-        *(values for values in special["dual_slot"].values()),
+        *(entries for entries in special["dual_slot"].values()),
     )
-    for group in groups:
-        for value in group:
-            if value is None:
-                continue
-            identity = (value.get("id"), value.get("slug"), value["name"])
-            if identity in seen:
-                continue
-            seen.add(identity)
-            pokemon.append(value)
-    return pokemon
+    pokemon = [
+        entry["pokemon"] for group in slotted_groups for entry in group if entry["pokemon"]
+    ]
+    pokemon.extend(value for value in special["radar"] if value is not None)
+    return _unique_pokemon(pokemon)
+
+
+def _unique_pokemon(pokemon: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """De-duplicate a Pokémon list, since the ROM's fixed-size special-encounter
+    tuples (e.g. Poké Radar's 4-species table) commonly repeat the same species.
+    """
+    unique = []
+    seen = set()
+    for value in pokemon:
+        identity = (value.get("id"), value.get("slug"), value["name"])
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique.append(value)
+    return unique
 
 
 def _pokemon_reference(pokemon: dict[str, Any]):
@@ -257,27 +278,43 @@ def _render_area(
         *_area_summary(record),
     ]
     _append_locations(lines, record.get("locations", []), source_file)
-    _append_walking(lines, record["walking"], source_file)
+    _append_walking(lines, record["walking"], source_file, references)
     for heading, key in (
         ("Surf", "surf"),
         ("Old Rod", "old_rod"),
         ("Good Rod", "good_rod"),
         ("Super Rod", "super_rod"),
     ):
-        _append_water(lines, heading, record[key], source_file)
-    _append_special(lines, record["special"], source_file)
+        _append_water(lines, heading, record[key], source_file, references)
+    _append_special(lines, record["special"], source_file, references)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
             [
-                (
-                    "Source: exact ROM record from "
-                    f"`{record['provenance']['archive']}` member "
-                    f"`{record['provenance']['member']}`. Chance percentages are not "
-                    "stored in the ROM's encounter tables — only each slot's species "
-                    "and level(s) are ROM data — they are fixed, publicly documented "
-                    "Generation III/IV engine weights applied by slot position."
+                *provenance_fact_table(
+                    (
+                        ("Unown table ID", f"`{record['unown_table_id']}`"),
+                        (
+                            "Encounter form rates",
+                            f"`{record['encounter_form_rates']}`",
+                        ),
+                    )
                 ),
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
+                ),
+                "Chance percentages are not stored in the ROM's encounter tables — "
+                "only each slot's species and level(s) are ROM data — they are "
+                "fixed, publicly documented Generation III/IV engine weights "
+                "applied by slot position.",
+                "Swarm, Day/Night, and Dual-slot replacements substitute a walking "
+                "slot's species only; the level and chance shown for them are the "
+                "replaced slot's own level and chance, per the wild-encounter "
+                "routine in the Pokémon Platinum decompilation.",
+                "Encounter form rates is a raw ROM value whose exact purpose isn't "
+                "fully understood; it is not a Pokémon species reference (unlike "
+                "most other numeric fields on this page) and stays constant across "
+                "every encounter area regardless of location.",
             ]
         )
     )
@@ -299,17 +336,28 @@ def _area_summary(record: dict[str, Any]) -> list[str]:
     ]
     locations = record.get("locations", [])
     facts = [
-        ("Area ID", str(record["area_id"])),
-        ("Methods", ", ".join(methods) if methods else "None"),
+        f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
+        (
+            "<div><dt>Methods</dt><dd>"
+            + (
+                ", ".join(
+                    summary_section_link(label, label.lower().replace(" ", "-"))
+                    for label in methods
+                )
+                if methods
+                else "None"
+            )
+            + "</dd></div>"
+        ),
     ]
     if locations:
-        facts.append(("Map headers", str(len(locations))))
+        facts.append(
+            "<div><dt>Map headers</dt><dd>"
+            f"{summary_section_link(len(locations), 'map-headers')}</dd></div>"
+        )
     return summary_section(
         "rw-encounter-summary",
-        [
-            f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
-            for label, value in facts
-        ],
+        facts,
     )
 
 
@@ -319,25 +367,17 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    source_url = f"encounters/area-{record['area_id']:03}/"
-    previous_link = None
-    if previous is not None:
-        label = f"← {previous['name']}"
-        href = ROUTES.published_href(
-            entity_reference("encounter", previous["area_id"], label, previous["area_id"]),
-            source_url,
-        )
-        previous_link = record_nav_link(href, label, "prev")
-    following_link = None
-    if following is not None:
-        label = f"{following['name']} →"
-        href = ROUTES.published_href(
-            entity_reference("encounter", following["area_id"], label, following["area_id"]),
-            source_url,
-        )
-        following_link = record_nav_link(href, label, "next")
     lines.extend(
-        record_navigation(previous_link, following_link, "Wild encounter navigation")
+        record_navigation_for(
+            "encounter",
+            f"encounters/area-{record['area_id']:03}/",
+            previous,
+            following,
+            aria_label="Wild encounter navigation",
+            identity=lambda value: value["area_id"],
+            route_key=lambda value: value["area_id"],
+            label=lambda value: value["name"],
+        )
     )
 
 
@@ -387,84 +427,131 @@ def _merge_slots(
 
 
 def _append_walking(
-    lines: list[str], method: dict[str, Any], source_file: str
+    lines: list[str],
+    method: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
     if not method["rate"]:
         return
+    slots = _merge_slots(method["slots"], ("level",))
+    lines.extend(["## Walking", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        [
-            "## Walking",
-            "",
-            f"Encounter rate: {method['rate']}",
-            "",
-            "| Pokémon | Level | Chance |",
-            "| ------- | ----: | -----: |",
-        ]
-    )
-    for slot in _merge_slots(method["slots"], ("level",)):
-        lines.append(
-            f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
-            f"{slot['level']} | {slot['chance']}% |"
+        pokemon_table(
+            ["| Pokémon | Type | Level | Chance |", "| ------- | ---- | ----: | -----: |"],
+            [
+                (
+                    f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
+                    f"{_slot_type_cell(slot['pokemon'], references)} | "
+                    f"{slot['level']} | {slot['chance']}% |"
+                )
+                for slot in slots
+            ],
         )
-    lines.append("")
+    )
 
 
 def _append_water(
-    lines: list[str], heading: str, method: dict[str, Any], source_file: str
+    lines: list[str],
+    heading: str,
+    method: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
     if not method["rate"]:
         return
+    slots = _merge_slots(method["slots"], ("minimum_level", "maximum_level"))
+    lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        [
-            f"## {heading}",
-            "",
-            f"Encounter rate: {method['rate']}",
-            "",
-            "| Pokémon | Levels | Chance |",
-            "| ------- | -----: | -----: |",
-        ]
-    )
-    for slot in _merge_slots(method["slots"], ("minimum_level", "maximum_level")):
-        levels = _level_range(slot["minimum_level"], slot["maximum_level"])
-        lines.append(
-            f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | {levels} | "
-            f"{slot['chance']}% |"
+        pokemon_table(
+            ["| Pokémon | Type | Levels | Chance |", "| ------- | ---- | -----: | -----: |"],
+            [
+                (
+                    f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
+                    f"{_slot_type_cell(slot['pokemon'], references)} | "
+                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | "
+                    f"{slot['chance']}% |"
+                )
+                for slot in slots
+            ],
         )
-    lines.append("")
+    )
 
 
 def _append_special(
-    lines: list[str], special: dict[str, Any], source_file: str
+    lines: list[str],
+    special: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
-    groups = [
+    slotted_groups = [
         ("Swarm", special["swarm"]),
         ("Day replacements", special["day"]),
         ("Night replacements", special["night"]),
-        ("Poké Radar", special["radar"]),
     ]
-    groups.extend(
-        (f"Dual-slot: {game.replace('-', ' ').title()}", pokemon)
-        for game, pokemon in special["dual_slot"].items()
+    slotted_groups.extend(
+        (f"Dual-slot: {game.replace('-', ' ').title()}", entries)
+        for game, entries in special["dual_slot"].items()
     )
-    populated = [(label, values) for label, values in groups if any(values)]
-    if not populated:
+    populated_slotted = [
+        (label, [entry for entry in entries if entry["pokemon"]])
+        for label, entries in slotted_groups
+    ]
+    populated_slotted = [(label, entries) for label, entries in populated_slotted if entries]
+    radar = _unique_pokemon(value for value in special["radar"] if value)
+    unown_forms = special["unown_forms"]
+    if not populated_slotted and not radar and not unown_forms:
         return
     lines.extend(["## Special encounters", ""])
-    for label, values in populated:
+    for label, entries in populated_slotted:
+        lines.extend([f"**{label}:**", ""])
+        lines.extend(
+            pokemon_table(
+                ["| Pokémon | Type | Level | Chance |", "| ------- | ---- | ----: | -----: |"],
+                [
+                    (
+                        f"| {sprite_with_link(table_sprite_cell(entry['pokemon'].get('sprite')), _pokemon_link(entry['pokemon'], source_file))} | "
+                        f"{_slot_type_cell(entry['pokemon'], references)} | "
+                        f"{entry['level']} | {entry['chance']}% |"
+                    )
+                    for entry in entries
+                ],
+            )
+        )
+    if radar:
         lines.extend(
             [
-                f"**{label}:**",
+                "**Poké Radar:**",
                 "",
-                "| Pokémon |",
-                "| ------- |",
-                *[
-                    f"| {sprite_with_link(table_sprite_cell((value or {}).get('sprite')), _pokemon_link(value, source_file))} |"
-                    for value in values
-                    if value
-                ],
+                "Only appears for one specific Poké Radar shake outcome; most "
+                "radar encounters instead continue the current chain's species "
+                "rather than drawing from this table, so no fixed level or "
+                "chance applies here.",
                 "",
             ]
         )
+        lines.extend(
+            pokemon_table(
+                ["| Pokémon | Type |", "| ------- | ---- |"],
+                [
+                    (
+                        f"| {sprite_with_link(table_sprite_cell((value or {}).get('sprite')), _pokemon_link(value, source_file))} | "
+                        f"{_slot_type_cell(value, references)} |"
+                    )
+                    for value in radar
+                ],
+            )
+        )
+    if unown_forms:
+        lines.extend(["**Unown forms:**", "", ", ".join(unown_forms), ""])
+
+
+def _slot_type_cell(
+    pokemon: dict[str, Any] | None, references: ReferenceIndex | None
+) -> str:
+    return reference_type_cell(
+        "pokemon", (pokemon or {}).get("id"), references
+    )
 
 
 def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
@@ -475,5 +562,3 @@ def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
 
 def _level_range(minimum: int, maximum: int) -> str:
     return str(minimum) if minimum == maximum else f"{minimum}–{maximum}"
-
-

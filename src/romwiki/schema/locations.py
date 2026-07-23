@@ -86,6 +86,13 @@ class LocationStaticEncounter:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationRoamingActivation:
+    slot: int
+    script_file_id: int
+    command_offset: int
+
+
+@dataclass(frozen=True, slots=True)
 class LocationNpcTrade:
     trade_id: int
     requested_species_id: int
@@ -102,6 +109,7 @@ class LocationNpcTrade:
     ot_gender: str
     language: str
     personality: int
+    unknown_values: tuple[int, ...]
     script_file_id: int
     command_offset: int
 
@@ -113,6 +121,14 @@ class Gen4Location:
     location_name_id: int
     name: str
     matrix_id: int
+    area_data_id: int
+    level_script_id: int
+    text_archive_id: int
+    day_music_id: int
+    night_music_id: int
+    weather_id: int
+    camera_id: int
+    map_flags: int
     event_file_id: int | None
     encounter_id: int | None
     warps: tuple[LocationWarp, ...]
@@ -122,6 +138,7 @@ class Gen4Location:
     shops: tuple[LocationShop, ...]
     pokemon_gifts: tuple[LocationPokemonGift, ...]
     static_encounters: tuple[LocationStaticEncounter, ...]
+    roaming_activations: tuple[LocationRoamingActivation, ...]
     npc_trades: tuple[LocationNpcTrade, ...]
 
     def to_dict(self) -> dict[str, Any]:

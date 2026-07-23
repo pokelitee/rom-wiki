@@ -22,17 +22,26 @@ from romwiki.renderers.mkdocs.components import (
     evolution_condition,
     fact_grid,
     machine_link,
+    name_table_source,
+    pokedex_quote,
     pokemon_summary,
+    provenance_fact_table,
     provenance_section,
-    record_nav_link,
-    record_navigation,
+    record_navigation_for,
+    reference_source_link,
+    reference_sprite_cell,
+    rom_record_source,
     sprite_with_link,
     stat_list,
-    table_sprite_cell,
     tutor_requirement,
     type_badges,
 )
-from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    ReferenceIndex,
+    entity_markdown_link,
+    entity_reference,
+)
 
 
 def render_pokemon_pages(
@@ -261,16 +270,25 @@ def _render_record(
     lines.extend(
         provenance_section(
             [
-                (
-                    "Source: exact ROM record from "
-                    f"`{record['provenance']['archive']}` member "
-                    f"`{record['provenance']['member']}`."
+                *provenance_fact_table(
+                    (
+                        ("Personal-data member", f"`{record['member']}`"),
+                        (
+                            "Flip battle sprite",
+                            "Yes" if record["flip_sprite"] else "No",
+                        ),
+                    )
+                ),
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
                 ),
                 *(
                     [
-                        "Type name source: ROM message table "
-                        f"`{type_name_source['archive']}` member "
-                        f"`{type_name_source['member']}`."
+                        name_table_source(
+                            "Type",
+                            type_name_source["archive"],
+                            type_name_source["member"],
+                        )
                     ]
                     if type_name_source is not None
                     else []
@@ -287,10 +305,10 @@ def _render_record(
                 ),
                 *(
                     [
-                        (
-                            "Level-up learnset source: exact ROM record from "
-                            f"`{record['learnset_provenance']['archive']}` member "
-                            f"`{record['learnset_provenance']['member']}`."
+                        rom_record_source(
+                            record["learnset_provenance"]["archive"],
+                            record["learnset_provenance"]["member"],
+                            label="Level-up learnset source",
                         )
                     ]
                     if record.get("learnset_provenance") is not None
@@ -298,15 +316,16 @@ def _render_record(
                 ),
                 *(
                     [
-                        (
-                            "Evolution source: exact ROM record from "
-                            f"`{record['evolution_provenance']['archive']}` member "
-                            f"`{record['evolution_provenance']['member']}`."
+                        rom_record_source(
+                            record["evolution_provenance"]["archive"],
+                            record["evolution_provenance"]["member"],
+                            label="Evolution source",
                         )
                     ]
                     if record.get("evolution_provenance") is not None
                     else []
                 ),
+                *reference_source_link(record),
             ]
         )
     )
@@ -317,8 +336,7 @@ def _render_record(
 def _item_sprite_cell(
     item: dict[str, Any], references: ReferenceIndex | None
 ) -> str:
-    sprite_url = references.sprite_url("item", item["id"]) if references else None
-    return table_sprite_cell(sprite_url)
+    return reference_sprite_cell("item", item["id"], references)
 
 
 _SPRITE_MATRIX_ROWS = (
@@ -681,13 +699,7 @@ def _reference_entry(reference: dict[str, Any]) -> list[str]:
         return []
     version = reference.get("flavor_text_version") or reference.get("version")
     version_label = f"{display_name(version)} Pokédex" if version else "Pokédex"
-    return [
-        '<figure class="rw-pokedex-entry">',
-        f"<blockquote>{escape(' '.join(text.split()))}</blockquote>",
-        f"<figcaption>{escape(version_label)}</figcaption>",
-        "</figure>",
-        "",
-    ]
+    return pokedex_quote(text, version_label)
 
 
 def _ev_yield(yields: dict[str, int]) -> str:
@@ -727,34 +739,21 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    source_url = f"pokemon/{record['slug']}/"
-    previous_link = (
-        _record_nav_link(previous, f"← {previous['name']}", source_url, "prev")
-        if previous is not None
-        else None
-    )
-    following_link = (
-        _record_nav_link(following, f"{following['name']} →", source_url, "next")
-        if following is not None
-        else None
-    )
-    lines.extend(record_navigation(previous_link, following_link, "Pokémon navigation"))
-
-
-def _record_nav_link(
-    record: dict[str, Any], label: str, source_url: str, direction: str
-) -> str:
-    href = ROUTES.published_href(
-        entity_reference(
+    lines.extend(
+        record_navigation_for(
             "pokemon",
-            record.get("member", record.get("national_dex_id")),
-            label,
-            record["slug"],
-        ),
-        source_url,
+            f"pokemon/{record['slug']}/",
+            previous,
+            following,
+            aria_label="Pokémon navigation",
+            identity=lambda value: value.get(
+                "member", value.get("national_dex_id")
+            ),
+            route_key=lambda value: value["slug"],
+            label=lambda value: value["name"],
+            sprite_url=lambda value: (value.get("sprite") or {}).get("url"),
+        )
     )
-    sprite_data = record.get("sprite") or {}
-    return record_nav_link(href, label, direction, sprite_data.get("url"))
 
 
 def _item_link(item: dict[str, Any], source_file: str) -> str:
@@ -762,11 +761,10 @@ def _item_link(item: dict[str, Any], source_file: str) -> str:
 
 
 def _record_link(kind: str, value: dict[str, Any], source_file: str) -> str:
-    reference = entity_reference(
+    return entity_markdown_link(
         kind,
         value.get("id", value.get("slug", value["name"])),
         value["name"],
-        value.get("slug"),
+        source_file,
+        route_key=value.get("slug"),
     )
-    return ROUTES.markdown_link(reference, source_file)
-

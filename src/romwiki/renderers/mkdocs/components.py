@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from html import escape
 from typing import Any
 
@@ -234,7 +235,9 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
         *(f"<div><dt>Form</dt><dd>{escape(display_name(form))}</dd></div>" for _ in [0] if form),
         *(f"<div><dt>Body color</dt><dd>{escape(display_name(body_color))}</dd></div>" for _ in [0] if body_color),
         f"<div><dt>Abilities</dt><dd>{abilities}</dd></div>",
-        f"<div><dt>Base stat total</dt><dd>{sum(record['base_stats'].values())}</dd></div>",
+        "<div><dt>Base stat total</dt><dd>"
+        f"{summary_section_link(sum(record['base_stats'].values()), 'base-stats')}"
+        "</dd></div>",
         *(f"<div><dt>Habitat</dt><dd>{escape(display_name(habitat))}</dd></div>" for _ in [0] if habitat),
         *(f"<div><dt>Shape</dt><dd>{escape(display_name(shape))}</dd></div>" for _ in [0] if shape),
         *(f"<div><dt>Height</dt><dd>{escape(measurements['height'])}</dd></div>" for _ in [0] if measurements.get("height")),
@@ -283,6 +286,10 @@ def sprite_with_link(sprite_html: str, link_html: str) -> str:
     return f'<span class="rw-cell-media">{sprite_html}{link_html}</span>'
 
 
+def pokemon_table(header_lines: list[str], row_lines: list[str]) -> list[str]:
+    return [*header_lines, *row_lines, ""]
+
+
 def machine_link(
     machine: dict[str, Any], source_file: str, references: ReferenceIndex | None
 ) -> str:
@@ -305,13 +312,21 @@ def summary_section(class_name: str, fact_lines: list[str]) -> list[str]:
 
 
 def fact_grid(
-    facts: tuple[tuple[str, str], ...], *, class_name: str = "rw-data-grid"
+    facts: tuple[tuple[str, str], ...],
+    *,
+    class_name: str = "rw-data-grid",
+    escape_values: bool = True,
 ) -> list[str]:
     lines = [f'<dl class="{class_name}">']
     for name, value in facts:
-        lines.append(f"<div><dt>{escape(name)}</dt><dd>{escape(value)}</dd></div>")
+        rendered_value = escape(value) if escape_values else value
+        lines.append(f"<div><dt>{escape(name)}</dt><dd>{rendered_value}</dd></div>")
     lines.append("</dl>")
     return lines
+
+
+def summary_section_link(value: str | int, anchor: str) -> str:
+    return f'<a href="#{escape(anchor, quote=True)}">{escape(str(value))}</a>'
 
 
 def record_nav_link(
@@ -353,6 +368,69 @@ def record_navigation(
     ]
 
 
+def record_navigation_for(
+    kind: str,
+    source_url: str,
+    previous: Mapping[str, Any] | None,
+    following: Mapping[str, Any] | None,
+    *,
+    aria_label: str,
+    identity: Callable[[Mapping[str, Any]], int | str],
+    route_key: Callable[[Mapping[str, Any]], int | str | None],
+    label: Callable[[Mapping[str, Any]], str],
+    sprite_url: Callable[[Mapping[str, Any]], str | None] | None = None,
+) -> list[str]:
+    """Build the previous/next footer navigation for one record kind."""
+
+    def link(record: Mapping[str, Any], text: str, direction: str) -> str:
+        href = ROUTES.published_href(
+            entity_reference(kind, identity(record), text, route_key(record)),
+            source_url,
+        )
+        sprite = sprite_url(record) if sprite_url is not None else None
+        return record_nav_link(href, text, direction, sprite)
+
+    previous_link = (
+        link(previous, f"← {label(previous)}", "prev")
+        if previous is not None
+        else None
+    )
+    following_link = (
+        link(following, f"{label(following)} →", "next")
+        if following is not None
+        else None
+    )
+    return record_navigation(previous_link, following_link, aria_label)
+
+
+def reference_sprite_cell(
+    kind: str,
+    identifier: int | str | None,
+    references: ReferenceIndex | None,
+) -> str:
+    """Render a table sprite cell resolved through the reference index."""
+    url = (
+        references.sprite_url(kind, identifier)
+        if references is not None and identifier is not None
+        else None
+    )
+    return table_sprite_cell(url)
+
+
+def reference_type_cell(
+    kind: str,
+    identifier: int | str | None,
+    references: ReferenceIndex | None,
+) -> str:
+    """Render a table type-badges cell resolved through the reference index."""
+    types = (
+        references.types(kind, identifier)
+        if references is not None and identifier is not None
+        else None
+    )
+    return type_badges(list(types)) if types else "—"
+
+
 def reference_description(record: dict[str, Any], empty_message: str) -> list[str]:
     reference = record.get("reference") or {}
     short_effect = reference.get("short_effect")
@@ -372,18 +450,29 @@ def reference_description(record: dict[str, Any], empty_message: str) -> list[st
             if reference.get("version")
             else "Pokédex"
         )
-        lines.extend(
-            [
-                '<figure class="rw-pokedex-entry">',
-                f"<blockquote>{escape(' '.join(flavor_text.split()))}</blockquote>",
-                f"<figcaption>{escape(version_label)}</figcaption>",
-                "</figure>",
-                "",
-            ]
-        )
+        lines.extend(pokedex_quote(flavor_text, version_label))
     if not lines:
         lines = empty_state(empty_message)
     return lines
+
+
+def pokedex_quote(text: str, version_label: str) -> list[str]:
+    return [
+        '<figure class="rw-pokedex-entry">',
+        f"<blockquote>{escape(' '.join(text.split()))}</blockquote>",
+        f"<figcaption>{escape(version_label)}</figcaption>",
+        "</figure>",
+        "",
+    ]
+
+
+def reference_source_link(record: dict[str, Any]) -> list[str]:
+    reference = record.get("reference") or {}
+    source_url = reference.get("source_url")
+    if not isinstance(source_url, str) or not source_url:
+        return []
+    source_name = reference.get("source") or "PokéDB / PokéAPI"
+    return [f"[View the {escape_markdown(source_name)} source record]({source_url})."]
 
 
 def provenance_section(
@@ -398,6 +487,53 @@ def provenance_section(
         "</details>",
         "",
     ]
+
+
+def provenance_fact_table(fields: tuple[tuple[str, str], ...]) -> list[str]:
+    """Render the shared "Native field | Value" table used across every
+    Data provenance section that has ROM-native engine values not already
+    shown elsewhere on the page.
+    """
+    return [
+        "| Native field | Value |",
+        "| ------------ | ----- |",
+        *(f"| {label} | {value} |" for label, value in fields),
+        "",
+    ]
+
+
+def rom_record_source(
+    archive: str, member: int | str, *, label: str = "Source"
+) -> str:
+    """The shared "<Label>: exact ROM record from `archive` member `id`."
+    sentence every Data provenance section uses to cite its source record.
+
+    Kept bare on purpose — no parameter for appending explanatory text, so
+    every kind's Source line stays the same short shape. Explanation or
+    caveats belong in their own following sentence, not folded into this one.
+    """
+    return f"{label}: exact ROM record from `{archive}` member `{member}`."
+
+
+def name_table_source(label: str, archive: str, member: int) -> str:
+    """The shared "<Label> name source: ROM message table ..." sentence."""
+    return f"{label} name source: ROM message table `{archive}` member `{member}`."
+
+
+def shop_price(price: int | None, currency: str) -> str:
+    if price is None:
+        return "—"
+    if currency == "money":
+        return f"₽{price:,}"
+    return f"{price:,} {currency.upper()}"
+
+
+def badge_requirement(badges: int | None) -> str:
+    if badges is None:
+        return "Always"
+    if badges == 0:
+        return "Start"
+    return f"{badges} badge" if badges == 1 else f"{badges} badges"
 
 
 def shard_cost(costs: dict[str, int]) -> str:

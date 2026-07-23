@@ -9,6 +9,8 @@ from romwiki.platforms.nds import (
     NarcArchive,
     NintendoDSFileSystem,
     NintendoDSImage,
+    arm9_load_address,
+    read_arm9_binary,
     read_arm9_overlay,
 )
 from romwiki.util.errors import DataSourceError
@@ -31,6 +33,8 @@ class PlatformAdapter:
     matches_header: Callable[[RomImage, Sequence[str], Sequence[int]], bool]
     archive_cls: type
     read_overlay: Callable[..., tuple[int, bytes]] | None = None
+    read_code_binary: Callable[[RomImage], bytes] | None = None
+    code_load_address: Callable[[RomImage], int] | None = None
 
 
 def _nds_matches_header(
@@ -49,6 +53,8 @@ _PLATFORMS: dict[str, PlatformAdapter] = {
         matches_header=_nds_matches_header,
         archive_cls=NarcArchive,
         read_overlay=read_arm9_overlay,
+        read_code_binary=read_arm9_binary,
+        code_load_address=arm9_load_address,
     ),
 }
 
@@ -58,3 +64,22 @@ def get_platform(platform: str) -> PlatformAdapter:
         return _PLATFORMS[platform]
     except KeyError as error:
         raise DataSourceError(f"Unsupported platform: {platform!r}") from error
+
+
+def registered_platforms() -> dict[str, PlatformAdapter]:
+    """Return the registered platform adapters keyed by platform ID."""
+    return dict(_PLATFORMS)
+
+
+def register_platform(platform: str, adapter: PlatformAdapter) -> None:
+    """Register a platform adapter under `platform`, replacing any existing entry.
+
+    Intended for tests exercising the extraction contract against a throwaway
+    fake platform; real platforms register themselves in `_PLATFORMS` above.
+    """
+    _PLATFORMS[platform] = adapter
+
+
+def unregister_platform(platform: str) -> None:
+    """Remove a previously registered platform, e.g. in a test's tearDown."""
+    _PLATFORMS.pop(platform, None)

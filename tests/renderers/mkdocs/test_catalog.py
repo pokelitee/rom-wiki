@@ -67,5 +67,21 @@ class SkeletonFilterCountsTests(unittest.TestCase):
         self.assertEqual(_SKELETON_FILTER_COUNTS, expected)
 
 
+class CatalogPresentationTests(unittest.TestCase):
+    def test_list_labels_match_detail_page_terminology(self) -> None:
+        text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
+
+        self.assertIn('["Base price", (record)', text)
+        self.assertIn('["Fling power", (record)', text)
+        self.assertIn('"Always hits"', text)
+        self.assertIn('["Map header", locationIdentifier]', text)
+        self.assertIn('sorts: [["label", "Area"]', text)
+
+    def test_encounter_ranges_collapse_equal_levels(self) -> None:
+        text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
+
+        self.assertIn("record.min_level === record.max_level", text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,7 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} does not define a machine move table"
         ) from error
     engine = get_engine(profile.engine).machines
-    machine_count = profile.parameters.get("machine_count", engine.GEN4_MACHINE_COUNT)
+    machine_count = profile.parameters.get("machine_count", engine.MACHINE_COUNT)
     tm_count = profile.parameters.get("tm_count", engine.GEN4_TM_COUNT)
 
     size = machine_count * 2

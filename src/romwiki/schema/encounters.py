@@ -42,8 +42,12 @@ class Gen4EncounterArea:
     day_species_ids: tuple[int, int]
     night_species_ids: tuple[int, int]
     radar_species_ids: tuple[int, int, int, int]
-    form_species_ids: tuple[int, int, int, int, int]
-    unknown_value: int
+    # Not species IDs — see engine constant docs for GEN4_UNOWN_FORM_TABLES.
+    # Confirmed constant across every Renegade Platinum/Platinum-US encounter
+    # record ((100, 100, 0, 0, 0) or (0, 0, 0, 0, 0)); kept as a raw fact
+    # rather than dropped since its true purpose isn't fully understood.
+    encounter_form_rates: tuple[int, int, int, int, int]
+    unown_table_id: int
     dual_slot_species_ids: dict[str, tuple[int, int]]
     surf: EncounterMethod
     old_rod: EncounterMethod

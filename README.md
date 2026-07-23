@@ -19,6 +19,13 @@ trainers, and locations. The location dataset also includes items, shops,
 warps, connections, gifts, static encounters, roaming activation audits, and
 in-game trades. Extracted records retain ROM provenance where practical.
 
+Some Gen IV data categories are known but not yet extracted: honey trees, the
+roaming Pokémon species/level definitions (only their scripted activations are
+audited), the Great Marsh and Trophy Garden daily rotation tables, Game Corner
+prize exchanges, and the ROM's own Pokédex/description text banks. Each needs
+dedicated offset research and is tracked as follow-up work rather than silently
+approximated.
+
 The exact USA retail release of Pokémon Platinum is also registered as the
 `platinum-us` profile. It reuses the Generation IV engine and has been validated
 across every raw and enriched dataset as the clean normalized baseline for
@@ -205,9 +212,10 @@ PokéDB to resolve stable Pokémon and move names and links.
 This keeps the enriched audit dataset under `build/` and renders publishable
 Markdown into `sites/games/renegade-platinum/wiki/pokemon/`. The same command also
 derives the normalized ability catalog from ROM names and personal-data assignments,
-then renders it under `sites/games/renegade-platinum/wiki/abilities/`. The ROM only
-stores an ability's name and which Pokémon have it — never what it does — so
-ability pages also carry PokéDB's effect description and flavor-text quote.
+then renders it under `sites/games/renegade-platinum/wiki/abilities/`. The extracted
+ability data covers the name table and per-Pokémon assignments; the in-game
+description text lives in separate message banks that ROM Wiki does not yet
+extract, so ability pages carry PokéDB's effect description and flavor-text quote.
 
 Extract and render wild encounter tables:
 
@@ -268,11 +276,12 @@ romwiki build-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
 
 Move pages report the exact type, damage class, power, accuracy, PP, priority,
 effect ID, targeting, flag, and contest fields stored in the hack's active move
-archive. Move and type names come from configured ROM message tables. The ROM
-does not store a human-readable description of what a move does — PokéDB
-supplies that effect text and flavor-text quote, alongside canonical
+archive. Move and type names come from configured ROM message tables. The move
+records themselves carry only an opaque effect ID — the in-game description
+text lives in separate message banks that ROM Wiki does not yet extract — so
+PokéDB supplies the effect text and flavor-text quote, alongside canonical
 comparison names and fallback metadata; ROM-derived values remain
-authoritative for every field the ROM does store.
+authoritative for every field the move records store.
 
 Extract and render the item catalog:
 
@@ -285,9 +294,9 @@ Item pages combine the ROM item-name table, the 34-byte item mechanics records,
 and the ARM9 item-to-archive-member map. The enriched build links overworld and
 hidden pickups, shops, wild and trainer held items, trainers' own AI battle
 items, gifts, trades, and item-based evolutions. As with abilities and moves,
-PokéDB supplies the item's effect description, flavor-text quote, and icon,
-since the ROM's item records store mechanics but not a human-readable
-description.
+PokéDB supplies the item's effect description, flavor-text quote, and icon:
+the ROM's item records store mechanics, while the in-game description text
+lives in message banks that ROM Wiki does not yet extract.
 
 Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
 different directory.
@@ -379,13 +388,17 @@ PokéDB is consumed as an external reference dataset rather than imported throug
 its internal implementation. The default local path is `../pokedb/.output/gen4`,
 with a configurable remote data-branch fallback for CI.
 
-Beyond canonical names and links, PokéDB is the sole source for anything the ROM
-itself does not store as data: Pokémon genus/height/weight/flavor text, and — for
-abilities, moves, and items — the human-readable effect description and
-Pokédex-style flavor-text quote, version-matched to the profile's `base_game`
-where PokéDB has per-version text. ROM-derived values remain authoritative for
-every field the ROM does store; PokéDB never overrides one and is never the
-mechanic baseline for hack-changes comparisons.
+Beyond canonical names and links, PokéDB supplies the descriptive text the
+structured ROM records do not carry: Pokémon genus/height/weight/flavor text,
+and — for abilities, moves, and items — the human-readable effect description
+and Pokédex-style flavor-text quote, version-matched to the profile's
+`base_game` where PokéDB has per-version text. Gen IV ROMs do store their own
+Pokédex and description text in separate message banks; ROM Wiki does not yet
+extract those banks, so this display text describes the base game and a hack
+that edits it is not yet reflected (extracting the ROM's own text banks is a
+planned follow-up). ROM-derived values remain authoritative for every
+structured field the extraction reads; PokéDB never overrides one and is never
+the mechanic baseline for hack-changes comparisons.
 
 Pokémon pages, trainer party members, and items may also reference a sprite or
 icon URL selected from PokéDB. Sprites and icons are loaded lazily from the

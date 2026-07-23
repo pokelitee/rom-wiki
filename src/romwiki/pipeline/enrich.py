@@ -19,58 +19,7 @@ from romwiki.schema.versions import (
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.util.text import name_slug, title_case_slug
-
-TYPE_NAMES = (
-    "normal", "fighting", "flying", "poison", "ground", "rock", "bug",
-    "ghost", "steel", "unknown", "fire", "water", "grass", "electric",
-    "psychic", "ice", "dragon", "dark",
-)
-EGG_GROUP_NAMES = (
-    "none", "monster", "water-1", "bug", "flying", "field", "fairy",
-    "grass", "human-like", "water-3", "mineral", "amorphous", "water-2",
-    "ditto", "dragon", "undiscovered",
-)
-GROWTH_RATE_NAMES = (
-    "medium-fast", "erratic", "fluctuating", "medium-slow", "fast", "slow",
-)
-COLOR_NAMES = (
-    "red", "blue", "yellow", "green", "black", "brown", "purple", "gray",
-    "white", "pink", "internal",
-)
-DAMAGE_CLASS_NAMES = ("physical", "special", "status")
-EVOLUTION_METHOD_NAMES = (
-    "none",
-    "friendship",
-    "friendship-day",
-    "friendship-night",
-    "level",
-    "trade",
-    "trade-held-item",
-    "use-item",
-    "level-attack-greater",
-    "level-attack-equal",
-    "level-defense-greater",
-    "level-personality-low",
-    "level-personality-high",
-    "level-ninjask",
-    "level-shedinja",
-    "beauty",
-    "use-item-male",
-    "use-item-female",
-    "level-held-item-day",
-    "level-held-item-night",
-    "level-knowing-move",
-    "level-with-party-species",
-    "level-male",
-    "level-female",
-    "level-magnetic-field",
-    "level-moss-rock",
-    "level-ice-rock",
-)
-_EVOLUTION_LEVEL_PARAMETERS = {4, 8, 9, 10, 13, 14, 22, 23}
-_EVOLUTION_ITEM_PARAMETERS = {6, 7, 16, 17, 18, 19}
-_EVOLUTION_PERSONALITY_PARAMETERS = {11, 12}
+from romwiki.util.text import name_slug, normalize_display_name, title_case_slug
 
 
 def enrich_personal_dataset(
@@ -87,23 +36,27 @@ def enrich_personal_dataset(
     sprite_version: str | None = None,
     reference_version: str | None = None,
 ) -> dict[str, Any]:
-    source_records = dataset.get("records")
-    if not isinstance(source_records, list) or len(source_records) != 508:
-        raise DataSourceError("Expected exactly 508 Gen IV personal records")
     engine = get_engine(dataset["engine"]).enrich
-    type_names = _resolve_type_names(dataset, type_names)
-    move_names = _resolve_move_names(dataset, move_names)
-    ability_names = _resolve_ability_names(dataset)
-    item_names = _resolve_item_names(dataset)
+    source_records = dataset.get("records")
+    expected_count = engine.PERSONAL_RECORD_COUNT
+    if not isinstance(source_records, list) or len(source_records) != expected_count:
+        raise DataSourceError(
+            f"Expected exactly {expected_count} personal records"
+        )
+    type_names = _resolve_type_names(engine, dataset, type_names)
+    move_names = _resolve_move_names(engine, dataset, move_names)
+    ability_names = _resolve_ability_names(engine, dataset)
+    item_names = _resolve_item_names(engine, dataset)
+    pokemon_names = _resolve_pokemon_names(engine, dataset)
 
-    learnsets = _validate_learnsets(learnset_dataset, dataset["game"])
-    evolutions = _validate_evolutions(evolution_dataset, dataset["game"])
+    learnsets = _validate_learnsets(engine, learnset_dataset, dataset["game"])
+    evolutions = _validate_evolutions(engine, evolution_dataset, dataset["game"])
     evolution_item_names = _validate_evolution_item_names(evolution_dataset)
-    machines = _validate_machines(machine_dataset, dataset["game"])
+    machines = _validate_machines(engine, machine_dataset, dataset["game"])
     tutors, tutor_ids_by_member, tutor_locations = _validate_tutors(
         tutor_dataset, dataset["game"]
     )
-    egg_moves = _validate_egg_moves(egg_move_dataset, dataset["game"])
+    egg_moves = _validate_egg_moves(engine, egg_move_dataset, dataset["game"])
     records = []
     for expected_member, source in enumerate(source_records):
         if source.get("species_id") != expected_member:
@@ -125,6 +78,7 @@ def enrich_personal_dataset(
                 move_names,
                 ability_names,
                 item_names,
+                pokemon_names,
                 sprite_version,
                 reference_version,
             )
@@ -132,6 +86,7 @@ def enrich_personal_dataset(
     enriched = {
         "schema_version": POKEMON_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
+        "engine": dataset["engine"],
         "dataset": "pokemon",
         "record_count": len(records),
         "public_record_count": sum(record["public"] for record in records),
@@ -175,15 +130,21 @@ def enrich_encounter_dataset(
     if not isinstance(source_records, list):
         raise DataSourceError("Encounter dataset records must be a list")
     engine = get_engine(dataset["engine"]).enrich
+    pokemon_names = _resolve_pokemon_names(engine, dataset)
 
     records = []
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
-        records.append(_enrich_encounter_area(engine, source, pokedb, sprite_version))
+        records.append(
+            _enrich_encounter_area(
+                engine, source, pokedb, sprite_version, pokemon_names
+            )
+        )
     return {
         "schema_version": ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
+        "engine": dataset["engine"],
         "dataset": "wild_encounters",
         "record_count": len(records),
         "active_record_count": sum(record["active"] for record in records),
@@ -208,10 +169,12 @@ def enrich_trainer_dataset(
     engine = dataset.get("engine")
     if not isinstance(engine, str):
         raise DataSourceError("Trainer dataset must declare its source engine")
+    engine_tables = get_engine(engine).enrich
     pokemon_records = _trainer_pokemon_index(dataset, pokemon_dataset)
     move_records = _trainer_move_index(dataset, move_dataset)
-    move_names = _resolve_move_names(dataset, move_names)
-    item_names = _resolve_item_names(dataset)
+    move_names = _resolve_move_names(engine_tables, dataset, move_names)
+    item_names = _resolve_item_names(engine_tables, dataset)
+    pokemon_names = _resolve_pokemon_names(engine_tables, dataset)
     records = []
     for expected_id, source in enumerate(source_records):
         if source.get("trainer_id") != expected_id:
@@ -227,6 +190,7 @@ def enrich_trainer_dataset(
                 engine=engine,
                 pokemon_records=pokemon_records,
                 move_records=move_records,
+                pokemon_names=pokemon_names,
             )
         )
     enriched = {
@@ -258,15 +222,19 @@ def enrich_move_dataset(
     move_names: Mapping[int, str] | None = None,
     reference_version: str | None = None,
 ) -> dict[str, Any]:
-    source_records = dataset.get("records")
-    if not isinstance(source_records, list) or len(source_records) != 471:
-        raise DataSourceError("Expected exactly 471 Gen IV move records")
     engine = get_engine(dataset["engine"]).enrich
-    rom_move_names = _reference_name_table(dataset, "move_names", 468)
-    type_names = _resolve_type_names(dataset, type_names)
-    move_names = _resolve_move_names(dataset, move_names)
+    source_records = dataset.get("records")
+    expected_count = engine.MOVE_RECORD_COUNT
+    if not isinstance(source_records, list) or len(source_records) != expected_count:
+        raise DataSourceError(f"Expected exactly {expected_count} move records")
+    rom_move_names = _reference_name_table(
+        dataset, "move_names", engine.MOVE_NAME_COUNT
+    )
+    type_names = _resolve_type_names(engine, dataset, type_names)
+    move_names = _resolve_move_names(engine, dataset, move_names)
+    pokemon_names = _resolve_pokemon_names(engine, dataset)
 
-    machines = _validate_machines(machine_dataset, dataset["game"])
+    machines = _validate_machines(engine, machine_dataset, dataset["game"])
     machines_by_move: dict[int, list[dict[str, Any]]] = {}
     for machine in machines.values():
         machines_by_move.setdefault(machine["move_id"], []).append(machine)
@@ -284,22 +252,22 @@ def enrich_move_dataset(
                 **tutor,
                 "location": _tutor_location(tutor, tutor_locations),
                 "compatible_pokemon": [
-                    _personal_member_reference(engine, member, pokedb)
+                    _personal_member_reference(engine, member, pokedb, pokemon_names)
                     for member in members_by_tutor[tutor_id]
                 ],
             }
         )
-    egg_moves = _validate_egg_moves(egg_move_dataset, dataset["game"])
+    egg_moves = _validate_egg_moves(engine, egg_move_dataset, dataset["game"])
     egg_move_pokemon: dict[int, list[dict[str, Any]]] = {}
     for species_id, egg_move_set in egg_moves.items():
-        pokemon = _personal_member_reference(engine, species_id, pokedb)
+        pokemon = _personal_member_reference(engine, species_id, pokedb, pokemon_names)
         for move_id in egg_move_set["move_ids"]:
             egg_move_pokemon.setdefault(move_id, []).append(pokemon)
     records = []
     for expected_id, source in enumerate(source_records):
         if source.get("move_id") != expected_id:
             raise DataSourceError("Move records must be ordered by member ID")
-        public = 1 <= expected_id <= 467
+        public = 1 <= expected_id <= engine.MAX_MOVE_ID
         slug = (
             _move_name(expected_id, pokedb, move_names)
             if public
@@ -324,9 +292,11 @@ def enrich_move_dataset(
                 ),
                 "public": public,
                 "damage_class": _named_id(
-                    source["damage_class_id"], DAMAGE_CLASS_NAMES, "move class"
+                    source["damage_class_id"],
+                    engine.DAMAGE_CLASS_NAMES,
+                    "move class",
                 ),
-                "type": _type_id(source["type_id"], type_names),
+                "type": _type_id(engine, source["type_id"], type_names),
                 "machines": machines_by_move.get(expected_id, []),
                 "tutors": tutors_by_move.get(expected_id, []),
                 "egg_move_pokemon": egg_move_pokemon.get(expected_id, []),
@@ -335,6 +305,7 @@ def enrich_move_dataset(
     enriched = {
         "schema_version": MOVES_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
+        "engine": dataset["engine"],
         "dataset": "moves",
         "record_count": len(records),
         "public_record_count": sum(record["public"] for record in records),
@@ -365,15 +336,16 @@ def _enrich_encounter_area(
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
+    pokemon_names: list[str] | None = None,
 ) -> dict[str, Any]:
     walking = {
         "rate": source["walking_rate"],
         "slots": [
             {
                 **slot,
-                "chance": engine.GEN4_WALKING_SLOT_CHANCES[index],
+                "chance": engine.WALKING_SLOT_CHANCES[index],
                 "pokemon": _encounter_pokemon(
-                    slot["species_id"], pokedb, sprite_version
+                    slot["species_id"], pokedb, sprite_version, pokemon_names
                 ),
             }
             for index, slot in enumerate(source["walking_slots"])
@@ -387,50 +359,77 @@ def _enrich_encounter_area(
                     **slot,
                     "chance": chances[index],
                     "pokemon": _encounter_pokemon(
-                        slot["species_id"], pokedb, sprite_version
+                        slot["species_id"], pokedb, sprite_version, pokemon_names
                     ),
                 }
                 for index, slot in enumerate(method["slots"])
             ],
         }
         for name, method, chances in (
-            ("surf", source["surf"], engine.GEN4_WATER_SLOT_CHANCES),
-            ("old_rod", source["old_rod"], engine.GEN4_FISHING_SLOT_CHANCES),
-            ("good_rod", source["good_rod"], engine.GEN4_FISHING_SLOT_CHANCES),
-            ("super_rod", source["super_rod"], engine.GEN4_FISHING_SLOT_CHANCES),
+            ("surf", source["surf"], engine.WATER_SLOT_CHANCES),
+            ("old_rod", source["old_rod"], engine.FISHING_SLOT_CHANCES),
+            ("good_rod", source["good_rod"], engine.FISHING_SLOT_CHANCES),
+            ("super_rod", source["super_rod"], engine.FISHING_SLOT_CHANCES),
         )
     }
     special = {
-        "swarm": _encounter_pokemon_list(
-            source["swarm_species_ids"], pokedb, sprite_version
+        "swarm": _encounter_special_slots(
+            source["swarm_species_ids"],
+            source["walking_slots"],
+            engine.SWARM_SLOT_INDICES,
+            engine.WALKING_SLOT_CHANCES,
+            pokedb,
+            sprite_version,
+            pokemon_names,
         ),
-        "day": _encounter_pokemon_list(
-            source["day_species_ids"], pokedb, sprite_version
+        "day": _encounter_special_slots(
+            source["day_species_ids"],
+            source["walking_slots"],
+            engine.TIMED_SLOT_INDICES,
+            engine.WALKING_SLOT_CHANCES,
+            pokedb,
+            sprite_version,
+            pokemon_names,
         ),
-        "night": _encounter_pokemon_list(
-            source["night_species_ids"], pokedb, sprite_version
+        "night": _encounter_special_slots(
+            source["night_species_ids"],
+            source["walking_slots"],
+            engine.TIMED_SLOT_INDICES,
+            engine.WALKING_SLOT_CHANCES,
+            pokedb,
+            sprite_version,
+            pokemon_names,
         ),
         "radar": _encounter_pokemon_list(
-            source["radar_species_ids"], pokedb, sprite_version
+            source["radar_species_ids"], pokedb, sprite_version, pokemon_names
         ),
-        "forms": _encounter_pokemon_list(
-            source["form_species_ids"], pokedb, sprite_version
-        ),
+        "unown_forms": _resolve_unown_forms(engine, source["unown_table_id"]),
         "dual_slot": {
-            game: _encounter_pokemon_list(species_ids, pokedb, sprite_version)
+            game: _encounter_special_slots(
+                species_ids,
+                source["walking_slots"],
+                engine.DUAL_SLOT_SLOT_INDICES,
+                engine.WALKING_SLOT_CHANCES,
+                pokedb,
+                sprite_version,
+                pokemon_names,
+            )
             for game, species_ids in source["dual_slot_species_ids"].items()
         },
     }
     active = bool(
         walking["rate"]
         or any(method["rate"] for method in methods.values())
+        or any(entry["pokemon"] for entry in special["swarm"])
+        or any(entry["pokemon"] for entry in special["day"])
+        or any(entry["pokemon"] for entry in special["night"])
+        or any(special["radar"])
+        or special["unown_forms"]
         or any(
-            value
-            for values in special.values()
-            if isinstance(values, list)
-            for value in values
+            entry["pokemon"]
+            for entries in special["dual_slot"].values()
+            for entry in entries
         )
-        or any(value for values in special["dual_slot"].values() for value in values)
     )
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
@@ -442,31 +441,10 @@ def _enrich_encounter_area(
         "walking": walking,
         **methods,
         "special": special,
-        "unknown_value": source["unknown_value"],
+        "encounter_form_rates": source["encounter_form_rates"],
+        "unown_table_id": source["unown_table_id"],
         "provenance": source["provenance"],
     }
-
-
-_TRAINER_FORMS = {
-    (386, 1): "deoxys-attack",
-    (386, 2): "deoxys-defense",
-    (386, 3): "deoxys-speed",
-    (413, 1): "wormadam-sandy",
-    (413, 2): "wormadam-trash",
-    (479, 1): "rotom-heat",
-    (479, 2): "rotom-wash",
-    (479, 3): "rotom-frost",
-    (479, 4): "rotom-fan",
-    (479, 5): "rotom-mow",
-    (487, 1): "giratina-origin",
-    (492, 1): "shaymin-sky",
-}
-_TRAINER_COSMETIC_FORMS = {
-    (412, 1): "Sandy Cloak",
-    (412, 2): "Trash Cloak",
-    (422, 1): "East Sea",
-    (423, 1): "East Sea",
-}
 
 
 def _enrich_trainer(
@@ -480,7 +458,9 @@ def _enrich_trainer(
     engine: str,
     pokemon_records: Mapping[int | str, dict[str, Any]] | None = None,
     move_records: Mapping[int, dict[str, Any]] | None = None,
+    pokemon_names: list[str] | None = None,
 ) -> dict[str, Any]:
+    engine_tables = get_engine(engine).enrich
     party = []
     for raw_member in source["party"]:
         pokemon = normalize_trainer_party_member(
@@ -491,8 +471,10 @@ def _enrich_trainer(
         species_id = pokemon["species_id"]
         form_id = pokemon["form_id"]
         if form_id:
-            slug = _TRAINER_FORMS.get((species_id, form_id))
-            cosmetic_form = _TRAINER_COSMETIC_FORMS.get((species_id, form_id))
+            slug = engine_tables.TRAINER_FORM_SLUGS.get((species_id, form_id))
+            cosmetic_form = engine_tables.TRAINER_COSMETIC_FORM_LABELS.get(
+                (species_id, form_id)
+            )
             if slug is not None:
                 reference = pokedb.pokemon_for_name(slug)
             elif cosmetic_form is not None:
@@ -517,9 +499,14 @@ def _enrich_trainer(
             base_stats=(game_record.get("base_stats") if game_record else None),
         )
         pokemon_slug = game_record["slug"] if game_record else reference["name"]
-        pokemon_name = game_record["name"] if game_record else title_case_slug(
-            reference["name"]
-        )
+        if game_record:
+            pokemon_name = game_record["name"]
+        elif form_id and slug:
+            pokemon_name = title_case_slug(slug)
+        else:
+            pokemon_name = _pokemon_display_name(
+                species_id, reference["name"], pokemon_names
+            )
         pokemon_sprite = (
             game_record.get("sprite")
             if game_record
@@ -666,9 +653,10 @@ def _encounter_pokemon_list(
     species_ids: list[int],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
+    pokemon_names: list[str] | None = None,
 ) -> list[dict[str, Any] | None]:
     return [
-        _encounter_pokemon(species_id, pokedb, sprite_version)
+        _encounter_pokemon(species_id, pokedb, sprite_version, pokemon_names)
         for species_id in species_ids
     ]
 
@@ -677,6 +665,7 @@ def _encounter_pokemon(
     species_id: int,
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
+    pokemon_names: list[str] | None = None,
 ) -> dict[str, Any] | None:
     if species_id == 0:
         return None
@@ -684,9 +673,41 @@ def _encounter_pokemon(
     return {
         "id": species_id,
         "slug": reference["name"],
-        "name": title_case_slug(reference["name"]),
+        "name": _pokemon_display_name(species_id, reference["name"], pokemon_names),
         "sprite": pokedb.pokemon_sprite(reference, sprite_version),
     }
+
+
+def _encounter_special_slots(
+    species_ids: tuple[int, ...],
+    walking_slots: list[dict[str, Any]],
+    slot_indices: tuple[int, ...],
+    chances: tuple[int, ...],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None,
+    pokemon_names: list[str] | None,
+) -> list[dict[str, Any]]:
+    """Special-encounter species replace a walking slot's species only — the
+    slot's level (and therefore its fixed selection chance) is untouched, so
+    a special entry's level/chance is whatever the replaced slot already has.
+    """
+    return [
+        {
+            "pokemon": _encounter_pokemon(
+                species_id, pokedb, sprite_version, pokemon_names
+            ),
+            "level": walking_slots[slot_index]["level"],
+            "chance": chances[slot_index],
+        }
+        for species_id, slot_index in zip(species_ids, slot_indices)
+    ]
+
+
+def _resolve_unown_forms(engine: Any, unown_table_id: int) -> list[str]:
+    index = unown_table_id - 1
+    if not (0 <= index < len(engine.UNOWN_FORM_TABLES)):
+        return []
+    return [engine.UNOWN_FORM_NAMES[form_id] for form_id in engine.UNOWN_FORM_TABLES[index]]
 
 
 def _enrich_record(
@@ -705,12 +726,13 @@ def _enrich_record(
     move_names: Mapping[int, str] | None,
     ability_names: list[str] | None,
     item_names: list[str] | None,
+    pokemon_names: list[str] | None,
     sprite_version: str | None,
     reference_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
-    if member in engine.PERSONAL_INTERNAL_MEMBERS:
-        slug = engine.PERSONAL_INTERNAL_MEMBERS[member]
+    if member in engine.INTERNAL_MEMBERS:
+        slug = engine.INTERNAL_MEMBERS[member]
         identity = {"national_dex_id": None, "base_species": None, "form": None}
         sprite = None
         sprites = []
@@ -718,8 +740,8 @@ def _enrich_record(
         cry = None
         reference_data = None
         public = False
-    elif member in engine.PERSONAL_FORM_MEMBERS:
-        slug = engine.PERSONAL_FORM_MEMBERS[member]
+    elif member in engine.FORM_MEMBERS:
+        slug = engine.FORM_MEMBERS[member]
         reference = pokedb.pokemon_for_name(slug)
         base_species = reference["species"]
         identity = {
@@ -748,10 +770,17 @@ def _enrich_record(
         reference_data = pokedb.pokemon_reference(reference, reference_version)
         public = True
 
+    # Form and internal members keep their slug-derived labels; regular
+    # species prefer the ROM's own name table ("Mr. Mime", "Farfetch'd").
+    if member in engine.FORM_MEMBERS or member in engine.INTERNAL_MEMBERS:
+        display_name = title_case_slug(slug)
+    else:
+        display_name = _pokemon_display_name(member, slug, pokemon_names)
+
     return {
         "member": member,
         "slug": slug,
-        "name": title_case_slug(slug),
+        "name": display_name,
         "public": public,
         **identity,
         "sprite": sprite,
@@ -760,7 +789,9 @@ def _enrich_record(
         "sprites": sprites,
         "reference": reference_data,
         "base_stats": source["base_stats"],
-        "types": [_type_id(value, type_names) for value in source["type_ids"]],
+        "types": [
+            _type_id(engine, value, type_names) for value in source["type_ids"]
+        ],
         "catch_rate": source["catch_rate"],
         "base_experience": source["base_experience"],
         "ev_yields": source["ev_yields"],
@@ -774,9 +805,11 @@ def _enrich_record(
         "gender_ratio": source["gender_ratio"],
         "hatch_cycles": source["hatch_cycles"],
         "base_friendship": source["base_friendship"],
-        "growth_rate": _named_id(source["growth_rate_id"], GROWTH_RATE_NAMES, "growth rate"),
+        "growth_rate": _named_id(
+            source["growth_rate_id"], engine.GROWTH_RATE_NAMES, "growth rate"
+        ),
         "egg_groups": [
-            _named_id(value, EGG_GROUP_NAMES, "egg group")
+            _named_id(value, engine.EGG_GROUP_NAMES, "egg group")
             for value in source["egg_group_ids"]
         ],
         "abilities": [
@@ -784,10 +817,12 @@ def _enrich_record(
             for value in source["ability_ids"]
         ],
         "safari_flee_rate": source["safari_flee_rate"],
-        "body_color": _named_id(source["body_color_id"], COLOR_NAMES, "body color"),
+        "body_color": _named_id(
+            source["body_color_id"], engine.COLOR_NAMES, "body color"
+        ),
         "flip_sprite": source["flip_sprite"],
         "machines": _enrich_compatible_machines(
-            source["machine_ids"], machines, pokedb, move_names
+            engine, source["machine_ids"], machines, pokedb, move_names
         ),
         "tutor_moves": _enrich_compatible_tutors(
             tutor_ids, tutors, tutor_locations, pokedb, move_names
@@ -804,7 +839,12 @@ def _enrich_record(
             else None
         ),
         "evolutions": _enrich_evolutions(
-            evolution_set, pokedb, evolution_item_names, move_names
+            engine,
+            evolution_set,
+            pokedb,
+            evolution_item_names,
+            move_names,
+            pokemon_names,
         ),
         "evolution_provenance": (
             evolution_set["provenance"] if evolution_set is not None else None
@@ -814,15 +854,18 @@ def _enrich_record(
 
 
 def _validate_learnsets(
-    dataset: dict[str, Any] | None, game: str
+    engine: Any, dataset: dict[str, Any] | None, game: str
 ) -> list[dict[str, Any] | None]:
+    expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
-        return [None] * 508
+        return [None] * expected_count
     if dataset.get("game") != game:
         raise DataSourceError("Personal and learnset datasets must be for the same game")
     records = dataset.get("records")
-    if not isinstance(records, list) or len(records) != 508:
-        raise DataSourceError("Expected exactly 508 Gen IV level-up learnsets")
+    if not isinstance(records, list) or len(records) != expected_count:
+        raise DataSourceError(
+            f"Expected exactly {expected_count} level-up learnsets"
+        )
     for expected_member, record in enumerate(records):
         if record.get("species_id") != expected_member:
             raise DataSourceError("Learnsets must be ordered by member ID")
@@ -830,15 +873,18 @@ def _validate_learnsets(
 
 
 def _validate_evolutions(
-    dataset: dict[str, Any] | None, game: str
+    engine: Any, dataset: dict[str, Any] | None, game: str
 ) -> list[dict[str, Any] | None]:
+    expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
-        return [None] * 508
+        return [None] * expected_count
     if dataset.get("game") != game:
         raise DataSourceError("Personal and evolution datasets must be for the same game")
     records = dataset.get("records")
-    if not isinstance(records, list) or len(records) != 508:
-        raise DataSourceError("Expected exactly 508 Gen IV evolution records")
+    if not isinstance(records, list) or len(records) != expected_count:
+        raise DataSourceError(
+            f"Expected exactly {expected_count} evolution records"
+        )
     for expected_member, record in enumerate(records):
         if record.get("species_id") != expected_member:
             raise DataSourceError("Evolution records must be ordered by member ID")
@@ -846,7 +892,7 @@ def _validate_evolutions(
 
 
 def _validate_egg_moves(
-    dataset: dict[str, Any] | None, game: str
+    engine: Any, dataset: dict[str, Any] | None, game: str
 ) -> dict[int, dict[str, Any]]:
     if dataset is None:
         return {}
@@ -862,12 +908,12 @@ def _validate_egg_moves(
         move_ids = record.get("move_ids")
         if (
             not isinstance(species_id, int)
-            or not previous_species < species_id <= 493
+            or not previous_species < species_id <= engine.BASE_SPECIES_COUNT
             or record.get("table_index") != expected_index
         ):
             raise DataSourceError("Egg move records must be ordered by species ID")
         if not isinstance(move_ids, (list, tuple)) or not move_ids or any(
-            not isinstance(move_id, int) or not 1 <= move_id <= 467
+            not isinstance(move_id, int) or not 1 <= move_id <= engine.MAX_MOVE_ID
             for move_id in move_ids
         ):
             raise DataSourceError("Egg move record contains invalid move IDs")
@@ -890,15 +936,18 @@ def _validate_evolution_item_names(dataset: dict[str, Any] | None) -> list[str]:
 
 
 def _validate_machines(
-    dataset: dict[str, Any] | None, game: str
+    engine: Any, dataset: dict[str, Any] | None, game: str
 ) -> dict[int, dict[str, Any]]:
     if dataset is None:
         return {}
     if dataset.get("game") != game:
         raise DataSourceError("Machine dataset must be for the same game")
     records = dataset.get("records")
-    if not isinstance(records, list) or len(records) != 100:
-        raise DataSourceError("Expected exactly 100 Gen IV machine records")
+    expected_count = engine.MACHINE_COUNT
+    if not isinstance(records, list) or len(records) != expected_count:
+        raise DataSourceError(
+            f"Expected exactly {expected_count} machine records"
+        )
     result = {}
     for expected_id, record in enumerate(records, start=1):
         if record.get("machine_id") != expected_id:
@@ -1006,34 +1055,43 @@ def _tutor_location(
 
 
 def _personal_member_reference(
-    engine: Any, member: int, pokedb: PokeDBGeneration
+    engine: Any,
+    member: int,
+    pokedb: PokeDBGeneration,
+    pokemon_names: list[str] | None = None,
 ) -> dict[str, Any]:
-    if member in engine.PERSONAL_FORM_MEMBERS:
-        slug = engine.PERSONAL_FORM_MEMBERS[member]
+    if member in engine.FORM_MEMBERS:
+        slug = engine.FORM_MEMBERS[member]
         reference = pokedb.pokemon_for_name(slug)
         national_dex_id = pokedb.pokemon_for_species(reference["species"])["id"]
-    elif 1 <= member <= 493:
+        name = title_case_slug(slug)
+    elif 1 <= member <= engine.BASE_SPECIES_COUNT:
         reference = pokedb.pokemon_for_id(member)
         slug = reference["name"]
         national_dex_id = member
+        name = _pokemon_display_name(member, slug, pokemon_names)
     else:
         raise DataSourceError(f"Tutor compatibility references internal member {member}")
     return {
         "member": member,
         "national_dex_id": national_dex_id,
         "slug": slug,
-        "name": title_case_slug(slug),
+        "name": name,
     }
 
 
 def _enrich_compatible_machines(
+    engine: Any,
     machine_ids: list[int],
     machines: dict[int, dict[str, Any]],
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     if not machines:
-        return [{"id": value, "name": _machine_name(value)} for value in machine_ids]
+        return [
+            {"id": value, "name": engine.machine_name(value)}
+            for value in machine_ids
+        ]
     result = []
     for machine_id in machine_ids:
         try:
@@ -1063,10 +1121,12 @@ def _enrich_compatible_machines(
 
 
 def _enrich_evolutions(
+    engine: Any,
     evolution_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     item_names: list[str],
     move_names: Mapping[int, str] | None,
+    pokemon_names: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     if evolution_set is None:
         return []
@@ -1078,15 +1138,17 @@ def _enrich_evolutions(
             {
                 **entry,
                 "method": _named_id(
-                    method_id, EVOLUTION_METHOD_NAMES, "evolution method"
+                    method_id, engine.EVOLUTION_METHOD_NAMES, "evolution method"
                 ),
                 "parameter_data": _evolution_parameter(
-                    entry, pokedb, item_names, move_names
+                    engine, entry, pokedb, item_names, move_names, pokemon_names
                 ),
                 "target": {
                     "id": entry["target_species_id"],
                     "slug": target["name"],
-                    "name": title_case_slug(target["name"]),
+                    "name": _pokemon_display_name(
+                        entry["target_species_id"], target["name"], pokemon_names
+                    ),
                 },
             }
         )
@@ -1094,18 +1156,19 @@ def _enrich_evolutions(
 
 
 def _evolution_parameter(
+    engine: Any,
     entry: dict[str, Any],
     pokedb: PokeDBGeneration,
     item_names: list[str],
     move_names: Mapping[int, str] | None,
+    pokemon_names: list[str] | None = None,
 ) -> dict[str, Any] | None:
     method_id = entry["method_id"]
     parameter = entry["parameter"]
-    if method_id in _EVOLUTION_LEVEL_PARAMETERS:
-        return {"kind": "level", "value": parameter}
-    if method_id in _EVOLUTION_ITEM_PARAMETERS:
+    kind = engine.EVOLUTION_PARAMETER_KINDS.get(method_id)
+    if kind == "item":
         if not 0 < parameter < len(item_names):
-            raise DataSourceError(f"Unknown Gen IV item ID: {parameter}")
+            raise DataSourceError(f"Unknown item ID: {parameter}")
         name = item_names[parameter]
         return {
             "kind": "item",
@@ -1113,24 +1176,22 @@ def _evolution_parameter(
             "slug": pokedb.item_slug(name),
             "name": name,
         }
-    if method_id in _EVOLUTION_PERSONALITY_PARAMETERS:
-        return {"kind": "personality", "value": parameter}
-    if method_id == 15:
-        return {"kind": "beauty", "value": parameter}
-    if method_id == 20:
+    if kind == "move":
         return {
             "kind": "move",
             "id": parameter,
             "name": _move_name(parameter, pokedb, move_names),
         }
-    if method_id == 21:
+    if kind == "pokemon":
         species = pokedb.pokemon_for_id(parameter)
         return {
             "kind": "pokemon",
             "id": parameter,
             "slug": species["name"],
-            "name": title_case_slug(species["name"]),
+            "name": _pokemon_display_name(parameter, species["name"], pokemon_names),
         }
+    if kind is not None:
+        return {"kind": kind, "value": parameter}
     if parameter:
         return {"kind": "raw", "value": parameter}
     return None
@@ -1175,7 +1236,7 @@ def _enrich_egg_moves(
 
 def _named_id(value: int, names: tuple[str, ...], label: str) -> dict[str, Any]:
     if not 0 <= value < len(names):
-        raise DataSourceError(f"Unknown Gen IV {label} ID: {value}")
+        raise DataSourceError(f"Unknown {label} ID: {value}")
     return {"id": value, "name": names[value]}
 
 
@@ -1197,10 +1258,10 @@ def _reference_name_table(
 
 
 def _resolve_type_names(
-    dataset: dict[str, Any], fallback: Mapping[int, str] | None
+    engine: Any, dataset: dict[str, Any], fallback: Mapping[int, str] | None
 ) -> dict[int, str]:
     result = dict(fallback or {})
-    names = _reference_name_table(dataset, "type_names", len(TYPE_NAMES))
+    names = _reference_name_table(dataset, "type_names", engine.TYPE_NAME_COUNT)
     if names is not None:
         result.update(
             (type_id, name_slug(name)) for type_id, name in enumerate(names)
@@ -1209,21 +1270,40 @@ def _resolve_type_names(
 
 
 def _resolve_move_names(
-    dataset: dict[str, Any], fallback: Mapping[int, str] | None
+    engine: Any, dataset: dict[str, Any], fallback: Mapping[int, str] | None
 ) -> dict[int, str]:
     result = dict(fallback or {})
-    names = _reference_name_table(dataset, "move_names", 468)
+    names = _reference_name_table(dataset, "move_names", engine.MOVE_NAME_COUNT)
     if names is not None:
         result.update((move_id, name_slug(name)) for move_id, name in enumerate(names))
     return result
 
 
-def _resolve_ability_names(dataset: dict[str, Any]) -> list[str] | None:
-    return _reference_name_table(dataset, "ability_names", 124)
+def _resolve_ability_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
+    return _reference_name_table(
+        dataset, "ability_names", engine.ABILITY_NAME_COUNT
+    )
 
 
-def _resolve_item_names(dataset: dict[str, Any]) -> list[str] | None:
-    return _reference_name_table(dataset, "item_names", 468)
+def _resolve_pokemon_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
+    names = _reference_name_table(
+        dataset, "pokemon_names", engine.POKEMON_NAME_COUNT
+    )
+    if names is None:
+        return None
+    return [normalize_display_name(name) for name in names]
+
+
+def _pokemon_display_name(
+    species_id: int, slug: str, pokemon_names: list[str] | None
+) -> str:
+    if pokemon_names is not None and 0 < species_id < len(pokemon_names):
+        return pokemon_names[species_id]
+    return title_case_slug(slug)
+
+
+def _resolve_item_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
+    return _reference_name_table(dataset, "item_names", engine.ITEM_NAME_COUNT)
 
 
 def _item_reference(
@@ -1237,7 +1317,7 @@ def _item_reference(
         slug = pokedb.item_name(item_id)
         return {"id": item_id, "slug": slug, "name": title_case_slug(slug)}
     if item_id >= len(item_names):
-        raise DataSourceError(f"Unknown Gen IV item ID: {item_id}")
+        raise DataSourceError(f"Unknown item ID: {item_id}")
     name = item_names[item_id]
     return {"id": item_id, "slug": pokedb.item_slug(name), "name": name}
 
@@ -1252,7 +1332,7 @@ def _ability_id(
     slug = pokedb.ability_name(ability_id)
     if ability_names is not None:
         if ability_id >= len(ability_names):
-            raise DataSourceError(f"Unknown Gen IV ability ID: {ability_id}")
+            raise DataSourceError(f"Unknown ability ID: {ability_id}")
         name = ability_names[ability_id]
     else:
         name = title_case_slug(slug)
@@ -1269,11 +1349,11 @@ def _replaced_move(
 
 
 def _type_id(
-    value: int, type_names: Mapping[int, str] | None
+    engine: Any, value: int, type_names: Mapping[int, str] | None
 ) -> dict[str, Any]:
     if type_names is not None and value in type_names:
         return {"id": value, "name": type_names[value]}
-    return _named_id(value, TYPE_NAMES, "type")
+    return _named_id(value, engine.TYPE_NAMES, "type")
 
 
 def _move_name(
@@ -1284,13 +1364,5 @@ def _move_name(
     if move_names is not None and move_id in move_names:
         return move_names[move_id]
     return pokedb.move_name(move_id)
-
-
-def _machine_name(machine_id: int) -> str:
-    if machine_id <= 92:
-        return f"TM{machine_id:02}"
-    if machine_id <= 100:
-        return f"HM{machine_id - 92:02}"
-    return f"MACHINE{machine_id:03}"
 
 

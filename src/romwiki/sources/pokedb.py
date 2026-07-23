@@ -94,9 +94,10 @@ class PokeDBGeneration:
     ) -> dict[str, Any] | None:
         """Return version-aware ability effect text, if PokéDB has it.
 
-        Ability behavior is never inferred from the ROM (only the name and
-        per-species assignment are ROM facts), so this is the sole source for
-        what an ability actually does.
+        Ability behavior is never inferred from the extracted records (only
+        the name and per-species assignment are read from the ROM); the ROM's
+        own description text banks are not yet extracted, so this supplies
+        the displayed effect text and describes the base game.
         """
         reference = self.abilities_reference.get(ability_id)
         if reference is None:
@@ -133,8 +134,9 @@ class PokeDBGeneration:
         """Return item effect text and icon, if PokéDB has it.
 
         Item mechanics (price, pocket, hold effects, etc.) are exact ROM
-        facts; the human-readable description of what an item does is not
-        stored in the ROM's item records, so this is the sole source for it.
+        facts; the human-readable description lives in ROM message banks not
+        yet extracted, so this supplies the displayed text and describes the
+        base game.
         """
         reference = self.items_reference.get(slug)
         if reference is None:
@@ -175,9 +177,10 @@ class PokeDBGeneration:
         """Return version-aware move effect text, if PokéDB has it.
 
         Battle mechanics (power, accuracy, PP, flags, etc.) are exact ROM
-        facts; the human-readable description of what a move actually does
-        is not stored in the ROM's move records, so this is the sole source
-        for it.
+        facts; the move records carry only an opaque effect ID and the
+        human-readable description lives in ROM message banks not yet
+        extracted, so this supplies the displayed text and describes the
+        base game.
         """
         reference = self.moves_reference.get(move_id)
         if reference is None:
@@ -187,6 +190,8 @@ class PokeDBGeneration:
         _, flavor_text = _pick_versioned_text(reference.get("flavor_text"), version)
         if not effect and not short_effect and not flavor_text:
             return None
+        metadata = reference.get("metadata")
+        stat_changes = reference.get("stat_changes")
         return {
             "version": effect_version,
             "source": "PokéDB / PokéAPI",
@@ -194,6 +199,8 @@ class PokeDBGeneration:
             "effect": effect,
             "short_effect": short_effect,
             "flavor_text": flavor_text,
+            "metadata": metadata if isinstance(metadata, dict) else None,
+            "stat_changes": stat_changes if isinstance(stat_changes, list) else [],
         }
 
     def pokemon_sprite(
@@ -298,7 +305,12 @@ class PokeDBGeneration:
     def pokemon_reference(
         self, reference: dict[str, Any], version: str | None
     ) -> dict[str, Any]:
-        """Return a small, version-aware reference snapshot for presentation."""
+        """Return a small, version-aware reference snapshot for presentation.
+
+        Only fields the renderers actually present are included; battle facts
+        such as stats, types, and abilities always come from the ROM and are
+        deliberately not duplicated here.
+        """
         flavor_texts = reference.get("flavor_text")
         flavor_text = None
         flavor_version = None
@@ -316,35 +328,6 @@ class PokeDBGeneration:
                     (None, None),
                 )
 
-        stats = reference.get("stats")
-        base_stats = None
-        if isinstance(stats, dict):
-            keys = {
-                "hp": "hp",
-                "attack": "attack",
-                "defense": "defense",
-                "speed": "speed",
-                "special-attack": "special_attack",
-                "special-defense": "special_defense",
-            }
-            if all(isinstance(stats.get(source), int) for source in keys):
-                base_stats = {target: stats[source] for source, target in keys.items()}
-
-        abilities = reference.get("abilities")
-        ability_names = []
-        if isinstance(abilities, list):
-            ability_names = [
-                value["name"]
-                for value in abilities
-                if isinstance(value, dict) and isinstance(value.get("name"), str)
-            ]
-
-        types = reference.get("types")
-        type_names = (
-            [value for value in types if isinstance(value, str)]
-            if isinstance(types, list)
-            else []
-        )
         return {
             "version": version,
             "source": "PokéDB / PokéAPI",
@@ -354,9 +337,6 @@ class PokeDBGeneration:
             "weight_hg": reference.get("weight"),
             "flavor_text": flavor_text,
             "flavor_text_version": flavor_version,
-            "base_stats": base_stats,
-            "types": type_names,
-            "abilities": ability_names,
             "is_baby": reference.get("is_baby"),
             "is_legendary": reference.get("is_legendary"),
             "is_mythical": reference.get("is_mythical"),

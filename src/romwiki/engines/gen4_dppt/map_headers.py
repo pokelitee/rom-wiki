@@ -12,13 +12,21 @@ INTERNAL_MAP_NAME_SIZE = 16
 @dataclass(frozen=True, slots=True)
 class PlatinumMapHeader:
     header_id: int
+    area_data_id: int
+    unknown_value: int
     matrix_id: int
     script_file_id: int
     level_script_id: int
     text_archive_id: int
+    day_music_id: int
+    night_music_id: int
     encounter_id: int
     event_file_id: int
     location_name_id: int
+    map_label_window_id: int
+    weather_id: int
+    camera_id: int
+    flags: int
     internal_name: str
 
 
@@ -52,13 +60,24 @@ def parse_platinum_map_headers(
         headers.append(
             PlatinumMapHeader(
                 header_id=header_id,
+                area_data_id=data[offset + 0x0],
+                unknown_value=data[offset + 0x1],
                 matrix_id=struct.unpack_from("<H", data, offset + 0x2)[0],
                 script_file_id=struct.unpack_from("<H", data, offset + 0x4)[0],
                 level_script_id=struct.unpack_from("<H", data, offset + 0x6)[0],
                 text_archive_id=struct.unpack_from("<H", data, offset + 0x8)[0],
+                day_music_id=struct.unpack_from("<H", data, offset + 0xA)[0],
+                night_music_id=struct.unpack_from("<H", data, offset + 0xC)[0],
                 encounter_id=struct.unpack_from("<H", data, offset + 0xE)[0],
                 event_file_id=struct.unpack_from("<H", data, offset + 0x10)[0],
                 location_name_id=data[offset + 0x12],
+                map_label_window_id=data[offset + 0x13],
+                weather_id=data[offset + 0x14],
+                camera_id=data[offset + 0x15],
+                # The last two bytes pack the map type, battle background,
+                # and permission bits (bike/run/escape rope/fly). Kept as
+                # the raw packed value until the bit layout is verified.
+                flags=struct.unpack_from("<H", data, offset + 0x16)[0],
                 internal_name=internal_name,
             )
         )

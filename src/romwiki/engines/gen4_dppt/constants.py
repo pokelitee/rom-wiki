@@ -10,3 +10,77 @@ NATURE_NAMES = (
     "Modest", "Mild", "Quiet", "Bashful", "Rash",
     "Calm", "Gentle", "Sassy", "Careful", "Quirky",
 )
+
+# Dataset shapes the enrichment pipeline validates against. These describe
+# the Gen IV engine, not any single game: every DPPt image ships these exact
+# table sizes.
+PERSONAL_RECORD_COUNT = 508
+MOVE_RECORD_COUNT = 471
+MAX_MOVE_ID = 467
+TYPE_NAME_COUNT = 18
+ABILITY_NAME_COUNT = 124
+ITEM_NAME_COUNT = 468
+MOVE_NAME_COUNT = 468
+POKEMON_NAME_COUNT = 496
+NATURAL_GIFT_TYPE_NONE = 31
+
+# Engine ID-to-name tables. The ROM stores these values as bare indexes the
+# game code interprets; the names are the community-standard slugs for them.
+TYPE_NAMES = (
+    "normal", "fighting", "flying", "poison", "ground", "rock", "bug",
+    "ghost", "steel", "unknown", "fire", "water", "grass", "electric",
+    "psychic", "ice", "dragon", "dark",
+)
+EGG_GROUP_NAMES = (
+    "none", "monster", "water-1", "bug", "flying", "field", "fairy",
+    "grass", "human-like", "water-3", "mineral", "amorphous", "water-2",
+    "ditto", "dragon", "undiscovered",
+)
+GROWTH_RATE_NAMES = (
+    "medium-fast", "erratic", "fluctuating", "medium-slow", "fast", "slow",
+)
+COLOR_NAMES = (
+    "red", "blue", "yellow", "green", "black", "brown", "purple", "gray",
+    "white", "pink", "internal",
+)
+DAMAGE_CLASS_NAMES = ("physical", "special", "status")
+EVOLUTION_METHOD_NAMES = (
+    "none",
+    "friendship",
+    "friendship-day",
+    "friendship-night",
+    "level",
+    "trade",
+    "trade-held-item",
+    "use-item",
+    "level-attack-greater",
+    "level-attack-equal",
+    "level-defense-greater",
+    "level-personality-low",
+    "level-personality-high",
+    "level-ninjask",
+    "level-shedinja",
+    "beauty",
+    "use-item-male",
+    "use-item-female",
+    "level-held-item-day",
+    "level-held-item-night",
+    "level-knowing-move",
+    "level-with-party-species",
+    "level-male",
+    "level-female",
+    "level-magnetic-field",
+    "level-moss-rock",
+    "level-ice-rock",
+)
+# How each evolution method's parameter operand should be interpreted.
+# Methods absent here either take no parameter or an unknown raw value.
+EVOLUTION_PARAMETER_KINDS = {
+    **{method_id: "level" for method_id in (4, 8, 9, 10, 13, 14, 22, 23)},
+    **{method_id: "item" for method_id in (6, 7, 16, 17, 18, 19)},
+    11: "personality",
+    12: "personality",
+    15: "beauty",
+    20: "move",
+    21: "pokemon",
+}

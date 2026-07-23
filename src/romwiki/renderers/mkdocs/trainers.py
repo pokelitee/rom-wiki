@@ -18,11 +18,12 @@ from romwiki.renderers.mkdocs.comparisons import (
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
+    provenance_fact_table,
     provenance_section,
-    record_nav_link,
-    record_navigation,
+    record_navigation_for,
     sprite_with_link,
     summary_section,
+    summary_section_link,
     table_sprite_cell,
     type_badges,
 )
@@ -328,50 +329,47 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    source_url = f"trainers/trainer-{record['trainer_id']:04}/"
-    previous_link = None
-    if previous is not None:
-        label = f"← {_trainer_label(previous)}"
-        href = ROUTES.published_href(
-            entity_reference(
-                "trainer", previous["trainer_id"], label, previous["trainer_id"]
-            ),
-            source_url,
-        )
-        previous_link = record_nav_link(href, label, "prev")
-    following_link = None
-    if following is not None:
-        label = f"{_trainer_label(following)} →"
-        href = ROUTES.published_href(
-            entity_reference(
-                "trainer", following["trainer_id"], label, following["trainer_id"]
-            ),
-            source_url,
-        )
-        following_link = record_nav_link(href, label, "next")
     lines.extend(
-        record_navigation(previous_link, following_link, "Trainer navigation")
+        record_navigation_for(
+            "trainer",
+            f"trainers/trainer-{record['trainer_id']:04}/",
+            previous,
+            following,
+            aria_label="Trainer navigation",
+            identity=lambda value: value["trainer_id"],
+            route_key=lambda value: value["trainer_id"],
+            label=_trainer_label,
+        )
     )
 
 
 def _trainer_provenance(record: dict[str, Any]) -> list[str]:
     entries = [
+        *provenance_fact_table(
+            (
+                ("Class ID", f"`{record['class_id']}`"),
+                ("Class gender", record["class_gender"].capitalize()),
+                ("AI flags", f"`0x{record['ai_flags']:08X}`"),
+                ("Battle type", f"`{record['battle_type']}`"),
+                ("Unknown byte", f"`0x{record['unknown_byte']:02X}`"),
+            )
+        ),
         (
-            "- **Trainer and party:** Exact ROM trainer record from "
+            "Source: exact ROM trainer record from "
             f"`{record['provenance']['archive']}` member "
             f"`{record['provenance']['member']}` and party record from "
             f"`{record['party_provenance']['archive']}` member "
             f"`{record['party_provenance']['member']}`."
-        )
+        ),
     ]
     if record.get("locations"):
         entries.append(
-            "- **Overworld locations:** Trainer event objects whose script IDs "
+            "Overworld locations: trainer event objects whose script IDs "
             "resolve directly to this trainer record."
         )
     if record.get("script_references"):
         entries.append(
-            "- **Scripted battle locations:** Literal `StartTrainerBattle` commands "
+            "Scripted battle locations: literal `StartTrainerBattle` commands "
             "followed by `CheckWonBattle`; only literal trainer IDs are linked."
         )
     return entries
@@ -428,9 +426,16 @@ def _trainer_summary(
                 "<div><dt>Battle format</dt><dd>"
                 f"{'Double battle' if record['double_battle'] else 'Single battle'}</dd></div>"
             ),
-            f"<div><dt>Party size</dt><dd>{len(record['party'])}</dd></div>",
-            f"<div><dt>Level range</dt><dd>{level_range}</dd></div>",
-            f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>",
+            "<div><dt>Party size</dt><dd>"
+            f"{summary_section_link(len(record['party']), 'party')}</dd></div>",
+            "<div><dt>Level range</dt><dd>"
+            f"{summary_section_link(level_range, 'party')}</dd></div>",
+            (
+                "<div><dt>AI items</dt><dd>"
+                f'<a href="#ai-battle-items">{ai_items}</a></dd></div>'
+                if grouped_ai_items
+                else f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>"
+            ),
         ],
     )
 
@@ -783,5 +788,3 @@ def _location_names(record: dict[str, Any]) -> list[str]:
     return list(
         dict.fromkeys(location["name"] for location in _combined_locations(record))
     )
-
-

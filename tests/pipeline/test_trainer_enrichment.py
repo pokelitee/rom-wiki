@@ -58,6 +58,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             "party_count": 1,
             "reward_item_ids": [0, 0, 0, 0],
             "ai_flags": 0,
+            "battle_type": 0,
             "double_battle": False,
             "party": [{
                 "difficulty": 0,

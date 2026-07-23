@@ -24,6 +24,9 @@ class Gen4NpcTrade:
     held_item_id: int | None
     ot_gender: int
     language_id: int
+    # Undecoded engine values at record offsets 0x1C, 0x24-0x34, and 0x44,
+    # kept raw so hack edits stay auditable until their meaning is verified.
+    unknown_values: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +48,14 @@ def parse_npc_trade_record(
     raw_ivs = struct.unpack_from("<6I", data, 4)
     ivs = raw_ivs[:3] + raw_ivs[4:] + raw_ivs[3:4]
     ot_id = struct.unpack_from("<H", data, 0x20)[0]
+    padding = struct.unpack_from("<H", data, 0x22)[0]
+    if padding:
+        raise InvalidRomError(f"NPC trade has nonzero padding: {padding}")
+    unknown_values = (
+        struct.unpack_from("<I", data, 0x1C)[0],
+        *struct.unpack_from("<5I", data, 0x24),
+        struct.unpack_from("<I", data, 0x44)[0],
+    )
     personality = struct.unpack_from("<I", data, 0x38)[0]
     raw_held_item_id = struct.unpack_from("<I", data, 0x3C)[0]
     ot_gender = struct.unpack_from("<I", data, 0x40)[0]
@@ -77,6 +88,7 @@ def parse_npc_trade_record(
         held_item_id=raw_held_item_id or None,
         ot_gender=ot_gender,
         language_id=language_id,
+        unknown_values=unknown_values,
     )
 
 

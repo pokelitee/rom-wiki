@@ -25,7 +25,6 @@ class RecordProvenance:
     source: str
     archive: str
     member: int
-    confidence: str = "exact"
 
 
 @dataclass(frozen=True, slots=True)

@@ -4,12 +4,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from romwiki.platforms.registry import RomImage, get_platform
+from romwiki.platforms.registry import RomImage, registered_platforms
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.profiles.models import HashMatch
-from romwiki.util.errors import ProfileError
-
-_DEFAULT_PLATFORM = "nintendo-ds"
+from romwiki.util.errors import InvalidRomError
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,14 +33,22 @@ class InspectionResult:
 
 
 def inspect_rom(rom_path: Path, profiles_dir: Path) -> InspectionResult:
-    image = get_platform(_DEFAULT_PLATFORM).inspect(rom_path)
+    image, image_platform = _inspect_image(rom_path)
     profiles = ProfileRepository.load(profiles_dir)
-    match = profiles.identify(image)
-    if match is not None and match.profile.platform != _DEFAULT_PLATFORM:
-        raise ProfileError(
-            f"Profile {match.profile.id} declares platform "
-            f"{match.profile.platform!r}, but the image was opened as "
-            f"{_DEFAULT_PLATFORM!r}"
-        )
+    match = profiles.identify(image, platform=image_platform)
     return InspectionResult(image=image, match=match)
+
+
+def _inspect_image(rom_path: Path) -> tuple[RomImage, str]:
+    """Open `rom_path` with the first registered platform that accepts it."""
+    failures = []
+    for platform_id, adapter in registered_platforms().items():
+        try:
+            return adapter.inspect(rom_path), platform_id
+        except InvalidRomError as error:
+            failures.append(f"{platform_id}: {error}")
+    detail = "; ".join(failures) or "no platforms are registered"
+    raise InvalidRomError(
+        f"No registered platform accepts {rom_path.name} ({detail})"
+    )
 

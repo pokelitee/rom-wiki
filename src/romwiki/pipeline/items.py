@@ -5,6 +5,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.map_headers import read_code_binary
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import (
     ITEMS_ENRICHED_SCHEMA_VERSION,
@@ -36,9 +37,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     messages = platform.archive_cls.from_bytes(filesystem.read(message_archive_path))
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
     type_names = engine.parse_english_message_archive(messages.read(type_names_member))
-    with result.image.path.open("rb") as stream:
-        stream.seek(result.image.header.arm9_offset)
-        arm9_data = stream.read(result.image.header.arm9_size)
+    arm9_data = read_code_binary(platform, result.image)
     map_offset, data_members = engine.find_item_archive_members(
         arm9_data,
         item_count=len(item_names),
@@ -56,15 +55,18 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         pocket_id = parsed["field_pocket_id"]
         field_use_id = parsed["field_use_function_id"]
         natural_gift_type_id = parsed["natural_gift_type_id"]
-        if pocket_id >= len(engine.GEN4_ITEM_POCKET_NAMES):
-            raise DataSourceError(f"Unknown Gen IV item pocket ID: {pocket_id}")
-        if field_use_id >= len(engine.GEN4_ITEM_FIELD_USE_NAMES):
+        if pocket_id >= len(engine.ITEM_POCKET_NAMES):
+            raise DataSourceError(f"Unknown item pocket ID: {pocket_id}")
+        if field_use_id >= len(engine.ITEM_FIELD_USE_NAMES):
             raise DataSourceError(
-                f"Unknown Gen IV item field-use function ID: {field_use_id}"
+                f"Unknown item field-use function ID: {field_use_id}"
             )
-        if natural_gift_type_id != 31 and natural_gift_type_id >= len(type_names):
+        if (
+            natural_gift_type_id != engine.NATURAL_GIFT_TYPE_NONE
+            and natural_gift_type_id >= len(type_names)
+        ):
             raise DataSourceError(
-                f"Unknown Gen IV Natural Gift type ID: {natural_gift_type_id}"
+                f"Unknown Natural Gift type ID: {natural_gift_type_id}"
             )
         records.append(
             {
@@ -73,15 +75,15 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
                 "public": item_id > 0 and data_member > 0,
                 "pocket": {
                     "id": pocket_id,
-                    "name": engine.GEN4_ITEM_POCKET_NAMES[pocket_id],
+                    "name": engine.ITEM_POCKET_NAMES[pocket_id],
                 },
                 "field_use": {
                     "id": field_use_id,
-                    "name": engine.GEN4_ITEM_FIELD_USE_NAMES[field_use_id],
+                    "name": engine.ITEM_FIELD_USE_NAMES[field_use_id],
                 },
                 "natural_gift_type": (
                     None
-                    if natural_gift_type_id == 31
+                    if natural_gift_type_id == engine.NATURAL_GIFT_TYPE_NONE
                     else {
                         "id": natural_gift_type_id,
                         "name": type_names[natural_gift_type_id],

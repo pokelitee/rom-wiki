@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.schema.versions import CATALOG_SCHEMA_VERSION
+from romwiki.util.json_io import write_text_atomic
 
 
 def write_catalog(output_root: Path, kind: str, records: list[dict[str, Any]]) -> None:
@@ -32,7 +33,7 @@ def prune_catalog_pages(output_root: Path, filenames: set[str]) -> None:
 _SKELETON_FILTER_COUNTS = {
     "pokemon": 9,
     "abilities": 6,
-    "items": 12,
+    "items": 13,
     "moves": 9,
     "trainers": 11,
     "locations": 5,
@@ -100,16 +101,5 @@ def catalog_index(
 
 
 def write_text(path: Path, value: str) -> None:
-    """Write ``value`` to ``path``, leaving an unchanged file's mtime alone.
-
-    Writes to a sibling ``.tmp`` file first and renames it into place so
-    readers never observe a partially written file. Skipping the write
-    entirely when the content already matches avoids bumping the mtime of
-    unchanged pages, which matters for tools like mkdocs `--dirty` that
-    decide what to reprocess by file modification time.
-    """
-    if path.is_file() and path.read_text(encoding="utf-8") == value:
-        return
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_text(value, encoding="utf-8")
-    temporary.replace(path)
+    """Write a generated page, leaving an unchanged file's mtime alone."""
+    write_text_atomic(path, value)

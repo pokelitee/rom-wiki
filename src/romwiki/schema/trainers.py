@@ -82,6 +82,7 @@ class Gen4Trainer:
     party_count: int
     reward_item_ids: tuple[int, int, int, int]
     ai_flags: int
+    battle_type: int
     double_battle: bool
     party: tuple[TrainerPokemon, ...]
     trailing_party_data: bytes

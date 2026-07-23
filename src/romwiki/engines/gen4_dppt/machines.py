@@ -14,6 +14,15 @@ GEN4_TM_COUNT = 92
 _GEN4_MACHINE_ITEM_ID_OFFSET = 327
 
 
+def machine_name(machine_id: int) -> str:
+    """Format a machine ID the way `Gen4Machine.name` would."""
+    if machine_id <= GEN4_TM_COUNT:
+        return f"TM{machine_id:02}"
+    if machine_id <= GEN4_MACHINE_COUNT:
+        return f"HM{machine_id - GEN4_TM_COUNT:02}"
+    return f"MACHINE{machine_id:03}"
+
+
 def parse_machine_move_table(
     data: bytes,
     *,

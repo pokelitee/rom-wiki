@@ -94,7 +94,7 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertIn("## Additional battle properties", page)
         self.assertNotIn("## Battle properties", page)
         self.assertIn("`0x0010`", page)
-        self.assertIn("| Machine | TM24 |", page)
+        self.assertIn("<dt>Machine</dt><dd>TM24</dd>", page)
         self.assertIn("Route 210 — Friendship 255", page)
         self.assertIn("[Dragonite](../pokemon/dragonite.md)", page)
         self.assertIn("## Egg move learners", page)

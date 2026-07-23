@@ -6,7 +6,11 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
+from romwiki.pipeline.map_headers import (
+    code_load_address,
+    parse_map_header_table,
+    read_code_binary,
+)
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
@@ -15,6 +19,7 @@ from romwiki.schema import (
     LocationItem,
     LocationNpcTrade,
     LocationPokemonGift,
+    LocationRoamingActivation,
     LocationShop,
     LocationShopItem,
     LocationStaticEncounter,
@@ -108,26 +113,26 @@ def extract_location_dataset(
     engine = get_engine(profile.engine).locations
 
     null_event_id = profile.parameters.get(
-        "null_event_id", engine.GEN4_ARCHIVE_MEMBER_NONE
+        "null_event_id", engine.ARCHIVE_MEMBER_NONE
     )
     null_encounter_id = profile.parameters.get(
-        "null_encounter_id", engine.GEN4_ARCHIVE_MEMBER_NONE
+        "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
     )
     dynamic_warp_header_id = profile.parameters.get(
-        "dynamic_warp_header_id", engine.PLATINUM_DYNAMIC_WARP_HEADER_ID
+        "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
     )
     dynamic_warp_id = profile.parameters.get(
-        "dynamic_warp_id", engine.PLATINUM_DYNAMIC_WARP_ID
+        "dynamic_warp_id", engine.DYNAMIC_WARP_ID
     )
     matrix_void_header_ids = frozenset(
         profile.parameters.get(
-            "matrix_void_header_ids", engine.PLATINUM_MATRIX_VOID_HEADER_IDS
+            "matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS
         )
     )
-    arm9_load_address = result.image.header.arm9_ram_address
+    arm9_load_address = code_load_address(platform, result.image)
 
     filesystem = platform.filesystem_from_image(result.image)
-    arm9_data = read_arm9(result.image)
+    arm9_data = read_code_binary(platform, result.image)
     headers = parse_map_header_table(
         engine, arm9_data, filesystem, map_names_path,
         table_offset=table_offset, count=count,
@@ -200,9 +205,21 @@ def extract_location_dataset(
         filesystem.read(scripts_path), allow_truncated=True
     )
     referenced_script_ids = {header.script_file_id for header in headers}
-    roaming_activation_count = sum(
-        len(engine.parse_roaming_activation_commands(scripts.read(script_file_id)))
+    roaming_by_script = {
+        script_file_id: tuple(
+            LocationRoamingActivation(
+                slot=command.slot,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+            for command in engine.parse_roaming_activation_commands(
+                scripts.read(script_file_id)
+            )
+        )
         for script_file_id in referenced_script_ids
+    }
+    roaming_activation_count = sum(
+        len(activations) for activations in roaming_by_script.values()
     )
     events = platform.archive_cls.from_bytes(filesystem.read(events_path))
     matrices = platform.archive_cls.from_bytes(filesystem.read(matrices_path))
@@ -382,6 +399,14 @@ def extract_location_dataset(
                 location_name_id=header.location_name_id,
                 name=location_names[header.location_name_id],
                 matrix_id=header.matrix_id,
+                area_data_id=header.area_data_id,
+                level_script_id=header.level_script_id,
+                text_archive_id=header.text_archive_id,
+                day_music_id=header.day_music_id,
+                night_music_id=header.night_music_id,
+                weather_id=header.weather_id,
+                camera_id=header.camera_id,
+                map_flags=header.flags,
                 event_file_id=(
                     None
                     if header.event_file_id == null_event_id
@@ -401,6 +426,7 @@ def extract_location_dataset(
                 static_encounters=static_encounters_by_location[
                     static_encounter_location_key
                 ],
+                roaming_activations=roaming_by_script[header.script_file_id],
                 npc_trades=npc_trades_by_script[header.script_file_id],
             ).to_dict()
         )
@@ -490,7 +516,7 @@ def extract_location_dataset(
             "roaming_pokemon": {
                 "scripts_archive": scripts_path,
                 "command": "ActivateRoamingPokemon",
-                "slot_count": engine.PLATINUM_ROAMING_SLOT_COUNT,
+                "slot_count": engine.ROAMING_SLOT_COUNT,
             },
             "decoration_names": {
                 "archive": messages_path,
@@ -762,6 +788,7 @@ def _extract_location_npc_trades(
                     trade.language_id, f"Language {trade.language_id}"
                 ),
                 personality=trade.personality,
+                unknown_values=trade.unknown_values,
                 script_file_id=script_file_id,
                 command_offset=command.offset,
             )

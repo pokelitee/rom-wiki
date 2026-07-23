@@ -6,7 +6,8 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
+from romwiki.pipeline.map_headers import parse_map_header_table, read_code_binary
+from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.encounters import EncounterLocation
 from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
@@ -29,6 +30,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).encounters
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    reference_names = extract_reference_names(profile, filesystem)
     parsed_records = [
         engine.parse_encounter_record(
             archive.read(member.index),
@@ -58,6 +60,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
             "archive": archive_path,
             **location_source,
         },
+        **reference_names,
         "records": records,
     }
 
@@ -91,7 +94,7 @@ def _extract_encounter_locations(
 
     count = parameters["map_header_count"]
     table_offset = parameters["map_header_offset"]
-    arm9_data = read_arm9(result.image)
+    arm9_data = read_code_binary(platform, result.image)
     headers = parse_map_header_table(
         engine,
         arm9_data,
@@ -106,7 +109,7 @@ def _extract_encounter_locations(
 
     locations: dict[int, list[EncounterLocation]] = {}
     null_encounter_id = profile.parameters.get(
-        "null_encounter_id", engine.GEN4_ARCHIVE_MEMBER_NONE
+        "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
     )
     for header in headers:
         if header.encounter_id == null_encounter_id:

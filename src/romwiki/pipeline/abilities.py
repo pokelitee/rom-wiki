@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from romwiki.engines.registry import get_engine
 from romwiki.schema.versions import ABILITIES_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -17,9 +18,15 @@ def build_ability_dataset(
 ) -> dict[str, Any]:
     if pokemon_dataset.get("dataset") != "pokemon":
         raise DataSourceError("Abilities require an enriched Pokémon dataset")
+    engine_id = pokemon_dataset.get("engine")
+    if not isinstance(engine_id, str):
+        raise DataSourceError("Pokémon dataset must declare its source engine")
+    expected_count = get_engine(engine_id).enrich.ABILITY_NAME_COUNT
     ability_names = pokemon_dataset.get("ability_names")
-    if not isinstance(ability_names, list) or len(ability_names) != 124:
-        raise DataSourceError("Expected exactly 124 ROM-derived ability names")
+    if not isinstance(ability_names, list) or len(ability_names) != expected_count:
+        raise DataSourceError(
+            f"Expected exactly {expected_count} ROM-derived ability names"
+        )
 
     pokemon_by_ability: dict[int, list[dict[str, Any]]] = {}
     for pokemon in pokemon_dataset.get("records", []):

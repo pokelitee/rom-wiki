@@ -18,6 +18,7 @@ class AbilityDatasetTests(unittest.TestCase):
         dataset = build_ability_dataset(
             {
                 "game": "test",
+                "engine": "gen4_dppt",
                 "dataset": "pokemon",
                 "source": {"archive": "personal.narc"},
                 "name_sources": {
@@ -88,7 +89,7 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertIn("# Overgrow", page)
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
-        self.assertIn("| #001 | 1 |", page)
+        self.assertIn("| — | 1 |", page)
         self.assertEqual(catalog["kind"], "abilities")
         self.assertEqual(catalog["records"][0]["pokemon_count"], 1)
         self.assertEqual(catalog["records"][0]["status"], "assigned")

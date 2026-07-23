@@ -54,7 +54,8 @@
 .rw-trainer-summary,
 .rw-ability-summary,
 .rw-encounter-summary { margin-bottom: 1.4rem; padding: .85rem; border: 1px solid var(--rw-border); border-radius: var(--rw-radius); background: var(--rw-surface); }
-.rw-move-summary > .rw-summary__facts { margin-top: .7rem; }
+.rw-move-summary > .rw-summary__facts,
+.rw-location-summary > .rw-summary__facts,
 .rw-trainer-summary > .rw-summary__facts,
 .rw-ability-summary > .rw-summary__facts,
 .rw-encounter-summary > .rw-summary__facts { margin-top: 0; }

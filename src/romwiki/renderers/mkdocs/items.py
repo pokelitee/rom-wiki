@@ -16,20 +16,29 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    badge_requirement,
     display_name,
     fact_grid,
+    name_table_source,
+    pokemon_table,
+    provenance_fact_table,
     provenance_section,
-    record_nav_link,
-    record_navigation,
+    record_navigation_for,
     reference_description,
+    reference_source_link,
+    reference_sprite_cell,
+    reference_type_cell,
+    rom_record_source,
+    shop_price,
     sprite_with_link,
-    table_sprite_cell,
+    summary_section_link,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    entity_markdown_link,
     entity_reference,
-    pokemon_markdown_link,
+    pokemon_record_link,
     unique_references,
 )
 
@@ -43,6 +52,7 @@ def render_item_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     records = dataset["records"]
+    name_source = dataset.get("source", {}).get("item_names")
     output_root.mkdir(parents=True, exist_ok=True)
     filenames = {
         "index.md",
@@ -71,6 +81,7 @@ def render_item_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    name_source,
                 ),
             )
             page_count += 1
@@ -87,6 +98,7 @@ def render_item_pages(
             )
         )
         features = _features(record)
+        category = (record.get("reference") or {}).get("category")
         locations = list(
             dict.fromkeys(
                 reference["name"]
@@ -114,6 +126,7 @@ def render_item_pages(
                 "url": f"{record['slug']}/",
                 "pocket": record["pocket"]["name"],
                 "field_use": record["field_use"]["name"],
+                "category": category,
                 "price": record["price"],
                 "fling_power": record["fling_power"],
                 "features": features,
@@ -122,7 +135,14 @@ def render_item_pages(
                     ROUTES.catalog_reference(reference, "items/")
                     for reference in location_refs
                 ],
-                "search_text": " ".join((record["name"], *features, *locations)).lower(),
+                "search_text": " ".join(
+                    (
+                        record["name"],
+                        *((category,) if category else ()),
+                        *features,
+                        *locations,
+                    )
+                ).lower(),
             }, change)
         )
     write_catalog(output_root, "items", catalog_records)
@@ -145,15 +165,21 @@ def _render_record(
     change: dict[str, Any] | None = None,
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
+    name_source: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"items/{record['slug']}.md"
     mechanics = [
         ("Field use", display_name(record["field_use"]["name"])),
+        ("Field pocket ID", str(record["field_pocket_id"])),
+        ("Field use function ID", str(record["field_use_function_id"])),
         ("Held effect ID", str(record["hold_effect_id"])),
         ("Held effect parameter", str(record["hold_effect_parameter"])),
         ("Battle use function ID", str(record["battle_use_function_id"])),
         ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}"),
+        ("Usable on party", _yes_no(record["party_use"])),
     ]
+    if record["pluck_effect_id"]:
+        mechanics.append(("Pluck effect ID", str(record["pluck_effect_id"])))
     if record["fling_power"]:
         mechanics.append(("Fling effect ID", str(record["fling_effect_id"])))
     if record["natural_gift_power"]:
@@ -190,11 +216,32 @@ def _render_record(
     lines.extend(
         provenance_section(
             [
+                *provenance_fact_table(
+                    (
+                        (
+                            "Data archive member",
+                            f"`{record['data_archive_member']}`",
+                        ),
+                    )
+                ),
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
+                ),
                 "The name, item-data member mapping, mechanics, and references are exact "
                 "ROM facts. Numeric effect IDs are retained when their behavior is "
                 "implemented by game code rather than the item record. Effect "
                 "description, flavor text, and icon come from PokéDB / PokéAPI "
                 "reference data.",
+                *(
+                    [
+                        name_table_source(
+                            "Item", name_source["archive"], name_source["member"]
+                        )
+                    ]
+                    if name_source is not None
+                    else []
+                ),
+                *reference_source_link(record),
             ]
         )
     )
@@ -215,21 +262,26 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
         media = '<span class="rw-summary__placeholder">Icon unavailable</span>'
     price = f"₽{record['price']:,}"
     facts = [
-        ("Item ID", str(record["item_id"])),
-        ("Pocket", display_name(record["pocket"]["name"])),
-        ("Base price", price),
-        ("Selectable", _yes_no(record["selectable"])),
-        ("Can be discarded", _yes_no(not record["prevent_toss"])),
+        ("Item ID", escape(str(record["item_id"]))),
+        ("Pocket", escape(display_name(record["pocket"]["name"]))),
+        ("Base price", escape(price)),
+        ("Selectable", escape(_yes_no(record["selectable"]))),
+        ("Can be discarded", escape(_yes_no(not record["prevent_toss"]))),
     ]
     if record["fling_power"]:
-        facts.append(("Fling power", str(record["fling_power"])))
+        facts.append(
+            (
+                "Fling power",
+                summary_section_link(record["fling_power"], "mechanics"),
+            )
+        )
     return [
         '<section class="rw-summary">',
         f'<div class="rw-summary__media">{media}</div>',
         '<div class="rw-summary__body">',
         '<dl class="rw-summary__facts">',
         *(
-            f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
+            f"<div><dt>{escape(label)}</dt><dd>{value}</dd></div>"
             for label, value in facts
         ),
         "</dl>",
@@ -274,8 +326,9 @@ def _append_shops(
             *[
                 (
                     f"| {_location_link(shop, source_file)} "
-                    f"| {shop['kind'].title()} | {_shop_price(shop)} | "
-                    f"{_availability(shop['required_badges'])} |"
+                    f"| {shop['kind'].title()} | "
+                    f"{shop_price(shop['price'], shop.get('currency', 'money'))} | "
+                    f"{badge_requirement(shop['required_badges'])} |"
                 )
                 for shop in shops
             ],
@@ -294,29 +347,26 @@ def _append_pokemon(
         return
     lines.extend(["## Wild held by", ""])
     lines.extend(
-        [
-            "| Pokémon | Rarity |",
-            "| ------- | ------ |",
-            *[
-                f"| {sprite_with_link(_pokemon_sprite_cell(value, references), _pokemon_link(value, source_file))} "
-                f"| {value['rarity'].title()} |"
+        pokemon_table(
+            ["| Pokémon | Type | Rarity |", "| ------- | ---- | ------ |"],
+            [
+                (
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value, references), pokemon_record_link(value, source_file))} "
+                    f"| {reference_type_cell('pokemon', value.get('member', value.get('id')), references)} "
+                    f"| {value['rarity'].title()} |"
+                )
                 for value in record["wild_held_by"]
             ],
-            "",
-        ]
+        )
     )
 
 
 def _pokemon_sprite_cell(
     pokemon: dict[str, Any], references: ReferenceIndex | None
 ) -> str:
-    identifier = pokemon.get("member", pokemon.get("id"))
-    sprite_url = (
-        references.sprite_url("pokemon", identifier)
-        if references and identifier is not None
-        else None
+    return reference_sprite_cell(
+        "pokemon", pokemon.get("member", pokemon.get("id")), references
     )
-    return table_sprite_cell(sprite_url)
 
 
 def _append_trainers(
@@ -361,12 +411,13 @@ def _append_gifts_and_trades(
     lines.extend(["## Gifts and trades", ""])
     lines.extend(
         [
-            "| Location | Kind | Pokémon |",
-            "| -------- | ---- | ------- |",
+            "| Location | Kind | Pokémon | Type |",
+            "| -------- | ---- | ------- | ---- |",
             *[
                 (
                     f"| {_location_link(value, source_file)} "
-                    f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), _pokemon_link(pokemon, source_file))} |"
+                    f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), pokemon_record_link(pokemon, source_file))} "
+                    f"| {reference_type_cell('pokemon', pokemon.get('member', pokemon.get('id')), references)} |"
                 )
                 for value, kind, pokemon in values
             ],
@@ -390,8 +441,8 @@ def _append_evolutions(
             "| ---- | -- | ------ |",
             *[
                 (
-                    f"| {sprite_with_link(_pokemon_sprite_cell(value['source'], references), _pokemon_link(value['source'], source_file))} "
-                    f"| {sprite_with_link(_pokemon_sprite_cell(value['target'], references), _pokemon_link(value['target'], source_file))} | "
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value['source'], references), pokemon_record_link(value['source'], source_file))} "
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value['target'], references), pokemon_record_link(value['target'], source_file))} | "
                     f"{display_name(value['method'])} |"
                 )
                 for value in evolutions
@@ -413,6 +464,7 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
         "heal_paralysis": "cures paralysis",
         "heal_confusion": "cures confusion",
         "heal_attract": "cures infatuation",
+        "guard_spec": "prevents stat reduction",
         "revive": "revives",
         "revive_all": "revives party",
         "level_up": "raises level",
@@ -428,27 +480,46 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
         result.append(f"HP amount {effects['hp_restored']}")
     if effects["pp_restore"] or effects["pp_restore_all"]:
         result.append(f"PP amount {effects['pp_restored']}")
+    for label, key in (
+        ("Attack", "attack_stages"),
+        ("Defense", "defense_stages"),
+        ("Sp. Atk", "special_attack_stages"),
+        ("Sp. Def", "special_defense_stages"),
+        ("Speed", "speed_stages"),
+        ("Accuracy", "accuracy_stages"),
+        ("Critical-hit rate", "critical_hit_stages"),
+    ):
+        stages = effects[key]
+        if stages:
+            suffix = "stage" if abs(stages) == 1 else "stages"
+            result.append(f"{label} {stages:+d} {suffix}")
+    for label, key in (
+        ("HP", "hp"),
+        ("Attack", "attack"),
+        ("Defense", "defense"),
+        ("Speed", "speed"),
+        ("Sp. Atk", "special_attack"),
+        ("Sp. Def", "special_defense"),
+    ):
+        if effects[f"{key}_ev"]:
+            result.append(f"{label} EVs {effects[f'{key}_ev_amount']:+d}")
+    friendship = [
+        f"{tier} {effects[f'friendship_{tier}_amount']:+d}"
+        for tier in ("low", "medium", "high")
+        if effects[f"friendship_{tier}"]
+    ]
+    if friendship:
+        result.append(f"friendship ({', '.join(friendship)})")
     return result
 
 
 def _location_link(value: dict[str, Any], source_file: str) -> str:
-    return ROUTES.markdown_link(
-        entity_reference(
-            "location",
-            value["header_id"],
-            value["name"],
-            value.get("header_id"),
-        ),
-        source_file,
-    )
-
-
-def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
-    return pokemon_markdown_link(
-        value.get("id", value.get("slug", value["name"])),
+    return entity_markdown_link(
+        "location",
+        value["header_id"],
         value["name"],
-        value.get("slug"),
         source_file,
+        route_key=value.get("header_id"),
     )
 
 
@@ -456,14 +527,12 @@ def _trainer_link(value: dict[str, Any], source_file: str) -> str:
     label = " ".join(
         part for part in (value.get("class_name"), value.get("name")) if part
     )
-    return ROUTES.markdown_link(
-        entity_reference(
-            "trainer",
-            value["trainer_id"],
-            label,
-            value.get("trainer_id"),
-        ),
+    return entity_markdown_link(
+        "trainer",
+        value["trainer_id"],
+        label,
         source_file,
+        route_key=value.get("trainer_id"),
     )
 
 
@@ -484,22 +553,6 @@ def _features(record: dict[str, Any]) -> list[str]:
     return values
 
 
-def _shop_price(shop: dict[str, Any]) -> str:
-    if shop["price"] is None:
-        return "—"
-    if shop["currency"] == "money":
-        return f"₽{shop['price']:,}"
-    return f"{shop['price']:,} {shop['currency'].upper()}"
-
-
-def _availability(badges: int | None) -> str:
-    if badges is None:
-        return "Always"
-    if badges == 0:
-        return "Start"
-    return f"{badges} badge" if badges == 1 else f"{badges} badges"
-
-
 def _yes_no(value: bool) -> str:
     return "Yes" if value else "No"
 
@@ -510,25 +563,18 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    source_url = f"items/{record['slug']}/"
-    previous_link = None
-    if previous is not None:
-        label = f"← {previous['name']}"
-        href = ROUTES.published_href(
-            entity_reference("item", previous["item_id"], label, previous["slug"]),
-            source_url,
+    lines.extend(
+        record_navigation_for(
+            "item",
+            f"items/{record['slug']}/",
+            previous,
+            following,
+            aria_label="Item navigation",
+            identity=lambda value: value["item_id"],
+            route_key=lambda value: value["slug"],
+            label=lambda value: value["name"],
+            sprite_url=lambda value: (value.get("reference") or {}).get(
+                "sprite_url"
+            ),
         )
-        previous_link = record_nav_link(
-            href, label, "prev", (previous.get("reference") or {}).get("sprite_url")
-        )
-    following_link = None
-    if following is not None:
-        label = f"{following['name']} →"
-        href = ROUTES.published_href(
-            entity_reference("item", following["item_id"], label, following["slug"]),
-            source_url,
-        )
-        following_link = record_nav_link(
-            href, label, "next", (following.get("reference") or {}).get("sprite_url")
-        )
-    lines.extend(record_navigation(previous_link, following_link, "Item navigation"))
+    )

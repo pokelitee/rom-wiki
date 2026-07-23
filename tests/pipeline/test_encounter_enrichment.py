@@ -17,6 +17,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         data[0:4] = (30).to_bytes(4, "little")
         data[4:8] = (5).to_bytes(4, "little")
         data[8:12] = (1).to_bytes(4, "little")
+        data[0x64:0x68] = (2).to_bytes(4, "little")  # swarm_species_ids[0]
         source = parse_encounter_record(
             bytes(data), area_id=0, archive_path="encounters.narc"
         ).to_dict()
@@ -29,7 +30,10 @@ class EncounterEnrichmentTests(unittest.TestCase):
             }
         ]
         pokedb = PokeDBGeneration(
-            pokemon_by_id={1: {"id": 1, "name": "bulbasaur", "species": "bulbasaur"}},
+            pokemon_by_id={
+                1: {"id": 1, "name": "bulbasaur", "species": "bulbasaur"},
+                2: {"id": 2, "name": "ivysaur", "species": "ivysaur"},
+            },
             pokemon_by_name={},
             pokemon_by_species={},
             abilities_by_id={},
@@ -71,7 +75,14 @@ class EncounterEnrichmentTests(unittest.TestCase):
             "| [Route 201](../locations/header-010.md) | 10 | `W201` |", page
         )
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
+        self.assertIn("**Swarm:**", page)
+        self.assertIn("[Ivysaur](../pokemon/ivysaur.md)", page)
+        # Swarm replaces walking slot 0's species only, so it inherits that
+        # slot's level (5) and fixed chance (20%).
+        self.assertIn("| 5 | 20% |", page)
         self.assertEqual(catalog["kind"], "encounters")
+        self.assertIn("Ivysaur", catalog["records"][0]["pokemon"])
+        self.assertIn("ivysaur", catalog["records"][0]["search_text"])
         self.assertEqual(catalog["records"][0]["methods"], ["walking"])
         self.assertIn("Charmander", catalog["records"][0]["pokemon"])
         self.assertIn("Charmander", catalog["records"][0]["method_pokemon"]["walking"])

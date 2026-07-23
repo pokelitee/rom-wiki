@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
+from romwiki.engines.gen4_dppt.items import GEN4_ITEM_RECORD_SIZE
 from romwiki.engines.gen4_dppt.scripts import parse_script_table
 from romwiki.util.errors import InvalidRomError
 
@@ -11,7 +12,7 @@ SPECIALTY_MART_COMMAND = 0x0148
 DECORATION_MART_COMMAND = 0x0149
 SEAL_MART_COMMAND = 0x014A
 FRONTIER_MART_COMMAND = 0x02D8
-ITEM_RECORD_SIZE = 34
+ITEM_RECORD_SIZE = GEN4_ITEM_RECORD_SIZE
 DECORATION_RECORD_SIZE = 28
 SEAL_RECORD_SIZE = 10
 _CLOSE_MART_SEQUENCE = struct.pack("<HH", 0x0061, 0x0002)

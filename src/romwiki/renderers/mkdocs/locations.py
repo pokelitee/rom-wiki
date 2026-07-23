@@ -16,18 +16,23 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    badge_requirement,
+    pokemon_table,
+    provenance_fact_table,
     provenance_section,
-    record_nav_link,
-    record_navigation,
+    record_navigation_for,
+    reference_sprite_cell,
+    reference_type_cell,
+    shop_price,
     sprite_with_link,
     summary_section,
-    table_sprite_cell,
+    summary_section_link,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    entity_markdown_link,
     entity_reference,
-    resolved_reference,
 )
 
 _SEAL_MART_DAYS = (
@@ -119,6 +124,7 @@ def render_location_pages(
                 ("gifts", bool(record.get("pokemon_gifts"))),
                 ("trades", bool(record.get("npc_trades"))),
                 ("static encounters", bool(record.get("static_encounters"))),
+                ("roaming", bool(record.get("roaming_activations"))),
                 ("trainers", bool(record.get("trainers"))),
                 ("warps", bool(record.get("warps"))),
                 ("connections", bool(record.get("connections"))),
@@ -190,6 +196,7 @@ def _render_location(
     _append_static_encounters(
         lines, record.get("static_encounters", []), source_file, references
     )
+    _append_roaming_activations(lines, record.get("roaming_activations", []))
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
     _append_connections(lines, record["connections"], source_file)
@@ -197,14 +204,41 @@ def _render_location(
     lines.extend(
         provenance_section(
             [
-                f"- Internal map: `{record['internal_name']}`",
-                f"- Header ID: `{record['header_id']}`",
-                f"- Matrix ID: `{record['matrix_id']}`",
-                "",
+                *provenance_fact_table(
+                    (
+                        ("Internal map", f"`{record['internal_name']}`"),
+                        ("Header ID", f"`{record['header_id']}`"),
+                        ("Location name ID", f"`{record['location_name_id']}`"),
+                        ("Matrix ID", f"`{record['matrix_id']}`"),
+                        (
+                            "Event file ID",
+                            f"`{record['event_file_id']}`"
+                            if record["event_file_id"] is not None
+                            else "—",
+                        ),
+                        ("Area data ID", f"`{record['area_data_id']}`"),
+                        ("Level script ID", f"`{record['level_script_id']}`"),
+                        ("Text archive ID", f"`{record['text_archive_id']}`"),
+                        (
+                            "Music ID",
+                            f"day `{record['day_music_id']}`, "
+                            f"night `{record['night_music_id']}`",
+                        ),
+                        ("Weather ID", f"`{record['weather_id']}`"),
+                        ("Camera ID", f"`{record['camera_id']}`"),
+                        ("Map flags", f"`0x{record['map_flags']:04X}`"),
+                    )
+                ),
                 "Source: exact map header, event, script, item-data, and map-matrix "
                 "records from the ROM.",
-            ],
-            summary="Map identifiers and provenance",
+                *(
+                    (
+                        f"Trade `{trade['trade_id']}` ({trade['nickname']}) "
+                        f"personality value: `0x{trade['personality']:08X}`."
+                    )
+                    for trade in record.get("npc_trades", [])
+                ),
+            ]
         )
     )
     _append_record_navigation(lines, record, previous, following)
@@ -217,29 +251,17 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    source_url = f"locations/{_filename(record['header_id']).removesuffix('.md')}/"
-    previous_link = None
-    if previous is not None:
-        label = f"← {previous['name']}"
-        href = ROUTES.published_href(
-            entity_reference(
-                "location", previous["header_id"], label, previous["header_id"]
-            ),
-            source_url,
-        )
-        previous_link = record_nav_link(href, label, "prev")
-    following_link = None
-    if following is not None:
-        label = f"{following['name']} →"
-        href = ROUTES.published_href(
-            entity_reference(
-                "location", following["header_id"], label, following["header_id"]
-            ),
-            source_url,
-        )
-        following_link = record_nav_link(href, label, "next")
     lines.extend(
-        record_navigation(previous_link, following_link, "Location navigation")
+        record_navigation_for(
+            "location",
+            f"locations/{_filename(record['header_id']).removesuffix('.md')}/",
+            previous,
+            following,
+            aria_label="Location navigation",
+            identity=lambda value: value["header_id"],
+            route_key=lambda value: value["header_id"],
+            label=lambda value: value["name"],
+        )
     )
 
 
@@ -254,21 +276,22 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
         )
     ]
     for label, key, anchor in (
-        ("Items", "items", "item-pickups"),
+        ("Item pickups", "items", "item-pickups"),
         ("Shops", "shops", "shops"),
-        ("Gifts", "pokemon_gifts", "gift-pokemon"),
-        ("Trades", "npc_trades", "in-game-trades"),
+        ("Gift Pokémon", "pokemon_gifts", "gift-pokemon"),
+        ("In-game trades", "npc_trades", "in-game-trades"),
         ("Static encounters", "static_encounters", "static-encounters"),
+        ("Roaming activations", "roaming_activations", "roaming-activations"),
         ("Trainers", "trainers", "trainers"),
         ("Warps", "warps", "warps"),
-        ("Connections", "connections", "outdoor-connections"),
+        ("Outdoor connections", "connections", "outdoor-connections"),
     ):
         count = len(record.get(key, []))
         facts.append((label, count, anchor, count > 0))
     fact_lines = []
     for label, value, anchor, populated in facts:
         rendered_value = (
-            f'<a href="#{anchor}">{value}</a>'
+            summary_section_link(value, anchor)
             if populated
             else f'<span class="rw-summary__empty">{value}</span>'
         )
@@ -341,21 +364,8 @@ def _append_shops(
             item_link = _entity_link(
                 "item", item["item_id"], item["name"], source_file, references
             )
-            if item["price"] is None:
-                price = "—"
-            elif currency == "money":
-                price = f"₽{item['price']:,}"
-            else:
-                price = f"{item['price']:,} {currency.upper()}"
-            badges = item["required_badges"]
-            if badges is None:
-                availability = "Always"
-            elif badges == 0:
-                availability = "Start"
-            elif badges == 1:
-                availability = "1 badge"
-            else:
-                availability = f"{badges} badges"
+            price = shop_price(item["price"], currency)
+            availability = badge_requirement(item["required_badges"])
             lines.append(
                 f"| {sprite_with_link(_entity_sprite('item', item['item_id'], references), item_link)} "
                 f"| {item['item_id']} | {price} | "
@@ -407,10 +417,9 @@ def _append_pokemon_gifts(
             "These are literal gift outcomes in this map's scripts; conditional "
             "branches may be mutually exclusive.",
             "",
-            "| Pokémon | Kind | Level | Held item |",
-            "| ------- | ---- | ----: | --------- |",
         ]
     )
+    rows = []
     for gift in gifts:
         pokemon = _entity_link(
             "pokemon", gift["species_id"], gift["name"], source_file, references
@@ -442,11 +451,17 @@ def _append_pokemon_gifts(
             if gift["held_item_id"] is not None and gift["held_item_name"]
             else "—"
         )
-        lines.append(
-            f"| {sprite_with_link(pokemon_sprite, pokemon)} | {kind} | {gift['level']} | "
-            f"{held_item_cell} |"
+        rows.append(
+            f"| {sprite_with_link(pokemon_sprite, pokemon)} | "
+            f"{reference_type_cell('pokemon', gift['species_id'], references)} | "
+            f"{kind} | {gift['level']} | {held_item_cell} |"
         )
-    lines.append("")
+    lines.extend(
+        pokemon_table(
+            ["| Pokémon | Type | Kind | Level | Held item |", "| ------- | ---- | ---- | ----: | --------- |"],
+            rows,
+        )
+    )
 
 
 def _append_static_encounters(
@@ -464,13 +479,12 @@ def _append_static_encounters(
             "These are literal wild-battle commands in this map's scripts; "
             "conditional branches may make encounters unavailable.",
             "",
-            "| Pokémon | Level |",
-            "| ------- | ----: |",
         ]
     )
     rendered_outcomes = set()
+    rows = []
     for encounter in encounters:
-        outcome = (encounter["name"], encounter["level"])
+        outcome = (encounter["name"], encounter["level"], encounter["command"])
         if outcome in rendered_outcomes:
             continue
         rendered_outcomes.add(outcome)
@@ -484,8 +498,45 @@ def _append_static_encounters(
         sprite = _entity_sprite(
             "pokemon", encounter["species_id"], references
         )
-        lines.append(f"| {sprite_with_link(sprite, pokemon)} | {encounter['level']} |")
-    lines.append("")
+        rows.append(
+            f"| {sprite_with_link(sprite, pokemon)} | "
+            f"{reference_type_cell('pokemon', encounter['species_id'], references)} | "
+            f"{encounter['level']} | `{encounter['command']}` |"
+        )
+    lines.extend(
+        pokemon_table(
+            ["| Pokémon | Type | Level | Command |", "| ------- | ---- | ----: | ------- |"],
+            rows,
+        )
+    )
+
+
+def _append_roaming_activations(
+    lines: list[str], activations: list[dict[str, Any]]
+) -> None:
+    if not activations:
+        return
+    lines.extend(
+        [
+            "## Roaming activations",
+            "",
+            "Literal roaming-slot activation commands in this map's scripts. "
+            "The engine assigns each slot's roamer elsewhere; only the "
+            "activation itself is audited here.",
+            "",
+            "| Roaming slot | Script command |",
+            "| -----------: | -------------- |",
+            *[
+                (
+                    f"| {activation['slot']} | "
+                    f"`{activation['script_file_id']}"
+                    f"@0x{activation['command_offset']:X}` |"
+                )
+                for activation in activations
+            ],
+            "",
+        ]
+    )
 
 
 def _append_npc_trades(
@@ -573,9 +624,7 @@ def _entity_sprite(
     identifier: int | str | None,
     references: ReferenceIndex | None,
 ) -> str:
-    if identifier is None or references is None:
-        return table_sprite_cell(None)
-    return table_sprite_cell(references.sprite_url(kind, identifier))
+    return reference_sprite_cell(kind, identifier, references)
 
 
 def _append_warps(
@@ -647,13 +696,8 @@ def _entity_link(
     source_file: str,
     references: ReferenceIndex | None,
 ) -> str:
-    reference = resolved_reference(
-        kind, identifier, label, index=references
-    )
-    return ROUTES.markdown_link(reference, source_file)
+    return entity_markdown_link(kind, identifier, label, source_file, index=references)
 
 
 def _filename(header_id: int) -> str:
     return f"header-{header_id:03}.md"
-
-

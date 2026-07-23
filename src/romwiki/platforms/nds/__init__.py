@@ -6,7 +6,12 @@ from romwiki.platforms.nds.overlays import (
     parse_overlay_table,
     read_arm9_overlay,
 )
-from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
+from romwiki.platforms.nds.reader import (
+    NintendoDSImage,
+    RomHashes,
+    arm9_load_address,
+    read_arm9_binary,
+)
 
 __all__ = [
     "NarcArchive",
@@ -17,6 +22,8 @@ __all__ = [
     "NintendoDSImage",
     "NintendoDSOverlay",
     "RomHashes",
+    "arm9_load_address",
     "parse_overlay_table",
+    "read_arm9_binary",
     "read_arm9_overlay",
 ]

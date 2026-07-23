@@ -87,8 +87,8 @@ export function trainerParty(record) {
   record.party.forEach((member, index) => {
     if (index) wrap.append(", ");
     wrap.append(
+      `Lv. ${member.level} `,
       member.pokemon_ref ? referenceLink(member.pokemon_ref) : member.name,
-      ` Lv. ${member.level}`,
     );
   });
   return wrap;

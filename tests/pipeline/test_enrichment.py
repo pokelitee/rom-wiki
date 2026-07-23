@@ -67,6 +67,10 @@ class PersonalEnrichmentTests(unittest.TestCase):
         records[1]["ability_ids"] = [65, 65]
         ability_names = [f"Ability {ability_id}" for ability_id in range(124)]
         ability_names[65] = "Overgrow"
+        pokemon_names = ["-----"] + [f"Rom-{index}" for index in range(1, 496)]
+        pokemon_names[1] = "MR. MIME"
+        pokemon_names[494] = "Egg"
+        pokemon_names[495] = "Bad Egg"
 
         enriched = enrich_personal_dataset(
             {
@@ -74,6 +78,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
                 "engine": "gen4_dppt",
                 "source": {"archive": "personal.narc"},
                 "ability_names": ability_names,
+                "pokemon_names": pokemon_names,
                 "records": records,
             },
             pokedb,
@@ -89,6 +94,11 @@ class PersonalEnrichmentTests(unittest.TestCase):
             enriched["records"][1]["abilities"][0],
             {"id": 65, "slug": "overgrow", "name": "Overgrow"},
         )
+        # ROM names win for regular species (recapitalized from vanilla caps);
+        # form members keep their slug-derived form labels.
+        self.assertEqual(enriched["records"][1]["name"], "Mr. Mime")
+        self.assertEqual(enriched["records"][2]["name"], "Rom-2")
+        self.assertEqual(enriched["records"][496]["name"], "Deoxys Attack")
 
     def test_renders_a_page_and_index(self) -> None:
         record = _bulbasaur_record()
@@ -322,6 +332,7 @@ class SpriteGalleryTests(unittest.TestCase):
 def _bulbasaur_record() -> dict:
     return {
         "public": True,
+        "member": 1,
         "slug": "bulbasaur",
         "name": "Bulbasaur",
         "national_dex_id": 1,
@@ -430,6 +441,7 @@ def _bulbasaur_record() -> dict:
             },
         ],
         "evolution_provenance": {"archive": "evo.narc", "member": 1},
+        "flip_sprite": False,
         "provenance": {"archive": "personal.narc", "member": 1},
     }
 

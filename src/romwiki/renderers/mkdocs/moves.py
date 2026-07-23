@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -16,15 +17,21 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
+    display_name,
     empty_state,
-    machine_link,
+    fact_grid,
+    name_table_source,
+    pokemon_table,
+    provenance_fact_table,
     provenance_section,
-    record_nav_link,
-    record_navigation,
+    record_navigation_for,
     reference_description,
+    reference_source_link,
+    reference_sprite_cell,
+    reference_type_cell,
+    rom_record_source,
     sprite_with_link,
     summary_section,
-    table_sprite_cell,
     tutor_requirement,
     type_badges,
 )
@@ -32,7 +39,8 @@ from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     entity_reference,
-    pokemon_markdown_link,
+    pokemon_record_link,
+    resolved_reference,
 )
 
 
@@ -151,13 +159,14 @@ def _render_record(
     references: ReferenceIndex | None = None,
 ) -> str:
     source_file = f"moves/{record['slug']}.md"
+    source_url = source_file.removesuffix(".md") + "/"
     additional_properties = []
     if record.get("machines"):
         additional_properties.append(
             (
                 "Machine",
                 ", ".join(
-                    machine_link(machine, source_file, references)
+                    _machine_html_link(machine, source_url, references)
                     for machine in record["machines"]
                 ),
             )
@@ -178,29 +187,27 @@ def _render_record(
     lines = [
         f"# {record['name']}",
         "",
-        *summary_section(
-            "rw-move-summary",
-            [
-                f"<div><dt>Move ID</dt><dd>{record['move_id']}</dd></div>",
-                f"<div><dt>Type</dt><dd>{type_badges([record['type']])}</dd></div>",
-                f"<div><dt>Class</dt><dd>{class_badge(record['damage_class'])}</dd></div>",
-                f"<div><dt>Power</dt><dd>{_optional_value(record['power'])}</dd></div>",
-                f"<div><dt>Accuracy</dt><dd>{_accuracy(record['accuracy'])}</dd></div>",
-                f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
-            ],
-        ),
+        *_move_summary(record),
         *reference_description(
             record, "No PokéDB reference data is available for this move."
         ),
+        *_reference_effects_section(record),
     ]
     if additional_properties:
         lines.extend(
             [
                 "## Additional battle properties",
                 "",
-                "| Property | Value |",
-                "| -------- | ----- |",
-                *(f"| {label} | {value} |" for label, value in additional_properties),
+                *fact_grid(
+                    tuple(
+                        (
+                            label,
+                            value if label == "Machine" else escape(value),
+                        )
+                        for label, value in additional_properties
+                    ),
+                    escape_values=False,
+                ),
                 "",
             ]
         )
@@ -224,36 +231,71 @@ def _render_record(
     lines.extend(
         provenance_section(
             [
-                "| Native field | Value |",
-                "| ------------ | ----- |",
-                f"| Effect ID | `{record['effect_id']}` |",
-                f"| Target ID | `0x{record['target_id']:04X}` |",
-                f"| Flags | `0x{record['flags']:02X}` |",
-                f"| Contest effect ID | `{record['contest_effect_id']}` |",
-                f"| Contest type ID | `{record['contest_type_id']}` |",
-                "",
-                (
-                    "Source: exact ROM record from "
-                    f"`{record['provenance']['archive']}` member "
-                    f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
-                    "shown in their native engine representation. The ROM does not store a "
-                    "human-readable effect description; the Effect section and Pokédex "
-                    "quote above come from PokéDB / PokéAPI reference data."
+                *provenance_fact_table(
+                    (
+                        ("Effect ID", f"`{record['effect_id']}`"),
+                        ("Target ID", f"`0x{record['target_id']:04X}`"),
+                        ("Flags", f"`0x{record['flags']:02X}`"),
+                        ("Contest effect ID", f"`{record['contest_effect_id']}`"),
+                        ("Contest type ID", f"`{record['contest_type_id']}`"),
+                    )
                 ),
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
+                ),
+                "Effect, target, and flag IDs are shown in their native engine "
+                "representation.",
+                "The move record stores only an opaque effect ID rather than a "
+                "description; the Effect section above (including its "
+                "supplementary battle-mechanic facts and Pokédex quote) comes from "
+                "PokéDB / PokéAPI reference data and describes the base game — a "
+                "hack that changes this move's effect ID may behave differently.",
                 *(
                     [
-                        "Move name source: ROM message table "
-                        f"`{name_source['archive']}` member `{name_source['member']}`."
+                        name_table_source(
+                            "Move", name_source["archive"], name_source["member"]
+                        )
                     ]
                     if name_source is not None
                     else []
                 ),
-            ],
-            summary="Engine details and provenance",
+                *reference_source_link(record),
+            ]
         )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _move_summary(record: dict[str, Any]) -> list[str]:
+    return summary_section(
+        "rw-move-summary",
+        [
+            f"<div><dt>Move ID</dt><dd>{record['move_id']}</dd></div>",
+            f"<div><dt>Type</dt><dd>{type_badges([record['type']])}</dd></div>",
+            f"<div><dt>Class</dt><dd>{class_badge(record['damage_class'])}</dd></div>",
+            f"<div><dt>Power</dt><dd>{_optional_value(record['power'])}</dd></div>",
+            f"<div><dt>Accuracy</dt><dd>{_accuracy(record['accuracy'])}</dd></div>",
+            f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
+        ],
+    )
+
+
+def _machine_html_link(
+    machine: dict[str, Any],
+    source_url: str,
+    references: ReferenceIndex | None,
+) -> str:
+    item_id = machine.get("item_id")
+    if item_id is None:
+        return escape(str(machine["name"]))
+    reference = resolved_reference(
+        "item",
+        item_id,
+        machine["name"],
+        index=references,
+    )
+    return ROUTES.html_link(reference, source_url)
 
 
 def _append_record_navigation(
@@ -262,24 +304,99 @@ def _append_record_navigation(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> None:
-    source_url = f"moves/{record['slug']}/"
-    previous_link = None
-    if previous is not None:
-        label = f"← {previous['name']}"
-        href = ROUTES.published_href(
-            entity_reference("move", previous["move_id"], label, previous["slug"]),
-            source_url,
+    lines.extend(
+        record_navigation_for(
+            "move",
+            f"moves/{record['slug']}/",
+            previous,
+            following,
+            aria_label="Move navigation",
+            identity=lambda value: value["move_id"],
+            route_key=lambda value: value["slug"],
+            label=lambda value: value["name"],
         )
-        previous_link = record_nav_link(href, label, "prev")
-    following_link = None
-    if following is not None:
-        label = f"{following['name']} →"
-        href = ROUTES.published_href(
-            entity_reference("move", following["move_id"], label, following["slug"]),
-            source_url,
+    )
+
+
+def _reference_effects_section(record: dict[str, Any]) -> list[str]:
+    """Fold PokéDB's supplementary battle-mechanic facts into the Effect section.
+
+    These are just as PokéDB-sourced as the Effect prose above them, so they
+    nest under its heading (mirroring how pokemon.py nests "### Level-up
+    moves" etc. under "## Learnset") rather than getting a section of their
+    own — keeping only two top-level data buckets on the page (PokéDB-sourced
+    "Effect", ROM-sourced "Additional battle properties"), matching every
+    other kind's page. Rendered as the same plain property/value table as
+    "Additional battle properties" (not the boxed `fact_grid()` component used
+    for full top-level sections like Mechanics/Training) since the two are
+    sibling lists of move facts and should carry the same visual weight.
+    """
+    properties = _reference_battle_properties(record)
+    if not properties:
+        return []
+    reference = record.get("reference") or {}
+    heading_level = (
+        "###"
+        if any(
+            reference.get(field)
+            for field in ("short_effect", "effect", "flavor_text")
         )
-        following_link = record_nav_link(href, label, "next")
-    lines.extend(record_navigation(previous_link, following_link, "Move navigation"))
+        else "##"
+    )
+    return [
+        f"{heading_level} Additional effects",
+        "",
+        *fact_grid(tuple(properties)),
+        "",
+    ]
+
+
+def _reference_battle_properties(record: dict[str, Any]) -> list[tuple[str, str]]:
+    """Supplementary battle mechanics PokéDB resolves but the ROM never stores.
+
+    Move records only carry an opaque `effect_id` the engine's native code
+    interprets; things like crit-rate boosts, drain/heal percentages, and
+    secondary-effect chances aren't ROM data at all, so PokéDB is the only
+    source for them.
+    """
+    reference = record.get("reference") or {}
+    metadata = reference.get("metadata") or {}
+    properties: list[tuple[str, str]] = []
+    stat_changes = [
+        f"{display_name(change['stat'])} {change['change']:+d}"
+        for change in reference.get("stat_changes") or []
+        if change.get("change")
+    ]
+    if stat_changes:
+        properties.append(("Stat changes", ", ".join(stat_changes)))
+    if metadata.get("crit_rate"):
+        properties.append(("Critical-hit rate", f"+{metadata['crit_rate']} stage"))
+    drain = metadata.get("drain")
+    if drain:
+        label = "HP drain" if drain > 0 else "Recoil"
+        properties.append((label, f"{abs(drain)}% of damage dealt"))
+    if metadata.get("healing"):
+        properties.append(("Healing", f"{metadata['healing']}% of max HP"))
+    if metadata.get("flinch_chance"):
+        properties.append(("Flinch chance", f"{metadata['flinch_chance']}%"))
+    ailment = metadata.get("ailment")
+    if ailment and ailment != "none":
+        properties.append(("Secondary effect", display_name(ailment)))
+    if metadata.get("min_hits") is not None:
+        properties.append(("Hits", _hit_range(metadata["min_hits"], metadata["max_hits"])))
+    if metadata.get("min_turns") is not None:
+        properties.append(("Duration", _turn_range(metadata["min_turns"], metadata["max_turns"])))
+    return properties
+
+
+def _hit_range(minimum: int, maximum: int) -> str:
+    return str(minimum) if minimum == maximum else f"{minimum}-{maximum}"
+
+
+def _turn_range(minimum: int, maximum: int) -> str:
+    if minimum == maximum:
+        return f"{minimum} turn" if minimum == 1 else f"{minimum} turns"
+    return f"{minimum}-{maximum} turns"
 
 
 def _optional_value(value: int) -> str:
@@ -324,36 +441,30 @@ def _pokemon_sprite_table(
 ) -> list[str]:
     if not pokemon:
         return empty_state(empty_message)
-    return [
-        "| Pokémon | National Pokédex |",
-        "| ------- | ---------------: |",
-        *[
+    return pokemon_table(
+        ["| Pokémon | Type |", "| ------- | ---- |"],
+        [
             (
-                f"| {sprite_with_link(table_sprite_cell(_pokemon_sprite(value, references)), _pokemon_link(value, source_file))} | "
-                f"{_dex_number(value)} |"
+                f"| {_pokemon_table_link(value, source_file, references, True)} | "
+                f"{reference_type_cell('pokemon', value.get('member'), references)} |"
             )
             for value in pokemon
         ],
-        "",
-    ]
-
-
-def _dex_number(value: dict[str, Any]) -> str:
-    dex_id = value.get("national_dex_id")
-    return f"#{dex_id:03}" if isinstance(dex_id, int) else "—"
-
-
-def _pokemon_sprite(
-    value: dict[str, Any], references: ReferenceIndex | None
-) -> str | None:
-    return references.sprite_url("pokemon", value["member"]) if references else None
-
-
-def _pokemon_link(value: dict[str, Any], source_file: str) -> str:
-    return pokemon_markdown_link(
-        value.get("id", value.get("slug", value["name"])),
-        value["name"],
-        value.get("slug"),
-        source_file,
     )
+
+
+def _pokemon_table_link(
+    value: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+    show_sprite: bool,
+) -> str:
+    link = pokemon_record_link(value, source_file)
+    if not show_sprite:
+        return link
+    return sprite_with_link(
+        reference_sprite_cell("pokemon", value.get("member"), references),
+        link,
+    )
+
 

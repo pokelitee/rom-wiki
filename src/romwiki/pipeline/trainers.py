@@ -6,7 +6,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
+from romwiki.pipeline.map_headers import parse_map_header_table, read_code_binary
 from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
@@ -42,11 +42,10 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         raise InvalidRomError("Trainer data and party archives have different counts")
     names = engine.parse_english_message_archive(messages.read(names_member))
     classes = engine.parse_english_message_archive(messages.read(classes_member))
-    with result.image.path.open("rb") as stream:
-        stream.seek(result.image.header.arm9_offset + class_gender_offset)
-        class_gender_data = stream.read(len(classes))
+    arm9_data = read_code_binary(platform, result.image)
     class_genders = engine.parse_trainer_class_genders(
-        class_gender_data, count=len(classes)
+        arm9_data[class_gender_offset : class_gender_offset + len(classes)],
+        count=len(classes),
     )
     if len(names) < len(trainers.members):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
@@ -69,7 +68,13 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         script_references_by_trainer,
         location_source,
     ) = _extract_trainer_locations(
-        engine, platform, result, filesystem, messages, trainer_count=len(parsed_records)
+        engine,
+        platform,
+        result,
+        filesystem,
+        messages,
+        arm9_data,
+        trainer_count=len(parsed_records),
     )
     records = [
         replace(
@@ -118,6 +123,7 @@ def _extract_trainer_locations(
     result: InspectionResult,
     filesystem: Any,
     messages: Any,
+    arm9_data: bytes,
     *,
     trainer_count: int,
 ) -> tuple[
@@ -142,10 +148,9 @@ def _extract_trainer_locations(
             f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
         ) from error
     null_event_id = profile.parameters.get(
-        "null_event_id", engine.GEN4_ARCHIVE_MEMBER_NONE
+        "null_event_id", engine.ARCHIVE_MEMBER_NONE
     )
 
-    arm9_data = read_arm9(result.image)
     headers = parse_map_header_table(
         engine, arm9_data, filesystem, map_names_path,
         table_offset=table_offset, count=count,
@@ -240,8 +245,8 @@ def _extract_trainer_locations(
         },
         "trainer_script_references": {
             "scripts_archive": scripts_path,
-            "start_trainer_battle_opcode": 0xE5,
-            "check_won_battle_opcode": 0xEC,
+            "start_trainer_battle_opcode": engine.START_TRAINER_BATTLE,
+            "check_won_battle_opcode": engine.CHECK_WON_BATTLE,
             "literal_ids_only": True,
         },
     }

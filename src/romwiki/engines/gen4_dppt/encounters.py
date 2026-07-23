@@ -24,6 +24,43 @@ GEN4_WALKING_SLOT_CHANCES = (20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1)
 GEN4_WATER_SLOT_CHANCES = (60, 30, 5, 4, 1)
 GEN4_FISHING_SLOT_CHANCES = (40, 40, 15, 4, 1)
 
+# Which of the 12 walking-table slots each special-encounter mechanic
+# overwrites (species only — the slot's level is left untouched, so a
+# special encounter's level/chance is the *replaced* slot's level/chance).
+# Verified against the wild-encounter routine in the Pokémon Platinum
+# decompilation (pret/pokeplatinum, src/overlay006/wild_encounters.c):
+# WildEncounters_ReplaceSwarmEncounters/-TimedEncounters/-DualSlotEncounters.
+GEN4_SWARM_SLOT_INDICES = (0, 1)
+GEN4_TIMED_SLOT_INDICES = (2, 3)  # shared by both day and night replacements
+GEN4_DUAL_SLOT_SLOT_INDICES = (8, 9)
+
+# Poké Radar's 4-species table (offset 0x7C) only ever populates walking
+# slots 4, 5, 10, and 11 for one specific radar "shake type"; most radar
+# encounters instead go through a separate chain-tracking routine
+# (GetRadarMon) that doesn't use these fixed slot levels/chances at all, so
+# this mapping is not applied — see WALKING_SLOT_CHANCES[4], [5], [10], [11]
+# if that changes.
+GEN4_RADAR_SLOT_INDICES = (4, 5, 10, 11)
+
+# The Unown letter-forms selectable per encounter area, indexed by
+# (unown_table_id - 1); table layout and the "F-R-I-E-N-D" grouping are
+# taken verbatim from WildEncounters_UnownTables in the decompilation.
+# unown_table_id == 0 means "not an Unown area" (no table selected).
+GEN4_UNOWN_FORM_NAMES = (
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+    "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?",
+)
+GEN4_UNOWN_FORM_TABLES = (
+    (0, 1, 2, 6, 7, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25),
+    (5,),
+    (17,),
+    (8,),
+    (13,),
+    (4,),
+    (3,),
+    (26, 27),
+)
+
 
 def parse_encounter_record(
     data: bytes,
@@ -54,8 +91,8 @@ def parse_encounter_record(
         day_species_ids=_pair(data, 0x6C),
         night_species_ids=_pair(data, 0x74),
         radar_species_ids=struct.unpack_from("<4I", data, 0x7C),
-        form_species_ids=struct.unpack_from("<5I", data, 0x8C),
-        unknown_value=_uint32(data, 0xA0),
+        encounter_form_rates=struct.unpack_from("<5I", data, 0x8C),
+        unown_table_id=_uint32(data, 0xA0),
         dual_slot_species_ids={
             game: (dual_slot_values[index * 2], dual_slot_values[index * 2 + 1])
             for index, game in enumerate(DUAL_SLOT_GAMES)

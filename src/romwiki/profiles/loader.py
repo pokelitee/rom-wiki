@@ -27,11 +27,19 @@ class ProfileRepository:
             raise ProfileError("Profile identifiers must be unique")
         return cls(profiles)
 
-    def identify(self, image: RomImage) -> HashMatch | None:
+    def identify(
+        self, image: RomImage, *, platform: str | None = None
+    ) -> HashMatch | None:
+        """Match `image` against profiles, optionally only those for `platform`.
+
+        Passing the platform that opened the image keeps other platforms'
+        profiles from interpreting a foreign image's header.
+        """
         matches = [
             match
             for profile in self.profiles
-            if (match := profile.match(image)) is not None
+            if (platform is None or profile.platform == platform)
+            and (match := profile.match(image)) is not None
         ]
         if len(matches) > 1:
             raise ProfileError("ROM image matches more than one profile")

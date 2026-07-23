@@ -14,6 +14,7 @@ class EntityReference:
     label: str
     route_key: int | str | None
     sprite_url: str | None = None
+    types: tuple[dict[str, Any], ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +107,7 @@ class ReferenceIndex:
                                 reference.label,
                                 reference.route_key,
                                 reference.sprite_url,
+                                reference.types,
                             )
                         )
         return index
@@ -128,11 +130,16 @@ class ReferenceIndex:
             label,
             indexed.route_key if indexed is not None else route_key,
             indexed.sprite_url if indexed is not None else None,
+            indexed.types if indexed is not None else None,
         )
 
     def sprite_url(self, kind: str, identifier: int | str) -> str | None:
         reference = self._references.get((kind, identifier))
         return reference.sprite_url if reference is not None else None
+
+    def types(self, kind: str, identifier: int | str) -> tuple[dict[str, Any], ...] | None:
+        reference = self._references.get((kind, identifier))
+        return reference.types if reference is not None else None
 
 
 def entity_reference(
@@ -155,6 +162,16 @@ def pokemon_markdown_link(
     )
 
 
+def pokemon_record_link(value: Mapping[str, Any], source_file: str) -> str:
+    """Link a Pokémon reference dict keyed by `id`/`slug`/`name` (fallback order)."""
+    return pokemon_markdown_link(
+        value.get("id", value.get("slug", value["name"])),
+        value["name"],
+        value.get("slug"),
+        source_file,
+    )
+
+
 def resolved_reference(
     kind: str,
     identifier: int | str,
@@ -166,6 +183,22 @@ def resolved_reference(
     if index is None:
         return entity_reference(kind, identifier, label, route_key)
     return index.resolve(kind, identifier, label, route_key)
+
+
+def entity_markdown_link(
+    kind: str,
+    identifier: int | str,
+    label: str,
+    source_file: str,
+    *,
+    route_key: int | str | None = None,
+    index: ReferenceIndex | None = None,
+) -> str:
+    """Render one Markdown link to an entity's generated page."""
+    return ROUTES.markdown_link(
+        resolved_reference(kind, identifier, label, route_key, index=index),
+        source_file,
+    )
 
 
 def unique_references(
@@ -253,7 +286,12 @@ def _record_reference(
     if identity is None or route_key is None or not isinstance(label, str):
         return None
     return EntityReference(
-        kind, identity, label, route_key, _record_sprite_url(kind, record)
+        kind,
+        identity,
+        label,
+        route_key,
+        _record_sprite_url(kind, record),
+        _record_types(kind, record),
     )
 
 
@@ -267,6 +305,13 @@ def _record_sprite_url(kind: str, record: Mapping[str, Any]) -> str | None:
             sprite_url = reference.get("sprite_url")
             return sprite_url if isinstance(sprite_url, str) else None
     return None
+
+
+def _record_types(kind: str, record: Mapping[str, Any]) -> tuple[dict[str, Any], ...] | None:
+    if kind != "pokemon":
+        return None
+    types = record.get("types")
+    return tuple(types) if isinstance(types, list) else None
 
 
 def escape_markdown(value: str) -> str:

@@ -101,6 +101,7 @@ def parse_trainer_record(
         party_count=party_count,
         reward_item_ids=reward_items,
         ai_flags=ai_flags,
+        battle_type=battle_type,
         double_battle=battle_type == 2,
         party=tuple(party),
         trailing_party_data=party_data[offset:],

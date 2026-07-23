@@ -17,8 +17,19 @@ class LocationRenderingTests(unittest.TestCase):
             "location_name_id": 7,
             "name": "Oreburgh City",
             "matrix_id": 0,
+            "area_data_id": 2,
+            "level_script_id": 12,
+            "text_archive_id": 433,
+            "day_music_id": 1103,
+            "night_music_id": 1119,
+            "weather_id": 0,
+            "camera_id": 3,
+            "map_flags": 0x0304,
             "event_file_id": 42,
             "encounter_id": 3,
+            "roaming_activations": [
+                {"slot": 2, "script_file_id": 51, "command_offset": 0x140}
+            ],
             "trainers": [
                 {
                     "trainer_id": 246,
@@ -211,20 +222,26 @@ class LocationRenderingTests(unittest.TestCase):
             '| <span class="rw-cell-media">'
             '<img class="rw-table-sprite" src="https://example.test/togepi.png" '
             'alt="" loading="lazy" referrerpolicy="no-referrer">'
-            "[Togepi](../pokemon/togepi.md)</span> | Egg | 1 | — |",
+            "[Togepi](../pokemon/togepi.md)</span> | — | Egg | 1 | — |",
             page,
         )
         self.assertIn(
             '| <span class="rw-cell-media">'
             '<img class="rw-table-sprite" src="https://example.test/rotom.png" '
             'alt="" loading="lazy" referrerpolicy="no-referrer">'
-            "[Rotom](../pokemon/rotom.md)</span> | 20 |",
+            "[Rotom](../pokemon/rotom.md)</span> | — | 20 | `WildBattle` |",
             page,
         )
         self.assertIn("header-047.md", page)
         self.assertIn("header-344.md", page)
+        self.assertIn("## Roaming activations", page)
+        self.assertIn("| 2 | `51@0x140` |", page)
+        self.assertIn("| Music ID | day `1103`, night `1119` |", page)
+        self.assertIn("| Weather ID | `0` |", page)
+        self.assertIn("| Map flags | `0x0304` |", page)
         self.assertEqual(catalog["kind"], "locations")
         self.assertIn("shops", catalog["records"][0]["features"])
+        self.assertIn("roaming", catalog["records"][0]["features"])
 
 
 if __name__ == "__main__":

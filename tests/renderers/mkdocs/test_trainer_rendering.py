@@ -16,6 +16,11 @@ from romwiki.renderers.mkdocs.trainers import (
 class TrainerRenderingTests(unittest.TestCase):
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
         lines = _trainer_provenance({
+            "class_id": 1,
+            "class_gender": "female",
+            "ai_flags": 0,
+            "battle_type": 0,
+            "unknown_byte": 0x30,
             "provenance": {"archive": "trdata.narc", "member": 5},
             "party_provenance": {"archive": "trpoke.narc", "member": 5},
             "locations": [{"name": "Route 202"}],
@@ -23,10 +28,12 @@ class TrainerRenderingTests(unittest.TestCase):
         })
         provenance = "\n".join(lines)
 
-        self.assertIn("**Trainer and party:**", provenance)
-        self.assertIn("**Overworld locations:**", provenance)
-        self.assertIn("**Scripted battle locations:**", provenance)
+        self.assertIn("Source: exact ROM trainer record from", provenance)
+        self.assertIn("Overworld locations:", provenance)
+        self.assertIn("Scripted battle locations:", provenance)
         self.assertIn("`StartTrainerBattle`", provenance)
+        self.assertIn("| Unknown byte | `0x30` |", provenance)
+        self.assertIn("| Class gender | Female |", provenance)
 
     def test_renders_same_name_trainers_without_assuming_identity(self) -> None:
         current = _related_trainer(5, "Route 202", 8, "Starly")
@@ -118,7 +125,11 @@ class TrainerRenderingTests(unittest.TestCase):
 
         page = "\n".join(_trainer_summary(record, _group_ai_battle_items(record)))
 
-        self.assertIn("<dt>AI items</dt><dd>Full Restore ×2</dd>", page)
+        self.assertIn(
+            '<dt>AI items</dt><dd><a href="#ai-battle-items">'
+            "Full Restore ×2</a></dd>",
+            page,
+        )
 
     def test_numbers_explicit_moves_in_rom_order(self) -> None:
         party = [_party_member(["tackle", "growl"])]
