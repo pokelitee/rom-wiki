@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -23,8 +24,14 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     try:
         item_archive_path = profile.layout["item_data"]
         message_archive_path = profile.layout["messages"]
+        berry_data_path = profile.layout["berry_data"]
         item_names_member = profile.parameters["item_names_member"]
         type_names_member = profile.parameters["type_names_member"]
+        fossil_revival_table_offset = profile.parameters[
+            "fossil_revival_table_offset"
+        ]
+        fossil_revival_count = profile.parameters["fossil_revival_count"]
+        first_berry_item_id = profile.parameters["first_berry_item_id"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing item metadata: {error.args[0]}"
@@ -43,6 +50,24 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         item_count=len(item_names),
         data_member_count=len(item_archive.members),
     )
+    fossil_revivals = engine.parse_fossil_revival_table(
+        arm9_data,
+        offset=fossil_revival_table_offset,
+        count=fossil_revival_count,
+        item_count=len(item_names),
+        species_count=engine.POKEMON_NAME_COUNT,
+    )
+    revives_into_by_item = {
+        revival.item_id: revival.species_id for revival in fossil_revivals
+    }
+    berry_archive = platform.archive_cls.from_bytes(filesystem.read(berry_data_path))
+    berry_by_item: dict[int, dict[str, Any]] = {}
+    for index in range(len(berry_archive.members)):
+        berry = engine.parse_berry_record(berry_archive.read(index))
+        berry_by_item[first_berry_item_id + index] = {
+            **asdict(berry),
+            "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
+        }
 
     records = []
     for item_id, data_member in enumerate(data_members):
@@ -89,6 +114,8 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
                         "name": type_names[natural_gift_type_id],
                     }
                 ),
+                "revives_into_species_id": revives_into_by_item.get(item_id),
+                "berry": berry_by_item.get(item_id),
             }
         )
 
@@ -113,6 +140,15 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
             "type_names": {
                 "archive": message_archive_path,
                 "member": type_names_member,
+            },
+            "fossil_revival_table": {
+                "source": "arm9",
+                "offset": fossil_revival_table_offset,
+                "record_count": len(fossil_revivals),
+            },
+            "berry_data": {
+                "archive": berry_data_path,
+                "record_count": len(berry_by_item),
             },
         },
         "records": records,
@@ -148,6 +184,7 @@ def build_item_dataset(
             return
         relationships.setdefault(item_id, {}).setdefault(kind, []).append(value)
 
+    pokemon_by_species: dict[int, dict[str, Any]] = {}
     for pokemon in pokemon_dataset["records"]:
         if not pokemon["public"]:
             continue
@@ -157,6 +194,8 @@ def build_item_dataset(
             "slug": pokemon["slug"],
             "name": pokemon["name"],
         }
+        if pokemon["national_dex_id"] is not None:
+            pokemon_by_species.setdefault(pokemon["national_dex_id"], reference)
         for held_item in pokemon["held_items"]:
             add(
                 held_item["id"],
@@ -274,6 +313,9 @@ def build_item_dataset(
                 "gifts": relation.get("gifts", []),
                 "trades": relation.get("trades", []),
                 "evolutions": relation.get("evolutions", []),
+                "revives_into": pokemon_by_species.get(
+                    source.get("revives_into_species_id")
+                ),
             }
         )
     slugs = [record["slug"] for record in records]
@@ -308,4 +350,4 @@ def _item_is_referenced(record: dict[str, Any]) -> bool:
             "trades",
             "evolutions",
         )
-    )
+    ) or bool(record["revives_into"])

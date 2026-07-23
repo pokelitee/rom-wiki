@@ -22,6 +22,7 @@ from romwiki.pipeline.locations import extract_location_dataset
 from romwiki.pipeline.machines import extract_machine_dataset
 from romwiki.pipeline.moves import extract_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset
+from romwiki.pipeline.pickup import extract_pickup_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset
 from romwiki.schema.versions import (
@@ -92,6 +93,9 @@ class GameBuildContext:
     def items_raw(self) -> dict[str, Any]:
         return self._raw("items/raw", extract_item_dataset)
 
+    def pickup_raw(self) -> dict[str, Any]:
+        return self._raw("pickup/raw", extract_pickup_dataset)
+
     def pokemon(self) -> dict[str, Any]:
         return self._memo(
             "pokemon/enriched",
@@ -116,6 +120,7 @@ class GameBuildContext:
             lambda: build_ability_dataset(
                 self.pokemon(),
                 self.pokedb,
+                self.pickup_raw(),
                 reference_version=self.profile.base_game,
             ),
         )

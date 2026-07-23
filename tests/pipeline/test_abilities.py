@@ -61,6 +61,48 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(overgrow["pokemon"][0]["slots"], [1, 2])
         self.assertEqual(dataset["records"][0]["pokemon"], [])
 
+    def test_attaches_pickup_tables_to_pickup_and_honey_gather_only(self) -> None:
+        names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]
+        names[53] = "Pickup"
+        names[118] = "Honey Gather"
+        pokedb = _pokedb()
+        pickup_dataset = {
+            "tables": {
+                "common_items": [{"item_id": 17, "name": "Potion"}],
+                "rare_items": [{"item_id": 92, "name": "Nugget"}],
+                "common_rate": [30],
+                "honey_gather_rate": [5],
+            }
+        }
+        dataset = build_ability_dataset(
+            {
+                "game": "test",
+                "engine": "gen4_dppt",
+                "dataset": "pokemon",
+                "source": {"archive": "personal.narc"},
+                "ability_names": names,
+                "records": [],
+            },
+            pokedb,
+            pickup_dataset,
+        )
+
+        pickup = dataset["records"][52]
+        honey_gather = dataset["records"][117]
+        other = dataset["records"][64]
+        self.assertEqual(pickup["slug"], "pickup")
+        self.assertEqual(
+            pickup["pickup"],
+            {
+                "common_items": [{"item_id": 17, "name": "Potion"}],
+                "rare_items": [{"item_id": 92, "name": "Nugget"}],
+                "common_rate": [30],
+            },
+        )
+        self.assertEqual(honey_gather["slug"], "honey-gather")
+        self.assertEqual(honey_gather["pickup"], {"honey_gather_rate": [5]})
+        self.assertIsNone(other["pickup"])
+
     def test_renders_ability_page_and_catalog(self) -> None:
         dataset = {
             "records": [
@@ -103,6 +145,42 @@ class AbilityDatasetTests(unittest.TestCase):
             }],
         )
 
+    def test_renders_pickup_and_honey_gather_sections(self) -> None:
+        dataset = {
+            "records": [
+                {
+                    "ability_id": 53,
+                    "slug": "pickup",
+                    "name": "Pickup",
+                    "pokemon": [],
+                    "pickup": {
+                        "common_items": [{"item_id": 17, "name": "Potion"}],
+                        "rare_items": [{"item_id": 92, "name": "Nugget"}],
+                        "common_rate": [30],
+                    },
+                },
+                {
+                    "ability_id": 118,
+                    "slug": "honey-gather",
+                    "name": "Honey Gather",
+                    "pokemon": [],
+                    "pickup": {"honey_gather_rate": [5, 10]},
+                },
+            ]
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_ability_pages(dataset, output)
+            pickup_page = (output / "pickup.md").read_text(encoding="utf-8")
+            honey_page = (output / "honey-gather.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Held items", pickup_page)
+        self.assertIn("Potion</span> | 17 |", pickup_page)
+        self.assertIn("Nugget</span> | 92 |", pickup_page)
+        self.assertIn("## Honey generation chance", honey_page)
+        self.assertIn("| 1–10 | 5% |", honey_page)
+        self.assertIn("| 11–20 | 10% |", honey_page)
+
 
 def _pokedb() -> PokeDBGeneration:
     ability_names = {
@@ -110,6 +188,8 @@ def _pokedb() -> PokeDBGeneration:
     }
     ability_names[1] = "stench"
     ability_names[65] = "overgrow"
+    ability_names[53] = "pickup"
+    ability_names[118] = "honey-gather"
     return PokeDBGeneration(
         pokemon_by_id={},
         pokemon_by_name={},

@@ -206,12 +206,14 @@ def _render_record(
         "",
     ]
 
+    _append_berry_mechanics(lines, record.get("berry"))
     _append_locations(lines, record, source_file)
     _append_shops(lines, record["shops"], source_file)
     _append_pokemon(lines, record, source_file, references)
     _append_trainers(lines, record, source_file)
     _append_gifts_and_trades(lines, record, source_file, references)
     _append_evolutions(lines, record["evolutions"], source_file, references)
+    _append_fossil_revival(lines, record["revives_into"], source_file, references)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -447,6 +449,62 @@ def _append_evolutions(
                 )
                 for value in evolutions
             ],
+            "",
+        ]
+    )
+
+
+def _append_berry_mechanics(
+    lines: list[str], berry: dict[str, Any] | None
+) -> None:
+    if not berry:
+        return
+    lines.extend(
+        [
+            "## Berry mechanics",
+            "",
+            *fact_grid(
+                (
+                    ("Firmness", berry["firmness_name"]),
+                    ("Size", f"{berry['size']} mm"),
+                    ("Base yield", str(berry["base_yield"])),
+                    ("Growth stage duration", f"{berry['stage_duration']} hours"),
+                    ("Moisture drain rate", str(berry["moisture_drain_rate"])),
+                )
+            ),
+            "",
+            "**Contest flavor:**",
+            "",
+            *fact_grid(
+                (
+                    ("Spicy", str(berry["spiciness"])),
+                    ("Dry", str(berry["dryness"])),
+                    ("Sweet", str(berry["sweetness"])),
+                    ("Bitter", str(berry["bitterness"])),
+                    ("Sour", str(berry["sourness"])),
+                    ("Smoothness", str(berry["smoothness"])),
+                )
+            ),
+            "",
+        ]
+    )
+
+
+def _append_fossil_revival(
+    lines: list[str],
+    revives_into: dict[str, Any] | None,
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not revives_into:
+        return
+    lines.extend(
+        [
+            "## Fossil revival",
+            "",
+            "Reviving this fossil produces:",
+            "",
+            f"{sprite_with_link(_pokemon_sprite_cell(revives_into, references), pokemon_record_link(revives_into, source_file))}",
             "",
         ]
     )

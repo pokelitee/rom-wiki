@@ -22,6 +22,7 @@ from romwiki.renderers.mkdocs.components import (
     record_navigation_for,
     reference_description,
     reference_source_link,
+    reference_sprite_cell,
     reference_type_cell,
     sprite_with_link,
     summary_section,
@@ -31,6 +32,7 @@ from romwiki.renderers.mkdocs.components import (
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    entity_markdown_link,
     entity_reference,
     pokemon_markdown_link,
 )
@@ -149,6 +151,7 @@ def _render_record(
         *reference_description(
             record, "No PokéDB reference data is available for this ability."
         ),
+        *_pickup_section(record.get("pickup"), source_file, references),
         "## Pokémon",
         "",
     ]
@@ -191,6 +194,74 @@ def _render_record(
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _pickup_section(
+    pickup: dict[str, Any] | None,
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> list[str]:
+    if not pickup:
+        return []
+    if "honey_gather_rate" in pickup:
+        rates = pickup["honey_gather_rate"]
+        lines = [
+            "## Honey generation chance",
+            "",
+            "At the end of a battle, each Pokémon with Honey Gather has a "
+            "chance to generate Honey, scaling with its level.",
+            "",
+            "| Level | Chance |",
+            "| ----: | -----: |",
+        ]
+        lines.extend(
+            f"| {tier * 10 + 1}–{tier * 10 + 10} | {rate}% |"
+            for tier, rate in enumerate(rates)
+        )
+        lines.append("")
+        return lines
+
+    lines = [
+        "## Held items",
+        "",
+        "At the end of a battle, a Pokémon with Pickup has a 10% chance to "
+        "check for an item if it isn't already holding one. Both pools slide "
+        "with the Pokémon's level (floor(level − 1) / 10, capped at the "
+        "table's last tier): higher-level Pokémon skip toward later, more "
+        "valuable entries in each list rather than always drawing from the "
+        "start.",
+        "",
+        "**Common pool:**",
+        "",
+    ]
+    lines.extend(
+        pokemon_table(
+            ["| Item | Item ID |", "| ---- | ------: |"],
+            [
+                f"| {sprite_with_link(reference_sprite_cell('item', item['item_id'], references), _item_link(item, source_file, references))} | {item['item_id']} |"
+                for item in pickup["common_items"]
+            ],
+        )
+    )
+    lines.extend(["**Rare pool** (only reachable on a 98–99 roll):", ""])
+    lines.extend(
+        pokemon_table(
+            ["| Item | Item ID |", "| ---- | ------: |"],
+            [
+                f"| {sprite_with_link(reference_sprite_cell('item', item['item_id'], references), _item_link(item, source_file, references))} | {item['item_id']} |"
+                for item in pickup["rare_items"]
+            ],
+        )
+    )
+    return lines
+
+
+def _item_link(
+    item: dict[str, Any], source_file: str, references: ReferenceIndex | None
+) -> str:
+    return entity_markdown_link(
+        "item", item["item_id"], item["name"], source_file, index=references
+    )
 
 
 def _ability_summary(record: dict[str, Any]) -> list[str]:

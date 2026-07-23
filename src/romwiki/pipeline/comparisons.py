@@ -40,7 +40,8 @@ _FIELDS = {
         "fling_effect_id", "fling_power", "natural_gift_power",
         "natural_gift_type", "party_use", "party_effects", "prevent_toss",
         "selectable", "locations", "shops", "wild_held_by", "trainer_held_by",
-        "trainer_battle_items", "gifts", "trades", "evolutions",
+        "trainer_battle_items", "gifts", "trades", "evolutions", "revives_into",
+        "berry",
     ),
     "wild_encounters": (
         "active", "name", "locations", "walking", "surf", "old_rod",

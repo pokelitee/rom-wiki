@@ -128,6 +128,100 @@ class ItemDatasetTests(unittest.TestCase):
         )
 
 
+class FossilRevivalTests(unittest.TestCase):
+    def test_resolves_and_renders_fossil_revival(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {"archive": "items.narc"},
+            "records": [{**_item_record(), "revives_into_species_id": 138}],
+        }
+        pokemon = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "public": True,
+                    "member": 138,
+                    "national_dex_id": 138,
+                    "slug": "omanyte",
+                    "name": "Omanyte",
+                    "held_items": [],
+                    "evolutions": [],
+                }
+            ],
+        }
+        trainers = {"game": "test", "source": {}, "records": []}
+        locations = {"game": "test", "source": {}, "records": []}
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={1: "master-ball"},
+        )
+
+        dataset = build_item_dataset(raw, pokedb, pokemon, trainers, locations)
+        record = dataset["records"][0]
+        self.assertEqual(record["revives_into"]["name"], "Omanyte")
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_item_pages(dataset, output)
+            page = (output / "master-ball.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Fossil revival", page)
+        self.assertIn("[Omanyte](../pokemon/omanyte.md)", page)
+
+
+class BerryMechanicsTests(unittest.TestCase):
+    def test_renders_berry_mechanics_section(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {"archive": "items.narc"},
+            "records": [
+                {
+                    **_item_record(),
+                    "item_id": 149,
+                    "name": "Cheri Berry",
+                    "berry": {
+                        "size": 20,
+                        "firmness": 2,
+                        "firmness_name": "Soft",
+                        "base_yield": 1,
+                        "stage_duration": 3,
+                        "moisture_drain_rate": 15,
+                        "spiciness": 10,
+                        "dryness": 0,
+                        "sweetness": 0,
+                        "bitterness": 0,
+                        "sourness": 0,
+                        "smoothness": 25,
+                    },
+                }
+            ],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        trainers = {"game": "test", "source": {}, "records": []}
+        locations = {"game": "test", "source": {}, "records": []}
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={149: "cheri-berry"},
+        )
+
+        dataset = build_item_dataset(raw, pokedb, pokemon, trainers, locations)
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_item_pages(dataset, output)
+            page = (output / "cheri-berry.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Berry mechanics", page)
+        self.assertIn("<dt>Firmness</dt><dd>Soft</dd>", page)
+        self.assertIn("<dt>Spicy</dt><dd>10</dd>", page)
+
+
 def _item_record() -> dict:
     return {
         "item_id": 1,

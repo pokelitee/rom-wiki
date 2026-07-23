@@ -13,6 +13,7 @@ from romwiki.util.json_io import write_json_atomic
 def build_ability_dataset(
     pokemon_dataset: dict[str, Any],
     pokedb: PokeDBGeneration,
+    pickup_dataset: dict[str, Any] | None = None,
     *,
     reference_version: str | None = None,
 ) -> dict[str, Any]:
@@ -49,16 +50,31 @@ def build_ability_dataset(
                 }
             )
 
-    records = [
-        {
-            "ability_id": ability_id,
-            "slug": pokedb.ability_name(ability_id),
-            "name": ability_names[ability_id],
-            "reference": pokedb.ability_reference(ability_id, reference_version),
-            "pokemon": pokemon_by_ability.get(ability_id, []),
-        }
-        for ability_id in range(1, len(ability_names))
-    ]
+    pickup_tables = (
+        pickup_dataset["tables"] if pickup_dataset is not None else None
+    )
+    records = []
+    for ability_id in range(1, len(ability_names)):
+        slug = pokedb.ability_name(ability_id)
+        pickup = None
+        if pickup_tables is not None and slug == "pickup":
+            pickup = {
+                "common_items": pickup_tables["common_items"],
+                "rare_items": pickup_tables["rare_items"],
+                "common_rate": pickup_tables["common_rate"],
+            }
+        elif pickup_tables is not None and slug == "honey-gather":
+            pickup = {"honey_gather_rate": pickup_tables["honey_gather_rate"]}
+        records.append(
+            {
+                "ability_id": ability_id,
+                "slug": slug,
+                "name": ability_names[ability_id],
+                "reference": pokedb.ability_reference(ability_id, reference_version),
+                "pokemon": pokemon_by_ability.get(ability_id, []),
+                "pickup": pickup,
+            }
+        )
     return {
         "schema_version": ABILITIES_ENRICHED_SCHEMA_VERSION,
         "game": pokemon_dataset["game"],

@@ -1,3 +1,8 @@
+from romwiki.engines.gen4_dppt.berries import (
+    GEN4_BERRY_FIRMNESS_NAMES,
+    Gen4BerryData,
+    parse_berry_record,
+)
 from romwiki.engines.gen4_dppt.bonus_encounters import (
     GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER,
     GEN4_GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER,
@@ -71,6 +76,10 @@ from romwiki.engines.gen4_dppt.evolutions import (
     EVOLUTION_SLOT_SIZE,
     parse_evolution_record,
 )
+from romwiki.engines.gen4_dppt.fossils import (
+    Gen4FossilRevival,
+    parse_fossil_revival_table,
+)
 from romwiki.engines.gen4_dppt.game_corner import (
     Gen4GameCornerPrize,
     parse_game_corner_prizes,
@@ -139,6 +148,7 @@ from romwiki.engines.gen4_dppt.personal import (
     TRAINER_FORM_SLUGS,
     parse_personal_record,
 )
+from romwiki.engines.gen4_dppt.pickup import Gen4PickupTables, parse_pickup_tables
 from romwiki.engines.gen4_dppt.scripts import (
     CHECK_WON_BATTLE,
     PLATINUM_ROAMING_SLOT_COUNT,
@@ -208,6 +218,7 @@ HONEY_TREE_GROUP_CHANCES = GEN4_HONEY_TREE_GROUP_CHANCES
 HONEY_TREE_MUNCHLAX_GROUP_CHANCES = GEN4_HONEY_TREE_MUNCHLAX_GROUP_CHANCES
 ROAMING_SLOT_SPECIES_IDS = PLATINUM_ROAMING_SLOT_SPECIES_IDS
 GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID = PLATINUM_GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID
+BERRY_FIRMNESS_NAMES = GEN4_BERRY_FIRMNESS_NAMES
 
 __all__ = [
     "ABILITY_NAME_COUNT",
@@ -268,6 +279,14 @@ __all__ = [
     "GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID",
     "Gen4GameCornerPrize",
     "parse_game_corner_prizes",
+    "Gen4PickupTables",
+    "parse_pickup_tables",
+    "Gen4FossilRevival",
+    "parse_fossil_revival_table",
+    "GEN4_BERRY_FIRMNESS_NAMES",
+    "BERRY_FIRMNESS_NAMES",
+    "Gen4BerryData",
+    "parse_berry_record",
     "HONEY_TREE_HEADER_IDS",
     "GREAT_MARSH_HEADER_IDS",
     "TROPHY_GARDEN_HEADER_ID",

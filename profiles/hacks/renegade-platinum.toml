@@ -28,6 +28,7 @@ evolutions = "poketool/personal/evo.narc"
 item_data = "itemtool/itemdata/pl_item_data.narc"
 npc_trades = "fielddata/pokemon_trade/fld_trade.narc"
 bonus_encounters = "arc/encdata_ex.narc"
+berry_data = "itemtool/itemdata/nuts_data.narc"
 
 [parameters]
 map_header_offset = 0xE601C
@@ -71,6 +72,18 @@ frontier_price_table_offset = 0x5A98
 frontier_price_record_count = 41
 game_corner_prize_table_offset = 0xEC018
 game_corner_prize_count = 19
+pickup_overlay_id = 16
+pickup_common_items_offset = 0x3352C
+pickup_rare_items_offset = 0x33450
+pickup_common_rate_offset = 0x33968
+pickup_honey_gather_rate_offset = 0x33974
+pickup_common_item_count = 18
+pickup_rare_item_count = 11
+pickup_common_rate_count = 9
+pickup_honey_gather_rate_count = 10
+fossil_revival_table_offset = 0xEBFFC
+fossil_revival_count = 7
+first_berry_item_id = 149
 
 [[parameters.special_tutors]]
 script_member = 450

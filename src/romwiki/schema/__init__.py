@@ -28,6 +28,7 @@ from romwiki.schema.locations import (
 )
 from romwiki.schema.machines import Gen4Machine
 from romwiki.schema.moves import Gen4Move
+from romwiki.schema.pickup import Gen4PickupTables
 from romwiki.schema.pokemon import (
     PokemonPersonalData,
     RecordProvenance,
@@ -85,6 +86,7 @@ __all__ = [
     "EvolutionEntry",
     "Gen4EvolutionSet",
     "Gen4Machine",
+    "Gen4PickupTables",
     "Gen4TutorCompatibility",
     "Gen4TutorMove",
     "Gen4SpecialTutorMove",

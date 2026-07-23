@@ -225,6 +225,18 @@ records and 505 Pokémon/form compatibility rows come from ARM9 overlay 5. Four
 additional scripted tutors—Draco Meteor, Blast Burn, Hydro Cannon, and Frenzy
 Plant—are decoded from their field-script commands and eligibility checks.
 
+Extract the Pickup and Honey Gather item and rate tables:
+
+```console
+romwiki extract-pickup ".local/roms/Pokemon - Platinum Version (USA).nds"
+```
+
+This writes `build/data/renegade-platinum/pickup/raw.json`. Both abilities'
+tables are compiled data in ARM9 overlay 16, not a NARC table; the offsets
+were verified byte-for-byte against the decompilation, then confirmed
+identical between the base game and Renegade Platinum. `build-pokemon` joins
+this into the Pickup and Honey Gather ability pages automatically.
+
 Build enriched records and the Pokémon wiki pages using the local PokéDB output:
 
 ```console
@@ -239,7 +251,8 @@ This keeps the enriched audit dataset under `build/` and renders publishable
 Markdown into `sites/games/renegade-platinum/wiki/pokemon/`. The same command also
 derives the normalized ability catalog from ROM names and personal-data assignments,
 then renders it under `sites/games/renegade-platinum/wiki/abilities/`. The extracted
-ability data covers the name table and per-Pokémon assignments; the in-game
+ability data covers the name table, per-Pokémon assignments, and — for Pickup
+and Honey Gather specifically — their item and rate tables; the in-game
 description text lives in separate message banks that ROM Wiki does not yet
 extract, so ability pages carry PokéDB's effect description and flavor-text quote.
 
@@ -331,7 +344,11 @@ romwiki build-items ".local/roms/Pokemon - Platinum Version (USA).nds"
 Item pages combine the ROM item-name table, the 34-byte item mechanics records,
 and the ARM9 item-to-archive-member map. The enriched build links overworld and
 hidden pickups, shops, wild and trainer held items, trainers' own AI battle
-items, gifts, trades, and item-based evolutions. As with abilities and moves,
+items, gifts, trades, item-based evolutions, and — for the seven fossil
+items — which Pokémon reviving them produces, from another fixed ARM9 table
+verified identical between the base game and Renegade Platinum. The 64 berry
+items also carry their full growth and contest-flavor mechanics, read from
+`itemtool/itemdata/nuts_data.narc`. As with abilities and moves,
 PokéDB supplies the item's effect description, flavor-text quote, and icon:
 the ROM's item records store mechanics, while the in-game description text
 lives in message banks that ROM Wiki does not yet extract.

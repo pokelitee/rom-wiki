@@ -33,6 +33,7 @@ class SchemaVersionTests(unittest.TestCase):
                 "trainers/raw",
                 "locations/raw",
                 "items/raw",
+                "pickup/raw",
             },
         )
 

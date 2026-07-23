@@ -35,6 +35,7 @@ from romwiki.pipeline.machines import extract_machine_dataset, write_machine_dat
 from romwiki.pipeline.manifest import create_manifest, write_manifest
 from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
+from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
 from romwiki.renderers.mkdocs import (
@@ -185,6 +186,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         help="dataset output path (defaults below build/data/<profile>/tutors)",
+    )
+
+    pickup_parser = subparsers.add_parser(
+        "extract-pickup", help="extract Pickup/Honey Gather item and rate tables"
+    )
+    _add_input_arguments(pickup_parser)
+    pickup_parser.add_argument(
+        "--output",
+        type=Path,
+        help="dataset output path (defaults below build/data/<profile>/pickup)",
     )
 
     pokemon_parser = subparsers.add_parser(
@@ -474,6 +485,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"rows plus {dataset['special_compatibility_record_count']} "
                 f"special compatibility rows: "
                 f"{output}"
+            )
+        elif args.command == "extract-pickup":
+            dataset = extract_pickup_dataset(result)
+            output = args.output or (
+                Path("build/data") / dataset["game"] / "pickup" / "raw.json"
+            )
+            write_pickup_dataset(dataset, output)
+            tables = dataset["tables"]
+            print(
+                f"Wrote {len(tables['common_items'])} common and "
+                f"{len(tables['rare_items'])} rare Pickup items: {output}"
             )
         elif args.command in {
             "build-pokemon",
