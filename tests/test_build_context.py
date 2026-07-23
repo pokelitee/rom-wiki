@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock
 
 from romwiki.pipeline.build_context import GameBuildContext
+from romwiki.schema.versions import MOVES_RAW_SCHEMA_VERSION
 
 
 def _result(rom_sha256: str) -> Mock:
@@ -26,7 +27,7 @@ def _extractor(calls: list) -> callable:
     def extract(result) -> dict:
         calls.append(result)
         return {
-            "schema_version": 1,
+            "schema_version": MOVES_RAW_SCHEMA_VERSION,
             "source": {"rom_sha256": result.image.hashes.sha256},
             "value": len(calls),
         }

@@ -68,7 +68,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         script_references_by_trainer,
         location_source,
     ) = _extract_trainer_locations(
-        result, filesystem, messages, trainer_count=len(parsed_records)
+        engine, platform, result, filesystem, messages, trainer_count=len(parsed_records)
     )
     records = [
         replace(
@@ -112,6 +112,8 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_trainer_locations(
+    engine: Any,
+    platform: Any,
     result: InspectionResult,
     filesystem: Any,
     messages: Any,
@@ -138,8 +140,6 @@ def _extract_trainer_locations(
         raise ProfileError(
             f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
         ) from error
-    platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).trainers
     null_event_id = profile.parameters.get(
         "null_event_id", engine.GEN4_ARCHIVE_MEMBER_NONE
     )

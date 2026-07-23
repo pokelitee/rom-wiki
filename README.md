@@ -27,10 +27,13 @@ catalog and detail page and generate a game-wide Changes overview.
 
 The project is designed to support additional games without coupling the wiki
 renderer to a particular ROM format. The normalized data contracts and MkDocs
-renderers are reusable, but extraction dispatch currently targets the
-Nintendo DS `gen4_dppt` engine directly. Supporting a different platform or
-generation therefore requires a new platform reader and/or engine adapter; it
-is not only a profile change.
+renderers are reusable, and extraction dispatch resolves the platform and engine
+adapter for a profile through the registries in `src/romwiki/platforms/registry.py`
+and `src/romwiki/engines/registry.py` rather than importing the Nintendo DS
+`gen4_dppt` engine directly. Supporting a different platform or generation still
+requires writing a new platform reader and/or engine adapter and registering it;
+it is not only a profile change, but no existing pipeline module needs to change
+to add one.
 
 See [Architecture](docs/development/architecture.md) for the data flow and
 current extension boundaries, and [Adding a game](docs/development/adding-a-game.md)

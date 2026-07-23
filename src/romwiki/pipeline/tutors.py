@@ -60,6 +60,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         form_count=len(form_members),
     )
     special_tutors, special_compatibility = _extract_special_tutors(
+        engine,
+        platform,
         result,
         start_tutor_id=len(tutors) + 1,
     )
@@ -97,7 +99,7 @@ def _slice_overlay(data: bytes, offset: int, size: int, label: str) -> bytes:
 
 
 def _extract_special_tutors(
-    result: InspectionResult, *, start_tutor_id: int
+    engine: Any, platform: Any, result: InspectionResult, *, start_tutor_id: int
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     profile = result.match.profile
     definitions = profile.parameters.get("special_tutors", [])
@@ -105,8 +107,6 @@ def _extract_special_tutors(
         raise ProfileError("Special tutor definitions must be a list")
     if not definitions:
         return [], []
-    platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).tutors
     try:
         minimum_friendship = profile.parameters.get(
             "special_tutor_minimum_friendship", engine.GEN4_MAX_FRIENDSHIP

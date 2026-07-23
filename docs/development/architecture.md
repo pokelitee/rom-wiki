@@ -230,18 +230,45 @@ real concept that the schemas cannot represent, extend the normalized schema wit
 an optional or versioned field and update renderers to degrade gracefully for games
 that do not provide it.
 
+## Platform and engine registries
+
+`src/romwiki/platforms/registry.py` and `src/romwiki/engines/registry.py` are the
+plug-in boundary. Each maps a stable string key (`GameProfile.platform`,
+`GameProfile.engine`) to a small adapter exposing that platform's image/filesystem/
+archive primitives, or that engine's parsers and constants. Pipeline modules resolve
+`get_platform(profile.platform)` and `get_engine(profile.engine)` instead of
+importing `platforms.nds` or `engines.gen4_dppt` directly; only the registries
+themselves, and each engine/platform's own package, are allowed to name a specific
+implementation. `pipeline/trainer_party.py` predates the shared registries and uses
+the same dict-dispatch shape locally, scoped to the one contract it translates.
+
+Adding a second platform or engine is additive: a new `platforms/<platform>/` or
+`engines/<engine>/` package, one new entry in the relevant registry dict, and a
+profile that declares the new `platform`/`engine` keys. No existing pipeline module
+needs to change.
+
+`tests/test_engine_contract.py` is the regression guard for this boundary: it
+registers a throwaway fake engine at test time and asserts that enrichment and
+rendering consume its output correctly, with no gen4-specific branching. Extend
+that test file, rather than adding a first real second engine's assumptions to it,
+if the contract needs to grow.
+
 ## Current limitations
 
-The architecture is not yet a plug-in registry. `GameProfile` and ROM inspection
-currently depend on the NDS image type, and the extraction commands call the
-`gen4_dppt` pipelines directly. Before adding the first non-NDS engine, these entry
-points should be generalized behind platform and engine adapter interfaces.
+ROM identification still has a bootstrap gap: `identify.py` must open a raw file
+before any profile is matched, so it cannot yet select a platform from
+`GameProfile.platform` for that first read. It currently opens every image as
+`nintendo-ds` and then raises if the matched profile declares a different platform.
+Blind platform detection (trying each registered platform's adapter in turn until
+one accepts the image) is real follow-up work for whenever a second platform
+package actually exists — building it speculatively against one platform would not
+prove much.
 
-Likewise, normalized schemas are implemented as Python dataclasses and typed
-contracts serialized to JSON, but formal cross-engine compatibility fixtures are
-still needed. The first
-new engine should add contract tests proving that its output can be consumed by the
-existing enrichment and rendering layers without game-specific branches there.
+Normalized schemas are implemented as Python dataclasses and typed contracts
+serialized to JSON. The contract test above proves the enrichment/rendering
+boundary against a fake engine; a real second engine should still add its own
+fixtures (profile identification, raw parsers, normalized output) following
+[Adding a game](adding-a-game.md).
 
 These are known extension tasks, not reasons to combine extraction and rendering.
 The existing boundary remains the intended long-term design.

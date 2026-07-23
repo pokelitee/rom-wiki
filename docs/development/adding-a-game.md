@@ -136,12 +136,21 @@ member overrides.
 
 For a new platform, add container and filesystem readers under
 `src/romwiki/platforms/<platform>/`. Validate offsets, sizes, and archive bounds
-before exposing data to an engine.
+before exposing data to an engine. Register the platform's image inspector,
+filesystem/archive types, and header-matching function as a new entry in
+`src/romwiki/platforms/registry.py`'s `_PLATFORMS` dict, and give the profile a
+matching `platform` key.
 
 Add engine parsers under `src/romwiki/engines/<engine>/` for each supported record
 type. Keep parsers small, typed, and independently testable. Preserve raw source
 locations in provenance and reject malformed or out-of-range records instead of
-silently guessing.
+silently guessing. Register the new engine's modules as a new `EngineAdapter` entry
+in `src/romwiki/engines/registry.py`'s `_ENGINES` dict; pipeline modules resolve
+parsers and constants through `get_engine(profile.engine)` rather than importing an
+engine package directly, so this registration is the only change needed to make an
+existing pipeline module's extraction and enrichment logic available to the new
+engine. Extend `tests/test_engine_contract.py`'s fake-engine coverage if the new
+engine exercises a shared code path the fake engine doesn't yet cover.
 
 For a hack-specific change, prefer a documented format variant shared through the
 engine over a parser named after one hack.

@@ -37,7 +37,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
         for member in archive.members
     ]
     locations_by_encounter, location_source = _extract_encounter_locations(
-        result, filesystem, encounter_count=len(parsed_records)
+        engine, platform, result, filesystem, encounter_count=len(parsed_records)
     )
     records = [
         replace(
@@ -62,6 +62,8 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_encounter_locations(
+    engine: Any,
+    platform: Any,
     result: InspectionResult,
     filesystem: Any,
     *,
@@ -86,8 +88,6 @@ def _extract_encounter_locations(
             f"{error.args[0]}"
         ) from error
 
-    platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).encounters
     count = parameters["map_header_count"]
     table_offset = parameters["map_header_offset"]
     with result.image.path.open("rb") as stream:
