@@ -31,3 +31,15 @@ sites/games/*/wiki/changes/
 *.gb
 *.sav
 *.dsv
+*.srm
+*.state
+
+# ROM hack patches and console keys must remain local; the README's legal
+# notice already promises these are never tracked.
+*.ips
+*.bps
+*.ups
+*.xdelta
+*.pat
+prod.keys
+title.keys
