@@ -125,6 +125,8 @@ def render_location_pages(
                 ("trades", bool(record.get("npc_trades"))),
                 ("static encounters", bool(record.get("static_encounters"))),
                 ("roaming", bool(record.get("roaming_activations"))),
+                ("honey tree", bool(record.get("honey_tree"))),
+                ("daily rotation", bool(record.get("daily_encounter_pool"))),
                 ("trainers", bool(record.get("trainers"))),
                 ("warps", bool(record.get("warps"))),
                 ("connections", bool(record.get("connections"))),
@@ -197,6 +199,10 @@ def _render_location(
         lines, record.get("static_encounters", []), source_file, references
     )
     _append_roaming_activations(lines, record.get("roaming_activations", []))
+    _append_honey_tree(lines, record.get("honey_tree"), source_file, references)
+    _append_daily_encounter_pool(
+        lines, record.get("daily_encounter_pool"), source_file, references
+    )
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
     _append_connections(lines, record["connections"], source_file)
@@ -267,13 +273,27 @@ def _append_record_navigation(
 
 def _location_summary(record: dict[str, Any]) -> list[str]:
     has_encounters = record["encounter_id"] is not None
+    has_honey_tree = bool(record.get("honey_tree"))
+    daily_pool = record.get("daily_encounter_pool")
+    daily_pool_anchor = (
+        "great-marsh-daily-rotation"
+        if daily_pool and daily_pool["kind"] == "great_marsh"
+        else "trophy-garden-daily-rotation"
+    )
     facts: list[tuple[str, int | str, str, bool]] = [
         (
             "Wild encounters",
             "Yes" if has_encounters else "No",
             "wild-encounters",
             has_encounters,
-        )
+        ),
+        ("Honey tree", "Yes" if has_honey_tree else "No", "honey-tree", has_honey_tree),
+        (
+            "Daily rotation",
+            "Yes" if daily_pool else "No",
+            daily_pool_anchor,
+            bool(daily_pool),
+        ),
     ]
     for label, key, anchor in (
         ("Item pickups", "items", "item-pickups"),
@@ -537,6 +557,91 @@ def _append_roaming_activations(
             "",
         ]
     )
+
+
+def _append_honey_tree(
+    lines: list[str],
+    honey_tree: dict[str, Any] | None,
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not honey_tree:
+        return
+    lines.extend(
+        [
+            "## Honey tree",
+            "",
+            "Slathering this tree has a 70% chance of a Common encounter, 20% "
+            "Uncommon, and 10% no encounter; four specific trees per save file "
+            "(chosen from the trainer ID) instead use 20% Common, 70% Uncommon, "
+            "1% Rare, and 9% no encounter. Which trees are a save file's Rare "
+            "trees is not ROM data.",
+            "",
+        ]
+    )
+    for label, key in (("Common", "common"), ("Uncommon", "uncommon"), ("Rare", "rare")):
+        rows = [
+            (
+                f"| {sprite_with_link(_entity_sprite('pokemon', entry['species_id'], references), _entity_link('pokemon', entry['species_id'], entry['name'], source_file, references))} | "
+                f"{reference_type_cell('pokemon', entry['species_id'], references)} |"
+            )
+            for entry in honey_tree[key]
+        ]
+        lines.extend([f"**{label}:**", ""])
+        lines.extend(
+            pokemon_table(["| Pokémon | Type |", "| ------- | ---- |"], rows)
+        )
+
+
+def _append_daily_encounter_pool(
+    lines: list[str],
+    pool: dict[str, Any] | None,
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not pool:
+        return
+    label = "Great Marsh" if pool["kind"] == "great_marsh" else "Trophy Garden"
+    lines.extend([f"## {label} daily rotation", ""])
+    if pool["pre_national_dex_species"] is not None:
+        lines.extend(
+            [
+                "This location shares one daily pool across all six Great Marsh "
+                "areas, gated on whether the player has the National Pokédex. "
+                "Which entry is active on a given day comes from save-file "
+                "state, not ROM data, so the full pool is listed instead of "
+                "today's pick.",
+                "",
+            ]
+        )
+        groups = (
+            ("After National Dex", pool["species"]),
+            ("Before National Dex", pool["pre_national_dex_species"]),
+        )
+    else:
+        lines.extend(
+            [
+                "Two of these Pokémon are available at a time and rotate on a "
+                "cooldown; which two are active comes from save-file state, "
+                "not ROM data, so the full pool is listed instead of today's "
+                "pick.",
+                "",
+            ]
+        )
+        groups = ((None, pool["species"]),)
+    for group_label, entries in groups:
+        rows = [
+            (
+                f"| {sprite_with_link(_entity_sprite('pokemon', entry['species_id'], references), _entity_link('pokemon', entry['species_id'], entry['name'], source_file, references))} | "
+                f"{reference_type_cell('pokemon', entry['species_id'], references)} |"
+            )
+            for entry in entries
+        ]
+        if group_label:
+            lines.extend([f"**{group_label}:**", ""])
+        lines.extend(
+            pokemon_table(["| Pokémon | Type |", "| ------- | ---- |"], rows)
+        )
 
 
 def _append_npc_trades(

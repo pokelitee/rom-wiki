@@ -16,15 +16,25 @@ Renegade Platinum is the first complete baseline implementation. It identifies
 Nintendo DS images, reads their filesystem and NARC archives, and generates
 normalized datasets and wiki pages for Pokémon, moves, wild encounters,
 trainers, and locations. The location dataset also includes items, shops,
-warps, connections, gifts, static encounters, roaming activation audits, and
-in-game trades. Extracted records retain ROM provenance where practical.
+warps, connections, gifts, static encounters, roaming activation audits,
+in-game trades, honey tree encounter pools, and Great Marsh/Trophy Garden
+daily rotation pools. Extracted records retain ROM provenance where practical.
 
-Some Gen IV data categories are known but not yet extracted: honey trees, the
-roaming Pokémon species/level definitions (only their scripted activations are
-audited), the Great Marsh and Trophy Garden daily rotation tables, Game Corner
-prize exchanges, and the ROM's own Pokédex/description text banks. Each needs
-dedicated offset research and is tracked as follow-up work rather than silently
-approximated.
+Honey trees and the Great Marsh/Trophy Garden dailies read from
+`arc/encdata_ex.narc`, a second encounter archive separate from the wild
+encounter tables, and only expose what the ROM stores as fixed data: species
+pools, not which entry is active. Which honey tree slathering yields, which
+four trees are a save file's guaranteed Rare trees, and which Great
+Marsh/Trophy Garden pool entries are live today are all derived from save-file
+state (trainer ID, a daily seed, or a save-persisted rotation), not ROM data,
+so those selections are out of scope by the same policy that keeps Poké Radar
+chains and dual-slot "today's" pick unrendered elsewhere in this project.
+
+Some Gen IV data categories are known but not yet extracted: the roaming
+Pokémon species/level definitions (only their scripted activations are
+audited), Game Corner prize exchanges, and the ROM's own Pokédex/description
+text banks. Each needs dedicated offset research and is tracked as follow-up
+work rather than silently approximated.
 
 The exact USA retail release of Pokémon Platinum is also registered as the
 `platinum-us` profile. It reuses the Generation IV engine and has been validated
@@ -233,6 +243,17 @@ in the ROM's encounter records, which only hold each slot's species and
 level(s)); slots for the same species and level(s) are combined into one row
 with their chances summed rather than shown as repeated rows.
 
+Special-encounter categories are also extracted: swarms, time-of-day
+replacements, and dual-slot substitutions (from connecting a Game Boy Advance
+game via dual-slot mode) each replace a specific walking-slot species only, so
+the level and chance shown for them are that slot's own values, not separate
+ROM data. Poké Radar encounters are shown with species and type but no fixed
+level or chance, since the ROM only populates that table for one specific
+shake outcome and most radar encounters instead continue the current chain's
+species. Unown's per-area letter set is resolved from the ROM's own table
+index. The Great Marsh and Trophy Garden daily rotations, which reuse two of
+the same slot positions, are not yet extracted — see "Current status" below.
+
 Extract and render trainer parties:
 
 ```console
@@ -263,9 +284,9 @@ Location pages combine map headers with exact visible and hidden item pickups;
 common, specialty, decoration, weekday seal-shop, and Battle Frontier BP
 inventories and prices; event warps; outdoor map-matrix connections; wild
 encounter tables; literal Pokémon and egg gifts; in-game trades; scripted static
-encounters; roaming activation audits; and trainer references. Each map
-header keeps a stable page even when several interiors share the same displayed
-location name.
+encounters; roaming activation audits; honey tree and Great Marsh/Trophy Garden
+daily encounter pools; and trainer references. Each map header keeps a stable
+page even when several interiors share the same displayed location name.
 
 Extract and render move mechanics:
 

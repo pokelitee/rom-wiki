@@ -134,6 +134,16 @@ class LocationRenderingTests(unittest.TestCase):
                     "directions": ["west"],
                 }
             ],
+            "honey_tree": {
+                "common": [{"species_id": 175, "name": "Togepi"}],
+                "uncommon": [{"species_id": 479, "name": "Rotom"}],
+                "rare": [{"species_id": 175, "name": "Togepi"}],
+            },
+            "daily_encounter_pool": {
+                "kind": "trophy_garden",
+                "species": [{"species_id": 479, "name": "Rotom"}],
+                "pre_national_dex_species": None,
+            },
         }
         dataset = {"records": [record]}
         references = ReferenceIndex.from_datasets(
@@ -242,6 +252,84 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["kind"], "locations")
         self.assertIn("shops", catalog["records"][0]["features"])
         self.assertIn("roaming", catalog["records"][0]["features"])
+        self.assertIn("honey tree", catalog["records"][0]["features"])
+        self.assertIn("daily rotation", catalog["records"][0]["features"])
+        self.assertIn('<a href="#honey-tree">Yes</a>', page)
+        self.assertIn('<a href="#trophy-garden-daily-rotation">Yes</a>', page)
+        self.assertIn("## Honey tree", page)
+        self.assertIn("**Common:**", page)
+        self.assertIn("**Uncommon:**", page)
+        self.assertIn("**Rare:**", page)
+        self.assertIn("## Trophy Garden daily rotation", page)
+        self.assertNotIn("After National Dex", page)
+        self.assertIn(
+            "[Togepi](../pokemon/togepi.md)</span> | — |",
+            page,
+        )
+
+
+    def test_renders_great_marsh_daily_pool_with_both_dex_groups(self) -> None:
+        record = {
+            "header_id": 504,
+            "internal_name": "GreatMarsh1",
+            "location_name_id": 7,
+            "name": "Great Marsh",
+            "matrix_id": 0,
+            "area_data_id": 2,
+            "level_script_id": 12,
+            "text_archive_id": 433,
+            "day_music_id": 1103,
+            "night_music_id": 1119,
+            "weather_id": 0,
+            "camera_id": 3,
+            "map_flags": 0,
+            "event_file_id": None,
+            "encounter_id": None,
+            "trainers": [],
+            "warps": [],
+            "connections": [],
+            "daily_encounter_pool": {
+                "kind": "great_marsh",
+                "species": [{"species_id": 479, "name": "Rotom"}],
+                "pre_national_dex_species": [{"species_id": 175, "name": "Togepi"}],
+            },
+        }
+        dataset = {"records": [record]}
+        references = ReferenceIndex.from_datasets(
+            {
+                "pokemon": {
+                    "records": [
+                        {
+                            "public": True,
+                            "member": 175,
+                            "national_dex_id": 175,
+                            "name": "Togepi",
+                            "slug": "togepi",
+                            "sprite": {"url": "https://example.test/togepi.png"},
+                        },
+                        {
+                            "public": True,
+                            "member": 479,
+                            "national_dex_id": 479,
+                            "name": "Rotom",
+                            "slug": "rotom",
+                            "sprite": {"url": "https://example.test/rotom.png"},
+                        },
+                    ]
+                },
+            }
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output, references=references)
+            page = (output / "header-504.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Great Marsh daily rotation", page)
+        self.assertIn("**After National Dex:**", page)
+        self.assertIn("**Before National Dex:**", page)
+        self.assertIn("[Rotom](../pokemon/rotom.md)", page)
+        self.assertIn("[Togepi](../pokemon/togepi.md)", page)
+        self.assertIn('<a href="#great-marsh-daily-rotation">Yes</a>', page)
 
 
 if __name__ == "__main__":

@@ -14,8 +14,11 @@ from romwiki.pipeline.map_headers import (
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
+    BonusEncounterSpecies,
     Gen4Location,
     LocationConnection,
+    LocationDailyEncounterPool,
+    LocationHoneyTree,
     LocationItem,
     LocationNpcTrade,
     LocationPokemonGift,
@@ -60,6 +63,7 @@ def extract_location_dataset(
         scripts_path = profile.layout["scripts"]
         item_data_path = profile.layout["item_data"]
         npc_trades_path = profile.layout["npc_trades"]
+        bonus_encounters_path = profile.layout["bonus_encounters"]
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
@@ -129,6 +133,17 @@ def extract_location_dataset(
             "matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS
         )
     )
+    honey_tree_header_ids = frozenset(
+        profile.parameters.get("honey_tree_header_ids", engine.HONEY_TREE_HEADER_IDS)
+    )
+    great_marsh_header_ids = frozenset(
+        profile.parameters.get(
+            "great_marsh_header_ids", engine.GREAT_MARSH_HEADER_IDS
+        )
+    )
+    trophy_garden_header_id = profile.parameters.get(
+        "trophy_garden_header_id", engine.TROPHY_GARDEN_HEADER_ID
+    )
     arm9_load_address = code_load_address(platform, result.image)
 
     filesystem = platform.filesystem_from_image(result.image)
@@ -190,6 +205,33 @@ def extract_location_dataset(
             item_count=len(item_names),
         )
         for index in range(len(npc_trades.members))
+    )
+    bonus_encounters = platform.archive_cls.from_bytes(
+        filesystem.read(bonus_encounters_path)
+    )
+
+    def _bonus_species(member: int) -> tuple[BonusEncounterSpecies, ...]:
+        return tuple(
+            BonusEncounterSpecies(species_id=species_id, name=pokemon_names[species_id])
+            for species_id in engine.parse_species_list(bonus_encounters.read(member))
+        )
+
+    honey_tree = LocationHoneyTree(
+        common=_bonus_species(engine.GEN4_HONEY_TREE_COMMON_MEMBER),
+        uncommon=_bonus_species(engine.GEN4_HONEY_TREE_UNCOMMON_MEMBER),
+        rare=_bonus_species(engine.GEN4_HONEY_TREE_RARE_MEMBER),
+    )
+    trophy_garden_pool = LocationDailyEncounterPool(
+        kind="trophy_garden",
+        species=_bonus_species(engine.GEN4_TROPHY_GARDEN_MEMBER),
+        pre_national_dex_species=None,
+    )
+    great_marsh_pool = LocationDailyEncounterPool(
+        kind="great_marsh",
+        species=_bonus_species(engine.GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER),
+        pre_national_dex_species=_bonus_species(
+            engine.GEN4_GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
+        ),
     )
     common_mart_items = engine.parse_common_mart_inventory(
         arm9_data, offset=common_mart_inventory_offset, item_count=len(item_names)
@@ -428,6 +470,18 @@ def extract_location_dataset(
                 ],
                 roaming_activations=roaming_by_script[header.script_file_id],
                 npc_trades=npc_trades_by_script[header.script_file_id],
+                honey_tree=(
+                    honey_tree
+                    if header.header_id in honey_tree_header_ids
+                    else None
+                ),
+                daily_encounter_pool=(
+                    great_marsh_pool
+                    if header.header_id in great_marsh_header_ids
+                    else trophy_garden_pool
+                    if header.header_id == trophy_garden_header_id
+                    else None
+                ),
             ).to_dict()
         )
     return {

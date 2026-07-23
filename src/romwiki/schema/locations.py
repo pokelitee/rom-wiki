@@ -93,6 +93,26 @@ class LocationRoamingActivation:
 
 
 @dataclass(frozen=True, slots=True)
+class BonusEncounterSpecies:
+    species_id: int
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class LocationHoneyTree:
+    common: tuple[BonusEncounterSpecies, ...]
+    uncommon: tuple[BonusEncounterSpecies, ...]
+    rare: tuple[BonusEncounterSpecies, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LocationDailyEncounterPool:
+    kind: str
+    species: tuple[BonusEncounterSpecies, ...]
+    pre_national_dex_species: tuple[BonusEncounterSpecies, ...] | None
+
+
+@dataclass(frozen=True, slots=True)
 class LocationNpcTrade:
     trade_id: int
     requested_species_id: int
@@ -140,6 +160,8 @@ class Gen4Location:
     static_encounters: tuple[LocationStaticEncounter, ...]
     roaming_activations: tuple[LocationRoamingActivation, ...]
     npc_trades: tuple[LocationNpcTrade, ...]
+    honey_tree: LocationHoneyTree | None
+    daily_encounter_pool: LocationDailyEncounterPool | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

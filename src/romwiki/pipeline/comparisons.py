@@ -59,6 +59,7 @@ _FIELDS = {
         "map_flags", "event_file_id", "encounter_id", "connections",
         "warps", "items", "shops", "pokemon_gifts", "npc_trades",
         "static_encounters", "roaming_activations", "trainers",
+        "honey_tree", "daily_encounter_pool",
     ),
 }
 

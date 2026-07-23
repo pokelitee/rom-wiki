@@ -10,8 +10,11 @@ from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
 from romwiki.schema.items import Gen4Item, ItemPartyEffects
 from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
 from romwiki.schema.locations import (
+    BonusEncounterSpecies,
     Gen4Location,
     LocationConnection,
+    LocationDailyEncounterPool,
+    LocationHoneyTree,
     LocationItem,
     LocationNpcTrade,
     LocationPokemonGift,
@@ -68,6 +71,9 @@ __all__ = [
     "LocationShopItem",
     "LocationTrainerReference",
     "LocationWarp",
+    "LocationHoneyTree",
+    "LocationDailyEncounterPool",
+    "BonusEncounterSpecies",
     "Gen4Move",
     "Gen4LevelUpLearnset",
     "LevelUpMove",

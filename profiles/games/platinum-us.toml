@@ -27,6 +27,7 @@ learnsets = "poketool/personal/wotbl.narc"
 evolutions = "poketool/personal/evo.narc"
 item_data = "itemtool/itemdata/pl_item_data.narc"
 npc_trades = "fielddata/pokemon_trade/fld_trade.narc"
+bonus_encounters = "arc/encdata_ex.narc"
 
 [parameters]
 map_header_offset = 0xE601C
