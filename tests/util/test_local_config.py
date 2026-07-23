@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.util.errors import LocalConfigError
 from romwiki.util.local_config import LocalGameRegistry

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import struct
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from romwiki.util.errors import InvalidRomError
-
 
 _MINIMUM_HEADER_SIZE = 0x200
 

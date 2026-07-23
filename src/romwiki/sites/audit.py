@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+import posixpath
+import re
 from bisect import bisect_right
 from dataclasses import dataclass
 from pathlib import Path
-import posixpath
-import re
 from urllib.parse import unquote, urlsplit
 
 from romwiki.util.errors import SiteError
-
 
 _CUSTOM_CLASS = re.compile(r"\brw-[a-zA-Z0-9_-]+\b")
 _CUSTOM_CSS_CLASS = re.compile(r"\.((?:rw-)[a-zA-Z0-9_-]+)")

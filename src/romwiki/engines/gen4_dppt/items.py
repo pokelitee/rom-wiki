@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import Gen4Item, ItemPartyEffects, RecordProvenance
-
+from romwiki.util.errors import InvalidRomError
 
 GEN4_ITEM_RECORD_SIZE = 34
 GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE = 8

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import struct
+from dataclasses import dataclass
 
 from romwiki.engines.gen4_dppt.scripts import parse_script_table
 from romwiki.util.errors import InvalidRomError
-
 
 GIVE_POKEMON_COMMAND = 0x0096
 GIVE_EGG_COMMAND = 0x0097

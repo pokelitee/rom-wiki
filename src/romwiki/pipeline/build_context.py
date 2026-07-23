@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from romwiki.util.errors import ProfileError
-from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.abilities import build_ability_dataset
-from romwiki.pipeline.encounters import extract_encounter_dataset
 from romwiki.pipeline.egg_moves import extract_egg_move_dataset
+from romwiki.pipeline.encounters import extract_encounter_dataset
 from romwiki.pipeline.enrich import (
     enrich_encounter_dataset,
     enrich_move_dataset,
@@ -17,6 +15,7 @@ from romwiki.pipeline.enrich import (
     enrich_trainer_dataset,
 )
 from romwiki.pipeline.evolutions import extract_evolution_dataset
+from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.items import build_item_dataset, extract_item_dataset
 from romwiki.pipeline.learnsets import extract_learnset_dataset
 from romwiki.pipeline.locations import extract_location_dataset
@@ -25,13 +24,13 @@ from romwiki.pipeline.moves import extract_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset
-from romwiki.pipeline.identify import InspectionResult
-from romwiki.sources import PokeDBGeneration
 from romwiki.schema.versions import (
     CACHE_MANIFEST_SCHEMA_VERSION,
     RAW_SCHEMA_VERSION_BY_CACHE_KEY,
 )
-
+from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import ProfileError
+from romwiki.util.json_io import write_json_atomic
 
 CACHE_REVISION = 3
 

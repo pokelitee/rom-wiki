@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import struct
+from dataclasses import dataclass
 
 from romwiki.engines.gen4_dppt.constants import NATURE_NAMES
 from romwiki.engines.gen4_dppt.scripts import parse_script_table
 from romwiki.util.errors import InvalidRomError
-
 
 NPC_TRADE_RECORD_SIZE = 80
 INIT_NPC_TRADE = 0x0226

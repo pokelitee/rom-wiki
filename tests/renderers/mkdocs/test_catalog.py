@@ -1,10 +1,18 @@
 from __future__ import annotations
 
-from pathlib import Path
+import re
 import tempfile
 import unittest
+from pathlib import Path
 
-from romwiki.renderers.mkdocs.catalog import write_text
+from romwiki.renderers.mkdocs.catalog import _SKELETON_FILTER_COUNTS, write_text
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+CATALOG_CONFIG_JS = (
+    REPOSITORY_ROOT
+    / "sites/shared/overrides/assets/javascripts/catalog/config.js"
+)
+_CATALOG_BLOCK = re.compile(r"^  (\w+): \{\n(.*?)\n  \},", re.MULTILINE | re.DOTALL)
 
 
 class WriteTextTests(unittest.TestCase):
@@ -34,6 +42,29 @@ class WriteTextTests(unittest.TestCase):
             write_text(path, "# Goodbye\n")
 
             self.assertEqual(path.read_text(encoding="utf-8"), "# Goodbye\n")
+
+
+class SkeletonFilterCountsTests(unittest.TestCase):
+    """Guards `_SKELETON_FILTER_COUNTS` against drifting from the interactive
+    catalog's actual filter/range configuration in `catalog/config.js`.
+    """
+
+    def test_matches_the_javascript_catalog_configuration(self) -> None:
+        text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
+        expected = {}
+        for kind, body in _CATALOG_BLOCK.findall(text):
+            filter_count = range_count = 0
+            for line in body.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("filters:"):
+                    filter_count = stripped.count("{ key:")
+                elif stripped.startswith("ranges:"):
+                    range_count = stripped.count("{ key:")
+            # search box (1) + filters (plus the injected change-status
+            # filter) + two fields per range + sort-by (1) + direction (1).
+            expected[kind] = 1 + (filter_count + 1) + range_count * 2 + 1 + 1
+
+        self.assertEqual(_SKELETON_FILTER_COUNTS, expected)
 
 
 if __name__ == "__main__":

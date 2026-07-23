@@ -9,7 +9,6 @@ from romwiki.profiles.loader import ProfileRepository
 from romwiki.profiles.models import HashMatch
 from romwiki.util.errors import ProfileError
 
-
 _DEFAULT_PLATFORM = "nintendo-ds"
 
 

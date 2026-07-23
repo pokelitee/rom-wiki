@@ -1,16 +1,14 @@
-from romwiki.engines.gen4_dppt.personal import (
-    GEN4_BASE_SPECIES_COUNT,
-    PERSONAL_FORM_MEMBERS,
-    PERSONAL_INTERNAL_MEMBERS,
-    PERSONAL_RECORD_SIZE,
-    parse_personal_record,
-)
 from romwiki.engines.gen4_dppt.constants import (
     GEN4_ARCHIVE_MEMBER_NONE,
     GEN4_MAX_FRIENDSHIP,
     PLATINUM_DYNAMIC_WARP_HEADER_ID,
     PLATINUM_DYNAMIC_WARP_ID,
     PLATINUM_MATRIX_VOID_HEADER_IDS,
+)
+from romwiki.engines.gen4_dppt.egg_moves import (
+    EGG_MOVE_SPECIES_MARKER_BASE,
+    EGG_MOVE_TABLE_TERMINATOR,
+    parse_egg_move_table,
 )
 from romwiki.engines.gen4_dppt.encounters import (
     DUAL_SLOT_GAMES,
@@ -20,26 +18,6 @@ from romwiki.engines.gen4_dppt.encounters import (
     GEN4_WATER_SLOT_CHANCES,
     parse_encounter_record,
 )
-from romwiki.engines.gen4_dppt.map_headers import (
-    MAP_HEADER_SIZE,
-    PlatinumMapHeader,
-    parse_platinum_map_headers,
-)
-from romwiki.engines.gen4_dppt.map_matrices import Gen4MapMatrix, parse_map_matrix
-from romwiki.engines.gen4_dppt.messages import parse_english_message_archive
-from romwiki.engines.gen4_dppt.items import (
-    GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE,
-    GEN4_ITEM_FIELD_USE_NAMES,
-    GEN4_ITEM_POCKET_NAMES,
-    GEN4_ITEM_RECORD_SIZE,
-    find_item_archive_members,
-    parse_item_record,
-)
-from romwiki.engines.gen4_dppt.trainers import (
-    TRAINER_RECORD_SIZE,
-    parse_trainer_class_genders,
-    parse_trainer_record,
-)
 from romwiki.engines.gen4_dppt.events import (
     Gen4BackgroundEvent,
     Gen4MapEvents,
@@ -48,28 +26,6 @@ from romwiki.engines.gen4_dppt.events import (
     parse_map_events,
     parse_object_events,
     parse_warp_events,
-)
-from romwiki.engines.gen4_dppt.scripts import (
-    Gen4RoamingActivationCommand,
-    Gen4StaticEncounterCommand,
-    Gen4TrainerBattleCommand,
-    PLATINUM_ROAMING_SLOT_COUNT,
-    parse_roaming_activation_commands,
-    parse_script_table,
-    parse_static_encounter_commands,
-    parse_trainer_battle_commands,
-)
-from romwiki.engines.gen4_dppt.moves import MOVE_RECORD_SIZE, parse_move_record
-from romwiki.engines.gen4_dppt.learnsets import (
-    LEARNSET_TERMINATOR,
-    LEVEL_SHIFT,
-    MOVE_ID_MASK,
-    parse_level_up_learnset,
-)
-from romwiki.engines.gen4_dppt.egg_moves import (
-    EGG_MOVE_SPECIES_MARKER_BASE,
-    EGG_MOVE_TABLE_TERMINATOR,
-    parse_egg_move_table,
 )
 from romwiki.engines.gen4_dppt.evolutions import (
     EVOLUTION_RECORD_SIZE,
@@ -85,15 +41,35 @@ from romwiki.engines.gen4_dppt.gifts import (
     parse_egg_gift_command,
     parse_pokemon_gift_commands,
 )
+from romwiki.engines.gen4_dppt.items import (
+    GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE,
+    GEN4_ITEM_FIELD_USE_NAMES,
+    GEN4_ITEM_POCKET_NAMES,
+    GEN4_ITEM_RECORD_SIZE,
+    find_item_archive_members,
+    parse_item_record,
+)
+from romwiki.engines.gen4_dppt.learnsets import (
+    LEARNSET_TERMINATOR,
+    LEVEL_SHIFT,
+    MOVE_ID_MASK,
+    parse_level_up_learnset,
+)
 from romwiki.engines.gen4_dppt.machines import (
     GEN4_MACHINE_COUNT,
     GEN4_TM_COUNT,
     parse_machine_move_table,
 )
+from romwiki.engines.gen4_dppt.map_headers import (
+    MAP_HEADER_SIZE,
+    PlatinumMapHeader,
+    parse_platinum_map_headers,
+)
+from romwiki.engines.gen4_dppt.map_matrices import Gen4MapMatrix, parse_map_matrix
 from romwiki.engines.gen4_dppt.marts import (
     COMMON_MART_COMMAND,
-    DECORATION_RECORD_SIZE,
     DECORATION_MART_COMMAND,
+    DECORATION_RECORD_SIZE,
     FRONTIER_MART_COMMAND,
     ITEM_RECORD_SIZE,
     SEAL_MART_COMMAND,
@@ -109,13 +85,24 @@ from romwiki.engines.gen4_dppt.marts import (
     parse_seal_price_table,
     parse_specialty_mart_inventories,
 )
-from romwiki.engines.gen4_dppt.tutors import (
-    TUTOR_COMPATIBILITY_RECORD_SIZE,
-    TUTOR_RECORD_SIZE,
-    parse_tutor_compatibility_table,
-    parse_tutor_move_table,
-    parse_special_tutor_move,
-    parse_special_tutor_species,
+from romwiki.engines.gen4_dppt.messages import parse_english_message_archive
+from romwiki.engines.gen4_dppt.moves import MOVE_RECORD_SIZE, parse_move_record
+from romwiki.engines.gen4_dppt.personal import (
+    GEN4_BASE_SPECIES_COUNT,
+    PERSONAL_FORM_MEMBERS,
+    PERSONAL_INTERNAL_MEMBERS,
+    PERSONAL_RECORD_SIZE,
+    parse_personal_record,
+)
+from romwiki.engines.gen4_dppt.scripts import (
+    PLATINUM_ROAMING_SLOT_COUNT,
+    Gen4RoamingActivationCommand,
+    Gen4StaticEncounterCommand,
+    Gen4TrainerBattleCommand,
+    parse_roaming_activation_commands,
+    parse_script_table,
+    parse_static_encounter_commands,
+    parse_trainer_battle_commands,
 )
 from romwiki.engines.gen4_dppt.trades import (
     NPC_TRADE_RECORD_SIZE,
@@ -127,6 +114,19 @@ from romwiki.engines.gen4_dppt.trades import (
 from romwiki.engines.gen4_dppt.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
+)
+from romwiki.engines.gen4_dppt.trainers import (
+    TRAINER_RECORD_SIZE,
+    parse_trainer_class_genders,
+    parse_trainer_record,
+)
+from romwiki.engines.gen4_dppt.tutors import (
+    TUTOR_COMPATIBILITY_RECORD_SIZE,
+    TUTOR_RECORD_SIZE,
+    parse_special_tutor_move,
+    parse_special_tutor_species,
+    parse_tutor_compatibility_table,
+    parse_tutor_move_table,
 )
 
 __all__ = [

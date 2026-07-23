@@ -4,9 +4,8 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.platforms.registry import get_platform
-from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.profiles.models import GameProfile
-
+from romwiki.util.errors import DataSourceError, ProfileError
 
 _NAME_TABLES = {
     "type_names": ("type_names_member", 18),

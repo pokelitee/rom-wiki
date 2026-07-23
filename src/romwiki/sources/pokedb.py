@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import re
-from typing import Any
 import unicodedata
+from pathlib import Path
+from typing import Any
 
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import name_slug

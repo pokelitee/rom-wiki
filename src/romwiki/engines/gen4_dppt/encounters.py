@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import (
     EncounterMethod,
     Gen4EncounterArea,
@@ -10,7 +9,7 @@ from romwiki.schema import (
     WalkingEncounterSlot,
     WaterEncounterSlot,
 )
-
+from romwiki.util.errors import InvalidRomError
 
 ENCOUNTER_RECORD_SIZES = (380, 424)
 DUAL_SLOT_GAMES = ("ruby", "sapphire", "emerald", "fire-red", "leaf-green")

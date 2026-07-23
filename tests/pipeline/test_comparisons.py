@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.util.errors import DataSourceError
 from romwiki.pipeline.comparisons import compare_datasets, comparison_by_key
+from romwiki.util.errors import DataSourceError
 
 
 class DatasetComparisonTests(unittest.TestCase):

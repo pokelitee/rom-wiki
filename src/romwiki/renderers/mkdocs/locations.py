@@ -10,17 +10,18 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
+    provenance_section,
     record_nav_link,
     record_navigation,
     sprite_with_link,
     summary_section,
     table_sprite_cell,
-)
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -28,7 +29,6 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     resolved_reference,
 )
-
 
 _SEAL_MART_DAYS = (
     "Sunday",
@@ -195,20 +195,17 @@ def _render_location(
     _append_connections(lines, record["connections"], source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Map identifiers and provenance</summary>",
-            "",
-            f"- Internal map: `{record['internal_name']}`",
-            f"- Header ID: `{record['header_id']}`",
-            f"- Matrix ID: `{record['matrix_id']}`",
-            "",
-            "Source: exact map header, event, script, item-data, and map-matrix "
-            "records from the ROM.",
-            "",
-            "</details>",
-            "",
-        ]
+        provenance_section(
+            [
+                f"- Internal map: `{record['internal_name']}`",
+                f"- Header ID: `{record['header_id']}`",
+                f"- Matrix ID: `{record['matrix_id']}`",
+                "",
+                "Source: exact map header, event, script, item-data, and map-matrix "
+                "records from the ROM.",
+            ],
+            summary="Map identifiers and provenance",
+        )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)

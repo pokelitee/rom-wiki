@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import Gen4Trainer, RecordProvenance, TrainerPokemon
-
+from romwiki.util.errors import InvalidRomError
 
 TRAINER_RECORD_SIZE = 20
 

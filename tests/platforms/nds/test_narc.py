@@ -3,9 +3,8 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.narc import NarcArchive
-
+from romwiki.util.errors import InvalidRomError
 from tests.conftest import make_narc
 
 

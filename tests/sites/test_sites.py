@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from romwiki.util.errors import SiteError
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
-
+from romwiki.util.errors import SiteError
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 

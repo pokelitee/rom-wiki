@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from romwiki.schema.versions import POKEMON_LEARNSETS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.versions import POKEMON_LEARNSETS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.pipeline.identify import InspectionResult
 
 
 def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:

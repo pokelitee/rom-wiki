@@ -7,7 +7,6 @@ from romwiki.engines.gen4_dppt.constants import NATURE_NAMES
 from romwiki.schema.trainers import NormalizedTrainerPokemon
 from romwiki.util.errors import DataSourceError
 
-
 _STATS = ("hp", "attack", "defense", "special_attack", "special_defense", "speed")
 _LCRNG_MULTIPLIER = 0x41C64E6D
 _LCRNG_INCREMENT = 0x6073

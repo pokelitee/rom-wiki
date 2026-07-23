@@ -8,7 +8,6 @@ from romwiki.engines.gen4_dppt import (
     parse_pokemon_gift_commands,
 )
 from romwiki.util.errors import InvalidRomError
-
 from tests.conftest import make_script
 
 

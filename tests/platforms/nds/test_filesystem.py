@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
 import struct
 import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.platforms.nds.filesystem import NintendoDSFileSystem
 from romwiki.platforms.nds.header import NintendoDSHeader

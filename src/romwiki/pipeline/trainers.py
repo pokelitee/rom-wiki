@@ -3,15 +3,16 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
-from romwiki.schema.versions import TRAINERS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
+from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
+from romwiki.schema import TrainerLocation, TrainerScriptReference
+from romwiki.schema.versions import TRAINERS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.reference_names import extract_reference_names
-from romwiki.schema import TrainerLocation, TrainerScriptReference
 
 
 def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -144,11 +145,10 @@ def _extract_trainer_locations(
         "null_event_id", engine.GEN4_ARCHIVE_MEMBER_NONE
     )
 
-    with result.image.path.open("rb") as stream:
-        stream.seek(result.image.header.arm9_offset + table_offset)
-        header_data = stream.read(count * engine.MAP_HEADER_SIZE)
-    headers = engine.parse_platinum_map_headers(
-        header_data, filesystem.read(map_names_path), count=count
+    arm9_data = read_arm9(result.image)
+    headers = parse_map_header_table(
+        engine, arm9_data, filesystem, map_names_path,
+        table_offset=table_offset, count=count,
     )
     location_names = engine.parse_english_message_archive(
         messages.read(location_names_member)

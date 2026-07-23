@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.pipeline.enrich import enrich_personal_dataset
 from romwiki.renderers.mkdocs import render_pokemon_pages
@@ -13,7 +13,6 @@ from romwiki.renderers.mkdocs.pokemon import (
     _sprite_gallery,
 )
 from romwiki.sources import PokeDBGeneration
-
 
 FORM_SPECIES = {
     "deoxys-attack": "deoxys",

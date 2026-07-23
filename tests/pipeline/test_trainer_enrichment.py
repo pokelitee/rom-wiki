@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.pipeline.enrich import _enrich_trainer, enrich_trainer_dataset
 from romwiki.renderers.mkdocs import render_trainer_pages

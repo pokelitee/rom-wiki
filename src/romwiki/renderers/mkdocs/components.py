@@ -11,7 +11,6 @@ from romwiki.renderers.mkdocs.references import (
     resolved_reference,
 )
 
-
 DISPLAY_NAMES = {
     "poke-balls": "Poké Balls",
     "poke-radar": "Poké Radar",
@@ -385,6 +384,20 @@ def reference_description(record: dict[str, Any], empty_message: str) -> list[st
     if not lines:
         lines = empty_state(empty_message)
     return lines
+
+
+def provenance_section(
+    body: list[str], *, summary: str = "Data provenance"
+) -> list[str]:
+    return [
+        '<details class="rw-source-details" markdown="1">',
+        f"<summary>{escape(summary)}</summary>",
+        "",
+        *body,
+        "",
+        "</details>",
+        "",
+    ]
 
 
 def shard_cost(costs: dict[str, int]) -> str:

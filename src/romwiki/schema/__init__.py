@@ -1,9 +1,4 @@
-from romwiki.schema.pokemon import (
-    PokemonPersonalData,
-    RecordProvenance,
-    StatBlock,
-    WildHeldItems,
-)
+from romwiki.schema.egg_moves import Gen4EggMoveSet
 from romwiki.schema.encounters import (
     EncounterLocation,
     EncounterMethod,
@@ -11,30 +6,35 @@ from romwiki.schema.encounters import (
     WalkingEncounterSlot,
     WaterEncounterSlot,
 )
+from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
+from romwiki.schema.items import Gen4Item, ItemPartyEffects
+from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
+from romwiki.schema.locations import (
+    Gen4Location,
+    LocationConnection,
+    LocationItem,
+    LocationNpcTrade,
+    LocationPokemonGift,
+    LocationShop,
+    LocationShopItem,
+    LocationStaticEncounter,
+    LocationTrainerReference,
+    LocationWarp,
+)
+from romwiki.schema.machines import Gen4Machine
+from romwiki.schema.moves import Gen4Move
+from romwiki.schema.pokemon import (
+    PokemonPersonalData,
+    RecordProvenance,
+    StatBlock,
+    WildHeldItems,
+)
 from romwiki.schema.trainers import (
     Gen4Trainer,
     TrainerLocation,
     TrainerPokemon,
     TrainerScriptReference,
 )
-from romwiki.schema.locations import (
-    Gen4Location,
-    LocationConnection,
-    LocationItem,
-    LocationShop,
-    LocationPokemonGift,
-    LocationNpcTrade,
-    LocationStaticEncounter,
-    LocationShopItem,
-    LocationTrainerReference,
-    LocationWarp,
-)
-from romwiki.schema.moves import Gen4Move
-from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
-from romwiki.schema.egg_moves import Gen4EggMoveSet
-from romwiki.schema.items import Gen4Item, ItemPartyEffects
-from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
-from romwiki.schema.machines import Gen4Machine
 from romwiki.schema.tutors import (
     Gen4SpecialTutorMove,
     Gen4TutorCompatibility,

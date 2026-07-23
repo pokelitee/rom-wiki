@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.engines.gen4_dppt import parse_encounter_record
 from romwiki.pipeline.enrich import enrich_encounter_dataset

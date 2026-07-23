@@ -10,19 +10,20 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
     display_name,
     fact_grid,
+    provenance_section,
     record_nav_link,
     record_navigation,
     reference_description,
     sprite_with_link,
     table_sprite_cell,
-)
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -187,19 +188,15 @@ def _render_record(
     _append_evolutions(lines, record["evolutions"], source_file, references)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Data provenance</summary>",
-            "",
-            "The name, item-data member mapping, mechanics, and references are exact "
-            "ROM facts. Numeric effect IDs are retained when their behavior is "
-            "implemented by game code rather than the item record. Effect "
-            "description, flavor text, and icon come from PokéDB / PokéAPI "
-            "reference data.",
-            "",
-            "</details>",
-            "",
-        ]
+        provenance_section(
+            [
+                "The name, item-data member mapping, mechanics, and references are exact "
+                "ROM facts. Numeric effect IDs are retained when their behavior is "
+                "implemented by game code rather than the item record. Effect "
+                "description, flavor text, and icon come from PokéDB / PokéAPI "
+                "reference data.",
+            ]
+        )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import struct
+from dataclasses import dataclass
 
 from romwiki.util.errors import InvalidRomError
-
 
 SCRIPT_TABLE_END = 0xFD13
 START_TRAINER_BATTLE = 0x00E5

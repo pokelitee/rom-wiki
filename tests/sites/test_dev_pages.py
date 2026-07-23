@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 
 from romwiki.sites.dev_pages import DevPages
 from romwiki.util.errors import SiteError
-
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 _MANIFEST = (

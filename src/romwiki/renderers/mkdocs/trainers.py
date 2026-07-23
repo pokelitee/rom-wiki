@@ -10,9 +10,15 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
+    provenance_section,
     record_nav_link,
     record_navigation,
     sprite_with_link,
@@ -20,18 +26,12 @@ from romwiki.renderers.mkdocs.components import (
     table_sprite_cell,
     type_badges,
 )
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
-)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     entity_reference,
     unique_references,
 )
-
 
 _SAME_NAME_COLLAPSE_THRESHOLD = 5
 
@@ -272,17 +272,7 @@ def _render_trainer(
         lines, record, same_name_records or [], source_file
     )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
-    lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Data provenance</summary>",
-            "",
-            *_trainer_provenance(record),
-            "",
-            "</details>",
-            "",
-        ]
-    )
+    lines.extend(provenance_section(_trainer_provenance(record)))
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
 

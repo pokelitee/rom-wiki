@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import struct
+from dataclasses import dataclass
 
 from romwiki.util.errors import InvalidRomError
-
 
 MAP_HEADER_SIZE = 24
 INTERNAL_MAP_NAME_SIZE = 16

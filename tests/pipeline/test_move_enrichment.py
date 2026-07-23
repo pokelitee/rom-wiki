@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.pipeline.enrich import enrich_move_dataset
 from romwiki.renderers.mkdocs import render_move_pages

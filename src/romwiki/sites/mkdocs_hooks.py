@@ -8,10 +8,9 @@ from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure.files import Files
 from mkdocs.structure.pages import Page
 
-from romwiki.util.errors import SiteError
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.sites.dev_pages import DevPages
-
+from romwiki.util.errors import SiteError
 
 _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None

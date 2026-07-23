@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import struct
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.reader import NintendoDSImage
-
+from romwiki.util.errors import InvalidRomError
 
 _ROOT_DIRECTORY_ID = 0xF000
 

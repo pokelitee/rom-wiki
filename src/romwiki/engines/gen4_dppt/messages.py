@@ -5,7 +5,6 @@ import struct
 
 from romwiki.util.errors import InvalidRomError
 
-
 _CHARACTERS = {
     0x120: "&",
     **{0x121 + index: value for index, value in enumerate(string.digits)},

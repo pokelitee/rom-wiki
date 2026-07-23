@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+
+from romwiki.engines.registry import get_engine
+from romwiki.pipeline.identify import InspectionResult
+from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import (
     ITEMS_ENRICHED_SCHEMA_VERSION,
     ITEMS_RAW_SCHEMA_VERSION,
 )
-
-from romwiki.engines.registry import get_engine
-from romwiki.platforms.registry import get_platform
+from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.pipeline.identify import InspectionResult
-from romwiki.sources import PokeDBGeneration
 
 
 def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:

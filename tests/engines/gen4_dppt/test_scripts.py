@@ -5,7 +5,6 @@ import unittest
 
 from romwiki.engines.gen4_dppt import parse_trainer_battle_commands
 from romwiki.util.errors import InvalidRomError
-
 from tests.conftest import make_script
 
 

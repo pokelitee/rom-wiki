@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.header import NintendoDSHeader
-
+from romwiki.util.errors import InvalidRomError
 from tests.conftest import make_header
 
 

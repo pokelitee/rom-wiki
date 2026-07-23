@@ -10,6 +10,11 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
@@ -18,6 +23,7 @@ from romwiki.renderers.mkdocs.components import (
     fact_grid,
     machine_link,
     pokemon_summary,
+    provenance_section,
     record_nav_link,
     record_navigation,
     sprite_with_link,
@@ -25,11 +31,6 @@ from romwiki.renderers.mkdocs.components import (
     table_sprite_cell,
     tutor_requirement,
     type_badges,
-)
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
 
@@ -258,60 +259,56 @@ def _render_record(
     _append_egg_moves(lines, egg_moves, source_file, move_lookup)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Data provenance</summary>",
-            "",
-            (
-                "Source: exact ROM record from "
-                f"`{record['provenance']['archive']}` member "
-                f"`{record['provenance']['member']}`."
-            ),
-            *(
-                [
-                    "Type name source: ROM message table "
-                    f"`{type_name_source['archive']}` member "
-                    f"`{type_name_source['member']}`."
-                ]
-                if type_name_source is not None
-                else []
-            ),
-            *(
-                [
-                    (
-                        "Egg move source: exact ROM table entry at overlay offset "
-                        f"`0x{record['egg_move_provenance']['overlay_offset']:X}`."
-                    )
-                ]
-                if record.get("egg_move_provenance") is not None
-                else []
-            ),
-            *(
-                [
-                    (
-                        "Level-up learnset source: exact ROM record from "
-                        f"`{record['learnset_provenance']['archive']}` member "
-                        f"`{record['learnset_provenance']['member']}`."
-                    )
-                ]
-                if record.get("learnset_provenance") is not None
-                else []
-            ),
-            *(
-                [
-                    (
-                        "Evolution source: exact ROM record from "
-                        f"`{record['evolution_provenance']['archive']}` member "
-                        f"`{record['evolution_provenance']['member']}`."
-                    )
-                ]
-                if record.get("evolution_provenance") is not None
-                else []
-            ),
-            "",
-            "</details>",
-            "",
-        ]
+        provenance_section(
+            [
+                (
+                    "Source: exact ROM record from "
+                    f"`{record['provenance']['archive']}` member "
+                    f"`{record['provenance']['member']}`."
+                ),
+                *(
+                    [
+                        "Type name source: ROM message table "
+                        f"`{type_name_source['archive']}` member "
+                        f"`{type_name_source['member']}`."
+                    ]
+                    if type_name_source is not None
+                    else []
+                ),
+                *(
+                    [
+                        (
+                            "Egg move source: exact ROM table entry at overlay offset "
+                            f"`0x{record['egg_move_provenance']['overlay_offset']:X}`."
+                        )
+                    ]
+                    if record.get("egg_move_provenance") is not None
+                    else []
+                ),
+                *(
+                    [
+                        (
+                            "Level-up learnset source: exact ROM record from "
+                            f"`{record['learnset_provenance']['archive']}` member "
+                            f"`{record['learnset_provenance']['member']}`."
+                        )
+                    ]
+                    if record.get("learnset_provenance") is not None
+                    else []
+                ),
+                *(
+                    [
+                        (
+                            "Evolution source: exact ROM record from "
+                            f"`{record['evolution_provenance']['archive']}` member "
+                            f"`{record['evolution_provenance']['member']}`."
+                        )
+                    ]
+                    if record.get("evolution_provenance") is not None
+                    else []
+                ),
+            ]
+        )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)

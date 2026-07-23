@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import (
     Gen4SpecialTutorMove,
     Gen4TutorCompatibility,
     Gen4TutorMove,
     ShardCosts,
 )
-
+from romwiki.util.errors import InvalidRomError
 
 TUTOR_RECORD_SIZE = 12
 TUTOR_COMPATIBILITY_RECORD_SIZE = 5

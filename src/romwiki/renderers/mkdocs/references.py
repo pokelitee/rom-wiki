@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import posixpath
 from dataclasses import dataclass
 from html import escape
 from pathlib import PurePosixPath
-import posixpath
 from typing import Any, Callable, Iterable, Mapping
 
 

@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from romwiki import __version__
-from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.schema.versions import MANIFEST_SCHEMA_VERSION
+from romwiki.util.json_io import write_json_atomic
 
 
 def create_manifest(result: InspectionResult) -> dict[str, Any]:

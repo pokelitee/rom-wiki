@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import Gen4Machine
-
+from romwiki.util.errors import InvalidRomError
 
 GEN4_MACHINE_COUNT = 100
 GEN4_TM_COUNT = 92

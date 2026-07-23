@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from pathlib import Path
 import subprocess
 import sys
+from collections.abc import Callable, Sequence
+from pathlib import Path
 
-from romwiki.util.errors import SiteError
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
-
+from romwiki.util.errors import SiteError
 
 CommandRunner = Callable[[Sequence[str]], None]
 

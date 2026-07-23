@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import EvolutionEntry, Gen4EvolutionSet, RecordProvenance
-
+from romwiki.util.errors import InvalidRomError
 
 EVOLUTION_RECORD_SIZE = 44
 EVOLUTION_SLOT_COUNT = 7

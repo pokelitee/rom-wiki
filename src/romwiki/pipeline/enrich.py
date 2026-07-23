@@ -5,9 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.util.errors import DataSourceError
-from romwiki.util.json_io import write_json_atomic
-from romwiki.sources import PokeDBGeneration
 from romwiki.pipeline.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
@@ -16,11 +13,13 @@ from romwiki.schema.versions import (
     ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
     MOVES_ENRICHED_SCHEMA_VERSION,
     POKEMON_ENRICHED_SCHEMA_VERSION,
-    TRAINERS_ENRICHED_SCHEMA_VERSION,
     TRAINER_PARTY_SCHEMA_VERSION,
+    TRAINERS_ENRICHED_SCHEMA_VERSION,
 )
+from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import DataSourceError
+from romwiki.util.json_io import write_json_atomic
 from romwiki.util.text import name_slug, title_case_slug
-
 
 TYPE_NAMES = (
     "normal", "fighting", "flying", "poison", "ground", "rock", "bug",

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import (
     PokemonPersonalData,
     RecordProvenance,
     StatBlock,
     WildHeldItems,
 )
-
+from romwiki.util.errors import InvalidRomError
 
 PERSONAL_RECORD_SIZE = 44
 GEN4_BASE_SPECIES_COUNT = 493

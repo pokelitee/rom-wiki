@@ -4,10 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
-
 
 _KEYS = {
     "pokemon": "member",

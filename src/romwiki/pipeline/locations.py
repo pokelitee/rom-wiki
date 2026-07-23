@@ -3,27 +3,27 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
-from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.registry import get_engine
-from romwiki.platforms.registry import get_platform
-from romwiki.util.errors import InvalidRomError, ProfileError
-from romwiki.util.json_io import write_json_atomic
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
 from romwiki.pipeline.trainers import extract_trainer_dataset
+from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     Gen4Location,
     LocationConnection,
     LocationItem,
-    LocationPokemonGift,
     LocationNpcTrade,
-    LocationStaticEncounter,
+    LocationPokemonGift,
     LocationShop,
     LocationShopItem,
+    LocationStaticEncounter,
     LocationTrainerReference,
     LocationWarp,
 )
-
+from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
+from romwiki.util.errors import InvalidRomError, ProfileError
+from romwiki.util.json_io import write_json_atomic
 
 _ITEM_BALL_GRAPHICS_ID = 87
 _VISIBLE_ITEM_SCRIPT_BASE = 7000
@@ -127,14 +127,10 @@ def extract_location_dataset(
     arm9_load_address = result.image.header.arm9_ram_address
 
     filesystem = platform.filesystem_from_image(result.image)
-    with result.image.path.open("rb") as stream:
-        stream.seek(result.image.header.arm9_offset)
-        arm9_data = stream.read(result.image.header.arm9_size)
-    header_data = arm9_data[
-        table_offset : table_offset + count * engine.MAP_HEADER_SIZE
-    ]
-    headers = engine.parse_platinum_map_headers(
-        header_data, filesystem.read(map_names_path), count=count
+    arm9_data = read_arm9(result.image)
+    headers = parse_map_header_table(
+        engine, arm9_data, filesystem, map_names_path,
+        table_offset=table_offset, count=count,
     )
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     location_names = engine.parse_english_message_archive(

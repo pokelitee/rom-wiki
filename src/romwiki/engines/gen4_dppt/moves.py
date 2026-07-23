@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import Gen4Move, RecordProvenance
-
+from romwiki.util.errors import InvalidRomError
 
 MOVE_RECORD_SIZE = 16
 

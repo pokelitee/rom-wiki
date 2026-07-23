@@ -5,7 +5,6 @@ import unittest
 
 from romwiki.engines.gen4_dppt.messages import parse_english_message_archive
 from romwiki.util.errors import InvalidRomError
-
 from tests.engines.gen4_dppt.test_map_headers import _make_message_archive
 
 

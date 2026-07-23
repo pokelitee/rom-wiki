@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import Gen4EggMoveSet
-
+from romwiki.util.errors import InvalidRomError
 
 EGG_MOVE_TABLE_TERMINATOR = 0xFFFF
 EGG_MOVE_SPECIES_MARKER_BASE = 20000

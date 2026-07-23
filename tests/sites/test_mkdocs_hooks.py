@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import types
 import unittest
+from pathlib import Path
 
 from mkdocs.config import load_config
 from mkdocs.structure.files import File, Files
@@ -10,7 +10,6 @@ from mkdocs.structure.pages import Page
 
 from romwiki.sites import mkdocs_hooks
 from romwiki.util.errors import SiteError
-
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 GAME_CONFIG = REPOSITORY_ROOT / "sites/games/renegade-platinum/mkdocs.yml"

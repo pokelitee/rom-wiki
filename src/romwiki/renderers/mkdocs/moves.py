@@ -9,10 +9,16 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     empty_state,
     machine_link,
+    provenance_section,
     record_nav_link,
     record_navigation,
     reference_description,
@@ -21,11 +27,6 @@ from romwiki.renderers.mkdocs.components import (
     table_sprite_cell,
     tutor_requirement,
     type_badges,
-)
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -221,38 +222,35 @@ def _render_record(
         )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Engine details and provenance</summary>",
-            "",
-            "| Native field | Value |",
-            "| ------------ | ----- |",
-            f"| Effect ID | `{record['effect_id']}` |",
-            f"| Target ID | `0x{record['target_id']:04X}` |",
-            f"| Flags | `0x{record['flags']:02X}` |",
-            f"| Contest effect ID | `{record['contest_effect_id']}` |",
-            f"| Contest type ID | `{record['contest_type_id']}` |",
-            "",
-            (
-                "Source: exact ROM record from "
-                f"`{record['provenance']['archive']}` member "
-                f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
-                "shown in their native engine representation. The ROM does not store a "
-                "human-readable effect description; the Effect section and Pokédex "
-                "quote above come from PokéDB / PokéAPI reference data."
-            ),
-            *(
-                [
-                    "Move name source: ROM message table "
-                    f"`{name_source['archive']}` member `{name_source['member']}`."
-                ]
-                if name_source is not None
-                else []
-            ),
-            "",
-            "</details>",
-            "",
-        ]
+        provenance_section(
+            [
+                "| Native field | Value |",
+                "| ------------ | ----- |",
+                f"| Effect ID | `{record['effect_id']}` |",
+                f"| Target ID | `0x{record['target_id']:04X}` |",
+                f"| Flags | `0x{record['flags']:02X}` |",
+                f"| Contest effect ID | `{record['contest_effect_id']}` |",
+                f"| Contest type ID | `{record['contest_type_id']}` |",
+                "",
+                (
+                    "Source: exact ROM record from "
+                    f"`{record['provenance']['archive']}` member "
+                    f"`{record['provenance']['member']}`. Effect, target, and flag IDs are "
+                    "shown in their native engine representation. The ROM does not store a "
+                    "human-readable effect description; the Effect section and Pokédex "
+                    "quote above come from PokéDB / PokéAPI reference data."
+                ),
+                *(
+                    [
+                        "Move name source: ROM message table "
+                        f"`{name_source['archive']}` member `{name_source['member']}`."
+                    ]
+                    if name_source is not None
+                    else []
+                ),
+            ],
+            summary="Engine details and provenance",
+        )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)

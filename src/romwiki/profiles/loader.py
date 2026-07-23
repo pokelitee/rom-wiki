@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import tomllib
+from pathlib import Path
 
-from romwiki.util.errors import ProfileError
 from romwiki.platforms.registry import RomImage
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
+from romwiki.util.errors import ProfileError
 
 
 class ProfileRepository:

@@ -6,10 +6,10 @@ through unmodified, exactly as a real second engine eventually would.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import types
 import unittest
+from pathlib import Path
 
 from romwiki.engines.gen4_dppt import parse_encounter_record
 from romwiki.engines.registry import (
@@ -22,7 +22,6 @@ from romwiki.pipeline.enrich import enrich_encounter_dataset, enrich_personal_da
 from romwiki.renderers.mkdocs import render_encounter_pages, render_pokemon_pages
 from romwiki.sources import PokeDBGeneration
 from tests.pipeline.test_enrichment import _source_record
-
 
 _FAKE_ENGINE_ID = "fake_test_engine"
 

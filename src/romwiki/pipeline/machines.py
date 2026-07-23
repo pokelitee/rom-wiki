@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.identify import InspectionResult
+from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.pipeline.identify import InspectionResult
 
 
 def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:

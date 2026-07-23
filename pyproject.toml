@@ -35,4 +35,4 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.ruff.lint]
-select = ["F"]
+select = ["F", "I"]

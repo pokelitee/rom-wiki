@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from romwiki.util.errors import ProfileError
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
 from romwiki.profiles.loader import ProfileRepository
+from romwiki.util.errors import ProfileError
 from tests.conftest import make_header
 
 

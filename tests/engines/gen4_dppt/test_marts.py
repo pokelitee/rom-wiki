@@ -14,7 +14,6 @@ from romwiki.engines.gen4_dppt import (
     parse_specialty_mart_inventories,
 )
 from romwiki.util.errors import InvalidRomError
-
 from tests.conftest import make_script
 
 

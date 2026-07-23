@@ -2,57 +2,57 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Sequence
 
-from romwiki.util.errors import LocalConfigError, RomWikiError, SiteError
-from romwiki.util.local_config import LocalGameRegistry
+from romwiki.pipeline.build_context import GameBuildContext
+from romwiki.pipeline.comparisons import write_comparison_dataset
+from romwiki.pipeline.egg_moves import (
+    extract_egg_move_dataset,
+    write_egg_move_dataset,
+)
 from romwiki.pipeline.encounters import (
     extract_encounter_dataset,
     write_encounter_dataset,
+)
+from romwiki.pipeline.enrich import (
+    write_enriched_dataset,
 )
 from romwiki.pipeline.evolutions import (
     extract_evolution_dataset,
     write_evolution_dataset,
 )
-from romwiki.pipeline.egg_moves import (
-    extract_egg_move_dataset,
-    write_egg_move_dataset,
-)
-from romwiki.pipeline.identify import InspectionResult, inspect_rom
-from romwiki.pipeline.comparisons import write_comparison_dataset
-from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.game_build import DATASET_KINDS, DatasetBuild, GameBuildWorkflow
+from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.items import (
     extract_item_dataset,
     write_item_dataset,
 )
-from romwiki.pipeline.enrich import (
-    write_enriched_dataset,
-)
-from romwiki.pipeline.locations import extract_location_dataset, write_location_dataset
 from romwiki.pipeline.learnsets import extract_learnset_dataset, write_learnset_dataset
-from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
-from romwiki.pipeline.manifest import create_manifest, write_manifest
+from romwiki.pipeline.locations import extract_location_dataset, write_location_dataset
 from romwiki.pipeline.machines import extract_machine_dataset, write_machine_dataset
+from romwiki.pipeline.manifest import create_manifest, write_manifest
+from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,
-    render_location_pages,
     render_item_pages,
+    render_location_pages,
     render_move_pages,
     render_pokemon_pages,
     render_trainer_pages,
 )
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
-from romwiki.sites.dev_pages import DevPages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import SiteCatalog, audit_site, build_sites
+from romwiki.sites.dev_pages import DevPages
 from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import LocalConfigError, RomWikiError, SiteError
+from romwiki.util.local_config import LocalGameRegistry
 
 
 def build_parser() -> argparse.ArgumentParser:

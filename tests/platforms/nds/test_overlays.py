@@ -3,8 +3,8 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.overlays import parse_overlay_table
+from romwiki.util.errors import InvalidRomError
 
 
 class NintendoDSOverlayTests(unittest.TestCase):

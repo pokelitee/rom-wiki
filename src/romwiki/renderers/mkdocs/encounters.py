@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from collections import Counter
 from html import escape
 from pathlib import Path
 from typing import Any
-from collections import Counter
 
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -11,17 +11,18 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
+    provenance_section,
     record_nav_link,
     record_navigation,
     sprite_with_link,
     summary_section,
     table_sprite_cell,
-)
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -267,22 +268,18 @@ def _render_area(
     _append_special(lines, record["special"], source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Data provenance</summary>",
-            "",
-            (
-                "Source: exact ROM record from "
-                f"`{record['provenance']['archive']}` member "
-                f"`{record['provenance']['member']}`. Chance percentages are not "
-                "stored in the ROM's encounter tables — only each slot's species "
-                "and level(s) are ROM data — they are fixed, publicly documented "
-                "Generation III/IV engine weights applied by slot position."
-            ),
-            "",
-            "</details>",
-            "",
-        ]
+        provenance_section(
+            [
+                (
+                    "Source: exact ROM record from "
+                    f"`{record['provenance']['archive']}` member "
+                    f"`{record['provenance']['member']}`. Chance percentages are not "
+                    "stored in the ROM's encounter tables — only each slot's species "
+                    "and level(s) are ROM data — they are fixed, publicly documented "
+                    "Generation III/IV engine weights applied by slot position."
+                ),
+            ]
+        )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)

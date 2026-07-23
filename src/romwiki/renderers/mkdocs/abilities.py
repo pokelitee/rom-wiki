@@ -9,19 +9,20 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
     empty_state,
+    provenance_section,
     record_nav_link,
     record_navigation,
     reference_description,
     sprite_with_link,
     summary_section,
     table_sprite_cell,
-)
-from romwiki.renderers.mkdocs.comparisons import (
-    add_change_status,
-    comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -165,17 +166,13 @@ def _render_record(
 
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
-        [
-            '<details class="rw-source-details" markdown="1">',
-            "<summary>Data provenance</summary>",
-            "",
-            "The ability name and Pokémon assignments are exact ROM facts. Ability "
-            "behavior is never inferred from the ROM or the name; effect and "
-            "flavor text come from PokéDB / PokéAPI reference data.",
-            "",
-            "</details>",
-            "",
-        ]
+        provenance_section(
+            [
+                "The ability name and Pokémon assignments are exact ROM facts. Ability "
+                "behavior is never inferred from the ROM or the name; effect and "
+                "flavor text come from PokéDB / PokéAPI reference data.",
+            ]
+        )
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)

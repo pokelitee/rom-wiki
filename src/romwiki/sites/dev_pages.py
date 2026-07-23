@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
 import re
 import tomllib
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 
 from romwiki.util.errors import SiteError
-
 
 _PATH_PART = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 

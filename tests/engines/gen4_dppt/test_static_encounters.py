@@ -4,7 +4,6 @@ import struct
 import unittest
 
 from romwiki.engines.gen4_dppt import parse_static_encounter_commands
-
 from tests.conftest import make_script
 
 

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import hashlib
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.platforms.nds.header import NintendoDSHeader
-
+from romwiki.util.errors import InvalidRomError
 
 _HEADER_READ_SIZE = 0x200
 _HASH_CHUNK_SIZE = 1024 * 1024

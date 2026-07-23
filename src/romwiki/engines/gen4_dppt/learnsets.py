@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.util.errors import InvalidRomError
 from romwiki.schema import Gen4LevelUpLearnset, LevelUpMove, RecordProvenance
-
+from romwiki.util.errors import InvalidRomError
 
 LEARNSET_TERMINATOR = 0xFFFF
 MOVE_ID_MASK = 0x01FF

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.map_headers import parse_map_header_table, read_arm9
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
-from romwiki.pipeline.identify import InspectionResult
 
 
 def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -133,12 +134,13 @@ def _extract_special_tutors(
     location_names = engine.parse_english_message_archive(
         messages.read(location_names_member)
     )
-    with result.image.path.open("rb") as stream:
-        stream.seek(result.image.header.arm9_offset + map_header_offset)
-        map_header_data = stream.read(map_header_count * engine.MAP_HEADER_SIZE)
-    headers = engine.parse_platinum_map_headers(
-        map_header_data,
-        filesystem.read(map_names_path),
+    arm9_data = read_arm9(result.image)
+    headers = parse_map_header_table(
+        engine,
+        arm9_data,
+        filesystem,
+        map_names_path,
+        table_offset=map_header_offset,
         count=map_header_count,
     )
 
