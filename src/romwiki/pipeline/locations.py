@@ -251,6 +251,10 @@ def extract_location_dataset(
         script_file_id: tuple(
             LocationRoamingActivation(
                 slot=command.slot,
+                species_id=engine.ROAMING_SLOT_SPECIES_IDS[command.slot],
+                species_name=pokemon_names[
+                    engine.ROAMING_SLOT_SPECIES_IDS[command.slot]
+                ],
                 script_file_id=script_file_id,
                 command_offset=command.offset,
             )

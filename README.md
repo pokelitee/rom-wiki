@@ -16,7 +16,7 @@ Renegade Platinum is the first complete baseline implementation. It identifies
 Nintendo DS images, reads their filesystem and NARC archives, and generates
 normalized datasets and wiki pages for Pokémon, moves, wild encounters,
 trainers, and locations. The location dataset also includes items, shops,
-warps, connections, gifts, static encounters, roaming activation audits,
+warps, connections, gifts, static encounters, roaming activations,
 in-game trades, honey tree encounter pools, and Great Marsh/Trophy Garden
 daily rotation pools. Extracted records retain ROM provenance where practical.
 
@@ -30,11 +30,20 @@ state (trainer ID, a daily seed, or a save-persisted rotation), not ROM data,
 so those selections are out of scope by the same policy that keeps Poké Radar
 chains and dual-slot "today's" pick unrendered elsewhere in this project.
 
-Some Gen IV data categories are known but not yet extracted: the roaming
-Pokémon species/level definitions (only their scripted activations are
-audited), Game Corner prize exchanges, and the ROM's own Pokédex/description
-text banks. Each needs dedicated offset research and is tracked as follow-up
-work rather than silently approximated.
+Each roaming-Pokémon activation is now resolved to its species: the
+species-per-slot assignment is a compiled ARM9 constant (not a NARC table),
+verified against every real scripted activation call across both ROMs
+(Verity Cavern → Mesprit, Fullmoon Island → Cresselia, Eterna City →
+Moltres/Zapdos). Roamer level is also a compiled constant, but its exact ARM9
+bytes were not locatable without a symbol table or disassembler, so level is
+intentionally left unrendered rather than guessed — a hack that rebalances
+difficulty could plausibly have changed it. Renegade Platinum removes all
+three scripted roaming activations that exist in the base game.
+
+Some Gen IV data categories are known but not yet extracted: Game Corner
+prize exchanges and the ROM's own Pokédex/description text banks. Each needs
+dedicated offset research and is tracked as follow-up work rather than
+silently approximated.
 
 The exact USA retail release of Pokémon Platinum is also registered as the
 `platinum-us` profile. It reuses the Generation IV engine and has been validated
@@ -284,8 +293,8 @@ Location pages combine map headers with exact visible and hidden item pickups;
 common, specialty, decoration, weekday seal-shop, and Battle Frontier BP
 inventories and prices; event warps; outdoor map-matrix connections; wild
 encounter tables; literal Pokémon and egg gifts; in-game trades; scripted static
-encounters; roaming activation audits; honey tree and Great Marsh/Trophy Garden
-daily encounter pools; and trainer references. Each map header keeps a stable
+encounters; roaming Pokémon activations; honey tree and Great Marsh/Trophy
+Garden daily encounter pools; and trainer references. Each map header keeps a stable
 page even when several interiors share the same displayed location name.
 
 Extract and render move mechanics:

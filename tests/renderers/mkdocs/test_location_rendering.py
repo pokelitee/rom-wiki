@@ -28,7 +28,13 @@ class LocationRenderingTests(unittest.TestCase):
             "event_file_id": 42,
             "encounter_id": 3,
             "roaming_activations": [
-                {"slot": 2, "script_file_id": 51, "command_offset": 0x140}
+                {
+                    "slot": 2,
+                    "species_id": 491,
+                    "species_name": "Darkrai",
+                    "script_file_id": 51,
+                    "command_offset": 0x140,
+                }
             ],
             "trainers": [
                 {
@@ -245,6 +251,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("header-047.md", page)
         self.assertIn("header-344.md", page)
         self.assertIn("## Roaming activations", page)
+        self.assertIn("Darkrai", page)
         self.assertIn("| 2 | `51@0x140` |", page)
         self.assertIn("| Music ID | day `1103`, night `1119` |", page)
         self.assertIn("| Weather ID | `0` |", page)

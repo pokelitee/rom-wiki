@@ -15,6 +15,17 @@ PLATINUM_HONEY_TREE_HEADER_IDS = (
 # areas share the same daily species pool.
 PLATINUM_GREAT_MARSH_HEADER_IDS = (504, 505, 506, 507, 508, 509)
 PLATINUM_TROPHY_GARDEN_HEADER_ID = 287
+
+# Species for each ROAMING_SLOT_* index (src/roaming_pokemon.c's
+# RoamingPokemon_ActivateSlot switch), in generated/roaming_slots.txt order:
+# Mesprit, Cresselia, Darkrai, Moltres, Zapdos. Only 5 entries — matches
+# PLATINUM_ROAMING_SLOT_COUNT (scripts.py); no observed or retail-reachable
+# script ever activates the 6th slot (Articuno). This mapping is a compiled
+# ARM9 constant, not ROM table data; verified against real script calls
+# (Verity Cavern activates slot 0, Fullmoon Island slot 1, Eterna City slots
+# 3/4). Level is also a compiled constant but was not verified per-ROM and is
+# intentionally not exposed here — see README.
+PLATINUM_ROAMING_SLOT_SPECIES_IDS = (481, 488, 491, 146, 145)
 NATURE_NAMES = (
     "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
     "Bold", "Docile", "Relaxed", "Impish", "Lax",

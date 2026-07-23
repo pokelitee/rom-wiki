@@ -88,6 +88,8 @@ class LocationStaticEncounter:
 @dataclass(frozen=True, slots=True)
 class LocationRoamingActivation:
     slot: int
+    species_id: int
+    species_name: str
     script_file_id: int
     command_offset: int
 

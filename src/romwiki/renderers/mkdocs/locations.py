@@ -198,7 +198,9 @@ def _render_location(
     _append_static_encounters(
         lines, record.get("static_encounters", []), source_file, references
     )
-    _append_roaming_activations(lines, record.get("roaming_activations", []))
+    _append_roaming_activations(
+        lines, record.get("roaming_activations", []), source_file, references
+    )
     _append_honey_tree(lines, record.get("honey_tree"), source_file, references)
     _append_daily_encounter_pool(
         lines, record.get("daily_encounter_pool"), source_file, references
@@ -532,7 +534,10 @@ def _append_static_encounters(
 
 
 def _append_roaming_activations(
-    lines: list[str], activations: list[dict[str, Any]]
+    lines: list[str],
+    activations: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
 ) -> None:
     if not activations:
         return
@@ -541,21 +546,26 @@ def _append_roaming_activations(
             "## Roaming activations",
             "",
             "Literal roaming-slot activation commands in this map's scripts. "
-            "The engine assigns each slot's roamer elsewhere; only the "
-            "activation itself is audited here.",
-            "",
-            "| Roaming slot | Script command |",
-            "| -----------: | -------------- |",
-            *[
-                (
-                    f"| {activation['slot']} | "
-                    f"`{activation['script_file_id']}"
-                    f"@0x{activation['command_offset']:X}` |"
-                )
-                for activation in activations
-            ],
+            "Each slot's species is a fixed engine assignment, not ROM table "
+            "data; its level is a compiled constant we haven't verified "
+            "per-ROM, so it isn't shown.",
             "",
         ]
+    )
+    rows = [
+        (
+            f"| {sprite_with_link(_entity_sprite('pokemon', activation['species_id'], references), _entity_link('pokemon', activation['species_id'], activation['species_name'], source_file, references))} | "
+            f"{reference_type_cell('pokemon', activation['species_id'], references)} | "
+            f"{activation['slot']} | `{activation['script_file_id']}"
+            f"@0x{activation['command_offset']:X}` |"
+        )
+        for activation in activations
+    ]
+    lines.extend(
+        pokemon_table(
+            ["| Pokémon | Type | Roaming slot | Script command |", "| ------- | ---- | -----------: | -------------- |"],
+            rows,
+        )
     )
 
 
