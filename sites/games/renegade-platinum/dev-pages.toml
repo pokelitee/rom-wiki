@@ -10,6 +10,8 @@ abilities = [
     "overgrow",
     "water-absorb",
     "klutz",
+    "pickup",
+    "honey-gather",
 ]
 moves = [
     "pound",
@@ -24,11 +26,14 @@ items = [
     "hp-up",
     "never-melt-ice",
     "sun-stone",
+    "root-fossil",
 ]
 encounters = [
     "area-000",
     "area-060",
     "area-134",
+    "area-005",
+    "area-029",
 ]
 trainers = [
     "trainer-0001",
@@ -38,10 +43,11 @@ trainers = [
     "trainer-1028",
 ]
 locations = [
-    "header-000",
-    "header-004",
-    "header-018",
-    "header-054",
+    "header-373",
     "header-065",
-    "header-132",
+    "header-054",
+    "header-144",
+    "header-504",
+    "header-287",
+    "header-559",
 ]
