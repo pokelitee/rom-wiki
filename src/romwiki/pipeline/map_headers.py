@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from romwiki.util.errors import DataSourceError
+from romwiki.util.errors import DataSourceError, InvalidRomError
 
 
 def read_code_binary(platform: Any, image: Any) -> bytes:
@@ -43,3 +43,40 @@ def parse_map_header_table(
     return engine.parse_map_headers(
         header_data, filesystem.read(map_names_path), count=count
     )
+
+
+def resolve_map_headers(
+    engine: Any,
+    arm9_data: bytes,
+    filesystem: Any,
+    messages: Any,
+    *,
+    map_names_path: str,
+    table_offset: int,
+    count: int,
+    location_names_member: int,
+) -> tuple[tuple[Any, ...], tuple[str, ...]]:
+    """Parse the map header table and resolve each header's location name.
+
+    Shared by every extractor that joins headers with location names
+    (encounters, trainers, locations) so the table parse and the "missing
+    location name" validation happen exactly once instead of once per module.
+    """
+    headers = parse_map_header_table(
+        engine,
+        arm9_data,
+        filesystem,
+        map_names_path,
+        table_offset=table_offset,
+        count=count,
+    )
+    location_names = engine.parse_english_message_archive(
+        messages.read(location_names_member)
+    )
+    for header in headers:
+        if header.location_name_id >= len(location_names):
+            raise InvalidRomError(
+                f"Map header {header.header_id} references missing location name "
+                f"{header.location_name_id}"
+            )
+    return headers, location_names

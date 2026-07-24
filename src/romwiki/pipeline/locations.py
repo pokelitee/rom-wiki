@@ -8,8 +8,8 @@ from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import (
     code_load_address,
-    parse_map_header_table,
     read_code_binary,
+    resolve_map_headers,
 )
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.registry import get_platform
@@ -157,13 +157,16 @@ def extract_location_dataset(
 
     filesystem = platform.filesystem_from_image(result.image)
     arm9_data = read_code_binary(platform, result.image)
-    headers = parse_map_header_table(
-        engine, arm9_data, filesystem, map_names_path,
-        table_offset=table_offset, count=count,
-    )
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
-    location_names = engine.parse_english_message_archive(
-        messages.read(location_names_member)
+    headers, location_names = resolve_map_headers(
+        engine,
+        arm9_data,
+        filesystem,
+        messages,
+        map_names_path=map_names_path,
+        table_offset=table_offset,
+        count=count,
+        location_names_member=location_names_member,
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
     game_corner_prizes = tuple(
@@ -319,11 +322,6 @@ def extract_location_dataset(
     raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
     raw_items_by_header: dict[int, tuple[LocationItem, ...]] = {}
     for header in headers:
-        if header.location_name_id >= len(location_names):
-            raise InvalidRomError(
-                f"Map header {header.header_id} references missing location name "
-                f"{header.location_name_id}"
-            )
         if header.event_file_id == null_event_id:
             raw_warps_by_header[header.header_id] = ()
             raw_items_by_header[header.header_id] = ()

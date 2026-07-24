@@ -6,7 +6,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.map_headers import parse_map_header_table, read_code_binary
+from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.encounters import EncounterLocation
@@ -94,18 +94,19 @@ def _extract_encounter_locations(
 
     count = parameters["map_header_count"]
     table_offset = parameters["map_header_offset"]
+    member = parameters["location_names_member"]
     arm9_data = read_code_binary(platform, result.image)
-    headers = parse_map_header_table(
+    messages = platform.archive_cls.from_bytes(filesystem.read(layout["messages"]))
+    headers, location_names = resolve_map_headers(
         engine,
         arm9_data,
         filesystem,
-        layout["map_names"],
+        messages,
+        map_names_path=layout["map_names"],
         table_offset=table_offset,
         count=count,
+        location_names_member=member,
     )
-    messages = platform.archive_cls.from_bytes(filesystem.read(layout["messages"]))
-    member = parameters["location_names_member"]
-    location_names = engine.parse_english_message_archive(messages.read(member))
 
     locations: dict[int, list[EncounterLocation]] = {}
     null_encounter_id = profile.parameters.get(
@@ -118,11 +119,6 @@ def _extract_encounter_locations(
             raise InvalidRomError(
                 f"Map header {header.header_id} references missing encounter "
                 f"member {header.encounter_id}"
-            )
-        if header.location_name_id >= len(location_names):
-            raise InvalidRomError(
-                f"Map header {header.header_id} references missing location name "
-                f"{header.location_name_id}"
             )
         locations.setdefault(header.encounter_id, []).append(
             EncounterLocation(

@@ -403,6 +403,13 @@ def _trainer_disambiguator(record: dict[str, Any]) -> str:
     return f"Lv. {_trainer_level_range(record)}: {_party_preview(record)}"
 
 
+def _location_summary_value(record: dict[str, Any], location_names: list[str]) -> str:
+    if not location_names:
+        return "Unlinked"
+    anchor = "locations" if record["locations"] else "scripted-battle-locations"
+    return summary_section_link(" / ".join(location_names), anchor)
+
+
 def _trainer_summary(
     record: dict[str, Any], grouped_ai_items: list[dict[str, Any]]
 ) -> list[str]:
@@ -420,7 +427,7 @@ def _trainer_summary(
             f"<div><dt>Class</dt><dd>{display_name(record['class_name'])}</dd></div>",
             (
                 "<div><dt>Location</dt><dd>"
-                f"{' / '.join(location_names) if location_names else 'Unlinked'}</dd></div>"
+                f"{_location_summary_value(record, location_names)}</dd></div>"
             ),
             (
                 "<div><dt>Battle format</dt><dd>"

@@ -543,7 +543,21 @@ def _append_special(
             )
         )
     if unown_forms:
-        lines.extend(["**Unown forms:**", "", ", ".join(unown_forms), ""])
+        lines.extend(
+            [
+                "**Unown forms:**",
+                "",
+                "Unown always shows the generic sprite in the tables above — "
+                "the ROM's encounter slots only store species and level, "
+                "never which letter. The letter is chosen per individual "
+                "Pokémon when it's encountered and isn't derivable from this "
+                "data. This room's Unown table does constrain which letters "
+                "are possible here:",
+                "",
+                ", ".join(unown_forms),
+                "",
+            ]
+        )
 
 
 def _slot_type_cell(

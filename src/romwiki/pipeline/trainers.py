@@ -6,7 +6,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
-from romwiki.pipeline.map_headers import parse_map_header_table, read_code_binary
+from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
@@ -151,12 +151,15 @@ def _extract_trainer_locations(
         "null_event_id", engine.ARCHIVE_MEMBER_NONE
     )
 
-    headers = parse_map_header_table(
-        engine, arm9_data, filesystem, map_names_path,
-        table_offset=table_offset, count=count,
-    )
-    location_names = engine.parse_english_message_archive(
-        messages.read(location_names_member)
+    headers, location_names = resolve_map_headers(
+        engine,
+        arm9_data,
+        filesystem,
+        messages,
+        map_names_path=map_names_path,
+        table_offset=table_offset,
+        count=count,
+        location_names_member=location_names_member,
     )
     events = platform.archive_cls.from_bytes(filesystem.read(events_path))
     scripts = platform.archive_cls.from_bytes(
@@ -168,11 +171,6 @@ def _extract_trainer_locations(
     script_references: dict[int, list[TrainerScriptReference]] = {}
 
     for header in headers:
-        if header.location_name_id >= len(location_names):
-            raise InvalidRomError(
-                f"Map header {header.header_id} references missing location name "
-                f"{header.location_name_id}"
-            )
         objects: tuple[Any, ...] = ()
         if header.event_file_id != null_event_id:
             if header.event_file_id >= len(events.members):
