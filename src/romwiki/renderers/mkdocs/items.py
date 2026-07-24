@@ -32,6 +32,7 @@ from romwiki.renderers.mkdocs.components import (
     shop_price,
     sprite_with_link,
     summary_section_link,
+    type_badges,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -169,7 +170,7 @@ def _render_record(
 ) -> str:
     source_file = f"items/{record['slug']}.md"
     mechanics = [
-        ("Field use", display_name(record["field_use"]["name"])),
+        ("Field use", escape(display_name(record["field_use"]["name"]))),
         ("Field pocket ID", str(record["field_pocket_id"])),
         ("Field use function ID", str(record["field_use_function_id"])),
         ("Held effect ID", str(record["hold_effect_id"])),
@@ -187,12 +188,14 @@ def _render_record(
         mechanics.append(
             (
                 "Natural Gift",
-                f"{record['natural_gift_power']} power, {gift_type['name']} type",
+                f"{record['natural_gift_power']} power, {type_badges([gift_type])}",
             )
         )
     party_effects = _party_effects(record)
     if party_effects:
-        mechanics.append(("Party-use effects", ", ".join(party_effects)))
+        mechanics.append(
+            ("Party-use effects", escape(", ".join(party_effects)))
+        )
     lines = [
         f"# {record['name']}",
         "",
@@ -202,7 +205,7 @@ def _render_record(
         ),
         "## Mechanics",
         "",
-        *fact_grid(tuple(mechanics)),
+        *fact_grid(tuple(mechanics), escape_values=False),
         "",
     ]
 

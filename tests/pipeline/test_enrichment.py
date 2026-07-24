@@ -284,9 +284,10 @@ class PersonalEnrichmentTests(unittest.TestCase):
 
 
 class SpriteGalleryTests(unittest.TestCase):
-    def test_omits_the_section_when_no_sprites_are_available(self) -> None:
-        self.assertEqual(_sprite_gallery({"name": "Missingno", "sprites": []}), [])
-        self.assertEqual(_sprite_gallery({"name": "Missingno"}), [])
+    def test_renders_empty_state_when_no_sprites_are_available(self) -> None:
+        expected = ["## Sprites", "", "No sprites are available.", ""]
+        self.assertEqual(_sprite_gallery({"name": "Missingno", "sprites": []}), expected)
+        self.assertEqual(_sprite_gallery({"name": "Missingno"}), expected)
 
     def test_still_renders_a_single_known_sprite(self) -> None:
         lines = _sprite_gallery(

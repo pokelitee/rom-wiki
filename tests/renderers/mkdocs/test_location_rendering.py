@@ -210,7 +210,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn('<a href="#wild-encounters">Yes</a>', page)
         self.assertIn('<a href="#item-pickups">2</a>', page)
         self.assertIn('<a href="#shops">2</a>', page)
-        self.assertIn('<span class="rw-summary__empty">0</span>', page)
+        self.assertNotIn("In-game trades", page)
         self.assertIn("../trainers/trainer-0246.md", page)
         self.assertIn(
             '| Visible | <span class="rw-cell-media">'

@@ -112,7 +112,14 @@ def render_pokemon_pages(
             )
         )
         stats = record["base_stats"]
-        abilities = [value["name"] for value in record["abilities"] if value["name"]]
+        unique_abilities = list(
+            {
+                value["name"]: value
+                for value in record["abilities"]
+                if value["name"]
+            }.values()
+        )
+        abilities = [value["name"] for value in unique_abilities]
         ability_refs = [
             ROUTES.catalog_reference(
                 entity_reference(
@@ -123,8 +130,7 @@ def render_pokemon_pages(
                 ),
                 "pokemon/",
             )
-            for value in record["abilities"]
-            if value["name"]
+            for value in unique_abilities
         ]
         types = list(dict.fromkeys(value["name"] for value in record["types"]))
         egg_groups = list(
@@ -256,7 +262,7 @@ def _render_record(
             _evolution_list(all_records or [record], record, source_file)
         )
     else:
-        lines.extend(["This Pokémon does not evolve.", ""])
+        lines.extend(empty_state("This Pokémon does not evolve."))
     lines.extend(["## Learnset", "", "### Level-up moves", ""])
     move_lookup = move_lookup or {}
     _append_level_up_moves(lines, level_up_moves, source_file, move_lookup)
@@ -349,8 +355,6 @@ _SPRITE_MATRIX_ROWS = (
 
 def _sprite_gallery(record: dict[str, Any]) -> list[str]:
     sprites = record.get("sprites", [])
-    if not sprites:
-        return []
     by_key = {sprite["key"]: sprite for sprite in sprites}
     rows = [
         (label, by_key.get(default_key), by_key.get(shiny_key))
@@ -358,7 +362,7 @@ def _sprite_gallery(record: dict[str, Any]) -> list[str]:
         if by_key.get(default_key) or by_key.get(shiny_key)
     ]
     if not rows:
-        return []
+        return ["## Sprites", "", *empty_state("No sprites are available.")]
     lines = [
         "## Sprites",
         "",
@@ -648,7 +652,8 @@ def _append_tutor_moves(
                 (
                     f"| {_record_link('move', tutor['move'], source_file)} | "
                     f"{_move_cells(tutor['move'], move_lookup)} | "
-                    f"{tutor['location']['name']} | {tutor_requirement(tutor)} |"
+                    f"{_tutor_location_link(tutor['location'], source_file)} | "
+                    f"{tutor_requirement(tutor)} |"
                 )
                 for tutor in moves
             ],
@@ -758,6 +763,14 @@ def _append_record_navigation(
 
 def _item_link(item: dict[str, Any], source_file: str) -> str:
     return _record_link("item", item, source_file)
+
+
+def _tutor_location_link(location: dict[str, Any], source_file: str) -> str:
+    if location.get("id") is None:
+        return escape(location["name"])
+    return entity_markdown_link(
+        "location", location["id"], location["name"], source_file, route_key=location["id"]
+    )
 
 
 def _record_link(kind: str, value: dict[str, Any], source_file: str) -> str:

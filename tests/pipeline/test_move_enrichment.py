@@ -107,7 +107,7 @@ class MoveEnrichmentTests(unittest.TestCase):
         )
         self.assertEqual(catalog["records"][0]["url"], "thunderbolt/")
 
-    def test_omits_empty_move_compatibility_sections(self) -> None:
+    def test_renders_empty_move_compatibility_sections(self) -> None:
         record = {
             **_source_record(1),
             "slug": "pound",
@@ -125,8 +125,10 @@ class MoveEnrichmentTests(unittest.TestCase):
             render_move_pages({"records": [record]}, output)
             page = (output / "pound.md").read_text(encoding="utf-8")
 
-        self.assertNotIn("## Tutor compatibility", page)
-        self.assertNotIn("## Egg move learners", page)
+        self.assertIn("## Tutor compatibility", page)
+        self.assertIn("No compatible move tutors.", page)
+        self.assertIn("## Egg move learners", page)
+        self.assertIn("No egg move learners.", page)
         self.assertNotIn("## Additional battle properties", page)
 
 

@@ -145,7 +145,7 @@ html:not(.rw-js) .rw-catalog { display: none; }
 .rw-catalog__code { font-family: var(--md-code-font-family); font-size: .63rem; }
 .rw-catalog__list { display: block; min-width: 12rem; max-width: 26rem; line-height: 1.45; }
 .rw-catalog__map-id { display: grid; gap: .12rem; min-width: 7rem; }
-.rw-type-list { display: flex; flex-wrap: wrap; gap: .25rem; }
+.rw-type-list { display: inline-flex; flex-wrap: wrap; gap: .25rem; vertical-align: middle; }
 .rw-catalog-fallback { columns: 3 14rem; column-gap: 1.5rem; }
 .rw-js [data-rw-catalog-fallback]:not(.rw-catalog-fallback--visible) { display: none; }
 .rw-catalog-fallback h2 { column-span: all; }

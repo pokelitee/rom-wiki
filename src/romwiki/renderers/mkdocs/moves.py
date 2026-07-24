@@ -39,6 +39,7 @@ from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     entity_reference,
+    escape_markdown,
     pokemon_record_link,
     resolved_reference,
 )
@@ -211,22 +212,24 @@ def _render_record(
                 "",
             ]
         )
-    if record.get("tutors"):
-        lines.extend(
-            [
-                "## Tutor compatibility",
-                "",
-                *_tutor_compatibility(record, source_file, references),
-            ]
-        )
-    if record.get("egg_move_pokemon"):
-        lines.extend(
-            [
-                "## Egg move learners",
-                "",
-                *_egg_move_learners(record, source_file, references),
-            ]
-        )
+    lines.extend(
+        [
+            "## Tutor compatibility",
+            "",
+            *(
+                _tutor_compatibility(record, source_file, references)
+                if record.get("tutors")
+                else empty_state("No compatible move tutors.")
+            ),
+        ]
+    )
+    lines.extend(
+        [
+            "## Egg move learners",
+            "",
+            *_egg_move_learners(record, source_file, references),
+        ]
+    )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -413,7 +416,8 @@ def _tutor_compatibility(
     lines = []
     for tutor in record["tutors"]:
         costs = tutor_requirement(tutor)
-        lines.extend([f"**{tutor['location']['name']} — {costs}:**", ""])
+        location = _tutor_location_link(tutor["location"], source_file)
+        lines.extend([f"**{location} — {costs}:**", ""])
         lines.extend(
             _pokemon_sprite_table(
                 tutor["compatible_pokemon"],
@@ -423,6 +427,15 @@ def _tutor_compatibility(
             )
         )
     return lines
+
+
+def _tutor_location_link(location: dict[str, Any], source_file: str) -> str:
+    if location.get("id") is None:
+        return escape_markdown(location["name"])
+    return ROUTES.markdown_link(
+        entity_reference("location", location["id"], location["name"], location["id"]),
+        source_file,
+    )
 
 
 def _egg_move_learners(

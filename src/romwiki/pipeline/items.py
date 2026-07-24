@@ -15,6 +15,7 @@ from romwiki.schema.versions import (
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.util.json_io import write_json_atomic
+from romwiki.util.text import name_slug
 
 
 def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -111,7 +112,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
                     if natural_gift_type_id == engine.NATURAL_GIFT_TYPE_NONE
                     else {
                         "id": natural_gift_type_id,
-                        "name": type_names[natural_gift_type_id],
+                        "name": name_slug(type_names[natural_gift_type_id]),
                     }
                 ),
                 "revives_into_species_id": revives_into_by_item.get(item_id),

@@ -236,7 +236,7 @@ def _item_record() -> dict:
         "fling_power": 30,
         "natural_gift_power": 0,
         "natural_gift_type_id": 0,
-        "natural_gift_type": {"id": 0, "name": "Normal"},
+        "natural_gift_type": {"id": 0, "name": "normal"},
         "prevent_toss": False,
         "selectable": True,
         "field_pocket_id": 2,

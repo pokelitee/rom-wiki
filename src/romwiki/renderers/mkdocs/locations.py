@@ -287,19 +287,9 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
         else "trophy-garden-daily-rotation"
     )
     facts: list[tuple[str, int | str, str, bool]] = [
-        (
-            "Wild encounters",
-            "Yes" if has_encounters else "No",
-            "wild-encounters",
-            has_encounters,
-        ),
-        ("Honey tree", "Yes" if has_honey_tree else "No", "honey-tree", has_honey_tree),
-        (
-            "Daily rotation",
-            "Yes" if daily_pool else "No",
-            daily_pool_anchor,
-            bool(daily_pool),
-        ),
+        ("Wild encounters", "Yes", "wild-encounters", has_encounters),
+        ("Honey tree", "Yes", "honey-tree", has_honey_tree),
+        ("Daily rotation", "Yes", daily_pool_anchor, bool(daily_pool)),
     ]
     for label, key, anchor in (
         ("Item pickups", "items", "item-pickups"),
@@ -315,14 +305,16 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
     ):
         count = len(record.get(key, []))
         facts.append((label, count, anchor, count > 0))
-    fact_lines = []
-    for label, value, anchor, populated in facts:
-        rendered_value = (
-            summary_section_link(value, anchor)
-            if populated
-            else f'<span class="rw-summary__empty">{value}</span>'
+    fact_lines = [
+        f"<div><dt>{label}</dt><dd>{summary_section_link(value, anchor)}</dd></div>"
+        for label, value, anchor, populated in facts
+        if populated
+    ]
+    if not fact_lines:
+        fact_lines.append(
+            "<div><dt>Notable features</dt>"
+            '<dd><span class="rw-summary__empty">None</span></dd></div>'
         )
-        fact_lines.append(f"<div><dt>{label}</dt><dd>{rendered_value}</dd></div>")
     return summary_section("rw-location-summary", fact_lines)
 
 
@@ -574,6 +566,35 @@ def _append_roaming_activations(
     )
 
 
+def _merge_bonus_species(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse duplicate species in a flat, equal-weight ROM species list.
+
+    Honey tree and daily-rotation pools store one entry per slot with no
+    explicit chance value; a species listed twice is twice as likely to be
+    picked as one listed once, the same relationship wild-encounter slots
+    express with a stored chance. Each slot is given equal weight here so
+    duplicates can be collapsed into a single row with a derived chance.
+    """
+    if not entries:
+        return []
+    slot_chance = 100 / len(entries)
+    merged: dict[int, dict[str, Any]] = {}
+    order: list[int] = []
+    for entry in entries:
+        species_id = entry["species_id"]
+        if species_id not in merged:
+            merged[species_id] = {**entry, "chance": slot_chance}
+            order.append(species_id)
+        else:
+            merged[species_id]["chance"] += slot_chance
+    return [merged[species_id] for species_id in order]
+
+
+def _format_chance(value: float) -> str:
+    text = f"{value:.1f}".rstrip("0").rstrip(".")
+    return f"{text}%"
+
+
 def _append_honey_tree(
     lines: list[str],
     honey_tree: dict[str, Any] | None,
@@ -598,13 +619,16 @@ def _append_honey_tree(
         rows = [
             (
                 f"| {sprite_with_link(_entity_sprite('pokemon', entry['species_id'], references), _entity_link('pokemon', entry['species_id'], entry['name'], source_file, references))} | "
-                f"{reference_type_cell('pokemon', entry['species_id'], references)} |"
+                f"{reference_type_cell('pokemon', entry['species_id'], references)} | "
+                f"{_format_chance(entry['chance'])} |"
             )
-            for entry in honey_tree[key]
+            for entry in _merge_bonus_species(honey_tree[key])
         ]
         lines.extend([f"**{label}:**", ""])
         lines.extend(
-            pokemon_table(["| Pokémon | Type |", "| ------- | ---- |"], rows)
+            pokemon_table(
+                ["| Pokémon | Type | Chance |", "| ------- | ---- | -----: |"], rows
+            )
         )
 
 
@@ -648,14 +672,17 @@ def _append_daily_encounter_pool(
         rows = [
             (
                 f"| {sprite_with_link(_entity_sprite('pokemon', entry['species_id'], references), _entity_link('pokemon', entry['species_id'], entry['name'], source_file, references))} | "
-                f"{reference_type_cell('pokemon', entry['species_id'], references)} |"
+                f"{reference_type_cell('pokemon', entry['species_id'], references)} | "
+                f"{_format_chance(entry['chance'])} |"
             )
-            for entry in entries
+            for entry in _merge_bonus_species(entries)
         ]
         if group_label:
             lines.extend([f"**{group_label}:**", ""])
         lines.extend(
-            pokemon_table(["| Pokémon | Type |", "| ------- | ---- |"], rows)
+            pokemon_table(
+                ["| Pokémon | Type | Chance |", "| ------- | ---- | -----: |"], rows
+            )
         )
 
 
