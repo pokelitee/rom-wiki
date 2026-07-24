@@ -20,6 +20,14 @@ token to custom properties such as `--rw-accent`; components consume the variabl
 rather than game names. Components must support the default and slate Material
 schemes and remain readable without color.
 
+`theme.css` also defines a fixed set of custom properties independent of any
+game's appearance token: `--rw-positive`/`--rw-negative` for change-status
+colors and `--rw-gender-male`/`--rw-gender-female` for gender indicators, each
+with separate light- and dark-mode values verified for WCAG AA contrast
+against `--rw-surface`, plus `--rw-select-chevron`/`--rw-select-chevron-inverse`
+for the shared dropdown icon. Components reference these directly rather than
+redefining colors locally.
+
 The shared `404.html` provides portal- and game-aware recovery links. GitHub Pages
 builds pass the deployment root through `ROMWIKI_SITE_URL`; the MkDocs hook derives
 each site's `site_url` from it so 404 assets and links remain valid when the combined

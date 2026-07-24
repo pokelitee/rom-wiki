@@ -413,23 +413,16 @@ For a faster frontend development loop, use the lightweight game configuration:
 python -m mkdocs serve --dirty --config-file sites/games/renegade-platinum/mkdocs.dev.yml
 ```
 
-The development configuration keeps every catalog index and its JSON data but
-builds only the representative detail pages listed in the game's
-`dev-pages.toml`. Each game owns its fixture list, so games from different
-generations can select different sections and pages. Use the normal configuration
-for final link, navigation, search, and production-build review.
-
 Add `--dev` to any `build-*` command (including `build-game`) to match this at
-generation time: only the representative detail pages are rendered, while the
-complete datasets, `catalog.json`, and each section's index page are still built.
-Raw extraction is reused from the ROM cache when valid. This speeds up local
-iteration on renderer changes, since a full `build-game` re-renders every
-dataset's complete page set on every run.
+generation time:
 
 ```console
 romwiki build-game --game renegade-platinum --dev
 romwiki build-pokemon --game renegade-platinum --dev
 ```
+
+See [Frontend](docs/development/frontend.md#development-preview) for what the
+`--dev` configuration and flag actually build and skip.
 
 The portal can be previewed by using `sites/portal/mkdocs.yml` instead. Each site
 inherits the shared responsive theme, light and dark palettes, catalog interface,
