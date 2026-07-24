@@ -64,16 +64,12 @@ def extract_location_dataset(
         scripts_path = profile.layout["scripts"]
         item_data_path = profile.layout["item_data"]
         npc_trades_path = profile.layout["npc_trades"]
-        bonus_encounters_path = profile.layout["bonus_encounters"]
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
         item_names_member = profile.parameters["item_names_member"]
         pokemon_names_member = profile.parameters["pokemon_names_member"]
         npc_trade_names_member = profile.parameters["npc_trade_names_member"]
-        decoration_names_member = profile.parameters["decoration_names_member"]
-        decoration_name_count = profile.parameters["decoration_name_count"]
-        seal_names_member = profile.parameters["seal_names_member"]
         common_mart_inventory_offset = profile.parameters[
             "common_mart_inventory_offset"
         ]
@@ -83,32 +79,6 @@ def extract_location_dataset(
         specialty_mart_inventory_count = profile.parameters[
             "specialty_mart_inventory_count"
         ]
-        decoration_mart_inventory_start = profile.parameters[
-            "decoration_mart_inventory_start"
-        ]
-        decoration_mart_inventory_count = profile.parameters[
-            "decoration_mart_inventory_count"
-        ]
-        decoration_price_table_offset = profile.parameters[
-            "decoration_price_table_offset"
-        ]
-        seal_mart_inventory_start = profile.parameters["seal_mart_inventory_start"]
-        seal_mart_inventory_count = profile.parameters["seal_mart_inventory_count"]
-        seal_price_table_offset = profile.parameters["seal_price_table_offset"]
-        frontier_mart_inventory_count = profile.parameters[
-            "frontier_mart_inventory_count"
-        ]
-        frontier_price_overlay_id = profile.parameters["frontier_price_overlay_id"]
-        frontier_price_table_offset = profile.parameters[
-            "frontier_price_table_offset"
-        ]
-        frontier_price_record_count = profile.parameters[
-            "frontier_price_record_count"
-        ]
-        game_corner_prize_table_offset = profile.parameters[
-            "game_corner_prize_table_offset"
-        ]
-        game_corner_prize_count = profile.parameters["game_corner_prize_count"]
         egg_gift_metadata = profile.parameters["egg_gifts"]
         static_encounter_location_metadata = profile.parameters.get(
             "static_encounter_locations", []
@@ -117,6 +87,40 @@ def extract_location_dataset(
         raise ProfileError(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
         ) from error
+
+    # The following features are Platinum-specific (decorations, seals, and the
+    # Battle Frontier were never in Diamond/Pearl; honey trees, Trophy Garden,
+    # and the Great Marsh are Sinnoh-only and have no Unova equivalent). They
+    # are optional per profile/engine so a future non-Sinnoh engine or a
+    # Diamond/Pearl profile can omit them entirely instead of crashing.
+    bonus_encounters_path = profile.layout.get("bonus_encounters")
+    decoration_names_member = profile.parameters.get("decoration_names_member")
+    decoration_name_count = profile.parameters.get("decoration_name_count", 0)
+    seal_names_member = profile.parameters.get("seal_names_member")
+    decoration_mart_inventory_start = profile.parameters.get(
+        "decoration_mart_inventory_start", 0
+    )
+    decoration_mart_inventory_count = profile.parameters.get(
+        "decoration_mart_inventory_count", 0
+    )
+    decoration_price_table_offset = profile.parameters.get(
+        "decoration_price_table_offset"
+    )
+    seal_mart_inventory_start = profile.parameters.get("seal_mart_inventory_start", 0)
+    seal_mart_inventory_count = profile.parameters.get("seal_mart_inventory_count", 0)
+    seal_price_table_offset = profile.parameters.get("seal_price_table_offset")
+    frontier_mart_inventory_count = profile.parameters.get(
+        "frontier_mart_inventory_count", 0
+    )
+    frontier_price_overlay_id = profile.parameters.get("frontier_price_overlay_id")
+    frontier_price_table_offset = profile.parameters.get("frontier_price_table_offset")
+    frontier_price_record_count = profile.parameters.get(
+        "frontier_price_record_count", 0
+    )
+    game_corner_prize_table_offset = profile.parameters.get(
+        "game_corner_prize_table_offset"
+    )
+    game_corner_prize_count = profile.parameters.get("game_corner_prize_count", 0)
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).locations
@@ -139,19 +143,21 @@ def extract_location_dataset(
         )
     )
     honey_tree_header_ids = frozenset(
-        profile.parameters.get("honey_tree_header_ids", engine.HONEY_TREE_HEADER_IDS)
+        profile.parameters.get(
+            "honey_tree_header_ids", getattr(engine, "HONEY_TREE_HEADER_IDS", ())
+        )
     )
     great_marsh_header_ids = frozenset(
         profile.parameters.get(
-            "great_marsh_header_ids", engine.GREAT_MARSH_HEADER_IDS
+            "great_marsh_header_ids", getattr(engine, "GREAT_MARSH_HEADER_IDS", ())
         )
     )
     trophy_garden_header_id = profile.parameters.get(
-        "trophy_garden_header_id", engine.TROPHY_GARDEN_HEADER_ID
+        "trophy_garden_header_id", getattr(engine, "TROPHY_GARDEN_HEADER_ID", None)
     )
     game_corner_header_id = profile.parameters.get(
         "game_corner_prize_exchange_header_id",
-        engine.GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID,
+        getattr(engine, "GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID", None),
     )
     arm9_load_address = code_load_address(platform, result.image)
 
@@ -169,45 +175,61 @@ def extract_location_dataset(
         location_names_member=location_names_member,
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
-    game_corner_prizes = tuple(
-        LocationGameCornerPrize(
-            item_id=prize.item_id,
-            name=item_names[prize.item_id],
-            price=prize.price,
+    if game_corner_prize_table_offset is not None:
+        game_corner_prizes = tuple(
+            LocationGameCornerPrize(
+                item_id=prize.item_id,
+                name=item_names[prize.item_id],
+                price=prize.price,
+            )
+            for prize in engine.parse_game_corner_prizes(
+                arm9_data,
+                offset=game_corner_prize_table_offset,
+                count=game_corner_prize_count,
+                item_count=len(item_names),
+            )
         )
-        for prize in engine.parse_game_corner_prizes(
-            arm9_data,
-            offset=game_corner_prize_table_offset,
-            count=game_corner_prize_count,
-            item_count=len(item_names),
-        )
-    )
+    else:
+        game_corner_prizes = ()
     pokemon_names = engine.parse_english_message_archive(
         messages.read(pokemon_names_member)
     )
     npc_trade_names = engine.parse_english_message_archive(
         messages.read(npc_trade_names_member)
     )
-    decoration_names = engine.parse_english_message_archive(
-        messages.read(decoration_names_member), limit=decoration_name_count
-    )
-    seal_names = engine.parse_english_message_archive(messages.read(seal_names_member))
-    decoration_prices = engine.parse_decoration_price_table(
-        arm9_data,
-        offset=decoration_price_table_offset,
-        decoration_count=len(decoration_names),
-    )
-    seal_prices = engine.parse_seal_price_table(
-        arm9_data, offset=seal_price_table_offset, seal_count=len(seal_names)
-    )
-    _, frontier_overlay = platform.read_overlay(
-        result.image, frontier_price_overlay_id
-    )
-    frontier_prices = engine.parse_frontier_price_table(
-        frontier_overlay,
-        offset=frontier_price_table_offset,
-        record_count=frontier_price_record_count,
-    )
+    if decoration_names_member is not None:
+        decoration_names = engine.parse_english_message_archive(
+            messages.read(decoration_names_member), limit=decoration_name_count
+        )
+        decoration_prices = engine.parse_decoration_price_table(
+            arm9_data,
+            offset=decoration_price_table_offset,
+            decoration_count=len(decoration_names),
+        )
+    else:
+        decoration_names = ()
+        decoration_prices = ()
+    if seal_names_member is not None:
+        seal_names = engine.parse_english_message_archive(
+            messages.read(seal_names_member)
+        )
+        seal_prices = engine.parse_seal_price_table(
+            arm9_data, offset=seal_price_table_offset, seal_count=len(seal_names)
+        )
+    else:
+        seal_names = ()
+        seal_prices = ()
+    if frontier_price_overlay_id is not None:
+        _, frontier_overlay = platform.read_overlay(
+            result.image, frontier_price_overlay_id
+        )
+        frontier_prices = engine.parse_frontier_price_table(
+            frontier_overlay,
+            offset=frontier_price_table_offset,
+            record_count=frontier_price_record_count,
+        )
+    else:
+        frontier_prices = {}
     item_data = platform.archive_cls.from_bytes(filesystem.read(item_data_path))
     item_archive_map_offset, item_data_members = engine.find_item_archive_members(
         arm9_data,
@@ -231,33 +253,46 @@ def extract_location_dataset(
         )
         for index in range(len(npc_trades.members))
     )
-    bonus_encounters = platform.archive_cls.from_bytes(
-        filesystem.read(bonus_encounters_path)
-    )
-
-    def _bonus_species(member: int) -> tuple[BonusEncounterSpecies, ...]:
-        return tuple(
-            BonusEncounterSpecies(species_id=species_id, name=pokemon_names[species_id])
-            for species_id in engine.parse_species_list(bonus_encounters.read(member))
+    honey_tree: LocationHoneyTree | None = None
+    trophy_garden_pool: LocationDailyEncounterPool | None = None
+    great_marsh_pool: LocationDailyEncounterPool | None = None
+    if bonus_encounters_path is not None:
+        bonus_encounters = platform.archive_cls.from_bytes(
+            filesystem.read(bonus_encounters_path)
         )
 
-    honey_tree = LocationHoneyTree(
-        common=_bonus_species(engine.GEN4_HONEY_TREE_COMMON_MEMBER),
-        uncommon=_bonus_species(engine.GEN4_HONEY_TREE_UNCOMMON_MEMBER),
-        rare=_bonus_species(engine.GEN4_HONEY_TREE_RARE_MEMBER),
-    )
-    trophy_garden_pool = LocationDailyEncounterPool(
-        kind="trophy_garden",
-        species=_bonus_species(engine.GEN4_TROPHY_GARDEN_MEMBER),
-        pre_national_dex_species=None,
-    )
-    great_marsh_pool = LocationDailyEncounterPool(
-        kind="great_marsh",
-        species=_bonus_species(engine.GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER),
-        pre_national_dex_species=_bonus_species(
-            engine.GEN4_GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
-        ),
-    )
+        def _bonus_species(member: int) -> tuple[BonusEncounterSpecies, ...]:
+            return tuple(
+                BonusEncounterSpecies(
+                    species_id=species_id, name=pokemon_names[species_id]
+                )
+                for species_id in engine.parse_species_list(
+                    bonus_encounters.read(member)
+                )
+            )
+
+        if hasattr(engine, "GEN4_HONEY_TREE_COMMON_MEMBER"):
+            honey_tree = LocationHoneyTree(
+                common=_bonus_species(engine.GEN4_HONEY_TREE_COMMON_MEMBER),
+                uncommon=_bonus_species(engine.GEN4_HONEY_TREE_UNCOMMON_MEMBER),
+                rare=_bonus_species(engine.GEN4_HONEY_TREE_RARE_MEMBER),
+            )
+        if hasattr(engine, "GEN4_TROPHY_GARDEN_MEMBER"):
+            trophy_garden_pool = LocationDailyEncounterPool(
+                kind="trophy_garden",
+                species=_bonus_species(engine.GEN4_TROPHY_GARDEN_MEMBER),
+                pre_national_dex_species=None,
+            )
+        if hasattr(engine, "GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER"):
+            great_marsh_pool = LocationDailyEncounterPool(
+                kind="great_marsh",
+                species=_bonus_species(
+                    engine.GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER
+                ),
+                pre_national_dex_species=_bonus_species(
+                    engine.GEN4_GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
+                ),
+            )
     common_mart_items = engine.parse_common_mart_inventory(
         arm9_data, offset=common_mart_inventory_offset, item_count=len(item_names)
     )
@@ -601,15 +636,23 @@ def extract_location_dataset(
                 "command": "ActivateRoamingPokemon",
                 "slot_count": engine.ROAMING_SLOT_COUNT,
             },
-            "decoration_names": {
-                "archive": messages_path,
-                "member": decoration_names_member,
-                "count": decoration_name_count,
-            },
-            "seal_names": {
-                "archive": messages_path,
-                "member": seal_names_member,
-            },
+            "decoration_names": (
+                {
+                    "archive": messages_path,
+                    "member": decoration_names_member,
+                    "count": decoration_name_count,
+                }
+                if decoration_names_member is not None
+                else None
+            ),
+            "seal_names": (
+                {
+                    "archive": messages_path,
+                    "member": seal_names_member,
+                }
+                if seal_names_member is not None
+                else None
+            ),
             "shops": {
                 "scripts_archive": scripts_path,
                 "item_data_archive": item_data_path,
@@ -622,11 +665,15 @@ def extract_location_dataset(
                     decoration_price_table_offset
                 ),
                 "seal_price_table_arm9_offset": seal_price_table_offset,
-                "frontier_price_table": {
-                    "overlay_id": frontier_price_overlay_id,
-                    "offset": frontier_price_table_offset,
-                    "record_count": frontier_price_record_count,
-                },
+                "frontier_price_table": (
+                    {
+                        "overlay_id": frontier_price_overlay_id,
+                        "offset": frontier_price_table_offset,
+                        "record_count": frontier_price_record_count,
+                    }
+                    if frontier_price_overlay_id is not None
+                    else None
+                ),
             },
         },
         "records": records,
