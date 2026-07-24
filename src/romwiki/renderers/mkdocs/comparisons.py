@@ -10,7 +10,12 @@ from romwiki.pipeline.comparisons import (
     normalize_comparison_value,
 )
 from romwiki.renderers.mkdocs.catalog import write_text
-from romwiki.renderers.mkdocs.components import display_name, evolution_condition
+from romwiki.renderers.mkdocs.components import (
+    display_name,
+    empty_state,
+    escape_table_cell,
+    evolution_condition,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
@@ -64,28 +69,28 @@ def comparison_section(
     if status == "unchanged":
         return [
             *lines,
-            f"Verified unchanged from **{escape(baseline)}** for all compared fields.",
+            f"Verified unchanged from **{escape_markdown(baseline)}** for all compared fields.",
             "",
         ]
     if status == "added":
         return [
             *lines,
             '!!! success "Added in this hack"',
-            f"    This record was added and does not exist in **{escape(baseline)}**.",
+            f"    This record was added and does not exist in **{escape_markdown(baseline)}**.",
             "",
         ]
     if status == "removed":
         return [
             *lines,
             '!!! warning "Removed in this hack"',
-            f"    This record exists in **{escape(baseline)}** but not in this hack.",
+            f"    This record exists in **{escape_markdown(baseline)}** but not in this hack.",
             "",
         ]
     change_count = len(entry["changes"])
     noun = "field changed" if change_count == 1 else "fields changed"
     lines.extend(
         [
-            f"Compared with **{escape(baseline)}**.",
+            f"Compared with **{escape_markdown(baseline)}**.",
             "",
             '<details markdown="1">',
             f"<summary>{change_count} {noun}</summary>",
@@ -172,7 +177,7 @@ def render_changes_pages(
         ]
         lines.extend([f"## {_SECTIONS[kind]}", ""])
         if not changed:
-            lines.extend(["All compared records are unchanged.", ""])
+            lines.extend(empty_state("All compared records are unchanged."))
             continue
         lines.extend(
             [
@@ -255,13 +260,13 @@ def _format_value(value: Any) -> str:
     if value is False:
         return "No"
     if isinstance(value, str):
-        return escape(value).replace("|", "&#124;") or "—"
+        return escape_table_cell(value) or "—"
     if isinstance(value, (int, float)):
         return str(value)
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    exact = escape(encoded).replace("|", "&#124;")
+    exact = escape_table_cell(encoded)
     if isinstance(value, dict):
-        summary = escape(_mapping_summary(value)).replace("|", "&#124;")
+        summary = escape_table_cell(_mapping_summary(value))
         return (
             f"{summary}<details><summary>Exact data</summary>"
             f"<code>{exact}</code></details>"
@@ -443,7 +448,7 @@ def _format_value_summary(value: Any) -> str:
     alternative and no detail page to link to instead.
     """
     if isinstance(value, dict):
-        return escape(_mapping_summary(value)).replace("|", "&#124;")
+        return escape_table_cell(_mapping_summary(value))
     return _format_value(value)
 
 
@@ -477,6 +482,8 @@ def _format_pokemon_change(
         return _format_level_up_moves(before, after, source_url, references)
     if field == "evolutions":
         return _format_evolutions(before, after, source_url, references)
+    if field == "held_items":
+        return _format_held_items_change(before, after, source_url, references)
     if field in {"base_stats", "ev_yields"}:
         return _format_mapping_change(before, after, kind="pokemon")
     return None
@@ -525,6 +532,26 @@ def _format_ability_pokemon_change(
     if not groups:
         return "Order changed"
     return _format_change_groups(groups)
+
+
+def _format_held_items_change(
+    before: list[dict[str, Any]],
+    after: list[dict[str, Any]],
+    source_url: str,
+    references: ReferenceIndex | None,
+) -> str:
+    previous = {item["rarity"]: item for item in before}
+    current = {item["rarity"]: item for item in after}
+    lines = []
+    for rarity in sorted(set(previous) | set(current)):
+        old = previous.get(rarity)
+        new = current.get(rarity)
+        if _reference_id(old) == _reference_id(new):
+            continue
+        old_label = _reference_html(old, "item", source_url, references)
+        new_label = _reference_html(new, "item", source_url, references)
+        lines.append(f"{rarity.title()} held item: {_diff(old_label, new_label)}")
+    return _format_lines(lines, True)
 
 
 def _format_trainer_location_change(
@@ -778,7 +805,7 @@ def _format_lines(values: list[str], trusted: bool = False) -> str:
     if not values:
         return "No changes"
     rendered = [
-        value if trusted else escape(value).replace("|", "&#124;")
+        value if trusted else escape_table_cell(value)
         for value in values
     ]
     return _format_collection(rendered, "change", "changes")

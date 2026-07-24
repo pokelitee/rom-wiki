@@ -35,6 +35,7 @@ from romwiki.renderers.mkdocs.components import (
     stat_list,
     tutor_requirement,
     type_badges,
+    yes_no,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -280,10 +281,7 @@ def _render_record(
                 *provenance_fact_table(
                     (
                         ("Personal-data member", f"`{record['member']}`"),
-                        (
-                            "Flip battle sprite",
-                            "Yes" if record["flip_sprite"] else "No",
-                        ),
+                        ("Flip battle sprite", yes_no(record["flip_sprite"])),
                     )
                 ),
                 rom_record_source(

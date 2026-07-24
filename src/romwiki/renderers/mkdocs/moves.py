@@ -176,7 +176,10 @@ def _render_record(
         additional_properties.append(
             (
                 "Move tutor",
-                ", ".join(tutor["location"]["name"] for tutor in record["tutors"]),
+                ", ".join(
+                    _tutor_location_link_html(tutor["location"], source_url)
+                    for tutor in record["tutors"]
+                ),
             )
         )
     if record.get("replaces") and change is None:
@@ -203,7 +206,9 @@ def _render_record(
                     tuple(
                         (
                             label,
-                            value if label == "Machine" else escape(value),
+                            value
+                            if label in ("Machine", "Move tutor")
+                            else escape(value),
                         )
                         for label, value in additional_properties
                     ),
@@ -418,6 +423,15 @@ def _tutor_location_link(location: dict[str, Any], source_file: str) -> str:
     return ROUTES.markdown_link(
         entity_reference("location", location["id"], location["name"], location["id"]),
         source_file,
+    )
+
+
+def _tutor_location_link_html(location: dict[str, Any], source_url: str) -> str:
+    if location.get("id") is None:
+        return escape(location["name"])
+    return ROUTES.html_link(
+        entity_reference("location", location["id"], location["name"], location["id"]),
+        source_url,
     )
 
 

@@ -25,6 +25,20 @@ def empty_state(message: str) -> list[str]:
     return [message, ""]
 
 
+def yes_no(value: bool) -> str:
+    return "Yes" if value else "No"
+
+
+def escape_table_cell(value: str) -> str:
+    """Escape free-text ROM data for a raw Markdown table cell.
+
+    Markdown tables split on ``|``, which HTML-escaping alone doesn't
+    neutralize, so this is the shared escaping every table cell holding
+    unstructured ROM/reference text (nicknames, OT names, etc.) should use.
+    """
+    return escape(value).replace("|", "&#124;")
+
+
 def type_badges(types: list[dict[str, Any]]) -> str:
     badges = []
     seen = set()

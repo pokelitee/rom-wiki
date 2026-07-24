@@ -17,6 +17,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     badge_requirement,
+    escape_table_cell,
     pokemon_table,
     provenance_fact_table,
     provenance_section,
@@ -33,6 +34,7 @@ from romwiki.renderers.mkdocs.references import (
     ReferenceIndex,
     entity_markdown_link,
     entity_reference,
+    escape_markdown,
 )
 
 _SEAL_MART_DAYS = (
@@ -245,7 +247,8 @@ def _render_location(
                 "records from the ROM.",
                 *(
                     (
-                        f"Trade `{trade['trade_id']}` ({trade['nickname']}) "
+                        f"Trade `{trade['trade_id']}` "
+                        f"({escape_markdown(trade['nickname'])}) "
                         f"personality value: `0x{trade['personality']:08X}`."
                     )
                     for trade in record.get("npc_trades", [])
@@ -764,7 +767,7 @@ def _append_npc_trades(
             else "—"
         )
         ot = (
-            f"{trade['ot_name']} (ID {trade['ot_id']:05}), "
+            f"{escape_table_cell(trade['ot_name'])} (ID {trade['ot_id']:05}), "
             f"{trade['ot_gender'].lower()}, {trade['language']}"
         )
         requested_sprite = _entity_sprite(
@@ -789,7 +792,8 @@ def _append_npc_trades(
         )
         lines.append(
             f"| {sprite_with_link(requested_sprite, requested)} "
-            f"| {sprite_with_link(offered_sprite, offered)} | {trade['nickname']} | "
+            f"| {sprite_with_link(offered_sprite, offered)} | "
+            f"{escape_table_cell(trade['nickname'])} | "
             f"{trade['nature']} | {held_item_cell} | {ivs} | {ot} |"
         )
     lines.append("")

@@ -259,7 +259,7 @@ def _render_trainer(
     lines = [
         f"# {label}",
         "",
-        *_trainer_summary(record, grouped_ai_items),
+        *_trainer_summary(record, grouped_ai_items, source_url),
         "## Party",
         "",
         *_party_cards(record["party"], source_url),
@@ -289,6 +289,20 @@ def _group_ai_battle_items(record: dict[str, Any]) -> list[dict[str, Any]]:
     return list(grouped_items.values())
 
 
+def _ai_item_identity(item: dict[str, Any]) -> int | str:
+    return item.get("id", item.get("slug", item["name"]))
+
+
+def _ai_item_link(grouped: dict[str, Any], source_url: str) -> str:
+    item = grouped["item"]
+    link = ROUTES.html_link(
+        entity_reference("item", _ai_item_identity(item), item["name"], item.get("slug")),
+        source_url,
+    )
+    quantity = f" ×{grouped['quantity']}" if grouped["quantity"] > 1 else ""
+    return f"{link}{quantity}"
+
+
 def _append_ai_battle_items(
     lines: list[str], grouped_items: list[dict[str, Any]], source_file: str
 ) -> None:
@@ -306,11 +320,10 @@ def _append_ai_battle_items(
     )
     for grouped in grouped_items:
         item = grouped["item"]
-        identity = item.get("id", item.get("slug", item["name"]))
         item_link = ROUTES.markdown_link(
             entity_reference(
                 "item",
-                identity,
+                _ai_item_identity(item),
                 item["name"],
                 item.get("slug"),
             ),
@@ -411,14 +424,14 @@ def _location_summary_value(record: dict[str, Any], location_names: list[str]) -
 
 
 def _trainer_summary(
-    record: dict[str, Any], grouped_ai_items: list[dict[str, Any]]
+    record: dict[str, Any],
+    grouped_ai_items: list[dict[str, Any]],
+    source_url: str,
 ) -> list[str]:
     location_names = _location_names(record)
     level_range = _trainer_level_range(record)
     ai_items = ", ".join(
-        escape(grouped["item"]["name"])
-        + (f" ×{grouped['quantity']}" if grouped["quantity"] > 1 else "")
-        for grouped in grouped_ai_items
+        _ai_item_link(grouped, source_url) for grouped in grouped_ai_items
     ) or '<span class="rw-summary__empty">None</span>'
     return summary_section(
         "rw-trainer-summary",
@@ -437,12 +450,7 @@ def _trainer_summary(
             f"{summary_section_link(len(record['party']), 'party')}</dd></div>",
             "<div><dt>Level range</dt><dd>"
             f"{summary_section_link(level_range, 'party')}</dd></div>",
-            (
-                "<div><dt>AI items</dt><dd>"
-                f'<a href="#ai-battle-items">{ai_items}</a></dd></div>'
-                if grouped_ai_items
-                else f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>"
-            ),
+            f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>",
         ],
     )
 
@@ -456,7 +464,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             item_link = ROUTES.html_link(
                 entity_reference(
                     "item",
-                    held_item.get("id", held_item["name"]),
+                    held_item.get("id", held_item.get("slug", held_item["name"])),
                     held_item["name"],
                     held_item.get("slug"),
                 ),
@@ -494,7 +502,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             ability_link = ROUTES.html_link(
                 entity_reference(
                     "ability",
-                    ability.get("id", ability["name"]),
+                    ability.get("id", ability.get("slug", ability["name"])),
                     ability["name"],
                     ability.get("slug"),
                 ),

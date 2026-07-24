@@ -33,6 +33,7 @@ from romwiki.renderers.mkdocs.components import (
     sprite_with_link,
     summary_section_link,
     type_badges,
+    yes_no,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -177,7 +178,7 @@ def _render_record(
         ("Held effect parameter", str(record["hold_effect_parameter"])),
         ("Battle use function ID", str(record["battle_use_function_id"])),
         ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}"),
-        ("Usable on party", _yes_no(record["party_use"])),
+        ("Usable on party", yes_no(record["party_use"])),
     ]
     if record["pluck_effect_id"]:
         mechanics.append(("Pluck effect ID", str(record["pluck_effect_id"])))
@@ -270,8 +271,8 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
         ("Item ID", escape(str(record["item_id"]))),
         ("Pocket", escape(display_name(record["pocket"]["name"]))),
         ("Base price", escape(price)),
-        ("Selectable", escape(_yes_no(record["selectable"]))),
-        ("Can be discarded", escape(_yes_no(not record["prevent_toss"]))),
+        ("Selectable", escape(yes_no(record["selectable"]))),
+        ("Can be discarded", escape(yes_no(not record["prevent_toss"]))),
     ]
     if record["fling_power"]:
         facts.append(
@@ -612,10 +613,6 @@ def _features(record: dict[str, Any]) -> list[str]:
         if record[field]:
             values.append(label)
     return values
-
-
-def _yes_no(value: bool) -> str:
-    return "Yes" if value else "No"
 
 
 def _append_record_navigation(

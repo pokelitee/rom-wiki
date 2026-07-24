@@ -118,16 +118,22 @@ class TrainerRenderingTests(unittest.TestCase):
             "double_battle": False,
             "party": [_party_member([])],
             "ai_battle_items": [
-                {"id": 23, "name": "Full Restore"},
-                {"id": 23, "name": "Full Restore"},
+                {"id": 23, "name": "Full Restore", "slug": "full-restore"},
+                {"id": 23, "name": "Full Restore", "slug": "full-restore"},
             ],
         }
 
-        page = "\n".join(_trainer_summary(record, _group_ai_battle_items(record)))
+        page = "\n".join(
+            _trainer_summary(
+                record,
+                _group_ai_battle_items(record),
+                "trainers/trainer-0005/",
+            )
+        )
 
         self.assertIn(
-            '<dt>AI items</dt><dd><a href="#ai-battle-items">'
-            "Full Restore ×2</a></dd>",
+            '<dt>AI items</dt><dd><a href="../../items/full-restore/">'
+            "Full Restore</a> ×2</dd>",
             page,
         )
 
