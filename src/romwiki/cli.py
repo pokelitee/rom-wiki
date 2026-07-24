@@ -52,7 +52,13 @@ from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import SiteCatalog, audit_site, build_sites
 from romwiki.sites.dev_pages import DevPages
 from romwiki.sources import PokeDBGeneration
-from romwiki.util.errors import LocalConfigError, RomWikiError, SiteError
+from romwiki.util.errors import (
+    DataSourceError,
+    LocalConfigError,
+    ProfileError,
+    RomWikiError,
+    SiteError,
+)
 from romwiki.util.local_config import LocalGameRegistry
 
 
@@ -693,11 +699,16 @@ def _run_section_build(
         "build-items": ("items",),
     }[args.command]
     workflow = _create_build_workflow(args, result)
-    move_dataset = (
-        workflow.build("moves").current
-        if args.command == "build-pokemon"
-        else None
-    )
+    move_dataset = None
+    if args.command == "build-pokemon":
+        try:
+            move_dataset = workflow.build("moves").current
+        except ProfileError:
+            # Cross-linking Pokémon/Ability pages to move names is a nice-to-
+            # have, not a requirement: an engine that hasn't implemented
+            # moves yet (e.g. a new generation's first vertical slice) should
+            # still be able to build its Pokémon section.
+            move_dataset = None
     game = workflow.current.profile.id
     wiki_root = (
         args.wiki_output.parent
@@ -713,6 +724,16 @@ def _run_section_build(
         else Path("build/data") / game
     )
     comparisons = _load_comparisons(data_root / "comparisons")
+    # An engine's Abilities section needs ROM-decoded ability names with no
+    # PokéDB fallback (unlike Pokémon page names); an engine whose first
+    # vertical slice implements only personal data (no message-archive
+    # decoding yet) can still build its Pokémon section without one.
+    abilities_dataset = None
+    if args.command == "build-pokemon":
+        try:
+            abilities_dataset = workflow.build("abilities")
+        except (ProfileError, DataSourceError):
+            abilities_dataset = None
     reference_datasets = {}
     if args.command == "build-locations":
         reference_datasets = {
@@ -720,18 +741,23 @@ def _run_section_build(
             "items": workflow.current.items(),
         }
     elif args.command == "build-pokemon":
-        reference_datasets = {
-            "pokemon": workflow.current.pokemon(),
-            "abilities": workflow.current.abilities(),
-            "moves": workflow.current.moves(),
-        }
+        reference_datasets = {"pokemon": workflow.current.pokemon()}
+        if abilities_dataset is not None:
+            reference_datasets["abilities"] = abilities_dataset.current
+        if move_dataset is not None:
+            reference_datasets["moves"] = move_dataset
     reference_index = (
         ReferenceIndex.from_datasets(reference_datasets)
         if reference_datasets
         else None
     )
+    kinds = tuple(
+        kind
+        for kind in kinds
+        if kind != "abilities" or abilities_dataset is not None
+    )
     for index, kind in enumerate(kinds):
-        build = workflow.build(kind)
+        build = abilities_dataset if kind == "abilities" else workflow.build(kind)
         data_output = (
             args.data_output
             if index == 0 and args.data_output is not None

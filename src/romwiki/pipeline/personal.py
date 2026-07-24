@@ -26,13 +26,18 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
     reference_names = extract_reference_names(profile, filesystem)
+    # Bounded to the engine's declared record count rather than every archive
+    # member: some engines' personal archives carry trailing members that
+    # aren't personal records at all (e.g. Gen V's `a/0/1/6` has a non-record
+    # table appended after the last species/forme entry).
+    members = archive.members[: engine.PERSONAL_RECORD_COUNT]
     records = [
         engine.parse_personal_record(
             archive.read(member.index),
             species_id=member.index,
             archive_path=archive_path,
         ).to_dict()
-        for member in archive.members
+        for member in members
     ]
     return {
         "schema_version": POKEMON_PERSONAL_RAW_SCHEMA_VERSION,

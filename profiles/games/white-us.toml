@@ -1,0 +1,21 @@
+[profile]
+id = "white-us"
+name = "Pokémon White (USA)"
+platform = "nintendo-ds"
+engine = "gen5_bw"
+base_game = "white"
+
+[header]
+game_codes = ["IRAO"]
+rom_versions = [0]
+
+[reference]
+sprite_version = "black-white"
+
+[layout]
+personal = "a/0/1/6"
+
+[[hashes]]
+algorithm = "sha256"
+value = "b288bb061fd646894f5059f55cd0a1efb13b4f0cfd3d9e06e9e42a5bd9431ac6"
+variant = "usa-retail"

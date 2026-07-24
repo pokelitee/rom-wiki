@@ -23,6 +23,28 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(profile.rom_versions, (0,))
         self.assertEqual(profile.parameters["egg_gifts"][0]["command_offset"], 0xE59)
 
+    def test_loads_black_and_white_baseline_profiles(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+
+        black = profiles["black-us"]
+        white = profiles["white-us"]
+
+        self.assertEqual(black.platform, "nintendo-ds")
+        self.assertEqual(black.engine, "gen5_bw")
+        self.assertEqual(black.base_game, "black")
+        self.assertEqual(black.game_codes, ("IRBO",))
+        self.assertEqual(black.rom_versions, (0,))
+        self.assertEqual(black.layout["personal"], "a/0/1/6")
+        self.assertEqual(black.sprite_version, "black-white")
+
+        self.assertEqual(white.engine, "gen5_bw")
+        self.assertEqual(white.base_game, "white")
+        self.assertEqual(white.game_codes, ("IRAO",))
+        self.assertEqual(white.layout["personal"], "a/0/1/6")
+
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "test.toml"

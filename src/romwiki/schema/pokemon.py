@@ -41,7 +41,7 @@ class PokemonPersonalData:
     base_friendship: int
     growth_rate_id: int
     egg_group_ids: tuple[int, int]
-    ability_ids: tuple[int, int]
+    ability_ids: tuple[int, ...]
     safari_flee_rate: int
     body_color_id: int
     flip_sprite: bool

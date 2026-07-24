@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import romwiki.engines.gen4_dppt as gen4_dppt
+import romwiki.engines.gen5_bw as gen5_bw
 from romwiki.util.errors import DataSourceError
 
 
@@ -49,6 +50,22 @@ _ENGINES: dict[str, EngineAdapter] = {
         reference_names=gen4_dppt,
         enrich=gen4_dppt,
         trainer_party=gen4_dppt,
+    ),
+    "gen5_bw": EngineAdapter(
+        personal=gen5_bw,
+        locations=gen5_bw,
+        trainers=gen5_bw,
+        encounters=gen5_bw,
+        evolutions=gen5_bw,
+        items=gen5_bw,
+        machines=gen5_bw,
+        moves=gen5_bw,
+        tutors=gen5_bw,
+        egg_moves=gen5_bw,
+        learnsets=gen5_bw,
+        reference_names=gen5_bw,
+        enrich=gen5_bw,
+        trainer_party=gen5_bw,
     ),
 }
 

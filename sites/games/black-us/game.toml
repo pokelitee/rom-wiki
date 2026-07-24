@@ -1,0 +1,24 @@
+[site]
+id = "black-us"
+name = "Pokémon Black"
+kind = "game"
+slug = "black-us"
+# Pokémon pages link to Abilities/Items pages that don't exist until those
+# sections are implemented; unpublished keeps this out of the portal and the
+# combined `site build --all` audit gate until then. It still builds and
+# audits fine on its own: `romwiki build-pokemon --game black-us`.
+published = false
+order = 20
+mkdocs_config = "mkdocs.yml"
+description = "A data-driven reference for Pokémon Black (USA) -- Pokémon species data"
+
+[game]
+profile = "black-us"
+generation = 5
+base_game = "black"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "Game Freak"
+
+[appearance]
+theme = "black-white"

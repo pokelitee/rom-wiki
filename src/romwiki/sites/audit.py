@@ -9,16 +9,27 @@ from urllib.parse import unquote, urlsplit
 
 from romwiki.util.errors import SiteError
 
+# minify_html drops attribute-value quotes whenever a value has no
+# whitespace/quote/`=`/angle-bracket characters (e.g. `href=../..` instead of
+# `href="../.."`), so every attribute-value match below accepts a quoted or a
+# bareword value rather than assuming quotes are always present.
+_ATTR_VALUE = r'(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'=<>`]+))'
 _CUSTOM_CLASS = re.compile(r"\brw-[a-zA-Z0-9_-]+\b")
 _CUSTOM_CSS_CLASS = re.compile(r"\.((?:rw-)[a-zA-Z0-9_-]+)")
 _EXTERNAL_SCHEMES = {"data", "http", "https", "mailto", "tel"}
-_ID = re.compile(r'\bid=(["\'])(.*?)\1', re.IGNORECASE | re.DOTALL)
-_HREF = re.compile(r'<a\b[^>]*\bhref=(["\'])(.*?)\1', re.IGNORECASE | re.DOTALL)
-_CLASS = re.compile(r'\bclass=(["\'])(.*?)\1', re.IGNORECASE | re.DOTALL)
+_ID = re.compile(rf"\bid={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
+_HREF = re.compile(rf"<a\b[^>]*\bhref={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
+_CLASS = re.compile(rf"\bclass={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
+_SRC = re.compile(rf"\bsrc={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
+_LOADING = re.compile(rf"\bloading={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
 _IMAGE = re.compile(r"<img\b[^>]*>", re.IGNORECASE | re.DOTALL)
 _DETAIL_TAG = re.compile(r"</?details\b[^>]*>|<summary\b[^>]*>", re.IGNORECASE)
 _TABLE_TAG = re.compile(r"</?table\b[^>]*>|<th\b[^>]*>", re.IGNORECASE)
 _HEADING = re.compile(r"<h([1-6])\b", re.IGNORECASE)
+
+
+def _attr_value(match: re.Match[str]) -> str:
+    return next(group for group in match.groups() if group is not None)
 
 
 @dataclass(frozen=True)
@@ -62,7 +73,7 @@ def _parse_page(text: str, path: str) -> _ParsedPage:
     issues: list[SiteAuditIssue] = []
     ids: set[str] = set()
     for match in _ID.finditer(text):
-        identifier = match.group(2)
+        identifier = _attr_value(match)
         if identifier in ids:
             issues.append(
                 SiteAuditIssue(
@@ -74,11 +85,13 @@ def _parse_page(text: str, path: str) -> _ParsedPage:
             )
         ids.add(identifier)
 
-    links = [(match.group(2), line_at(match.start())) for match in _HREF.finditer(text)]
+    links = [
+        (_attr_value(match), line_at(match.start())) for match in _HREF.finditer(text)
+    ]
     custom_classes = {
         class_name
         for match in _CLASS.finditer(text)
-        for class_name in _CUSTOM_CLASS.findall(match.group(2))
+        for class_name in _CUSTOM_CLASS.findall(_attr_value(match))
     }
     images = list(_IMAGE.finditer(text))
     for match in images:
@@ -86,9 +99,10 @@ def _parse_page(text: str, path: str) -> _ParsedPage:
         line = line_at(match.start())
         if not re.search(r"\balt\b(\s*=|\s|/?>)", tag, re.IGNORECASE):
             issues.append(SiteAuditIssue("image-alt", path, "image is missing an alt attribute", line))
-        source = re.search(r'\bsrc=(["\'])(.*?)\1', tag, re.IGNORECASE | re.DOTALL)
-        if source and source.group(2).startswith(("http://", "https://")):
-            if not re.search(r'\bloading=(["\'])lazy\1', tag, re.IGNORECASE):
+        source = _SRC.search(tag)
+        if source and _attr_value(source).startswith(("http://", "https://")):
+            loading = _LOADING.search(tag)
+            if not loading or _attr_value(loading).lower() != "lazy":
                 issues.append(
                     SiteAuditIssue("image-loading", path, "external image is not lazy-loaded", line)
                 )

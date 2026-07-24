@@ -49,6 +49,31 @@ class SiteAuditTests(unittest.TestCase):
 
         self.assertNotIn("image-alt", {issue.code for issue in report.errors})
 
+    def test_resolves_minified_unquoted_href_id_and_class_attributes(self) -> None:
+        # minify_html also drops quotes around attribute values with no
+        # whitespace/quote/`=`/angle-bracket characters (e.g. `href=detail/`
+        # instead of `href="detail/"`); link counting, link-target
+        # validation, duplicate-id detection, and custom-class usage must all
+        # still work against that unquoted form.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(
+                root / "index.html",
+                "<a class=rw-link href=detail/#facts>Detail</a>",
+            )
+            _write_page(
+                root / "detail" / "index.html",
+                '<h2 id=facts>Facts</h2>',
+            )
+            assets = root / "assets"
+            assets.mkdir()
+            (assets / "site.css").write_text(".rw-link { color: blue; }", encoding="utf-8")
+
+            report = audit_site(root)
+
+        self.assertTrue(report.ok, [issue.format() for issue in report.errors])
+        self.assertEqual(report.link_count, 1)
+
     def test_reports_broken_structure_links_and_custom_styles(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

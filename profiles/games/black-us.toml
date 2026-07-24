@@ -1,0 +1,21 @@
+[profile]
+id = "black-us"
+name = "Pokémon Black (USA)"
+platform = "nintendo-ds"
+engine = "gen5_bw"
+base_game = "black"
+
+[header]
+game_codes = ["IRBO"]
+rom_versions = [0]
+
+[reference]
+sprite_version = "black-white"
+
+[layout]
+personal = "a/0/1/6"
+
+[[hashes]]
+algorithm = "sha256"
+value = "4ae66c769062afe74bbdca30ffee9330e7cc3865156133e11567ac3907babfc7"
+variant = "usa-retail"

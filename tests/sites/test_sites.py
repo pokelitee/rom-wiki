@@ -17,7 +17,7 @@ class SiteCatalogTests(unittest.TestCase):
 
         self.assertEqual(
             [site.id for site in catalog.sites],
-            ["portal", "platinum-us", "renegade-platinum"],
+            ["portal", "platinum-us", "renegade-platinum", "black-us", "white-us"],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
         game = catalog.get("renegade-platinum").game

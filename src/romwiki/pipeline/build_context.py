@@ -58,20 +58,42 @@ class GameBuildContext:
     def personal_raw(self) -> dict[str, Any]:
         return self._raw("pokemon/personal", extract_personal_dataset)
 
-    def learnsets_raw(self) -> dict[str, Any]:
+    # The five accessors below back optional enrichment inputs for pokemon()/
+    # abilities() (learnsets, evolutions, TM/HM compatibility, tutors, egg
+    # moves): enrich_personal_dataset and build_ability_dataset already accept
+    # each as None, so a profile that doesn't configure one (e.g. an engine's
+    # first vertical slice, which implements personal data before these
+    # datasets) gets a Pokémon section without that detail instead of a hard
+    # failure.
+    def learnsets_raw(self) -> dict[str, Any] | None:
+        if "learnsets" not in self.profile.layout:
+            return None
         return self._raw("pokemon/learnsets", extract_learnset_dataset)
 
-    def egg_moves_raw(self) -> dict[str, Any]:
+    def egg_moves_raw(self) -> dict[str, Any] | None:
+        if "egg_move_offset" not in self.profile.parameters:
+            return None
         return self._raw("pokemon/egg-moves", extract_egg_move_dataset)
 
-    def evolutions_raw(self) -> dict[str, Any]:
+    def evolutions_raw(self) -> dict[str, Any] | None:
+        if "evolutions" not in self.profile.layout:
+            return None
         return self._raw("pokemon/evolutions", extract_evolution_dataset)
 
-    def machines_raw(self) -> dict[str, Any]:
+    def machines_raw(self) -> dict[str, Any] | None:
+        if "machine_move_offset" not in self.profile.parameters:
+            return None
         return self._raw("machines/raw", extract_machine_dataset)
 
-    def tutors_raw(self) -> dict[str, Any]:
+    def tutors_raw(self) -> dict[str, Any] | None:
+        if "tutor_move_offset" not in self.profile.parameters:
+            return None
         return self._raw("tutors/raw", extract_tutor_dataset)
+
+    def pickup_raw(self) -> dict[str, Any] | None:
+        if "pickup_overlay_id" not in self.profile.parameters:
+            return None
+        return self._raw("pickup/raw", extract_pickup_dataset)
 
     def moves_raw(self) -> dict[str, Any]:
         return self._raw("moves/raw", extract_move_dataset)
@@ -92,9 +114,6 @@ class GameBuildContext:
 
     def items_raw(self) -> dict[str, Any]:
         return self._raw("items/raw", extract_item_dataset)
-
-    def pickup_raw(self) -> dict[str, Any]:
-        return self._raw("pickup/raw", extract_pickup_dataset)
 
     def pokemon(self) -> dict[str, Any]:
         return self._memo(

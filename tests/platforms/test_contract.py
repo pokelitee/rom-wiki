@@ -103,7 +103,9 @@ class PlatformContractTests(unittest.TestCase):
         register_platform(
             _FAKE_PLATFORM_ID, _fake_platform({"personal.bin": bytes([7, 9, 11])})
         )
-        tables = types.SimpleNamespace(parse_personal_record=_parse_record)
+        tables = types.SimpleNamespace(
+            parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=3
+        )
         register_engine(
             _FAKE_ENGINE_ID,
             EngineAdapter(**dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)),

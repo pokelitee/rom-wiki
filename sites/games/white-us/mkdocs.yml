@@ -1,0 +1,16 @@
+INHERIT: ../../shared/mkdocs.base.yml
+
+site_name: Pokémon White Wiki
+site_description: A data-driven reference for Pokémon White
+docs_dir: wiki
+hooks:
+  - ../../../src/romwiki/sites/mkdocs_hooks.py
+
+theme:
+  custom_dir: ../../shared/overrides
+
+nav:
+  - Home: index.md
+  - Data Sources: data-sources.md
+  - Game Data:
+      - Pokémon: pokemon/index.md
