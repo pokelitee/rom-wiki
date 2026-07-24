@@ -255,6 +255,7 @@ def _render_record(
         )
     else:
         lines.extend(empty_state("No wild held items."))
+    lines.extend(_other_forms_section(record, all_records or [record], source_file))
     preevolutions = preevolutions or []
     lines.extend(["## Evolutions", ""])
     if preevolutions or evolutions:
@@ -409,6 +410,49 @@ def _comparison_base_stats(
     return current
 
 
+def _sibling_forms(
+    record: dict[str, Any], records: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    base_species = record.get("base_species")
+    if not base_species:
+        return []
+    return [
+        sibling
+        for sibling in records
+        if sibling["slug"] != record["slug"]
+        and sibling.get("base_species") == base_species
+    ]
+
+
+def _other_forms_section(
+    record: dict[str, Any], records: list[dict[str, Any]], source_file: str
+) -> list[str]:
+    siblings = _sibling_forms(record, records)
+    if not siblings:
+        return []
+    source_url = source_file.removesuffix(".md") + "/"
+    forms = [record, *siblings]
+    by_slug = {form["slug"]: form for form in forms}
+    base = next(
+        (form for form in forms if form.get("form") is None),
+        forms[0],
+    )
+    lines = ['<div class="rw-record-tree" aria-label="Other forms">']
+    lines.extend(
+        _evolution_row(base, by_slug, record["slug"], source_url, set(), 0)
+    )
+    for form in forms:
+        if form["slug"] == base["slug"]:
+            continue
+        lines.extend(
+            _evolution_row(
+                form, by_slug, record["slug"], source_url, {base["slug"]}, 1
+            )
+        )
+    lines.extend(["</div>", ""])
+    return ["## Other forms", "", *lines]
+
+
 def _index_preevolutions(
     records: list[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
@@ -475,7 +519,7 @@ def _evolution_list(
     )
     if not roots:
         roots = [current["slug"]]
-    lines = ['<div class="rw-evolution-list" aria-label="Evolution chain">']
+    lines = ['<div class="rw-record-tree" aria-label="Evolution chain">']
     for root in roots:
         lines.extend(
             _evolution_row(
@@ -505,7 +549,7 @@ def _evolution_row(
     )
     href = ROUTES.published_href(reference, source_url)
     sprite = record.get("sprite") or {}
-    media = '<span class="rw-evolution-row__placeholder" aria-hidden="true">?</span>'
+    media = '<span class="rw-record-tree__placeholder" aria-hidden="true">?</span>'
     if sprite.get("url"):
         media = (
             f'<img src="{escape(sprite["url"], quote=True)}" alt="" '
@@ -523,32 +567,32 @@ def _evolution_row(
     else:
         name = name_escaped
     condition_html = (
-        f'<span class="rw-evolution-row__condition">'
+        f'<span class="rw-record-tree__condition">'
         f"{evolution_condition(condition, source_url)}</span>"
         if condition is not None
         else ""
     )
     current_badge = (
-        '<span class="rw-evolution-row__current">Current</span>' if is_current else ""
+        '<span class="rw-record-tree__current">Current</span>' if is_current else ""
     )
-    row_class = "rw-evolution-row"
+    row_class = "rw-record-tree__row"
     if is_current:
-        row_class += " rw-evolution-row--current"
+        row_class += " rw-record-tree__row--current"
     style_attribute = ""
     if depth:
-        row_class += " rw-evolution-row--child"
-        style_attribute = f' style="--rw-evolution-depth: {depth}"'
+        row_class += " rw-record-tree__row--child"
+        style_attribute = f' style="--rw-record-tree-depth: {depth}"'
     lines = [
         line
         for line in [
             f'<div class="{row_class}"{style_attribute}>',
-            f'<span class="rw-evolution-row__icon">{media}</span>',
-            '<span class="rw-evolution-row__text">',
-            f'<span class="rw-evolution-row__name">{name}</span>',
+            f'<span class="rw-record-tree__icon">{media}</span>',
+            '<span class="rw-record-tree__text">',
+            f'<span class="rw-record-tree__name">{name}</span>',
             condition_html,
             "</span>",
             current_badge,
-            f'<span class="rw-evolution-row__dex">{dex_label}</span>',
+            f'<span class="rw-record-tree__dex">{dex_label}</span>',
             "</div>",
         ]
         if line

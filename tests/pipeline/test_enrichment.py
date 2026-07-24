@@ -123,7 +123,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("<div><dt>Body color</dt><dd>Green</dd></div>", page)
         self.assertIn("<div><dt>Habitat</dt><dd>Grassland</dd></div>", page)
         self.assertIn("<div><dt>Shape</dt><dd>Quadruped</dd></div>", page)
-        self.assertNotIn("rw-summary__tags", page)
+        self.assertNotIn('rw-summary__tag">', page)
         self.assertIn("0.7 m (2′4″)", page)
         self.assertIn("1 Sp. Atk", page)
         self.assertIn("87.5% male / 12.5% female", page)
@@ -137,7 +137,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
             '<a href="../ivysaur/">Ivysaur</a>', page
         )
         self.assertIn(
-            '<span class="rw-evolution-row__name">', page
+            '<span class="rw-record-tree__name">', page
         )
         self.assertIn("Level 16", page)
         self.assertIn(
@@ -171,7 +171,8 @@ class PersonalEnrichmentTests(unittest.TestCase):
             page = (output / "bulbasaur.md").read_text(encoding="utf-8")
 
         self.assertIn(
-            '<div class="rw-summary__tags">'
+            '<div class="rw-summary__badges">'
+            '<span class="rw-type-list"><span class="rw-type rw-type--grass">Grass</span></span>'
             '<span class="rw-summary__tag">Legendary</span>'
             '<span class="rw-summary__tag">Baby</span></div>',
             page,
@@ -246,9 +247,9 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("Jolteon", chain)
         self.assertIn("Water Stone", chain)
         self.assertIn('aria-current="page"', chain)
-        self.assertIn('class="rw-evolution-row__current">Current', chain)
-        self.assertIn('class="rw-evolution-row__dex">#135', chain)
-        self.assertIn('rw-evolution-row--child', chain)
+        self.assertIn('class="rw-record-tree__current">Current', chain)
+        self.assertIn('class="rw-record-tree__dex">#135', chain)
+        self.assertIn('rw-record-tree__row--child', chain)
         self.assertIn('href="../vaporeon/"', chain)
 
     def test_renders_personality_based_branch_as_a_level_not_a_branch_number(

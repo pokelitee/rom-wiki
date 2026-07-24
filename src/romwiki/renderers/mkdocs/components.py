@@ -223,13 +223,13 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     body_color = (record.get("body_color") or {}).get("name")
     habitat = reference.get("habitat")
     shape = reference.get("shape")
+    badges = type_badges(record["types"]) + classification
     return [
         '<section class="rw-summary">',
         f'<div class="rw-summary__media">{media}{cry_html}</div>',
         '<div class="rw-summary__body">',
         *(f'<p class="rw-summary__genus">{escape(genus)}</p>' for _ in [0] if genus),
-        *([f'<div class="rw-summary__tags">{classification}</div>'] if classification else []),
-        type_badges(record["types"]),
+        f'<div class="rw-summary__badges">{badges}</div>',
         '<dl class="rw-summary__facts">',
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
         *(f"<div><dt>Form</dt><dd>{escape(display_name(form))}</dd></div>" for _ in [0] if form),
@@ -291,12 +291,19 @@ def pokemon_table(header_lines: list[str], row_lines: list[str]) -> list[str]:
 
 
 def machine_link(
-    machine: dict[str, Any], source_file: str, references: ReferenceIndex | None
+    machine: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+    *,
+    as_html: bool = False,
 ) -> str:
     item_id = machine.get("item_id")
     if item_id is None:
-        return escape_markdown(str(machine["name"]))
+        name = str(machine["name"])
+        return escape(name) if as_html else escape_markdown(name)
     reference = resolved_reference("item", item_id, machine["name"], index=references)
+    if as_html:
+        return ROUTES.html_link(reference, source_file)
     return ROUTES.markdown_link(reference, source_file)
 
 

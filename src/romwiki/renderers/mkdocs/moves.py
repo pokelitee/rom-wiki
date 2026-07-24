@@ -20,6 +20,7 @@ from romwiki.renderers.mkdocs.components import (
     display_name,
     empty_state,
     fact_grid,
+    machine_link,
     name_table_source,
     pokemon_table,
     provenance_fact_table,
@@ -41,7 +42,6 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     escape_markdown,
     pokemon_record_link,
-    resolved_reference,
 )
 
 
@@ -167,7 +167,7 @@ def _render_record(
             (
                 "Machine",
                 ", ".join(
-                    _machine_html_link(machine, source_url, references)
+                    machine_link(machine, source_url, references, as_html=True)
                     for machine in record["machines"]
                 ),
             )
@@ -282,23 +282,6 @@ def _move_summary(record: dict[str, Any]) -> list[str]:
             f"<div><dt>PP</dt><dd>{record['pp']}</dd></div>",
         ],
     )
-
-
-def _machine_html_link(
-    machine: dict[str, Any],
-    source_url: str,
-    references: ReferenceIndex | None,
-) -> str:
-    item_id = machine.get("item_id")
-    if item_id is None:
-        return escape(str(machine["name"]))
-    reference = resolved_reference(
-        "item",
-        item_id,
-        machine["name"],
-        index=references,
-    )
-    return ROUTES.html_link(reference, source_url)
 
 
 def _append_record_navigation(
