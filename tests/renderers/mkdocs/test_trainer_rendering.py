@@ -210,6 +210,25 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn('<tr><th scope="row">IV</th><td>12</td>', page)
         self.assertIn('<tr><th scope="row">EV</th><td>0</td>', page)
 
+    def test_marks_a_hidden_ability_in_the_party_card(self) -> None:
+        member = _party_member([])
+        member["ability"] = {
+            "id": 34,
+            "name": "Chlorophyll",
+            "slug": "chlorophyll",
+            "slot": 3,
+            "is_hidden": True,
+            "source": "derived",
+        }
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertIn(
+            'href="../../abilities/chlorophyll/">Chlorophyll</a>'
+            '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>',
+            page,
+        )
+
 
 def _party_member(moves: list[str]) -> dict[str, object]:
     return {

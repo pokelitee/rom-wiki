@@ -122,15 +122,18 @@ def render_pokemon_pages(
         )
         abilities = [value["name"] for value in unique_abilities]
         ability_refs = [
-            ROUTES.catalog_reference(
-                entity_reference(
-                    "ability",
-                    value.get("id", value["name"]),
-                    value["name"],
-                    value.get("slug"),
+            {
+                **ROUTES.catalog_reference(
+                    entity_reference(
+                        "ability",
+                        value.get("id", value["name"]),
+                        value["name"],
+                        value.get("slug"),
+                    ),
+                    "pokemon/",
                 ),
-                "pokemon/",
-            )
+                **({"hidden": True} if value.get("is_hidden") else {}),
+            }
             for value in unique_abilities
         ]
         types = list(dict.fromkeys(value["name"] for value in record["types"]))
@@ -341,10 +344,34 @@ def _item_sprite_cell(
 
 
 _SPRITE_MATRIX_ROWS = (
-    ("Front", "front_default", "front_shiny"),
-    ("Front, female", "front_female", "front_shiny_female"),
-    ("Back", "back_default", "back_shiny"),
-    ("Back, female", "back_female", "back_shiny_female"),
+    (
+        "Front",
+        "front_default",
+        "front_shiny",
+        "front_default_animated",
+        "front_shiny_animated",
+    ),
+    (
+        "Front, female",
+        "front_female",
+        "front_shiny_female",
+        "front_female_animated",
+        "front_shiny_female_animated",
+    ),
+    (
+        "Back",
+        "back_default",
+        "back_shiny",
+        "back_default_animated",
+        "back_shiny_animated",
+    ),
+    (
+        "Back, female",
+        "back_female",
+        "back_shiny_female",
+        "back_female_animated",
+        "back_shiny_female_animated",
+    ),
 )
 
 
@@ -352,28 +379,51 @@ def _sprite_gallery(record: dict[str, Any]) -> list[str]:
     sprites = record.get("sprites", [])
     by_key = {sprite["key"]: sprite for sprite in sprites}
     rows = [
-        (label, by_key.get(default_key), by_key.get(shiny_key))
-        for label, default_key, shiny_key in _SPRITE_MATRIX_ROWS
-        if by_key.get(default_key) or by_key.get(shiny_key)
+        (
+            label,
+            by_key.get(default_key),
+            by_key.get(shiny_key),
+            by_key.get(animated_key),
+            by_key.get(animated_shiny_key),
+        )
+        for label, default_key, shiny_key, animated_key, animated_shiny_key in _SPRITE_MATRIX_ROWS
+        if by_key.get(default_key)
+        or by_key.get(shiny_key)
+        or by_key.get(animated_key)
+        or by_key.get(animated_shiny_key)
     ]
     if not rows:
         return ["## Sprites", "", *empty_state("No sprites are available.")]
+    has_animated = any(animated or animated_shiny for _, _, _, animated, animated_shiny in rows)
     lines = [
         "## Sprites",
         "",
-        '<div class="rw-sprite-matrix">',
+        '<div class="rw-sprite-matrix'
+        + (" rw-sprite-matrix--animated" if has_animated else "")
+        + '">',
         '<div class="rw-sprite-matrix__row rw-sprite-matrix__row--header">',
         '<span><span class="rw-visually-hidden">Sprite variant</span></span>'
-        "<span>Normal</span><span>Shiny</span>",
+        "<span>Normal</span><span>Shiny</span>"
+        + ("<span>Animated</span><span>Animated, shiny</span>" if has_animated else ""),
         "</div>",
     ]
-    for label, default_sprite, shiny_sprite in rows:
+    for label, default_sprite, shiny_sprite, animated_sprite, animated_shiny_sprite in rows:
+        cells = [
+            _sprite_cell(default_sprite, record["name"]),
+            _sprite_cell(shiny_sprite, record["name"]),
+        ]
+        if has_animated:
+            cells.extend(
+                [
+                    _sprite_cell(animated_sprite, record["name"]),
+                    _sprite_cell(animated_shiny_sprite, record["name"]),
+                ]
+            )
         lines.extend(
             [
                 '<div class="rw-sprite-matrix__row">',
                 f'<span class="rw-sprite-matrix__label">{escape(label)}</span>',
-                _sprite_cell(default_sprite, record["name"]),
-                _sprite_cell(shiny_sprite, record["name"]),
+                *cells,
                 "</div>",
             ]
         )

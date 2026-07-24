@@ -19,7 +19,22 @@ function referenceLink(reference) {
   const link = document.createElement("a");
   link.href = reference.url;
   link.textContent = reference.label;
-  return link;
+  if (!reference.hidden) return link;
+  const fragment = document.createDocumentFragment();
+  fragment.append(link, hiddenAbilityMarker());
+  return fragment;
+}
+
+// Mirrors `HIDDEN_ABILITY_MARKER` in renderers/mkdocs/components.py, so a
+// Pokémon's hidden ability (`reference.hidden`, set from the ROM's own
+// ability-slot position) is marked the same way whether the page is
+// server-rendered or built client-side from catalog.json.
+function hiddenAbilityMarker() {
+  const marker = document.createElement("abbr");
+  marker.className = "rw-hidden-ability";
+  marker.title = "Hidden Ability";
+  marker.textContent = "*";
+  return marker;
 }
 
 export function referenceList(references, className = "rw-catalog__list") {

@@ -61,6 +61,43 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(overgrow["pokemon"][0]["slots"], [1, 2])
         self.assertEqual(dataset["records"][0]["pokemon"], [])
 
+    def test_carries_the_hidden_ability_flag_through_to_pokemon_entries(self) -> None:
+        names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]
+        names[65] = "Overgrow"
+        names[34] = "Chlorophyll"
+        pokedb = _pokedb()
+        dataset = build_ability_dataset(
+            {
+                "game": "test",
+                "engine": "gen4_dppt",
+                "dataset": "pokemon",
+                "source": {"archive": "personal.narc"},
+                "ability_names": names,
+                "records": [
+                    {
+                        "member": 1,
+                        "national_dex_id": 1,
+                        "slug": "bulbasaur",
+                        "name": "Bulbasaur",
+                        "public": True,
+                        "abilities": [
+                            {"id": 65, "slug": "overgrow", "name": "Overgrow", "is_hidden": False},
+                            {"id": 0, "slug": None, "name": None, "is_hidden": False},
+                            {"id": 34, "slug": "chlorophyll", "name": "Chlorophyll", "is_hidden": True},
+                        ],
+                    },
+                ],
+            },
+            pokedb,
+        )
+
+        overgrow = dataset["records"][64]
+        chlorophyll = dataset["records"][33]
+        self.assertEqual(overgrow["pokemon"][0]["slots"], [1])
+        self.assertFalse(overgrow["pokemon"][0]["is_hidden"])
+        self.assertEqual(chlorophyll["pokemon"][0]["slots"], [3])
+        self.assertTrue(chlorophyll["pokemon"][0]["is_hidden"])
+
     def test_attaches_pickup_tables_to_pickup_and_honey_gather_only(self) -> None:
         names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]
         names[53] = "Pickup"
@@ -143,6 +180,36 @@ class AbilityDatasetTests(unittest.TestCase):
                 "label": "Bulbasaur",
                 "url": "../pokemon/bulbasaur/",
             }],
+        )
+
+    def test_marks_the_hidden_ability_slot_on_the_ability_page(self) -> None:
+        dataset = {
+            "records": [
+                {
+                    "ability_id": 34,
+                    "slug": "chlorophyll",
+                    "name": "Chlorophyll",
+                    "pokemon": [
+                        {
+                            "member": 1,
+                            "national_dex_id": 1,
+                            "slug": "bulbasaur",
+                            "name": "Bulbasaur",
+                            "slots": [3],
+                            "is_hidden": True,
+                        }
+                    ],
+                }
+            ]
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_ability_pages(dataset, output)
+            page = (output / "chlorophyll.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            '3<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>',
+            page,
         )
 
     def test_renders_pickup_and_honey_gather_sections(self) -> None:

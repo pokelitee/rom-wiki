@@ -1,0 +1,22 @@
+[pages]
+pokemon = [
+    "bulbasaur",
+    "eevee",
+    "snorlax",
+    "victini",
+    "zekrom",
+    "genesect",
+]
+abilities = [
+    "overgrow",
+    "water-absorb",
+    "klutz",
+    "pickup",
+    "teravolt",
+]
+items = [
+    "master-ball",
+    "potion",
+    "leftovers",
+    "xtransceiver-626",
+]

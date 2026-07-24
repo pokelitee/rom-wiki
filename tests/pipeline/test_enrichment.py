@@ -92,7 +92,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["records"][1]["types"][0], {"id": 9, "name": "fairy"})
         self.assertEqual(
             enriched["records"][1]["abilities"][0],
-            {"id": 65, "slug": "overgrow", "name": "Overgrow"},
+            {"id": 65, "slug": "overgrow", "name": "Overgrow", "is_hidden": False},
         )
         # ROM names win for regular species (recapitalized from vanilla caps);
         # form members keep their slug-derived form labels.
@@ -178,6 +178,32 @@ class PersonalEnrichmentTests(unittest.TestCase):
             page,
         )
         self.assertNotIn(">Mythical<", page)
+
+    def test_labels_the_hidden_ability_slot(self) -> None:
+        record = _bulbasaur_record()
+        record["abilities"] = [
+            {"id": 65, "slug": "overgrow", "name": "Overgrow", "is_hidden": False},
+            {"id": 0, "slug": None, "name": None, "is_hidden": False},
+            {"id": 34, "slug": "chlorophyll", "name": "Chlorophyll", "is_hidden": True},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages({"records": [record]}, output)
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertIn(
+            "<div><dt>Abilities</dt><dd>"
+            '<a href="../../abilities/overgrow/">Overgrow</a>, '
+            '<a href="../../abilities/chlorophyll/">Chlorophyll</a>'
+            '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>'
+            "</dd></div>",
+            page,
+        )
+        refs = catalog["records"][0]["ability_refs"]
+        self.assertEqual([ref["label"] for ref in refs], ["Overgrow", "Chlorophyll"])
+        self.assertNotIn("hidden", refs[0])
+        self.assertTrue(refs[1]["hidden"])
 
     def test_only_pages_skips_detail_pages_but_keeps_full_catalog(self) -> None:
         record = _bulbasaur_record()
@@ -329,6 +355,30 @@ class SpriteGalleryTests(unittest.TestCase):
         self.assertIn('src="https://example.test/front-shiny.png"', page)
         self.assertIn('src="https://example.test/back.png"', page)
         self.assertIn('rw-sprite-matrix__cell--empty">—<', page)
+        self.assertNotIn("Animated", page)
+        self.assertNotIn("rw-sprite-matrix--animated", page)
+
+    def test_adds_an_animated_column_only_when_animated_sprites_exist(self) -> None:
+        lines = _sprite_gallery(
+            {
+                "name": "Bulbasaur",
+                "sprites": [
+                    {"key": "front_default", "label": "Front", "url": "https://example.test/front.png"},
+                    {"key": "front_shiny", "label": "Front, shiny", "url": "https://example.test/front-shiny.png"},
+                    {
+                        "key": "front_default_animated",
+                        "label": "Front, animated",
+                        "url": "https://example.test/front.gif",
+                    },
+                ],
+            }
+        )
+
+        page = "\n".join(lines)
+        self.assertIn('rw-sprite-matrix rw-sprite-matrix--animated', page)
+        self.assertIn("<span>Animated</span><span>Animated, shiny</span>", page)
+        self.assertIn('src="https://example.test/front.gif"', page)
+        self.assertEqual(page.count("rw-sprite-matrix__cell--empty"), 1)
 
 
 def _bulbasaur_record() -> dict:

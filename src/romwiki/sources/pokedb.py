@@ -298,6 +298,35 @@ class PokeDBGeneration:
                     "source_url": "https://github.com/PokeAPI/sprites",
                 }
             )
+        animated = selected.get("animated")
+        if isinstance(animated, dict):
+            for key, label in (
+                ("front_default", "Front, animated"),
+                ("front_female", "Front, female, animated"),
+                ("front_shiny", "Front, shiny, animated"),
+                ("front_shiny_female", "Front, female shiny, animated"),
+                ("back_default", "Back, animated"),
+                ("back_female", "Back, female, animated"),
+                ("back_shiny", "Back, shiny, animated"),
+                ("back_shiny_female", "Back, female shiny, animated"),
+            ):
+                url = animated.get(key)
+                if (
+                    not isinstance(url, str)
+                    or not url.startswith("https://")
+                    or url in seen
+                ):
+                    continue
+                seen.add(url)
+                result.append(
+                    {
+                        "key": f"{key}_animated",
+                        "label": label,
+                        "url": url,
+                        "source": "PokéAPI sprites",
+                        "source_url": "https://github.com/PokeAPI/sprites",
+                    }
+                )
         if not result and selected is not sprites:
             return self.pokemon_sprites(reference, None)
         return result

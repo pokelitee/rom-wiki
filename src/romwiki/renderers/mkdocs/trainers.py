@@ -16,6 +16,7 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    ability_link,
     class_badge,
     display_name,
     provenance_fact_table,
@@ -497,17 +498,11 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             else ""
         )
         ability = member.get("ability")
-        ability_link = None
-        if ability and ability.get("name"):
-            ability_link = ROUTES.html_link(
-                entity_reference(
-                    "ability",
-                    ability.get("id", ability.get("slug", ability["name"])),
-                    ability["name"],
-                    ability.get("slug"),
-                ),
-                source_url,
-            )
+        ability_link_html = (
+            ability_link(ability, source_url)
+            if ability and ability.get("name")
+            else None
+        )
         details = []
         pokemon_types = pokemon.get("types", [])
         nature = member.get("nature")
@@ -515,8 +510,8 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             nature_name = nature.get("name", nature.get("value"))
             if nature_name is not None:
                 details.append(("Nature", escape(str(nature_name))))
-        if ability_link is not None:
-            details.append(("Ability", ability_link))
+        if ability_link_html is not None:
+            details.append(("Ability", ability_link_html))
         details.append(("Held item", item_name))
         gender_html = _party_gender(member.get("gender"))
         types_html = (

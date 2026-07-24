@@ -814,8 +814,8 @@ def _enrich_record(
             for value in source["egg_group_ids"]
         ],
         "abilities": [
-            _ability_id(value, pokedb, ability_names)
-            for value in source["ability_ids"]
+            {**_ability_id(value, pokedb, ability_names), "is_hidden": index == 2}
+            for index, value in enumerate(source["ability_ids"])
         ],
         "safari_flee_rate": source["safari_flee_rate"],
         "body_color": _named_id(

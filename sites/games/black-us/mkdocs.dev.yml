@@ -1,0 +1,12 @@
+INHERIT: mkdocs.yml
+
+site_name: Pokémon Black Wiki (Development)
+site_dir: ../../../build/mkdocs-dev/black-us
+
+extra:
+  romwiki_site_id: black-us
+  romwiki_dev_pages: dev-pages.toml
+
+validation:
+  links:
+    not_found: ignore

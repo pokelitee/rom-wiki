@@ -154,6 +154,21 @@
   letter-spacing: .025em;
   text-transform: uppercase;
 }
+/* Material for MkDocs styles every `abbr` with `.md-typeset abbr {
+   border-bottom: .05rem dotted ... }` (not text-decoration) -- matching its
+   selector shape here (class + element) is required to out-specificity
+   that rule and actually remove the dotted line. */
+.md-typeset abbr.rw-hidden-ability {
+  margin-left: .1em;
+  color: var(--rw-accent);
+  font-weight: 800;
+  border-bottom: none;
+  cursor: help;
+}
+.md-typeset abbr.rw-hidden-ability:hover,
+.md-typeset abbr.rw-hidden-ability:focus-visible {
+  color: var(--md-primary-fg-color);
+}
 .md-typeset dl.rw-summary__facts {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(8rem,1fr));
@@ -666,6 +681,10 @@
   margin: 0 0 1.5rem;
 }
 
+.rw-sprite-matrix--animated {
+  grid-template-columns: max-content repeat(4, 6rem);
+}
+
 .rw-sprite-matrix__row {
   display: contents;
 }
@@ -707,10 +726,15 @@
 }
 
 .rw-sprite-matrix__cell img {
-  width: 100%;
-  height: 100%;
+  /* Rendered at native pixel size (capped to the cell) rather than
+     stretched to fill it: PokéAPI's animated GIFs use a canvas tightly
+     cropped to the sprite's content, while static PNGs sit in a much
+     larger padded canvas, so scaling both to fill the same box would
+     make the animated sprite look artificially bigger than the static
+     one even though the actual artwork is the same pixel size. */
+  max-width: 100%;
+  max-height: 100%;
   image-rendering: pixelated;
-  object-fit: contain;
 }
 
 .rw-record-tree {

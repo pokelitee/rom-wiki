@@ -15,6 +15,7 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    HIDDEN_ABILITY_MARKER,
     empty_state,
     name_table_source,
     pokemon_table,
@@ -163,7 +164,8 @@ def _render_record(
                     (
                         f"| {sprite_with_link(table_sprite_cell(pokemon.get('sprite')), _pokemon_link(pokemon, source_file))} | "
                         f"{reference_type_cell('pokemon', pokemon.get('member'), references)} | "
-                        f"{', '.join(str(slot) for slot in pokemon['slots'])} |"
+                        f"{', '.join(str(slot) for slot in pokemon['slots'])}"
+                        f"{HIDDEN_ABILITY_MARKER if pokemon.get('is_hidden') else ''} |"
                     )
                     for pokemon in record["pokemon"]
                 ],

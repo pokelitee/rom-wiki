@@ -54,6 +54,39 @@ class PokeDBSpriteTests(unittest.TestCase):
             ["front_default", "front_shiny", "back_default", "back_shiny"],
         )
 
+    def test_includes_animated_variants_when_present(self) -> None:
+        reference = {
+            "sprites": {
+                "versions": {
+                    "black-white": {
+                        "front_default": "https://example.test/front.png",
+                        "front_shiny": "https://example.test/front-shiny.png",
+                        "animated": {
+                            "front_default": "https://example.test/front.gif",
+                            "front_shiny": "https://example.test/front-shiny.gif",
+                            "back_default": None,
+                        },
+                    }
+                }
+            }
+        }
+
+        sprites = self.pokedb.pokemon_sprites(reference, "black-white")
+
+        self.assertEqual(
+            [sprite["key"] for sprite in sprites],
+            [
+                "front_default",
+                "front_shiny",
+                "front_default_animated",
+                "front_shiny_animated",
+            ],
+        )
+        animated = {sprite["key"]: sprite["url"] for sprite in sprites}
+        self.assertEqual(
+            animated["front_default_animated"], "https://example.test/front.gif"
+        )
+
     def test_falls_back_and_rejects_non_https_urls(self) -> None:
         fallback = self.pokedb.pokemon_sprite(
             {"sprites": {"front_default": "https://example.test/default.png"}},

@@ -210,6 +210,32 @@ def summary_hero(
     ]
 
 
+HIDDEN_ABILITY_MARKER = '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>'
+
+
+def ability_link(value: dict[str, Any], source_url: str) -> str:
+    """Render one Pokémon's ability as a link, marking hidden ones.
+
+    Every renderer that displays a Pokémon's assigned ability (species
+    pages, trainer parties, catalogs) should go through this so the
+    hidden-ability marker (`is_hidden`, set in `pipeline/enrich.py` from
+    the ROM's own ability-slot position) shows up consistently everywhere,
+    not just on the species page.
+    """
+    link = ROUTES.html_link(
+        entity_reference(
+            "ability",
+            value.get("id", value["name"]),
+            value["name"],
+            value.get("slug"),
+        ),
+        source_url,
+    )
+    if value.get("is_hidden"):
+        link += HIDDEN_ABILITY_MARKER
+    return link
+
+
 def pokemon_summary(record: dict[str, Any]) -> list[str]:
     portrait = record.get("portrait") or record.get("sprite")
     if portrait:
@@ -230,21 +256,11 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
             "Your browser does not support audio playback."
             "</audio>"
         )
-    ability_links = []
-    for value in record["abilities"]:
-        if value["name"] is None:
-            continue
-        ability_links.append(
-            ROUTES.html_link(
-                entity_reference(
-                    "ability",
-                    value.get("id", value["name"]),
-                    value["name"],
-                    value.get("slug"),
-                ),
-                f"pokemon/{record['slug']}/",
-            )
-        )
+    ability_links = [
+        ability_link(value, f"pokemon/{record['slug']}/")
+        for value in record["abilities"]
+        if value["name"] is not None
+    ]
     abilities = ", ".join(dict.fromkeys(ability_links)) or "None"
     dex = record["national_dex_id"]
     dex_label = f"#{dex:03}" if dex is not None else "—"

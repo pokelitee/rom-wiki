@@ -34,10 +34,13 @@ def build_ability_dataset(
         if not pokemon.get("public"):
             continue
         slots_by_ability: dict[int, list[int]] = {}
+        hidden_by_ability: dict[int, bool] = {}
         for slot, ability in enumerate(pokemon.get("abilities", []), start=1):
             ability_id = ability.get("id")
             if isinstance(ability_id, int) and ability_id:
                 slots_by_ability.setdefault(ability_id, []).append(slot)
+                if ability.get("is_hidden"):
+                    hidden_by_ability[ability_id] = True
         for ability_id, slots in slots_by_ability.items():
             pokemon_by_ability.setdefault(ability_id, []).append(
                 {
@@ -47,6 +50,7 @@ def build_ability_dataset(
                     "name": pokemon["name"],
                     "sprite": pokemon.get("sprite"),
                     "slots": slots,
+                    "is_hidden": hidden_by_ability.get(ability_id, False),
                 }
             )
 
