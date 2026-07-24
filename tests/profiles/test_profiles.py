@@ -38,11 +38,18 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.game_codes, ("IRBO",))
         self.assertEqual(black.rom_versions, (0,))
         self.assertEqual(black.layout["personal"], "a/0/1/6")
+        self.assertEqual(black.layout["messages"], "a/0/0/2")
+        self.assertEqual(black.parameters["pokemon_names_member"], 70)
+        self.assertEqual(black.parameters["ability_names_member"], 182)
+        self.assertEqual(black.parameters["move_names_member"], 203)
+        self.assertEqual(black.parameters["item_names_member"], 54)
         self.assertEqual(black.sprite_version, "black-white")
 
         self.assertEqual(white.engine, "gen5_bw")
         self.assertEqual(white.base_game, "white")
         self.assertEqual(white.game_codes, ("IRAO",))
+        self.assertEqual(white.layout["messages"], "a/0/0/2")
+        self.assertEqual(white.parameters["pokemon_names_member"], 70)
         self.assertEqual(white.layout["personal"], "a/0/1/6")
 
     def test_matches_a_known_hash(self) -> None:

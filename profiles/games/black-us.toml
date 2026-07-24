@@ -14,6 +14,13 @@ sprite_version = "black-white"
 
 [layout]
 personal = "a/0/1/6"
+messages = "a/0/0/2"
+
+[parameters]
+pokemon_names_member = 70
+ability_names_member = 182
+move_names_member = 203
+item_names_member = 54
 
 [[hashes]]
 algorithm = "sha256"

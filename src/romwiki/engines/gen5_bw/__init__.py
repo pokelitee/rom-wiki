@@ -17,6 +17,7 @@ from romwiki.engines.gen5_bw.constants import (
     TYPE_NAMES,
 )
 from romwiki.engines.gen5_bw.machines import machine_name
+from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.personal import parse_personal_record
 
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
@@ -52,5 +53,6 @@ __all__ = [
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "machine_name",
+    "parse_english_message_archive",
     "parse_personal_record",
 ]

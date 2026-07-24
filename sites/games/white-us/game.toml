@@ -3,10 +3,11 @@ id = "white-us"
 name = "Pokémon White"
 kind = "game"
 slug = "white-us"
-# Pokémon pages link to Abilities/Items pages that don't exist until those
-# sections are implemented; unpublished keeps this out of the portal and the
-# combined `site build --all` audit gate until then. It still builds and
-# audits fine on its own: `romwiki build-pokemon --game white-us`.
+# Abilities now exists (Gen5 text decoding landed), but Pokémon pages still
+# link to Items pages that don't exist yet; unpublished keeps this out of the
+# portal and the combined `site build --all` audit gate until Items lands
+# too. It still builds and audits fine on its own for its current sections:
+# `romwiki build-pokemon --game white-us`.
 published = false
 order = 21
 mkdocs_config = "mkdocs.yml"

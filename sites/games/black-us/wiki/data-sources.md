@@ -2,7 +2,7 @@
 
 The primary source is the exact USA/Europe NDSi-Enhanced release of Pokémon Black
 (header code IRBO, ROM version 0). This is this project's first Generation V
-release, and currently covers Pokémon species (personal) data only.
+release, and currently covers Pokémon species (personal) data and Abilities.
 
 ## Pokémon species data
 
@@ -23,17 +23,24 @@ not yet resolved to their real species/form identity or given a public page --
 they're marked non-public with a placeholder label until a future update maps each
 archive index to its actual forme.
 
-Pokémon, type, and ability names and descriptions come from PokéDB rather than this
-ROM's own text, since Generation V message-archive decoding is not yet implemented.
 The wild held item's third slot (Dark Grass encounters, present in this release but
 absent from Generation IV) is decoded internally but not yet surfaced in the
 published dataset.
 
+## Text and names
+
+Pokémon, ability, move, and item display names are decoded directly from this
+ROM's own text archive at `a/0/0/2`, rather than from PokéDB. Each name table is a
+member of that archive (Pokémon names at member 70, ability names at 182, move
+names at 203, item names at 54); type names have no ROM text table in this
+generation (Generation V added no new types over Generation IV) and remain a
+built-in engine constant instead.
+
 ## Not yet available
 
-Moves, Abilities, Items, Wild Encounters, Trainers, and Locations are not built for
-this release yet -- each needs its own Generation V record-layout research, and for
+Moves, Items, Wild Encounters, Trainers, and Locations are not built for this
+release yet -- each needs its own Generation V record-layout research, and for
 Trainers/Wild Encounters/Locations, this release's own script-engine opcode table,
 none of which carry over from the Generation IV engine this project already
-supports. Because the Abilities section isn't built, Pokémon pages link to ability
-pages that don't exist in this build.
+supports. Because Items isn't built, Pokémon pages link to item pages that don't
+exist in this build.

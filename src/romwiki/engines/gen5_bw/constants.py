@@ -62,14 +62,18 @@ COLOR_NAMES = (
     "white", "pink", "internal",
 )
 
-# Not yet verified against ROM data -- no profile in this slice configures
-# ROM-derived name tables, so these counts are unreached by
-# pipeline/enrich.py's validation paths. Placeholder values only; confirm
-# against the real message archive before implementing move/item/ability
-# name decoding in a future slice.
+# Name-table entry counts, confirmed empirically by decoding every entry in
+# a real Black ROM's `a/0/0/2` (TextStrings) NARC -- see messages.py. Each
+# includes a leading placeholder entry (index 0) and, for Pokémon, two
+# trailing "Egg" entries (650-651) alongside the 649 real species.
+MOVE_NAME_COUNT = 560
+ABILITY_NAME_COUNT = 165
+ITEM_NAME_COUNT = 627
+POKEMON_NAME_COUNT = 652
+
+# MOVE_RECORD_COUNT/MAX_MOVE_ID describe the (still unimplemented) move *data*
+# archive, a different table from the move *names* text above -- not yet
+# verified against ROM data; no profile configures a moves layout entry yet,
+# so these counts are unreached by pipeline/enrich.py's validation paths.
 MOVE_RECORD_COUNT = 559
 MAX_MOVE_ID = 559
-MOVE_NAME_COUNT = 559
-ABILITY_NAME_COUNT = 165
-ITEM_NAME_COUNT = 638
-POKEMON_NAME_COUNT = 649
