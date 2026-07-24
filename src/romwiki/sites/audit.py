@@ -164,7 +164,7 @@ def audit_site(
     root: Path,
     *,
     max_html_bytes: int = 512 * 1024,
-    max_images_per_page: int = 100,
+    max_images_per_page: int = 150,
 ) -> SiteAuditReport:
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
@@ -202,7 +202,7 @@ def audit_site(
         parsed[relative] = result
         errors.extend(result.issues)
         if result.image_count > max_images_per_page:
-            errors.append(
+            warnings.append(
                 SiteAuditIssue(
                     "image-count",
                     relative,

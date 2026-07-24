@@ -367,8 +367,8 @@ def build_parser() -> argparse.ArgumentParser:
     audit_site_parser.add_argument(
         "--max-images",
         type=int,
-        default=100,
-        help="maximum images on one page (default: 100)",
+        default=150,
+        help="image count that triggers a warning on one page (default: 150)",
     )
     return parser
 

@@ -388,13 +388,18 @@ Audit a built artifact for oversized pages and broken links before publishing:
 
 ```console
 romwiki site audit dist
-romwiki site audit dist --max-page-kb 512 --max-images 100
+romwiki site audit dist --max-page-kb 512 --max-images 150
 ```
 
-`--max-page-kb` (default 512) and `--max-images` (default 100) flag pages that
-exceed the configured rendered-HTML size or image count. The command exits
-with an error if any issues are found; this is the same check the GitHub Pages
-workflow runs against the built artifact before deploying.
+`--max-page-kb` (default 512) flags pages whose rendered HTML exceeds the
+configured size; the command exits with an error if any are found, and this
+is the same check the GitHub Pages workflow runs against the built artifact
+before deploying. `--max-images` (default 150) is a softer signal: it prints
+a warning (not an error) for pages with more images than that, useful for
+spotting an accidental duplicate-row bug, but it doesn't fail the build —
+some pages, like widely tutor-compatible moves (e.g. Snore, learnable by
+hundreds of Pokémon at one tutor location), legitimately have a large,
+correct image count.
 
 Preview an individual site with live reload:
 

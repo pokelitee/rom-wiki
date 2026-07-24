@@ -63,16 +63,15 @@ class SiteAuditTests(unittest.TestCase):
         self.assertIn("table-header", codes)
         self.assertIn("css-unused", codes)
 
-    def test_enforces_page_and_image_limits(self) -> None:
+    def test_enforces_page_size_limit_and_warns_on_image_limit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             _write_page(root / "index.html", '<img src="one.png" alt=""><img src="two.png" alt="">')
 
             report = audit_site(root, max_html_bytes=10, max_images_per_page=1)
 
-        self.assertEqual(
-            {issue.code for issue in report.errors}, {"image-count", "page-size"}
-        )
+        self.assertEqual({issue.code for issue in report.errors}, {"page-size"})
+        self.assertIn("image-count", {issue.code for issue in report.warnings})
 
     def test_resolves_directory_and_site_root_links_in_combined_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
