@@ -72,7 +72,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         self.assertFalse(stale_page.exists())
         self.assertIn("# Route 201", page)
         self.assertIn(
-            "| [Route 201](../locations/header-010.md) | 10 | `W201` |", page
+            "| [Route 201](../locations/header-010.md) | 10 | 16 | `W201` |", page
         )
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("**Swarm:**", page)

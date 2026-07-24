@@ -267,9 +267,11 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
     else:
         media = '<span class="rw-summary__placeholder">Icon unavailable</span>'
     price = f"₽{record['price']:,}"
+    category = reference.get("category")
     facts = [
         ("Item ID", escape(str(record["item_id"]))),
         ("Pocket", escape(display_name(record["pocket"]["name"]))),
+        *([("Category", escape(display_name(category)))] if category else []),
         ("Base price", escape(price)),
         ("Selectable", escape(yes_no(record["selectable"]))),
         ("Can be discarded", escape(yes_no(not record["prevent_toss"]))),

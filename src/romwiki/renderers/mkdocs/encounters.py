@@ -386,7 +386,14 @@ def _append_locations(
 ) -> None:
     if not locations:
         return
-    lines.extend(["## Map headers", "", "| Location | Header | Internal map |", "| -------- | -----: | ------------ |"])
+    lines.extend(
+        [
+            "## Map headers",
+            "",
+            "| Location | Header | Location name ID | Internal map |",
+            "| -------- | -----: | ----------------: | ------------ |",
+        ]
+    )
     for location in locations:
         reference = entity_reference(
             "location",
@@ -397,6 +404,7 @@ def _append_locations(
         lines.append(
             f"| {ROUTES.markdown_link(reference, source_file)} "
             f"| {location['header_id']} | "
+            f"{location['location_name_id']} | "
             f"`{location['internal_name']}` |"
         )
     lines.append("")

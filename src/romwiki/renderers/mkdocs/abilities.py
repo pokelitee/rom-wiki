@@ -231,9 +231,14 @@ def _pickup_section(
         "valuable entries in each list rather than always drawing from the "
         "start.",
         "",
-        "**Common pool:**",
-        "",
+        "| Level | Common pool chance |",
+        "| ----: | ------------------: |",
     ]
+    lines.extend(
+        f"| {tier * 10 + 1}–{tier * 10 + 10} | {rate}% |"
+        for tier, rate in enumerate(pickup["common_rate"])
+    )
+    lines.extend(["", "**Common pool:**", ""])
     lines.extend(
         pokemon_table(
             ["| Item | Item ID |", "| ---- | ------: |"],
@@ -243,7 +248,7 @@ def _pickup_section(
             ],
         )
     )
-    lines.extend(["**Rare pool** (only reachable on a 98–99 roll):", ""])
+    lines.extend(["**Rare pool** (the remaining chance):", ""])
     lines.extend(
         pokemon_table(
             ["| Item | Item ID |", "| ---- | ------: |"],

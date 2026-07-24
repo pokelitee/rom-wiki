@@ -249,9 +249,19 @@ def _render_location(
                     (
                         f"Trade `{trade['trade_id']}` "
                         f"({escape_markdown(trade['nickname'])}) "
-                        f"personality value: `0x{trade['personality']:08X}`."
+                        f"personality value: `0x{trade['personality']:08X}`, "
+                        f"undecoded record values: `{trade['unknown_values']}`."
                     )
                     for trade in record.get("npc_trades", [])
+                ),
+                *(
+                    (
+                        "Undecoded trade record values are raw ROM data at "
+                        "offsets whose purpose isn't fully understood; kept "
+                        "here so hack edits to those bytes stay auditable.",
+                    )
+                    if record.get("npc_trades")
+                    else ()
                 ),
             ]
         )

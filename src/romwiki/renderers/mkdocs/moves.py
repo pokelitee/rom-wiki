@@ -359,7 +359,11 @@ def _reference_battle_properties(record: dict[str, Any]) -> list[tuple[str, str]
         if change.get("change")
     ]
     if stat_changes:
-        properties.append(("Stat changes", ", ".join(stat_changes)))
+        label = ", ".join(stat_changes)
+        stat_chance = metadata.get("stat_chance")
+        if stat_chance:
+            label += f" ({stat_chance}% chance)"
+        properties.append(("Stat changes", label))
     if metadata.get("crit_rate"):
         properties.append(("Critical-hit rate", f"+{metadata['crit_rate']} stage"))
     drain = metadata.get("drain")
@@ -372,7 +376,11 @@ def _reference_battle_properties(record: dict[str, Any]) -> list[tuple[str, str]
         properties.append(("Flinch chance", f"{metadata['flinch_chance']}%"))
     ailment = metadata.get("ailment")
     if ailment and ailment != "none":
-        properties.append(("Secondary effect", display_name(ailment)))
+        label = display_name(ailment)
+        ailment_chance = metadata.get("ailment_chance")
+        if ailment_chance:
+            label += f" ({ailment_chance}% chance)"
+        properties.append(("Secondary effect", label))
     if metadata.get("min_hits") is not None:
         properties.append(("Hits", _hit_range(metadata["min_hits"], metadata["max_hits"])))
     if metadata.get("min_turns") is not None:

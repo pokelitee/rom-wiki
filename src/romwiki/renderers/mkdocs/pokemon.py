@@ -209,11 +209,7 @@ def _render_record(
                 ("Base experience", str(record["base_experience"])),
                 ("Base friendship", str(record["base_friendship"])),
                 ("Growth rate", display_name(record["growth_rate"]["name"])),
-                *(
-                    (("Safari flee rate", str(record["safari_flee_rate"])),)
-                    if record.get("safari_flee_rate")
-                    else ()
-                ),
+                ("Safari flee rate", str(record["safari_flee_rate"])),
             )
         ),
         "",
