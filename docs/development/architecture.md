@@ -255,20 +255,19 @@ if the contract needs to grow.
 
 ## Current limitations
 
-ROM identification still has a bootstrap gap: `identify.py` must open a raw file
-before any profile is matched, so it cannot yet select a platform from
-`GameProfile.platform` for that first read. It currently opens every image as
-`nintendo-ds` and then raises if the matched profile declares a different platform.
-Blind platform detection (trying each registered platform's adapter in turn until
-one accepts the image) is real follow-up work for whenever a second platform
-package actually exists — building it speculatively against one platform would not
-prove much.
+ROM identification already supports blind platform detection: `identify.py`'s
+`_inspect_image` tries each platform registered in `platforms/registry.py` in
+turn and returns the first one that accepts the image, rather than assuming
+Nintendo DS. `tests/platforms/test_contract.py` proves this against a
+throwaway fake platform, the same pattern `tests/engines/test_contract.py`
+uses for the engine boundary above. Neither test proves anything against real
+second-platform or second-engine data, since only `nintendo-ds` and
+`gen4_dppt` exist today — a real addition should still add its own fixtures
+(profile identification, raw parsers, normalized output) following
+[Adding a game](adding-a-game.md).
 
 Normalized schemas are implemented as Python dataclasses and typed contracts
-serialized to JSON. The contract test above proves the enrichment/rendering
-boundary against a fake engine; a real second engine should still add its own
-fixtures (profile identification, raw parsers, normalized output) following
-[Adding a game](adding-a-game.md).
+serialized to JSON.
 
 These are known extension tasks, not reasons to combine extraction and rendering.
 The existing boundary remains the intended long-term design.

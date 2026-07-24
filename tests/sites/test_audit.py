@@ -34,6 +34,21 @@ class SiteAuditTests(unittest.TestCase):
         self.assertEqual(report.page_count, 2)
         self.assertEqual(report.link_count, 1)
 
+    def test_accepts_minified_bareword_alt_attribute(self) -> None:
+        # mkdocs.base.yml's minify_html plugin collapses alt="" down to the
+        # valueless boolean-attribute form `alt`; the audit must still
+        # recognize it as present rather than reporting a false positive.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(
+                root / "index.html",
+                '<img class=rw-table-sprite src=sprite.png alt loading=lazy>',
+            )
+
+            report = audit_site(root)
+
+        self.assertNotIn("image-alt", {issue.code for issue in report.errors})
+
     def test_reports_broken_structure_links_and_custom_styles(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

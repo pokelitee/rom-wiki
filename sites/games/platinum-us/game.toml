@@ -1,0 +1,20 @@
+[site]
+id = "platinum-us"
+name = "Pokémon Platinum"
+kind = "game"
+slug = "platinum-us"
+published = true
+order = 5
+mkdocs_config = "mkdocs.yml"
+description = "An exact, data-driven reference for Pokémon Platinum (USA)"
+
+[game]
+profile = "platinum-us"
+generation = 4
+base_game = "platinum"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "Game Freak"
+
+[appearance]
+theme = "platinum"

@@ -34,7 +34,9 @@ class MkDocsHooksTests(unittest.TestCase):
         self.assertEqual(site["kind"], "game")
 
         games = config.extra["romwiki_games"]
-        self.assertEqual([game["id"] for game in games], ["renegade-platinum"])
+        self.assertEqual(
+            [game["id"] for game in games], ["platinum-us", "renegade-platinum"]
+        )
 
     def test_on_config_loads_dev_pages_from_configured_manifest(self) -> None:
         _load_and_configure(DEV_CONFIG)
@@ -113,7 +115,7 @@ class MkDocsHooksTests(unittest.TestCase):
         self.assertEqual(context["romwiki"]["current"]["id"], "renegade-platinum")
         self.assertEqual(
             [game["id"] for game in context["romwiki"]["games"]],
-            ["renegade-platinum"],
+            ["platinum-us", "renegade-platinum"],
         )
         self.assertTrue(context["romwiki"]["games"][0]["url"].endswith("/"))
 

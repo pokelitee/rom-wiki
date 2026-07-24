@@ -84,7 +84,7 @@ def _parse_page(text: str, path: str) -> _ParsedPage:
     for match in images:
         tag = match.group(0)
         line = line_at(match.start())
-        if not re.search(r"\balt\s*=", tag, re.IGNORECASE):
+        if not re.search(r"\balt\b(\s*=|\s|/?>)", tag, re.IGNORECASE):
             issues.append(SiteAuditIssue("image-alt", path, "image is missing an alt attribute", line))
         source = re.search(r'\bsrc=(["\'])(.*?)\1', tag, re.IGNORECASE | re.DOTALL)
         if source and source.group(2).startswith(("http://", "https://")):
