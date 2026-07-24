@@ -14,11 +14,12 @@ from romwiki.util.errors import SiteError
 
 _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None
+_current_sections: set[str] = set()
 _dev_pages: DevPages | None = None
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
-    global _catalog, _current_site, _dev_pages
+    global _catalog, _current_site, _current_sections, _dev_pages
     config_path = Path(config.config_file_path).resolve()
     root = _find_repository_root(config_path.parent)
     catalog = SiteCatalog.load(root)
@@ -35,13 +36,17 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         raise SiteError(f"MkDocs configuration is not registered: {config_path}")
     _catalog = catalog
     _current_site = current
+    _current_sections = _nav_sections(config.nav)
     dev_pages_path = config.extra.get("romwiki_dev_pages")
     _dev_pages = (
         DevPages.load(config_path.parent / dev_pages_path)
         if isinstance(dev_pages_path, str)
         else None
     )
-    config.extra["romwiki_site"] = _site_context(current)
+    config.extra["romwiki_site"] = {
+        **_site_context(current),
+        "sections": sorted(_current_sections),
+    }
     config.extra["romwiki_games"] = [
         _site_context(site)
         for site in catalog.published()
@@ -72,7 +77,10 @@ def on_page_context(
     depth = len([part for part in page.url.split("/") if part])
     artifact_root = "../" * (depth + (1 if _current_site.kind == "game" else 0))
     context["romwiki"] = {
-        "current": _site_context(_current_site),
+        "current": {
+            **_site_context(_current_site),
+            "sections": sorted(_current_sections),
+        },
         "portal_url": artifact_root or "./",
         "games": [
             {
@@ -84,6 +92,27 @@ def on_page_context(
         ],
     }
     return context
+
+
+def _nav_sections(nav_config: Any) -> set[str]:
+    """Top-level URL segments (e.g. "pokemon", "items") present in this
+    site's `mkdocs.yml` nav -- lets shared templates skip section cards/
+    links for datasets a game hasn't built yet, instead of assuming every
+    game has full section coverage.
+    """
+    sections: set[str] = set()
+    stack = [nav_config]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, str):
+            segment = item.strip("/").split("/", 1)[0]
+            if segment and segment != "index.md" and not segment.endswith(".md"):
+                sections.add(segment)
+        elif isinstance(item, dict):
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            stack.extend(item)
+    return sections
 
 
 def _find_repository_root(start: Path) -> Path:

@@ -2,7 +2,8 @@
 
 The primary source is the exact USA/Europe NDSi-Enhanced release of Pokémon Black
 (header code IRBO, ROM version 0). This is this project's first Generation V
-release, and currently covers Pokémon species (personal) data and Abilities.
+release, and currently covers Pokémon species (personal) data, Abilities, and
+Items.
 
 ## Pokémon species data
 
@@ -27,6 +28,26 @@ The wild held item's third slot (Dark Grass encounters, present in this release 
 absent from Generation IV) is decoded internally but not yet surfaced in the
 published dataset.
 
+## Items
+
+Item records are decoded from the `a/0/2/4` archive, a fixed-layout 36-byte
+record per member: item ID maps directly to archive member index (no ARM9
+item-to-member mapping table exists in this generation, unlike Generation IV).
+There is no public documentation or decompilation of this record format to
+check against, so only fields that were cross-referenced against real ROM data
+and PokéDB's known Generation V item values are decoded: price (stored as
+price ÷ 10 -- a real Generation V-specific difference from Generation IV, which
+stores price directly), held-effect ID, fling power, fling effect ID, and pluck
+effect ID. Item pocket, field/battle-use function IDs, party-use effects (HP/PP
+restoration, stat boosts, status cures), Natural Gift power and type, berries,
+and fossil revival are not yet decoded -- black-box comparison against real
+records produced no single consistent interpretation for these fields without
+a disassembly to check against, so they're left out rather than guessed. Items
+whose ROM name is the archive's own "???" placeholder sentinel are excluded as
+unused slots; the rare case of two distinct real items sharing a display name
+(the male- and female-color Xtransceiver) is disambiguated with the item ID in
+the page URL.
+
 ## Text and names
 
 Pokémon, ability, move, and item display names are decoded directly from this
@@ -38,9 +59,8 @@ built-in engine constant instead.
 
 ## Not yet available
 
-Moves, Items, Wild Encounters, Trainers, and Locations are not built for this
-release yet -- each needs its own Generation V record-layout research, and for
+Moves, Wild Encounters, Trainers, and Locations are not built for this release
+yet -- each needs its own Generation V record-layout research, and for
 Trainers/Wild Encounters/Locations, this release's own script-engine opcode table,
 none of which carry over from the Generation IV engine this project already
-supports. Because Items isn't built, Pokémon pages link to item pages that don't
-exist in this build.
+supports.

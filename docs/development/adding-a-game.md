@@ -147,10 +147,25 @@ locations in provenance and reject malformed or out-of-range records instead of
 silently guessing. Register the new engine's modules as a new `EngineAdapter` entry
 in `src/romwiki/engines/registry.py`'s `_ENGINES` dict; pipeline modules resolve
 parsers and constants through `get_engine(profile.engine)` rather than importing an
-engine package directly, so this registration is the only change needed to make an
-existing pipeline module's extraction and enrichment logic available to the new
-engine. Extend `tests/engines/test_contract.py`'s fake-engine coverage if the new
-engine exercises a shared code path the fake engine doesn't yet cover.
+engine package directly, so this registration is what makes an existing pipeline
+module's extraction and enrichment logic *dispatch* to the new engine. Extend
+`tests/engines/test_contract.py`'s fake-engine coverage if the new engine exercises
+a shared code path the fake engine doesn't yet cover.
+
+Registration alone is not always the *only* change needed, though. A pipeline
+module that has only ever been exercised by one engine can carry that engine's
+unstated assumptions — invisible until a second real engine hits the same code
+path. Implementing `gen5_bw` found two: `pipeline/locations.py` unconditionally
+required several Platinum-only Sinnoh mechanics (honey trees, Trophy Garden,
+Great Marsh, decorations, seals, Battle Frontier), and `pipeline/build_context.py`
+eagerly required several ancillary Pokémon-enrichment datasets (learnsets,
+evolutions, machines, tutors, egg moves, pickup) that a new engine's first
+vertical slice may not have implemented yet. Both needed a small, targeted fix —
+gate the feature on whether the profile actually configures it (`"x" not in
+profile.layout` / `profile.parameters`, mirroring `pipeline/reference_names.py`'s
+existing pattern), returning `None`/skipping cleanly rather than raising. Expect
+to audit pipeline modules your new engine's slice actually exercises for this
+kind of single-engine assumption, not just add the registry entry.
 
 For a hack-specific change, prefer a documented format variant shared through the
 engine over a parser named after one hack.

@@ -242,10 +242,22 @@ themselves, and each engine/platform's own package, are allowed to name a specif
 implementation. `pipeline/trainer_party.py` predates the shared registries and uses
 the same dict-dispatch shape locally, scoped to the one contract it translates.
 
-Adding a second platform or engine is additive: a new `platforms/<platform>/` or
-`engines/<engine>/` package, one new entry in the relevant registry dict, and a
-profile that declares the new `platform`/`engine` keys. No existing pipeline module
-needs to change.
+Adding a second platform or engine is additive at the registry boundary: a new
+`platforms/<platform>/` or `engines/<engine>/` package, one new entry in the
+relevant registry dict, and a profile that declares the new `platform`/`engine`
+keys — no pipeline module needs to change to *dispatch* to it. But a pipeline
+module that has only ever run against one engine can still carry that engine's
+unstated assumptions, invisible until a second real engine exercises the same
+code path. Implementing `gen5_bw` (alongside `gen4_dppt`) found two:
+`pipeline/locations.py` unconditionally required several Platinum-only Sinnoh
+mechanics (honey trees, Trophy Garden, Great Marsh, decorations, seals, Battle
+Frontier), and `pipeline/build_context.py` eagerly required several ancillary
+Pokémon-enrichment datasets (learnsets, evolutions, machines, tutors, egg
+moves, pickup) that don't exist for an engine's first vertical slice. Both were
+small, targeted fixes — gate the feature on whether the profile actually
+configures it, mirroring the pattern `pipeline/reference_names.py` already used
+— not a redesign. Treat this as expected, cheap-to-fix generalization work when
+adding a second engine, not evidence the registry boundary is wrong.
 
 `tests/engines/test_contract.py` is the regression guard for this boundary: it
 registers a throwaway fake engine at test time and asserts that enrichment and
@@ -260,11 +272,18 @@ ROM identification already supports blind platform detection: `identify.py`'s
 turn and returns the first one that accepts the image, rather than assuming
 Nintendo DS. `tests/platforms/test_contract.py` proves this against a
 throwaway fake platform, the same pattern `tests/engines/test_contract.py`
-uses for the engine boundary above. Neither test proves anything against real
-second-platform or second-engine data, since only `nintendo-ds` and
-`gen4_dppt` exist today — a real addition should still add its own fixtures
-(profile identification, raw parsers, normalized output) following
-[Adding a game](adding-a-game.md).
+uses for the engine boundary above.
+
+A second real engine, `gen5_bw` (Pokémon Black/White, Generation V), now
+exists alongside `gen4_dppt` — both on the `nintendo-ds` platform, so this
+proves the engine boundary against real data but not yet a second platform.
+Its personal-data and text-decoding slices needed no platform-layer changes
+and only registry-dict wiring to pick up the engine, confirming the
+platform/engine split holds up; the pipeline generalization it did need is
+described above. A real second platform is still unproven against anything
+but `tests/platforms/test_contract.py`'s fake — a real addition should still
+add its own fixtures (profile identification, raw parsers, normalized output)
+following [Adding a game](adding-a-game.md).
 
 Normalized schemas are implemented as Python dataclasses and typed contracts
 serialized to JSON.

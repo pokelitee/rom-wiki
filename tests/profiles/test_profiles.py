@@ -39,6 +39,7 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.rom_versions, (0,))
         self.assertEqual(black.layout["personal"], "a/0/1/6")
         self.assertEqual(black.layout["messages"], "a/0/0/2")
+        self.assertEqual(black.layout["item_data"], "a/0/2/4")
         self.assertEqual(black.parameters["pokemon_names_member"], 70)
         self.assertEqual(black.parameters["ability_names_member"], 182)
         self.assertEqual(black.parameters["move_names_member"], 203)
@@ -51,6 +52,7 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(white.layout["messages"], "a/0/0/2")
         self.assertEqual(white.parameters["pokemon_names_member"], 70)
         self.assertEqual(white.layout["personal"], "a/0/1/6")
+        self.assertEqual(white.layout["item_data"], "a/0/2/4")
 
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

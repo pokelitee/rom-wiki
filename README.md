@@ -65,8 +65,18 @@ adapter for a profile through the registries in `src/romwiki/platforms/registry.
 and `src/romwiki/engines/registry.py` rather than importing the Nintendo DS
 `gen4_dppt` engine directly. Supporting a different platform or generation still
 requires writing a new platform reader and/or engine adapter and registering it;
-it is not only a profile change, but no existing pipeline module needs to change
-to add one.
+it is not only a profile change. Registering an engine is enough to make an
+existing pipeline module *dispatch* to it, but a pipeline module that has only
+ever been exercised by one engine can still carry that engine's unstated
+assumptions. Implementing a second real engine (`gen5_bw`, alongside `gen4_dppt`)
+found two: `pipeline/locations.py` required several Platinum-only Sinnoh
+mechanics (honey trees, Trophy Garden, Great Marsh, decorations, seals, Battle
+Frontier) unconditionally, and `pipeline/build_context.py` eagerly required
+several ancillary Pokémon-enrichment datasets (learnsets, evolutions, machines,
+tutors, egg moves, pickup) that a new engine's first slice may not have yet.
+Both needed small, targeted fixes — gating the feature on whether the profile
+actually configures it — not a redesign. Expect a new engine to occasionally
+need this kind of pipeline generalization, not just registration.
 
 See [Architecture](docs/development/architecture.md) for the data flow and
 current extension boundaries, and [Adding a game](docs/development/adding-a-game.md)

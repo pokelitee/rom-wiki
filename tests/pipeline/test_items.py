@@ -222,6 +222,83 @@ class BerryMechanicsTests(unittest.TestCase):
         self.assertIn("<dt>Spicy</dt><dd>10</dd>", page)
 
 
+class MinimalItemDatasetTests(unittest.TestCase):
+    def test_degrades_cleanly_without_trainer_and_location_datasets(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {"archive": "itemdata.narc"},
+            "records": [_gen5_item_record()],
+        }
+        pokemon = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "public": True,
+                    "member": 1,
+                    "national_dex_id": 1,
+                    "slug": "bulbasaur",
+                    "name": "Bulbasaur",
+                    "held_items": [
+                        {
+                            "rarity": "rare",
+                            "id": 234,
+                            "slug": "leftovers",
+                            "name": "Leftovers",
+                        }
+                    ],
+                    "evolutions": [],
+                }
+            ],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
+        )
+
+        dataset = build_item_dataset(raw, pokedb, pokemon, None, None)
+        record = dataset["records"][0]
+        self.assertEqual(record["slug"], "leftovers")
+        self.assertEqual(record["wild_held_by"][0]["name"], "Bulbasaur")
+        self.assertIsNone(dataset["supplemental_sources"]["trainers"])
+        self.assertIsNone(dataset["supplemental_sources"]["locations"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            count = render_item_pages(dataset, output)
+            page = (output / "leftovers.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(count, 1)
+        self.assertIn("# Leftovers", page)
+        self.assertIn("<dt>Held effect ID</dt><dd>69</dd>", page)
+        self.assertNotIn("<dt>Pocket</dt>", page)
+        self.assertNotIn("Field pocket ID", page)
+        self.assertNotIn("Usable on party", page)
+        self.assertIsNone(catalog["records"][0]["pocket"])
+        self.assertIsNone(catalog["records"][0]["field_use"])
+
+
+def _gen5_item_record() -> dict:
+    return {
+        "item_id": 234,
+        "data_archive_member": 234,
+        "name": "Leftovers",
+        "public": True,
+        "price": 4000,
+        "hold_effect_id": 69,
+        "pluck_effect_id": 0,
+        "fling_effect_id": 0,
+        "fling_power": 10,
+        "revives_into_species_id": None,
+        "berry": None,
+        "provenance": {"source": "rom", "archive": "itemdata.narc", "member": 234},
+    }
+
+
 def _item_record() -> dict:
     return {
         "item_id": 1,

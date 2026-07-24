@@ -14,13 +14,27 @@
   <section aria-labelledby="explore-heading">
     <div class="rw-section-heading"><div><p class="rw-eyebrow">Browse the data</p><h2 id="explore-heading">Explore</h2></div></div>
     <div class="rw-section-grid">
+      {% if 'pokemon' in romwiki.current.sections %}
       <a href="pokemon/" class="rw-section-card"><span class="rw-section-card__icon">#</span><h3>Pokémon</h3><p>Stats, abilities, evolutions, machines, tutors, and learnsets.</p></a>
+      {% endif %}
+      {% if 'abilities' in romwiki.current.sections %}
       <a href="abilities/" class="rw-section-card"><span class="rw-section-card__icon">ABILITY</span><h3>Abilities</h3><p>In-game names and every Pokémon or form assigned to each ability.</p></a>
+      {% endif %}
+      {% if 'items' in romwiki.current.sections %}
       <a href="items/" class="rw-section-card"><span class="rw-section-card__icon">ITEM</span><h3>Items</h3><p>ROM mechanics, locations, shops, held-item assignments, gifts, trades, and evolutions.</p></a>
+      {% endif %}
+      {% if 'moves' in romwiki.current.sections %}
       <a href="moves/" class="rw-section-card"><span class="rw-section-card__icon">POW</span><h3>Moves</h3><p>Exact battle properties, machines, tutors, and learners.</p></a>
+      {% endif %}
+      {% if 'encounters' in romwiki.current.sections %}
       <a href="encounters/" class="rw-section-card"><span class="rw-section-card__icon">%</span><h3>Wild encounters</h3><p>Encounter methods, rates, slots, species, and levels.</p></a>
+      {% endif %}
+      {% if 'trainers' in romwiki.current.sections %}
       <a href="trainers/" class="rw-section-card"><span class="rw-section-card__icon">VS</span><h3>Trainers</h3><p>Trainer parties, held items, moves, and battle locations.</p></a>
+      {% endif %}
+      {% if 'locations' in romwiki.current.sections %}
       <a href="locations/" class="rw-section-card"><span class="rw-section-card__icon">MAP</span><h3>Locations</h3><p>Items, shops, encounters, trainers, gifts, trades, and connections.</p></a>
+      {% endif %}
     </div>
   </section>
   <section class="rw-method-card">

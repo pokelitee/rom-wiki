@@ -43,7 +43,7 @@ class SiteCatalogTests(unittest.TestCase):
 
             self.assertEqual(
                 [site.id for site in built],
-                ["portal", "platinum-us", "renegade-platinum"],
+                ["portal", "platinum-us", "renegade-platinum", "black-us", "white-us"],
             )
             self.assertEqual(Path(commands[0][-1]), output.resolve())
             self.assertEqual(

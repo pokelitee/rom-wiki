@@ -16,17 +16,18 @@ from romwiki.engines.gen5_bw.constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
+from romwiki.engines.gen5_bw.items import parse_item_record
 from romwiki.engines.gen5_bw.machines import machine_name
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.personal import parse_personal_record
 
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
-# This engine currently implements only the Pokémon personal-data slice; the
-# other 13 EngineAdapter fields (locations, trainers, encounters, ...) all
-# point at this same module per gen4_dppt's precedent, but none of their
-# functions/constants exist yet. Adding a later slice (moves, trainers, ...)
-# should add the corresponding module and re-export here, the same way this
-# slice added personal.py/machines.py/constants.py.
+# This engine currently implements only the Pokémon personal-data and Items
+# slices; the remaining EngineAdapter fields (locations, trainers, encounters,
+# ...) all point at this same module per gen4_dppt's precedent, but none of
+# their functions/constants exist yet. Adding a later slice (moves, trainers,
+# ...) should add the corresponding module and re-export here, the same way
+# these slices added personal.py/machines.py/items.py/constants.py.
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
@@ -54,5 +55,6 @@ __all__ = [
     "TYPE_NAMES",
     "machine_name",
     "parse_english_message_archive",
+    "parse_item_record",
     "parse_personal_record",
 ]

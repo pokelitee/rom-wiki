@@ -25,18 +25,16 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     try:
         item_archive_path = profile.layout["item_data"]
         message_archive_path = profile.layout["messages"]
-        berry_data_path = profile.layout["berry_data"]
         item_names_member = profile.parameters["item_names_member"]
-        type_names_member = profile.parameters["type_names_member"]
-        fossil_revival_table_offset = profile.parameters[
-            "fossil_revival_table_offset"
-        ]
-        fossil_revival_count = profile.parameters["fossil_revival_count"]
-        first_berry_item_id = profile.parameters["first_berry_item_id"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing item metadata: {error.args[0]}"
         ) from error
+    berry_data_path = profile.layout.get("berry_data")
+    type_names_member = profile.parameters.get("type_names_member")
+    fossil_revival_table_offset = profile.parameters.get("fossil_revival_table_offset")
+    fossil_revival_count = profile.parameters.get("fossil_revival_count")
+    first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).items
@@ -44,32 +42,87 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     item_archive = platform.archive_cls.from_bytes(filesystem.read(item_archive_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(message_archive_path))
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
-    type_names = engine.parse_english_message_archive(messages.read(type_names_member))
-    arm9_data = read_code_binary(platform, result.image)
-    map_offset, data_members = engine.find_item_archive_members(
-        arm9_data,
-        item_count=len(item_names),
-        data_member_count=len(item_archive.members),
-    )
-    fossil_revivals = engine.parse_fossil_revival_table(
-        arm9_data,
-        offset=fossil_revival_table_offset,
-        count=fossil_revival_count,
-        item_count=len(item_names),
-        species_count=engine.POKEMON_NAME_COUNT,
-    )
-    revives_into_by_item = {
-        revival.item_id: revival.species_id for revival in fossil_revivals
+
+    type_names: tuple[str, ...] = ()
+    if type_names_member is not None:
+        type_names = engine.parse_english_message_archive(
+            messages.read(type_names_member)
+        )
+
+    source: dict[str, Any] = {
+        "rom_sha256": result.image.hashes.sha256,
+        "archive": item_archive_path,
+        "item_names": {
+            "archive": message_archive_path,
+            "member": item_names_member,
+        },
     }
-    berry_archive = platform.archive_cls.from_bytes(filesystem.read(berry_data_path))
-    berry_by_item: dict[int, dict[str, Any]] = {}
-    for index in range(len(berry_archive.members)):
-        berry = engine.parse_berry_record(berry_archive.read(index))
-        berry_by_item[first_berry_item_id + index] = {
-            **asdict(berry),
-            "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
+
+    if hasattr(engine, "find_item_archive_members"):
+        arm9_data = read_code_binary(platform, result.image)
+        map_offset, data_members = engine.find_item_archive_members(
+            arm9_data,
+            item_count=len(item_names),
+            data_member_count=len(item_archive.members),
+        )
+        source["item_archive_map"] = {
+            "source": "arm9",
+            "offset": map_offset,
+            "record_count": len(data_members),
+        }
+    else:
+        arm9_data = None
+        data_members = tuple(range(len(item_archive.members)))
+        source["item_archive_map"] = {
+            "source": "archive-index",
+            "record_count": len(data_members),
         }
 
+    if type_names_member is not None:
+        source["type_names"] = {
+            "archive": message_archive_path,
+            "member": type_names_member,
+        }
+
+    revives_into_by_item: dict[int, int] = {}
+    if fossil_revival_table_offset is not None:
+        if arm9_data is None:
+            arm9_data = read_code_binary(platform, result.image)
+        fossil_revivals = engine.parse_fossil_revival_table(
+            arm9_data,
+            offset=fossil_revival_table_offset,
+            count=fossil_revival_count,
+            item_count=len(item_names),
+            species_count=engine.POKEMON_NAME_COUNT,
+        )
+        revives_into_by_item = {
+            revival.item_id: revival.species_id for revival in fossil_revivals
+        }
+        source["fossil_revival_table"] = {
+            "source": "arm9",
+            "offset": fossil_revival_table_offset,
+            "record_count": len(fossil_revivals),
+        }
+
+    berry_by_item: dict[int, dict[str, Any]] = {}
+    if berry_data_path is not None:
+        berry_archive = platform.archive_cls.from_bytes(
+            filesystem.read(berry_data_path)
+        )
+        for index in range(len(berry_archive.members)):
+            berry = engine.parse_berry_record(berry_archive.read(index))
+            berry_by_item[first_berry_item_id + index] = {
+                **asdict(berry),
+                "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
+            }
+        source["berry_data"] = {
+            "archive": berry_data_path,
+            "record_count": len(berry_by_item),
+        }
+
+    # "???" is the ROM's own name-table sentinel for unused item text slots
+    # (seen in Gen5, where item ID always equals its archive member, so
+    # Gen4's "member 0 is unused" heuristic alone can't exclude them).
     records = []
     for item_id, data_member in enumerate(data_members):
         parsed = engine.parse_item_record(
@@ -78,47 +131,54 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
             data_archive_member=data_member,
             archive_path=item_archive_path,
         ).to_dict()
-        pocket_id = parsed["field_pocket_id"]
-        field_use_id = parsed["field_use_function_id"]
-        natural_gift_type_id = parsed["natural_gift_type_id"]
-        if pocket_id >= len(engine.ITEM_POCKET_NAMES):
-            raise DataSourceError(f"Unknown item pocket ID: {pocket_id}")
-        if field_use_id >= len(engine.ITEM_FIELD_USE_NAMES):
-            raise DataSourceError(
-                f"Unknown item field-use function ID: {field_use_id}"
-            )
-        if (
-            natural_gift_type_id != engine.NATURAL_GIFT_TYPE_NONE
-            and natural_gift_type_id >= len(type_names)
-        ):
-            raise DataSourceError(
-                f"Unknown Natural Gift type ID: {natural_gift_type_id}"
-            )
-        records.append(
-            {
-                **parsed,
-                "name": item_names[item_id],
-                "public": item_id > 0 and data_member > 0,
-                "pocket": {
-                    "id": pocket_id,
-                    "name": engine.ITEM_POCKET_NAMES[pocket_id],
-                },
-                "field_use": {
-                    "id": field_use_id,
-                    "name": engine.ITEM_FIELD_USE_NAMES[field_use_id],
-                },
-                "natural_gift_type": (
-                    None
-                    if natural_gift_type_id == engine.NATURAL_GIFT_TYPE_NONE
-                    else {
-                        "id": natural_gift_type_id,
-                        "name": name_slug(type_names[natural_gift_type_id]),
-                    }
-                ),
-                "revives_into_species_id": revives_into_by_item.get(item_id),
-                "berry": berry_by_item.get(item_id),
+        name = item_names[item_id]
+        record = {
+            **parsed,
+            "name": name,
+            "public": item_id > 0 and data_member > 0 and name != "???",
+            "revives_into_species_id": revives_into_by_item.get(item_id),
+            "berry": berry_by_item.get(item_id),
+        }
+
+        if "field_pocket_id" in parsed:
+            pocket_id = parsed["field_pocket_id"]
+            if pocket_id >= len(engine.ITEM_POCKET_NAMES):
+                raise DataSourceError(f"Unknown item pocket ID: {pocket_id}")
+            record["pocket"] = {
+                "id": pocket_id,
+                "name": engine.ITEM_POCKET_NAMES[pocket_id],
             }
-        )
+
+        if "field_use_function_id" in parsed:
+            field_use_id = parsed["field_use_function_id"]
+            if field_use_id >= len(engine.ITEM_FIELD_USE_NAMES):
+                raise DataSourceError(
+                    f"Unknown item field-use function ID: {field_use_id}"
+                )
+            record["field_use"] = {
+                "id": field_use_id,
+                "name": engine.ITEM_FIELD_USE_NAMES[field_use_id],
+            }
+
+        if "natural_gift_type_id" in parsed:
+            natural_gift_type_id = parsed["natural_gift_type_id"]
+            if (
+                natural_gift_type_id != engine.NATURAL_GIFT_TYPE_NONE
+                and natural_gift_type_id >= len(type_names)
+            ):
+                raise DataSourceError(
+                    f"Unknown Natural Gift type ID: {natural_gift_type_id}"
+                )
+            record["natural_gift_type"] = (
+                None
+                if natural_gift_type_id == engine.NATURAL_GIFT_TYPE_NONE
+                else {
+                    "id": natural_gift_type_id,
+                    "name": name_slug(type_names[natural_gift_type_id]),
+                }
+            )
+
+        records.append(record)
 
     return {
         "schema_version": ITEMS_RAW_SCHEMA_VERSION,
@@ -126,32 +186,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         "dataset": "items_raw",
         "record_count": len(records),
         "public_record_count": sum(record["public"] for record in records),
-        "source": {
-            "rom_sha256": result.image.hashes.sha256,
-            "archive": item_archive_path,
-            "item_archive_map": {
-                "source": "arm9",
-                "offset": map_offset,
-                "record_count": len(data_members),
-            },
-            "item_names": {
-                "archive": message_archive_path,
-                "member": item_names_member,
-            },
-            "type_names": {
-                "archive": message_archive_path,
-                "member": type_names_member,
-            },
-            "fossil_revival_table": {
-                "source": "arm9",
-                "offset": fossil_revival_table_offset,
-                "record_count": len(fossil_revivals),
-            },
-            "berry_data": {
-                "archive": berry_data_path,
-                "record_count": len(berry_by_item),
-            },
-        },
+        "source": source,
         "records": records,
     }
 
@@ -164,8 +199,8 @@ def build_item_dataset(
     item_dataset: dict[str, Any],
     pokedb: PokeDBGeneration,
     pokemon_dataset: dict[str, Any],
-    trainer_dataset: dict[str, Any],
-    location_dataset: dict[str, Any],
+    trainer_dataset: dict[str, Any] | None,
+    location_dataset: dict[str, Any] | None,
     *,
     reference_version: str | None = None,
 ) -> dict[str, Any]:
@@ -175,7 +210,7 @@ def build_item_dataset(
         ("trainer", trainer_dataset),
         ("location", location_dataset),
     ):
-        if dataset.get("game") != game:
+        if dataset is not None and dataset.get("game") != game:
             raise DataSourceError(f"Item and {label} datasets must be for the same game")
 
     relationships: dict[int, dict[str, list[dict[str, Any]]]] = {}
@@ -216,7 +251,7 @@ def build_item_dataset(
                     },
                 )
 
-    for trainer in trainer_dataset["records"]:
+    for trainer in (trainer_dataset or {}).get("records", []):
         if not trainer["party"]:
             continue
         trainer_reference = {
@@ -239,7 +274,7 @@ def build_item_dataset(
         for battle_item in battle_items.values():
             add(battle_item["id"], "trainer_battle_items", trainer_reference)
 
-    for location in location_dataset["records"]:
+    for location in (location_dataset or {}).get("records", []):
         location_reference = {
             "header_id": location["header_id"],
             "name": location["name"],
@@ -294,6 +329,18 @@ def build_item_dataset(
                     },
                 )
 
+    # ROM item names are usually unique, but not always: e.g. Gen5's real,
+    # distinct male- and female-color Xtransceiver items share the exact
+    # displayed name "Xtransceiver". Disambiguate with the item ID (a stable
+    # ROM fact) rather than rejecting the whole dataset over a real game
+    # design choice.
+    slug_counts: dict[str, int] = {}
+    for source in item_dataset["records"]:
+        if source["public"]:
+            slug_counts[pokedb.item_slug(source["name"])] = (
+                slug_counts.get(pokedb.item_slug(source["name"]), 0) + 1
+            )
+
     records = []
     for source in item_dataset["records"]:
         if not source["public"]:
@@ -301,6 +348,8 @@ def build_item_dataset(
         item_id = source["item_id"]
         relation = relationships.get(item_id, {})
         slug = pokedb.item_slug(source["name"])
+        if slug_counts[slug] > 1:
+            slug = f"{slug}-{item_id}"
         records.append(
             {
                 **source,
@@ -331,8 +380,8 @@ def build_item_dataset(
         "source": item_dataset["source"],
         "supplemental_sources": {
             "pokemon": pokemon_dataset["source"],
-            "trainers": trainer_dataset["source"],
-            "locations": location_dataset["source"],
+            "trainers": trainer_dataset["source"] if trainer_dataset else None,
+            "locations": location_dataset["source"] if location_dataset else None,
         },
         "records": records,
     }

@@ -78,3 +78,18 @@ class Gen4Item:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5Item:
+    item_id: int
+    data_archive_member: int
+    price: int
+    hold_effect_id: int
+    pluck_effect_id: int
+    fling_effect_id: int
+    fling_power: int
+    provenance: RecordProvenance
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

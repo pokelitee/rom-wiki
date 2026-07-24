@@ -101,10 +101,14 @@ class GameBuildContext:
     def encounters_raw(self) -> dict[str, Any]:
         return self._raw("encounters/raw", extract_encounter_dataset)
 
-    def trainers_raw(self) -> dict[str, Any]:
+    def trainers_raw(self) -> dict[str, Any] | None:
+        if "trainer_data" not in self.profile.layout:
+            return None
         return self._raw("trainers/raw", extract_trainer_dataset)
 
-    def locations_raw(self) -> dict[str, Any]:
+    def locations_raw(self) -> dict[str, Any] | None:
+        if "map_matrices" not in self.profile.layout:
+            return None
         return self._raw(
             "locations/raw",
             lambda result: extract_location_dataset(
@@ -169,11 +173,14 @@ class GameBuildContext:
             ),
         )
 
-    def trainers(self) -> dict[str, Any]:
+    def trainers(self) -> dict[str, Any] | None:
+        trainers_raw = self.trainers_raw()
+        if trainers_raw is None:
+            return None
         return self._memo(
             "trainers/enriched",
             lambda: enrich_trainer_dataset(
-                self.trainers_raw(),
+                trainers_raw,
                 self.pokedb,
                 pokemon_dataset=self.pokemon(),
                 move_dataset=self.moves(),
@@ -183,7 +190,7 @@ class GameBuildContext:
             ),
         )
 
-    def locations(self) -> dict[str, Any]:
+    def locations(self) -> dict[str, Any] | None:
         return self.locations_raw()
 
     def items(self) -> dict[str, Any]:

@@ -127,8 +127,8 @@ def render_item_pages(
                 "label": record["name"],
                 "slug": record["slug"],
                 "url": f"{record['slug']}/",
-                "pocket": record["pocket"]["name"],
-                "field_use": record["field_use"]["name"],
+                "pocket": record.get("pocket", {}).get("name"),
+                "field_use": record.get("field_use", {}).get("name"),
                 "category": category,
                 "price": record["price"],
                 "fling_power": record["fling_power"],
@@ -171,21 +171,38 @@ def _render_record(
     name_source: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"items/{record['slug']}.md"
-    mechanics = [
-        ("Field use", escape(display_name(record["field_use"]["name"]))),
-        ("Field pocket ID", str(record["field_pocket_id"])),
-        ("Field use function ID", str(record["field_use_function_id"])),
-        ("Held effect ID", str(record["hold_effect_id"])),
-        ("Held effect parameter", str(record["hold_effect_parameter"])),
-        ("Battle use function ID", str(record["battle_use_function_id"])),
-        ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}"),
-        ("Usable on party", yes_no(record["party_use"])),
-    ]
-    if record["pluck_effect_id"]:
+    mechanics = []
+    if "field_use" in record:
+        mechanics.append(
+            ("Field use", escape(display_name(record["field_use"]["name"])))
+        )
+    if "field_pocket_id" in record:
+        mechanics.append(("Field pocket ID", str(record["field_pocket_id"])))
+    if "field_use_function_id" in record:
+        mechanics.append(
+            ("Field use function ID", str(record["field_use_function_id"]))
+        )
+    if "hold_effect_id" in record:
+        mechanics.append(("Held effect ID", str(record["hold_effect_id"])))
+    if "hold_effect_parameter" in record:
+        mechanics.append(
+            ("Held effect parameter", str(record["hold_effect_parameter"]))
+        )
+    if "battle_use_function_id" in record:
+        mechanics.append(
+            ("Battle use function ID", str(record["battle_use_function_id"]))
+        )
+    if "battle_pocket_mask" in record:
+        mechanics.append(
+            ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}")
+        )
+    if "party_use" in record:
+        mechanics.append(("Usable on party", yes_no(record["party_use"])))
+    if record.get("pluck_effect_id"):
         mechanics.append(("Pluck effect ID", str(record["pluck_effect_id"])))
     if record["fling_power"]:
         mechanics.append(("Fling effect ID", str(record["fling_effect_id"])))
-    if record["natural_gift_power"]:
+    if record.get("natural_gift_power"):
         gift_type = record["natural_gift_type"]
         mechanics.append(
             (
@@ -269,13 +286,26 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
         media = '<span class="rw-summary__placeholder">Icon unavailable</span>'
     price = f"₽{record['price']:,}"
     category = reference.get("category")
+    pocket = record.get("pocket")
     facts = [
         ("Item ID", escape(str(record["item_id"]))),
-        ("Pocket", escape(display_name(record["pocket"]["name"]))),
+        *(
+            [("Pocket", escape(display_name(pocket["name"])))]
+            if pocket is not None
+            else []
+        ),
         *([("Category", escape(display_name(category)))] if category else []),
         ("Base price", escape(price)),
-        ("Selectable", escape(yes_no(record["selectable"]))),
-        ("Can be discarded", escape(yes_no(not record["prevent_toss"]))),
+        *(
+            [("Selectable", escape(yes_no(record["selectable"])))]
+            if "selectable" in record
+            else []
+        ),
+        *(
+            [("Can be discarded", escape(yes_no(not record["prevent_toss"])))]
+            if "prevent_toss" in record
+            else []
+        ),
     ]
     if record["fling_power"]:
         facts.append(
@@ -509,7 +539,7 @@ def _append_fossil_revival(
 
 
 def _party_effects(record: dict[str, Any]) -> list[str]:
-    if not record["party_use"]:
+    if not record.get("party_use"):
         return []
     effects = record["party_effects"]
     labels = {

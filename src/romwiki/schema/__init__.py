@@ -7,7 +7,7 @@ from romwiki.schema.encounters import (
     WaterEncounterSlot,
 )
 from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
-from romwiki.schema.items import Gen4Item, ItemPartyEffects
+from romwiki.schema.items import Gen4Item, Gen5Item, ItemPartyEffects
 from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
 from romwiki.schema.locations import (
     BonusEncounterSpecies,
@@ -82,6 +82,7 @@ __all__ = [
     "LevelUpMove",
     "Gen4EggMoveSet",
     "Gen4Item",
+    "Gen5Item",
     "ItemPartyEffects",
     "EvolutionEntry",
     "Gen4EvolutionSet",

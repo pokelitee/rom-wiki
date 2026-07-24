@@ -31,13 +31,27 @@
           </div>
         </div>
         <nav class="rw-not-found__links" aria-label="Game data sections">
+          {% if 'pokemon' in current.sections %}
           <a href="{{ 'pokemon/' | url }}"><strong>Pokémon</strong><span>Stats, abilities, and learnsets</span></a>
+          {% endif %}
+          {% if 'abilities' in current.sections %}
           <a href="{{ 'abilities/' | url }}"><strong>Abilities</strong><span>Assignments and effects</span></a>
+          {% endif %}
+          {% if 'items' in current.sections %}
           <a href="{{ 'items/' | url }}"><strong>Items</strong><span>Uses, prices, and locations</span></a>
+          {% endif %}
+          {% if 'moves' in current.sections %}
           <a href="{{ 'moves/' | url }}"><strong>Moves</strong><span>Battle data and learners</span></a>
+          {% endif %}
+          {% if 'encounters' in current.sections %}
           <a href="{{ 'encounters/' | url }}"><strong>Wild encounters</strong><span>Species, methods, and levels</span></a>
+          {% endif %}
+          {% if 'trainers' in current.sections %}
           <a href="{{ 'trainers/' | url }}"><strong>Trainers</strong><span>Parties and battle locations</span></a>
+          {% endif %}
+          {% if 'locations' in current.sections %}
           <a href="{{ 'locations/' | url }}"><strong>Locations</strong><span>Maps and connected records</span></a>
+          {% endif %}
         </nav>
       </section>
     {% elif games %}
