@@ -203,6 +203,7 @@ def _render_record(
         "",
         *stat_list(stats, baseline_stats),
         "",
+        *_battle_forms_section(record),
         "## Training",
         "",
         *fact_grid(
@@ -466,6 +467,31 @@ def _sibling_forms(
         if sibling["slug"] != record["slug"]
         and sibling.get("base_species") == base_species
     ]
+
+
+def _battle_forms_section(record: dict[str, Any]) -> list[str]:
+    """Real stats/typing for a species' battle-only transformations (e.g.
+    Castform's weather forms, Darmanitan's Zen Mode) -- these have no PokéDB
+    reference page or public record of their own (a player never
+    independently owns one), so they're shown here rather than as a
+    separate page, unlike a real alternate forme like Deoxys or Rotom.
+    """
+    forms = record.get("battle_forms")
+    if not forms:
+        return []
+    lines = ["## Battle-only forms", ""]
+    for form in forms:
+        lines.extend(
+            [
+                f"### {escape(form['label'])}",
+                "",
+                type_badges(form["types"]),
+                "",
+                *stat_list(form["base_stats"]),
+                "",
+            ]
+        )
+    return lines
 
 
 def _other_forms_section(

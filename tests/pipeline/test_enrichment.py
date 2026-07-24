@@ -100,6 +100,98 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["records"][2]["name"], "Rom-2")
         self.assertEqual(enriched["records"][496]["name"], "Deoxys Attack")
 
+    def test_resolves_gen5_alternate_formes_and_battle_only_transformations(
+        self,
+    ) -> None:
+        defaults = {
+            pokemon_id: {
+                "id": pokemon_id,
+                "name": f"pokemon-{pokemon_id}",
+                "species": f"pokemon-{pokemon_id}",
+            }
+            for pokemon_id in range(1, 650)
+        }
+        for pokemon_id, name, species in (
+            (386, "deoxys", "deoxys"),
+            (413, "wormadam", "wormadam"),
+            (487, "giratina", "giratina"),
+            (492, "shaymin", "shaymin"),
+            (479, "rotom", "rotom"),
+            (550, "basculin", "basculin"),
+            (351, "castform", "castform"),
+            (555, "darmanitan-standard", "darmanitan"),
+            (648, "meloetta-aria", "meloetta"),
+        ):
+            defaults[pokemon_id] = {"id": pokemon_id, "name": name, "species": species}
+        gen5_form_species = {
+            "deoxys-attack": "deoxys",
+            "deoxys-defense": "deoxys",
+            "deoxys-speed": "deoxys",
+            "wormadam-sandy": "wormadam",
+            "wormadam-trash": "wormadam",
+            "shaymin-sky": "shaymin",
+            "giratina-origin": "giratina",
+            "rotom-heat": "rotom",
+            "rotom-wash": "rotom",
+            "rotom-frost": "rotom",
+            "rotom-fan": "rotom",
+            "rotom-mow": "rotom",
+            "basculin-blue-striped": "basculin",
+        }
+        variants = {
+            name: {"id": 10000 + index, "name": name, "species": species}
+            for index, (name, species) in enumerate(gen5_form_species.items())
+        }
+        by_name = {item["name"]: item for item in defaults.values()}
+        by_name.update(variants)
+        pokedb = PokeDBGeneration(
+            pokemon_by_id=defaults,
+            pokemon_by_name=by_name,
+            pokemon_by_species={item["species"]: item for item in defaults.values()},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        records = [_source_record(member) for member in range(668)]
+
+        enriched = enrich_personal_dataset(
+            {
+                "game": "test",
+                "engine": "gen5_bw",
+                "source": {"archive": "personal.narc"},
+                "records": records,
+            },
+            pokedb,
+            type_names={0: "normal"},
+        )
+
+        deoxys_attack = enriched["records"][650]
+        self.assertTrue(deoxys_attack["public"])
+        self.assertEqual(deoxys_attack["slug"], "deoxys-attack")
+        self.assertEqual(deoxys_attack["national_dex_id"], 386)
+
+        castform_sunny = enriched["records"][662]
+        self.assertFalse(castform_sunny["public"])
+        self.assertNotIn("battle_forms", castform_sunny)
+
+        castform = enriched["records"][351]
+        self.assertEqual(
+            [form["label"] for form in castform["battle_forms"]],
+            ["Sunny Form", "Rainy Form", "Snowy Form"],
+        )
+        self.assertEqual(
+            castform["battle_forms"][0]["base_stats"], castform_sunny["base_stats"]
+        )
+
+        darmanitan = enriched["records"][555]
+        self.assertEqual(
+            [form["label"] for form in darmanitan["battle_forms"]], ["Zen Mode"]
+        )
+
+        meloetta = enriched["records"][648]
+        self.assertEqual(
+            [form["label"] for form in meloetta["battle_forms"]], ["Pirouette Forme"]
+        )
+
     def test_renders_a_page_and_index(self) -> None:
         record = _bulbasaur_record()
         with tempfile.TemporaryDirectory() as directory:
@@ -178,6 +270,37 @@ class PersonalEnrichmentTests(unittest.TestCase):
             page,
         )
         self.assertNotIn(">Mythical<", page)
+
+    def test_renders_battle_only_forms_section_when_present(self) -> None:
+        record = _bulbasaur_record()
+        record["battle_forms"] = [
+            {
+                "label": "Sunny Form",
+                "base_stats": {
+                    "hp": 70, "attack": 70, "defense": 70, "speed": 70,
+                    "special_attack": 70, "special_defense": 70,
+                },
+                "types": [{"id": 9, "name": "fire"}],
+            }
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages({"records": [record]}, output)
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Battle-only forms", page)
+        self.assertIn("### Sunny Form", page)
+        self.assertIn("rw-type--fire", page)
+        self.assertEqual(page.count('<span class="rw-stat__value">70</span>'), 6)
+
+    def test_omits_battle_only_forms_section_when_absent(self) -> None:
+        record = _bulbasaur_record()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages({"records": [record]}, output)
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("Battle-only forms", page)
 
     def test_labels_the_hidden_ability_slot(self) -> None:
         record = _bulbasaur_record()

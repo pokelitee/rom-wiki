@@ -83,6 +83,7 @@ def enrich_personal_dataset(
                 reference_version,
             )
         )
+    _attach_battle_forms(engine, records)
     enriched = {
         "schema_version": POKEMON_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
@@ -704,6 +705,35 @@ def _encounter_special_slots(
     ]
 
 
+def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
+    """Attach each battle-only transformation record's stats/types to its
+    base species' record as `battle_forms`, e.g. Castform's page gains its
+    real Sunny/Rainy/Snowy stat blocks even though those transformations
+    have no PokéDB reference page or public record of their own.
+    """
+    transformation_members = getattr(engine, "TRANSFORMATION_MEMBERS", {})
+    if not transformation_members:
+        return
+    by_base_slug: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        transformation = transformation_members.get(record["member"])
+        if transformation is None:
+            continue
+        by_base_slug.setdefault(transformation["base_slug"], []).append(
+            {
+                "label": transformation["label"],
+                "base_stats": record["base_stats"],
+                "types": record["types"],
+            }
+        )
+    if not by_base_slug:
+        return
+    for record in records:
+        forms = by_base_slug.get(record["slug"])
+        if forms:
+            record["battle_forms"] = forms
+
+
 def _resolve_unown_forms(engine: Any, unown_table_id: int) -> list[str]:
     index = unown_table_id - 1
     if not (0 <= index < len(engine.UNOWN_FORM_TABLES)):
@@ -732,6 +762,7 @@ def _enrich_record(
     reference_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
+    transformation_members = getattr(engine, "TRANSFORMATION_MEMBERS", {})
     if member in engine.INTERNAL_MEMBERS:
         slug = engine.INTERNAL_MEMBERS[member]
         identity = {"national_dex_id": None, "base_species": None, "form": None}
@@ -756,6 +787,21 @@ def _enrich_record(
         cry = pokedb.pokemon_cry(reference)
         reference_data = pokedb.pokemon_reference(reference, reference_version)
         public = True
+    elif member in transformation_members:
+        transformation = transformation_members[member]
+        base_slug = transformation["base_slug"]
+        slug = f"{base_slug}-{name_slug(transformation['label'])}"
+        identity = {
+            "national_dex_id": None,
+            "base_species": base_slug,
+            "form": None,
+        }
+        sprite = None
+        sprites = []
+        portrait = None
+        cry = None
+        reference_data = None
+        public = False
     else:
         reference = pokedb.pokemon_for_id(member)
         slug = reference["name"]
@@ -773,7 +819,11 @@ def _enrich_record(
 
     # Form and internal members keep their slug-derived labels; regular
     # species prefer the ROM's own name table ("Mr. Mime", "Farfetch'd").
-    if member in engine.FORM_MEMBERS or member in engine.INTERNAL_MEMBERS:
+    if (
+        member in engine.FORM_MEMBERS
+        or member in engine.INTERNAL_MEMBERS
+        or member in transformation_members
+    ):
         display_name = title_case_slug(slug)
     else:
         display_name = _pokemon_display_name(member, slug, pokemon_names)
