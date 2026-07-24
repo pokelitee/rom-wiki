@@ -6,6 +6,8 @@ theme:
   features:
     - navigation.sections
     - navigation.top
+    - navigation.instant
+    - navigation.instant.progress
     - search.suggest
     - search.highlight
     - content.tooltips
@@ -23,6 +25,10 @@ theme:
 
 plugins:
   - search
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
 
 markdown_extensions:
   - attr_list
@@ -31,6 +37,8 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - toc:
+      permalink: true
 
 extra:
   generator: false

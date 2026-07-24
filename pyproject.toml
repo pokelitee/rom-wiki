@@ -22,6 +22,7 @@ dev = ["pytest>=8", "ruff>=0.8"]
 docs = [
     "mkdocs>=1.6.1,<2",
     "mkdocs-material>=9.7.6,<10",
+    "mkdocs-minify-plugin>=0.8,<1",
 ]
 
 [project.scripts]

@@ -252,7 +252,6 @@ function enhanceCatalog(root, records, config) {
     state.page = 1;
     render();
   });
-  window.addEventListener("popstate", () => window.location.reload());
   render();
 }
 

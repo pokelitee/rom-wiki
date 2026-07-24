@@ -5,7 +5,11 @@ const comboboxWidgets = new WeakMap();
 const selectWidgets = new WeakMap();
 let elementSequence = 0;
 
+let controlsInitialized = false;
+
 export function initializeControls() {
+  if (controlsInitialized) return;
+  controlsInitialized = true;
   document.addEventListener("pointerdown", (event) => {
     const openWidget = event.target.closest?.(".rw-select--open, .rw-combobox--open");
     closeOpenMenus(openWidget);
