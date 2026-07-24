@@ -12,11 +12,15 @@ theme:
 nav:
   - Home: index.md
   - Changes: changes/index.md
-  - Pokémon: pokemon/index.md
-  - Abilities: abilities/index.md
-  - Items: items/index.md
-  - Moves: moves/index.md
-  - Wild Encounters: encounters/index.md
-  - Trainers: trainers/index.md
-  - Locations: locations/index.md
+  - Game Data:
+      - Pokémon: pokemon/index.md
+      - Abilities: abilities/index.md
+      - Items: items/index.md
+      - Moves: moves/index.md
+  - World:
+      - Wild Encounters: encounters/index.md
+      - Trainers: trainers/index.md
+      - Locations: locations/index.md
+  - Documentation:
+      - Overview: docs/index.md
   - Data Sources: data-sources.md
