@@ -441,6 +441,7 @@ def _enrich_encounter_area(
         "walking": walking,
         **methods,
         "special": special,
+        "bonus_slot_methodology_source": engine.BONUS_SLOT_METHODOLOGY_SOURCE,
         "encounter_form_rates": source["encounter_form_rates"],
         "unown_table_id": source["unown_table_id"],
         "provenance": source["provenance"],

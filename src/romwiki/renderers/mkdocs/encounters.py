@@ -309,8 +309,8 @@ def _render_area(
                 "applied by slot position.",
                 "Swarm, Day/Night, and Dual-slot replacements substitute a walking "
                 "slot's species only; the level and chance shown for them are the "
-                "replaced slot's own level and chance, per the wild-encounter "
-                "routine in the Pokémon Platinum decompilation.",
+                "replaced slot's own level and chance, per "
+                f"{record['bonus_slot_methodology_source']}.",
                 "Encounter form rates is a raw ROM value whose exact purpose isn't "
                 "fully understood; it is not a Pokémon species reference (unlike "
                 "most other numeric fields on this page) and stays constant across "

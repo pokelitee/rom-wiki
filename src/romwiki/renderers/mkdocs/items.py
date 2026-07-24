@@ -31,6 +31,7 @@ from romwiki.renderers.mkdocs.components import (
     rom_record_source,
     shop_price,
     sprite_with_link,
+    summary_hero,
     summary_section_link,
     type_badges,
     yes_no,
@@ -283,20 +284,11 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
                 summary_section_link(record["fling_power"], "mechanics"),
             )
         )
-    return [
-        '<section class="rw-summary">',
-        f'<div class="rw-summary__media">{media}</div>',
-        '<div class="rw-summary__body">',
-        '<dl class="rw-summary__facts">',
-        *(
-            f"<div><dt>{escape(label)}</dt><dd>{value}</dd></div>"
-            for label, value in facts
-        ),
-        "</dl>",
-        "</div>",
-        "</section>",
-        "",
+    fact_lines = [
+        f"<div><dt>{escape(label)}</dt><dd>{value}</dd></div>"
+        for label, value in facts
     ]
+    return summary_hero(media, fact_lines)
 
 
 def _append_locations(

@@ -30,6 +30,9 @@ GEN4_FISHING_SLOT_CHANCES = (40, 40, 15, 4, 1)
 # Verified against the wild-encounter routine in the Pokémon Platinum
 # decompilation (pret/pokeplatinum, src/overlay006/wild_encounters.c):
 # WildEncounters_ReplaceSwarmEncounters/-TimedEncounters/-DualSlotEncounters.
+GEN4_BONUS_SLOT_METHODOLOGY_SOURCE = (
+    "the wild-encounter routine in the Pokémon Platinum decompilation"
+)
 GEN4_SWARM_SLOT_INDICES = (0, 1)
 GEN4_TIMED_SLOT_INDICES = (2, 3)  # shared by both day and night replacements
 GEN4_DUAL_SLOT_SLOT_INDICES = (8, 9)

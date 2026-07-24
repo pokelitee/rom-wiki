@@ -317,10 +317,9 @@ def _reference_effects_section(record: dict[str, Any]) -> list[str]:
     moves" etc. under "## Learnset") rather than getting a section of their
     own — keeping only two top-level data buckets on the page (PokéDB-sourced
     "Effect", ROM-sourced "Additional battle properties"), matching every
-    other kind's page. Rendered as the same plain property/value table as
-    "Additional battle properties" (not the boxed `fact_grid()` component used
-    for full top-level sections like Mechanics/Training) since the two are
-    sibling lists of move facts and should carry the same visual weight.
+    other kind's page. Rendered through the same `fact_grid()` component as
+    "Additional battle properties" so the two sibling lists of move facts
+    carry the same visual weight.
     """
     properties = _reference_battle_properties(record)
     if not properties:

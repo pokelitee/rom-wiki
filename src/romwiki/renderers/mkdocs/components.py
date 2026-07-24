@@ -183,6 +183,33 @@ def stat_list(
     return lines
 
 
+def summary_hero(
+    media_html: str,
+    fact_lines: list[str],
+    *,
+    genus: str | None = None,
+    badges_html: str | None = None,
+) -> list[str]:
+    """The shared `<section class="rw-summary">` hero shell every record
+    kind's page-top summary uses: a media slot, an optional genus line and
+    badge row, and a facts `<dl>`. Callers build their own media/badges/facts
+    HTML and pass it in rather than duplicating this shell.
+    """
+    return [
+        '<section class="rw-summary">',
+        f'<div class="rw-summary__media">{media_html}</div>',
+        '<div class="rw-summary__body">',
+        *(f'<p class="rw-summary__genus">{escape(genus)}</p>' for _ in [0] if genus),
+        *(f'<div class="rw-summary__badges">{badges_html}</div>' for _ in [0] if badges_html),
+        '<dl class="rw-summary__facts">',
+        *fact_lines,
+        "</dl>",
+        "</div>",
+        "</section>",
+        "",
+    ]
+
+
 def pokemon_summary(record: dict[str, Any]) -> list[str]:
     portrait = record.get("portrait") or record.get("sprite")
     if portrait:
@@ -238,13 +265,7 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     habitat = reference.get("habitat")
     shape = reference.get("shape")
     badges = type_badges(record["types"]) + classification
-    return [
-        '<section class="rw-summary">',
-        f'<div class="rw-summary__media">{media}{cry_html}</div>',
-        '<div class="rw-summary__body">',
-        *(f'<p class="rw-summary__genus">{escape(genus)}</p>' for _ in [0] if genus),
-        f'<div class="rw-summary__badges">{badges}</div>',
-        '<dl class="rw-summary__facts">',
+    fact_lines = [
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
         *(f"<div><dt>Form</dt><dd>{escape(display_name(form))}</dd></div>" for _ in [0] if form),
         *(f"<div><dt>Body color</dt><dd>{escape(display_name(body_color))}</dd></div>" for _ in [0] if body_color),
@@ -256,11 +277,10 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
         *(f"<div><dt>Shape</dt><dd>{escape(display_name(shape))}</dd></div>" for _ in [0] if shape),
         *(f"<div><dt>Height</dt><dd>{escape(measurements['height'])}</dd></div>" for _ in [0] if measurements.get("height")),
         *(f"<div><dt>Weight</dt><dd>{escape(measurements['weight'])}</dd></div>" for _ in [0] if measurements.get("weight")),
-        "</dl>",
-        "</div>",
-        "</section>",
-        "",
     ]
+    return summary_hero(
+        f"{media}{cry_html}", fact_lines, genus=genus, badges_html=badges
+    )
 
 
 def _pokemon_measurements(reference: dict[str, Any]) -> dict[str, str]:

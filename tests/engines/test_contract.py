@@ -68,6 +68,7 @@ def _fake_engine_tables(**overrides: object) -> types.SimpleNamespace:
         "WALKING_SLOT_CHANCES": (999,) + (0,) * 11,
         "WATER_SLOT_CHANCES": (0,) * 5,
         "FISHING_SLOT_CHANCES": (0,) * 5,
+        "BONUS_SLOT_METHODOLOGY_SOURCE": "the fake test engine's own routine",
         "SWARM_SLOT_INDICES": (1, 2),
         "TIMED_SLOT_INDICES": (3, 4),
         "DUAL_SLOT_SLOT_INDICES": (9, 10),
@@ -385,6 +386,13 @@ class EngineContractTests(unittest.TestCase):
         # off the registered fake engine rather than a hardcoded gen4 import.
         self.assertEqual(
             enriched["records"][0]["walking"]["slots"][0]["chance"], 999
+        )
+        # Likewise for the bonus-slot methodology citation: it must come from
+        # the registered engine, not a literal gen4/Platinum string baked
+        # into the renderer.
+        self.assertEqual(
+            enriched["records"][0]["bonus_slot_methodology_source"],
+            "the fake test engine's own routine",
         )
 
         with tempfile.TemporaryDirectory() as directory:
