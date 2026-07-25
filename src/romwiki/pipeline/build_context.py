@@ -102,6 +102,14 @@ class GameBuildContext:
             return None
         return self._raw("pickup/raw", extract_pickup_dataset)
 
+    # moves_raw/encounters_raw/items_raw are deliberately NOT gated like the
+    # accessors above: Moves, Encounters, and Items are mandatory dataset
+    # kinds every profile must define (unlike the optional enrichment inputs
+    # above, some of which a given engine may never implement -- e.g. Gen5
+    # BW has no move tutors at all). A profile missing one of their layout
+    # keys is a real configuration error, so it should surface as the
+    # extractor's own clear ProfileError rather than be silently treated as
+    # an absent, optional section.
     def moves_raw(self) -> dict[str, Any]:
         return self._raw("moves/raw", extract_move_dataset)
 
@@ -126,6 +134,9 @@ class GameBuildContext:
             ),
         )
 
+    # Also mandatory (see the comment above moves_raw/encounters_raw) --
+    # unlike trainers_raw/locations_raw just above, which are legitimately
+    # optional per-engine slices.
     def items_raw(self) -> dict[str, Any]:
         return self._raw("items/raw", extract_item_dataset)
 
@@ -269,10 +280,6 @@ class GameBuildContext:
             return None
         source = value.get("source", {}) if isinstance(value, dict) else {}
         if value.get("schema_version") != RAW_SCHEMA_VERSION_BY_CACHE_KEY[key]:
-            return None
-        if value.get("dataset") == "trainers" and not isinstance(
-            value.get("engine"), str
-        ):
             return None
         if source.get("rom_sha256") != self.result.image.hashes.sha256:
             return None

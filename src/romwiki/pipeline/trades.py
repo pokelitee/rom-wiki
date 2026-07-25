@@ -26,7 +26,7 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
     unused_trade_ids = frozenset(profile.parameters.get("npc_trades_unused", ()))
 
     platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).locations
+    engine = get_engine(profile.engine).trades
     filesystem = platform.filesystem_from_image(result.image)
     trades = platform.archive_cls.from_bytes(filesystem.read(trades_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))

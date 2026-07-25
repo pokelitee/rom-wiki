@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from romwiki.engines.registry import GEN5_BW_ENGINE
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -56,7 +57,7 @@ def render_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    if dataset.get("engine") == "gen5_bw":
+    if dataset.get("engine") == GEN5_BW_ENGINE:
         return _render_gen5_location_pages(dataset, output_root, only_pages=only_pages)
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)

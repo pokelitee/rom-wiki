@@ -7,6 +7,15 @@ import romwiki.engines.gen4_dppt as gen4_dppt
 import romwiki.engines.gen5_bw as gen5_bw
 from romwiki.util.errors import DataSourceError
 
+# Canonical engine-name strings, for the handful of pipeline/renderer call
+# sites that must dispatch on which engine they're given a dataset for
+# (encounters/locations/trainers have genuinely different record shapes per
+# engine, unlike everything else, which dispatches generically through
+# EngineAdapter). Referencing these constants instead of repeating string
+# literals keeps that dispatch centralized on one source of truth.
+GEN4_DPPT_ENGINE = "gen4_dppt"
+GEN5_BW_ENGINE = "gen5_bw"
+
 
 @dataclass(frozen=True, slots=True)
 class EngineAdapter:
@@ -32,10 +41,11 @@ class EngineAdapter:
     reference_names: Any
     enrich: Any
     trainer_party: Any
+    trades: Any
 
 
 _ENGINES: dict[str, EngineAdapter] = {
-    "gen4_dppt": EngineAdapter(
+    GEN4_DPPT_ENGINE: EngineAdapter(
         personal=gen4_dppt,
         locations=gen4_dppt,
         trainers=gen4_dppt,
@@ -50,8 +60,9 @@ _ENGINES: dict[str, EngineAdapter] = {
         reference_names=gen4_dppt,
         enrich=gen4_dppt,
         trainer_party=gen4_dppt,
+        trades=gen4_dppt,
     ),
-    "gen5_bw": EngineAdapter(
+    GEN5_BW_ENGINE: EngineAdapter(
         personal=gen5_bw,
         locations=gen5_bw,
         trainers=gen5_bw,
@@ -66,6 +77,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         reference_names=gen5_bw,
         enrich=gen5_bw,
         trainer_party=gen5_bw,
+        trades=gen5_bw,
     ),
 }
 

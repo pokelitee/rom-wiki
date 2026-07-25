@@ -6,6 +6,10 @@ from romwiki.schema import Gen5Item, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 GEN5_ITEM_RECORD_SIZE = 36
+# Gen5 stores price at 1/10th scale, unlike Gen4 (which stores it directly) --
+# verified against Potion=300, Antidote=100, Full Restore=3000, HP Up=9800,
+# Iron=9800 (see the byte-layout notes below).
+GEN5_ITEM_PRICE_SCALE = 10
 
 # Byte layout confirmed against the real Black ROM's `a/0/2/4` archive (627
 # fixed 36-byte records, item ID == archive member index directly -- no ARM9
@@ -52,7 +56,7 @@ def parse_item_record(
             f"Gen5 item record for item {item_id} must be "
             f"{GEN5_ITEM_RECORD_SIZE} bytes, got {len(data)}"
         )
-    price = struct.unpack_from("<H", data, 0)[0] * 10
+    price = struct.unpack_from("<H", data, 0)[0] * GEN5_ITEM_PRICE_SCALE
     return Gen5Item(
         item_id=item_id,
         data_archive_member=data_archive_member,

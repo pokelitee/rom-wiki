@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
 from romwiki.pipeline.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
@@ -137,7 +137,7 @@ def enrich_encounter_dataset(
     # enrichment function rather than a branch inside the Gen IV one.
     enrich_area = (
         _enrich_gen5_encounter_area
-        if dataset.get("engine") == "gen5_bw"
+        if dataset.get("engine") == GEN5_BW_ENGINE
         else _enrich_encounter_area
     )
 

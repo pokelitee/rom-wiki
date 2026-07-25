@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
@@ -19,7 +19,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
-    if profile.engine == "gen5_bw":
+    if profile.engine == GEN5_BW_ENGINE:
         return _extract_gen5_trainer_dataset(result)
     try:
         trainer_path = profile.layout["trainer_data"]

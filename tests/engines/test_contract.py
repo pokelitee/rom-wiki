@@ -95,6 +95,7 @@ def _register_fake_engine(tables: types.SimpleNamespace) -> None:
         reference_names=tables,
         enrich=tables,
         trainer_party=tables,
+        trades=tables,
     )
     register_engine(_FAKE_ENGINE_ID, adapter)
 

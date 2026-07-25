@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import (
     code_load_address,
@@ -56,7 +56,7 @@ def extract_location_dataset(
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
-    if profile.engine == "gen5_bw":
+    if profile.engine == GEN5_BW_ENGINE:
         return _extract_gen5_location_dataset(result)
     try:
         events_path = profile.layout["events"]
