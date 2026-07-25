@@ -335,6 +335,66 @@ class MinimalItemDatasetTests(unittest.TestCase):
         self.assertIn("Driftveil Incense Salesman", page)
         self.assertIn("Post-game", page)
 
+    def test_renders_gen5_party_effects(self) -> None:
+        record = {
+            **_gen5_item_record(),
+            "item_id": 23,
+            "name": "Full Restore",
+            "natural_gift_power": 0,
+            "field_pocket_id": 1,
+            "field_use_function_id": 1,
+            "battle_use_function_id": 2,
+            "party_use": True,
+            "party_effects": {
+                "heal_sleep": True,
+                "heal_poison": True,
+                "heal_burn": True,
+                "heal_freeze": True,
+                "heal_paralysis": True,
+                "heal_confusion": True,
+                "revive": False,
+                "revive_all": False,
+                "level_up": False,
+                "hp_restored": 255,
+                "pp_restored": 0,
+                "hp_ev_amount": 0,
+                "attack_ev_amount": 0,
+                "defense_ev_amount": 0,
+                "speed_ev_amount": 0,
+                "special_attack_ev_amount": 0,
+                "special_defense_ev_amount": 0,
+                "friendship_low_amount": 0,
+                "friendship_medium_amount": 0,
+                "friendship_high_amount": 0,
+            },
+        }
+        raw = {
+            "game": "test",
+            "source": {"archive": "itemdata.narc"},
+            "records": [record],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={23: "full-restore"},
+        )
+
+        dataset = build_item_dataset(raw, pokedb, pokemon, None, None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_item_pages(dataset, output)
+            page = (output / "full-restore.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "cures sleep, cures poison, cures burn, cures freeze, "
+            "cures paralysis, cures confusion, HP amount 255",
+            page,
+        )
+
 
 def _gen5_item_record() -> dict:
     return {

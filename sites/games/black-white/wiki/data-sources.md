@@ -104,18 +104,40 @@ Item records are decoded from the `a/0/2/4` archive, a fixed-layout 36-byte
 record per member: item ID maps directly to archive member index (no ARM9
 item-to-member mapping table exists in this generation, unlike Generation IV).
 There is no public documentation or decompilation of this record format to
-check against, so only fields that were cross-referenced against real ROM data
-and PokéDB's known Generation V item values are decoded: price (stored as
-price ÷ 10 -- a real Generation V-specific difference from Generation IV, which
-stores price directly), held-effect ID, fling power, fling effect ID, and pluck
-effect ID. Item pocket, field/battle-use function IDs, party-use effects (HP/PP
-restoration, stat boosts, status cures), Natural Gift power and type, berries,
-and fossil revival are not yet decoded -- black-box comparison against real
-records produced no single consistent interpretation for these fields without
-a disassembly to check against, so they're left out rather than guessed. Items
-whose ROM name is the archive's own "???" placeholder sentinel are excluded as
-unused slots; the rare case of two distinct real items sharing a display name
-(the male- and female-color Xtransceiver) is disambiguated with the item ID in
+check against, so every field below was cross-referenced against real ROM
+data, PokéDB's known Generation V item values, and (for pocket assignment)
+Bulbapedia's own real item-by-pocket listing: price (stored as price ÷ 10 --
+a real Generation V-specific difference from Generation IV, which stores
+price directly), held-effect ID, fling power, fling effect ID, pluck effect
+ID, bag pocket (this generation has only 5 pockets, down from Generation
+IV's 8 -- Poké Balls, Battle Items, and Mail were folded into a single
+general "Items" pocket), field-use function ID (byte-identical to Generation
+IV's own enumeration, plus one new entry for the Dowsing MCHN -- this
+generation's Itemfinder replacement, with no Generation IV counterpart),
+battle-use function ID (a raw ID, not exhaustively named), Natural Gift
+power and type (verified against Oran Berry, Sitrus Berry, and Micle Berry's
+well-documented real types and powers), and party-use effects -- HP/PP
+restoration amounts, six independent per-stat EV change amounts (verified
+against all 6 EV vitamins and all 6 EV-reducing berries, 12 independent real
+facts), status-cure bitmask, friendship-change amounts, and a small
+disambiguated revive/whole-party-revive/level-up flag (an initial "bit 0
+means revive" reading turned out to have a false positive on Rare Candy;
+checking it against the ROM's *entire* item table rather than a handful of
+samples caught the collision and led to the real 3-bit encoding). Several
+Generation IV item-effect concepts (Guard Spec.'s stat-drop immunity,
+evolution stones, infatuation cures, PP Up/PP Max) have no confirmed
+Generation V bit at all and are left undecoded rather than guessed at --
+this generation may simply hardcode those effects by item ID instead of
+storing them as data. Berry growth (soil-planting) data doesn't exist to
+decode in the first place: Generation V removed that mechanic from the base
+game entirely (berries only come from wild berry trees, NPCs, and the Dream
+World). Fossil revival remains partly open: the *species and level* for all
+9 fossils are already known (see Pokémon species data above), but the
+*item-to-species* mapping needs the field-use function dispatch table
+itself, a deeper decode than the function ID values alone. Items whose ROM
+name is the archive's own "???" placeholder sentinel are excluded as unused
+slots; the rare case of two distinct real items sharing a display name (the
+male- and female-color Xtransceiver) is disambiguated with the item ID in
 the page URL.
 
 The Pickup ability's held-item table is decoded from a 29-word array found by

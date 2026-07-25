@@ -5,6 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from romwiki.engines.registry import GEN5_BW_ENGINE
 from romwiki.pipeline.abilities import build_ability_dataset
 from romwiki.pipeline.egg_moves import extract_egg_move_dataset
 from romwiki.pipeline.encounters import extract_encounter_dataset
@@ -143,7 +144,16 @@ class GameBuildContext:
         return self._raw("items/raw", extract_item_dataset)
 
     def trades_raw(self) -> dict[str, Any] | None:
-        if "npc_trades" not in self.profile.layout:
+        # Gen5-only, despite reusing the `npc_trades` layout key's name:
+        # Gen4's own NPC trades are already fully location-linked and
+        # attached to items via `locations_raw()`'s embedded records (see
+        # `pipeline/locations.py`/`pipeline/items.py`) -- Gen4 profiles set
+        # `layout.npc_trades` for that unrelated purpose. This flat,
+        # non-location-linked dataset exists only because this generation's
+        # trades aren't tied to a map location at all; gating on the key
+        # alone would wrongly fire for Gen4 too and call its differently
+        # shaped `parse_npc_trade_record`.
+        if self.profile.engine != GEN5_BW_ENGINE or "npc_trades" not in self.profile.layout:
             return None
         return self._raw("trades/raw", extract_npc_trade_dataset)
 

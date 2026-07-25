@@ -32,7 +32,12 @@ from romwiki.engines.gen5_bw.encounters import (
 )
 from romwiki.engines.gen5_bw.encounters import parse_encounter_entry
 from romwiki.engines.gen5_bw.evolutions import parse_evolution_record
-from romwiki.engines.gen5_bw.items import parse_item_record
+from romwiki.engines.gen5_bw.items import (
+    GEN5_ITEM_FIELD_USE_NAMES,
+    GEN5_ITEM_POCKET_NAMES,
+    NATURAL_GIFT_TYPE_NONE,
+    parse_item_record,
+)
 from romwiki.engines.gen5_bw.learnsets import parse_level_up_learnset
 from romwiki.engines.gen5_bw.locations import (
     parse_map_header_table,
@@ -104,6 +109,11 @@ INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 TRANSFORMATION_MEMBERS = PERSONAL_TRANSFORMATION_MEMBERS
 MACHINE_COUNT = GEN5_MACHINE_COUNT
+# Consumed generically by pipeline/items.py (keyed off attribute name, not
+# per-engine branching), matching Gen4's own `ITEM_POCKET_NAMES`/
+# `ITEM_FIELD_USE_NAMES` precedent.
+ITEM_POCKET_NAMES = GEN5_ITEM_POCKET_NAMES
+ITEM_FIELD_USE_NAMES = GEN5_ITEM_FIELD_USE_NAMES
 
 __all__ = [
     "ABILITY_NAME_COUNT",
@@ -120,8 +130,11 @@ __all__ = [
     "GEN5_MACHINE_TABLE_PREFIX",
     "GROWTH_RATE_NAMES",
     "INTERNAL_MEMBERS",
+    "ITEM_FIELD_USE_NAMES",
     "ITEM_NAME_COUNT",
+    "ITEM_POCKET_NAMES",
     "MACHINE_COUNT",
+    "NATURAL_GIFT_TYPE_NONE",
     "MAX_MOVE_ID",
     "MOVE_NAME_COUNT",
     "MOVE_RECORD_COUNT",

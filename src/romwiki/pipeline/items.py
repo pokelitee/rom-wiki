@@ -48,6 +48,12 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         type_names = engine.parse_english_message_archive(
             messages.read(type_names_member)
         )
+    else:
+        # This generation has no ROM text table for type names at all (no
+        # new types were added over Generation IV), so Natural Gift type
+        # names fall back to the engine's own built-in constant table
+        # instead of a ROM-decoded one.
+        type_names = get_engine(profile.engine).enrich.TYPE_NAMES
 
     source: dict[str, Any] = {
         "rom_sha256": result.image.hashes.sha256,

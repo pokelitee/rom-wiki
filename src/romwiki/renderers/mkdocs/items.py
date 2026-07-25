@@ -583,6 +583,11 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
     if not record.get("party_use"):
         return []
     effects = record["party_effects"]
+    # Gen5's party effects have no `evolve` concept at all (that Gen4 key is
+    # absent from Gen5ItemPartyEffects entirely, not just always-false), so
+    # its presence distinguishes which shape this record carries.
+    if "evolve" not in effects:
+        return _gen5_party_effects(effects)
     labels = {
         "heal_sleep": "cures sleep",
         "heal_poison": "cures poison",
@@ -634,6 +639,44 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
         f"{tier} {effects[f'friendship_{tier}_amount']:+d}"
         for tier in ("low", "medium", "high")
         if effects[f"friendship_{tier}"]
+    ]
+    if friendship:
+        result.append(f"friendship ({', '.join(friendship)})")
+    return result
+
+
+def _gen5_party_effects(effects: dict[str, Any]) -> list[str]:
+    labels = {
+        "heal_sleep": "cures sleep",
+        "heal_poison": "cures poison",
+        "heal_burn": "cures burn",
+        "heal_freeze": "cures freeze",
+        "heal_paralysis": "cures paralysis",
+        "heal_confusion": "cures confusion",
+        "revive": "revives",
+        "revive_all": "revives party",
+        "level_up": "raises level",
+    }
+    result = [label for key, label in labels.items() if effects[key]]
+    if effects["hp_restored"]:
+        result.append(f"HP amount {effects['hp_restored']}")
+    if effects["pp_restored"]:
+        result.append(f"PP amount {effects['pp_restored']}")
+    for label, key in (
+        ("HP", "hp_ev_amount"),
+        ("Attack", "attack_ev_amount"),
+        ("Defense", "defense_ev_amount"),
+        ("Speed", "speed_ev_amount"),
+        ("Sp. Atk", "special_attack_ev_amount"),
+        ("Sp. Def", "special_defense_ev_amount"),
+    ):
+        amount = effects[key]
+        if amount:
+            result.append(f"{label} EVs {amount:+d}")
+    friendship = [
+        f"{tier} {effects[f'friendship_{tier}_amount']:+d}"
+        for tier in ("low", "medium", "high")
+        if effects[f"friendship_{tier}_amount"]
     ]
     if friendship:
         result.append(f"friendship ({', '.join(friendship)})")
