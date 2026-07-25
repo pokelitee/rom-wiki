@@ -235,5 +235,80 @@ class TrainerEnrichmentTests(unittest.TestCase):
         )
 
 
+class Gen5TrainerEnrichmentTests(unittest.TestCase):
+    def test_enriches_and_renders_a_triple_battle_trainer(self) -> None:
+        source = {
+            "trainer_id": 1,
+            "name": "Burgh",
+            "class_id": 5,
+            "class_name": "Gym Leader",
+            "battle_mode": 2,
+            "double_battle": False,
+            "has_custom_moves": False,
+            "has_held_items": False,
+            "party_count": 1,
+            "reward_item_ids": (0, 0, 0, 0),
+            "ai_flags": 0,
+            "healer": False,
+            "victory_money_multiplier": 30,
+            "victory_item_id": 0,
+            "party": [
+                {
+                    "difficulty": 255,
+                    "ability_slot": 1,
+                    "forced_gender_flag": 2,
+                    "level": 20,
+                    "species_id": 587,
+                    "form_id": 0,
+                    "held_item_id": None,
+                    "move_ids": [],
+                }
+            ],
+            "provenance": {"source": "rom", "archive": "trdata.narc", "member": 1},
+            "party_provenance": {
+                "source": "rom", "archive": "trpoke.narc", "member": 1
+            },
+            "locations": (),
+            "script_references": (),
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={587: {"id": 587, "name": "emolga", "species": "emolga"}},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+
+        enriched = enrich_trainer_dataset(
+            {
+                "game": "test",
+                "engine": "gen5_bw",
+                "source": {},
+                "records": [source],
+            },
+            pokedb,
+        )
+
+        party_member = enriched["records"][0]["party"][0]
+        # A forced-female gender flag is stored data, unlike nature/calculated
+        # stats, which stay unavailable since Gen V doesn't derive them from a
+        # documented, reproducible algorithm the way Gen IV does.
+        self.assertEqual(party_member["gender"], {"source": "stored", "name": "Female"})
+        self.assertIsNone(party_member["nature"])
+        self.assertIsNone(party_member["calculated_stats"])
+        self.assertEqual(party_member["ivs"]["values"]["speed"], 31)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_trainer_pages(enriched, output)
+            page = (output / "trainer-0001.md").read_text(encoding="utf-8")
+
+        self.assertIn("# Gym Leader Burgh", page)
+        self.assertIn("Triple battle", page)
+        self.assertIn("Emolga", page)
+        self.assertIn("Battle mode", page)
+        self.assertNotIn("Battle type", page)
+
+
 if __name__ == "__main__":
     unittest.main()

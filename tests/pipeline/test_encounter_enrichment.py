@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from romwiki.engines.gen4_dppt import parse_encounter_record
+from romwiki.engines.gen5_bw import parse_encounter_entry
 from romwiki.pipeline.enrich import enrich_encounter_dataset
 from romwiki.renderers.mkdocs import render_encounter_pages
 from romwiki.sources import PokeDBGeneration
@@ -138,6 +139,64 @@ class EncounterEnrichmentTests(unittest.TestCase):
         self.assertEqual(count, 0)
         self.assertFalse((output / "area-000.md").exists())
         self.assertEqual(len(catalog["records"]), 1)
+
+
+class Gen5EncounterEnrichmentTests(unittest.TestCase):
+    def test_enriches_species_and_renders_an_active_area(self) -> None:
+        data = bytearray(232)
+        data[0] = 20  # grass_cave rate
+        # A nonzero rate requires every one of grass_cave's 12 slots to hold
+        # a valid species ID (cursor = offset(0) + 8, 4 bytes per slot).
+        for slot_index in range(12):
+            base = 8 + slot_index * 4
+            data[base : base + 2] = (1).to_bytes(2, "little")  # species 1, form 0
+            data[base + 2] = 3
+            data[base + 3] = 5
+        (area,) = parse_encounter_entry(
+            bytes(data), map_index=0, archive_path="wild_pokemon.narc"
+        )
+        source = area.to_dict()
+        source["location_names"] = ["Route 1"]
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={1: {"id": 1, "name": "bulbasaur", "species": "bulbasaur"}},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+
+        enriched = enrich_encounter_dataset(
+            {
+                "game": "test",
+                "engine": "gen5_bw",
+                "source": {"archive": "wild_pokemon.narc"},
+                "records": [source],
+            },
+            pokedb,
+        )
+
+        self.assertEqual(enriched["active_record_count"], 1)
+        record = enriched["records"][0]
+        self.assertEqual(record["name"], "Route 1")
+        slot = record["grass_cave"]["slots"][0]
+        self.assertEqual(slot["pokemon"]["name"], "Bulbasaur")
+        self.assertEqual(slot["minimum_level"], 3)
+        self.assertEqual(slot["maximum_level"], 5)
+        self.assertFalse(record["doubles_grass"]["rate"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            count = render_encounter_pages(enriched, output)
+            page = (output / "area-000.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(count, 1)
+        self.assertIn("# Route 1", page)
+        self.assertIn("Grass/Cave", page)
+        self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
+        self.assertEqual(catalog["kind"], "encounters")
+        self.assertEqual(catalog["records"][0]["methods"], ["Grass/Cave"])
+        self.assertIn("Bulbasaur", catalog["records"][0]["pokemon"])
 
 
 if __name__ == "__main__":

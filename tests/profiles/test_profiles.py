@@ -40,10 +40,27 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.layout["personal"], "a/0/1/6")
         self.assertEqual(black.layout["messages"], "a/0/0/2")
         self.assertEqual(black.layout["item_data"], "a/0/2/4")
+        self.assertEqual(black.layout["moves"], "a/0/2/1")
+        self.assertEqual(black.layout["learnsets"], "a/0/1/8")
+        self.assertEqual(black.layout["evolutions"], "a/0/1/9")
+        self.assertEqual(black.layout["egg_moves"], "a/1/2/3")
+        self.assertEqual(black.layout["encounters"], "a/1/2/6")
+        self.assertEqual(black.layout["trainer_data"], "a/0/9/2")
+        self.assertEqual(black.layout["trainer_parties"], "a/0/9/3")
+        self.assertEqual(black.layout["map_headers"], "a/0/1/2")
+        self.assertEqual(black.layout["npc_trades"], "a/1/6/5")
         self.assertEqual(black.parameters["pokemon_names_member"], 70)
         self.assertEqual(black.parameters["ability_names_member"], 182)
         self.assertEqual(black.parameters["move_names_member"], 203)
         self.assertEqual(black.parameters["item_names_member"], 54)
+        self.assertEqual(black.parameters["machine_move_prefix"], "87038803")
+        self.assertEqual(black.parameters["trainer_names_member"], 190)
+        self.assertEqual(black.parameters["trainer_classes_member"], 191)
+        self.assertEqual(black.parameters["map_names_member"], 89)
+        self.assertEqual(black.parameters["npc_trade_names_member"], 35)
+        self.assertEqual(
+            black.parameters["npc_trades_unused"], [1, 3, 7, 8, 9, 10, 11, 12]
+        )
         self.assertEqual(black.sprite_version, "black-white")
 
         self.assertEqual(white.engine, "gen5_bw")
@@ -53,6 +70,12 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(white.parameters["pokemon_names_member"], 70)
         self.assertEqual(white.layout["personal"], "a/0/1/6")
         self.assertEqual(white.layout["item_data"], "a/0/2/4")
+        self.assertEqual(white.layout["trainer_data"], "a/0/9/2")
+        self.assertEqual(white.layout["map_headers"], "a/0/1/2")
+        self.assertEqual(white.layout["npc_trades"], "a/1/6/5")
+        self.assertEqual(
+            white.parameters["npc_trades_unused"], [0, 2, 7, 8, 9, 10, 11, 12]
+        )
 
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
