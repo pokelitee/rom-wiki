@@ -40,6 +40,7 @@ from romwiki.engines.gen5_bw.items import (
 )
 from romwiki.engines.gen5_bw.learnsets import parse_level_up_learnset
 from romwiki.engines.gen5_bw.locations import (
+    parse_map_header_script_files,
     parse_map_header_table,
     parse_wild_map_names,
 )
@@ -47,6 +48,11 @@ from romwiki.engines.gen5_bw.machines import machine_name, parse_machine_move_ta
 from romwiki.engines.gen5_bw.marts import parse_shop_catalog
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
+from romwiki.engines.gen5_bw.overworld import (
+    parse_overworld_npcs,
+    parse_overworld_warps,
+    resolve_common_script_trainer_id,
+)
 from romwiki.engines.gen5_bw.personal import parse_personal_record
 from romwiki.engines.gen5_bw.pickup import (
     PICKUP_LEVEL_RANGE_COUNT,
@@ -54,6 +60,10 @@ from romwiki.engines.gen5_bw.pickup import (
     PICKUP_SLOT_CHANCES,
     parse_pickup_table,
     pickup_level_range_item_ids,
+)
+from romwiki.engines.gen5_bw.scripts import (
+    parse_function_table,
+    parse_trainer_battle_commands,
 )
 from romwiki.engines.gen5_bw.static_encounters import parse_static_encounters
 from romwiki.engines.gen5_bw.trades import parse_npc_trade_record
@@ -79,14 +89,22 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # handling was needed first, since one (unused) entry in the map-name table
 # contains a runtime-substituted-text control code that used to make the
 # whole table fail to decode.
-# Locations is deliberately a bare minimum: just each map header's display
-# name and its wild-encounter-table cross-reference, both of which the
-# randomizer community's own code already uses (so they're verifiable
-# against Gen5RomHandler.java). No public reference documents the rest of
-# the 48-byte map header record (warps, connections, scripts, music, ...),
-# and this generation's own script-engine opcode table -- which Trainers'
-# location/script-reference linking also needs -- hasn't been researched;
-# guessing at either isn't done here.
+# Locations' own record is still a bare minimum (display name + wild-encounter
+# cross-reference; no warps/connections/shops/gifts yet -- no public reference
+# documents the rest of the 48-byte map header record, and guessing at
+# undocumented offsets isn't done here). Trainers' map-location/script-
+# reference linking, previously blocked on "this generation's script-engine
+# opcode table hasn't been researched," is now unblocked: scripts.py adopts
+# FrostFalcon/FrostsGen5Editor's BW1 field-script opcode table (an actively-
+# maintained community tool, cross-checked against real ROM bytes -- see
+# scripts.py's module docstring) to find literal `CallTrainerBattle`
+# invocations the same "opcode signature + validating follow-on command" way
+# gen4_dppt/scripts.py already finds Platinum's `StartTrainerBattle`, and
+# overworld.py resolves sight-triggered battles' trainer IDs directly from
+# the overworld NPC record's own `scriptUsed` field via a verified band
+# arithmetic (see overworld.py's module docstring). Both are literal-ID-only;
+# battles whose trainer can't be resolved to a real record are left unlinked
+# rather than guessed at.
 # Static (gift/single-Pokémon) encounters, unlike the above, don't need that
 # opcode research at all: static_encounters.py reads literal species/level
 # byte offsets straight out of `Scripts` (`a/0/5/7`) script files, the same
@@ -158,17 +176,23 @@ __all__ = [
     "parse_item_record",
     "parse_level_up_learnset",
     "parse_machine_move_table",
+    "parse_map_header_script_files",
     "parse_map_header_table",
     "parse_move_record",
+    "parse_overworld_npcs",
+    "parse_overworld_warps",
     "parse_personal_record",
     "parse_npc_trade_record",
     "parse_pickup_table",
     "parse_shop_catalog",
     "parse_static_encounters",
+    "parse_function_table",
+    "parse_trainer_battle_commands",
     "parse_trainer_record",
     "pickup_level_range_item_ids",
     "PICKUP_LEVEL_RANGE_COUNT",
     "PICKUP_LEVEL_RANGE_SIZE",
     "PICKUP_SLOT_CHANCES",
     "parse_wild_map_names",
+    "resolve_common_script_trainer_id",
 ]

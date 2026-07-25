@@ -189,6 +189,8 @@ class Gen5Location:
     # map index can expand to up to 4 seasonal areas -- see data-sources.md.
     encounter_map_index: int | None
     provenance: RecordProvenance
+    trainers: tuple[LocationTrainerReference, ...] = ()
+    warps: tuple[LocationWarp, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

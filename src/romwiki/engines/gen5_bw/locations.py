@@ -17,6 +17,25 @@ MAP_HEADER_RECORD_SIZE = 48
 _NAME_INDEX_OFFSET = 26
 _WILD_SET_OFFSET = 20
 _NULL_WILD_SET = 0xFFFF
+# Byte offset 6 (u16): the map's own dedicated member index in `layout.scripts`
+# (`a/0/5/7`) -- undecoded until this session. Verified against real Black ROM
+# data: for several maps, walking the function this field's script member
+# points to (via `gen5_bw/scripts.py`'s function table) at the offset an NPC's
+# `scriptUsed` field (1-indexed) selects lands on real, in-range script
+# content -- see `gen5_bw/overworld.py`'s module docstring for the full
+# cross-check. Offset 8 (the very next u16) is a second, related script
+# member (consistently `script_file_offset + 1`) whose purpose isn't decoded.
+_SCRIPT_FILE_OFFSET = 6
+
+
+def parse_map_header_script_files(data: bytes) -> tuple[int, ...]:
+    if len(data) % MAP_HEADER_RECORD_SIZE:
+        raise InvalidRomError("Gen V map header table has an invalid size")
+    count = len(data) // MAP_HEADER_RECORD_SIZE
+    return tuple(
+        struct.unpack_from("<H", data, header_id * MAP_HEADER_RECORD_SIZE + _SCRIPT_FILE_OFFSET)[0]
+        for header_id in range(count)
+    )
 
 
 def parse_map_header_table(

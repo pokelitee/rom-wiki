@@ -902,9 +902,9 @@ def _render_gen5_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    # Bare minimum: name + wild-encounter cross-reference only -- see
-    # gen5_bw/__init__.py's module docstring for why the rest (warps,
-    # connections, shops, gifts, trainers, ...) isn't here yet.
+    # Name, wild-encounter cross-reference, real trainers, and real warps --
+    # see gen5_bw/__init__.py's module docstring for why the rest
+    # (connections, shops, gifts, ...) isn't here yet.
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -953,9 +953,11 @@ def _render_gen5_location_pages(
                 "id": record["header_id"],
                 "label": label,
                 "url": filename.removesuffix(".md") + "/",
-                "features": (
-                    ["encounters"] if record["encounter_map_index"] is not None else []
-                ),
+                "features": [
+                    *(["encounters"] if record["encounter_map_index"] is not None else []),
+                    *(["trainers"] if record["trainers"] else []),
+                    *(["warps"] if record["warps"] else []),
+                ],
                 "search_text": record["name"].lower(),
             }
         )
@@ -1002,6 +1004,9 @@ def _render_gen5_location(
                 "",
             ]
         )
+    source_file = f"locations/{_filename(record['header_id'])}"
+    _append_trainers(lines, record["trainers"], source_file)
+    _append_warps(lines, record["warps"], source_file)
     lines.extend(
         provenance_section(
             [
@@ -1009,11 +1014,10 @@ def _render_gen5_location(
                 "Source: exact ROM map header record from "
                 f"`{record['provenance']['archive']}` member "
                 f"`{record['provenance']['member']}`.",
-                "Only the display name and wild-encounter cross-reference are "
-                "decoded from this record — warps, connections, shops, gifts, "
-                "static encounters, and trainer references all need this "
-                "generation's script-engine opcode table, which hasn't been "
-                "researched yet.",
+                "The display name, wild-encounter cross-reference, real "
+                "trainers (both sight-triggered and scripted), and real "
+                "warps are decoded. Outdoor connections, shops, gifts, and "
+                "static encounters aren't decoded yet.",
             ]
         )
     )

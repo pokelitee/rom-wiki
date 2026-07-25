@@ -4,6 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen5_bw.locations import (
+    parse_map_header_script_files,
     parse_map_header_table,
     parse_wild_map_names,
 )
@@ -12,10 +13,13 @@ from romwiki.util.errors import InvalidRomError
 _MAP_NAMES = ("Route 1", "Route 2", "Accumula Town")
 
 
-def _map_header(*, name_index: int, wild_set: int) -> bytes:
+def _map_header(
+    *, name_index: int, wild_set: int, script_file: int = 0
+) -> bytes:
     record = bytearray(48)
     record[26] = name_index
     struct.pack_into("<H", record, 20, wild_set)
+    struct.pack_into("<H", record, 6, script_file)
     return bytes(record)
 
 
@@ -73,6 +77,18 @@ class Gen5LocationsTests(unittest.TestCase):
         self.assertEqual(headers[0].provenance.member, 0)
         self.assertEqual(headers[1].name, "Accumula Town")
         self.assertIsNone(headers[1].encounter_map_index)
+
+    def test_parses_each_header_s_own_script_file_index(self) -> None:
+        # Real Black ROM fact: map header 7 (Striaton City) points at script
+        # archive member 14, whose function-table entry 4 (NPC scriptUsed=4,
+        # 1-indexed) is Cilan's tutorial `CallTrainerBattle` -- see
+        # gen5_bw/overworld.py's module docstring for the full cross-check.
+        data = (
+            _map_header(name_index=0, wild_set=5, script_file=14)
+            + _map_header(name_index=1, wild_set=6, script_file=310)
+        )
+
+        self.assertEqual(parse_map_header_script_files(data), (14, 310))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +58,7 @@ def extract_location_dataset(
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
     if profile.engine == GEN5_BW_ENGINE:
-        return _extract_gen5_location_dataset(result)
+        return _extract_gen5_location_dataset(result, trainer_dataset)
     try:
         events_path = profile.layout["events"]
         matrices_path = profile.layout["map_matrices"]
@@ -682,15 +683,20 @@ def extract_location_dataset(
     }
 
 
-def _extract_gen5_location_dataset(result: InspectionResult) -> dict[str, Any]:
-    # Bare minimum: each map header's display name and its wild-encounter-
-    # table cross-reference. See gen5_bw/__init__.py's module docstring for
-    # why the rest (warps, connections, shops, gifts, static encounters,
-    # trainer references, ...) isn't decoded yet.
+def _extract_gen5_location_dataset(
+    result: InspectionResult, trainer_dataset: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    # Each map header's display name, its wild-encounter-table cross-
+    # reference, its real trainers, and its real warps (now that Trainers'
+    # script-engine gap is unblocked -- see gen5_bw/__init__.py's module
+    # docstring). Outdoor connections/shops/gifts/static encounters still
+    # aren't decoded here -- no public reference documents the rest of the
+    # 48-byte map header record.
     profile = result.match.profile
     try:
         map_headers_path = profile.layout["map_headers"]
         map_names_member = profile.parameters["map_names_member"]
+        overworld_objects_path = profile.layout["overworld_objects"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
@@ -703,14 +709,67 @@ def _extract_gen5_location_dataset(result: InspectionResult) -> dict[str, Any]:
     map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     map_names = engine.parse_english_message_archive(messages.read(map_names_member))
-    records = [
-        header.to_dict()
-        for header in engine.parse_map_header_table(
-            map_headers.read(0),
-            map_names=tuple(map_names),
-            archive_path=map_headers_path,
+    headers = engine.parse_map_header_table(
+        map_headers.read(0),
+        map_names=tuple(map_names),
+        archive_path=map_headers_path,
+    )
+    trainers_by_header = _extract_trainer_references(result, trainer_dataset)
+    overworld_objects = platform.archive_cls.from_bytes(
+        filesystem.read(overworld_objects_path)
+    )
+    headers_by_id = {header.header_id: header for header in headers}
+    records = []
+    for header in headers:
+        warps = []
+        if header.header_id < len(overworld_objects.members):
+            raw_warps = engine.parse_overworld_warps(
+                overworld_objects.read(header.header_id)
+            )
+            for warp in raw_warps:
+                if warp.destination_header_id not in headers_by_id:
+                    warps.append(
+                        LocationWarp(
+                            index=warp.index,
+                            x=warp.x,
+                            z=warp.z,
+                            destination_header_id=None,
+                            destination_warp_id=None,
+                            destination_name=None,
+                            destination_internal_name=None,
+                            destination_warp_exists=None,
+                            dynamic=True,
+                        )
+                    )
+                    continue
+                destination = headers_by_id[warp.destination_header_id]
+                destination_warp_count = len(
+                    engine.parse_overworld_warps(
+                        overworld_objects.read(destination.header_id)
+                    )
+                )
+                warps.append(
+                    LocationWarp(
+                        index=warp.index,
+                        x=warp.x,
+                        z=warp.z,
+                        destination_header_id=destination.header_id,
+                        destination_warp_id=warp.destination_warp_id,
+                        destination_name=destination.name,
+                        destination_internal_name=f"map_{destination.header_id}",
+                        destination_warp_exists=(
+                            0 <= warp.destination_warp_id < destination_warp_count
+                        ),
+                        dynamic=False,
+                    )
+                )
+        records.append(
+            replace(
+                header,
+                trainers=tuple(trainers_by_header.get(header.header_id, ())),
+                warps=tuple(warps),
+            ).to_dict()
         )
-    ]
     return {
         "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
         "game": profile.id,
@@ -720,9 +779,12 @@ def _extract_gen5_location_dataset(result: InspectionResult) -> dict[str, Any]:
         "encounter_reference_count": sum(
             record["encounter_map_index"] is not None for record in records
         ),
+        "trainer_reference_count": sum(len(record["trainers"]) for record in records),
+        "warp_reference_count": sum(len(record["warps"]) for record in records),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "map_headers_archive": map_headers_path,
+            "overworld_objects_archive": overworld_objects_path,
             "map_names": {"archive": messages_path, "member": map_names_member},
         },
         "records": records,

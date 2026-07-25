@@ -281,12 +281,39 @@ guessed. The same applies to nature and calculated stats: Generation V
 trainer parties have no stored nature field and no publicly documented,
 reproducible derivation for one, so both stay unavailable.
 
-Real map locations and script references aren't attached to trainers yet:
-that needs this generation's own script-engine opcode table (to find each
-trainer's field battle trigger), which hasn't been researched. This is the
-same underlying gap that blocks Locations' fuller feature set below; static
-(gift/single) Pokémon encounters, investigated the same way, turned out
-*not* to share this blocker (see Pokémon species data above).
+Real map locations and script references are now attached to trainers, closing
+what used to be this section's one remaining gap. Two literal-fact
+mechanisms, both cross-verified against real Black ROM data, resolve every
+trainer battle trigger without a full script-engine disassembly:
+
+- **Sight-triggered battles**: each map's overworld NPC placements
+  (`a/1/2/5`, one member per map header) carry the trainer ID directly on
+  the NPC record's own `scriptUsed` field, encoded as `band + trainer_id`
+  where `band` is a multiple of 1000 (2000/3000/5000/7000 all seen in the
+  real ROM). Confirmed against 18 real trainer records this way: two
+  consecutive runs of `scriptUsed` values (3026-3034 and 7040-7048)
+  resolved to trainer IDs 26-34 and 40-48, all real, sensible trainer
+  records with ascending party sizes.
+- **Talk-triggered/scripted battles**: each map header's own dedicated
+  script file (an undecoded field at byte offset 6 of the 48-byte map
+  header record, until this pass) is scanned for literal
+  `CallTrainerBattle`/`CallTrainerMultiBattle` commands, the same
+  "opcode signature + validating follow-on command" technique this
+  project's Generation IV engine already uses for Platinum's
+  `StartTrainerBattle`. The opcode table itself (`CallTrainerBattle` =
+  `0x0085`, followed in every real occurrence by `TrainerBattleIsVictory` =
+  `0x008D`) is adopted from FrostFalcon/FrostsGen5Editor, an actively
+  maintained community Gen V ROM editor, and independently cross-checked
+  against real ROM bytes (walking a known static-encounter script from its
+  own function-table start lands byte-exact on the already-verified
+  Magikarp species fact).
+
+Both mechanisms resolve trainer IDs to real trainer records only -- battles
+whose ID doesn't resolve are left unlinked rather than guessed at. Verified
+end-to-end: trainer 13 (Cilan, Striaton City's Grass-type Gym Leader) shows
+both a scripted battle at Striaton City (his tutorial fight) and a
+sight-triggered appearance later at Dragonspiral Tower, matching the real
+game's story.
 
 ## Locations
 
@@ -311,16 +338,33 @@ single table index can expand into up to 4 seasonal encounter areas (see
 Wild Encounters above), and resolving that mapping precisely is left to a
 future pass rather than guessed at here.
 
-Warps, outdoor connections, gift Pokémon, roaming activations, and trainer
-cross-references -- most of what Platinum's own Locations section has -- all
-depend on this generation's script-engine opcode table, which is real,
-substantial, unresearched work (see Trainers above for the same underlying
-gap). Shop *contents* (see Items above) and static (gift/single) Pokémon
-encounters (see Pokémon species data above) are both decoded despite being in
-this general area, since both turned out to be plain literal ROM facts with
-no script-engine dependency at all -- only *which map* each shop or static
-encounter is physically in remains blocked on the same script-engine gap as
-everything else in this list.
+Trainer cross-references are now attached to each location (see Trainers
+above for the mechanism): every map page lists its real trainers, both
+sight-triggered NPCs and scripted/talk-triggered ones, sourced directly from
+the trainer dataset's own resolved locations.
+
+Warps are now attached to each location too, decoded from the same
+`OverworldObjectsNARC`-shaped record (`FrostFalcon/FrostsGen5Editor`'s
+layout) as the NPC placements above. Verified against every real warp in the
+game: checking whether each warp's destination map has its own matching
+return warp (a reciprocity check, not just a one-sided reading) succeeds for
+858 of 873 real warps; the remaining 15 are genuine one-way warps (holes,
+ledges, cave slides), not a decoding error. A small number of warps
+(6 across the whole ROM, all in "Gear Station," the Union Room's real-world
+entrance) have a destination that isn't a literal map at all (the ROM's own
+null-destination sentinel) -- these are shown as a "dynamic destination"
+rather than guessed at, the same concept Generation IV's own Locations
+section already uses for its own Union Room warps.
+
+Outdoor connections and gift Pokémon are still not decoded -- unlike warps
+and trainer battle triggers, no literal opcode signature or verified record
+field this project has found so far resolves them the same low-risk way (the
+`StaticLevelScript` record shape is known from the same source, but hasn't
+yet been cross-verified against real ROM facts). Shop *contents* (see Items
+above) and static (gift/single) Pokémon encounters (see Pokémon species data
+above) are both decoded despite being in this general area, since both
+turned out to be plain literal ROM facts with no script-engine dependency at
+all.
 
 ## Text and names
 
@@ -348,7 +392,11 @@ executable code, not a data word, at the species offset for at least one of
 the two, so the real species isn't a literal fact without a randomizer-style
 ASM patch applied first, unlike every other static encounter.
 
-Trainers' and Locations' remaining gaps (field map locations/script
-triggers, warps, outdoor connections, gift Pokémon, roaming activations)
-depend on this generation's own script-engine opcode table, which hasn't
-been researched.
+Locations' remaining gaps (warps, outdoor connections, gift Pokémon) aren't
+decoded yet -- see Locations above. Trainers' field map locations/script
+triggers, previously listed here as blocked on this generation's
+script-engine opcode table, are now resolved (see Trainers above); that
+opcode table turned out to be adoptable from an actively maintained
+community tool (FrostFalcon/FrostsGen5Editor) the same way Marts/NPC
+trades/Pickup were adopted from Ajarmar/universal-pokemon-randomizer-zx,
+rather than requiring an original ARM disassembly.
