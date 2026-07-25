@@ -191,6 +191,7 @@ class Gen5Location:
     provenance: RecordProvenance
     trainers: tuple[LocationTrainerReference, ...] = ()
     warps: tuple[LocationWarp, ...] = ()
+    static_encounters: tuple[LocationStaticEncounter, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

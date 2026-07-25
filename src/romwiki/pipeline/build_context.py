@@ -133,7 +133,9 @@ class GameBuildContext:
         return self._raw(
             "locations/raw",
             lambda result: extract_location_dataset(
-                result, trainer_dataset=self.trainers_raw()
+                result,
+                trainer_dataset=self.trainers_raw(),
+                static_encounter_dataset=self.static_encounters_raw(),
             ),
         )
 

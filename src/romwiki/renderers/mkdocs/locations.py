@@ -58,7 +58,9 @@ def render_location_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     if dataset.get("engine") == GEN5_BW_ENGINE:
-        return _render_gen5_location_pages(dataset, output_root, only_pages=only_pages)
+        return _render_gen5_location_pages(
+            dataset, output_root, references, only_pages=only_pages
+        )
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -899,12 +901,14 @@ def _filename(header_id: int) -> str:
 def _render_gen5_location_pages(
     dataset: dict[str, Any],
     output_root: Path,
+    references: ReferenceIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    # Name, wild-encounter cross-reference, real trainers, and real warps --
-    # see gen5_bw/__init__.py's module docstring for why the rest
-    # (connections, shops, gifts, ...) isn't here yet.
+    # Name, wild-encounter cross-reference, real trainers, real warps, and
+    # real static encounters -- see gen5_bw/__init__.py's module docstring
+    # for why the rest (connections, location-linked shops, ...) isn't here
+    # yet.
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -933,7 +937,7 @@ def _render_gen5_location_pages(
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             write_text(
                 output_root / filename,
-                _render_gen5_location(record, previous, following),
+                _render_gen5_location(record, previous, following, references),
             )
             page_count += 1
         label = record["name"]
@@ -957,6 +961,7 @@ def _render_gen5_location_pages(
                     *(["encounters"] if record["encounter_map_index"] is not None else []),
                     *(["trainers"] if record["trainers"] else []),
                     *(["warps"] if record["warps"] else []),
+                    *(["static-encounters"] if record["static_encounters"] else []),
                 ],
                 "search_text": record["name"].lower(),
             }
@@ -979,6 +984,7 @@ def _render_gen5_location(
     record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
+    references: ReferenceIndex | None = None,
 ) -> str:
     facts = [f"<div><dt>Header ID</dt><dd>{record['header_id']}</dd></div>"]
     if record["encounter_map_index"] is not None:
@@ -1007,6 +1013,7 @@ def _render_gen5_location(
     source_file = f"locations/{_filename(record['header_id'])}"
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
+    _append_static_encounters(lines, record["static_encounters"], source_file, references)
     lines.extend(
         provenance_section(
             [
@@ -1015,9 +1022,9 @@ def _render_gen5_location(
                 f"`{record['provenance']['archive']}` member "
                 f"`{record['provenance']['member']}`.",
                 "The display name, wild-encounter cross-reference, real "
-                "trainers (both sight-triggered and scripted), and real "
-                "warps are decoded. Outdoor connections, shops, gifts, and "
-                "static encounters aren't decoded yet.",
+                "trainers (both sight-triggered and scripted), real warps, "
+                "and real static encounters are decoded. Outdoor "
+                "connections and location-linked shops aren't decoded yet.",
             ]
         )
     )

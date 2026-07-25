@@ -356,15 +356,27 @@ null-destination sentinel) -- these are shown as a "dynamic destination"
 rather than guessed at, the same concept Generation IV's own Locations
 section already uses for its own Union Room warps.
 
-Outdoor connections and gift Pokémon are still not decoded -- unlike warps
-and trainer battle triggers, no literal opcode signature or verified record
-field this project has found so far resolves them the same low-risk way (the
-`StaticLevelScript` record shape is known from the same source, but hasn't
-yet been cross-verified against real ROM facts). Shop *contents* (see Items
-above) and static (gift/single) Pokémon encounters (see Pokémon species data
-above) are both decoded despite being in this general area, since both
-turned out to be plain literal ROM facts with no script-engine dependency at
-all.
+Static (gift/single) Pokémon encounters are now cross-referenced to their
+real map location too, reusing the same map-header-to-script-file lookup
+warps and trainer battles use: each encounter's already-known
+`[script-file, byte-offset]` fact is matched against the map header whose
+own dedicated script file is that same file. Verified against 18 of 19 real
+static encounters -- every one resolves to its real, well-known location
+with zero mismatches (Volcarona → Relic Castle, Victini → Liberty Garden,
+Reshiram/Zekrom → Dragonspiral Tower, and so on). The one exception (the
+shared fossil-revival script) doesn't resolve because that script is a
+secondary/common script invoked from the museum's own primary script, not a
+map's own dedicated one -- a real, understood limitation, not a bug.
+
+Outdoor connections and location-linked shops are still not decoded --
+unlike warps, trainer battle triggers, and static encounters, no literal
+opcode signature or verified record field this project has found so far
+resolves them the same low-risk way (the `StaticLevelScript` record shape is
+known from the same source, but hasn't yet been cross-verified against real
+ROM facts). Shop *contents* (see Items above) are decoded despite being in
+this general area, since it turned out to be a plain literal ROM fact with
+no script-engine dependency at all -- only *which map* each shop is
+physically in remains unresolved.
 
 ## Text and names
 
