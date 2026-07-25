@@ -15,14 +15,17 @@ the Hidden Ability), safari flee rate, body color, sprite flip, and TM/HM
 compatibility. The archive holds 669 total members: member 0 is an unused
 placeholder record (a distinct, shorter 56-byte layout in this release, zero-padded
 rather than decoded), members 1-649 are the national Pokédex species, members
-650-667 are 18 alternate-forme records (Therian formes, Kyurem's Black/White forms,
-seasonal Deerling/Sawsbuck, Genesect's drives, Keldeo, Meloetta, and similar), and
-the final member is an unrelated 1300-byte table excluded from extraction entirely.
+650-667 are 18 alternate-forme/battle-transformation records (Deoxys, Wormadam,
+Giratina, Shaymin, Rotom, and Basculin's independently-obtainable forms, plus
+Castform, Darmanitan, and Meloetta's battle-only transformations), and the final
+member is an unrelated 1300-byte table excluded from extraction entirely.
 
-The 18 alternate-forme records are decoded and included in the raw dataset, but are
-not yet resolved to their real species/form identity or given a public page --
-they're marked non-public with a placeholder label until a future update maps each
-archive index to its actual forme.
+Of the 18 records, 13 are real, independently-obtainable forms and are resolved to
+their real species/form identity and given a public page, same as Generation IV's
+alternate formes. The remaining 5 (Castform's weather forms, Darmanitan's Zen Mode,
+and Meloetta's Pirouette Forme) are battle-only transformations with no independent
+existence -- they're decoded and shown on their base species' page under a
+"Battle-only forms" section rather than given their own page.
 
 The wild held item's third slot (Dark Grass encounters, present in this release but
 absent from Generation IV) is decoded internally but not yet surfaced in the

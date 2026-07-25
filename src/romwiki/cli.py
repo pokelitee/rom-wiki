@@ -53,9 +53,7 @@ from romwiki.sites import SiteCatalog, audit_site, build_sites
 from romwiki.sites.dev_pages import DevPages
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import (
-    DataSourceError,
     LocalConfigError,
-    ProfileError,
     RomWikiError,
     SiteError,
 )
@@ -700,15 +698,14 @@ def _run_section_build(
     }[args.command]
     workflow = _create_build_workflow(args, result)
     move_dataset = None
-    if args.command == "build-pokemon":
-        try:
-            move_dataset = workflow.build("moves").current
-        except ProfileError:
-            # Cross-linking Pokémon/Ability pages to move names is a nice-to-
-            # have, not a requirement: an engine that hasn't implemented
-            # moves yet (e.g. a new generation's first vertical slice) should
-            # still be able to build its Pokémon section.
-            move_dataset = None
+    # Cross-linking Pokémon/Ability pages to move names is a nice-to-have, not
+    # a requirement: an engine that hasn't implemented moves yet (e.g. a new
+    # generation's first vertical slice) should still be able to build its
+    # Pokémon section. Gated declaratively on the profile, matching
+    # GameBuildContext's optional-input accessors, rather than probing with a
+    # try/except around the build.
+    if args.command == "build-pokemon" and "moves" in workflow.current.profile.layout:
+        move_dataset = workflow.build("moves").current
     game = workflow.current.profile.id
     wiki_root = (
         args.wiki_output.parent
@@ -727,13 +724,13 @@ def _run_section_build(
     # An engine's Abilities section needs ROM-decoded ability names with no
     # PokéDB fallback (unlike Pokémon page names); an engine whose first
     # vertical slice implements only personal data (no message-archive
-    # decoding yet) can still build its Pokémon section without one.
+    # decoding yet) can still build its Pokémon section without one. Gated
+    # declaratively on the profile's "messages" layout entry, matching
+    # GameBuildContext's optional-input accessors, rather than probing with a
+    # try/except around the build.
     abilities_dataset = None
-    if args.command == "build-pokemon":
-        try:
-            abilities_dataset = workflow.build("abilities")
-        except (ProfileError, DataSourceError):
-            abilities_dataset = None
+    if args.command == "build-pokemon" and "messages" in workflow.current.profile.layout:
+        abilities_dataset = workflow.build("abilities")
     reference_datasets = {}
     if args.command == "build-locations":
         reference_datasets = {
