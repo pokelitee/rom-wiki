@@ -120,6 +120,10 @@ def render_item_pages(
                 )
                 for field in ("locations", "shops", "gifts", "trades")
                 for reference in record[field]
+                # Gen5's NPC trades have no map-header cross-reference (see
+                # gen5_bw/__init__.py's module docstring), so they're excluded
+                # from this location-entity list rather than linked wrong.
+                if reference.get("header_id") is not None
             ]
         )
         catalog_records.append(
@@ -447,7 +451,7 @@ def _append_gifts_and_trades(
             "| -------- | ---- | ------- | ---- |",
             *[
                 (
-                    f"| {_location_link(value, source_file)} "
+                    f"| {_location_or_trade_cell(value, source_file)} "
                     f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), pokemon_record_link(pokemon, source_file))} "
                     f"| {reference_type_cell('pokemon', pokemon.get('member', pokemon.get('id')), references)} |"
                 )
@@ -456,6 +460,16 @@ def _append_gifts_and_trades(
             "",
         ]
     )
+
+
+def _location_or_trade_cell(value: dict[str, Any], source_file: str) -> str:
+    # Gen5's NPC trades aren't linked to a specific map header (no
+    # script-engine location resolution -- see gen5_bw/__init__.py's module
+    # docstring), so they show the trade NPC's name/nickname as plain text
+    # instead of a location link.
+    if "header_id" in value:
+        return _location_link(value, source_file)
+    return f"{value['ot_name']} (nicknamed {value['nickname']})"
 
 
 def _append_evolutions(

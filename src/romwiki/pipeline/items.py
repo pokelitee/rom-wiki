@@ -202,6 +202,7 @@ def build_item_dataset(
     trainer_dataset: dict[str, Any] | None,
     location_dataset: dict[str, Any] | None,
     *,
+    trade_dataset: dict[str, Any] | None = None,
     reference_version: str | None = None,
 ) -> dict[str, Any]:
     game = item_dataset.get("game")
@@ -209,6 +210,7 @@ def build_item_dataset(
         ("Pokémon", pokemon_dataset),
         ("trainer", trainer_dataset),
         ("location", location_dataset),
+        ("trade", trade_dataset),
     ):
         if dataset is not None and dataset.get("game") != game:
             raise DataSourceError(f"Item and {label} datasets must be for the same game")
@@ -221,6 +223,7 @@ def build_item_dataset(
         relationships.setdefault(item_id, {}).setdefault(kind, []).append(value)
 
     pokemon_by_species: dict[int, dict[str, Any]] = {}
+    pokemon_by_slug: dict[str, dict[str, Any]] = {}
     for pokemon in pokemon_dataset["records"]:
         if not pokemon["public"]:
             continue
@@ -230,6 +233,7 @@ def build_item_dataset(
             "slug": pokemon["slug"],
             "name": pokemon["name"],
         }
+        pokemon_by_slug[pokemon["slug"]] = reference
         if pokemon["national_dex_id"] is not None:
             pokemon_by_species.setdefault(pokemon["national_dex_id"], reference)
         for held_item in pokemon["held_items"]:
@@ -334,6 +338,42 @@ def build_item_dataset(
                     },
                 )
 
+    # Unlike Gen4's script-linked NPC trades above, Gen5's aren't attached to
+    # a specific map header (see gen5_bw/__init__.py's module docstring), so
+    # this is a flat pass over a standalone trade dataset instead of nested
+    # inside the location loop.
+    for trade in (trade_dataset or {}).get("records", []):
+        held_item_id = trade.get("held_item_id")
+        if not held_item_id:
+            continue
+        offered = None
+        forme_id = trade.get("offered_forme_id")
+        if forme_id:
+            engine_tables = get_engine(pokemon_dataset["engine"]).enrich
+            form_slug = engine_tables.TRAINER_FORM_SLUGS.get(
+                (trade["offered_species_id"], forme_id)
+            )
+            if form_slug is not None:
+                offered = pokemon_by_slug.get(form_slug)
+        if offered is None:
+            offered = pokemon_by_species.get(trade["offered_species_id"])
+        pokemon_reference = (
+            {"id": offered["member"], "name": offered["name"], "slug": offered["slug"]}
+            if offered is not None
+            else {"id": trade["offered_species_id"], "name": None}
+        )
+        add(
+            held_item_id,
+            "trades",
+            {
+                "trade_id": trade["trade_id"],
+                "name": trade["ot_name"],
+                "nickname": trade["nickname"],
+                "ot_name": trade["ot_name"],
+                "pokemon": pokemon_reference,
+            },
+        )
+
     # ROM item names are usually unique, but not always: e.g. Gen5's real,
     # distinct male- and female-color Xtransceiver items share the exact
     # displayed name "Xtransceiver". Disambiguate with the item ID (a stable
@@ -387,6 +427,7 @@ def build_item_dataset(
             "pokemon": pokemon_dataset["source"],
             "trainers": trainer_dataset["source"] if trainer_dataset else None,
             "locations": location_dataset["source"] if location_dataset else None,
+            "trades": trade_dataset["source"] if trade_dataset else None,
         },
         "records": records,
     }

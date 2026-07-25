@@ -13,6 +13,13 @@ class Gen5NpcTrade:
     ot_name: str
     ot_id: int
     offered_species_id: int
+    # Undocumented by Gen5RomHandler.java's own `getIngameTrades` (which never
+    # reads this field), but confirmed meaningful: Black's inactive "White
+    # counterpart" Basculin trade (blue-striped) differs from Black's own
+    # active one (red-striped) at this exact offset (0 vs 1) and no other
+    # byte in the record besides trade bookkeeping fields -- decoded rather
+    # than left as an unknown value.
+    offered_forme_id: int
     requested_species_id: int
     held_item_id: int | None
     # Raw ROM storage order -- matches Generation IV's identical-shaped

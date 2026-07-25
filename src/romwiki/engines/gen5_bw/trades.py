@@ -17,6 +17,7 @@ from romwiki.util.errors import InvalidRomError
 # `TradesUnused` index list rather than decoded as if it were live.
 TRADE_RECORD_SIZE = 108
 _OFFERED_SPECIES_OFFSET = 4
+_OFFERED_FORME_OFFSET = 8
 _IVS_OFFSET = 0x10
 _OT_ID_OFFSET = 0x34
 _HELD_ITEM_OFFSET = 0x4C
@@ -37,6 +38,7 @@ def parse_npc_trade_record(
             f"{TRADE_RECORD_SIZE}"
         )
     offered_species_id = struct.unpack_from("<I", data, _OFFERED_SPECIES_OFFSET)[0]
+    offered_forme_id = struct.unpack_from("<I", data, _OFFERED_FORME_OFFSET)[0]
     ivs = struct.unpack_from("<6I", data, _IVS_OFFSET)
     ot_id = struct.unpack_from("<H", data, _OT_ID_OFFSET)[0]
     held_item_id = struct.unpack_from("<I", data, _HELD_ITEM_OFFSET)[0]
@@ -49,6 +51,7 @@ def parse_npc_trade_record(
         ot_name=ot_name,
         ot_id=ot_id,
         offered_species_id=offered_species_id,
+        offered_forme_id=offered_forme_id,
         requested_species_id=requested_species_id,
         held_item_id=held_item_id or None,
         ivs=ivs,

@@ -34,6 +34,7 @@ class SchemaVersionTests(unittest.TestCase):
                 "locations/raw",
                 "items/raw",
                 "pickup/raw",
+                "trades/raw",
             },
         )
 

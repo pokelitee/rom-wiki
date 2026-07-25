@@ -95,20 +95,34 @@ unused slots; the rare case of two distinct real items sharing a display name
 the page URL.
 
 NPC (in-game) trades are decoded from the `a/1/6/5` archive (108-byte fixed
-records) but not yet published to a page. Unlike most of the gaps above, this
-one isn't blocked on a missing disassembly -- the record layout is fully
-documented by the ROM-hacking community's own tooling and needs no
-script-engine work for the trade data itself (only for the field location it
-triggers at, which isn't attempted). Verified against 5 real, active Black
-ROM trades: "Lillil" the Petilil for a Cottonee, "Redeye" the red-striped
-Basculin for a Minccino, "Minipete" the Emolga for a Boldore, "Gorge" the
-Munchlax for a Cinccino (holding Leftovers), and "Eeks" the Rotom for a
-Ditto -- species, held item, OT name, and nickname all match the real trade
-NPCs exactly. Each version's counterpart trade (e.g. White's Cottonee-for-
-Petilil trade) has its own record in the same archive, correctly excluded
-via the ROM's own inactive-trade index list rather than published as if
-live.
-the page URL.
+records) and shown on the traded-for item's page (the same "Gifts and
+trades" table Generation IV's locations use, since the underlying concept is
+the same even though Generation V's trades aren't linked to a map header).
+Unlike most of the gaps above, this one wasn't blocked on a missing
+disassembly -- the record layout is fully documented by the ROM-hacking
+community's own tooling and needs no script-engine work for the trade data
+itself (only for the field location it triggers at, which isn't attempted).
+Verified against 5 real, active Black ROM trades: "Lillil" the Petilil for a
+Cottonee, "Redeye" the red-striped Basculin for a Minccino, "Minipete" the
+Emolga for a Boldore, "Gorge" the Munchlax for a Cinccino (holding
+Leftovers), and "Eeks" the Rotom for a Ditto -- species, held item, OT name,
+and nickname all match the real trade NPCs exactly. Each version's
+counterpart trade (e.g. White's Cottonee-for-Petilil trade) has its own
+record in the same archive, correctly excluded via the ROM's own
+inactive-trade index list rather than published as if live.
+
+Along the way, an undocumented field at record offset 8 was found and
+decoded: the ROM-hacking community's own tooling never reads it, but it's
+the *only* byte that differs between Black's active red-striped-Basculin
+trade and its otherwise-identical inactive blue-striped counterpart (0 vs
+1) -- a forme ID, used to correctly link each version's Basculin trade to
+its own distinct color-striped page rather than always the base form. One
+known display gap: since Black and White's Basculin trades share the same
+underlying item record but differ in content, the version-merge system
+stores them as a version variant pair; the published page currently renders
+only the primary (Black) variant, since this project has no per-field
+version-variant renderer anywhere yet -- White's own data is captured
+correctly, just not yet surfaced on this particular page.
 
 ## Moves
 
