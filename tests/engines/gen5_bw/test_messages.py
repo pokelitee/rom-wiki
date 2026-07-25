@@ -121,6 +121,27 @@ class Gen5MessageTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidRomError, "Unsupported Gen V character code"):
             parse_english_message_archive(data)
 
+    def test_decodes_a_variable_code_as_a_placeholder(self) -> None:
+        # Real Black ROM map-name table (member 89, entry 3, unused by any
+        # actual map): two variable codes around a literal "'s ".
+        words = [
+            0xF000, 0x0100, 0x0001, 0x0000,
+            ord("'"), ord("s"), ord(" "),
+            0xF000, 0x0105, 0x0001, 0x0001,
+            0xFFFF,
+        ]
+        data = _make_raw_message_archive([words])
+
+        result = parse_english_message_archive(data)
+
+        self.assertEqual(result, ("{VAR:0100}'s {VAR:0105}",))
+
+    def test_rejects_a_truncated_variable_code(self) -> None:
+        words = [0xF000, 0x0100, 0x0005, 0xFFFF]
+        data = _make_raw_message_archive([words])
+        with self.assertRaisesRegex(InvalidRomError, "truncated variable code"):
+            parse_english_message_archive(data)
+
     def test_decodes_compressed_text(self) -> None:
         # 9-bit-packed stream (all 16 bits/word) for "AB": codes 0x41, 0x42,
         # then a value whose low byte is 0xFF to terminate the bitstream. The

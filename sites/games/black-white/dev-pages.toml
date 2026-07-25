@@ -27,3 +27,6 @@ encounters = [
 trainers = [
     "trainer-0542",
 ]
+locations = [
+    "header-006",
+]

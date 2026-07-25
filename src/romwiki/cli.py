@@ -870,14 +870,18 @@ def _run_full_game_build(
 # and .items()). A section is only built when both sibling profiles configure
 # every required layout entry, matching the declarative-gate convention
 # GameBuildContext's optional-input accessors already use.
-_VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[str, ...]] = {
-    "pokemon": (),
-    "abilities": ("messages",),
-    "items": ("item_data", "messages"),
-    "moves": ("moves",),
-    "encounters": ("encounters",),
-    "trainers": ("trainer_data", "trainer_parties"),
-    "locations": ("map_matrices",),
+# Each kind maps to one or more alternative required-key sets (a kind
+# qualifies if any one set's keys are all present) -- Locations' two very
+# different implementations (Gen IV's full map-matrix-based one vs. Gen V's
+# bare-minimum map-header one) both use this same gating dict.
+_VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "pokemon": ((),),
+    "abilities": (("messages",),),
+    "items": (("item_data", "messages"),),
+    "moves": (("moves",),),
+    "encounters": (("encounters",),),
+    "trainers": (("trainer_data", "trainer_parties"),),
+    "locations": (("map_matrices",), ("map_headers",)),
 }
 
 
@@ -901,9 +905,12 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     secondary_layout = workflows[secondary_version].current.profile.layout
     kinds = [
         kind
-        for kind, required_keys in _VERSION_PAIR_SECTION_LAYOUT_KEYS.items()
-        if all(key in primary_layout for key in required_keys)
-        and all(key in secondary_layout for key in required_keys)
+        for kind, alternatives in _VERSION_PAIR_SECTION_LAYOUT_KEYS.items()
+        if any(
+            all(key in primary_layout for key in required_keys)
+            and all(key in secondary_layout for key in required_keys)
+            for required_keys in alternatives
+        )
     ]
 
     merged_datasets: dict[str, dict] = {}

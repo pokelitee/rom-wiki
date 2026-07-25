@@ -23,6 +23,7 @@ egg_moves = "a/1/2/3"
 encounters = "a/1/2/6"
 trainer_data = "a/0/9/2"
 trainer_parties = "a/0/9/3"
+map_headers = "a/0/1/2"
 
 [parameters]
 pokemon_names_member = 70
@@ -32,6 +33,7 @@ item_names_member = 54
 machine_move_prefix = "87038803"
 trainer_names_member = 190
 trainer_classes_member = 191
+map_names_member = 89
 
 [[hashes]]
 algorithm = "sha256"

@@ -607,10 +607,11 @@ def _render_gen5_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    # This generation's areas don't have real location names attached yet
-    # (see gen5_bw/__init__.py's module docstring), so unlike the Gen IV path
+    # This generation's areas don't have real map *header* cross-references
+    # yet (that needs the still-unresearched script engine -- see
+    # gen5_bw/__init__.py's module docstring), so unlike the Gen IV path
     # above there's no linked/unlinked split -- every area is listed the same
-    # way, identified by its map index (and season, if seasonal).
+    # way. Real display names (from the map-name table) are attached, though.
     records = sorted(
         (record for record in dataset["records"] if record["active"]),
         key=lambda record: record["area_id"],
@@ -685,11 +686,12 @@ def _gen5_catalog_record(record: dict[str, Any], filename: str) -> dict[str, Any
                 pokemon_refs.append(_pokemon_reference(pokemon))
             levels.extend((slot["minimum_level"], slot["maximum_level"]))
         method_pokemon[label] = list(dict.fromkeys(method_species))
+    location_names = record.get("location_names", [])
     return {
         "id": record["area_id"],
         "label": record["name"],
         "url": filename,
-        "locations": [],
+        "locations": location_names,
         "methods": methods,
         "pokemon": list(dict.fromkeys(species)),
         "pokemon_refs": [
@@ -700,7 +702,9 @@ def _gen5_catalog_record(record: dict[str, Any], filename: str) -> dict[str, Any
         "min_level": min(levels) if levels else None,
         "max_level": max(levels) if levels else None,
         "referenced": True,
-        "search_text": " ".join((record["name"], *species)).lower(),
+        "search_text": " ".join(
+            (record["name"], *location_names, *species)
+        ).lower(),
     }
 
 
@@ -728,8 +732,10 @@ def _render_gen5_area(
                 "only each slot's species and level(s) are ROM data — they are "
                 "fixed, publicly documented Generation III+ engine weights applied "
                 "by slot position.",
-                "Location names aren't attached to encounter areas yet for this "
-                "generation — see the site's data sources page for why.",
+                "Location names come from the ROM's own map header table "
+                "(cross-referenced by wild-encounter-table index); the map headers "
+                "themselves aren't cross-linked as their own pages yet — see the "
+                "site's data sources page for why.",
             ]
         )
     )

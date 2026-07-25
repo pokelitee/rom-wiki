@@ -87,7 +87,7 @@ class Gen5EncounterArea:
     fishing: Gen5EncounterMethod
     fishing_spots: Gen5EncounterMethod
     provenance: RecordProvenance
-    locations: tuple[EncounterLocation, ...] = ()
+    location_names: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

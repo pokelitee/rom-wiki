@@ -15,6 +15,7 @@ from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
 from romwiki.schema.locations import (
     BonusEncounterSpecies,
     Gen4Location,
+    Gen5Location,
     LocationConnection,
     LocationDailyEncounterPool,
     LocationGameCornerPrize,
@@ -73,6 +74,7 @@ __all__ = [
     "TrainerLocation",
     "TrainerScriptReference",
     "Gen4Location",
+    "Gen5Location",
     "LocationConnection",
     "LocationItem",
     "LocationShop",

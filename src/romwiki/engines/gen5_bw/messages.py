@@ -17,6 +17,17 @@ _TERMINATOR = 0xFFFF
 _COMPRESSED_MARKER = 0xF100
 _HEADER_SIZE = 12
 
+# Runtime-substituted text (e.g. "[RIVAL]'s House"): a 0xF000 marker, a
+# variable-ID word, a parameter-count word, then that many parameter words --
+# confirmed against a real Black ROM message (map-name table member 89,
+# entry 3, an otherwise-unused entry: decodes to two of these sequences
+# around a literal "'s " with 1 parameter word each). None of this project's
+# currently-decoded name tables (Pokémon/ability/move/item names, or any
+# *used* map name) contain one, so the actual variable-ID meanings (what
+# gets substituted at runtime) aren't documented here -- this only avoids
+# treating the marker/ID/parameter words as literal characters and crashing.
+_VARIABLE_MARKER = 0xF000
+
 
 def parse_english_message_archive(
     data: bytes, *, limit: int | None = None
@@ -80,12 +91,30 @@ def _decode_message(words: list[int], index: int) -> str:
             raise InvalidRomError(f"Gen V message {index} has no terminator")
 
     characters = []
-    for value in code_points:
+    position = 0
+    while position < len(code_points):
+        value = code_points[position]
+        if value == _VARIABLE_MARKER:
+            if position + 2 >= len(code_points):
+                raise InvalidRomError(
+                    f"Gen V message {index} has a truncated variable code"
+                )
+            variable_id = code_points[position + 1]
+            param_count = code_points[position + 2]
+            params_end = position + 3 + param_count
+            if params_end > len(code_points):
+                raise InvalidRomError(
+                    f"Gen V message {index} has a truncated variable code"
+                )
+            characters.append(f"{{VAR:{variable_id:04X}}}")
+            position = params_end
+            continue
         if not 20 < value <= 0xFFF0:
             raise InvalidRomError(
                 f"Unsupported Gen V character code {value:#06x} in message {index}"
             )
         characters.append(chr(value))
+        position += 1
     return "".join(characters)
 
 

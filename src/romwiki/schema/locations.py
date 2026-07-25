@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from romwiki.schema.pokemon import RecordProvenance
+
 
 @dataclass(frozen=True, slots=True)
 class LocationWarp:
@@ -172,6 +174,21 @@ class Gen4Location:
     honey_tree: LocationHoneyTree | None
     daily_encounter_pool: LocationDailyEncounterPool | None
     game_corner_prizes: tuple[LocationGameCornerPrize, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5Location:
+    header_id: int
+    name: str
+    # The `WildPokemon` archive member (Wild Encounters' `map_index`) this
+    # header's wild encounters come from, or None if this header has none.
+    # Not resolved to a specific encounter-area page URL here since a single
+    # map index can expand to up to 4 seasonal areas -- see data-sources.md.
+    encounter_map_index: int | None
+    provenance: RecordProvenance
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -485,8 +485,7 @@ def _enrich_gen5_encounter_area(
         )
     }
     active = any(method["rate"] for method in methods.values())
-    locations = source.get("locations", [])
-    names = list(dict.fromkeys(location["name"] for location in locations))
+    location_names = list(dict.fromkeys(source.get("location_names", [])))
     label = f"Map {source['map_index']:03}"
     if source.get("season"):
         label += f" ({source['season'].title()})"
@@ -494,8 +493,8 @@ def _enrich_gen5_encounter_area(
         "area_id": source["area_id"],
         "map_index": source["map_index"],
         "season": source.get("season"),
-        "name": " / ".join(names) or label,
-        "locations": locations,
+        "name": " / ".join(location_names) or label,
+        "location_names": location_names,
         "active": active,
         **methods,
         "provenance": source["provenance"],

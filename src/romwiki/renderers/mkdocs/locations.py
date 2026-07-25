@@ -56,6 +56,8 @@ def render_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
+    if dataset.get("engine") == "gen5_bw":
+        return _render_gen5_location_pages(dataset, output_root, only_pages=only_pages)
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -891,3 +893,139 @@ def _entity_link(
 
 def _filename(header_id: int) -> str:
     return f"header-{header_id:03}.md"
+
+
+def _render_gen5_location_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    *,
+    only_pages: frozenset[str] | None = None,
+) -> int:
+    # Bare minimum: name + wild-encounter cross-reference only -- see
+    # gen5_bw/__init__.py's module docstring for why the rest (warps,
+    # connections, shops, gifts, trainers, ...) isn't here yet.
+    records = dataset["records"]
+    output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                _filename(record["header_id"])
+                for record in records
+                if only_pages is None
+                or _filename(record["header_id"]).removesuffix(".md") in only_pages
+            ),
+        },
+    )
+    name_counts = Counter(record["name"] for record in records)
+    fallback_links = []
+    catalog_records = []
+    page_count = 0
+    sorted_records = sorted(records, key=lambda item: (item["name"], item["header_id"]))
+    for index, record in enumerate(sorted_records):
+        filename = _filename(record["header_id"])
+        previous = sorted_records[index - 1] if index else None
+        following = (
+            sorted_records[index + 1] if index + 1 < len(sorted_records) else None
+        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            write_text(
+                output_root / filename,
+                _render_gen5_location(record, previous, following),
+            )
+            page_count += 1
+        label = record["name"]
+        if name_counts[label] > 1:
+            label = f"{label} (header {record['header_id']})"
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "location", record["header_id"], label, record["header_id"]
+                ),
+                "locations/index.md",
+            )
+        )
+        catalog_records.append(
+            {
+                "id": record["header_id"],
+                "label": label,
+                "url": filename.removesuffix(".md") + "/",
+                "features": (
+                    ["encounters"] if record["encounter_map_index"] is not None else []
+                ),
+                "search_text": record["name"].lower(),
+            }
+        )
+    write_catalog(output_root, "locations", catalog_records)
+    write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Locations",
+            "Map header names and wild-encounter cross-references extracted "
+            "from the ROM.",
+            "locations",
+            fallback_links,
+        ),
+    )
+    return page_count
+
+
+def _render_gen5_location(
+    record: dict[str, Any],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> str:
+    facts = [f"<div><dt>Header ID</dt><dd>{record['header_id']}</dd></div>"]
+    if record["encounter_map_index"] is not None:
+        facts.append(
+            "<div><dt>Wild encounters</dt><dd>"
+            f"map index {record['encounter_map_index']}</dd></div>"
+        )
+    lines = [
+        f"# {record['name']}",
+        "",
+        *summary_section("rw-location-summary", facts),
+    ]
+    if record["encounter_map_index"] is not None:
+        lines.extend(
+            [
+                "## Wild encounters",
+                "",
+                "This location's wild encounters come from Wild Encounters "
+                f"table index `{record['encounter_map_index']}`. Not linked "
+                "directly to a specific encounter-area page here, since a "
+                "single table index can expand into up to 4 seasonal areas — "
+                "search the Wild Encounters catalog for this index instead.",
+                "",
+            ]
+        )
+    lines.extend(
+        provenance_section(
+            [
+                *provenance_fact_table((("Header ID", f"`{record['header_id']}`"),)),
+                "Source: exact ROM map header record from "
+                f"`{record['provenance']['archive']}` member "
+                f"`{record['provenance']['member']}`.",
+                "Only the display name and wild-encounter cross-reference are "
+                "decoded from this record — warps, connections, shops, gifts, "
+                "static encounters, and trainer references all need this "
+                "generation's script-engine opcode table, which hasn't been "
+                "researched yet.",
+            ]
+        )
+    )
+    lines.extend(
+        record_navigation_for(
+            "location",
+            f"locations/{_filename(record['header_id']).removesuffix('.md')}/",
+            previous,
+            following,
+            aria_label="Location navigation",
+            identity=lambda value: value["header_id"],
+            route_key=lambda value: value["header_id"],
+            label=lambda value: value["name"],
+        )
+    )
+    return "\n".join(lines)

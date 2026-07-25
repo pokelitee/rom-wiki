@@ -113,7 +113,10 @@ class GameBuildContext:
         return self._raw("trainers/raw", extract_trainer_dataset)
 
     def locations_raw(self) -> dict[str, Any] | None:
-        if "map_matrices" not in self.profile.layout:
+        if (
+            "map_matrices" not in self.profile.layout
+            and "map_headers" not in self.profile.layout
+        ):
             return None
         return self._raw(
             "locations/raw",

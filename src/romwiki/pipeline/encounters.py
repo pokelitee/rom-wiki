@@ -72,8 +72,6 @@ def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     # area, up to four seasonal variants per map) don't share Gen4's shape
     # (walking/surf/rod/swarm/day/night/radar/dual-slot/Unown), so this is a
     # standalone extraction path rather than a variant of the one above.
-    # Real location names aren't attached yet -- see gen5_bw/__init__.py's
-    # module docstring for why -- so every area's `locations` stays empty.
     profile = result.match.profile
     try:
         archive_path = profile.layout["encounters"]
@@ -96,8 +94,16 @@ def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
             archive_path=archive_path,
         )
     ]
+    wild_map_names, location_source = _extract_gen5_wild_map_names(
+        result, engine, platform, filesystem
+    )
     records = [
-        replace(area, area_id=index).to_dict() for index, area in enumerate(areas)
+        replace(
+            area,
+            area_id=index,
+            location_names=tuple(wild_map_names.get(area.map_index, ())),
+        ).to_dict()
+        for index, area in enumerate(areas)
     ]
     return {
         "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
@@ -108,9 +114,36 @@ def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
+            **location_source,
         },
         **reference_names,
         "records": records,
+    }
+
+
+def _extract_gen5_wild_map_names(
+    result: InspectionResult, engine: Any, platform: Any, filesystem: Any
+) -> tuple[dict[int, list[str]], dict[str, Any]]:
+    # Optional: a profile that doesn't declare this yet (or a future
+    # generation reusing this path) simply gets unnamed encounter areas,
+    # same as every other optional enrichment input in this codebase.
+    profile = result.match.profile
+    if "map_headers" not in profile.layout or "map_names_member" not in profile.parameters:
+        return {}, {}
+    map_headers_path = profile.layout["map_headers"]
+    map_names_member = profile.parameters["map_names_member"]
+    messages_path = profile.layout["messages"]
+    map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    map_names = engine.parse_english_message_archive(messages.read(map_names_member))
+    wild_map_names = engine.parse_wild_map_names(
+        map_headers.read(0), map_names=tuple(map_names)
+    )
+    return wild_map_names, {
+        "wild_map_names": {
+            "map_headers_archive": map_headers_path,
+            "map_names": {"archive": messages_path, "member": map_names_member},
+        }
     }
 
 

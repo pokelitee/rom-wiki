@@ -275,10 +275,15 @@ def build_item_dataset(
             add(battle_item["id"], "trainer_battle_items", trainer_reference)
 
     for location in (location_dataset or {}).get("records", []):
+        # Gen5's bare-minimum location records have no distinct internal
+        # (debug) map name -- see gen5_bw/__init__.py's module docstring --
+        # so this falls back to the display name; harmless in practice since
+        # Gen5 locations have no items/shops/gifts/trades to cross-reference
+        # yet anyway (the loops below are no-ops for them).
         location_reference = {
             "header_id": location["header_id"],
             "name": location["name"],
-            "internal_name": location["internal_name"],
+            "internal_name": location.get("internal_name", location["name"]),
         }
         for item in location.get("items", []):
             add(

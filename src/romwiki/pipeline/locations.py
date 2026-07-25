@@ -56,6 +56,8 @@ def extract_location_dataset(
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
+    if profile.engine == "gen5_bw":
+        return _extract_gen5_location_dataset(result)
     try:
         events_path = profile.layout["events"]
         matrices_path = profile.layout["map_matrices"]
@@ -675,6 +677,53 @@ def extract_location_dataset(
                     else None
                 ),
             },
+        },
+        "records": records,
+    }
+
+
+def _extract_gen5_location_dataset(result: InspectionResult) -> dict[str, Any]:
+    # Bare minimum: each map header's display name and its wild-encounter-
+    # table cross-reference. See gen5_bw/__init__.py's module docstring for
+    # why the rest (warps, connections, shops, gifts, static encounters,
+    # trainer references, ...) isn't decoded yet.
+    profile = result.match.profile
+    try:
+        map_headers_path = profile.layout["map_headers"]
+        map_names_member = profile.parameters["map_names_member"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing location metadata: {error.args[0]}"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).locations
+    filesystem = platform.filesystem_from_image(result.image)
+    messages_path = profile.layout["messages"]
+    map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    map_names = engine.parse_english_message_archive(messages.read(map_names_member))
+    records = [
+        header.to_dict()
+        for header in engine.parse_map_header_table(
+            map_headers.read(0),
+            map_names=tuple(map_names),
+            archive_path=map_headers_path,
+        )
+    ]
+    return {
+        "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "locations",
+        "record_count": len(records),
+        "encounter_reference_count": sum(
+            record["encounter_map_index"] is not None for record in records
+        ),
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "map_headers_archive": map_headers_path,
+            "map_names": {"archive": messages_path, "member": map_names_member},
         },
         "records": records,
     }

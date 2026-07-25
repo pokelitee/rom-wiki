@@ -4,17 +4,17 @@ The primary sources are the exact USA/Europe NDSi-Enhanced releases of Pokémon
 Black (header code IRBO, ROM version 0) and Pokémon White (header code IRAO,
 ROM version 0). This is this project's first Generation V release, and
 currently covers Pokémon species (personal) data, Abilities, Items, Moves,
-Wild Encounters, and Trainers.
+Wild Encounters, Trainers, and a bare-minimum Locations section.
 
 Black and White are published as one wiki rather than two: every section this
 wiki currently covers -- personal data, item data, move data, wild encounter
-data, trainer data, and the ROM text archive -- is confirmed byte-for-byte
-identical between the two games. Each page notes
+data, trainer data, location data, and the ROM text archive -- is confirmed
+byte-for-byte identical between the two games. Each page notes
 which version(s) a record is available in; today that is always "Black &
 White" for shared content, with a handful of exclusives (e.g. Zekrom in Black,
-Reshiram in White) marked accordingly. If a future section (Locations, gifts)
-introduces real per-version differences, the affected pages will show both
-variants instead of one shared entry.
+Reshiram in White) marked accordingly. If a future section (gifts, static
+encounters) introduces real per-version differences, the affected pages will
+show both variants instead of one shared entry.
 
 ## Pokémon species data
 
@@ -126,13 +126,15 @@ early routes (Patrat, Lillipup, Purrloin) and mid-game water routes
 percentages aren't stored in the ROM -- like every other generation since
 Generation III, they're a fixed engine weighting applied by slot position.
 
-Real in-game location names aren't attached to encounter areas yet, for a
-narrow, specific reason: the map-name lookup table itself (`a/0/1/2`, a
-simple fixed 48-byte record per map) decodes fine, but the map name *text*
-table hits a character code this project's message decoder doesn't handle
-yet -- an unrelated text-decoding gap, not missing ROM research on the
-encounter side. Each page instead shows its ROM archive member index (and
-season, if seasonal).
+Real in-game location names are attached via the map header table
+(`a/0/1/2`, a simple fixed 48-byte record per map): each header's own
+wild-encounter-table index cross-references the encounter area it belongs
+to, and its display-name index resolves through the ROM's own map-name text
+table. Multiple map headers can share one encounter table (giving an area
+more than one real name, e.g. several sub-areas of the same city); confirmed
+against real Black ROM data (e.g. area 3 correctly resolves to "Icirrus
+City"). Decoding that map-name text table required fixing a real bug in this
+project's message decoder first -- see Text and names below.
 
 ## Trainers
 
@@ -166,24 +168,60 @@ reproducible derivation for one, so both stay unavailable.
 Real map locations and script references aren't attached to trainers yet:
 that needs this generation's own script-engine opcode table (to find each
 trainer's field battle trigger), which hasn't been researched. This is the
-same underlying gap that blocks Locations and static (gift/single) Pokémon
-encounters below -- unlike wild encounters' location-linking gap, which is
-narrowly a text-decoder issue, this one is genuinely unresearched.
+same underlying gap that blocks Locations' fuller feature set and static
+(gift/single) Pokémon encounters below.
+
+## Locations
+
+This section is a deliberately bare minimum, decoded from the map header
+table (`a/0/1/2`, a single-member NARC holding one fixed 48-byte record per
+map -- 427 total). Only two fields are decoded from each record: a
+display-name index (resolved through the map-name text table) and a
+wild-encounter-table cross-reference. These are the only two fields the
+ROM-hacking community's own tooling (Ajarmar/universal-pokemon-randomizer-zx)
+reads from this record, and so the only two that can be checked against a
+known-working reference; no public documentation covers the record's
+remaining ~46 bytes (warps, connections, scripts, music, and whatever else a
+full map header holds), so nothing there is guessed at. Confirmed against
+real Black ROM data: header 6 resolves to "Striaton City" with a wild
+encounter cross-reference to table index 0; every one of the 427 headers has
+a valid name index, and exactly 112 distinct wild-encounter cross-references
+are used, matching the Wild Encounters archive's own 112 members exactly.
+
+Each location page shows its cross-referenced Wild Encounters table index as
+plain text rather than a direct link to a specific encounter-area page: a
+single table index can expand into up to 4 seasonal encounter areas (see
+Wild Encounters above), and resolving that mapping precisely is left to a
+future pass rather than guessed at here.
+
+Warps, outdoor connections, shops, gift Pokémon, static encounters, roaming
+activations, NPC trades, and trainer cross-references -- everything
+Platinum's own Locations section has -- all depend on this generation's
+script-engine opcode table, which is real, substantial, unresearched work
+(see Trainers above for the same underlying gap).
 
 ## Text and names
 
 Pokémon, ability, move, and item display names are decoded directly from each
 ROM's own text archive at `a/0/0/2`, rather than from PokéDB. Each name table is a
 member of that archive (Pokémon names at member 70, ability names at 182, move
-names at 203, item names at 54); type names have no ROM text table in this
-generation (Generation V added no new types over Generation IV) and remain a
-built-in engine constant instead.
+names at 203, item names at 54, map names at 89); type names have no ROM text
+table in this generation (Generation V added no new types over Generation IV)
+and remain a built-in engine constant instead.
+
+One control code needed extra handling: some messages contain
+runtime-substituted text (e.g. "[RIVAL]'s House") marked by 0xF000 followed
+by a variable ID and a count of parameter words -- not literal characters.
+The decoder recognizes this and renders a `{VAR:ID}` placeholder rather than
+crashing or misreading the parameter words as garbage text; the actual
+runtime-substituted value isn't reproduced, since that requires knowing what
+each variable ID means (undocumented, and this project's tables so far only
+ever hit this in one *unused* map-name table entry, not a real page name).
 
 ## Not yet available
 
-Locations are not built for this release yet -- it needs its own Generation V
-record-layout research, and this release's own script-engine opcode table
-(shared with Trainers' location-linking gap above), none of which carry over
-from the Generation IV engine this project already supports. Static
-(gift/single) Pokémon encounters are part of this same gap, since they're
-script-driven rather than part of the wild encounter table already decoded.
+Static (gift/single) Pokémon encounters aren't built for this release yet:
+they're script-driven rather than part of the wild encounter table already
+decoded, and depend on the same unresearched script-engine opcode table as
+Locations' fuller feature set and Trainers' location/script cross-references
+above.
