@@ -118,6 +118,22 @@ unused slots; the rare case of two distinct real items sharing a display name
 (the male- and female-color Xtransceiver) is disambiguated with the item ID in
 the page URL.
 
+The Pickup ability's held-item table is decoded from a 29-word array found by
+byte-pattern search in the Battle overlay (overlay 92) -- the same technique
+used for the TM/HM move table above, since this table also has no stable
+absolute offset across ROM builds. Unlike Generation IV's Pickup (separate
+flat common/rare item lists plus a rate curve), this generation packs every
+10-level range's items into one shared array with a sliding window (a
+9-item "common" window and a 2-item "rare" window, each shifting by one
+entry per level range) -- a real, verified fact
+(`Gen5RomHandler.getPickupItems()`'s own hardcoded formula), not a guess.
+The per-slot percentages (30%, six at 10%, two at 4%, two at 1%) aren't ROM
+data -- they're the same fixed engine constant Generation IV's own Pickup
+uses. Verified against both real ROMs: both decode to the identical,
+well-documented real Gen5 Pickup table (Potion/Antidote/Super Potion/.../Max
+Elixir in the common pool; Nugget/King's Rock/Iron Ball/Prism Scale/
+Leftovers in the rare tier).
+
 NPC (in-game) trades are decoded from the `a/1/6/5` archive (108-byte fixed
 records) and shown on the traded-for item's page (the same "Gifts and
 trades" table Generation IV's locations use, since the underlying concept is

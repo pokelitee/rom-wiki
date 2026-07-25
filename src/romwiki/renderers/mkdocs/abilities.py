@@ -207,6 +207,8 @@ def _pickup_section(
 ) -> list[str]:
     if not pickup:
         return []
+    if "level_ranges" in pickup:
+        return _gen5_pickup_section(pickup["level_ranges"], source_file, references)
     if "honey_gather_rate" in pickup:
         rates = pickup["honey_gather_rate"]
         lines = [
@@ -262,6 +264,41 @@ def _pickup_section(
             ],
         )
     )
+    return lines
+
+
+def _gen5_pickup_section(
+    level_ranges: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> list[str]:
+    lines = [
+        "## Held items",
+        "",
+        "At the end of a battle, a Pokémon with Pickup has a 10% chance to "
+        "check for an item if it isn't already holding one. Which item "
+        "depends on the Pokémon's level -- each 10-level range draws from "
+        "its own weighted list of 11 possible items.",
+        "",
+    ]
+    for level_range in level_ranges:
+        lines.extend(
+            [
+                f"### Level {level_range['minimum_level']}"
+                f"–{level_range['maximum_level']}",
+                "",
+            ]
+        )
+        lines.extend(
+            pokemon_table(
+                ["| Item | Item ID | Chance |", "| ---- | ------: | -----: |"],
+                [
+                    f"| {sprite_with_link(reference_sprite_cell('item', slot['item_id'], references), _item_link(slot, source_file, references))} | "
+                    f"{slot['item_id']} | {slot['chance']}% |"
+                    for slot in level_range["slots"]
+                ],
+            )
+        )
     return lines
 
 

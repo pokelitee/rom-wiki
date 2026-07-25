@@ -51,6 +51,14 @@ shop_item_sizes = [
 ]
 tm_shop_ids = [1, 2, 4, 7]
 regular_shop_ids = [0, 16, 20, 23, 24, 25]
+# `PickupOvlNumber`/`pickupTableLocator` (Ajarmar/universal-pokemon-randomizer-zx):
+# the pickup item table has no stable absolute offset, so it's found the
+# same way as the TM/HM move table -- a byte-pattern search, here in the
+# Battle overlay. Verified against the real Black ROM: decodes to the
+# well-known real Gen5 Pickup table (Potion/Antidote/.../Max Elixir plus the
+# Nugget/King's Rock/Iron Ball/Prism Scale/Leftovers rare-tier items).
+pickup_overlay_id = 92
+pickup_table_locator = "19005C00DD00"
 # `StaticPokemon{}` facts (Ajarmar/universal-pokemon-randomizer-zx's
 # gen5_offsets.ini, `[Black (U)]`; identical for White, which copies this
 # list rather than redefining it). Each entry is a [file, offset] pair into

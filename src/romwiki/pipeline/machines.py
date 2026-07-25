@@ -7,6 +7,7 @@ from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
+from romwiki.util.byte_search import find_unique_pattern
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
@@ -75,7 +76,10 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).machines
     arm9 = platform.read_decompressed_code_binary(result.image)
     prefix = bytes.fromhex(prefix_hex)
-    offset = _find_unique(arm9, prefix) + len(prefix)
+    offset = (
+        find_unique_pattern(arm9, prefix, label="the machine move table in ARM9")
+        + len(prefix)
+    )
     size = engine.MACHINE_COUNT * 2
     if offset + size > len(arm9):
         raise InvalidRomError("Gen V machine move table is outside the decompressed ARM9")
@@ -96,15 +100,6 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
         },
         "records": records,
     }
-
-
-def _find_unique(data: bytes, pattern: bytes) -> int:
-    first = data.find(pattern)
-    if first == -1:
-        raise InvalidRomError("Could not locate the machine move table in ARM9")
-    if data.find(pattern, first + 1) != -1:
-        raise InvalidRomError("Machine move table byte pattern is not unique in ARM9")
-    return first
 
 
 def write_machine_dataset(dataset: dict[str, Any], output_path: Path) -> None:

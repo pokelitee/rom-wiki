@@ -140,6 +140,50 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(honey_gather["pickup"], {"honey_gather_rate": [5]})
         self.assertIsNone(other["pickup"])
 
+    def test_attaches_gen5_level_ranges_to_pickup_only(self) -> None:
+        names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]
+        names[53] = "Pickup"
+        names[118] = "Honey Gather"
+        pokedb = _pokedb()
+        pickup_dataset = {
+            "engine": "gen5_bw",
+            "level_ranges": [
+                {
+                    "minimum_level": 1,
+                    "maximum_level": 10,
+                    "slots": [{"item_id": 17, "name": "Potion", "chance": 30}],
+                }
+            ],
+        }
+        dataset = build_ability_dataset(
+            {
+                "game": "test",
+                "engine": "gen4_dppt",
+                "dataset": "pokemon",
+                "source": {"archive": "personal.narc"},
+                "ability_names": names,
+                "records": [],
+            },
+            pokedb,
+            pickup_dataset,
+        )
+
+        pickup = dataset["records"][52]
+        honey_gather = dataset["records"][117]
+        self.assertEqual(
+            pickup["pickup"],
+            {
+                "level_ranges": [
+                    {
+                        "minimum_level": 1,
+                        "maximum_level": 10,
+                        "slots": [{"item_id": 17, "name": "Potion", "chance": 30}],
+                    }
+                ]
+            },
+        )
+        self.assertIsNone(honey_gather["pickup"])
+
     def test_renders_ability_page_and_catalog(self) -> None:
         dataset = {
             "records": [
@@ -247,6 +291,49 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertIn("## Honey generation chance", honey_page)
         self.assertIn("| 1–10 | 5% |", honey_page)
         self.assertIn("| 11–20 | 10% |", honey_page)
+
+
+    def test_renders_gen5_pickup_level_ranges(self) -> None:
+        dataset = {
+            "records": [
+                {
+                    "ability_id": 53,
+                    "slug": "pickup",
+                    "name": "Pickup",
+                    "pokemon": [],
+                    "pickup": {
+                        "level_ranges": [
+                            {
+                                "minimum_level": 1,
+                                "maximum_level": 10,
+                                "slots": [
+                                    {"item_id": 17, "name": "Potion", "chance": 30},
+                                    {"item_id": 92, "name": "Nugget", "chance": 1},
+                                ],
+                            },
+                            {
+                                "minimum_level": 91,
+                                "maximum_level": 100,
+                                "slots": [
+                                    {"item_id": 41, "name": "Max Elixir", "chance": 1},
+                                ],
+                            },
+                        ]
+                    },
+                }
+            ]
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_ability_pages(dataset, output)
+            page = (output / "pickup.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Held items", page)
+        self.assertIn("### Level 1–10", page)
+        self.assertIn("### Level 91–100", page)
+        self.assertIn("Potion</span> | 17 | 30% |", page)
+        self.assertIn("Nugget</span> | 92 | 1% |", page)
+        self.assertIn("Max Elixir</span> | 41 | 1% |", page)
 
 
 def _pokedb() -> PokeDBGeneration:

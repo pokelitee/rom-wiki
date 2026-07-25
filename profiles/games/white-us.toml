@@ -51,6 +51,11 @@ shop_item_sizes = [
 ]
 tm_shop_ids = [1, 2, 4, 7]
 regular_shop_ids = [0, 16, 20, 23, 24, 25]
+# `PickupOvlNumber`/`pickupTableLocator`: same overlay number and byte
+# pattern as Black (verified against the real White ROM -- decodes to the
+# identical, real Gen5 Pickup table).
+pickup_overlay_id = 92
+pickup_table_locator = "19005C00DD00"
 # `StaticPokemon{}` facts (Ajarmar/universal-pokemon-randomizer-zx's
 # gen5_offsets.ini): White's own `[White (U)]` section sets
 # `CopyStaticPokemon=1` rather than redefining these, i.e. these are

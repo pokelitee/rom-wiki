@@ -43,6 +43,13 @@ from romwiki.engines.gen5_bw.marts import parse_shop_catalog
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
 from romwiki.engines.gen5_bw.personal import parse_personal_record
+from romwiki.engines.gen5_bw.pickup import (
+    PICKUP_LEVEL_RANGE_COUNT,
+    PICKUP_LEVEL_RANGE_SIZE,
+    PICKUP_SLOT_CHANCES,
+    parse_pickup_table,
+    pickup_level_range_item_ids,
+)
 from romwiki.engines.gen5_bw.static_encounters import parse_static_encounters
 from romwiki.engines.gen5_bw.trades import parse_npc_trade_record
 from romwiki.engines.gen5_bw.trainer_party import (
@@ -54,11 +61,11 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
 # This engine currently implements the Pokémon personal-data, Items, Moves,
 # Learnsets, Evolutions, Egg moves, TM/HM machines, Wild encounters, Trainers,
-# Static encounters, and (a bare-minimum) Locations slices. Adding a later
-# slice should add the corresponding module and re-export here, the same way
-# these slices added personal.py/machines.py/items.py/moves.py/learnsets.py/
-# evolutions.py/egg_moves.py/encounters.py/trainers.py/locations.py/
-# static_encounters.py/constants.py.
+# Static encounters, Pickup, and (a bare-minimum) Locations slices. Adding a
+# later slice should add the corresponding module and re-export here, the
+# same way these slices added personal.py/machines.py/items.py/moves.py/
+# learnsets.py/evolutions.py/egg_moves.py/encounters.py/trainers.py/
+# locations.py/static_encounters.py/pickup.py/constants.py.
 # Move tutors are not a gap to fill in: Ajarmar/universal-pokemon-randomizer-zx's
 # Gen5RomHandler.hasMoveTutors() returns true only for Black 2/White 2 --
 # tutors were introduced in the sequels and don't exist in this release at all.
@@ -86,6 +93,12 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # ini lists for at least one of the two (verified against the real Black
 # ROM) -- the real species is only a literal fact after the randomizer's own
 # ASM patch is applied, so it's left undecoded here rather than guessed at.
+# Pickup's item table (pickup.py) is found the same way the TM/HM move table
+# is (machines.py): a byte-pattern search in an overlay, since it has no
+# stable absolute offset across ROM builds -- no script-engine research
+# needed here either. The per-level-range percentages themselves aren't ROM
+# data, though; they're the same fixed engine formula Generation IV's own
+# Pickup already uses (`PICKUP_SLOT_CHANCES`).
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
@@ -136,8 +149,13 @@ __all__ = [
     "parse_move_record",
     "parse_personal_record",
     "parse_npc_trade_record",
+    "parse_pickup_table",
     "parse_shop_catalog",
     "parse_static_encounters",
     "parse_trainer_record",
+    "pickup_level_range_item_ids",
+    "PICKUP_LEVEL_RANGE_COUNT",
+    "PICKUP_LEVEL_RANGE_SIZE",
+    "PICKUP_SLOT_CHANCES",
     "parse_wild_map_names",
 ]

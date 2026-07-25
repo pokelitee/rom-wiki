@@ -44,6 +44,7 @@ class EngineAdapter:
     trades: Any
     marts: Any
     static_encounters: Any
+    pickup: Any
 
 
 _ENGINES: dict[str, EngineAdapter] = {
@@ -65,6 +66,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         trades=gen4_dppt,
         marts=gen4_dppt,
         static_encounters=gen4_dppt,
+        pickup=gen4_dppt,
     ),
     GEN5_BW_ENGINE: EngineAdapter(
         personal=gen5_bw,
@@ -84,6 +86,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         trades=gen5_bw,
         marts=gen5_bw,
         static_encounters=gen5_bw,
+        pickup=gen5_bw,
     ),
 }
 

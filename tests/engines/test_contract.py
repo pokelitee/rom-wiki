@@ -98,6 +98,7 @@ def _register_fake_engine(tables: types.SimpleNamespace) -> None:
         trades=tables,
         marts=tables,
         static_encounters=tables,
+        pickup=tables,
     )
     register_engine(_FAKE_ENGINE_ID, adapter)
 
