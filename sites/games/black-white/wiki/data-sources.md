@@ -3,11 +3,13 @@
 The primary sources are the exact USA/Europe NDSi-Enhanced releases of Pokémon
 Black (header code IRBO, ROM version 0) and Pokémon White (header code IRAO,
 ROM version 0). This is this project's first Generation V release, and
-currently covers Pokémon species (personal) data, Abilities, Items, and Moves.
+currently covers Pokémon species (personal) data, Abilities, Items, Moves, and
+Wild Encounters.
 
 Black and White are published as one wiki rather than two: every section this
-wiki currently covers -- personal data, item data, move data, and the ROM text
-archive -- is confirmed byte-for-byte identical between the two games. Each page notes
+wiki currently covers -- personal data, item data, move data, wild encounter
+data, and the ROM text archive -- is confirmed byte-for-byte identical
+between the two games. Each page notes
 which version(s) a record is available in; today that is always "Black &
 White" for shared content, with a handful of exclusives (e.g. Zekrom in Black,
 Reshiram in White) marked accordingly. If a future section (encounters,
@@ -104,6 +106,34 @@ secondary-effect chance, target, an opaque effect ID, and a battle-flags
 bitmask. Generation V removed Contests entirely, so (unlike Generation IV)
 there are no contest-effect or contest-type fields to decode.
 
+## Wild encounters
+
+Wild encounters are decoded from the `a/1/2/6` archive: 112 members, each
+either one 232-byte block (no seasonal variation) or four consecutive
+232-byte blocks (spring/summer/autumn/winter, in that order), completely
+unlike Generation IV's `pl_enc_data.narc` shape. Each block holds a 7-byte
+rate header -- one byte per encounter method -- followed by that method's
+slot table: 12 slots each for Grass/Cave, Doubles Grass, and Shaking Spots
+(Generation V's name for the "Dark Grass" rustling-grass mechanic, whose
+possibility is already decoded as part of each Pokémon's own wild-held-item
+data), and 5 slots each for Surfing, Surfing Spots, Fishing, and Fishing
+Spots. Each slot is a word (an 11-bit species ID plus a 5-bit forme index --
+confirmed against a Basculin fishing slot resolving its color-stripe forme
+correctly) followed by minimum/maximum level bytes. Confirmed against real
+Black ROM data across several areas: real, level-appropriate species for
+early routes (Patrat, Lillipup, Purrloin) and mid-game water routes
+(Palpitoad, Shelmet, Stunfisk, Seismitoad, Barboach, Whiscash). Slot chance
+percentages aren't stored in the ROM -- like every other generation since
+Generation III, they're a fixed engine weighting applied by slot position.
+
+Real in-game location names aren't attached to encounter areas yet, for a
+narrow, specific reason: the map-name lookup table itself (`a/0/1/2`, a
+simple fixed 48-byte record per map) decodes fine, but the map name *text*
+table hits a character code this project's message decoder doesn't handle
+yet -- an unrelated text-decoding gap, not missing ROM research on the
+encounter side. Each page instead shows its ROM archive member index (and
+season, if seasonal).
+
 ## Text and names
 
 Pokémon, ability, move, and item display names are decoded directly from each
@@ -115,8 +145,10 @@ built-in engine constant instead.
 
 ## Not yet available
 
-Wild Encounters, Trainers, and Locations are not built for this release yet --
-each needs its own Generation V record-layout research, and for
-Trainers/Wild Encounters/Locations, this release's own script-engine opcode table,
-none of which carry over from the Generation IV engine this project already
-supports.
+Trainers and Locations are not built for this release yet -- each needs its
+own Generation V record-layout research, and this release's own script-engine
+opcode table (for Trainers/Locations' battle triggers, gifts, and static
+encounters), none of which carry over from the Generation IV engine this
+project already supports. Static (gift/single) Pokémon encounters are part of
+this same gap, since they're script-driven rather than part of the wild
+encounter table decoded above.

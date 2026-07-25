@@ -34,6 +34,18 @@ from romwiki.renderers.mkdocs.references import (
     unique_references,
 )
 
+# Generation V's own display labels for its seven encounter methods
+# (Gen5Constants.encounterTypeNames, Ajarmar/universal-pokemon-randomizer-zx).
+_GEN5_METHOD_LABELS = {
+    "grass_cave": "Grass/Cave",
+    "doubles_grass": "Doubles Grass",
+    "shaking_spots": "Shaking Spots",
+    "surfing": "Surfing",
+    "surfing_spots": "Surfing Spots",
+    "fishing": "Fishing",
+    "fishing_spots": "Fishing Spots",
+}
+
 
 def render_encounter_pages(
     dataset: dict[str, Any],
@@ -43,6 +55,8 @@ def render_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
+    if dataset.get("engine") == "gen5_bw":
+        return _render_gen5_encounter_pages(dataset, output_root, references, only_pages=only_pages)
     records = [record for record in dataset["records"] if record["active"]]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -584,3 +598,201 @@ def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
 
 def _level_range(minimum: int, maximum: int) -> str:
     return str(minimum) if minimum == maximum else f"{minimum}–{maximum}"
+
+
+def _render_gen5_encounter_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    references: ReferenceIndex | None,
+    *,
+    only_pages: frozenset[str] | None = None,
+) -> int:
+    # This generation's areas don't have real location names attached yet
+    # (see gen5_bw/__init__.py's module docstring), so unlike the Gen IV path
+    # above there's no linked/unlinked split -- every area is listed the same
+    # way, identified by its map index (and season, if seasonal).
+    records = sorted(
+        (record for record in dataset["records"] if record["active"]),
+        key=lambda record: record["area_id"],
+    )
+    output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                f"area-{record['area_id']:03}.md"
+                for record in records
+                if only_pages is None or f"area-{record['area_id']:03}" in only_pages
+            ),
+        },
+    )
+    fallback_links = []
+    catalog_records = []
+    page_count = 0
+    for index, record in enumerate(records):
+        filename = f"area-{record['area_id']:03}.md"
+        previous = records[index - 1] if index else None
+        following = records[index + 1] if index + 1 < len(records) else None
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            write_text(
+                output_root / filename,
+                _render_gen5_area(record, references, previous, following),
+            )
+            page_count += 1
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "encounter", record["area_id"], record["name"], record["area_id"]
+                ),
+                "encounters/index.md",
+            )
+        )
+        catalog_records.append(
+            _gen5_catalog_record(record, filename.removesuffix(".md") + "/")
+        )
+    write_catalog(output_root, "encounters", catalog_records)
+    write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Wild encounters",
+            "Exact encounter tables decoded from the ROM's own wild-encounter archive.",
+            "encounters",
+            fallback_links,
+        ),
+    )
+    return page_count
+
+
+def _gen5_catalog_record(record: dict[str, Any], filename: str) -> dict[str, Any]:
+    methods = []
+    levels = []
+    species = []
+    pokemon_refs = []
+    method_pokemon = {}
+    for key, label in _GEN5_METHOD_LABELS.items():
+        method = record[key]
+        if not method["rate"]:
+            continue
+        methods.append(label)
+        method_species = []
+        for slot in method["slots"]:
+            pokemon = slot.get("pokemon")
+            if pokemon:
+                species.append(pokemon["name"])
+                method_species.append(pokemon["name"])
+                pokemon_refs.append(_pokemon_reference(pokemon))
+            levels.extend((slot["minimum_level"], slot["maximum_level"]))
+        method_pokemon[label] = list(dict.fromkeys(method_species))
+    return {
+        "id": record["area_id"],
+        "label": record["name"],
+        "url": filename,
+        "locations": [],
+        "methods": methods,
+        "pokemon": list(dict.fromkeys(species)),
+        "pokemon_refs": [
+            ROUTES.catalog_reference(reference, "encounters/")
+            for reference in unique_references(pokemon_refs)
+        ],
+        "method_pokemon": method_pokemon,
+        "min_level": min(levels) if levels else None,
+        "max_level": max(levels) if levels else None,
+        "referenced": True,
+        "search_text": " ".join((record["name"], *species)).lower(),
+    }
+
+
+def _render_gen5_area(
+    record: dict[str, Any],
+    references: ReferenceIndex | None,
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> str:
+    source_file = f"encounters/area-{record['area_id']:03}.md"
+    lines = [
+        f"# {record['name']}",
+        "",
+        *_gen5_area_summary(record),
+    ]
+    for key, label in _GEN5_METHOD_LABELS.items():
+        _append_gen5_method(lines, label, record[key], source_file, references)
+    lines.extend(
+        provenance_section(
+            [
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
+                ),
+                "Chance percentages are not stored in the ROM's encounter tables — "
+                "only each slot's species and level(s) are ROM data — they are "
+                "fixed, publicly documented Generation III+ engine weights applied "
+                "by slot position.",
+                "Location names aren't attached to encounter areas yet for this "
+                "generation — see the site's data sources page for why.",
+            ]
+        )
+    )
+    _append_gen5_record_navigation(lines, record, previous, following)
+    return "\n".join(lines)
+
+
+def _gen5_area_summary(record: dict[str, Any]) -> list[str]:
+    methods = [
+        label for key, label in _GEN5_METHOD_LABELS.items() if record[key]["rate"]
+    ]
+    facts = [
+        f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
+        f"<div><dt>Map index</dt><dd>{record['map_index']}</dd></div>",
+        "<div><dt>Methods</dt><dd>" + (", ".join(methods) if methods else "None") + "</dd></div>",
+    ]
+    if record.get("season"):
+        facts.insert(2, f"<div><dt>Season</dt><dd>{record['season'].title()}</dd></div>")
+    return summary_section("rw-encounter-summary", facts)
+
+
+def _append_gen5_method(
+    lines: list[str],
+    heading: str,
+    method: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not method["rate"]:
+        return
+    slots = _merge_slots(method["slots"], ("minimum_level", "maximum_level"))
+    lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
+    lines.extend(
+        pokemon_table(
+            ["| Pokémon | Type | Levels | Chance |", "| ------- | ---- | -----: | -----: |"],
+            [
+                (
+                    f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
+                    f"{_slot_type_cell(slot['pokemon'], references)} | "
+                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | "
+                    f"{slot['chance']}% |"
+                )
+                for slot in slots
+            ],
+        )
+    )
+
+
+def _append_gen5_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> None:
+    lines.extend(
+        record_navigation_for(
+            "encounter",
+            f"encounters/area-{record['area_id']:03}/",
+            previous,
+            following,
+            aria_label="Wild encounter navigation",
+            identity=lambda value: value["area_id"],
+            route_key=lambda value: value["area_id"],
+            label=lambda value: value["name"],
+        )
+    )

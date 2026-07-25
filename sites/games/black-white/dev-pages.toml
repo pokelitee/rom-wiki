@@ -21,3 +21,6 @@ items = [
     "leftovers",
     "xtransceiver-626",
 ]
+encounters = [
+    "area-003",
+]

@@ -132,15 +132,21 @@ def enrich_encounter_dataset(
         raise DataSourceError("Encounter dataset records must be a list")
     engine = get_engine(dataset["engine"]).enrich
     pokemon_names = _resolve_pokemon_names(engine, dataset)
+    # Generation V's wild-encounter mechanics don't share Generation IV's
+    # shape (see gen5_bw/encounters.py) so they get their own per-area
+    # enrichment function rather than a branch inside the Gen IV one.
+    enrich_area = (
+        _enrich_gen5_encounter_area
+        if dataset.get("engine") == "gen5_bw"
+        else _enrich_encounter_area
+    )
 
     records = []
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
         records.append(
-            _enrich_encounter_area(
-                engine, source, pokedb, sprite_version, pokemon_names
-            )
+            enrich_area(engine, source, pokedb, sprite_version, pokemon_names)
         )
     return {
         "schema_version": ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
@@ -445,6 +451,49 @@ def _enrich_encounter_area(
         "bonus_slot_methodology_source": engine.BONUS_SLOT_METHODOLOGY_SOURCE,
         "encounter_form_rates": source["encounter_form_rates"],
         "unown_table_id": source["unown_table_id"],
+        "provenance": source["provenance"],
+    }
+
+
+def _enrich_gen5_encounter_area(
+    engine: Any,
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None = None,
+    pokemon_names: list[str] | None = None,
+) -> dict[str, Any]:
+    methods = {
+        name: {
+            "rate": source[name]["rate"],
+            "slots": [
+                {
+                    **slot,
+                    "chance": chances[index],
+                    "pokemon": _encounter_pokemon(
+                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                    ),
+                }
+                for index, slot in enumerate(source[name]["slots"])
+            ],
+        }
+        for name, chances in zip(
+            engine.ENCOUNTER_METHOD_NAMES, engine.ENCOUNTER_METHOD_SLOT_CHANCES
+        )
+    }
+    active = any(method["rate"] for method in methods.values())
+    locations = source.get("locations", [])
+    names = list(dict.fromkeys(location["name"] for location in locations))
+    label = f"Map {source['map_index']:03}"
+    if source.get("season"):
+        label += f" ({source['season'].title()})"
+    return {
+        "area_id": source["area_id"],
+        "map_index": source["map_index"],
+        "season": source.get("season"),
+        "name": " / ".join(names) or label,
+        "locations": locations,
+        "active": active,
+        **methods,
         "provenance": source["provenance"],
     }
 

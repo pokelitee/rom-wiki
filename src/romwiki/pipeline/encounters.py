@@ -19,6 +19,8 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for encounter extraction")
     profile = result.match.profile
+    if profile.engine == "gen5_bw":
+        return _extract_gen5_encounter_dataset(result)
     try:
         archive_path = profile.layout["encounters"]
     except KeyError as error:
@@ -59,6 +61,53 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
             **location_source,
+        },
+        **reference_names,
+        "records": records,
+    }
+
+
+def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
+    # This generation's wild-encounter mechanics (seven encounter methods per
+    # area, up to four seasonal variants per map) don't share Gen4's shape
+    # (walking/surf/rod/swarm/day/night/radar/dual-slot/Unown), so this is a
+    # standalone extraction path rather than a variant of the one above.
+    # Real location names aren't attached yet -- see gen5_bw/__init__.py's
+    # module docstring for why -- so every area's `locations` stays empty.
+    profile = result.match.profile
+    try:
+        archive_path = profile.layout["encounters"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define an encounter archive"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).encounters
+    filesystem = platform.filesystem_from_image(result.image)
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    reference_names = extract_reference_names(profile, filesystem)
+    areas = [
+        area
+        for member in archive.members
+        for area in engine.parse_encounter_entry(
+            archive.read(member.index),
+            map_index=member.index,
+            archive_path=archive_path,
+        )
+    ]
+    records = [
+        replace(area, area_id=index).to_dict() for index, area in enumerate(areas)
+    ]
+    return {
+        "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "wild_encounters",
+        "record_count": len(records),
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "archive": archive_path,
         },
         **reference_names,
         "records": records,

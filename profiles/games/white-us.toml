@@ -20,6 +20,7 @@ moves = "a/0/2/1"
 learnsets = "a/0/1/8"
 evolutions = "a/0/1/9"
 egg_moves = "a/1/2/3"
+encounters = "a/1/2/6"
 
 [parameters]
 pokemon_names_member = 70

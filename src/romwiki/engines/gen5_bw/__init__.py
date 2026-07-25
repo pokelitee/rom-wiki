@@ -22,6 +22,13 @@ from romwiki.engines.gen5_bw.constants import (
     TYPE_NAMES,
 )
 from romwiki.engines.gen5_bw.egg_moves import parse_egg_move_set
+from romwiki.engines.gen5_bw.encounters import (
+    METHOD_NAMES as ENCOUNTER_METHOD_NAMES,
+)
+from romwiki.engines.gen5_bw.encounters import (
+    METHOD_SLOT_CHANCES as ENCOUNTER_METHOD_SLOT_CHANCES,
+)
+from romwiki.engines.gen5_bw.encounters import parse_encounter_entry
 from romwiki.engines.gen5_bw.evolutions import parse_evolution_record
 from romwiki.engines.gen5_bw.items import parse_item_record
 from romwiki.engines.gen5_bw.learnsets import parse_level_up_learnset
@@ -32,15 +39,20 @@ from romwiki.engines.gen5_bw.personal import parse_personal_record
 
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
 # This engine currently implements the Pokémon personal-data, Items, Moves,
-# Learnsets, Evolutions, Egg moves, and TM/HM machines slices; the remaining
-# EngineAdapter fields (locations, trainers, encounters, ...) all point at
-# this same module per gen4_dppt's precedent, but none of their
+# Learnsets, Evolutions, Egg moves, TM/HM machines, and Wild encounters
+# slices; the remaining EngineAdapter fields (locations, trainers, ...) all
+# point at this same module per gen4_dppt's precedent, but none of their
 # functions/constants exist yet. Adding a later slice should add the
 # corresponding module and re-export here, the same way these slices added
-# personal.py/machines.py/items.py/moves.py/learnsets.py/evolutions.py/egg_moves.py/constants.py.
+# personal.py/machines.py/items.py/moves.py/learnsets.py/evolutions.py/egg_moves.py/encounters.py/constants.py.
 # Move tutors are not a gap to fill in: Ajarmar/universal-pokemon-randomizer-zx's
 # Gen5RomHandler.hasMoveTutors() returns true only for Black 2/White 2 --
 # tutors were introduced in the sequels and don't exist in this release at all.
+# Wild encounters don't yet attach real location names (unlike Gen4): this
+# generation's map-name lookup needs its own small fixed-record table
+# (`a/0/1/2`), but the map-name text table hits a text-decoder control code
+# this project's message decoder doesn't handle yet -- a separate, narrow gap
+# from the encounter data itself, which is fully decoded and verified.
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
@@ -53,6 +65,8 @@ __all__ = [
     "COLOR_NAMES",
     "DAMAGE_CLASS_NAMES",
     "EGG_GROUP_NAMES",
+    "ENCOUNTER_METHOD_NAMES",
+    "ENCOUNTER_METHOD_SLOT_CHANCES",
     "EVOLUTION_METHOD_NAMES",
     "EVOLUTION_PARAMETER_KINDS",
     "FORM_MEMBERS",
@@ -75,6 +89,7 @@ __all__ = [
     "TYPE_NAMES",
     "machine_name",
     "parse_egg_move_set",
+    "parse_encounter_entry",
     "parse_english_message_archive",
     "parse_evolution_record",
     "parse_item_record",

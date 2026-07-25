@@ -58,3 +58,36 @@ class Gen4EncounterArea:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5EncounterSlot:
+    species_id: int
+    form_id: int
+    minimum_level: int
+    maximum_level: int
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5EncounterMethod:
+    rate: int
+    slots: tuple[Gen5EncounterSlot, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5EncounterArea:
+    area_id: int
+    map_index: int
+    season: str | None
+    grass_cave: Gen5EncounterMethod
+    doubles_grass: Gen5EncounterMethod
+    shaking_spots: Gen5EncounterMethod
+    surfing: Gen5EncounterMethod
+    surfing_spots: Gen5EncounterMethod
+    fishing: Gen5EncounterMethod
+    fishing_spots: Gen5EncounterMethod
+    provenance: RecordProvenance
+    locations: tuple[EncounterLocation, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
