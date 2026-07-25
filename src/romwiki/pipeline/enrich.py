@@ -183,8 +183,12 @@ def enrich_trainer_dataset(
     item_names = _resolve_item_names(engine_tables, dataset)
     pokemon_names = _resolve_pokemon_names(engine_tables, dataset)
     records = []
-    for expected_id, source in enumerate(source_records):
-        if source.get("trainer_id") != expected_id:
+    # Trainer IDs are expected to be consecutive, but not necessarily
+    # starting at 0: Generation V's trainer archive has an unused member 0
+    # with a different shape, so its real trainer IDs start at 1.
+    base_trainer_id = source_records[0].get("trainer_id") if source_records else 0
+    for offset, source in enumerate(source_records):
+        if source.get("trainer_id") != base_trainer_id + offset:
             raise DataSourceError("Trainer records must be ordered by trainer ID")
         records.append(
             _enrich_trainer(
@@ -545,7 +549,7 @@ def _enrich_trainer(
             pokemon,
             trainer_id=source["trainer_id"],
             class_id=source["class_id"],
-            class_gender=source["class_gender"],
+            class_gender=source.get("class_gender"),
             gender_ratio=(game_record.get("gender_ratio") if game_record else None),
             base_stats=(game_record.get("base_stats") if game_record else None),
         )

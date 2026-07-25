@@ -358,16 +358,22 @@ def _append_record_navigation(
 
 
 def _trainer_provenance(record: dict[str, Any]) -> list[str]:
+    facts = [("Class ID", f"`{record['class_id']}`")]
+    if "class_gender" in record:
+        facts.append(("Class gender", record["class_gender"].capitalize()))
+    facts.append(("AI flags", f"`0x{record['ai_flags']:08X}`"))
+    if "battle_type" in record:
+        facts.append(("Battle type", f"`{record['battle_type']}`"))
+    else:
+        facts.append(("Battle mode", f"`{record['battle_mode']}`"))
+    if "unknown_byte" in record:
+        facts.append(("Unknown byte", f"`0x{record['unknown_byte']:02X}`"))
+    if "victory_money_multiplier" in record:
+        facts.append(
+            ("Victory money multiplier", f"`{record['victory_money_multiplier']}`")
+        )
     entries = [
-        *provenance_fact_table(
-            (
-                ("Class ID", f"`{record['class_id']}`"),
-                ("Class gender", record["class_gender"].capitalize()),
-                ("AI flags", f"`0x{record['ai_flags']:08X}`"),
-                ("Battle type", f"`{record['battle_type']}`"),
-                ("Unknown byte", f"`0x{record['unknown_byte']:02X}`"),
-            )
-        ),
+        *provenance_fact_table(facts),
         (
             "Source: exact ROM trainer record from "
             f"`{record['provenance']['archive']}` member "
@@ -387,6 +393,26 @@ def _trainer_provenance(record: dict[str, Any]) -> list[str]:
             "followed by `CheckWonBattle`; only literal trainer IDs are linked."
         )
     return entries
+
+
+# Trainer Data record comment, Gen5RomHandler.java: "Battle Mode; 1 byte;
+# 0=single, 1=double, 2=triple, 3=rotation" -- unlike Generation IV, which
+# only ever has single/double battles, so `double_battle` alone would
+# misrepresent a triple or rotation battle as merely "double".
+_GEN5_BATTLE_MODE_LABELS = {
+    0: "Single battle",
+    1: "Double battle",
+    2: "Triple battle",
+    3: "Rotation battle",
+}
+
+
+def _battle_format_label(record: dict[str, Any]) -> str:
+    if "battle_mode" in record:
+        return _GEN5_BATTLE_MODE_LABELS.get(
+            record["battle_mode"], f"Battle mode {record['battle_mode']}"
+        )
+    return "Double battle" if record["double_battle"] else "Single battle"
 
 
 def _trainer_level_range(record: dict[str, Any]) -> str:
@@ -445,7 +471,7 @@ def _trainer_summary(
             ),
             (
                 "<div><dt>Battle format</dt><dd>"
-                f"{'Double battle' if record['double_battle'] else 'Single battle'}</dd></div>"
+                f"{_battle_format_label(record)}</dd></div>"
             ),
             "<div><dt>Party size</dt><dd>"
             f"{summary_section_link(len(record['party']), 'party')}</dd></div>",

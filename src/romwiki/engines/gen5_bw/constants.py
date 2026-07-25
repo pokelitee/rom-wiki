@@ -68,6 +68,21 @@ PERSONAL_TRANSFORMATION_MEMBERS: dict[int, dict[str, str]] = {
     667: {"base_slug": "meloetta-aria", "label": "Pirouette Forme"},
 }
 
+# Trainer-party form operands that select a battle form with its own
+# personal record; slugs match the PERSONAL_FORM_MEMBERS entries above.
+# Confirmed exhaustive against every real Black ROM trainer party record
+# (only Wormadam and Basculin ever appear with a nonzero forme -- Deoxys/
+# Rotom/Giratina/Shaymin never do, unlike Generation IV's trainer rosters).
+TRAINER_FORM_SLUGS: dict[tuple[int, int], str] = {
+    (413, 1): "wormadam-sandy",
+    (413, 2): "wormadam-trash",
+    (550, 1): "basculin-blue-striped",
+}
+
+# No cosmetic-only trainer forms (same personal record, different display
+# name) were found in any real Black ROM trainer party record.
+TRAINER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {}
+
 # TM01-95, HM01-06 (Gen5Constants.tmCount / hmCount, Ajarmar/universal-pokemon-randomizer-zx).
 GEN5_TM_COUNT = 95
 GEN5_HM_COUNT = 6

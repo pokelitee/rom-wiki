@@ -24,3 +24,6 @@ items = [
 encounters = [
     "area-003",
 ]
+trainers = [
+    "trainer-0542",
+]

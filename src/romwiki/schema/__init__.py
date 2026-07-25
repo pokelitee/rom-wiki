@@ -40,6 +40,8 @@ from romwiki.schema.pokemon import (
 )
 from romwiki.schema.trainers import (
     Gen4Trainer,
+    Gen5Trainer,
+    Gen5TrainerPokemon,
     TrainerLocation,
     TrainerPokemon,
     TrainerScriptReference,
@@ -65,6 +67,8 @@ __all__ = [
     "WalkingEncounterSlot",
     "WaterEncounterSlot",
     "Gen4Trainer",
+    "Gen5Trainer",
+    "Gen5TrainerPokemon",
     "TrainerPokemon",
     "TrainerLocation",
     "TrainerScriptReference",

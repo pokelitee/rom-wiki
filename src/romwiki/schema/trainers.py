@@ -70,6 +70,47 @@ class TrainerScriptReference:
 
 
 @dataclass(frozen=True, slots=True)
+class Gen5TrainerPokemon:
+    difficulty: int
+    ability_slot: int
+    forced_gender_flag: int
+    level: int
+    species_id: int
+    form_id: int
+    held_item_id: int | None
+    move_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5Trainer:
+    trainer_id: int
+    name: str
+    class_id: int
+    class_name: str
+    # 0=single, 1=double, 2=triple, 3=rotation (Gen5RomHandler.java's own
+    # comment on the Trainer Data record) -- unlike Generation IV's
+    # single/double-only battle_type.
+    battle_mode: int
+    double_battle: bool
+    has_custom_moves: bool
+    has_held_items: bool
+    party_count: int
+    reward_item_ids: tuple[int, int, int, int]
+    ai_flags: int
+    healer: bool
+    victory_money_multiplier: int
+    victory_item_id: int
+    party: tuple[Gen5TrainerPokemon, ...]
+    provenance: RecordProvenance
+    party_provenance: RecordProvenance
+    locations: tuple[TrainerLocation, ...] = ()
+    script_references: tuple[TrainerScriptReference, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class Gen4Trainer:
     trainer_id: int
     name: str

@@ -19,6 +19,8 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
+    if profile.engine == "gen5_bw":
+        return _extract_gen5_trainer_dataset(result)
     try:
         trainer_path = profile.layout["trainer_data"]
         party_path = profile.layout["trainer_parties"]
@@ -111,6 +113,77 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
                 "count": len(class_genders),
             },
             **location_source,
+        },
+        **reference_names,
+        "records": records,
+    }
+
+
+def _extract_gen5_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
+    # This generation's trainer/party record shape is close enough to Gen
+    # IV's to reuse the same schema-level idea (header + party array with
+    # optional held-item/custom-move blocks), but real map locations/script
+    # references aren't attached yet -- see gen5_bw/__init__.py's module
+    # docstring for why -- so every trainer's `locations`/`script_references`
+    # stay empty. Member 0 of both archives is an unused, differently-shaped
+    # placeholder (confirmed against real ROM data: 16 bytes vs. the normal
+    # 20, 6 bytes vs. a real party record), so real trainer IDs start at 1;
+    # trainer names are indexed by trainer_id - 1 (Gen5RomHandler.java's own
+    # `tnames.get(i - 1)`).
+    profile = result.match.profile
+    try:
+        trainer_path = profile.layout["trainer_data"]
+        party_path = profile.layout["trainer_parties"]
+        messages_path = profile.layout["messages"]
+        names_member = profile.parameters["trainer_names_member"]
+        classes_member = profile.parameters["trainer_classes_member"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing trainer metadata: {error.args[0]}"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).trainers
+    filesystem = platform.filesystem_from_image(result.image)
+    trainers = platform.archive_cls.from_bytes(filesystem.read(trainer_path))
+    parties = platform.archive_cls.from_bytes(filesystem.read(party_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    reference_names = extract_reference_names(profile, filesystem, messages)
+    if len(trainers.members) != len(parties.members):
+        raise InvalidRomError("Trainer data and party archives have different counts")
+    names = engine.parse_english_message_archive(messages.read(names_member))
+    classes = engine.parse_english_message_archive(messages.read(classes_member))
+    if len(names) < len(trainers.members) - 1:
+        raise InvalidRomError("Trainer name table is shorter than the trainer archive")
+
+    records = [
+        engine.parse_trainer_record(
+            trainers.read(member.index),
+            parties.read(member.index),
+            trainer_id=member.index,
+            name=names[member.index - 1],
+            class_names=classes,
+            trainer_archive=trainer_path,
+            party_archive=party_path,
+        ).to_dict()
+        for member in trainers.members
+        if member.index != 0
+    ]
+    return {
+        "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "trainers",
+        "record_count": len(records),
+        "linked_record_count": 0,
+        "location_reference_count": 0,
+        "script_reference_count": 0,
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "trainer_archive": trainer_path,
+            "party_archive": party_path,
+            "trainer_names": {"archive": messages_path, "member": names_member},
+            "trainer_classes": {"archive": messages_path, "member": classes_member},
         },
         **reference_names,
         "records": records,

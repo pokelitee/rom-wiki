@@ -3,18 +3,18 @@
 The primary sources are the exact USA/Europe NDSi-Enhanced releases of Pokémon
 Black (header code IRBO, ROM version 0) and Pokémon White (header code IRAO,
 ROM version 0). This is this project's first Generation V release, and
-currently covers Pokémon species (personal) data, Abilities, Items, Moves, and
-Wild Encounters.
+currently covers Pokémon species (personal) data, Abilities, Items, Moves,
+Wild Encounters, and Trainers.
 
 Black and White are published as one wiki rather than two: every section this
 wiki currently covers -- personal data, item data, move data, wild encounter
-data, and the ROM text archive -- is confirmed byte-for-byte identical
-between the two games. Each page notes
+data, trainer data, and the ROM text archive -- is confirmed byte-for-byte
+identical between the two games. Each page notes
 which version(s) a record is available in; today that is always "Black &
 White" for shared content, with a handful of exclusives (e.g. Zekrom in Black,
-Reshiram in White) marked accordingly. If a future section (encounters,
-trainers, gifts) introduces real per-version differences, the affected pages
-will show both variants instead of one shared entry.
+Reshiram in White) marked accordingly. If a future section (Locations, gifts)
+introduces real per-version differences, the affected pages will show both
+variants instead of one shared entry.
 
 ## Pokémon species data
 
@@ -134,6 +134,42 @@ yet -- an unrelated text-decoding gap, not missing ROM research on the
 encounter side. Each page instead shows its ROM archive member index (and
 season, if seasonal).
 
+## Trainers
+
+Trainer data is decoded from the `a/0/9/2` archive (20-byte fixed record per
+member) and party data from `a/0/9/3` (variable-size per trainer, driven by
+the trainer's own flags). The trainer record holds: flags (custom moves/held
+items), class ID, battle mode (0=single, 1=double, 2=triple, 3=rotation --
+this generation adds Triple and Rotation battles, unlike Generation IV's
+single/double-only format), party size, four AI battle items, AI flags, a
+"healer" flag, a victory-money multiplier, and a victory item. Each party
+member is 8 bytes (difficulty, a byte combining ability slot and a
+forced-gender flag, level, species, and forme -- all full words, unlike
+Generation IV's packed species/form value), plus an optional 2-byte held item
+and/or 8-byte custom-move block depending on the trainer's flags. Confirmed
+against several real Black ROM trainers: Lass Jimmy's level-7 Purrloin; Gym
+Leader Burgh's Emolga pair, one forced male and one forced female (confirming
+the gender-flag bit meaning); and a real level-75-77 rematch team (three
+elemental monkeys, Liepard, Swoobat, and Zebstrika) with real held items and
+move sets, whose party data ends exactly on the computed record boundary
+with zero leftover bytes.
+
+Ability slot 0 and an unforced gender are genuine in-game randomness for this
+generation, not something recorded in the ROM (Generation IV's trainers, by
+contrast, use a documented, reproducible personality-value algorithm this
+project already replicates for that generation) -- so unlike a stored
+ability slot or a forced gender, they're left unavailable rather than
+guessed. The same applies to nature and calculated stats: Generation V
+trainer parties have no stored nature field and no publicly documented,
+reproducible derivation for one, so both stay unavailable.
+
+Real map locations and script references aren't attached to trainers yet:
+that needs this generation's own script-engine opcode table (to find each
+trainer's field battle trigger), which hasn't been researched. This is the
+same underlying gap that blocks Locations and static (gift/single) Pokémon
+encounters below -- unlike wild encounters' location-linking gap, which is
+narrowly a text-decoder issue, this one is genuinely unresearched.
+
 ## Text and names
 
 Pokémon, ability, move, and item display names are decoded directly from each
@@ -145,10 +181,9 @@ built-in engine constant instead.
 
 ## Not yet available
 
-Trainers and Locations are not built for this release yet -- each needs its
-own Generation V record-layout research, and this release's own script-engine
-opcode table (for Trainers/Locations' battle triggers, gifts, and static
-encounters), none of which carry over from the Generation IV engine this
-project already supports. Static (gift/single) Pokémon encounters are part of
-this same gap, since they're script-driven rather than part of the wild
-encounter table decoded above.
+Locations are not built for this release yet -- it needs its own Generation V
+record-layout research, and this release's own script-engine opcode table
+(shared with Trainers' location-linking gap above), none of which carry over
+from the Generation IV engine this project already supports. Static
+(gift/single) Pokémon encounters are part of this same gap, since they're
+script-driven rather than part of the wild encounter table already decoded.
