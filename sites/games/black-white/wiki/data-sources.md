@@ -133,8 +133,12 @@ decode in the first place: Generation V removed that mechanic from the base
 game entirely (berries only come from wild berry trees, NPCs, and the Dream
 World). Fossil revival remains partly open: the *species and level* for all
 9 fossils are already known (see Pokémon species data above), but the
-*item-to-species* mapping needs the field-use function dispatch table
-itself, a deeper decode than the function ID values alone. Items whose ROM
+*item-to-species* mapping is blocked on the same unresearched script engine
+as Trainers'/Locations' remaining gaps above -- every real fossil item's own
+field-use function ID is 0 ("none"; reviving a fossil is a specific NPC
+interaction, not a bag-menu action), so the item choice is hardcoded in that
+NPC's own script logic rather than data this project's item-record decode
+can reach. Items whose ROM
 name is the archive's own "???" placeholder sentinel are excluded as unused
 slots; the rare case of two distinct real items sharing a display name (the
 male- and female-color Xtransceiver) is disambiguated with the item ID in
