@@ -34,6 +34,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     type_names_member = profile.parameters.get("type_names_member")
     fossil_revival_table_offset = profile.parameters.get("fossil_revival_table_offset")
     fossil_revival_count = profile.parameters.get("fossil_revival_count")
+    fossil_revival_script_file = profile.parameters.get("fossil_revival_script_file")
     first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
     platform = get_platform(profile.platform)
@@ -107,6 +108,28 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         source["fossil_revival_table"] = {
             "source": "arm9",
             "offset": fossil_revival_table_offset,
+            "record_count": len(fossil_revivals),
+        }
+    elif fossil_revival_script_file is not None:
+        # Gen V has no fixed ARM9 table like Gen IV's -- the fossil
+        # scientist's own script (`layout.scripts`) picks a species by
+        # literally comparing the handed-over item against each real fossil
+        # item ID (see gen5_bw/scripts.py's module docstring for the full
+        # disassembly and cross-check against both real ROMs).
+        scripts_path = profile.layout["scripts"]
+        scripts_archive = platform.archive_cls.from_bytes(
+            filesystem.read(scripts_path)
+        )
+        fossil_revivals = engine.parse_fossil_revival_table(
+            scripts_archive.read(fossil_revival_script_file)
+        )
+        revives_into_by_item = {
+            revival.item_id: revival.species_id for revival in fossil_revivals
+        }
+        source["fossil_revival_table"] = {
+            "source": "script",
+            "archive": scripts_path,
+            "member": fossil_revival_script_file,
             "record_count": len(fossil_revivals),
         }
 

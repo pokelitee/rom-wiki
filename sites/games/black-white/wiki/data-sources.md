@@ -131,14 +131,19 @@ this generation may simply hardcode those effects by item ID instead of
 storing them as data. Berry growth (soil-planting) data doesn't exist to
 decode in the first place: Generation V removed that mechanic from the base
 game entirely (berries only come from wild berry trees, NPCs, and the Dream
-World). Fossil revival remains partly open: the *species and level* for all
-9 fossils are already known (see Pokémon species data above), but the
-*item-to-species* mapping is blocked on the same unresearched script engine
-as Trainers'/Locations' remaining gaps above -- every real fossil item's own
-field-use function ID is 0 ("none"; reviving a fossil is a specific NPC
-interaction, not a bag-menu action), so the item choice is hardcoded in that
-NPC's own script logic rather than data this project's item-record decode
-can reach. Items whose ROM
+World). Fossil revival is now fully decoded, including the item-to-species
+mapping: every real fossil item's own field-use function ID is 0 ("none";
+reviving a fossil is a specific NPC interaction, not a bag-menu action), so
+the choice is hardcoded in the fossil scientist's own script logic rather
+than a data table this project's item-record decode alone can reach --
+unlike the opcode-signature scans that resolved trainer battles/warps/static
+encounters, this needed reading the script's actual conditional-branch
+logic (a chain of item-ID comparisons feeding a species variable). Verified
+identically against both real ROMs: items 105/104/101/102/103/100/99/572/573
+(Skull/Armor/Helix/Dome/Old Amber/Claw/Root/Cover/Plume Fossil) resolve to
+species 408/410/138/140/142/347/345/564/566 (Cranidos/Shieldon/Omanyte/
+Kabuto/Aerodactyl/Anorith/Lileep/Tirtouga/Archen) -- the real, well-known
+pairing, now a literal decoded fact. Items whose ROM
 name is the archive's own "???" placeholder sentinel are excluded as unused
 slots; the rare case of two distinct real items sharing a display name (the
 male- and female-color Xtransceiver) is disambiguated with the item ID in
@@ -404,11 +409,20 @@ executable code, not a data word, at the species offset for at least one of
 the two, so the real species isn't a literal fact without a randomizer-style
 ASM patch applied first, unlike every other static encounter.
 
-Locations' remaining gaps (warps, outdoor connections, gift Pokémon) aren't
-decoded yet -- see Locations above. Trainers' field map locations/script
-triggers, previously listed here as blocked on this generation's
-script-engine opcode table, are now resolved (see Trainers above); that
-opcode table turned out to be adoptable from an actively maintained
-community tool (FrostFalcon/FrostsGen5Editor) the same way Marts/NPC
-trades/Pickup were adopted from Ajarmar/universal-pokemon-randomizer-zx,
-rather than requiring an original ARM disassembly.
+Locations' remaining gaps -- outdoor connections and location-linked shops --
+aren't decoded yet, and unlike everything else that used to be listed here,
+these two are genuinely harder, not just unverified: outdoor connections
+aren't stored in the map header record at all (checked directly, and a
+community-documented archive path for this from a later game doesn't carry
+over to this ROM's own archive numbering), and location-linked shops' best
+candidate opcode produces unreliable, false-positive-looking results without
+a validating instruction the way trainer battles have. See Locations above.
+
+Trainers' field map locations/script triggers, Locations' warps and static
+encounters, and the fossil revival item-to-species mapping -- all
+previously listed here as blocked on this generation's script-engine opcode
+table -- are now resolved (see Trainers/Locations/Items above); that opcode
+table turned out to be adoptable from an actively maintained community tool
+(FrostFalcon/FrostsGen5Editor) the same way Marts/NPC trades/Pickup were
+adopted from Ajarmar/universal-pokemon-randomizer-zx, rather than requiring
+an original ARM disassembly from scratch.

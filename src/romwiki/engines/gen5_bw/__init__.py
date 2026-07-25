@@ -62,6 +62,7 @@ from romwiki.engines.gen5_bw.pickup import (
     pickup_level_range_item_ids,
 )
 from romwiki.engines.gen5_bw.scripts import (
+    parse_fossil_revival_table,
     parse_function_table,
     parse_trainer_battle_commands,
 )
@@ -173,6 +174,7 @@ __all__ = [
     "parse_encounter_entry",
     "parse_english_message_archive",
     "parse_evolution_record",
+    "parse_fossil_revival_table",
     "parse_item_record",
     "parse_level_up_learnset",
     "parse_machine_move_table",
