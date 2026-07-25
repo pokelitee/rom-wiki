@@ -18,20 +18,10 @@ def parse_static_encounters(
     Unlike the wild-encounter table (`gen5_bw/encounters.py`), these aren't a
     single contiguous table -- each encounter is a species ID (and, unless
     it's an egg, a level) patched into one specific script file at a literal
-    byte offset. `entries` comes from Ajarmar/universal-pokemon-randomizer-zx's
-    `gen5_offsets.ini` (`StaticPokemon{}` facts, `[Black (U)]`/`[White (U)]`
-    sections -- identical between Black/White, since White's own section just
-    copies Black's `StaticPokemon{}` list rather than redefining it). Each
-    fact lists every script file/offset pair the species ID is duplicated at
-    (one per place the same event can trigger from); only the first pair is
-    read here, matching `Gen5RomHandler.getPokemon()`'s own behavior.
-
-    Verified against 12 real Black ROM entries spanning every present-in-BW1
-    category this covers: starter-choice monkeys (Pansage/Pansear/Panpour,
-    level 10), the free tutorial Magikarp (level 5), event legendaries
-    (Reshiram/Zekrom level 50, the trio Cobalion/Terrakion/Virizion level 42,
-    Landorus level 70, Kyurem level 75), and fossil revivals (Cranidos/
-    Shieldon level 25) -- all real, correct, level-appropriate facts.
+    byte offset. `entries` comes from `gen5_offsets.ini`'s `StaticPokemon{}`
+    facts (see plan.md for the source and verification). Each fact lists
+    every script file/offset pair the species ID is duplicated at; only the
+    first pair is read here, matching `Gen5RomHandler.getPokemon()`.
     """
     encounters = []
     for encounter_id, entry in enumerate(entries):

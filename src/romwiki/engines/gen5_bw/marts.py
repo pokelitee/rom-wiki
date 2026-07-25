@@ -4,17 +4,12 @@ import struct
 
 from romwiki.schema import Gen5Shop, RecordProvenance
 
-# `ShopItemOffsets`/`ShopItemSizes` (Ajarmar/universal-pokemon-randomizer-zx's
-# gen5_offsets.ini, `[Black (U)]`/`[White (U)]`): one persistent item list per
-# "specialty" shop (everything except the TM shops and the plain Poké Marts,
-# whose stock is a fixed generation-wide item list, not ROM data), stored as
-# consecutive item-ID words at a literal byte offset in the (BLZ-compressed)
-# `ShopItemOvlNumber` overlay. Verified against 5 real Black ROM shops: index
-# 3 ("Driftveil Herb Salesman") decodes to exactly Heal Powder/EnergyPowder/
-# Energy Root/Revival Herb; index 5 ("Shopping Mall 9 F3 Left") decodes to the
-# vitamin shop (Protein/Iron/Calcium/Zinc/Carbos/HP Up); index 13 ("Driftveil
-# Incense Salesman") decodes to exactly the eight Incense items plus Lax
-# Incense -- all real, correct, and matching the known real shop contents.
+# `ShopItemOffsets`/`ShopItemSizes` (gen5_offsets.ini, `[Black (U)]`/
+# `[White (U)]`): one persistent item list per "specialty" shop (everything
+# except the TM shops and the plain Poké Marts, whose stock is a fixed
+# generation-wide item list, not ROM data), stored as consecutive item-ID
+# words at a literal byte offset in the (BLZ-compressed) `ShopItemOvlNumber`
+# overlay. See plan.md for the source and verification.
 SHOP_ITEM_WORD_SIZE = 2
 
 # `bw1ShopNames`/`bw1MainGameShops` (Gen5Constants.java): fixed internal shop
