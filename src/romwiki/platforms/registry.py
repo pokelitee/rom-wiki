@@ -13,6 +13,7 @@ from romwiki.platforms.nds import (
     read_arm9_binary,
     read_arm9_binary_decompressed,
     read_arm9_overlay,
+    read_arm9_overlay_decompressed,
 )
 from romwiki.util.errors import DataSourceError
 
@@ -34,6 +35,7 @@ class PlatformAdapter:
     matches_header: Callable[[RomImage, Sequence[str], Sequence[int]], bool]
     archive_cls: type
     read_overlay: Callable[..., tuple[int, bytes]] | None = None
+    read_overlay_decompressed: Callable[..., tuple[int, bytes]] | None = None
     read_code_binary: Callable[[RomImage], bytes] | None = None
     read_decompressed_code_binary: Callable[[RomImage], bytes] | None = None
     code_load_address: Callable[[RomImage], int] | None = None
@@ -55,6 +57,7 @@ _PLATFORMS: dict[str, PlatformAdapter] = {
         matches_header=_nds_matches_header,
         archive_cls=NarcArchive,
         read_overlay=read_arm9_overlay,
+        read_overlay_decompressed=read_arm9_overlay_decompressed,
         read_code_binary=read_arm9_binary,
         read_decompressed_code_binary=read_arm9_binary_decompressed,
         code_load_address=arm9_load_address,

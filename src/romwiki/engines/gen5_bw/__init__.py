@@ -39,6 +39,7 @@ from romwiki.engines.gen5_bw.locations import (
     parse_wild_map_names,
 )
 from romwiki.engines.gen5_bw.machines import machine_name, parse_machine_move_table
+from romwiki.engines.gen5_bw.marts import parse_shop_catalog
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
 from romwiki.engines.gen5_bw.personal import parse_personal_record
@@ -121,6 +122,7 @@ __all__ = [
     "parse_move_record",
     "parse_personal_record",
     "parse_npc_trade_record",
+    "parse_shop_catalog",
     "parse_trainer_record",
     "parse_wild_map_names",
 ]

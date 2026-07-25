@@ -105,7 +105,10 @@ def render_item_pages(
         category = (record.get("reference") or {}).get("category")
         locations = list(
             dict.fromkeys(
-                reference["name"]
+                # Gen5's shop references have no map-header cross-reference
+                # (see gen5_bw/__init__.py's module docstring) and use
+                # "shop_name" instead of "name" -- fall back to it here.
+                reference.get("name", reference.get("shop_name"))
                 for field in ("locations", "shops", "gifts", "trades")
                 for reference in record[field]
             )
@@ -236,7 +239,7 @@ def _render_record(
 
     _append_berry_mechanics(lines, record.get("berry"))
     _append_locations(lines, record, source_file)
-    _append_shops(lines, record["shops"], source_file)
+    _append_shops(lines, record, source_file)
     _append_pokemon(lines, record, source_file, references)
     _append_trainers(lines, record, source_file)
     _append_gifts_and_trades(lines, record, source_file, references)
@@ -350,21 +353,43 @@ def _append_locations(
 
 
 def _append_shops(
-    lines: list[str], shops: list[dict[str, Any]], source_file: str
+    lines: list[str], record: dict[str, Any], source_file: str
 ) -> None:
+    shops = record["shops"]
     if not shops:
         return
     lines.extend(["## Shops", ""])
+    if "header_id" in shops[0]:
+        lines.extend(
+            [
+                "| Location | Shop | Price | Availability |",
+                "| -------- | ---- | ----: | ------------ |",
+                *[
+                    (
+                        f"| {_location_link(shop, source_file)} "
+                        f"| {shop['kind'].title()} | "
+                        f"{shop_price(shop['price'], shop.get('currency', 'money'))} | "
+                        f"{badge_requirement(shop['required_badges'])} |"
+                    )
+                    for shop in shops
+                ],
+                "",
+            ]
+        )
+        return
+    # Gen5's shops aren't attached to a specific map header (no script-engine
+    # location resolution -- see gen5_bw/__init__.py's module docstring), and
+    # their stock isn't badge-gated the way Gen4's is, so this shows just the
+    # shop's own internal name and the item's own listed price.
     lines.extend(
         [
-            "| Location | Shop | Price | Availability |",
-            "| -------- | ---- | ----: | ------------ |",
+            "| Shop | Price | Availability |",
+            "| ---- | ----: | ------------ |",
             *[
                 (
-                    f"| {_location_link(shop, source_file)} "
-                    f"| {shop['kind'].title()} | "
-                    f"{shop_price(shop['price'], shop.get('currency', 'money'))} | "
-                    f"{badge_requirement(shop['required_badges'])} |"
+                    f"| {escape(shop['shop_name'])} "
+                    f"| {shop_price(record['price'], 'money')} | "
+                    f"{'Main game' if shop['is_main_game'] else 'Post-game'} |"
                 )
                 for shop in shops
             ],

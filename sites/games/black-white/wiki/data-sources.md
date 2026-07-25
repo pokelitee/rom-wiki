@@ -124,6 +124,24 @@ only the primary (Black) variant, since this project has no per-field
 version-variant renderer anywhere yet -- White's own data is captured
 correctly, just not yet surfaced on this particular page.
 
+Specialty shop inventories (Herb Salesman, Incense Salesman, vitamin shops,
+the various city Mail counters, and similar) are decoded from a fixed word
+array per shop in ARM9 overlay 21 -- itself BLZ-compressed, unlike
+Generation IV's overlays, decompressed the same way Generation V's ARM9
+itself was. Like NPC trades, this wasn't blocked on a missing disassembly:
+the ROM-hacking community's own tooling documents the exact byte offsets and
+sizes for every specialty shop in this specific ROM revision. "TM shops" and
+plain Poké Marts are deliberately excluded -- their stock isn't ROM data at
+all, just a fixed, generation-wide item list every mainline Generation V+
+game sells, so there's nothing to decode. Verified against all 16 real
+specialty shops in the Black ROM: the Driftveil Herb Salesman decodes to
+exactly Heal Powder/EnergyPowder/Energy Root/Revival Herb, the Driftveil
+Incense Salesman to exactly the real Incense lineup, and so on for every
+other shop -- all real, coherent, correct shop contents. Unlike Gen4's
+shops, these aren't linked to a specific map location (the same underlying
+gap noted for Locations/Trainers below), so each shop shows on the item
+page by its own internal name rather than a location link.
+
 ## Moves
 
 Move records are decoded from the `a/0/2/1` archive, a fixed-layout 36-byte
@@ -226,11 +244,14 @@ single table index can expand into up to 4 seasonal encounter areas (see
 Wild Encounters above), and resolving that mapping precisely is left to a
 future pass rather than guessed at here.
 
-Warps, outdoor connections, shops, gift Pokémon, static encounters, roaming
-activations, NPC trades, and trainer cross-references -- everything
-Platinum's own Locations section has -- all depend on this generation's
-script-engine opcode table, which is real, substantial, unresearched work
-(see Trainers above for the same underlying gap).
+Warps, outdoor connections, gift Pokémon, static encounters, roaming
+activations, and trainer cross-references -- most of what Platinum's own
+Locations section has -- all depend on this generation's script-engine
+opcode table, which is real, substantial, unresearched work (see Trainers
+above for the same underlying gap). Shop *contents* are decoded (see Items
+above) since that's plain ARM9 overlay data with no script-engine
+dependency at all -- only *which map each shop is physically in* remains
+blocked on the same script-engine gap as everything else in this list.
 
 ## Text and names
 

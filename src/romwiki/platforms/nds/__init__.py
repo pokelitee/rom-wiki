@@ -5,6 +5,7 @@ from romwiki.platforms.nds.overlays import (
     NintendoDSOverlay,
     parse_overlay_table,
     read_arm9_overlay,
+    read_arm9_overlay_decompressed,
 )
 from romwiki.platforms.nds.reader import (
     NintendoDSImage,
@@ -28,4 +29,5 @@ __all__ = [
     "read_arm9_binary",
     "read_arm9_binary_decompressed",
     "read_arm9_overlay",
+    "read_arm9_overlay_decompressed",
 ]

@@ -20,6 +20,7 @@ from romwiki.pipeline.items import build_item_dataset, extract_item_dataset
 from romwiki.pipeline.learnsets import extract_learnset_dataset
 from romwiki.pipeline.locations import extract_location_dataset
 from romwiki.pipeline.machines import extract_machine_dataset
+from romwiki.pipeline.marts import extract_mart_dataset
 from romwiki.pipeline.moves import extract_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset
 from romwiki.pipeline.pickup import extract_pickup_dataset
@@ -145,6 +146,11 @@ class GameBuildContext:
             return None
         return self._raw("trades/raw", extract_npc_trade_dataset)
 
+    def marts_raw(self) -> dict[str, Any] | None:
+        if "shop_item_overlay_id" not in self.profile.parameters:
+            return None
+        return self._raw("marts/raw", extract_mart_dataset)
+
     def pokemon(self) -> dict[str, Any]:
         return self._memo(
             "pokemon/enriched",
@@ -229,6 +235,7 @@ class GameBuildContext:
                 self.trainers(),
                 self.locations(),
                 trade_dataset=self.trades_raw(),
+                mart_dataset=self.marts_raw(),
                 reference_version=self.profile.base_game,
             ),
         )

@@ -203,6 +203,7 @@ def build_item_dataset(
     location_dataset: dict[str, Any] | None,
     *,
     trade_dataset: dict[str, Any] | None = None,
+    mart_dataset: dict[str, Any] | None = None,
     reference_version: str | None = None,
 ) -> dict[str, Any]:
     game = item_dataset.get("game")
@@ -211,6 +212,7 @@ def build_item_dataset(
         ("trainer", trainer_dataset),
         ("location", location_dataset),
         ("trade", trade_dataset),
+        ("mart", mart_dataset),
     ):
         if dataset is not None and dataset.get("game") != game:
             raise DataSourceError(f"Item and {label} datasets must be for the same game")
@@ -374,6 +376,22 @@ def build_item_dataset(
             },
         )
 
+    # Gen5's shops aren't attached to a specific map header either (see
+    # gen5_bw/__init__.py's module docstring), so this is a flat pass over a
+    # standalone mart dataset instead of nested inside the location loop --
+    # same shape of gap as trades above.
+    for shop in (mart_dataset or {}).get("records", []):
+        for item in shop["items"]:
+            add(
+                item["item_id"],
+                "shops",
+                {
+                    "shop_id": shop["shop_id"],
+                    "shop_name": shop["name"],
+                    "is_main_game": shop["is_main_game"],
+                },
+            )
+
     # ROM item names are usually unique, but not always: e.g. Gen5's real,
     # distinct male- and female-color Xtransceiver items share the exact
     # displayed name "Xtransceiver". Disambiguate with the item ID (a stable
@@ -428,6 +446,7 @@ def build_item_dataset(
             "trainers": trainer_dataset["source"] if trainer_dataset else None,
             "locations": location_dataset["source"] if location_dataset else None,
             "trades": trade_dataset["source"] if trade_dataset else None,
+            "marts": mart_dataset["source"] if mart_dataset else None,
         },
         "records": records,
     }

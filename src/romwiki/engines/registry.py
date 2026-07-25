@@ -42,6 +42,7 @@ class EngineAdapter:
     enrich: Any
     trainer_party: Any
     trades: Any
+    marts: Any
 
 
 _ENGINES: dict[str, EngineAdapter] = {
@@ -61,6 +62,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         enrich=gen4_dppt,
         trainer_party=gen4_dppt,
         trades=gen4_dppt,
+        marts=gen4_dppt,
     ),
     GEN5_BW_ENGINE: EngineAdapter(
         personal=gen5_bw,
@@ -78,6 +80,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         enrich=gen5_bw,
         trainer_party=gen5_bw,
         trades=gen5_bw,
+        marts=gen5_bw,
     ),
 }
 

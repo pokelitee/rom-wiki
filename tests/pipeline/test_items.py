@@ -281,6 +281,60 @@ class MinimalItemDatasetTests(unittest.TestCase):
         self.assertIsNone(catalog["records"][0]["pocket"])
         self.assertIsNone(catalog["records"][0]["field_use"])
 
+    def test_attaches_a_gen5_shop_cross_reference(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {"archive": "itemdata.narc"},
+            "records": [_gen5_item_record()],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        mart_dataset = {
+            "game": "test",
+            "source": {"shop_item_overlay": {"id": 21, "file_id": 0}},
+            "records": [
+                {
+                    "shop_id": 13,
+                    "name": "Driftveil Incense Salesman",
+                    "is_main_game": False,
+                    "items": [{"item_id": 234, "name": "Leftovers"}],
+                }
+            ],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
+        )
+
+        dataset = build_item_dataset(
+            raw, pokedb, pokemon, None, None, mart_dataset=mart_dataset
+        )
+        record = dataset["records"][0]
+        self.assertEqual(
+            record["shops"],
+            [
+                {
+                    "shop_id": 13,
+                    "shop_name": "Driftveil Incense Salesman",
+                    "is_main_game": False,
+                }
+            ],
+        )
+        self.assertEqual(
+            dataset["supplemental_sources"]["marts"], mart_dataset["source"]
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_item_pages(dataset, output)
+            page = (output / "leftovers.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Shops", page)
+        self.assertIn("Driftveil Incense Salesman", page)
+        self.assertIn("Post-game", page)
+
 
 def _gen5_item_record() -> dict:
     return {

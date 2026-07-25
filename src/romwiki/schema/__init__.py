@@ -31,6 +31,7 @@ from romwiki.schema.locations import (
     LocationWarp,
 )
 from romwiki.schema.machines import Gen4Machine
+from romwiki.schema.marts import Gen5Shop
 from romwiki.schema.moves import Gen4Move, Gen5Move
 from romwiki.schema.pickup import Gen4PickupTables
 from romwiki.schema.pokemon import (
@@ -103,6 +104,7 @@ __all__ = [
     "Gen4EvolutionSet",
     "Gen4Machine",
     "Gen4PickupTables",
+    "Gen5Shop",
     "Gen5NpcTrade",
     "Gen4TutorCompatibility",
     "Gen4TutorMove",
