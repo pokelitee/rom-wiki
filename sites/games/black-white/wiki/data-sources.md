@@ -94,6 +94,22 @@ unused slots; the rare case of two distinct real items sharing a display name
 (the male- and female-color Xtransceiver) is disambiguated with the item ID in
 the page URL.
 
+NPC (in-game) trades are decoded from the `a/1/6/5` archive (108-byte fixed
+records) but not yet published to a page. Unlike most of the gaps above, this
+one isn't blocked on a missing disassembly -- the record layout is fully
+documented by the ROM-hacking community's own tooling and needs no
+script-engine work for the trade data itself (only for the field location it
+triggers at, which isn't attempted). Verified against 5 real, active Black
+ROM trades: "Lillil" the Petilil for a Cottonee, "Redeye" the red-striped
+Basculin for a Minccino, "Minipete" the Emolga for a Boldore, "Gorge" the
+Munchlax for a Cinccino (holding Leftovers), and "Eeks" the Rotom for a
+Ditto -- species, held item, OT name, and nickname all match the real trade
+NPCs exactly. Each version's counterpart trade (e.g. White's Cottonee-for-
+Petilil trade) has its own record in the same archive, correctly excluded
+via the ROM's own inactive-trade index list rather than published as if
+live.
+the page URL.
+
 ## Moves
 
 Move records are decoded from the `a/0/2/1` archive, a fixed-layout 36-byte

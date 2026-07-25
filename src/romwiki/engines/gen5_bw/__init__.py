@@ -42,6 +42,7 @@ from romwiki.engines.gen5_bw.machines import machine_name, parse_machine_move_ta
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
 from romwiki.engines.gen5_bw.personal import parse_personal_record
+from romwiki.engines.gen5_bw.trades import parse_npc_trade_record
 from romwiki.engines.gen5_bw.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
@@ -119,6 +120,7 @@ __all__ = [
     "parse_map_header_table",
     "parse_move_record",
     "parse_personal_record",
+    "parse_npc_trade_record",
     "parse_trainer_record",
     "parse_wild_map_names",
 ]
