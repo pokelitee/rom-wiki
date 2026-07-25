@@ -14,7 +14,7 @@ _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 @dataclass(frozen=True, slots=True)
 class GameMetadata:
-    profile: str
+    profiles: tuple[str, ...]
     generation: int
     base_game: str
     platform: str
@@ -111,12 +111,22 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
         generation = game["generation"]
         if not isinstance(generation, int) or generation < 1:
             raise SiteError(f"Invalid game generation in {path.relative_to(root)}")
+        raw_profiles = game["profile"] if "profile" in game else game["profiles"]
+        profiles = (
+            (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
+        )
+        if not profiles or not all(isinstance(value, str) for value in profiles):
+            raise SiteError(f"Invalid profile(s) in {path.relative_to(root)}")
         slug_fields: dict[str, Any] = {
-            "profile": game["profile"],
             "base_game": game["base_game"],
             "platform": game["platform"],
             "theme": appearance["theme"],
         }
+        for profile in profiles:
+            if not _SLUG_PATTERN.fullmatch(profile):
+                raise SiteError(
+                    f"Invalid profile in {path.relative_to(root)}: {profile}"
+                )
         for field_name, value in slug_fields.items():
             if not isinstance(value, str) or not _SLUG_PATTERN.fullmatch(value):
                 raise SiteError(
@@ -129,7 +139,7 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
         if not isinstance(platform_name, str) or not platform_name.strip():
             raise SiteError(f"Invalid platform name in {path.relative_to(root)}")
         return GameMetadata(
-            profile=slug_fields["profile"],
+            profiles=profiles,
             generation=generation,
             base_game=slug_fields["base_game"],
             platform=slug_fields["platform"],

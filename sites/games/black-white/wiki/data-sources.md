@@ -1,9 +1,18 @@
 # Data sources
 
-The primary source is the exact USA/Europe NDSi-Enhanced release of Pokémon Black
-(header code IRBO, ROM version 0). This is this project's first Generation V
-release, and currently covers Pokémon species (personal) data, Abilities, and
-Items.
+The primary sources are the exact USA/Europe NDSi-Enhanced releases of Pokémon
+Black (header code IRBO, ROM version 0) and Pokémon White (header code IRAO,
+ROM version 0). This is this project's first Generation V release, and
+currently covers Pokémon species (personal) data, Abilities, and Items.
+
+Black and White are published as one wiki rather than two: every section this
+wiki currently covers -- personal data, item data, and the ROM text archive --
+is confirmed byte-for-byte identical between the two games. Each page notes
+which version(s) a record is available in; today that is always "Black &
+White" for shared content, with a handful of exclusives (e.g. Zekrom in Black,
+Reshiram in White) marked accordingly. If a future section (encounters,
+trainers, gifts) introduces real per-version differences, the affected pages
+will show both variants instead of one shared entry.
 
 ## Pokémon species data
 
@@ -53,7 +62,7 @@ the page URL.
 
 ## Text and names
 
-Pokémon, ability, move, and item display names are decoded directly from this
+Pokémon, ability, move, and item display names are decoded directly from each
 ROM's own text archive at `a/0/0/2`, rather than from PokéDB. Each name table is a
 member of that archive (Pokémon names at member 70, ability names at 182, move
 names at 203, item names at 54); type names have no ROM text table in this

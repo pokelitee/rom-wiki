@@ -1,7 +1,7 @@
 INHERIT: ../../shared/mkdocs.base.yml
 
-site_name: Pokémon Black Wiki
-site_description: A data-driven reference for Pokémon Black
+site_name: Pokémon Black & White Wiki
+site_description: A data-driven reference for Pokémon Black and White
 docs_dir: wiki
 hooks:
   - ../../../src/romwiki/sites/mkdocs_hooks.py

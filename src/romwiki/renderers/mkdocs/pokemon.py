@@ -35,6 +35,7 @@ from romwiki.renderers.mkdocs.components import (
     stat_list,
     tutor_requirement,
     type_badges,
+    version_availability_note,
     yes_no,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -196,6 +197,7 @@ def _render_record(
     lines = [
         f"# {record['name']}",
         "",
+        *version_availability_note(record),
         *pokemon_summary(record),
         *_reference_entry(reference),
         *_sprite_gallery(record),

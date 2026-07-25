@@ -34,6 +34,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_hero,
     summary_section_link,
     type_badges,
+    version_availability_note,
     yes_no,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -218,6 +219,7 @@ def _render_record(
     lines = [
         f"# {record['name']}",
         "",
+        *version_availability_note(record),
         *_item_summary(record),
         *reference_description(
             record, "No PokéDB reference data is available for this item."

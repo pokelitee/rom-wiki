@@ -8,7 +8,7 @@ from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError
 from romwiki.util.json_io import write_json_atomic
 
-_KEYS = {
+RECORD_KEY_FIELDS = {
     "pokemon": "member",
     "abilities": "ability_id",
     "moves": "move_id",
@@ -164,11 +164,11 @@ def compare_datasets(
     current: dict[str, Any], baseline: dict[str, Any]
 ) -> dict[str, Any]:
     kind = current.get("dataset")
-    if kind != baseline.get("dataset") or kind not in _KEYS:
+    if kind != baseline.get("dataset") or kind not in RECORD_KEY_FIELDS:
         raise DataSourceError("Comparison datasets must have the same supported kind")
-    key_name = _KEYS[kind]
-    current_records = _records_by_key(current, key_name)
-    baseline_records = _records_by_key(baseline, key_name)
+    key_name = RECORD_KEY_FIELDS[kind]
+    current_records = records_by_key(current, key_name)
+    baseline_records = records_by_key(baseline, key_name)
     records = []
     counts = {status: 0 for status in ("unchanged", "changed", "added", "removed")}
     for key in sorted(set(current_records) | set(baseline_records)):
@@ -225,7 +225,7 @@ def comparison_by_key(
     return {record["key"]: record for record in dataset.get("records", [])}
 
 
-def _records_by_key(
+def records_by_key(
     dataset: dict[str, Any], key_name: str
 ) -> dict[int | str, dict[str, Any]]:
     records = dataset.get("records")
@@ -342,7 +342,7 @@ def _record_label(kind: str, record: dict[str, Any]) -> str:
     if kind == "trainers":
         parts = (record.get("class_name"), record.get("name"))
         return " ".join(part for part in parts if part)
-    return str(record.get("name") or record.get("internal_name") or record.get(_KEYS[kind]))
+    return str(record.get("name") or record.get("internal_name") or record.get(RECORD_KEY_FIELDS[kind]))
 
 
 def _has_detail_page(kind: str, record: dict[str, Any]) -> bool:

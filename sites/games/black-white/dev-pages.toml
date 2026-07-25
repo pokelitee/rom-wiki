@@ -5,6 +5,7 @@ pokemon = [
     "snorlax",
     "victini",
     "zekrom",
+    "reshiram",
     "genesect",
 ]
 abilities = [

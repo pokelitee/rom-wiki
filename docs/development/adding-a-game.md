@@ -266,6 +266,28 @@ index. Catalog records contain only the fields needed for browsing and filtering
 the normalized dataset remains authoritative. Preserve a complete Markdown link
 fallback so new categories remain usable without JavaScript.
 
+### Sibling game versions (e.g. Black/White)
+
+Two releases of the same game (same engine, data confirmed byte-for-byte
+identical except for a handful of version-exclusive records) publish as **one**
+site rather than two. Each release still gets its own `GameProfile` under
+`profiles/games/` (needed to hash-match its own ROM), but the site descriptor's
+`[game]` table lists both under `profiles = ["black-us", "white-us"]` instead of
+a single `profile`, and there is no `sites/games/black-us/` or `.../white-us/`
+directory at all -- only `sites/games/black-white/`.
+
+The `romwiki build-version-pair --games black-us white-us --versions black
+white` command builds both profiles, merges each section with
+`pipeline.version_merge.merge_version_datasets` (which tags every record with
+the `versions` it appears in -- `["black", "white"]` for shared content, a
+single entry for an exclusive), and renders the merged dataset into that one
+site. Renderers surface a "Black only"/"White only" callout automatically via
+`components.version_availability_note` whenever a record's `versions` list has
+exactly one entry; shared records get no callout. Do not use this pattern for
+a ROM hack and its base game (e.g. Renegade Platinum vs. Platinum) -- those are
+deliberately different games and keep their existing separate-sites-plus-
+comparison-diff treatment (`pipeline.comparisons`).
+
 ## 7. Validate before publication
 
 - Add unit tests for every new binary record and script parser.

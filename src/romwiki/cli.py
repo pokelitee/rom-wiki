@@ -23,7 +23,7 @@ from romwiki.pipeline.evolutions import (
     extract_evolution_dataset,
     write_evolution_dataset,
 )
-from romwiki.pipeline.game_build import DATASET_KINDS, DatasetBuild, GameBuildWorkflow
+from romwiki.pipeline.game_build import DATASET_KINDS, GameBuildWorkflow
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.items import (
     extract_item_dataset,
@@ -38,6 +38,7 @@ from romwiki.pipeline.personal import extract_personal_dataset, write_personal_d
 from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
+from romwiki.pipeline.version_merge import merge_version_datasets
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,
@@ -313,6 +314,46 @@ def build_parser() -> argparse.ArgumentParser:
         "--wiki-root", type=Path, help="game wiki root (defaults below sites/games)"
     )
 
+    version_pair_parser = subparsers.add_parser(
+        "build-version-pair",
+        help="build one merged wiki for two sibling game versions (e.g. Black/White)",
+    )
+    version_pair_parser.add_argument(
+        "--games",
+        nargs=2,
+        metavar=("PRIMARY", "SECONDARY"),
+        required=True,
+        help="two game identifiers from the local game configuration",
+    )
+    version_pair_parser.add_argument(
+        "--versions",
+        nargs=2,
+        metavar=("PRIMARY_LABEL", "SECONDARY_LABEL"),
+        help="version labels used for tagging records (default: the --games values)",
+    )
+    version_pair_parser.add_argument(
+        "--site-id",
+        default="black-white",
+        help="merged site identifier (defaults below sites/games/<site-id>)",
+    )
+    version_pair_parser.add_argument(
+        "--games-config", type=Path, default=Path(".local/games.toml")
+    )
+    version_pair_parser.add_argument(
+        "--profiles-dir", type=Path, default=Path("profiles")
+    )
+    version_pair_parser.add_argument(
+        "--pokedb", type=Path, default=Path("../pokedb/.output/gen5")
+    )
+    version_pair_parser.add_argument(
+        "--data-root", type=Path, default=Path("build/data")
+    )
+    version_pair_parser.add_argument(
+        "--wiki-root", type=Path, help="merged wiki root (defaults below sites/games)"
+    )
+    _add_dev_argument(version_pair_parser)
+    _add_cache_argument(version_pair_parser)
+
     baseline_parser = subparsers.add_parser(
         "baseline", help="manage clean-ROM baseline caches"
     )
@@ -512,6 +553,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _run_section_build(args, result)
         elif args.command == "build-game":
             _run_full_game_build(args, result)
+        elif args.command == "build-version-pair":
+            _run_version_pair_build(args)
         elif args.command == "baseline":
             _run_baseline_build(args)
         elif args.command == "site":
@@ -767,7 +810,8 @@ def _run_section_build(
         )
         _write_dataset_build(
             kind,
-            build,
+            build.current,
+            build.comparison,
             data_output,
             wiki_output,
             move_dataset=move_dataset,
@@ -802,7 +846,8 @@ def _run_full_game_build(
     for kind, build in builds.items():
         _write_dataset_build(
             kind,
-            build,
+            build.current,
+            build.comparison,
             _dataset_output(data_root, kind),
             wiki_root / kind,
             move_dataset=builds["moves"].current,
@@ -818,6 +863,76 @@ def _run_full_game_build(
                 path.unlink()
     page_count = render_changes_pages(comparisons, wiki_root)
     print(f"Rendered {page_count} change overview pages: {wiki_root / 'changes'}")
+
+
+# Sections a version-pair site can build, keyed to the profile layout entry
+# that gates them (None means always attempted, like GameBuildContext.pokemon()
+# and .items()). A section is only built when both sibling profiles configure
+# every required layout entry, matching the declarative-gate convention
+# GameBuildContext's optional-input accessors already use.
+_VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[str, ...]] = {
+    "pokemon": (),
+    "abilities": ("messages",),
+    "items": ("item_data", "messages"),
+    "moves": ("moves",),
+    "encounters": ("encounters",),
+    "trainers": ("trainer_data", "trainer_parties"),
+    "locations": ("map_matrices",),
+}
+
+
+def _run_version_pair_build(args: argparse.Namespace) -> None:
+    registry = LocalGameRegistry.load(args.games_config)
+    pokedb = PokeDBGeneration.load(args.pokedb)
+    primary_game, secondary_game = args.games
+    primary_version, secondary_version = args.versions or (primary_game, secondary_game)
+
+    workflows = {}
+    for version, game_id in ((primary_version, primary_game), (secondary_version, secondary_game)):
+        result = inspect_rom(registry.get(game_id).rom(), args.profiles_dir)
+        workflows[version] = GameBuildWorkflow(
+            result,
+            pokedb,
+            current_cache_root=args.data_root / "cache",
+            refresh_current=args.refresh_cache,
+        )
+
+    primary_layout = workflows[primary_version].current.profile.layout
+    secondary_layout = workflows[secondary_version].current.profile.layout
+    kinds = [
+        kind
+        for kind, required_keys in _VERSION_PAIR_SECTION_LAYOUT_KEYS.items()
+        if all(key in primary_layout for key in required_keys)
+        and all(key in secondary_layout for key in required_keys)
+    ]
+
+    merged_datasets: dict[str, dict] = {}
+    for kind in kinds:
+        primary_dataset = getattr(workflows[primary_version].current, kind)()
+        secondary_dataset = getattr(workflows[secondary_version].current, kind)()
+        merged_datasets[kind] = merge_version_datasets(
+            primary_dataset, primary_version, secondary_dataset, secondary_version
+        )
+
+    site_id = args.site_id
+    wiki_root = args.wiki_root or Path("sites/games") / site_id / "wiki"
+    data_root = args.data_root / site_id
+    dev_pages = (
+        DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
+    )
+    reference_index = ReferenceIndex.from_datasets(merged_datasets)
+    move_dataset = merged_datasets.get("moves")
+    for kind, dataset in merged_datasets.items():
+        _write_dataset_build(
+            kind,
+            dataset,
+            None,
+            _dataset_output(data_root, kind),
+            wiki_root / kind,
+            move_dataset=move_dataset,
+            reference_index=reference_index,
+            only_pages=dev_pages.pages_for(kind) if dev_pages else None,
+        )
 
 
 def _run_baseline_build(args: argparse.Namespace) -> None:
@@ -840,7 +955,8 @@ def _run_baseline_build(args: argparse.Namespace) -> None:
 
 def _write_dataset_build(
     kind: str,
-    build: DatasetBuild,
+    dataset: dict,
+    comparison: dict | None,
     data_output: Path,
     wiki_output: Path,
     *,
@@ -848,10 +964,10 @@ def _write_dataset_build(
     reference_index: ReferenceIndex | None = None,
     only_pages: frozenset[str] | None = None,
 ) -> None:
-    write_enriched_dataset(build.current, data_output)
-    if build.comparison is not None:
+    write_enriched_dataset(dataset, data_output)
+    if comparison is not None:
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
-        write_comparison_dataset(build.comparison, comparison_output)
+        write_comparison_dataset(comparison, comparison_output)
     renderer = {
         "pokemon": render_pokemon_pages,
         "abilities": render_ability_pages,
@@ -863,22 +979,22 @@ def _write_dataset_build(
     }[kind]
     if kind == "pokemon":
         page_count = renderer(
-            build.current,
+            dataset,
             wiki_output,
-            build.comparison,
+            comparison,
             move_dataset,
             reference_index,
             only_pages=only_pages,
         )
     else:
         page_count = renderer(
-            build.current,
+            dataset,
             wiki_output,
-            build.comparison,
+            comparison,
             reference_index,
             only_pages=only_pages,
         )
-    print(f"Wrote {len(build.current['records'])} {kind} records: {data_output}")
+    print(f"Wrote {len(dataset['records'])} {kind} records: {data_output}")
     print(f"Rendered {page_count} {kind} pages: {wiki_output}")
 
 

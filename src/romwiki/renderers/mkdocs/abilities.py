@@ -29,6 +29,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section,
     summary_section_link,
     table_sprite_cell,
+    version_availability_note,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -148,6 +149,7 @@ def _render_record(
     lines = [
         f"# {record['name']}",
         "",
+        *version_availability_note(record),
         *_ability_summary(record),
         *reference_description(
             record, "No PokéDB reference data is available for this ability."
