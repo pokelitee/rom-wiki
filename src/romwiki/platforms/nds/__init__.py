@@ -11,6 +11,7 @@ from romwiki.platforms.nds.reader import (
     RomHashes,
     arm9_load_address,
     read_arm9_binary,
+    read_arm9_binary_decompressed,
 )
 
 __all__ = [
@@ -25,5 +26,6 @@ __all__ = [
     "arm9_load_address",
     "parse_overlay_table",
     "read_arm9_binary",
+    "read_arm9_binary_decompressed",
     "read_arm9_overlay",
 ]

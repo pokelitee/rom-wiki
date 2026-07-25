@@ -71,7 +71,10 @@ class GameBuildContext:
         return self._raw("pokemon/learnsets", extract_learnset_dataset)
 
     def egg_moves_raw(self) -> dict[str, Any] | None:
-        if "egg_move_offset" not in self.profile.parameters:
+        if (
+            "egg_moves" not in self.profile.layout
+            and "egg_move_offset" not in self.profile.parameters
+        ):
             return None
         return self._raw("pokemon/egg-moves", extract_egg_move_dataset)
 
@@ -81,7 +84,10 @@ class GameBuildContext:
         return self._raw("pokemon/evolutions", extract_evolution_dataset)
 
     def machines_raw(self) -> dict[str, Any] | None:
-        if "machine_move_offset" not in self.profile.parameters:
+        if (
+            "machine_move_offset" not in self.profile.parameters
+            and "machine_move_prefix" not in self.profile.parameters
+        ):
             return None
         return self._raw("machines/raw", extract_machine_dataset)
 

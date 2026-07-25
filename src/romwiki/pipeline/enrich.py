@@ -262,7 +262,7 @@ def enrich_move_dataset(
     egg_move_pokemon: dict[int, list[dict[str, Any]]] = {}
     for species_id, egg_move_set in egg_moves.items():
         pokemon = _personal_member_reference(engine, species_id, pokedb, pokemon_names)
-        for move_id in egg_move_set["move_ids"]:
+        for move_id in set(egg_move_set["move_ids"]):
             egg_move_pokemon.setdefault(move_id, []).append(pokemon)
     records = []
     for expected_id, source in enumerate(source_records):
@@ -881,14 +881,7 @@ def _enrich_record(
         "level_up_moves": _enrich_level_up_moves(learnset, pokedb, move_names),
         "learnset_provenance": learnset["provenance"] if learnset is not None else None,
         "egg_moves": _enrich_egg_moves(egg_move_set, pokedb, move_names),
-        "egg_move_provenance": (
-            {
-                "overlay_offset": egg_move_set["overlay_offset"],
-                "table_index": egg_move_set["table_index"],
-            }
-            if egg_move_set is not None
-            else None
-        ),
+        "egg_move_provenance": _egg_move_provenance(egg_move_set),
         "evolutions": _enrich_evolutions(
             engine,
             evolution_set,
@@ -952,6 +945,43 @@ def _validate_egg_moves(
     records = dataset.get("records")
     if not isinstance(records, list):
         raise DataSourceError("Egg move records must be a list")
+    # Two provenance shapes coexist here: a sparse ARM9-overlay table (Gen IV,
+    # one entry per species that actually has egg moves, ordered by
+    # table_index) and a dense per-species NARC archive (Gen V, one member per
+    # species -- including ones with zero egg moves -- carrying a shared
+    # RecordProvenance instead).
+    if records and "provenance" in records[0]:
+        return _validate_dense_egg_moves(engine, records)
+    return _validate_sparse_egg_moves(engine, records)
+
+
+def _validate_dense_egg_moves(
+    engine: Any, records: list[dict[str, Any]]
+) -> dict[int, dict[str, Any]]:
+    result = {}
+    for expected_member, record in enumerate(records):
+        species_id = record.get("species_id")
+        move_ids = record.get("move_ids")
+        if species_id != expected_member:
+            raise DataSourceError("Egg move records must be ordered by member ID")
+        if not isinstance(move_ids, (list, tuple)) or any(
+            not isinstance(move_id, int) or not 1 <= move_id <= engine.MAX_MOVE_ID
+            for move_id in move_ids
+        ):
+            raise DataSourceError("Egg move record contains invalid move IDs")
+        # Unlike the sparse (Gen IV) table, this generation's real ROM data
+        # does contain a handful of duplicate move IDs within one species'
+        # record (e.g. Swinub's own table lists Mud Shot twice) -- rejecting
+        # them would mean guessing at "corrected" data instead of decoding
+        # what's actually there; _enrich_egg_moves dedupes for display.
+        if move_ids:
+            result[species_id] = record
+    return result
+
+
+def _validate_sparse_egg_moves(
+    engine: Any, records: list[dict[str, Any]]
+) -> dict[int, dict[str, Any]]:
     result = {}
     previous_species = 0
     for expected_index, record in enumerate(records):
@@ -1271,13 +1301,30 @@ def _enrich_level_up_moves(
     return moves
 
 
+def _egg_move_provenance(
+    egg_move_set: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if egg_move_set is None:
+        return None
+    if "provenance" in egg_move_set:
+        return dict(egg_move_set["provenance"])
+    return {
+        "overlay_offset": egg_move_set["overlay_offset"],
+        "table_index": egg_move_set["table_index"],
+    }
+
+
 def _enrich_egg_moves(
     egg_move_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     moves = []
+    seen: set[int] = set()
     for move_id in egg_move_set["move_ids"] if egg_move_set is not None else []:
+        if move_id in seen:
+            continue
+        seen.add(move_id)
         slug = _move_name(move_id, pokedb, move_names)
         if slug is None:
             raise DataSourceError("Egg moves cannot reference move ID 0")

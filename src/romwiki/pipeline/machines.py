@@ -5,6 +5,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
@@ -13,6 +14,13 @@ from romwiki.util.json_io import write_json_atomic
 def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for machine extraction")
+    profile = result.match.profile
+    if "machine_move_prefix" in profile.parameters:
+        return _extract_from_arm9_prefix(result)
+    return _extract_from_offset(result)
+
+
+def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
     profile = result.match.profile
     try:
         # Unlike sibling extractors' ARM9-relative offsets (e.g. locations.py's
@@ -53,6 +61,50 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
         },
         "records": records,
     }
+
+
+def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
+    # Unlike Generation IV's fixed absolute file offset, this generation's
+    # move table has no stable location: its ARM9 is BLZ-compressed, so the
+    # table is found by byte-pattern search against the *decompressed*
+    # binary (see platforms/nds/blz.py and Gen5RomHandler.java's
+    # `getTMMoves`/tmDataPrefix).
+    profile = result.match.profile
+    prefix_hex = profile.parameters["machine_move_prefix"]
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).machines
+    arm9 = platform.read_decompressed_code_binary(result.image)
+    prefix = bytes.fromhex(prefix_hex)
+    offset = _find_unique(arm9, prefix) + len(prefix)
+    size = engine.MACHINE_COUNT * 2
+    if offset + size > len(arm9):
+        raise InvalidRomError("Gen V machine move table is outside the decompressed ARM9")
+    data = arm9[offset : offset + size]
+    records = [
+        machine.to_dict() for machine in engine.parse_machine_move_table(data)
+    ]
+    return {
+        "schema_version": MACHINES_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "dataset": "machines",
+        "record_count": len(records),
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "arm9_prefix": prefix_hex,
+            "arm9_offset": offset,
+            "size": size,
+        },
+        "records": records,
+    }
+
+
+def _find_unique(data: bytes, pattern: bytes) -> int:
+    first = data.find(pattern)
+    if first == -1:
+        raise InvalidRomError("Could not locate the machine move table in ARM9")
+    if data.find(pattern, first + 1) != -1:
+        raise InvalidRomError("Machine move table byte pattern is not unique in ARM9")
+    return first
 
 
 def write_machine_dataset(dataset: dict[str, Any], output_path: Path) -> None:

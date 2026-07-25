@@ -50,6 +50,26 @@ at index 7 -- shifting every later method up by one; confirmed against Tyrogue
 (attack/defense-comparison evolutions), Eevee (its three Stones plus
 Moss Rock/Icy Rock evolutions), and Snorunt's Dawn Stone evolution.
 
+Egg moves are decoded from the `a/1/2/3` archive: one member per species (a
+dense table, unlike Generation IV's flat ARM9-overlay list), each holding a
+move count followed by that many move IDs, with no terminator or padding.
+Confirmed against Bulbasaur's real 14 egg moves. A few species' own records
+contain a literal duplicate move ID (Swinub's lists Mud Shot twice) -- decoded
+faithfully in the raw dataset since it's genuine ROM data, and deduplicated
+only where it's displayed so pages don't show the same move twice.
+
+The TM/HM move-assignment table (which move each TM/HM number teaches) lives
+in the ARM9 executable, which -- unlike Generation IV's uncompressed ARM9 --
+is BLZ-compressed; this project decompresses it before locating the table via
+the same byte-pattern search technique the ROM-hacking community uses
+(`87038803`, found once, uniquely). The table itself isn't TM01-95 followed
+by HM01-06 as its move/HM counts alone might suggest -- it's TM01-92, then
+HM01-06, then TM93-95, confirmed against 6 real Black ROM values (TM01=Hone
+Claws, TM92=Trick Room, HM01=Cut, HM06=Dive, TM93=Wild Charge, TM95=Snarl) and
+each machine's real TM/HM item ID from the ROM's own item-name table. Move
+tutors, meanwhile, aren't a gap: Generation V's original Black/White never
+had them at all -- they were introduced in the Black 2/White 2 sequels.
+
 ## Items
 
 Item records are decoded from the `a/0/2/4` archive, a fixed-layout 36-byte
@@ -100,14 +120,3 @@ each needs its own Generation V record-layout research, and for
 Trainers/Wild Encounters/Locations, this release's own script-engine opcode table,
 none of which carry over from the Generation IV engine this project already
 supports.
-
-Each Pokémon's raw TM/HM compatibility bits are already decoded as part of its
-personal-data record, but the separate table mapping each TM/HM number to the
-move it teaches is not published yet: unlike Generation IV, Generation V's
-ARM9 executable is compressed, and that table (along with move tutors' move
-assignments) is located within it via a byte-pattern search rather than a
-fixed offset -- this project doesn't decompress ARM9 binaries yet. Egg moves
-(decoded from the separate, straightforward `a/1/2/3` archive) aren't
-published yet either, for an unrelated reason: this generation's egg-move
-records don't fit the shape this project's shared enrichment/rendering code
-currently assumes for that section.

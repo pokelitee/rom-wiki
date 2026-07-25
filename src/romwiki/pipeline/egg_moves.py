@@ -15,6 +15,13 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for egg move extraction")
     profile = result.match.profile
+    if "egg_moves" in profile.layout:
+        return _extract_from_archive(result)
+    return _extract_from_overlay_table(result)
+
+
+def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
+    profile = result.match.profile
     try:
         overlay_id = profile.parameters["egg_move_overlay_id"]
         table_offset = profile.parameters["egg_move_offset"]
@@ -40,6 +47,35 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
             "table_offset": table_offset,
         },
         "records": [record.to_dict() for record in records],
+    }
+
+
+def _extract_from_archive(result: InspectionResult) -> dict[str, Any]:
+    profile = result.match.profile
+    archive_path = profile.layout["egg_moves"]
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).egg_moves
+    filesystem = platform.filesystem_from_image(result.image)
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    records = [
+        engine.parse_egg_move_set(
+            archive.read(member.index),
+            species_id=member.index,
+            archive_path=archive_path,
+        ).to_dict()
+        for member in archive.members
+    ]
+    return {
+        "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "dataset": "egg_moves",
+        "record_count": len(records),
+        "move_reference_count": sum(len(record["move_ids"]) for record in records),
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "archive": archive_path,
+        },
+        "records": records,
     }
 
 

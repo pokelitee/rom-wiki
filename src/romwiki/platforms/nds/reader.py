@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, BinaryIO
 
+from romwiki.platforms.nds.blz import decompress_arm9
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.util.errors import InvalidRomError
 
@@ -58,6 +59,17 @@ def read_arm9_binary(image: NintendoDSImage) -> bytes:
     with image.path.open("rb") as stream:
         stream.seek(image.header.arm9_offset)
         return stream.read(image.header.arm9_size)
+
+
+def read_arm9_binary_decompressed(image: NintendoDSImage) -> bytes:
+    """Read the ARM9 binary, BLZ-decompressing it if it's compressed.
+
+    Generation IV's ARM9 is stored raw, so this is a no-op for it; Generation
+    V's is BLZ-compressed, so callers that need to byte-pattern-search the
+    ARM9 (e.g. the TM/HM move table) should use this instead of
+    `read_arm9_binary`.
+    """
+    return decompress_arm9(read_arm9_binary(image))
 
 
 def arm9_load_address(image: NintendoDSImage) -> int:

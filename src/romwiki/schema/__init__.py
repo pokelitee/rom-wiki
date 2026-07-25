@@ -1,4 +1,4 @@
-from romwiki.schema.egg_moves import Gen4EggMoveSet
+from romwiki.schema.egg_moves import Gen4EggMoveSet, Gen5EggMoveSet
 from romwiki.schema.encounters import (
     EncounterLocation,
     EncounterMethod,
@@ -82,6 +82,7 @@ __all__ = [
     "Gen4LevelUpLearnset",
     "LevelUpMove",
     "Gen4EggMoveSet",
+    "Gen5EggMoveSet",
     "Gen4Item",
     "Gen5Item",
     "ItemPartyEffects",

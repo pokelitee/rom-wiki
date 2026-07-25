@@ -11,6 +11,7 @@ from romwiki.platforms.nds import (
     NintendoDSImage,
     arm9_load_address,
     read_arm9_binary,
+    read_arm9_binary_decompressed,
     read_arm9_overlay,
 )
 from romwiki.util.errors import DataSourceError
@@ -34,6 +35,7 @@ class PlatformAdapter:
     archive_cls: type
     read_overlay: Callable[..., tuple[int, bytes]] | None = None
     read_code_binary: Callable[[RomImage], bytes] | None = None
+    read_decompressed_code_binary: Callable[[RomImage], bytes] | None = None
     code_load_address: Callable[[RomImage], int] | None = None
 
 
@@ -54,6 +56,7 @@ _PLATFORMS: dict[str, PlatformAdapter] = {
         archive_cls=NarcArchive,
         read_overlay=read_arm9_overlay,
         read_code_binary=read_arm9_binary,
+        read_decompressed_code_binary=read_arm9_binary_decompressed,
         code_load_address=arm9_load_address,
     ),
 }

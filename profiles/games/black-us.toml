@@ -19,12 +19,14 @@ item_data = "a/0/2/4"
 moves = "a/0/2/1"
 learnsets = "a/0/1/8"
 evolutions = "a/0/1/9"
+egg_moves = "a/1/2/3"
 
 [parameters]
 pokemon_names_member = 70
 ability_names_member = 182
 move_names_member = 203
 item_names_member = 54
+machine_move_prefix = "87038803"
 
 [[hashes]]
 algorithm = "sha256"

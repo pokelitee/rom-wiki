@@ -300,16 +300,7 @@ def _render_record(
                     if type_name_source is not None
                     else []
                 ),
-                *(
-                    [
-                        (
-                            "Egg move source: exact ROM table entry at overlay offset "
-                            f"`0x{record['egg_move_provenance']['overlay_offset']:X}`."
-                        )
-                    ]
-                    if record.get("egg_move_provenance") is not None
-                    else []
-                ),
+                *_egg_move_source(record),
                 *(
                     [
                         rom_record_source(
@@ -776,6 +767,22 @@ def _append_tutor_moves(
             "",
         ]
     )
+
+
+def _egg_move_source(record: dict[str, Any]) -> list[str]:
+    provenance = record.get("egg_move_provenance")
+    if provenance is None:
+        return []
+    if "archive" in provenance:
+        return [
+            rom_record_source(
+                provenance["archive"], provenance["member"], label="Egg move source"
+            )
+        ]
+    return [
+        "Egg move source: exact ROM table entry at overlay offset "
+        f"`0x{provenance['overlay_offset']:X}`."
+    ]
 
 
 def _append_egg_moves(

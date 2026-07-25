@@ -73,6 +73,27 @@ GEN5_TM_COUNT = 95
 GEN5_HM_COUNT = 6
 GEN5_MACHINE_COUNT = GEN5_TM_COUNT + GEN5_HM_COUNT
 
+# The real ARM9 table (found via GEN5_MACHINE_TABLE_PREFIX below) isn't TM1-95
+# followed by HM1-6 -- it's TM01-92, then HM01-06, then TM93-95, confirmed
+# against real Black ROM data: TM01=Hone Claws, TM92=Trick Room, HM01=Cut,
+# HM06=Dive, TM93=Wild Charge, TM95=Snarl (Gen5RomHandler.java's
+# `getTMMoves`/`getHMMoves` read the same three blocks in this order).
+GEN5_TM_BLOCK_ONE_COUNT = 92
+# Item IDs for the TM/HM item that teaches each machine -- confirmed against
+# the real ROM's own item-name table (`a/0/0/2` member 54): TM01=item 328,
+# TM92=419, HM01=420, HM06=425, TM93=618, TM95=620. TM01-92 and HM01-06 share
+# Generation IV's exact item ID scheme; TM93-95 are new Generation V items
+# with their own separate block.
+GEN5_TM_BLOCK_ONE_ITEM_ID_OFFSET = 327
+GEN5_HM_ITEM_ID_OFFSET = 419
+GEN5_TM_BLOCK_TWO_ITEM_ID_BASE = 618
+
+# Byte-pattern prefix immediately preceding the TM/HM move-ID table in the
+# decompressed ARM9 binary (Gen5Constants.tmDataPrefix,
+# Ajarmar/universal-pokemon-randomizer-zx); confirmed unique in a real
+# Black ROM's decompressed ARM9.
+GEN5_MACHINE_TABLE_PREFIX = "87038803"
+
 # Byte-order type table (Gen5Constants.constructTypeTable(), Ajarmar/universal-
 # pokemon-randomizer-zx); confirmed against a real Black ROM record (Bulbasaur
 # decodes to grass=11/poison=3 at this table's indices). No Fairy type yet and,
