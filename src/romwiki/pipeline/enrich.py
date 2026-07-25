@@ -903,6 +903,11 @@ def _enrich_record(
             for rarity, value in (
                 ("common", source["wild_held_items"]["common"]),
                 ("rare", source["wild_held_items"]["rare"]),
+                *(
+                    [("dark_grass", source["wild_held_items"]["dark_grass"])]
+                    if source["wild_held_items"].get("dark_grass") is not None
+                    else []
+                ),
             )
         ],
         "gender_ratio": source["gender_ratio"],

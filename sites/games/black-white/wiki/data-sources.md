@@ -39,8 +39,10 @@ existence -- they're decoded and shown on their base species' page under a
 "Battle-only forms" section rather than given their own page.
 
 The wild held item's third slot (Dark Grass encounters, present in this release but
-absent from Generation IV) is decoded internally but not yet surfaced in the
-published dataset.
+absent from Generation IV) is decoded from a word at offset 0x10 and shown as a
+third "Dark Grass" row alongside the common/rare held items. Confirmed against a
+specific, well-documented real fact: Sawk holds Black Belt normally but a
+distinct Expert Belt in Dark Grass.
 
 Level-up learnsets are decoded from the `a/0/1/8` archive (one member per
 personal-data member, a simple list of move ID/level word pairs terminated by

@@ -247,7 +247,7 @@ def _render_record(
                 "| ------ | ---- | ------: |",
                 *[
                     (
-                        f"| {item['rarity'].title()} | "
+                        f"| {item['rarity'].replace('_', ' ').title()} | "
                         f"{sprite_with_link(_item_sprite_cell(item, references), _item_link(item, source_file))} "
                         f"| {item['id']} |"
                     )

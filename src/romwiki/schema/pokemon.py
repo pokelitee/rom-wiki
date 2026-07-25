@@ -18,6 +18,10 @@ class StatBlock:
 class WildHeldItems:
     common: int
     rare: int
+    # Generation V adds a third wild-held-item slot for Dark Grass encounters
+    # (absent from Generation IV, which has no third slot at all -- kept
+    # optional here rather than modeled as a separate schema for one field).
+    dark_grass: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

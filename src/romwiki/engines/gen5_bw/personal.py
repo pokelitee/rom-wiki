@@ -23,10 +23,10 @@ from romwiki.util.errors import InvalidRomError
 # friendship, growth rate, egg groups, base experience (64), and the TM/HM
 # bitmap's Grass Pledge bit all decode to Bulbasaur's known real values.
 #
-# Gen5 adds a third wild-held-item slot (Dark Grass, at 0x10) that this parser
-# deliberately does not read -- the shared `WildHeldItems` schema only models
-# common/rare, and surfacing a third slot is deferred to a later slice (see
-# sites/games/black-us/wiki/data-sources.md).
+# Gen5 adds a third wild-held-item slot (Dark Grass, at 0x10). Verified
+# against real Black ROM records: Sawk holds Black Belt normally but a
+# distinct Expert Belt in Dark Grass (a well-documented, memorable Gen5
+# fact), confirming this offset rather than some unrelated field.
 
 
 def parse_personal_record(
@@ -71,6 +71,7 @@ def parse_personal_record(
         wild_held_items=WildHeldItems(
             common=struct.unpack_from("<H", data, 0x0C)[0],
             rare=struct.unpack_from("<H", data, 0x0E)[0],
+            dark_grass=struct.unpack_from("<H", data, 0x10)[0],
         ),
         gender_ratio=data[0x12],
         hatch_cycles=data[0x13],
