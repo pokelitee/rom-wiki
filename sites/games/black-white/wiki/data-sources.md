@@ -12,9 +12,9 @@ data, trainer data, location data, and the ROM text archive -- is confirmed
 byte-for-byte identical between the two games. Each page notes
 which version(s) a record is available in; today that is always "Black &
 White" for shared content, with a handful of exclusives (e.g. Zekrom in Black,
-Reshiram in White) marked accordingly. If a future section (gifts, static
-encounters) introduces real per-version differences, the affected pages will
-show both variants instead of one shared entry.
+Reshiram in White) marked accordingly. If a future section (gifts,
+roaming Pokémon) introduces real per-version differences, the affected pages
+will show both variants instead of one shared entry.
 
 ## Pokémon species data
 
@@ -73,6 +73,30 @@ Claws, TM92=Trick Room, HM01=Cut, HM06=Dive, TM93=Wild Charge, TM95=Snarl) and
 each machine's real TM/HM item ID from the ROM's own item-name table. Move
 tutors, meanwhile, aren't a gap: Generation V's original Black/White never
 had them at all -- they were introduced in the Black 2/White 2 sequels.
+
+Static (gift/single-Pokémon) encounters -- starter-choice monkeys, event
+legendaries, fossil revivals, and similar -- are decoded from 31 literal
+`[script-file, byte-offset]` facts published by
+Ajarmar/universal-pokemon-randomizer-zx's own tooling, read directly out of
+the `Scripts` archive (`a/0/5/7`). Unlike Trainers' and Locations' remaining
+gaps below, this needed no script-engine research at all -- each fact is a
+plain species ID (and, unless it's a gift egg, a level byte) patched into one
+specific script file, the same "adopt-and-verify a literal fact" pattern as
+NPC trades and specialty shops. Verified against 12 real Black ROM facts:
+starter-choice monkeys (level 10), the free tutorial Magikarp (level 5), the
+Dreamyard Munna/Zorua events, the Larvesta gift egg, the post-game legendary
+trio and Landorus/Kyurem, Reshiram/Zekrom, and two fossil revivals -- all
+real, correct, level-appropriate facts. Each affected Pokémon's page shows a
+"Static encounters" section listing its level (or "Egg"); there's no map
+location to link these to yet (see Locations below), so unlike Generation
+IV's static encounters they aren't shown from a location's own page.
+Roaming Pokémon (Thundurus/Tornadus) were investigated the same way and found
+to be a genuine exception: the *unmodified* retail ROM stores an ARM
+instruction, not a data word, at the species offset the same tooling
+publishes for at least one of the two (confirmed against the real Black
+ROM) -- the real species is only a literal fact once a randomizer's own code
+patch has been applied to the ROM, so this one case is left undecoded rather
+than guessed at.
 
 ## Items
 
@@ -218,8 +242,9 @@ reproducible derivation for one, so both stay unavailable.
 Real map locations and script references aren't attached to trainers yet:
 that needs this generation's own script-engine opcode table (to find each
 trainer's field battle trigger), which hasn't been researched. This is the
-same underlying gap that blocks Locations' fuller feature set and static
-(gift/single) Pokémon encounters below.
+same underlying gap that blocks Locations' fuller feature set below; static
+(gift/single) Pokémon encounters, investigated the same way, turned out
+*not* to share this blocker (see Pokémon species data above).
 
 ## Locations
 
@@ -244,14 +269,16 @@ single table index can expand into up to 4 seasonal encounter areas (see
 Wild Encounters above), and resolving that mapping precisely is left to a
 future pass rather than guessed at here.
 
-Warps, outdoor connections, gift Pokémon, static encounters, roaming
-activations, and trainer cross-references -- most of what Platinum's own
-Locations section has -- all depend on this generation's script-engine
-opcode table, which is real, substantial, unresearched work (see Trainers
-above for the same underlying gap). Shop *contents* are decoded (see Items
-above) since that's plain ARM9 overlay data with no script-engine
-dependency at all -- only *which map each shop is physically in* remains
-blocked on the same script-engine gap as everything else in this list.
+Warps, outdoor connections, gift Pokémon, roaming activations, and trainer
+cross-references -- most of what Platinum's own Locations section has -- all
+depend on this generation's script-engine opcode table, which is real,
+substantial, unresearched work (see Trainers above for the same underlying
+gap). Shop *contents* (see Items above) and static (gift/single) Pokémon
+encounters (see Pokémon species data above) are both decoded despite being in
+this general area, since both turned out to be plain literal ROM facts with
+no script-engine dependency at all -- only *which map* each shop or static
+encounter is physically in remains blocked on the same script-engine gap as
+everything else in this list.
 
 ## Text and names
 
@@ -273,8 +300,13 @@ ever hit this in one *unused* map-name table entry, not a real page name).
 
 ## Not yet available
 
-Static (gift/single) Pokémon encounters aren't built for this release yet:
-they're script-driven rather than part of the wild encounter table already
-decoded, and depend on the same unresearched script-engine opcode table as
-Locations' fuller feature set and Trainers' location/script cross-references
-above.
+Roaming Pokémon (Thundurus/Tornadus) aren't built for this release: see
+Pokémon species data above for why -- the unmodified retail ROM stores
+executable code, not a data word, at the species offset for at least one of
+the two, so the real species isn't a literal fact without a randomizer-style
+ASM patch applied first, unlike every other static encounter.
+
+Trainers' and Locations' remaining gaps (field map locations/script
+triggers, warps, outdoor connections, gift Pokémon, roaming activations)
+depend on this generation's own script-engine opcode table, which hasn't
+been researched.

@@ -43,6 +43,7 @@ from romwiki.engines.gen5_bw.marts import parse_shop_catalog
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
 from romwiki.engines.gen5_bw.personal import parse_personal_record
+from romwiki.engines.gen5_bw.static_encounters import parse_static_encounters
 from romwiki.engines.gen5_bw.trades import parse_npc_trade_record
 from romwiki.engines.gen5_bw.trainer_party import (
     derive_trainer_party_attributes,
@@ -53,9 +54,11 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
 # This engine currently implements the Pokémon personal-data, Items, Moves,
 # Learnsets, Evolutions, Egg moves, TM/HM machines, Wild encounters, Trainers,
-# and (a bare-minimum) Locations slices. Adding a later slice should add the
-# corresponding module and re-export here, the same way these slices added
-# personal.py/machines.py/items.py/moves.py/learnsets.py/evolutions.py/egg_moves.py/encounters.py/trainers.py/locations.py/constants.py.
+# Static encounters, and (a bare-minimum) Locations slices. Adding a later
+# slice should add the corresponding module and re-export here, the same way
+# these slices added personal.py/machines.py/items.py/moves.py/learnsets.py/
+# evolutions.py/egg_moves.py/encounters.py/trainers.py/locations.py/
+# static_encounters.py/constants.py.
 # Move tutors are not a gap to fill in: Ajarmar/universal-pokemon-randomizer-zx's
 # Gen5RomHandler.hasMoveTutors() returns true only for Black 2/White 2 --
 # tutors were introduced in the sequels and don't exist in this release at all.
@@ -72,6 +75,17 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # and this generation's own script-engine opcode table -- which Trainers'
 # location/script-reference linking also needs -- hasn't been researched;
 # guessing at either isn't done here.
+# Static (gift/single-Pokémon) encounters, unlike the above, don't need that
+# opcode research at all: static_encounters.py reads literal species/level
+# byte offsets straight out of `Scripts` (`a/0/5/7`) script files, the same
+# "adopt-and-verify a literal per-ROM fact" pattern as Marts/NPC trades
+# (facts from Ajarmar/universal-pokemon-randomizer-zx's `gen5_offsets.ini`).
+# Roaming Pokémon (Thundurus/Tornadus) were investigated the same way and
+# found to be a genuine exception: the unmodified retail ROM stores an ARM
+# instruction, not a data word, at the "species" offset the randomizer's own
+# ini lists for at least one of the two (verified against the real Black
+# ROM) -- the real species is only a literal fact after the randomizer's own
+# ASM patch is applied, so it's left undecoded here rather than guessed at.
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
@@ -123,6 +137,7 @@ __all__ = [
     "parse_personal_record",
     "parse_npc_trade_record",
     "parse_shop_catalog",
+    "parse_static_encounters",
     "parse_trainer_record",
     "parse_wild_map_names",
 ]

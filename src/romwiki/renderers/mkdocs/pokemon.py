@@ -258,6 +258,8 @@ def _render_record(
         )
     else:
         lines.extend(empty_state("No wild held items."))
+    lines.extend(["", "## Static encounters", ""])
+    _append_static_encounters(lines, record.get("static_encounters", []))
     lines.extend(_other_forms_section(record, all_records or [record], source_file))
     preevolutions = preevolutions or []
     lines.extend(["## Evolutions", ""])
@@ -802,6 +804,25 @@ def _append_egg_moves(
                 f"| {_record_link('move', move, source_file)} | "
                 f"{_move_cells(move, move_lookup)} |"
                 for move in moves
+            ],
+            "",
+        ]
+    )
+
+
+def _append_static_encounters(
+    lines: list[str], encounters: list[dict[str, Any]]
+) -> None:
+    if not encounters:
+        lines.extend(empty_state("No static (gift/single) encounters."))
+        return
+    lines.extend(
+        [
+            "| Level |",
+            "| ----: |",
+            *[
+                f"| {'Egg' if entry['is_egg'] else entry['level']} |"
+                for entry in encounters
             ],
             "",
         ]

@@ -30,6 +30,7 @@ def enrich_personal_dataset(
     machine_dataset: dict[str, Any] | None = None,
     tutor_dataset: dict[str, Any] | None = None,
     egg_move_dataset: dict[str, Any] | None = None,
+    static_encounter_dataset: dict[str, Any] | None = None,
     *,
     type_names: Mapping[int, str] | None = None,
     move_names: Mapping[int, str] | None = None,
@@ -57,6 +58,9 @@ def enrich_personal_dataset(
         tutor_dataset, dataset["game"]
     )
     egg_moves = _validate_egg_moves(engine, egg_move_dataset, dataset["game"])
+    static_encounters_by_species = _validate_static_encounters(
+        static_encounter_dataset, dataset["game"]
+    )
     records = []
     for expected_member, source in enumerate(source_records):
         if source.get("species_id") != expected_member:
@@ -74,6 +78,7 @@ def enrich_personal_dataset(
                 tutor_ids_by_member.get(expected_member, []),
                 tutor_locations,
                 egg_moves.get(expected_member),
+                static_encounters_by_species.get(expected_member, []),
                 type_names,
                 move_names,
                 ability_names,
@@ -113,6 +118,10 @@ def enrich_personal_dataset(
     if egg_move_dataset is not None:
         enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
             egg_move_dataset["source"]
+        )
+    if static_encounter_dataset is not None:
+        enriched.setdefault("supplemental_sources", {})["static_encounters"] = (
+            static_encounter_dataset["source"]
         )
     if dataset.get("name_sources"):
         enriched["name_sources"] = dataset["name_sources"]
@@ -805,6 +814,7 @@ def _enrich_record(
     tutor_ids: list[int],
     tutor_locations: list[str],
     egg_move_set: dict[str, Any] | None,
+    static_encounters: list[dict[str, Any]],
     type_names: Mapping[int, str] | None,
     move_names: Mapping[int, str] | None,
     ability_names: list[str] | None,
@@ -939,6 +949,10 @@ def _enrich_record(
         "learnset_provenance": learnset["provenance"] if learnset is not None else None,
         "egg_moves": _enrich_egg_moves(egg_move_set, pokedb, move_names),
         "egg_move_provenance": _egg_move_provenance(egg_move_set),
+        "static_encounters": [
+            {"level": entry["level"], "is_egg": entry["is_egg"]}
+            for entry in static_encounters
+        ],
         "evolutions": _enrich_evolutions(
             engine,
             evolution_set,
@@ -1060,6 +1074,25 @@ def _validate_sparse_egg_moves(
         result[species_id] = record
         previous_species = species_id
     return result
+
+
+def _validate_static_encounters(
+    dataset: dict[str, Any] | None, game: str
+) -> dict[int, list[dict[str, Any]]]:
+    if dataset is None:
+        return {}
+    if dataset.get("game") != game:
+        raise DataSourceError("Static encounter dataset must be for the same game")
+    records = dataset.get("records")
+    if not isinstance(records, list):
+        raise DataSourceError("Static encounter records must be a list")
+    by_species: dict[int, list[dict[str, Any]]] = {}
+    for record in records:
+        species_id = record.get("species_id")
+        if not isinstance(species_id, int):
+            raise DataSourceError("Static encounter record is missing a species ID")
+        by_species.setdefault(species_id, []).append(record)
+    return by_species
 
 
 def _validate_evolution_item_names(dataset: dict[str, Any] | None) -> list[str]:

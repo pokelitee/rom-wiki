@@ -49,6 +49,7 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.layout["trainer_parties"], "a/0/9/3")
         self.assertEqual(black.layout["map_headers"], "a/0/1/2")
         self.assertEqual(black.layout["npc_trades"], "a/1/6/5")
+        self.assertEqual(black.layout["scripts"], "a/0/5/7")
         self.assertEqual(black.parameters["pokemon_names_member"], 70)
         self.assertEqual(black.parameters["ability_names_member"], 182)
         self.assertEqual(black.parameters["move_names_member"], 203)
@@ -60,6 +61,11 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.parameters["npc_trade_names_member"], 35)
         self.assertEqual(
             black.parameters["npc_trades_unused"], [1, 3, 7, 8, 9, 10, 11, 12]
+        )
+        self.assertEqual(black.parameters["static_pokemon_egg_indices"], [5])
+        self.assertEqual(len(black.parameters["static_pokemon"]), 31)
+        self.assertEqual(
+            black.parameters["static_pokemon"][0], {"species": [304, 0x121], "level": [304, 0x29D]}
         )
         self.assertEqual(black.sprite_version, "black-white")
 
@@ -73,9 +79,11 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(white.layout["trainer_data"], "a/0/9/2")
         self.assertEqual(white.layout["map_headers"], "a/0/1/2")
         self.assertEqual(white.layout["npc_trades"], "a/1/6/5")
+        self.assertEqual(white.layout["scripts"], "a/0/5/7")
         self.assertEqual(
             white.parameters["npc_trades_unused"], [0, 2, 7, 8, 9, 10, 11, 12]
         )
+        self.assertEqual(white.parameters["static_pokemon"], black.parameters["static_pokemon"])
 
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

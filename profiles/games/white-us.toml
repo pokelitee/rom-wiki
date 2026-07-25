@@ -25,6 +25,7 @@ trainer_data = "a/0/9/2"
 trainer_parties = "a/0/9/3"
 map_headers = "a/0/1/2"
 npc_trades = "a/1/6/5"
+scripts = "a/0/5/7"
 
 [parameters]
 pokemon_names_member = 70
@@ -50,6 +51,45 @@ shop_item_sizes = [
 ]
 tm_shop_ids = [1, 2, 4, 7]
 regular_shop_ids = [0, 16, 20, 23, 24, 25]
+# `StaticPokemon{}` facts (Ajarmar/universal-pokemon-randomizer-zx's
+# gen5_offsets.ini): White's own `[White (U)]` section sets
+# `CopyStaticPokemon=1` rather than redefining these, i.e. these are
+# byte-for-byte identical to Black's own list (verified against the real
+# White ROM for a spot-check: Pansage/Magikarp match exactly).
+static_pokemon_egg_indices = [5]
+static_pokemon = [
+    { species = [304, 0x121], level = [304, 0x29D] }, # Pansage
+    { species = [304, 0x131], level = [304, 0x2BB] }, # Pansear
+    { species = [304, 0xFE], level = [304, 0x26C] }, # Panpour
+    { species = [526, 0x758], level = [526, 0x75C] }, # Magikarp
+    { species = [94, 0x810], level = [94, 0x44F] }, # Zorua
+    { species = [776, 0x85] }, # Larvesta (egg)
+    { species = [316, 0x369], level = [316, 0x36B] }, # Darmanitan (1)
+    { species = [316, 0x437], level = [316, 0x439] }, # Darmanitan (2)
+    { species = [316, 0x505], level = [316, 0x507] }, # Darmanitan (3)
+    { species = [316, 0x5D3], level = [316, 0x5D5] }, # Darmanitan (4)
+    { species = [316, 0x6A1], level = [316, 0x6A3] }, # Darmanitan (5)
+    { species = [306, 0x65], level = [306, 0x91] }, # Musharna
+    { species = [770, 0x2F8], level = [770, 0x355] }, # Zoroark
+    { species = [364, 0xE], level = [364, 0x21] }, # Volcarona
+    { species = [474, 0x1CE], level = [474, 0x20C] }, # Victini
+    { species = [426, 0x133], level = [426, 0x15D] }, # Reshiram
+    { species = [426, 0x127], level = [426, 0x176] }, # Zekrom
+    { species = [670, 0x415], level = [670, 0x428] }, # Cobalion
+    { species = [458, 0x10], level = [458, 0x23] }, # Terrakion
+    { species = [312, 0x10], level = [312, 0x23] }, # Virizion
+    { species = [752, 0x66D], level = [752, 0x6DF] }, # Landorus
+    { species = [464, 0x10], level = [468, 0x62] }, # Kyurem
+    { species = [877, 0x601], level = [877, 0x3F7] }, # Cranidos
+    { species = [877, 0x620], level = [877, 0x3F7] }, # Shieldon
+    { species = [877, 0x63F], level = [877, 0x3F7] }, # Omanyte
+    { species = [877, 0x65E], level = [877, 0x3F7] }, # Kabuto
+    { species = [877, 0x67D], level = [877, 0x3F7] }, # Aerodactyl
+    { species = [877, 0x69C], level = [877, 0x3F7] }, # Anorith
+    { species = [877, 0x6BB], level = [877, 0x3F7] }, # Lileep
+    { species = [877, 0x6DA], level = [877, 0x3F7] }, # Tirtouga
+    { species = [877, 0x6F9], level = [877, 0x3F7] }, # Archen
+]
 
 [[hashes]]
 algorithm = "sha256"

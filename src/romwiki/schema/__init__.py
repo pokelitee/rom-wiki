@@ -40,6 +40,7 @@ from romwiki.schema.pokemon import (
     StatBlock,
     WildHeldItems,
 )
+from romwiki.schema.static_encounters import Gen5StaticEncounter
 from romwiki.schema.trades import Gen5NpcTrade
 from romwiki.schema.trainers import (
     Gen4Trainer,
@@ -104,6 +105,7 @@ __all__ = [
     "Gen4EvolutionSet",
     "Gen4Machine",
     "Gen4PickupTables",
+    "Gen5StaticEncounter",
     "Gen5Shop",
     "Gen5NpcTrade",
     "Gen4TutorCompatibility",
