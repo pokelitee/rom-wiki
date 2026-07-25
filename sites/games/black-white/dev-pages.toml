@@ -3,7 +3,7 @@ pokemon = [
     "bulbasaur",
     "eevee",
     "snorlax",
-    "deoxys",
+    "deoxys-normal",
     "victini",
     "zekrom",
     "reshiram",
@@ -15,6 +15,9 @@ abilities = [
     "klutz",
     "pickup",
     "teravolt",
+]
+moves = [
+    "tackle",
 ]
 items = [
     "master-ball",
