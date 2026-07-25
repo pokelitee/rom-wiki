@@ -27,7 +27,7 @@ from romwiki.schema.locations import (
     LocationWarp,
 )
 from romwiki.schema.machines import Gen4Machine
-from romwiki.schema.moves import Gen4Move
+from romwiki.schema.moves import Gen4Move, Gen5Move
 from romwiki.schema.pickup import Gen4PickupTables
 from romwiki.schema.pokemon import (
     PokemonPersonalData,
@@ -78,6 +78,7 @@ __all__ = [
     "BonusEncounterSpecies",
     "LocationGameCornerPrize",
     "Gen4Move",
+    "Gen5Move",
     "Gen4LevelUpLearnset",
     "LevelUpMove",
     "Gen4EggMoveSet",

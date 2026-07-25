@@ -3,11 +3,11 @@
 The primary sources are the exact USA/Europe NDSi-Enhanced releases of Pokémon
 Black (header code IRBO, ROM version 0) and Pokémon White (header code IRAO,
 ROM version 0). This is this project's first Generation V release, and
-currently covers Pokémon species (personal) data, Abilities, and Items.
+currently covers Pokémon species (personal) data, Abilities, Items, and Moves.
 
 Black and White are published as one wiki rather than two: every section this
-wiki currently covers -- personal data, item data, and the ROM text archive --
-is confirmed byte-for-byte identical between the two games. Each page notes
+wiki currently covers -- personal data, item data, move data, and the ROM text
+archive -- is confirmed byte-for-byte identical between the two games. Each page notes
 which version(s) a record is available in; today that is always "Black &
 White" for shared content, with a handful of exclusives (e.g. Zekrom in Black,
 Reshiram in White) marked accordingly. If a future section (encounters,
@@ -40,6 +40,16 @@ The wild held item's third slot (Dark Grass encounters, present in this release 
 absent from Generation IV) is decoded internally but not yet surfaced in the
 published dataset.
 
+Level-up learnsets are decoded from the `a/0/1/8` archive (one member per
+personal-data member, a simple list of move ID/level word pairs terminated by
+`0xFFFF 0xFFFF`) and evolutions from the `a/0/1/9` archive (a fixed 42-byte,
+7-slot record per member, unpadded -- unlike Generation IV's equivalent, which
+carries two trailing padding bytes). Generation V's evolution-method IDs match
+Generation IV's own scheme with one insertion -- a new "trade-special" method
+at index 7 -- shifting every later method up by one; confirmed against Tyrogue
+(attack/defense-comparison evolutions), Eevee (its three Stones plus
+Moss Rock/Icy Rock evolutions), and Snorunt's Dawn Stone evolution.
+
 ## Items
 
 Item records are decoded from the `a/0/2/4` archive, a fixed-layout 36-byte
@@ -60,6 +70,20 @@ unused slots; the rare case of two distinct real items sharing a display name
 (the male- and female-color Xtransceiver) is disambiguated with the item ID in
 the page URL.
 
+## Moves
+
+Move records are decoded from the `a/0/2/1` archive, a fixed-layout 36-byte
+record per member: move ID maps directly to archive member index. The archive
+holds 560 total members: member 0 is an unused placeholder record, and members
+1-559 are the real moves (`moveCount = 559`,
+Ajarmar/universal-pokemon-randomizer-zx). As with Items, there is no public
+disassembly of this record format to check every field against, so only
+fields cross-referenced against known real move data are decoded: type,
+damage class (status/physical/special), power, accuracy, PP, priority,
+secondary-effect chance, target, an opaque effect ID, and a battle-flags
+bitmask. Generation V removed Contests entirely, so (unlike Generation IV)
+there are no contest-effect or contest-type fields to decode.
+
 ## Text and names
 
 Pokémon, ability, move, and item display names are decoded directly from each
@@ -71,8 +95,19 @@ built-in engine constant instead.
 
 ## Not yet available
 
-Moves, Wild Encounters, Trainers, and Locations are not built for this release
-yet -- each needs its own Generation V record-layout research, and for
+Wild Encounters, Trainers, and Locations are not built for this release yet --
+each needs its own Generation V record-layout research, and for
 Trainers/Wild Encounters/Locations, this release's own script-engine opcode table,
 none of which carry over from the Generation IV engine this project already
 supports.
+
+Each Pokémon's raw TM/HM compatibility bits are already decoded as part of its
+personal-data record, but the separate table mapping each TM/HM number to the
+move it teaches is not published yet: unlike Generation IV, Generation V's
+ARM9 executable is compressed, and that table (along with move tutors' move
+assignments) is located within it via a byte-pattern search rather than a
+fixed offset -- this project doesn't decompress ARM9 binaries yet. Egg moves
+(decoded from the separate, straightforward `a/1/2/3` archive) aren't
+published yet either, for an unrelated reason: this generation's egg-move
+records don't fit the shape this project's shared enrichment/rendering code
+currently assumes for that section.

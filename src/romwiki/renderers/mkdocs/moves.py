@@ -35,6 +35,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section,
     tutor_requirement,
     type_badges,
+    version_availability_note,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -191,6 +192,7 @@ def _render_record(
     lines = [
         f"# {record['name']}",
         "",
+        *version_availability_note(record),
         *_move_summary(record),
         *reference_description(
             record, "No PokéDB reference data is available for this move."
@@ -244,8 +246,18 @@ def _render_record(
                         ("Effect ID", f"`{record['effect_id']}`"),
                         ("Target ID", f"`0x{record['target_id']:04X}`"),
                         ("Flags", f"`0x{record['flags']:02X}`"),
-                        ("Contest effect ID", f"`{record['contest_effect_id']}`"),
-                        ("Contest type ID", f"`{record['contest_type_id']}`"),
+                        # Absent for engines with no Contests (e.g. Gen V removed
+                        # them), rather than merely unresolved.
+                        *(
+                            (("Contest effect ID", f"`{record['contest_effect_id']}`"),)
+                            if "contest_effect_id" in record
+                            else ()
+                        ),
+                        *(
+                            (("Contest type ID", f"`{record['contest_type_id']}`"),)
+                            if "contest_type_id" in record
+                            else ()
+                        ),
                     )
                 ),
                 rom_record_source(

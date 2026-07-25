@@ -25,3 +25,22 @@ class Gen4Move:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5Move:
+    move_id: int
+    effect_id: int
+    damage_class_id: int
+    power: int
+    type_id: int
+    accuracy: int
+    pp: int
+    effect_chance: int
+    target_id: int
+    priority: int
+    flags: int
+    provenance: RecordProvenance
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

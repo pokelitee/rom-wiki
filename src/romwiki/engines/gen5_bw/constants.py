@@ -110,9 +110,76 @@ ABILITY_NAME_COUNT = 165
 ITEM_NAME_COUNT = 627
 POKEMON_NAME_COUNT = 652
 
-# MOVE_RECORD_COUNT/MAX_MOVE_ID describe the (still unimplemented) move *data*
-# archive, a different table from the move *names* text above -- not yet
-# verified against ROM data; no profile configures a moves layout entry yet,
-# so these counts are unreached by pipeline/enrich.py's validation paths.
-MOVE_RECORD_COUNT = 559
+# Move data archive `a/0/2/1` (a different table from the move *names* text
+# above): confirmed empirically against a real Black ROM to hold 560 members
+# (member 0 an unused placeholder, members 1-559 the real moves -- matches
+# Gen5Constants.java's authoritative `moveCount = 559`,
+# Ajarmar/universal-pokemon-randomizer-zx), byte-for-byte identical to White's
+# copy of the same archive.
+MOVE_RECORD_SIZE = 36
+MOVE_RECORD_COUNT = 560
 MAX_MOVE_ID = 559
+
+# Gen5Constants.java's `moveCategoryIndices = { STATUS, PHYSICAL, SPECIAL }`
+# (Ajarmar/universal-pokemon-randomizer-zx); confirmed against real Black ROM
+# records (Toxic/Thunder Wave/Swords Dance/Growl decode to status, Body
+# Slam/Quick Attack to physical, Flamethrower/Thunderbolt/Ice Beam to special).
+DAMAGE_CLASS_NAMES = ("status", "physical", "special")
+
+# Evolution table `a/0/1/9`: 42-byte record (7 slots x 6 bytes, no padding),
+# indexed 1:1 with the personal archive (member 0 is an all-zero placeholder).
+EVOLUTION_RECORD_SIZE = 42
+EVOLUTION_SLOT_COUNT = 7
+EVOLUTION_SLOT_SIZE = 6
+
+# EvolutionType.java's per-generation index table (Ajarmar/universal-pokemon-
+# randomizer-zx) gives Generation V's evolution-method IDs: identical to
+# Generation IV's own scheme (see gen4_dppt's EVOLUTION_METHOD_NAMES) except
+# for one new method -- "trade-special" -- inserted at index 7, shifting
+# every method from "use-item" onward up by one. Confirmed against a real
+# Black ROM: Tyrogue's three evolutions decode to methods 9/10/11 (attack-
+# greater/atk-def-same/defense-greater -> Hitmonlee/Hitmontop/Hitmonchan),
+# Eevee's stone evolutions to method 8 (use-item) with parameter = item ID,
+# Snorunt's Dawn Stone evolution to method 18 (use-item-female), and Eevee's
+# Leafeon/Glaceon evolutions to methods 26/27 (level-moss-rock/level-icy-rock).
+EVOLUTION_METHOD_NAMES = (
+    "none",
+    "friendship",
+    "friendship-day",
+    "friendship-night",
+    "level",
+    "trade",
+    "trade-held-item",
+    "trade-special",
+    "use-item",
+    "level-attack-greater",
+    "level-attack-equal",
+    "level-defense-greater",
+    "level-personality-low",
+    "level-personality-high",
+    "level-ninjask",
+    "level-shedinja",
+    "beauty",
+    "use-item-male",
+    "use-item-female",
+    "level-held-item-day",
+    "level-held-item-night",
+    "level-knowing-move",
+    "level-with-party-species",
+    "level-male",
+    "level-female",
+    "level-magnetic-field",
+    "level-moss-rock",
+    "level-ice-rock",
+)
+# How each evolution method's parameter operand should be interpreted.
+# Methods absent here either take no parameter or an unknown raw value.
+EVOLUTION_PARAMETER_KINDS = {
+    **{method_id: "level" for method_id in (4, 9, 10, 11, 14, 15, 23)},
+    **{method_id: "item" for method_id in (6, 8, 17, 18, 19, 20)},
+    12: "personality",
+    13: "personality",
+    16: "beauty",
+    21: "move",
+    22: "pokemon",
+}

@@ -16,6 +16,9 @@ sprite_version = "black-white"
 personal = "a/0/1/6"
 messages = "a/0/0/2"
 item_data = "a/0/2/4"
+moves = "a/0/2/1"
+learnsets = "a/0/1/8"
+evolutions = "a/0/1/9"
 
 [parameters]
 pokemon_names_member = 70
