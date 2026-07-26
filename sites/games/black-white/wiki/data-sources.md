@@ -474,12 +474,24 @@ executable code, not a data word, at the species offset for at least one of
 the two, so the real species isn't a literal fact without a randomizer-style
 ASM patch applied first, unlike every other static encounter.
 
-Locations' one remaining gap, location-linked shops, isn't decoded yet, and
-unlike everything else that used to be listed here, it's genuinely harder,
-not just unverified: the best candidate opcode
-(`CallFriendlyShopBuy`) produces unreliable, false-positive-looking results
-without a validating instruction the way trainer battles have. See
-Locations above.
+Locations' one remaining gap, location-linked shops (which map each real
+shop is physically in), is a confirmed blocker rather than an unattempted
+one. Multiple independent angles were checked and ruled out: the best
+candidate opcode (`CallFriendlyShopBuy`) produces unreliable,
+false-positive-looking results with no validating instruction; the real
+shop-clerk NPCs (found directly, matching the known Herb/Incense Salesman
+count at Driftveil City exactly) have every other record field zeroed out,
+with no shop identity encoded on the instance; a map's own "level scripts"
+section references script IDs too large to be direct indices into the
+Scripts archive, pointing at the same unresolvable indirection. Even the
+community reference this project has otherwise relied on for every other
+Gen5 fact never solved this either -- its own source has a literal,
+never-finished stub where a map-to-shop table would be, and the shop names
+this project (and the wider community) uses are human knowledge from
+playing the game, not derived ROM data. Whatever resolves this is almost
+certainly compiled into ARM9 machine code rather than stored as data, a
+different technology than the Gen V field-script bytecode this project has
+working, tested tooling for. See Locations above.
 
 Trainers' field map locations/script triggers, Locations' warps/outdoor
 connections/field items/static encounters, and the fossil revival
