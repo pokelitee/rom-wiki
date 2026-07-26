@@ -692,16 +692,17 @@ def _extract_gen5_location_dataset(
     static_encounter_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     # Each map header's display name, its wild-encounter-table cross-
-    # reference, its real trainers, its real warps, and its real static
-    # (gift/single) Pokémon encounters (now that Trainers' script-engine gap
-    # is unblocked -- see gen5_bw/__init__.py's module docstring). Outdoor
-    # connections and location-linked shops still aren't decoded here -- no
-    # public reference documents the rest of the 48-byte map header record.
+    # reference, its real trainers, its real warps, its real static
+    # (gift/single) Pokémon encounters, and its real outdoor connections (now
+    # that Trainers' script-engine gap is unblocked -- see
+    # gen5_bw/__init__.py's module docstring). Location-linked shops still
+    # aren't decoded here.
     profile = result.match.profile
     try:
         map_headers_path = profile.layout["map_headers"]
         map_names_member = profile.parameters["map_names_member"]
         overworld_objects_path = profile.layout["overworld_objects"]
+        map_matrices_path = profile.layout["map_matrices"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
@@ -726,6 +727,10 @@ def _extract_gen5_location_dataset(
     )
     overworld_objects = platform.archive_cls.from_bytes(
         filesystem.read(overworld_objects_path)
+    )
+    map_matrices = platform.archive_cls.from_bytes(filesystem.read(map_matrices_path))
+    connections_by_header = _extract_gen5_matrix_connections(
+        engine, headers, map_matrices
     )
     headers_by_id = {header.header_id: header for header in headers}
     records = []
@@ -780,6 +785,9 @@ def _extract_gen5_location_dataset(
                 static_encounters=tuple(
                     static_encounters_by_header.get(header.header_id, ())
                 ),
+                connections=tuple(
+                    connections_by_header.get(header.header_id, ())
+                ),
             ).to_dict()
         )
     return {
@@ -796,10 +804,14 @@ def _extract_gen5_location_dataset(
         "static_encounter_reference_count": sum(
             len(record["static_encounters"]) for record in records
         ),
+        "connection_reference_count": sum(
+            len(record["connections"]) for record in records
+        ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "map_headers_archive": map_headers_path,
             "overworld_objects_archive": overworld_objects_path,
+            "map_matrices_archive": map_matrices_path,
             "map_names": {"archive": messages_path, "member": map_names_member},
         },
         "records": records,
@@ -1184,6 +1196,74 @@ def _extract_trainer_references(
     for values in references.values():
         values.sort(key=lambda item: (item.class_name, item.name, item.trainer_id))
     return references
+
+
+def _extract_gen5_matrix_connections(
+    engine: Any,
+    headers: tuple[Any, ...],
+    map_matrices: Any,
+) -> dict[int, list[LocationConnection]]:
+    """Derive real outdoor connections from each header's matrix grid.
+
+    Each map header's `matrix_id` (see `gen5_bw/locations.py`'s
+    `_MATRIX_ID_OFFSET` docstring) selects a grid of real header IDs from
+    `layout.map_matrices`; adjacent grid cells are real, geographically
+    adjacent maps. A cell value of -1 means "no map there" (verified: real
+    grids are ragged rectangles, not fully packed). Mirrors Gen IV's own
+    `_extract_matrix_connections` algorithm, adapted to Gen V's differently-
+    shaped `Gen5MapMatrix` (no separate location-name-id indirection --
+    `Gen5Location.name` is already the display name).
+    """
+    headers_by_id = {header.header_id: header for header in headers}
+    directions: dict[int, dict[int, set[str]]] = defaultdict(lambda: defaultdict(set))
+    matrix_ids = sorted({header.matrix_id for header in headers})
+    parsed_matrices: dict[int, Any] = {}
+    for matrix_id in matrix_ids:
+        if matrix_id >= len(map_matrices.members):
+            raise InvalidRomError(f"Map header references missing matrix {matrix_id}")
+        parsed_matrices[matrix_id] = engine.parse_map_matrix(
+            map_matrices.read(matrix_id), matrix_id=matrix_id
+        )
+
+    for matrix in parsed_matrices.values():
+        if matrix.header_ids is None:
+            continue
+        for index, source in enumerate(matrix.header_ids):
+            if source < 0 or source not in headers_by_id:
+                continue
+            x = index % matrix.width
+            y = index // matrix.width
+            for offset, forward, reverse in (
+                (1, "east", "west"),
+                (matrix.width, "south", "north"),
+            ):
+                if (forward == "east" and x + 1 >= matrix.width) or (
+                    forward == "south" and y + 1 >= matrix.height
+                ):
+                    continue
+                destination = matrix.header_ids[index + offset]
+                if destination < 0 or destination == source:
+                    continue
+                if destination not in headers_by_id:
+                    continue
+                directions[source][destination].add(forward)
+                directions[destination][source].add(reverse)
+
+    result: dict[int, list[LocationConnection]] = {}
+    direction_order = {"north": 0, "east": 1, "south": 2, "west": 3}
+    for source, destinations in directions.items():
+        result[source] = []
+        for destination_id, values in sorted(destinations.items()):
+            destination = headers_by_id[destination_id]
+            result[source].append(
+                LocationConnection(
+                    destination_header_id=destination_id,
+                    destination_name=destination.name,
+                    destination_internal_name=f"map_{destination_id}",
+                    directions=tuple(sorted(values, key=direction_order.__getitem__)),
+                )
+            )
+    return result
 
 
 def _extract_gen5_static_encounter_references(

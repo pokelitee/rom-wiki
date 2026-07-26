@@ -188,10 +188,15 @@ class Gen5Location:
     # Not resolved to a specific encounter-area page URL here since a single
     # map index can expand to up to 4 seasonal areas -- see data-sources.md.
     encounter_map_index: int | None
+    # The `layout.map_matrices` (`a/0/0/9`) member this header's own outdoor-
+    # connection grid comes from -- see `gen5_bw/locations.py`'s
+    # `_MATRIX_ID_OFFSET` docstring for how this was found and verified.
+    matrix_id: int
     provenance: RecordProvenance
     trainers: tuple[LocationTrainerReference, ...] = ()
     warps: tuple[LocationWarp, ...] = ()
     static_encounters: tuple[LocationStaticEncounter, ...] = ()
+    connections: tuple[LocationConnection, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

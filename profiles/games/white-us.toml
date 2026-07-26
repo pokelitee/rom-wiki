@@ -27,6 +27,7 @@ map_headers = "a/0/1/2"
 npc_trades = "a/1/6/5"
 scripts = "a/0/5/7"
 overworld_objects = "a/1/2/5"
+map_matrices = "a/0/0/9"
 
 [parameters]
 pokemon_names_member = 70

@@ -905,10 +905,10 @@ def _render_gen5_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    # Name, wild-encounter cross-reference, real trainers, real warps, and
-    # real static encounters -- see gen5_bw/__init__.py's module docstring
-    # for why the rest (connections, location-linked shops, ...) isn't here
-    # yet.
+    # Name, wild-encounter cross-reference, real trainers, real warps, real
+    # outdoor connections, and real static encounters -- see
+    # gen5_bw/__init__.py's module docstring for why location-linked shops
+    # aren't here yet.
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -962,6 +962,7 @@ def _render_gen5_location_pages(
                     *(["trainers"] if record["trainers"] else []),
                     *(["warps"] if record["warps"] else []),
                     *(["static-encounters"] if record["static_encounters"] else []),
+                    *(["connections"] if record["connections"] else []),
                 ],
                 "search_text": record["name"].lower(),
             }
@@ -1011,20 +1012,26 @@ def _render_gen5_location(
             ]
         )
     source_file = f"locations/{_filename(record['header_id'])}"
+    _append_connections(lines, record["connections"], source_file)
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
     _append_static_encounters(lines, record["static_encounters"], source_file, references)
     lines.extend(
         provenance_section(
             [
-                *provenance_fact_table((("Header ID", f"`{record['header_id']}`"),)),
+                *provenance_fact_table(
+                    (
+                        ("Header ID", f"`{record['header_id']}`"),
+                        ("Matrix ID", f"`{record['matrix_id']}`"),
+                    )
+                ),
                 "Source: exact ROM map header record from "
                 f"`{record['provenance']['archive']}` member "
                 f"`{record['provenance']['member']}`.",
                 "The display name, wild-encounter cross-reference, real "
                 "trainers (both sight-triggered and scripted), real warps, "
-                "and real static encounters are decoded. Outdoor "
-                "connections and location-linked shops aren't decoded yet.",
+                "real outdoor connections, and real static encounters are "
+                "decoded. Location-linked shops aren't decoded yet.",
             ]
         )
     )

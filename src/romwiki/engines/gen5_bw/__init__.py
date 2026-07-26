@@ -45,6 +45,7 @@ from romwiki.engines.gen5_bw.locations import (
     parse_wild_map_names,
 )
 from romwiki.engines.gen5_bw.machines import machine_name, parse_machine_move_table
+from romwiki.engines.gen5_bw.map_matrices import parse_map_matrix
 from romwiki.engines.gen5_bw.marts import parse_shop_catalog
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
@@ -180,6 +181,7 @@ __all__ = [
     "parse_machine_move_table",
     "parse_map_header_script_files",
     "parse_map_header_table",
+    "parse_map_matrix",
     "parse_move_record",
     "parse_overworld_npcs",
     "parse_overworld_warps",

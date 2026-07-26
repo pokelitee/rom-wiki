@@ -28,6 +28,17 @@ _NULL_WILD_SET = 0xFFFF
 _SCRIPT_FILE_OFFSET = 6
 
 
+# Byte offset 4 (u16): the map's own matrix ID in `layout.map_matrices`
+# (`a/0/0/9`) -- the map-grid mechanism outdoor connections use. Adopted from
+# FrostFalcon/FrostsGen5Editor's `ZoneDataEntry`/`MapMatrixNARC.cs` and
+# verified against real Black ROM data: header 317 (Route 1), 319 (Route 2),
+# and 389 (Nuvema Town's outdoor plaza) all report matrix 0, and that
+# matrix's own header-ID grid places all three in real, contiguous,
+# correctly-adjacent cells (Nuvema Town directly south of Route 1, Route 1
+# directly south of Route 2) -- matching the real game's geography exactly.
+_MATRIX_ID_OFFSET = 4
+
+
 def parse_map_header_script_files(data: bytes) -> tuple[int, ...]:
     if len(data) % MAP_HEADER_RECORD_SIZE:
         raise InvalidRomError("Gen V map header table has an invalid size")
@@ -49,6 +60,7 @@ def parse_map_header_table(
         base = header_id * MAP_HEADER_RECORD_SIZE
         wild_set = struct.unpack_from("<H", data, base + _WILD_SET_OFFSET)[0]
         name_index = data[base + _NAME_INDEX_OFFSET]
+        matrix_id = struct.unpack_from("<H", data, base + _MATRIX_ID_OFFSET)[0]
         if name_index >= len(map_names):
             raise InvalidRomError(
                 f"Gen V map header {header_id} references missing map name "
@@ -61,6 +73,7 @@ def parse_map_header_table(
                 encounter_map_index=(
                     None if wild_set == _NULL_WILD_SET else wild_set
                 ),
+                matrix_id=matrix_id,
                 provenance=RecordProvenance(
                     source="rom", archive=archive_path, member=header_id
                 ),

@@ -373,15 +373,30 @@ shared fossil-revival script) doesn't resolve because that script is a
 secondary/common script invoked from the museum's own primary script, not a
 map's own dedicated one -- a real, understood limitation, not a bug.
 
-Outdoor connections and location-linked shops are still not decoded --
-unlike warps, trainer battle triggers, and static encounters, no literal
-opcode signature or verified record field this project has found so far
-resolves them the same low-risk way (the `StaticLevelScript` record shape is
-known from the same source, but hasn't yet been cross-verified against real
-ROM facts). Shop *contents* (see Items above) are decoded despite being in
-this general area, since it turned out to be a plain literal ROM fact with
-no script-engine dependency at all -- only *which map* each shop is
-physically in remains unresolved.
+Outdoor connections are now decoded too: each map header's `matrix` field
+(byte offset 4 of the 48-byte record) indexes into a separate `MapMatrix`
+archive (`layout.map_matrices`) -- the same underlying design this
+project's own Generation IV support already uses (`layout.map_matrices`),
+just a different binary shape here (a type byte, width/height, a grid of
+terrain-file references, and, for outdoor regions, a second parallel grid
+of the real header ID occupying each cell). Adjacent grid cells are real,
+geographically adjacent maps. Verified against real Black ROM data: the
+matrix's own declared cell count matches its raw byte length exactly, and
+decoding its header-ID grid places Route 1, Route 2, and Nuvema Town in
+real, contiguous, correctly-adjacent positions -- Route 1's real connections
+resolve to Nuvema Town, Accumula Town, Route 17, and P2 Laboratory, exactly
+the real, canonical early-game path.
+
+Location-linked shops are still not decoded -- unlike everything else in
+this list, no literal opcode signature this project has found so far
+resolves them the same low-risk way: the candidate opcode
+(`CallFriendlyShopBuy`) has no reliable validating follow-on instruction the
+way trainer battles' opcode does, and scanning for it produces
+false-positive-looking results (a suspicious `shop_id=0` at several
+unrelated locations). Shop *contents* (see Items above) are decoded despite
+being in this general area, since it turned out to be a plain literal ROM
+fact with no script-engine dependency at all -- only *which map* each shop
+is physically in remains unresolved.
 
 ## Text and names
 
@@ -409,20 +424,22 @@ executable code, not a data word, at the species offset for at least one of
 the two, so the real species isn't a literal fact without a randomizer-style
 ASM patch applied first, unlike every other static encounter.
 
-Locations' remaining gaps -- outdoor connections and location-linked shops --
-aren't decoded yet, and unlike everything else that used to be listed here,
-these two are genuinely harder, not just unverified: outdoor connections
-aren't stored in the map header record at all (checked directly, and a
-community-documented archive path for this from a later game doesn't carry
-over to this ROM's own archive numbering), and location-linked shops' best
-candidate opcode produces unreliable, false-positive-looking results without
-a validating instruction the way trainer battles have. See Locations above.
+Locations' one remaining gap, location-linked shops, isn't decoded yet, and
+unlike everything else that used to be listed here, it's genuinely harder,
+not just unverified: the best candidate opcode
+(`CallFriendlyShopBuy`) produces unreliable, false-positive-looking results
+without a validating instruction the way trainer battles have. See
+Locations above.
 
-Trainers' field map locations/script triggers, Locations' warps and static
-encounters, and the fossil revival item-to-species mapping -- all
-previously listed here as blocked on this generation's script-engine opcode
-table -- are now resolved (see Trainers/Locations/Items above); that opcode
-table turned out to be adoptable from an actively maintained community tool
-(FrostFalcon/FrostsGen5Editor) the same way Marts/NPC trades/Pickup were
-adopted from Ajarmar/universal-pokemon-randomizer-zx, rather than requiring
-an original ARM disassembly from scratch.
+Trainers' field map locations/script triggers, Locations' warps/outdoor
+connections/static encounters, and the fossil revival item-to-species
+mapping -- all previously listed here as blocked on this generation's
+script-engine opcode table -- are now resolved (see Trainers/Locations/Items
+above); that opcode table turned out to be adoptable from an actively
+maintained community tool (FrostFalcon/FrostsGen5Editor) the same way Marts/
+NPC trades/Pickup were adopted from Ajarmar/universal-pokemon-randomizer-zx,
+rather than requiring an original ARM disassembly from scratch. Outdoor
+connections specifically turned out not to need the opcode table at all --
+the same tool's documentation of the map header record's `matrix` field and
+a separate `MapMatrix` archive (the same underlying design as this
+project's own Generation IV `map_matrices` support) was enough.
