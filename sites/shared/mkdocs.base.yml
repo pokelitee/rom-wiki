@@ -44,3 +44,17 @@ markdown_extensions:
 
 extra:
   generator: false
+
+# Generated detail pages are intentionally reached through searchable catalogs
+# rather than the global navigation. Declaring them here avoids thousands of
+# expected omitted-navigation messages during production builds.
+not_in_nav: |
+  /pokemon/*.md
+  /abilities/*.md
+  /items/*.md
+  /moves/*.md
+  /encounters/*.md
+  /trainers/*.md
+  /locations/*.md
+  /changes/*.md
+  /data/*.md

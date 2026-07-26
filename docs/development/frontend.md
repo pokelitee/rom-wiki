@@ -140,8 +140,9 @@ written below `build/mkdocs-dev/`. Link validation for excluded detail pages is
 disabled only in this configuration.
 
 Always use the production configuration or the multi-site build before deployment.
-The deploy workflow runs the unit suite, builds the combined artifact, and audits
-the rendered result. Run the same artifact checks locally with:
+The deploy workflow runs the unit suite, builds each published site concurrently,
+merges their artifacts, and audits the combined result. Run the same artifact
+checks locally with:
 
 ```console
 romwiki site build --all --output dist
