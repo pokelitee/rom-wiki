@@ -387,14 +387,25 @@ real, contiguous, correctly-adjacent positions -- Route 1's real connections
 resolve to Nuvema Town, Accumula Town, Route 17, and P2 Laboratory, exactly
 the real, canonical early-game path.
 
-Location-linked shops are still not decoded -- unlike everything else in
-this list, no literal opcode signature this project has found so far
-resolves them the same low-risk way: the candidate opcode
-(`CallFriendlyShopBuy`) has no reliable validating follow-on instruction the
-way trainer battles' opcode does, and scanning for it produces
-false-positive-looking results (a suspicious `shop_id=0` at several
-unrelated locations). Shop *contents* (see Items above) are decoded despite
-being in this general area, since it turned out to be a plain literal ROM
+Location-linked shops are still not decoded. A real, proper, control-flow-
+aware disassembler was built to check this properly (following
+`VMJump`/`VMJumpIf`/`VMCall`/`VMCallIf` targets rather than assuming
+straight-line code, using a jump/call addressing convention verified
+empirically against hundreds of real jumps at a 99.8% success rate) --
+and it settles the question with a stronger negative result than the
+earlier signature scan's false positives: zero reachable
+`CallFriendlyShopBuy` calls exist in any map's own script at all, even with
+real branch-following. The likely explanation found along the way: real
+NPC records include a distinct, still-unexplained "common script" band
+(10000+) with scattered, enum-like values repeating identically across many
+towns -- consistent with shop clerks (and other recurring NPCs like Nurse
+Joy) dispatching through a generic, shared script rather than embedding
+shop logic in each map's own file the way trainer battles do. Unlike the
+trainer-ID bands, there's no already-decoded reference table to verify a
+"band value -> shop ID" mapping against, so this remains open as its own,
+separate research question. Shop *contents* (see Items above) are decoded
+despite being in this general area, since it turned out to be a plain
+literal ROM
 fact with no script-engine dependency at all -- only *which map* each shop
 is physically in remains unresolved.
 
