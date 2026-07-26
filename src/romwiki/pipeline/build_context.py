@@ -138,6 +138,7 @@ class GameBuildContext:
                 trainer_dataset=self.trainers_raw(),
                 static_encounter_dataset=self.static_encounters_raw(),
                 item_dataset=self.items_raw(),
+                mart_dataset=self.marts_raw(),
             ),
         )
 

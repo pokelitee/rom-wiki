@@ -63,6 +63,11 @@ class LocationShop:
     script_file_id: int
     command_offset: int
     items: tuple[LocationShopItem, ...]
+    name: str | None = None
+    is_main_game: bool | None = None
+    selector_id: int | None = None
+    mode: int | None = None
+    dynamic: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,6 +204,7 @@ class Gen5Location:
     static_encounters: tuple[LocationStaticEncounter, ...] = ()
     connections: tuple[LocationConnection, ...] = ()
     items: tuple[LocationItem, ...] = ()
+    shops: tuple[LocationShop, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

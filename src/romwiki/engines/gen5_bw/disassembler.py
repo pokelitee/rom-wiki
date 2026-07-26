@@ -42,6 +42,7 @@ _CALL_OPCODE = 0x04
 _CALL_IF_OPCODE = 0x20
 _HALT_OPCODE = 0x02
 _RETURN_OPCODE = 0x05
+_FUNCTION_TABLE_END = 0xFD13
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +52,24 @@ class Gen5Instruction:
     name: str
     params: tuple[int, ...]
     next_offset: int
+
+
+def parse_function_offsets(data: bytes) -> tuple[int, ...]:
+    """Return the absolute starts in a Gen V script's function table."""
+    offsets = []
+    cursor = 0
+    while cursor + 2 <= len(data):
+        if struct.unpack_from("<H", data, cursor)[0] == _FUNCTION_TABLE_END:
+            return tuple(offsets)
+        if cursor + 4 > len(data):
+            break
+        relative_offset = struct.unpack_from("<i", data, cursor)[0]
+        target = cursor + 4 + relative_offset
+        if not 0 <= target < len(data):
+            return ()
+        offsets.append(target)
+        cursor += 4
+    return ()
 
 
 def disassemble_function(data: bytes, start: int) -> dict[int, Gen5Instruction]:

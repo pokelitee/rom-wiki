@@ -373,9 +373,10 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
                 *[
                     (
                         f"| {_location_link(shop, source_file)} "
-                        f"| {shop['kind'].title()} | "
+                        f"| {escape(shop.get('shop_name') or shop['kind'].title())} "
+                        "| "
                         f"{shop_price(shop['price'], shop.get('currency', 'money'))} | "
-                        f"{badge_requirement(shop['required_badges'])} |"
+                        f"{_shop_availability(shop)} |"
                     )
                     for shop in shops
                 ],
@@ -383,10 +384,7 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
             ]
         )
         return
-    # Gen5's shops aren't attached to a specific map header (no script-engine
-    # location resolution -- see gen5_bw/__init__.py's module docstring), and
-    # their stock isn't badge-gated the way Gen4's is, so this shows just the
-    # shop's own internal name and the item's own listed price.
+    # Standalone fallback for inventories without a verified location link.
     lines.extend(
         [
             "| Shop | Price | Availability |",
@@ -402,6 +400,12 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
             "",
         ]
     )
+
+
+def _shop_availability(shop: dict[str, Any]) -> str:
+    if shop.get("is_main_game") is not None:
+        return "Main game" if shop["is_main_game"] else "Post-game"
+    return badge_requirement(shop["required_badges"])
 
 
 def _append_pokemon(

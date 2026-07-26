@@ -10,6 +10,61 @@ from romwiki.renderers.mkdocs.references import ReferenceIndex
 
 
 class LocationRenderingTests(unittest.TestCase):
+    def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
+        record = {
+            "header_id": 105,
+            "name": "Driftveil City",
+            "encounter_map_index": None,
+            "matrix_id": 0,
+            "provenance": {"archive": "a/0/1/2", "member": 105},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [
+                {
+                    "kind": "specialty",
+                    "currency": "money",
+                    "inventory_id": 3,
+                    "items": [
+                        {
+                            "item_id": 36,
+                            "name": "Heal Powder",
+                            "price": 450,
+                            "required_badges": None,
+                        }
+                    ],
+                    "name": "Driftveil Herb Salesman",
+                    "is_main_game": True,
+                    "dynamic": False,
+                },
+                {
+                    "kind": "common",
+                    "currency": "money",
+                    "inventory_id": 255,
+                    "items": [],
+                    "name": "Standard Poké Mart",
+                    "is_main_game": True,
+                    "dynamic": True,
+                },
+            ],
+        }
+        dataset = {"engine": "gen5_bw", "records": [record]}
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output)
+            page = (output / "header-105.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertIn("### Driftveil Herb Salesman", page)
+        self.assertNotIn("### Driftveil Herb Salesman 1", page)
+        self.assertIn("| 36 | ₽450 | Main game |", page)
+        self.assertIn("### Standard Poké Mart", page)
+        self.assertIn("Stock changes with badge progression", page)
+        self.assertIn("shops", catalog["records"][0]["features"])
+
     def test_renders_navigation_encounters_and_trainers(self) -> None:
         record = {
             "header_id": 45,

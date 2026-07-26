@@ -381,16 +381,28 @@ def _append_shops(
     kind_indices: Counter[str] = Counter()
     for shop in shops:
         kind_indices[shop["kind"]] += 1
-        label = {
+        label = shop.get("name") or {
             "common": "Common Poké Mart",
             "specialty": "Specialty shop",
+            "tm": "TM shop",
             "decoration": "Decoration shop",
             "seal": "Seal shop",
             "frontier": "Battle Frontier shop",
         }.get(shop["kind"], f"{shop['kind'].title()} shop")
+        if shop.get("dynamic"):
+            lines.extend(
+                [
+                    f"### {label}",
+                    "",
+                    "Stock changes with badge progression and is selected "
+                    "dynamically by the game.",
+                    "",
+                ]
+            )
+            continue
         if shop["kind"] == "seal" and shop["inventory_id"] < len(_SEAL_MART_DAYS):
             label += f" — {_SEAL_MART_DAYS[shop['inventory_id']]}"
-        elif kind_counts[shop["kind"]] > 1:
+        elif not shop.get("name") and kind_counts[shop["kind"]] > 1:
             label += f" {kind_indices[shop['kind']]}"
         lines.extend(
             [
@@ -406,7 +418,12 @@ def _append_shops(
                 "item", item["item_id"], item["name"], source_file, references
             )
             price = shop_price(item["price"], currency)
-            availability = badge_requirement(item["required_badges"])
+            if shop.get("is_main_game") is not None:
+                availability = (
+                    "Main game" if shop["is_main_game"] else "Post-game"
+                )
+            else:
+                availability = badge_requirement(item["required_badges"])
             lines.append(
                 f"| {sprite_with_link(_entity_sprite('item', item['item_id'], references), item_link)} "
                 f"| {item['item_id']} | {price} | "

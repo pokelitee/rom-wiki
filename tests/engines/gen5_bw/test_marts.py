@@ -23,8 +23,8 @@ class Gen5ShopCatalogTests(unittest.TestCase):
             overlay_data,
             shop_item_offsets=(0, 0, 0, 0x10),
             shop_item_sizes=(0, 0, 0, 4),
-            tm_shop_ids=frozenset({1, 2}),
-            regular_shop_ids=frozenset({0}),
+            tm_shop_ids=frozenset(),
+            regular_shop_ids=frozenset({0, 1, 2}),
             archive_path="overlay21",
         )
 
@@ -32,12 +32,13 @@ class Gen5ShopCatalogTests(unittest.TestCase):
         shop = shops[0]
         self.assertEqual(shop.shop_id, 3)
         self.assertEqual(shop.name, "Driftveil Herb Salesman")
+        self.assertEqual(shop.kind, "specialty")
         self.assertTrue(shop.is_main_game)
         self.assertEqual(shop.item_ids, (36, 34, 35, 37))
         self.assertEqual(shop.provenance.archive, "overlay21")
         self.assertEqual(shop.provenance.member, 3)
 
-    def test_skips_tm_and_regular_shops(self) -> None:
+    def test_retains_tm_shops_and_skips_regular_shops(self) -> None:
         overlay_data = _overlay_with_shop(0, (1, 2))
 
         shops = parse_shop_catalog(
@@ -49,7 +50,8 @@ class Gen5ShopCatalogTests(unittest.TestCase):
             archive_path="overlay21",
         )
 
-        self.assertEqual([shop.shop_id for shop in shops], [2])
+        self.assertEqual([shop.shop_id for shop in shops], [0, 2])
+        self.assertEqual(shops[0].kind, "tm")
 
     def test_marks_a_post_game_shop(self) -> None:
         # Real Black ROM shop 13, "Driftveil Incense Salesman", is not in
@@ -59,8 +61,8 @@ class Gen5ShopCatalogTests(unittest.TestCase):
             bytes(overlay_data),
             shop_item_offsets=tuple([0] * 14),
             shop_item_sizes=tuple([0] * 14),
-            tm_shop_ids=frozenset(range(13)),
-            regular_shop_ids=frozenset(),
+            tm_shop_ids=frozenset(),
+            regular_shop_ids=frozenset(range(13)),
             archive_path="overlay21",
         )
 

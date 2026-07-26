@@ -10,6 +10,7 @@ from romwiki.schema.pokemon import RecordProvenance
 class Gen5Shop:
     shop_id: int
     name: str
+    kind: str
     is_main_game: bool
     item_ids: tuple[int, ...]
     provenance: RecordProvenance

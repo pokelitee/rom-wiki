@@ -56,13 +56,18 @@ def extract_location_dataset(
     trainer_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
     item_dataset: dict[str, Any] | None = None,
+    mart_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
     if profile.engine == GEN5_BW_ENGINE:
         return _extract_gen5_location_dataset(
-            result, trainer_dataset, static_encounter_dataset, item_dataset
+            result,
+            trainer_dataset,
+            static_encounter_dataset,
+            item_dataset,
+            mart_dataset,
         )
     try:
         events_path = profile.layout["events"]
@@ -680,19 +685,19 @@ def _extract_gen5_location_dataset(
     trainer_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
     item_dataset: dict[str, Any] | None = None,
+    mart_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     # Each map header's display name, its wild-encounter-table cross-
     # reference, its real trainers, its real warps, its real static
     # (gift/single) Pokémon encounters, its real outdoor connections, and its
-    # real field items (now that Trainers' script-engine gap is unblocked --
-    # see gen5_bw/__init__.py's module docstring). Location-linked shops
-    # still aren't decoded here.
+    # real field items, and its real script-linked shops.
     profile = result.match.profile
     try:
         map_headers_path = profile.layout["map_headers"]
         map_names_member = profile.parameters["map_names_member"]
         overworld_objects_path = profile.layout["overworld_objects"]
         map_matrices_path = profile.layout["map_matrices"]
+        scripts_path = profile.layout["scripts"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
@@ -719,6 +724,7 @@ def _extract_gen5_location_dataset(
         filesystem.read(overworld_objects_path)
     )
     map_matrices = platform.archive_cls.from_bytes(filesystem.read(map_matrices_path))
+    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
     connections_by_header = _extract_gen5_matrix_connections(
         engine, headers, map_matrices
     )
@@ -726,14 +732,25 @@ def _extract_gen5_location_dataset(
         record["item_id"]: record["name"]
         for record in (item_dataset or {}).get("records", ())
     }
+    item_prices_by_id = {
+        record["item_id"]: record.get("price")
+        for record in (item_dataset or {}).get("records", ())
+    }
+    shops_by_id = {
+        record["shop_id"]: record
+        for record in (mart_dataset or {}).get("records", ())
+    }
     item_count = max(item_names_by_id, default=-1) + 1
     headers_by_id = {header.header_id: header for header in headers}
     records = []
+    unsupported_shop_selectors = []
     for header in headers:
         items = []
+        shops = []
         if header.header_id < len(overworld_objects.members):
             overworld_data = overworld_objects.read(header.header_id)
-            for npc in engine.parse_overworld_npcs(overworld_data):
+            npcs = engine.parse_overworld_npcs(overworld_data)
+            for npc in npcs:
                 item_id = engine.resolve_visible_item_id(npc, item_count=item_count)
                 if item_id is None or item_id not in item_names_by_id:
                     continue
@@ -749,6 +766,67 @@ def _extract_gen5_location_dataset(
                         hidden_flag=None,
                     )
                 )
+            script_file_id = script_file_ids[header.header_id]
+            if script_file_id < len(scripts.members):
+                script = scripts.read(script_file_id)
+                function_offsets = engine.parse_function_offsets(script)
+                seen_dispatches = set()
+                for function_offset in function_offsets:
+                    dispatch = engine.parse_shop_dispatch(script, function_offset)
+                    if dispatch is None:
+                        continue
+                    dispatch_key = (dispatch.selector_id, dispatch.command_offset)
+                    if dispatch_key in seen_dispatches:
+                        continue
+                    seen_dispatches.add(dispatch_key)
+                    inventory_id = engine.SHOP_SELECTOR_TO_INVENTORY_ID.get(
+                        dispatch.selector_id
+                    )
+                    if inventory_id is None:
+                        if dispatch.selector_id != engine.STANDARD_SHOP_SELECTOR:
+                            unsupported_shop_selectors.append(dispatch.selector_id)
+                            continue
+                        shops.append(
+                            LocationShop(
+                                kind="common",
+                                currency="money",
+                                inventory_id=dispatch.selector_id,
+                                script_file_id=script_file_id,
+                                command_offset=dispatch.command_offset,
+                                items=(),
+                                name="Standard Poké Mart",
+                                is_main_game=True,
+                                selector_id=dispatch.selector_id,
+                                mode=dispatch.mode,
+                                dynamic=True,
+                            )
+                        )
+                        continue
+                    catalog_shop = shops_by_id.get(inventory_id)
+                    if catalog_shop is None:
+                        continue
+                    shops.append(
+                        LocationShop(
+                            kind=catalog_shop["kind"],
+                            currency="money",
+                            inventory_id=inventory_id,
+                            script_file_id=script_file_id,
+                            command_offset=dispatch.command_offset,
+                            items=tuple(
+                                LocationShopItem(
+                                    item_id=item["item_id"],
+                                    name=item["name"],
+                                    price=item_prices_by_id.get(item["item_id"]),
+                                    required_badges=None,
+                                )
+                                for item in catalog_shop["items"]
+                            ),
+                            name=catalog_shop["name"],
+                            is_main_game=catalog_shop["is_main_game"],
+                            selector_id=dispatch.selector_id,
+                            mode=dispatch.mode,
+                        )
+                    )
             for furniture in engine.parse_overworld_furniture(overworld_data):
                 item_id = engine.resolve_hidden_item_id(
                     furniture, item_count=item_count
@@ -819,6 +897,7 @@ def _extract_gen5_location_dataset(
                 ),
                 connections=tuple(connections_by_header.get(header.header_id, ())),
                 items=tuple(items),
+                shops=tuple(shops),
             ).to_dict()
         )
     return {
@@ -833,6 +912,9 @@ def _extract_gen5_location_dataset(
         "trainer_reference_count": sum(len(record["trainers"]) for record in records),
         "warp_reference_count": sum(len(record["warps"]) for record in records),
         "item_reference_count": sum(len(record["items"]) for record in records),
+        "shop_reference_count": sum(len(record["shops"]) for record in records),
+        "unsupported_shop_dispatch_count": len(unsupported_shop_selectors),
+        "unsupported_shop_selector_ids": sorted(set(unsupported_shop_selectors)),
         "static_encounter_reference_count": sum(
             len(record["static_encounters"]) for record in records
         ),
@@ -844,6 +926,7 @@ def _extract_gen5_location_dataset(
             "map_headers_archive": map_headers_path,
             "overworld_objects_archive": overworld_objects_path,
             "map_matrices_archive": map_matrices_path,
+            "scripts_archive": scripts_path,
             "map_names": {"archive": messages_path, "member": map_names_member},
         },
         "records": records,

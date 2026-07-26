@@ -23,6 +23,7 @@ from romwiki.engines.gen5_bw.constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
+from romwiki.engines.gen5_bw.disassembler import parse_function_offsets
 from romwiki.engines.gen5_bw.egg_moves import parse_egg_move_set
 from romwiki.engines.gen5_bw.encounters import (
     METHOD_NAMES as ENCOUNTER_METHOD_NAMES,
@@ -46,7 +47,12 @@ from romwiki.engines.gen5_bw.locations import (
 )
 from romwiki.engines.gen5_bw.machines import machine_name, parse_machine_move_table
 from romwiki.engines.gen5_bw.map_matrices import parse_map_matrix
-from romwiki.engines.gen5_bw.marts import parse_shop_catalog
+from romwiki.engines.gen5_bw.marts import (
+    SHOP_SELECTOR_TO_INVENTORY_ID,
+    STANDARD_SHOP_SELECTOR,
+    parse_shop_catalog,
+    parse_shop_dispatch,
+)
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
 from romwiki.engines.gen5_bw.overworld import (
@@ -80,7 +86,7 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
 # This engine currently implements the Pokémon personal-data, Items, Moves,
 # Learnsets, Evolutions, Egg moves, TM/HM machines, Wild encounters, Trainers,
-# Static encounters, Pickup, and (a bare-minimum) Locations slices. Adding a
+# Static encounters, Pickup, Marts, and Locations slices. Adding a
 # later slice should add the corresponding module and re-export here, the
 # same way these slices added personal.py/machines.py/items.py/moves.py/
 # learnsets.py/evolutions.py/egg_moves.py/encounters.py/trainers.py/
@@ -93,11 +99,10 @@ from romwiki.engines.gen5_bw.trainers import parse_trainer_record
 # handling was needed first, since one (unused) entry in the map-name table
 # contains a runtime-substituted-text control code that used to make the
 # whole table fail to decode.
-# Locations' own record is still a bare minimum (display name + wild-encounter
-# cross-reference; no warps/connections/shops/gifts yet -- no public reference
-# documents the rest of the 48-byte map header record, and guessing at
-# undocumented offsets isn't done here). Trainers' map-location/script-
-# reference linking, previously blocked on "this generation's script-engine
+# Locations combine the map header, matrix, overworld-object, and field-script
+# archives to resolve navigation, items, encounters, trainers, and shops.
+# Trainers' map-location/script-reference linking, previously blocked on
+# "this generation's script-engine
 # opcode table hasn't been researched," is now unblocked: scripts.py adopts
 # FrostFalcon/FrostsGen5Editor's BW1 field-script opcode table (an actively-
 # maintained community tool, cross-checked against real ROM bytes -- see
@@ -178,6 +183,7 @@ __all__ = [
     "parse_english_message_archive",
     "parse_evolution_record",
     "parse_fossil_revival_table",
+    "parse_function_offsets",
     "parse_item_record",
     "parse_level_up_learnset",
     "parse_machine_move_table",
@@ -192,12 +198,15 @@ __all__ = [
     "parse_npc_trade_record",
     "parse_pickup_table",
     "parse_shop_catalog",
+    "parse_shop_dispatch",
     "parse_static_encounters",
     "parse_trainer_battle_commands",
     "parse_trainer_record",
     "pickup_level_range_item_ids",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",
+    "SHOP_SELECTOR_TO_INVENTORY_ID",
+    "STANDARD_SHOP_SELECTOR",
     "PICKUP_LEVEL_RANGE_COUNT",
     "PICKUP_LEVEL_RANGE_SIZE",
     "PICKUP_SLOT_CHANCES",

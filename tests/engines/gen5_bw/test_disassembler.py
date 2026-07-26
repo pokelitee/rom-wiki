@@ -3,7 +3,12 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5_bw.disassembler import disassemble_function, find_calls
+from romwiki.engines.gen5_bw.disassembler import (
+    disassemble_function,
+    find_calls,
+    parse_function_offsets,
+)
+from romwiki.engines.gen5_bw.marts import parse_shop_dispatch
 
 
 def _vmnop() -> bytes:
@@ -35,6 +40,25 @@ def _call_trainer_battle(tr1: int, tr2: int, flags: int) -> bytes:
 
 
 class Gen5DisassemblerTests(unittest.TestCase):
+    def test_parses_function_table_and_shop_dispatch(self) -> None:
+        function = (
+            struct.pack("<HHH", 0x2A, 0x8000, 14)
+            + struct.pack("<HHH", 0x2A, 0x8001, 0)
+            + struct.pack("<HH", 0x1C, 10110)
+            + _vmhalt()
+        )
+        data = struct.pack("<iH", 2, 0xFD13) + function
+
+        offsets = parse_function_offsets(data)
+        dispatch = parse_shop_dispatch(data, offsets[0])
+
+        self.assertEqual(offsets, (6,))
+        self.assertIsNotNone(dispatch)
+        assert dispatch is not None
+        self.assertEqual(dispatch.selector_id, 14)
+        self.assertEqual(dispatch.mode, 0)
+        self.assertEqual(dispatch.command_offset, 18)
+
     def test_decodes_a_straight_line_function(self) -> None:
         data = _vmnop() + _vmnop() + _vmhalt()
 

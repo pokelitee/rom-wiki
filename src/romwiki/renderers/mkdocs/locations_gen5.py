@@ -19,6 +19,7 @@ from romwiki.renderers.mkdocs.components import (
 from romwiki.renderers.mkdocs.locations import (
     _append_connections,
     _append_items,
+    _append_shops,
     _append_static_encounters,
     _append_trainers,
     _append_warps,
@@ -93,6 +94,7 @@ def render_gen5_location_pages(
                     *(["static-encounters"] if record["static_encounters"] else []),
                     *(["connections"] if record["connections"] else []),
                     *(["items"] if record["items"] else []),
+                    *(["shops"] if record.get("shops") else []),
                 ],
                 "search_text": record["name"].lower(),
             }
@@ -146,6 +148,7 @@ def _render_gen5_location(
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
     _append_items(lines, record["items"], source_file, references)
+    _append_shops(lines, record.get("shops", []), source_file, references)
     _append_static_encounters(
         lines, record["static_encounters"], source_file, references
     )
@@ -165,7 +168,8 @@ def _render_gen5_location(
                 "trainers (both sight-triggered and scripted), real warps, "
                 "real outdoor connections, real field items (visible and "
                 "hidden), and real static encounters are decoded. "
-                "Location-linked shops aren't decoded yet.",
+                "Script-linked shops are decoded from their real local "
+                "dispatcher functions.",
             ]
         )
     )

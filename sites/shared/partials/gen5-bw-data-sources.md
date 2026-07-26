@@ -405,27 +405,18 @@ real, contiguous, correctly-adjacent positions -- Route 1's real connections
 resolve to Nuvema Town, Accumula Town, Route 17, and P2 Laboratory, exactly
 the real, canonical early-game path.
 
-Location-linked shops are still not decoded. A real, proper, control-flow-
-aware disassembler was built to check this properly (following
-`VMJump`/`VMJumpIf`/`VMCall`/`VMCallIf` targets rather than assuming
-straight-line code, using a jump/call addressing convention verified
-empirically against hundreds of real jumps at a 99.8% success rate) --
-and it settles the question with a stronger negative result than the
-earlier signature scan's false positives: zero reachable
-`CallFriendlyShopBuy` calls exist in any map's own script at all, even with
-real branch-following. The likely explanation found along the way: real
-NPC records include a distinct, still-unexplained "common script" band
-(10000+) with scattered, enum-like values repeating identically across many
-towns -- consistent with shop clerks (and other recurring NPCs like Nurse
-Joy) dispatching through a generic, shared script rather than embedding
-shop logic in each map's own file the way trainer battles do. Unlike the
-trainer-ID bands, there's no already-decoded reference table to verify a
-"band value -> shop ID" mapping against, so this remains open as its own,
-separate research question. Shop *contents* (see Items above) are decoded
-despite being in this general area, since it turned out to be a plain
-literal ROM
-fact with no script-engine dependency at all -- only *which map* each shop
-is physically in remains unresolved.
+Location-linked shops are decoded through their actual field-script
+dispatcher. Each local shop function writes a selector to work variable
+`0x8000`, writes its mode to `0x8001`, then calls global script `10110`.
+Selectors `0` through `19` map to the persistent specialty and TM inventory
+tables in overlay 21; selector `255` identifies the standard Poké Mart whose
+stock changes with badge progression. The same dispatcher shape and selector
+mapping were verified in Black, White, Blaze Black, and Volt White.
+
+Selectors `247` through `254` are retained as an explicit unsupported count
+in the raw location dataset. They belong to Black City and Gear Station
+vendors whose inventory/currency mechanism is separate from the overlay-21
+Poké Mart catalog, so no stock is guessed for them.
 
 ## Text and names
 
@@ -452,25 +443,6 @@ Pokémon species data above for why -- the unmodified retail ROM stores
 executable code, not a data word, at the species offset for at least one of
 the two, so the real species isn't a literal fact without a randomizer-style
 ASM patch applied first, unlike every other static encounter.
-
-Locations' one remaining gap, location-linked shops (which map each real
-shop is physically in), is a confirmed blocker rather than an unattempted
-one. Multiple independent angles were checked and ruled out: the best
-candidate opcode (`CallFriendlyShopBuy`) produces unreliable,
-false-positive-looking results with no validating instruction; the real
-shop-clerk NPCs (found directly, matching the known Herb/Incense Salesman
-count at Driftveil City exactly) have every other record field zeroed out,
-with no shop identity encoded on the instance; a map's own "level scripts"
-section references script IDs too large to be direct indices into the
-Scripts archive, pointing at the same unresolvable indirection. Even the
-community reference this project has otherwise relied on for every other
-Gen5 fact never solved this either -- its own source has a literal,
-never-finished stub where a map-to-shop table would be, and the shop names
-this project (and the wider community) uses are human knowledge from
-playing the game, not derived ROM data. Whatever resolves this is almost
-certainly compiled into ARM9 machine code rather than stored as data, a
-different technology than the Gen V field-script bytecode this project has
-working, tested tooling for. See Locations above.
 
 Trainers' field map locations/script triggers, Locations' warps/outdoor
 connections/field items/static encounters, and the fossil revival

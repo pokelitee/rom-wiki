@@ -312,12 +312,10 @@ def build_item_dataset(
         if victory_item:
             add(victory_item["id"], "trainer_rewards", trainer_reference)
 
+    linked_shop_ids = set()
     for location in (location_dataset or {}).get("records", []):
-        # Gen5's bare-minimum location records have no distinct internal
-        # (debug) map name -- see gen5_bw/__init__.py's module docstring --
-        # so this falls back to the display name; harmless in practice since
-        # Gen5 locations have no items/shops/gifts/trades to cross-reference
-        # yet anyway (the loops below are no-ops for them).
+        # Gen5 has no distinct internal debug-map name, so use its display
+        # name for the shared relationship shape.
         location_reference = {
             "header_id": location["header_id"],
             "name": location["name"],
@@ -335,6 +333,8 @@ def build_item_dataset(
                 },
             )
         for shop in location.get("shops", []):
+            if not shop.get("dynamic"):
+                linked_shop_ids.add(shop["inventory_id"])
             for item in shop["items"]:
                 add(
                     item["item_id"],
@@ -345,6 +345,9 @@ def build_item_dataset(
                         "currency": shop["currency"],
                         "price": item["price"],
                         "required_badges": item["required_badges"],
+                        "shop_id": shop["inventory_id"],
+                        "shop_name": shop.get("name"),
+                        "is_main_game": shop.get("is_main_game"),
                     },
                 )
         for gift in location.get("pokemon_gifts", []):
@@ -408,11 +411,11 @@ def build_item_dataset(
             },
         )
 
-    # Gen5's shops aren't attached to a specific map header either (see
-    # gen5_bw/__init__.py's module docstring), so this is a flat pass over a
-    # standalone mart dataset instead of nested inside the location loop --
-    # same shape of gap as trades above.
+    # Preserve a flat fallback for any decoded inventory without a verified
+    # location dispatcher.
     for shop in (mart_dataset or {}).get("records", []):
+        if shop["shop_id"] in linked_shop_ids:
+            continue
         for item in shop["items"]:
             add(
                 item["item_id"],

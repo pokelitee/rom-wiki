@@ -390,6 +390,76 @@ class MinimalItemDatasetTests(unittest.TestCase):
         self.assertIn("Driftveil Incense Salesman", page)
         self.assertIn("Post-game", page)
 
+    def test_prefers_a_location_linked_gen5_shop_reference(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {"archive": "itemdata.narc"},
+            "records": [_gen5_item_record()],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        mart_dataset = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "shop_id": 13,
+                    "name": "Driftveil Incense Salesman",
+                    "is_main_game": False,
+                    "items": [{"item_id": 234, "name": "Leftovers"}],
+                }
+            ],
+        }
+        location_dataset = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "header_id": 105,
+                    "name": "Driftveil City",
+                    "shops": [
+                        {
+                            "inventory_id": 13,
+                            "kind": "specialty",
+                            "currency": "money",
+                            "name": "Driftveil Incense Salesman",
+                            "is_main_game": False,
+                            "dynamic": False,
+                            "items": [
+                                {
+                                    "item_id": 234,
+                                    "price": 9600,
+                                    "required_badges": None,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
+        )
+
+        dataset = build_item_dataset(
+            raw,
+            pokedb,
+            pokemon,
+            None,
+            location_dataset,
+            mart_dataset=mart_dataset,
+        )
+
+        self.assertEqual(len(dataset["records"][0]["shops"]), 1)
+        self.assertEqual(dataset["records"][0]["shops"][0]["header_id"], 105)
+        self.assertEqual(
+            dataset["records"][0]["shops"][0]["shop_name"],
+            "Driftveil Incense Salesman",
+        )
+
     def test_renders_gen5_party_effects(self) -> None:
         record = {
             **_gen5_item_record(),
