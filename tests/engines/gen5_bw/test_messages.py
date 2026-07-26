@@ -142,6 +142,20 @@ class Gen5MessageTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidRomError, "truncated variable code"):
             parse_english_message_archive(data)
 
+    def test_decodes_a_line_break_as_a_newline(self) -> None:
+        # Real Black ROM item-description fact (member 53, index 149, Cheri
+        # Berry): "If held by a Pokémon, \nit recovers from paralysis." --
+        # this control code is what makes the description wrap to a second
+        # line rather than being one continuous string.
+        words = [ord(c) for c in "If held, "] + [0xFFFE] + [
+            ord(c) for c in "it recovers."
+        ] + [0xFFFF]
+        data = _make_raw_message_archive([words])
+
+        result = parse_english_message_archive(data)
+
+        self.assertEqual(result, ("If held, \nit recovers.",))
+
     def test_decodes_compressed_text(self) -> None:
         # 9-bit-packed stream (all 16 bits/word) for "AB": codes 0x41, 0x42,
         # then a value whose low byte is 0xFF to terminate the bitstream. The

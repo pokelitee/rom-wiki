@@ -28,6 +28,16 @@ _HEADER_SIZE = 12
 # treating the marker/ID/parameter words as literal characters and crashing.
 _VARIABLE_MARKER = 0xF000
 
+# A literal line break (documented by the ROM-hacking community's own text
+# format notes; not previously handled here, so any message containing one
+# crashed). Verified against real Black ROM text: member 53 (item
+# descriptions, identified by decoding Potion's own entry, index 17, to its
+# exact real text) contains many multi-line descriptions using this code,
+# e.g. Cheri Berry's real description ("If held by a Pokémon, \nit recovers
+# from paralysis.") decodes cleanly once this is treated as `\n` rather than
+# rejected.
+_LINE_BREAK = 0xFFFE
+
 
 def parse_english_message_archive(
     data: bytes, *, limit: int | None = None
@@ -108,6 +118,10 @@ def _decode_message(words: list[int], index: int) -> str:
                 )
             characters.append(f"{{VAR:{variable_id:04X}}}")
             position = params_end
+            continue
+        if value == _LINE_BREAK:
+            characters.append("\n")
+            position += 1
             continue
         if not 20 < value <= 0xFFF0:
             raise InvalidRomError(

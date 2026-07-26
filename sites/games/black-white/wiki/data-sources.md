@@ -147,7 +147,15 @@ this generation may simply hardcode those effects by item ID instead of
 storing them as data. Berry growth (soil-planting) data doesn't exist to
 decode in the first place: Generation V removed that mechanic from the base
 game entirely (berries only come from wild berry trees, NPCs, and the Dream
-World). Fossil revival is now fully decoded, including the item-to-species
+World). Berry firmness/size/smoothness -- the properties Generation IV
+stores in its own separate `nuts_data.narc` archive -- don't exist to
+decode either, and this was checked directly rather than assumed: this
+generation has no equivalent archive, no item-record byte matches the real
+firmness groupings, and (most conclusively) the ROM's own real item
+description text for every one of the 66 real berries never mentions Size
+or Firmness at all, describing only gameplay effect. This matches the
+mechanics that would need this data -- soil-growing and Pokéblocks/Poffins
+-- being equally absent from this generation. Fossil revival is now fully decoded, including the item-to-species
 mapping: every real fossil item's own field-use function ID is 0 ("none";
 reviving a fossil is a specific NPC interaction, not a bag-menu action), so
 the choice is hardcoded in the fossil scientist's own script logic rather
@@ -472,11 +480,6 @@ not just unverified: the best candidate opcode
 (`CallFriendlyShopBuy`) produces unreliable, false-positive-looking results
 without a validating instruction the way trainer battles have. See
 Locations above.
-
-Items' berry-specific data (firmness, size, smoothness, flavor) isn't
-decoded either -- distinct from the already-correctly-excluded soil-growing
-mechanic, this is simply not yet attempted; no candidate archive or field
-has been found for it so far.
 
 Trainers' field map locations/script triggers, Locations' warps/outdoor
 connections/field items/static encounters, and the fossil revival
