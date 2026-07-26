@@ -19,7 +19,8 @@ def parse_static_encounters(
     single contiguous table -- each encounter is a species ID (and, unless
     it's an egg, a level) patched into one specific script file at a literal
     byte offset. `entries` comes from `gen5_offsets.ini`'s `StaticPokemon{}`
-    facts (see plan.md for the source and verification). Each fact lists
+    facts (see sites/games/black-white/wiki/data-sources.md for the source
+    and verification). Each fact lists
     every script file/offset pair the species ID is duplicated at; only the
     first pair is read here, matching `Gen5RomHandler.getPokemon()`.
     """

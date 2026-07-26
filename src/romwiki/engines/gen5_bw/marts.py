@@ -9,7 +9,8 @@ from romwiki.schema import Gen5Shop, RecordProvenance
 # except the TM shops and the plain Poké Marts, whose stock is a fixed
 # generation-wide item list, not ROM data), stored as consecutive item-ID
 # words at a literal byte offset in the (BLZ-compressed) `ShopItemOvlNumber`
-# overlay. See plan.md for the source and verification.
+# overlay. See sites/games/black-white/wiki/data-sources.md for the source
+# and verification.
 SHOP_ITEM_WORD_SIZE = 2
 
 # `bw1ShopNames`/`bw1MainGameShops` (Gen5Constants.java): fixed internal shop

@@ -12,7 +12,8 @@ GEN5_ITEM_PRICE_SCALE = 10
 # This generation's Bag has only 5 pockets (down from Gen4's 8 -- Poké Balls,
 # Battle Items, and Mail were folded into the general "Items" pocket).
 # Confirmed against Bulbapedia's "List of items by pocket in Pokémon Black
-# and White" (see plan.md for the full item-by-item verification).
+# and White" (see sites/games/black-white/wiki/data-sources.md for the full
+# item-by-item verification).
 GEN5_ITEM_POCKET_NAMES = (
     "items",
     "medicine",
@@ -57,8 +58,9 @@ GEN5_ITEM_FIELD_USE_NAMES = (
 
 # Byte layout of the real `a/0/2/4` archive's 36-byte records (item ID ==
 # archive member index directly -- no ARM9 item-to-member map, unlike Gen4).
-# No public documentation or decompilation covers this format; see plan.md
-# for the full verification writeup. The first 12 bytes are byte-identical
+# No public documentation or decompilation covers this format; see
+# sites/games/black-white/wiki/data-sources.md for the full verification
+# writeup. The first 12 bytes are byte-identical
 # to Gen4's own item record; everything from byte 13 on diverges, since Gen5
 # replaced Gen4's one large party-effects bitfield with dedicated
 # per-concept fields:
@@ -109,9 +111,10 @@ GEN5_ITEM_FIELD_USE_NAMES = (
 #     HP/Attack/Defense/Speed/Sp. Atk/Sp. Def order (the standard internal
 #     stat order).
 #   friendship_low/medium/high_amount: signed bytes @ 31-33.
-# Deliberately not decoded (see plan.md for why): byte 3 (re-checked this
-# session -- it tracks hp_restored/pp_restored exactly for every healing
-# item regardless of whether that item's own hold_effect_id is even
+# Deliberately not decoded (see sites/games/black-white/wiki/data-sources.md
+# for why): byte 3 (re-checked this session -- it tracks hp_restored/
+# pp_restored exactly for every healing item regardless of whether that
+# item's own hold_effect_id is even
 # non-zero, e.g. Potion's hold_effect_id is 0 but byte 3 is still 20; a
 # genuine `hold_effect_parameter` should only vary with a real held-item
 # effect, so this looks like a shared "amount" field reused by more than
