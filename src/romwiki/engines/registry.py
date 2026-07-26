@@ -45,6 +45,7 @@ class EngineAdapter:
     marts: Any
     static_encounters: Any
     pickup: Any
+    capabilities: frozenset[str] = frozenset()
 
 
 _ENGINES: dict[str, EngineAdapter] = {
@@ -87,6 +88,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         marts=gen5_bw,
         static_encounters=gen5_bw,
         pickup=gen5_bw,
+        capabilities=frozenset({"detached-npc-trades"}),
     ),
 }
 

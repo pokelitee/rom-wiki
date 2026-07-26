@@ -5,6 +5,8 @@ import unittest
 from romwiki.pipeline.version_merge import (
     merge_version_comparisons,
     merge_version_datasets,
+    merge_version_family_comparisons,
+    merge_version_family_datasets,
 )
 from romwiki.util.errors import DataSourceError
 
@@ -38,17 +40,31 @@ class VersionMergeTests(unittest.TestCase):
         self.assertEqual(records[643]["versions"], ["white"])
         self.assertNotIn("version_variants", records[1])
 
-    def test_flags_records_that_differ_between_versions(self) -> None:
-        black = _dataset("pokemon", "black-us", [_pokemon(1, "Bulbasaur", power=40)])
-        white = _dataset("pokemon", "white-us", [_pokemon(1, "Bulbasaur", power=41)])
+    def test_rejects_differing_records_without_variant_renderer(self) -> None:
+        black = _dataset("moves", "black-us", [_move(1, 40)])
+        white = _dataset("moves", "white-us", [_move(1, 41)])
 
-        merged = merge_version_datasets(black, "black", white, "white")
+        with self.assertRaisesRegex(DataSourceError, "does not support"):
+            merge_version_datasets(black, "black", white, "white")
+
+    def test_merges_renderable_variants_for_three_versions(self) -> None:
+        datasets = {
+            "red": _dataset("items", "red", [_item(1, 100)]),
+            "blue": _dataset("items", "blue", [_item(1, 200)]),
+            "yellow": _dataset("items", "yellow", [_item(1, 300)]),
+        }
+
+        merged = merge_version_family_datasets(datasets)
         record = merged["records"][0]
 
-        self.assertEqual(record["versions"], ["black", "white"])
-        self.assertIn("version_variants", record)
-        self.assertEqual(record["version_variants"]["black"]["power"], 40)
-        self.assertEqual(record["version_variants"]["white"]["power"], 41)
+        self.assertEqual(record["versions"], ["red", "blue", "yellow"])
+        self.assertEqual(
+            {
+                version: value["price"]
+                for version, value in record["version_variants"].items()
+            },
+            {"red": 100, "blue": 200, "yellow": 300},
+        )
 
     def test_rejects_mismatched_dataset_kinds(self) -> None:
         black = _dataset("pokemon", "black-us", [_pokemon(1, "Bulbasaur")])
@@ -105,6 +121,30 @@ class VersionMergeTests(unittest.TestCase):
                 "b",
             )
 
+    def test_single_version_comparison_row_keeps_its_baseline(self) -> None:
+        merged = merge_version_family_comparisons(
+            {
+                "red-hack": _comparison(
+                    "items",
+                    "red-hack",
+                    "red",
+                    [_comparison_record(1, "added", ["price"])],
+                ),
+                "blue-hack": _comparison(
+                    "items", "blue-hack", "blue", []
+                ),
+                "yellow-hack": _comparison(
+                    "items", "yellow-hack", "yellow", []
+                ),
+            }
+        )
+
+        record = merged["records"][0]
+        self.assertEqual(record["versions"], ["red-hack"])
+        self.assertEqual(
+            record["version_comparisons"]["red-hack"]["baseline"], "red"
+        )
+
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:
     return {
@@ -126,6 +166,24 @@ def _pokemon(member: int, name: str, **overrides: object) -> dict:
     }
     record.update(overrides)
     return record
+
+
+def _item(item_id: int, price: int) -> dict:
+    return {
+        "item_id": item_id,
+        "name": f"Item {item_id}",
+        "slug": f"item-{item_id}",
+        "price": price,
+    }
+
+
+def _move(move_id: int, power: int) -> dict:
+    return {
+        "move_id": move_id,
+        "name": f"Move {move_id}",
+        "slug": f"move-{move_id}",
+        "power": power,
+    }
 
 
 def _comparison(

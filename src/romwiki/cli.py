@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.comparisons import write_comparison_dataset
@@ -39,8 +39,8 @@ from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
 from romwiki.pipeline.version_merge import (
-    merge_version_comparisons,
-    merge_version_datasets,
+    merge_version_family_comparisons,
+    merge_version_family_datasets,
 )
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
@@ -53,7 +53,13 @@ from romwiki.renderers.mkdocs import (
 )
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
-from romwiki.sites import SiteCatalog, audit_site, build_sites
+from romwiki.sites import (
+    SiteCatalog,
+    audit_site,
+    build_sites,
+    create_generated_wiki_snapshot,
+    restore_generated_wiki_snapshot,
+)
 from romwiki.sites.dev_pages import DevPages
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import (
@@ -61,7 +67,7 @@ from romwiki.util.errors import (
     RomWikiError,
     SiteError,
 )
-from romwiki.util.local_config import LocalGameRegistry
+from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -319,19 +325,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     version_pair_parser = subparsers.add_parser(
         "build-version-pair",
-        help="build one merged wiki for two sibling game versions (e.g. Black/White)",
+        help="build one merged wiki for a sibling game-version family",
     )
     version_pair_parser.add_argument(
         "--games",
-        nargs=2,
-        metavar=("PRIMARY", "SECONDARY"),
+        nargs="+",
+        metavar="GAME",
         required=True,
-        help="two game identifiers from the local game configuration",
+        help="two or more game identifiers from the local game configuration",
     )
     version_pair_parser.add_argument(
         "--versions",
-        nargs=2,
-        metavar=("PRIMARY_LABEL", "SECONDARY_LABEL"),
+        nargs="+",
+        metavar="LABEL",
         help="version labels used for tagging records (default: the --games values)",
     )
     version_pair_parser.add_argument(
@@ -423,6 +429,25 @@ def build_parser() -> argparse.ArgumentParser:
         default=150,
         help="image count that triggers a warning on one page (default: 150)",
     )
+    snapshot_parser = site_subparsers.add_parser(
+        "snapshot", help="archive generated, ROM-free wiki Markdown"
+    )
+    snapshot_parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("sites/generated-wiki.tar.gz"),
+    )
+    _add_site_root_argument(snapshot_parser)
+    restore_parser = site_subparsers.add_parser(
+        "restore-snapshot", help="restore generated wiki Markdown"
+    )
+    restore_parser.add_argument(
+        "archive",
+        type=Path,
+        nargs="?",
+        default=Path("sites/generated-wiki.tar.gz"),
+    )
+    _add_site_root_argument(restore_parser)
     return parser
 
 
@@ -608,6 +633,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 for site in built:
                     print(f"Built {site.id}: {site.output_path(args.output.resolve())}")
+            elif args.site_command == "snapshot":
+                count = create_generated_wiki_snapshot(args.root, args.output)
+                print(f"Archived {count:,} generated wiki files: {args.output}")
+            elif args.site_command == "restore-snapshot":
+                count = restore_generated_wiki_snapshot(args.root, args.archive)
+                print(f"Restored {count:,} generated wiki files: {args.archive}")
         return 0
     except RomWikiError as error:
         print(f"error: {error}", file=sys.stderr)
@@ -896,24 +927,15 @@ _VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
 def _run_version_pair_build(args: argparse.Namespace) -> None:
     registry = LocalGameRegistry.load(args.games_config)
     pokedb = PokeDBGeneration.load(args.pokedb)
-    primary_game, secondary_game = args.games
-    primary_version, secondary_version = args.versions or (primary_game, secondary_game)
+    games, versions = _version_family_inputs(args.games, args.versions)
     game_paths = {
-        primary_version: registry.get(primary_game),
-        secondary_version: registry.get(secondary_game),
+        version: registry.get(game_id)
+        for version, game_id in zip(versions, games, strict=True)
     }
-    configured_baselines = {
-        version: paths.base_rom is not None
-        for version, paths in game_paths.items()
-    }
-    if len(set(configured_baselines.values())) != 1:
-        raise LocalConfigError(
-            "Version-pair builds require both games to define base_rom or neither"
-        )
-    compare_to_bases = all(configured_baselines.values())
+    compare_to_bases = _version_family_uses_baselines(game_paths)
 
     workflows = {}
-    for version, game_id in ((primary_version, primary_game), (secondary_version, secondary_game)):
+    for version in versions:
         paths = game_paths[version]
         result = inspect_rom(paths.rom(), args.profiles_dir)
         baseline = (
@@ -931,14 +953,18 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             refresh_current=args.refresh_cache,
         )
 
-    primary_layout = workflows[primary_version].current.profile.layout
-    secondary_layout = workflows[secondary_version].current.profile.layout
+    layouts = [
+        workflows[version].current.profile.layout
+        for version in versions
+    ]
     kinds = [
         kind
         for kind, alternatives in _VERSION_PAIR_SECTION_LAYOUT_KEYS.items()
         if any(
-            all(key in primary_layout for key in required_keys)
-            and all(key in secondary_layout for key in required_keys)
+            all(
+                all(key in layout for key in required_keys)
+                for layout in layouts
+            )
             for required_keys in alternatives
         )
     ]
@@ -946,23 +972,24 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     merged_datasets: dict[str, dict] = {}
     merged_comparisons: dict[str, dict] = {}
     for kind in kinds:
-        primary_build = workflows[primary_version].build(kind)
-        secondary_build = workflows[secondary_version].build(kind)
-        merged_datasets[kind] = merge_version_datasets(
-            primary_build.current,
-            primary_version,
-            secondary_build.current,
-            secondary_version,
+        builds = {
+            version: workflows[version].build(kind)
+            for version in versions
+        }
+        merged_datasets[kind] = merge_version_family_datasets(
+            {
+                version: build.current
+                for version, build in builds.items()
+            }
         )
-        if (
-            primary_build.comparison is not None
-            and secondary_build.comparison is not None
-        ):
-            merged_comparisons[kind] = merge_version_comparisons(
-                primary_build.comparison,
-                primary_version,
-                secondary_build.comparison,
-                secondary_version,
+        comparisons = {
+            version: build.comparison
+            for version, build in builds.items()
+            if build.comparison is not None
+        }
+        if comparisons:
+            merged_comparisons[kind] = merge_version_family_comparisons(
+                comparisons
             )
 
     site_id = args.site_id
@@ -991,6 +1018,35 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             f"Rendered {page_count} change overview pages: "
             f"{wiki_root / 'changes'}"
         )
+
+
+def _version_family_inputs(
+    raw_games: Sequence[str], raw_versions: Sequence[str] | None
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    games = tuple(raw_games)
+    versions = tuple(raw_versions or games)
+    if len(games) < 2:
+        raise LocalConfigError("Version-family builds require at least two games")
+    if len(versions) != len(games):
+        raise LocalConfigError(
+            "--versions must contain one label for every --games entry"
+        )
+    if len(set(versions)) != len(versions):
+        raise LocalConfigError("Version labels must be unique")
+    return games, versions
+
+
+def _version_family_uses_baselines(
+    game_paths: Mapping[str, LocalGamePaths],
+) -> bool:
+    configured_baselines = {
+        version: paths.base_rom is not None for version, paths in game_paths.items()
+    }
+    if len(set(configured_baselines.values())) != 1:
+        raise LocalConfigError(
+            "Version-family builds require every game to define base_rom or none"
+        )
+    return all(configured_baselines.values())
 
 
 def _run_baseline_build(args: argparse.Namespace) -> None:

@@ -155,6 +155,41 @@ class Gen5TrainerTests(unittest.TestCase):
         self.assertEqual(len(trainer.party), 1)
         self.assertEqual(trainer.party[0].species_id, 1)
 
+    def test_rejects_nonzero_partial_trailing_party_record(self) -> None:
+        data = _trainer_header(
+            poketype=0, class_id=0, battle_mode=0, party_count=1
+        )
+        active = struct.pack("<BBHHH", 0, 0, 20, 1, 0)
+
+        with self.assertRaises(InvalidRomError):
+            parse_trainer_record(
+                data,
+                active + b"\1",
+                trainer_id=1,
+                name="x",
+                class_names=_CLASS_NAMES,
+                trainer_archive="trainers.narc",
+                party_archive="parties.narc",
+            )
+
+    def test_accepts_zero_alignment_padding_after_complete_records(self) -> None:
+        data = _trainer_header(
+            poketype=2, class_id=0, battle_mode=0, party_count=1
+        )
+        active = struct.pack("<BBHHHH", 0, 0, 20, 1, 0, 0)
+
+        trainer = parse_trainer_record(
+            data,
+            active + b"\0\0",
+            trainer_id=1,
+            name="x",
+            class_names=_CLASS_NAMES,
+            trainer_archive="trainers.narc",
+            party_archive="parties.narc",
+        )
+
+        self.assertEqual(len(trainer.party), 1)
+
     def test_rejects_unknown_class_id(self) -> None:
         data = _trainer_header(
             poketype=0, class_id=len(_CLASS_NAMES), battle_mode=0, party_count=0

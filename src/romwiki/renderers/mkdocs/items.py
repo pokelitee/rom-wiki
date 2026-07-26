@@ -35,6 +35,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section_link,
     type_badges,
     version_availability_note,
+    version_variant_records,
     yes_no,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -101,8 +102,9 @@ def render_item_pages(
                 "items/index.md",
             )
         )
-        variants = record.get("version_variants")
-        source_records = list(variants.values()) if variants else [record]
+        source_records = [
+            value for _, value in version_variant_records(record)
+        ]
         features = list(
             dict.fromkeys(
                 feature
@@ -474,16 +476,17 @@ def _append_gifts_and_trades(
     source_file: str,
     references: ReferenceIndex | None,
 ) -> None:
-    variants = record.get("version_variants")
-    variant_records = list(variants.values()) if variants else []
-    gifts_and_trades_differ = bool(variant_records) and any(
+    version_records = version_variant_records(record)
+    variant_records = [value for _, value in version_records]
+    gifts_and_trades_differ = version_records[0][0] is not None and any(
         (value["gifts"], value["trades"])
         != (variant_records[0]["gifts"], variant_records[0]["trades"])
         for value in variant_records[1:]
     )
     if gifts_and_trades_differ:
         lines.extend(["## Gifts and trades", ""])
-        for version, version_record in variants.items():
+        for version, version_record in version_records:
+            assert version is not None
             lines.extend([f"### {display_name(version)}", ""])
             values = _gift_trade_values(version_record)
             if values:

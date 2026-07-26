@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from romwiki.profiles.loader import ProfileRepository
 from romwiki.util.errors import SiteError
 
 SiteKind = Literal["portal", "game"]
@@ -60,6 +61,7 @@ class SiteCatalog:
             )
         )
         _validate_catalog(sites)
+        _validate_profile_references(resolved_root, sites)
         return cls(resolved_root, sites)
 
     def get(self, site_id: str) -> SiteDefinition:
@@ -164,3 +166,37 @@ def _validate_catalog(sites: tuple[SiteDefinition, ...]) -> None:
         raise SiteError("Site slugs must be unique")
     if any(site.kind == "game" and site.game is None for site in sites):
         raise SiteError("Every game site must include game metadata")
+
+
+def _validate_profile_references(
+    root: Path, sites: tuple[SiteDefinition, ...]
+) -> None:
+    profiles_root = root / "profiles"
+    if not profiles_root.is_dir():
+        return
+    profiles = {
+        profile.id: profile
+        for profile in ProfileRepository.load(profiles_root).profiles
+    }
+    for site in sites:
+        if site.game is None:
+            continue
+        missing = [
+            profile_id
+            for profile_id in site.game.profiles
+            if profile_id not in profiles
+        ]
+        if missing:
+            raise SiteError(
+                f"Game site {site.id} references unknown profile(s): "
+                f"{', '.join(missing)}"
+            )
+        selected = [profiles[profile_id] for profile_id in site.game.profiles]
+        if any(profile.platform != site.game.platform for profile in selected):
+            raise SiteError(
+                f"Game site {site.id} platform does not match its profiles"
+            )
+        if len({profile.engine for profile in selected}) != 1:
+            raise SiteError(
+                f"Game site {site.id} profiles must use the same engine"
+            )

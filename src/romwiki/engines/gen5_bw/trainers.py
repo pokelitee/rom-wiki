@@ -37,10 +37,17 @@ def parse_trainer_record(
     has_held_items = bool(poketype & 2)
     record_size = 8 + (2 if has_held_items else 0) + (8 if has_custom_moves else 0)
     expected_size = record_size * party_count
-    if len(party_data) < expected_size:
+    valid_size = any(
+        len(party_data) - padding_size >= expected_size
+        and (len(party_data) - padding_size) % record_size == 0
+        and not any(party_data[len(party_data) - padding_size :])
+        for padding_size in range(4)
+    )
+    if not valid_size:
         raise InvalidRomError(
             f"Trainer {trainer_id} party has size {len(party_data)}; expected "
-            f"at least {expected_size}"
+            f"at least {expected_size}, complete {record_size}-byte records, "
+            "and at most three zero padding bytes"
         )
 
     party = []

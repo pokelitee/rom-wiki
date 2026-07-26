@@ -11,10 +11,13 @@ from romwiki.cli import (
     _load_comparisons,
     _resolve_build_baseline,
     _resolve_input_rom,
+    _version_family_inputs,
+    _version_family_uses_baselines,
     build_parser,
     main,
 )
 from romwiki.util.errors import LocalConfigError
+from romwiki.util.local_config import LocalGamePaths
 
 
 class MainErrorHandlingTests(unittest.TestCase):
@@ -27,6 +30,26 @@ class MainErrorHandlingTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             main(["not-a-real-command"])
 
+    def test_version_family_parser_accepts_three_games_and_labels(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "build-version-pair",
+                "--games",
+                "red",
+                "blue",
+                "yellow",
+                "--versions",
+                "red-hack",
+                "blue-hack",
+                "yellow-hack",
+            ]
+        )
+
+        self.assertEqual(args.games, ["red", "blue", "yellow"])
+        self.assertEqual(
+            args.versions, ["red-hack", "blue-hack", "yellow-hack"]
+        )
+
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")
         if not rom_path.is_file():
@@ -35,6 +58,54 @@ class MainErrorHandlingTests(unittest.TestCase):
         exit_code = main(["inspect", str(rom_path), "--json"])
 
         self.assertEqual(exit_code, 0)
+
+
+class VersionFamilyInputTests(unittest.TestCase):
+    def test_defaults_version_labels_to_game_ids(self) -> None:
+        self.assertEqual(
+            _version_family_inputs(["black", "white"], None),
+            (("black", "white"), ("black", "white")),
+        )
+
+    def test_requires_at_least_two_games(self) -> None:
+        with self.assertRaisesRegex(LocalConfigError, "at least two games"):
+            _version_family_inputs(["black"], None)
+
+    def test_requires_one_label_per_game(self) -> None:
+        with self.assertRaisesRegex(LocalConfigError, "one label"):
+            _version_family_inputs(["black", "white"], ["black"])
+
+    def test_requires_unique_labels(self) -> None:
+        with self.assertRaisesRegex(LocalConfigError, "must be unique"):
+            _version_family_inputs(["black", "white"], ["hack", "hack"])
+
+    def test_detects_consistent_baseline_configuration(self) -> None:
+        without_baselines = {
+            "black": LocalGamePaths("black", Path("black.nds"), None),
+            "white": LocalGamePaths("white", Path("white.nds"), None),
+        }
+        with_baselines = {
+            "black": LocalGamePaths(
+                "black", Path("black.nds"), Path("base-black.nds")
+            ),
+            "white": LocalGamePaths(
+                "white", Path("white.nds"), Path("base-white.nds")
+            ),
+        }
+
+        self.assertFalse(_version_family_uses_baselines(without_baselines))
+        self.assertTrue(_version_family_uses_baselines(with_baselines))
+
+    def test_rejects_mixed_baseline_configuration(self) -> None:
+        paths = {
+            "black": LocalGamePaths(
+                "black", Path("black.nds"), Path("base-black.nds")
+            ),
+            "white": LocalGamePaths("white", Path("white.nds"), None),
+        }
+
+        with self.assertRaisesRegex(LocalConfigError, "every game"):
+            _version_family_uses_baselines(paths)
 
 
 class DatasetOutputPathTests(unittest.TestCase):

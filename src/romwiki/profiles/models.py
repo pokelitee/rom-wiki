@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from romwiki.platforms.registry import RomImage, get_platform
 
@@ -27,7 +28,7 @@ class GameProfile:
     type_names: Mapping[int, str] = field(default_factory=dict)
     move_names: Mapping[int, str] = field(default_factory=dict)
     layout: Mapping[str, str] = field(default_factory=dict)
-    parameters: Mapping[str, int] = field(default_factory=dict)
+    parameters: Mapping[str, Any] = field(default_factory=dict)
 
     def match(self, image: RomImage) -> HashMatch | None:
         platform = get_platform(self.platform)

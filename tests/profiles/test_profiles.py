@@ -152,6 +152,137 @@ variant = "test"
         self.assertEqual(match.profile.move_names, {66: "play-rough"})
         self.assertEqual(match.known_hash.variant, "test")
 
+    def test_profile_inherits_and_overrides_nested_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "base.toml").write_text(
+                """
+[profile]
+id = "base"
+name = "Base"
+platform = "nintendo-ds"
+engine = "gen4_dppt"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [0]
+[layout]
+personal = "base/personal"
+messages = "base/messages"
+[parameters]
+member = 1
+[[hashes]]
+algorithm = "sha256"
+value = "base"
+variant = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "child.toml").write_text(
+                """
+[profile]
+id = "child"
+name = "Child"
+extends = "base"
+[layout]
+messages = "child/messages"
+[parameters]
+member = 2
+[[hashes]]
+algorithm = "sha256"
+value = "child"
+variant = "child"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            profiles = {
+                profile.id: profile
+                for profile in ProfileRepository.load(root).profiles
+            }
+
+        child = profiles["child"]
+        self.assertEqual(child.platform, "nintendo-ds")
+        self.assertEqual(child.layout["personal"], "base/personal")
+        self.assertEqual(child.layout["messages"], "child/messages")
+        self.assertEqual(child.parameters["member"], 2)
+        self.assertEqual([value.value for value in child.hashes], ["child"])
+
+    def test_rejects_unknown_profile_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "child.toml"
+            path.write_text(
+                """
+[profile]
+id = "child"
+name = "Child"
+extends = "missing"
+[[hashes]]
+algorithm = "sha256"
+value = "child"
+variant = "child"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "unknown profile missing"):
+                ProfileRepository.load(Path(directory))
+
+    def test_inherited_profile_requires_its_own_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "base.toml").write_text(
+                """
+[profile]
+id = "base"
+name = "Base"
+platform = "nintendo-ds"
+engine = "gen4_dppt"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [0]
+[[hashes]]
+algorithm = "sha256"
+value = "base"
+variant = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "child.toml").write_text(
+                """
+[profile]
+id = "child"
+name = "Child"
+extends = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "must define its own hashes"):
+                ProfileRepository.load(root)
+
+    def test_rejects_profile_inheritance_cycle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for profile_id, parent_id in (("first", "second"), ("second", "first")):
+                (root / f"{profile_id}.toml").write_text(
+                    f"""
+[profile]
+id = "{profile_id}"
+name = "{profile_id}"
+extends = "{parent_id}"
+[[hashes]]
+algorithm = "sha256"
+value = "{profile_id}"
+variant = "{profile_id}"
+""".strip(),
+                    encoding="utf-8",
+                )
+
+            with self.assertRaisesRegex(ProfileError, "inheritance cycle"):
+                ProfileRepository.load(root)
+
     def test_rejects_invalid_sprite_version(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "test.toml"

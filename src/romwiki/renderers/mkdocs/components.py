@@ -212,24 +212,27 @@ def summary_hero(
 
 HIDDEN_ABILITY_MARKER = '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>'
 
-_VERSION_LABELS = {"black": "Black", "white": "White"}
-
-
 def version_availability_note(record: dict[str, Any]) -> list[str]:
-    """Flag a record exclusive to one paired game version.
+    """Flag a record exclusive to one member of a version family.
 
-    Black and White are published as one wiki (see `pipeline.version_merge`)
-    since their data is otherwise byte-for-byte identical; most records apply
-    to both and get no callout here, but a handful (e.g. Zekrom vs. Reshiram)
-    are exclusive to one cartridge and need to say so. A record without a
-    `versions` field (e.g. every non-merged single-profile site) is left
-    untouched.
+    Most merged records apply to every sibling version and get no callout. A
+    record without a ``versions`` field belongs to a single-profile site.
     """
     versions = record.get("versions")
     if not versions or len(versions) != 1:
         return []
-    label = _VERSION_LABELS.get(versions[0], versions[0].title())
+    label = display_name(versions[0])
     return [f'!!! info "{label} only"', f"    Only available in Pokémon {label}.", ""]
+
+
+def version_variant_records(
+    record: dict[str, Any],
+) -> tuple[tuple[str | None, dict[str, Any]], ...]:
+    """Return explicit version variants or the ordinary record as one entry."""
+    variants = record.get("version_variants")
+    if variants:
+        return tuple(variants.items())
+    return ((None, record),)
 
 
 def ability_link(value: dict[str, Any], source_url: str) -> str:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import tomllib
 from pathlib import Path
+from typing import Any
 
 from romwiki.platforms.registry import RomImage
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
@@ -17,24 +18,75 @@ class ProfileRepository:
     def load(cls, directory: Path) -> ProfileRepository:
         if not directory.is_dir():
             raise ProfileError(f"Profile directory does not exist: {directory}")
-        profiles = tuple(
-            _load_profile(path) for path in sorted(directory.rglob("*.toml"))
-        )
-        if not profiles:
+        paths = sorted(directory.rglob("*.toml"))
+        if not paths:
             raise ProfileError(f"No TOML profiles found in: {directory}")
-        identifiers = [profile.id for profile in profiles]
-        if len(identifiers) != len(set(identifiers)):
-            raise ProfileError("Profile identifiers must be unique")
+
+        raw_profiles = {
+            path: _read_profile_data(path)
+            for path in paths
+        }
+        profiles_by_id: dict[str, tuple[Path, dict[str, Any]]] = {}
+        for path, data in raw_profiles.items():
+            try:
+                profile_id = data["profile"]["id"]
+            except (KeyError, TypeError) as error:
+                raise ProfileError(f"Invalid profile {path}: {error}") from error
+            if not isinstance(profile_id, str) or not profile_id:
+                raise ProfileError(f"Invalid profile identifier in {path}")
+            if profile_id in profiles_by_id:
+                raise ProfileError("Profile identifiers must be unique")
+            profiles_by_id[profile_id] = path, data
+
+        resolved: dict[str, dict[str, Any]] = {}
+
+        def resolve(profile_id: str, ancestors: tuple[str, ...] = ()) -> dict[str, Any]:
+            if profile_id in resolved:
+                return resolved[profile_id]
+            if profile_id in ancestors:
+                chain = " -> ".join((*ancestors, profile_id))
+                raise ProfileError(f"Profile inheritance cycle: {chain}")
+            try:
+                path, data = profiles_by_id[profile_id]
+            except KeyError as error:
+                raise ProfileError(
+                    f"Profile extends unknown profile: {profile_id}"
+                ) from error
+            profile_data = data.get("profile")
+            if not isinstance(profile_data, dict):
+                raise ProfileError(f"Invalid profile metadata in {path}")
+            parent_id = profile_data.get("extends")
+            if parent_id is None:
+                merged = _merge_tables({}, data)
+            else:
+                if not isinstance(parent_id, str) or not parent_id:
+                    raise ProfileError(f"Invalid profile parent in {path}")
+                if "hashes" not in data:
+                    raise ProfileError(
+                        f"Inherited profile {profile_id} must define its own hashes"
+                    )
+                if parent_id not in profiles_by_id:
+                    raise ProfileError(
+                        f"Profile {profile_id} extends unknown profile {parent_id}"
+                    )
+                merged = _merge_tables(
+                    resolve(parent_id, (*ancestors, profile_id)),
+                    data,
+                )
+            merged["profile"].pop("extends", None)
+            resolved[profile_id] = merged
+            return merged
+
+        profiles = tuple(
+            _build_profile(path, resolve(profile_id))
+            for profile_id, (path, _) in profiles_by_id.items()
+        )
         return cls(profiles)
 
     def identify(
         self, image: RomImage, *, platform: str | None = None
     ) -> HashMatch | None:
-        """Match `image` against profiles, optionally only those for `platform`.
-
-        Passing the platform that opened the image keeps other platforms'
-        profiles from interpreting a foreign image's header.
-        """
+        """Match `image` against profiles, optionally only those for `platform`."""
         matches = [
             match
             for profile in self.profiles
@@ -46,10 +98,32 @@ class ProfileRepository:
         return matches[0] if matches else None
 
 
-def _load_profile(path: Path) -> GameProfile:
+def _read_profile_data(path: Path) -> dict[str, Any]:
     try:
         with path.open("rb") as stream:
             data = tomllib.load(stream)
+    except tomllib.TOMLDecodeError as error:
+        raise ProfileError(f"Invalid profile {path}: {error}") from error
+    if not isinstance(data, dict):
+        raise ProfileError(f"Invalid profile data in {path}")
+    return data
+
+
+def _merge_tables(
+    parent: dict[str, Any], child: dict[str, Any]
+) -> dict[str, Any]:
+    merged = dict(parent)
+    for key, value in child.items():
+        inherited = merged.get(key)
+        if isinstance(inherited, dict) and isinstance(value, dict):
+            merged[key] = _merge_tables(inherited, value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
+    try:
         profile_data = data["profile"]
         header_data = data["header"]
         reference_data = data.get("reference", {})
@@ -100,7 +174,7 @@ def _load_profile(path: Path) -> GameProfile:
             layout=dict(data.get("layout", {})),
             parameters=dict(data.get("parameters", {})),
         )
-    except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
+    except (KeyError, TypeError) as error:
         raise ProfileError(f"Invalid profile {path}: {error}") from error
 
 

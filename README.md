@@ -170,6 +170,24 @@ follow the same baseline policy. `inspect`, `manifest`, and `extract-*` stay
 single-ROM audit commands and never implicitly parse another image. MkDocs itself
 only consumes generated files and never opens a ROM.
 
+When a hack shares an existing retail profile's complete layout, it can inherit
+that configuration and override only its identity and hashes:
+
+```toml
+[profile]
+id = "example-hack"
+name = "Example Hack"
+extends = "retail-profile"
+
+[[hashes]]
+algorithm = "sha256"
+value = "..."
+variant = "v1"
+```
+
+Nested TOML tables merge recursively; child scalar and array values replace
+their inherited values. Unknown parents and inheritance cycles are rejected.
+
 Use `--games-config` for a different registry. `--rom` provides a one-command
 override, and the original positional path remains supported:
 
@@ -411,6 +429,26 @@ Build one game locally or every published site for deployment:
 romwiki site build renegade-platinum --output dist
 romwiki site build --all --output dist
 ```
+
+Generated game pages are ignored individually so the repository does not carry
+thousands of noisy Markdown diffs. After rebuilding and validating ROM-derived
+pages, update the deterministic, ROM-free publication snapshot:
+
+```console
+romwiki site snapshot
+```
+
+The tracked `sites/generated-wiki.tar.gz` contains generated Markdown, not ROMs.
+It also records a source/profile fingerprint, so deployment rejects an archive
+created by stale parser or renderer code. Deployment restores it before running
+MkDocs:
+
+```console
+romwiki site restore-snapshot
+```
+
+`site build` fails when a required generated section is absent, preventing a
+clean checkout from silently publishing only hand-written landing pages.
 
 Audit a built artifact for oversized pages and broken links before publishing:
 

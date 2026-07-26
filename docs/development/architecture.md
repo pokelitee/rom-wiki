@@ -290,3 +290,15 @@ serialized to JSON.
 
 These are known extension tasks, not reasons to combine extraction and rendering.
 The existing boundary remains the intended long-term design.
+
+## Generated publication snapshot
+
+ROM-derived Markdown remains ignored as individual files, but deployment must be
+reproducible without distributing ROM inputs. `romwiki site snapshot` packs all
+generated game sections into the deterministic, tracked
+`sites/generated-wiki.tar.gz` archive. The Pages workflow restores that archive
+before invoking MkDocs. Its manifest fingerprints the parser, pipeline,
+renderer, and profile sources, so a stale snapshot is rejected. Required
+generated sections are validated before a site build, preventing an absent
+publication input from degrading into a successful landing-page-only
+deployment.

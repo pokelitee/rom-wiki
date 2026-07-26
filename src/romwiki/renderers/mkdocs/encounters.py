@@ -28,6 +28,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section,
     summary_section_link,
     table_sprite_cell,
+    version_variant_records,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -695,8 +696,8 @@ def _gen5_catalog_record(
     species = []
     pokemon_refs = []
     method_pokemon = {}
-    variants = record.get("version_variants")
-    source_records = list(variants.values()) if variants else [record]
+    variant_records = version_variant_records(record)
+    source_records = [value for _, value in variant_records]
     for source_record in source_records:
         for key, label in _GEN5_METHOD_LABELS.items():
             method = source_record[key]
@@ -756,8 +757,8 @@ def _render_gen5_area(
         "",
         *_gen5_area_summary(record),
     ]
-    variants = record.get("version_variants")
-    if variants:
+    variant_records = version_variant_records(record)
+    if variant_records[0][0] is not None:
         lines.extend(
             [
                 '!!! info "Version differences"',
@@ -765,7 +766,8 @@ def _render_gen5_area(
                 "",
             ]
         )
-        for version, version_record in variants.items():
+        for version, version_record in variant_records:
+            assert version is not None
             lines.extend([f"## {display_name(version)}", ""])
             for key, label in _GEN5_METHOD_LABELS.items():
                 _append_gen5_method(

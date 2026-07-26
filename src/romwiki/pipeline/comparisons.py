@@ -243,6 +243,15 @@ def records_by_key(
     return result
 
 
+def records_semantically_equal(
+    kind: str, first: dict[str, Any], second: dict[str, Any]
+) -> bool:
+    """Compare only the normalized fields published for one dataset kind."""
+    if kind not in _FIELDS:
+        raise DataSourceError(f"Unsupported comparison kind: {kind}")
+    return not _field_changes(kind, first, second)
+
+
 def _field_changes(
     kind: str, before: dict[str, Any], after: dict[str, Any]
 ) -> list[dict[str, Any]]:

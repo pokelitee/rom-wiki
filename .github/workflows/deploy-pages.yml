@@ -35,6 +35,9 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
+      - name: Restore generated wiki pages
+        run: romwiki site restore-snapshot
+
       - name: Build published sites
         run: romwiki site build --all --output dist
         env:

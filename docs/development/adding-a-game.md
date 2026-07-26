@@ -70,6 +70,13 @@ Create `profiles/<category>/<game-id>.toml` with:
 - internal paths, offsets, counts, and other layout parameters;
 - explicit annotations only when the relationship cannot be derived exactly.
 
+If the new ROM uses an existing profile's complete layout, declare
+`extends = "<parent-profile>"` in its `[profile]` table and override only the
+fields that differ. Nested TOML tables merge recursively; scalar and array
+values in the child replace inherited values. Keep a standalone profile when
+the relationship is only approximate or extensive overrides would make
+inheritance harder to audit.
+
 Keep format logic out of the profile. A profile should select and configure a
 parser, not implement one through a large collection of magic values.
 
@@ -268,17 +275,17 @@ fallback so new categories remain usable without JavaScript.
 
 ### Sibling game versions (e.g. Black/White)
 
-Two releases of the same game (same engine, data confirmed byte-for-byte
-identical except for a handful of version-exclusive records) publish as **one**
-site rather than two. Each release still gets its own `GameProfile` under
+Two or more releases of the same game (same engine, data confirmed identical
+except for version-exclusive records or explicitly supported same-key variants)
+may publish as **one** site. Each release still gets its own `GameProfile` under
 `profiles/games/` (needed to hash-match its own ROM), but the site descriptor's
 `[game]` table lists both under `profiles = ["black-us", "white-us"]` instead of
 a single `profile`, and there is no `sites/games/black-us/` or `.../white-us/`
 directory at all -- only `sites/games/black-white/`.
 
 The `romwiki build-version-pair --games black-us white-us --versions black
-white` command builds both profiles, merges each section with
-`pipeline.version_merge.merge_version_datasets` (which tags every record with
+white` command accepts two or more profiles, merges each section with
+`pipeline.version_merge.merge_version_family_datasets` (which tags every record with
 the `versions` it appears in -- `["black", "white"]` for shared content, a
 single entry for an exclusive), and renders the merged dataset into that one
 site. Renderers surface a "Black only"/"White only" callout automatically via
@@ -297,11 +304,12 @@ base or neither may do so; a half-configured paired comparison is rejected.
 Always pass a distinct `--site-id` for a new pair because the command's default
 is the existing `black-white` site.
 
-Same-key records whose current values differ retain both complete records under
-`version_variants`. A combined site must render every material variant and
-include both in its catalog data; do not silently publish only the primary
-record. The Generation V encounter and item renderers are the current examples
-for version-specific encounter tables and NPC trade references.
+Same-key records whose current values differ retain all complete records under
+`version_variants`. Only dataset kinds registered as variant-capable may contain
+them; merging fails rather than silently publishing the first value when a
+renderer lacks that support. The Generation V encounter and item renderers are
+the current examples for version-specific encounter tables and NPC trade
+references.
 
 ## 7. Validate before publication
 
@@ -316,6 +324,8 @@ for version-specific encounter tables and NPC trade references.
 - Extract the complete target and reconcile record counts against its archives.
 - Manually verify representative records from every content category.
 - Run the full test suite and build the individual site and combined Pages artifact.
+- Run `romwiki site snapshot` after validating the complete generated output,
+  then test `romwiki site restore-snapshot` from a clean checkout.
 - Run `romwiki build-game --game <id>` twice and confirm the second run reuses the
   baseline cache.
 - Test catalogs with missing optional values, duplicate labels, and enough records
