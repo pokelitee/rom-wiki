@@ -26,7 +26,7 @@ REQUIRED_WIKI_SECTIONS = tuple(
     section for section in GENERATED_WIKI_SECTIONS if section != "changes"
 )
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
-SNAPSHOT_SCHEMA_VERSION = 1
+SNAPSHOT_SCHEMA_VERSION = 2
 
 
 def create_generated_wiki_snapshot(root: Path, output: Path) -> int:
@@ -200,7 +200,10 @@ def _source_fingerprint(root: Path) -> str:
         relative = path.relative_to(root).as_posix().encode("utf-8")
         digest.update(len(relative).to_bytes(4, "big"))
         digest.update(relative)
-        data = path.read_bytes()
+        # Git normalizes tracked text to LF, but a Windows working tree may
+        # expose the same file as CRLF. Fingerprints must describe the source
+        # content rather than the checkout platform that created the snapshot.
+        data = path.read_bytes().replace(b"\r\n", b"\n")
         digest.update(len(data).to_bytes(8, "big"))
         digest.update(data)
     return digest.hexdigest()

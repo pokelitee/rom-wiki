@@ -76,6 +76,17 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
             with self.assertRaisesRegex(SiteError, "snapshot is stale"):
                 restore_generated_wiki_snapshot(root, archive_path)
 
+    def test_source_fingerprint_is_independent_of_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "src" / "romwiki" / "example.py"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"VALUE = 1\nOTHER = 2\n")
+            lf_fingerprint = _source_fingerprint(root)
+            source.write_bytes(b"VALUE = 1\r\nOTHER = 2\r\n")
+
+            self.assertEqual(_source_fingerprint(root), lf_fingerprint)
+
 
 def _make_site(root: Path) -> Path:
     portal = root / "sites" / "portal"
