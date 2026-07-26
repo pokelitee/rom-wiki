@@ -85,6 +85,32 @@ class ProfileRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(white.parameters["static_pokemon"], black.parameters["static_pokemon"])
 
+    def test_loads_blaze_black_and_volt_white_profiles(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+
+        blaze = profiles["blaze-black"]
+        volt = profiles["volt-white"]
+
+        self.assertEqual(blaze.engine, "gen5_bw")
+        self.assertEqual(blaze.base_game, "black")
+        self.assertEqual(blaze.game_codes, ("IRBO",))
+        self.assertEqual(blaze.hashes[0].variant, "full-v3.1")
+        self.assertEqual(
+            blaze.hashes[0].value,
+            "340c1416b2b107a59c9305c43747761804edce8e876c364abee1f0189bd768ac",
+        )
+        self.assertEqual(volt.engine, "gen5_bw")
+        self.assertEqual(volt.base_game, "white")
+        self.assertEqual(volt.game_codes, ("IRAO",))
+        self.assertEqual(volt.hashes[0].variant, "full-v3.1")
+        self.assertEqual(
+            volt.hashes[0].value,
+            "232043c9e3f979fff9e1fd67b78d759928e7849b4c2516477b43538fbf7bf851",
+        )
+
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "test.toml"

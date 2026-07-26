@@ -132,6 +132,29 @@ class Gen5TrainerTests(unittest.TestCase):
                 party_archive="parties.narc",
             )
 
+    def test_ignores_party_records_after_the_header_count(self) -> None:
+        # Blaze Black/Volt White leave old party records in some archive
+        # members after reducing the party count. The game reads only the
+        # count from the trainer header, so those trailing bytes are inert.
+        data = _trainer_header(
+            poketype=0, class_id=0, battle_mode=0, party_count=1
+        )
+        active = struct.pack("<BBHHH", 0, 0, 20, 1, 0)
+        stale = struct.pack("<BBHHH", 0, 0, 30, 2, 0)
+
+        trainer = parse_trainer_record(
+            data,
+            active + stale,
+            trainer_id=1,
+            name="x",
+            class_names=_CLASS_NAMES,
+            trainer_archive="trainers.narc",
+            party_archive="parties.narc",
+        )
+
+        self.assertEqual(len(trainer.party), 1)
+        self.assertEqual(trainer.party[0].species_id, 1)
+
     def test_rejects_unknown_class_id(self) -> None:
         data = _trainer_header(
             poketype=0, class_id=len(_CLASS_NAMES), battle_mode=0, party_count=0

@@ -101,7 +101,15 @@ def render_item_pages(
                 "items/index.md",
             )
         )
-        features = _features(record)
+        variants = record.get("version_variants")
+        source_records = list(variants.values()) if variants else [record]
+        features = list(
+            dict.fromkeys(
+                feature
+                for source_record in source_records
+                for feature in _features(source_record)
+            )
+        )
         category = (record.get("reference") or {}).get("category")
         locations = list(
             dict.fromkeys(
@@ -109,8 +117,9 @@ def render_item_pages(
                 # (see gen5_bw/__init__.py's module docstring) and use
                 # "shop_name" instead of "name" -- fall back to it here.
                 reference.get("name", reference.get("shop_name"))
+                for source_record in source_records
                 for field in ("locations", "shops", "gifts", "trades")
-                for reference in record[field]
+                for reference in source_record[field]
             )
         )
         location_refs = unique_references(
@@ -121,8 +130,9 @@ def render_item_pages(
                     reference["name"],
                     reference.get("header_id"),
                 )
+                for source_record in source_records
                 for field in ("locations", "shops", "gifts", "trades")
-                for reference in record[field]
+                for reference in source_record[field]
                 # Gen5's NPC trades have no map-header cross-reference (see
                 # gen5_bw/__init__.py's module docstring), so they're excluded
                 # from this location-entity list rather than linked wrong.
@@ -464,12 +474,45 @@ def _append_gifts_and_trades(
     source_file: str,
     references: ReferenceIndex | None,
 ) -> None:
-    values = [
-        (value, "Gift", value["pokemon"]) for value in record["gifts"]
-    ] + [(value, "Trade", value["pokemon"]) for value in record["trades"]]
+    variants = record.get("version_variants")
+    variant_records = list(variants.values()) if variants else []
+    gifts_and_trades_differ = bool(variant_records) and any(
+        (value["gifts"], value["trades"])
+        != (variant_records[0]["gifts"], variant_records[0]["trades"])
+        for value in variant_records[1:]
+    )
+    if gifts_and_trades_differ:
+        lines.extend(["## Gifts and trades", ""])
+        for version, version_record in variants.items():
+            lines.extend([f"### {display_name(version)}", ""])
+            values = _gift_trade_values(version_record)
+            if values:
+                _append_gift_trade_table(lines, values, source_file, references)
+            else:
+                lines.extend(["No gift or trade references.", ""])
+        return
+
+    values = _gift_trade_values(record)
     if not values:
         return
     lines.extend(["## Gifts and trades", ""])
+    _append_gift_trade_table(lines, values, source_file, references)
+
+
+def _gift_trade_values(
+    record: dict[str, Any],
+) -> list[tuple[dict[str, Any], str, dict[str, Any]]]:
+    return [
+        (value, "Gift", value["pokemon"]) for value in record["gifts"]
+    ] + [(value, "Trade", value["pokemon"]) for value in record["trades"]]
+
+
+def _append_gift_trade_table(
+    lines: list[str],
+    values: list[tuple[dict[str, Any], str, dict[str, Any]]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
     lines.extend(
         [
             "| Location | Kind | Pokémon | Type |",

@@ -32,7 +32,12 @@ def parse_evolution_record(
         if method_id == parameter == target_species_id == 0:
             found_empty_slot = True
             continue
-        if method_id == 0 or target_species_id == 0:
+        if method_id == 0:
+            # The game treats method zero as disabled regardless of the two
+            # operands. Blaze Black/Volt White leave Feebas's former evolution
+            # operands in such a slot before adding its replacement method.
+            continue
+        if target_species_id == 0:
             raise InvalidRomError(
                 f"Gen V evolution record {species_id} has incomplete slot {slot}"
             )

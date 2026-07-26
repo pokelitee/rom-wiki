@@ -236,6 +236,62 @@ class TrainerEnrichmentTests(unittest.TestCase):
 
 
 class Gen5TrainerEnrichmentTests(unittest.TestCase):
+    def test_resolves_hack_trainer_forms(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={
+                422: {"id": 422, "name": "shellos", "species": "shellos"}
+            },
+            pokemon_by_name={
+                "rotom-heat": {
+                    "id": 479,
+                    "name": "rotom-heat",
+                    "species": "rotom",
+                }
+            },
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 1,
+            "class_id": 1,
+            "has_custom_moves": False,
+            "reward_item_ids": (),
+            "party": [
+                {
+                    "difficulty": 0,
+                    "ability_slot": 0,
+                    "forced_gender_flag": 0,
+                    "level": 20,
+                    "species_id": 422,
+                    "form_id": 1,
+                    "held_item_id": None,
+                    "move_ids": (),
+                },
+                {
+                    "difficulty": 0,
+                    "ability_slot": 0,
+                    "forced_gender_flag": 0,
+                    "level": 20,
+                    "species_id": 479,
+                    "form_id": 1,
+                    "held_item_id": None,
+                    "move_ids": (),
+                },
+            ],
+        }
+
+        trainer = _enrich_trainer(
+            source, pokedb, None, None, engine="gen5_bw"
+        )
+
+        self.assertEqual(
+            trainer["party"][0]["pokemon"]["name"], "Shellos (East Sea)"
+        )
+        self.assertEqual(
+            trainer["party"][1]["pokemon"]["name"], "Rotom Heat"
+        )
+
     def test_enriches_and_renders_a_triple_battle_trainer(self) -> None:
         source = {
             "trainer_id": 1,

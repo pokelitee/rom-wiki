@@ -1,0 +1,12 @@
+INHERIT: mkdocs.yml
+
+site_name: Pokémon Blaze Black & Volt White Wiki (Development)
+site_dir: ../../../build/mkdocs-dev/blaze-black-volt-white
+
+extra:
+  romwiki_site_id: blaze-black-volt-white
+  romwiki_dev_pages: dev-pages.toml
+
+validation:
+  links:
+    not_found: ignore

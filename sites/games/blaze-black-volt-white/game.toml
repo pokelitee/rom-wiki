@@ -1,0 +1,20 @@
+[site]
+id = "blaze-black-volt-white"
+name = "Pokémon Blaze Black & Volt White"
+kind = "game"
+slug = "blaze-black-volt-white"
+published = true
+order = 15
+mkdocs_config = "mkdocs.yml"
+description = "A data-driven reference for Pokémon Blaze Black and Volt White v3.1"
+
+[game]
+profiles = ["blaze-black", "volt-white"]
+generation = 5
+base_game = "black-white"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "Drayano"
+
+[appearance]
+theme = "black-white"

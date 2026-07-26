@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from romwiki.pipeline.items import build_item_dataset
@@ -223,6 +224,56 @@ class BerryMechanicsTests(unittest.TestCase):
 
 
 class MinimalItemDatasetTests(unittest.TestCase):
+    def test_renders_and_indexes_version_specific_trade_references(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {"archive": "itemdata.narc"},
+            "records": [_gen5_item_record()],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
+        )
+        dataset = build_item_dataset(raw, pokedb, pokemon, None, None)
+        record = dataset["records"][0]
+        blaze_record = deepcopy(record)
+        volt_record = deepcopy(record)
+        volt_record["trades"] = [
+            {
+                "name": "Kyle",
+                "nickname": "Blueeye",
+                "ot_name": "Kyle",
+                "pokemon": {
+                    "id": 459,
+                    "name": "Snover",
+                    "slug": "snover",
+                },
+                "trade_id": 3,
+            }
+        ]
+        record["version_variants"] = {
+            "blaze-black": blaze_record,
+            "volt-white": volt_record,
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_item_pages(dataset, output)
+            page = (output / "leftovers.md").read_text(encoding="utf-8")
+            catalog = json.loads(
+                (output / "catalog.json").read_text(encoding="utf-8")
+            )
+
+        self.assertIn("### Blaze Black", page)
+        self.assertIn("No gift or trade references.", page)
+        self.assertIn("### Volt White", page)
+        self.assertIn("Blueeye", page)
+        self.assertIn("Kyle", catalog["records"][0]["locations"])
+
     def test_degrades_cleanly_without_trainer_and_location_datasets(self) -> None:
         raw = {
             "game": "test",

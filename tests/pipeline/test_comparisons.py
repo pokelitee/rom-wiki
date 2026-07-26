@@ -202,6 +202,28 @@ class DatasetComparisonTests(unittest.TestCase):
         self.assertEqual(change["label"], "Prevents tossing")
         self.assertEqual((change["before"], change["after"]), (False, True))
 
+    def test_compares_gen5_encounter_methods(self) -> None:
+        baseline = {
+            "area_id": 1,
+            "name": "Route 1",
+            "active": True,
+            "grass_cave": {"rate": 20, "slots": [{"species_id": 504}]},
+        }
+        current = {
+            **baseline,
+            "grass_cave": {"rate": 20, "slots": [{"species_id": 506}]},
+        }
+
+        comparison = compare_datasets(
+            _dataset("wild_encounters", "hack", [current]),
+            _dataset("wild_encounters", "base", [baseline]),
+        )
+
+        self.assertEqual(comparison["counts"]["changed"], 1)
+        change = comparison["records"][0]["changes"][0]
+        self.assertEqual(change["field"], "grass_cave")
+        self.assertEqual(change["label"], "Grass/Cave")
+
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:
     return {

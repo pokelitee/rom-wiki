@@ -33,13 +33,29 @@ class Gen5EvolutionTests(unittest.TestCase):
         )
         self.assertEqual(result.evolutions, ())
 
+    def test_ignores_a_disabled_slot_with_stale_operands(self) -> None:
+        # Blaze Black/Volt White disable Feebas's former evolution by clearing
+        # only its method, leaving the parameter and target operands in place.
+        data = bytearray(42)
+        struct.pack_into("<3H", data, 0, 0, 170, 350)
+        struct.pack_into("<3H", data, 6, 8, 537, 350)
+
+        result = parse_evolution_record(
+            bytes(data), species_id=349, archive_path="evo.narc"
+        )
+
+        self.assertEqual(len(result.evolutions), 1)
+        self.assertEqual(result.evolutions[0].method_id, 8)
+        self.assertEqual(result.evolutions[0].parameter, 537)
+        self.assertEqual(result.evolutions[0].target_species_id, 350)
+
     def test_rejects_wrong_size(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_evolution_record(b"short", species_id=1, archive_path="evo.narc")
 
     def test_rejects_incomplete_or_noncontiguous_slots(self) -> None:
         incomplete = bytearray(42)
-        struct.pack_into("<3H", incomplete, 0, 0, 16, 2)
+        struct.pack_into("<3H", incomplete, 0, 4, 16, 0)
         with self.assertRaises(InvalidRomError):
             parse_evolution_record(
                 bytes(incomplete), species_id=1, archive_path="evo.narc"

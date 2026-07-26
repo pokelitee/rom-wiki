@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from romwiki.engines.gen4_dppt import parse_encounter_record
@@ -184,9 +185,39 @@ class Gen5EncounterEnrichmentTests(unittest.TestCase):
         self.assertEqual(slot["maximum_level"], 5)
         self.assertFalse(record["doubles_grass"]["rate"])
 
+        comparison = {
+            "baseline": "black-us",
+            "records": [
+                {
+                    "kind": "wild_encounters",
+                    "key": 0,
+                    "status": "changed",
+                    "changes": [
+                        {
+                            "field": "grass_cave",
+                            "label": "Grass/Cave",
+                            "before": {"rate": 20, "slots": []},
+                            "after": record["grass_cave"],
+                        }
+                    ],
+                }
+            ],
+        }
+        blaze_record = deepcopy(record)
+        volt_record = deepcopy(record)
+        for slot in volt_record["grass_cave"]["slots"]:
+            slot["pokemon"] = {
+                "id": 2,
+                "name": "Ivysaur",
+                "slug": "ivysaur",
+            }
+        record["version_variants"] = {
+            "blaze-black": blaze_record,
+            "volt-white": volt_record,
+        }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            count = render_encounter_pages(enriched, output)
+            count = render_encounter_pages(enriched, output, comparison)
             page = (output / "area-000.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
@@ -194,9 +225,15 @@ class Gen5EncounterEnrichmentTests(unittest.TestCase):
         self.assertIn("# Route 1", page)
         self.assertIn("Grass/Cave", page)
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
+        self.assertIn("## Blaze Black", page)
+        self.assertIn("## Volt White", page)
+        self.assertIn("[Ivysaur](../pokemon/ivysaur.md)", page)
+        self.assertIn("## Hack changes", page)
         self.assertEqual(catalog["kind"], "encounters")
         self.assertEqual(catalog["records"][0]["methods"], ["Grass/Cave"])
         self.assertIn("Bulbasaur", catalog["records"][0]["pokemon"])
+        self.assertIn("Ivysaur", catalog["records"][0]["pokemon"])
+        self.assertEqual(catalog["records"][0]["change_status"], "changed")
 
 
 if __name__ == "__main__":

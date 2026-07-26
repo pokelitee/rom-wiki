@@ -17,6 +17,7 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    display_name,
     pokemon_table,
     provenance_fact_table,
     provenance_section,
@@ -57,7 +58,13 @@ def render_encounter_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     if dataset.get("engine") == GEN5_BW_ENGINE:
-        return _render_gen5_encounter_pages(dataset, output_root, references, only_pages=only_pages)
+        return _render_gen5_encounter_pages(
+            dataset,
+            output_root,
+            comparison,
+            references,
+            only_pages=only_pages,
+        )
     records = [record for record in dataset["records"] if record["active"]]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -604,6 +611,7 @@ def _level_range(minimum: int, maximum: int) -> str:
 def _render_gen5_encounter_pages(
     dataset: dict[str, Any],
     output_root: Path,
+    comparison: dict[str, Any] | None,
     references: ReferenceIndex | None,
     *,
     only_pages: frozenset[str] | None = None,
@@ -633,13 +641,21 @@ def _render_gen5_encounter_pages(
     catalog_records = []
     page_count = 0
     for index, record in enumerate(records):
+        change = record_comparison(comparison, record["area_id"])
         filename = f"area-{record['area_id']:03}.md"
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             write_text(
                 output_root / filename,
-                _render_gen5_area(record, references, previous, following),
+                _render_gen5_area(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                    previous,
+                    following,
+                ),
             )
             page_count += 1
         fallback_links.append(
@@ -652,7 +668,9 @@ def _render_gen5_encounter_pages(
             )
         )
         catalog_records.append(
-            _gen5_catalog_record(record, filename.removesuffix(".md") + "/")
+            _gen5_catalog_record(
+                record, filename.removesuffix(".md") + "/", change
+            )
         )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
@@ -667,50 +685,67 @@ def _render_gen5_encounter_pages(
     return page_count
 
 
-def _gen5_catalog_record(record: dict[str, Any], filename: str) -> dict[str, Any]:
+def _gen5_catalog_record(
+    record: dict[str, Any],
+    filename: str,
+    change: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     methods = []
     levels = []
     species = []
     pokemon_refs = []
     method_pokemon = {}
-    for key, label in _GEN5_METHOD_LABELS.items():
-        method = record[key]
-        if not method["rate"]:
-            continue
-        methods.append(label)
-        method_species = []
-        for slot in method["slots"]:
-            pokemon = slot.get("pokemon")
-            if pokemon:
-                species.append(pokemon["name"])
-                method_species.append(pokemon["name"])
-                pokemon_refs.append(_pokemon_reference(pokemon))
-            levels.extend((slot["minimum_level"], slot["maximum_level"]))
-        method_pokemon[label] = list(dict.fromkeys(method_species))
-    location_names = record.get("location_names", [])
-    return {
+    variants = record.get("version_variants")
+    source_records = list(variants.values()) if variants else [record]
+    for source_record in source_records:
+        for key, label in _GEN5_METHOD_LABELS.items():
+            method = source_record[key]
+            if not method["rate"]:
+                continue
+            methods.append(label)
+            method_species = method_pokemon.setdefault(label, [])
+            for slot in method["slots"]:
+                pokemon = slot.get("pokemon")
+                if pokemon:
+                    species.append(pokemon["name"])
+                    method_species.append(pokemon["name"])
+                    pokemon_refs.append(_pokemon_reference(pokemon))
+                levels.extend((slot["minimum_level"], slot["maximum_level"]))
+    location_names = list(
+        dict.fromkeys(
+            name
+            for source_record in source_records
+            for name in source_record.get("location_names", [])
+        )
+    )
+    return add_change_status({
         "id": record["area_id"],
         "label": record["name"],
         "url": filename,
         "locations": location_names,
-        "methods": methods,
+        "methods": list(dict.fromkeys(methods)),
         "pokemon": list(dict.fromkeys(species)),
         "pokemon_refs": [
             ROUTES.catalog_reference(reference, "encounters/")
             for reference in unique_references(pokemon_refs)
         ],
-        "method_pokemon": method_pokemon,
+        "method_pokemon": {
+            label: list(dict.fromkeys(values))
+            for label, values in method_pokemon.items()
+        },
         "min_level": min(levels) if levels else None,
         "max_level": max(levels) if levels else None,
         "referenced": True,
         "search_text": " ".join(
             (record["name"], *location_names, *species)
         ).lower(),
-    }
+    }, change)
 
 
 def _render_gen5_area(
     record: dict[str, Any],
+    change: dict[str, Any] | None,
+    baseline_name: str | None,
     references: ReferenceIndex | None,
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
@@ -721,8 +756,30 @@ def _render_gen5_area(
         "",
         *_gen5_area_summary(record),
     ]
-    for key, label in _GEN5_METHOD_LABELS.items():
-        _append_gen5_method(lines, label, record[key], source_file, references)
+    variants = record.get("version_variants")
+    if variants:
+        lines.extend(
+            [
+                '!!! info "Version differences"',
+                "    Encounter tables on this page differ between the two versions.",
+                "",
+            ]
+        )
+        for version, version_record in variants.items():
+            lines.extend([f"## {display_name(version)}", ""])
+            for key, label in _GEN5_METHOD_LABELS.items():
+                _append_gen5_method(
+                    lines,
+                    label,
+                    version_record[key],
+                    source_file,
+                    references,
+                    heading_level=3,
+                )
+    else:
+        for key, label in _GEN5_METHOD_LABELS.items():
+            _append_gen5_method(lines, label, record[key], source_file, references)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
             [
@@ -764,11 +821,20 @@ def _append_gen5_method(
     method: dict[str, Any],
     source_file: str,
     references: ReferenceIndex | None,
+    *,
+    heading_level: int = 2,
 ) -> None:
     if not method["rate"]:
         return
     slots = _merge_slots(method["slots"], ("minimum_level", "maximum_level"))
-    lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
+    lines.extend(
+        [
+            f"{'#' * heading_level} {heading}",
+            "",
+            f"Encounter rate: {method['rate']}",
+            "",
+        ]
+    )
     lines.extend(
         pokemon_table(
             ["| Pokémon | Type | Levels | Chance |", "| ------- | ---- | -----: | -----: |"],

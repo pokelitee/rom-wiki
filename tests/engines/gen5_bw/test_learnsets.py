@@ -32,6 +32,18 @@ class Gen5LearnsetTests(unittest.TestCase):
         )
         self.assertEqual(learnset.moves, ())
 
+    def test_ignores_disabled_move_zero_entries(self) -> None:
+        learnset = parse_level_up_learnset(
+            struct.pack("<6H", 0, 1, 33, 5, 0xFFFF, 0xFFFF),
+            species_id=1,
+            archive_path="wotbl.narc",
+        )
+
+        self.assertEqual(
+            [(entry.level, entry.move_id) for entry in learnset.moves],
+            [(5, 33)],
+        )
+
     def test_rejects_missing_terminator(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_level_up_learnset(

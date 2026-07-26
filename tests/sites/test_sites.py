@@ -17,7 +17,13 @@ class SiteCatalogTests(unittest.TestCase):
 
         self.assertEqual(
             [site.id for site in catalog.sites],
-            ["portal", "platinum-us", "renegade-platinum", "black-white"],
+            [
+                "portal",
+                "platinum-us",
+                "renegade-platinum",
+                "blaze-black-volt-white",
+                "black-white",
+            ],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
         game = catalog.get("renegade-platinum").game
@@ -43,7 +49,13 @@ class SiteCatalogTests(unittest.TestCase):
 
             self.assertEqual(
                 [site.id for site in built],
-                ["portal", "platinum-us", "renegade-platinum", "black-white"],
+                [
+                    "portal",
+                    "platinum-us",
+                    "renegade-platinum",
+                    "blaze-black-volt-white",
+                    "black-white",
+                ],
             )
             self.assertEqual(Path(commands[0][-1]), output.resolve())
             self.assertEqual(
@@ -51,6 +63,13 @@ class SiteCatalogTests(unittest.TestCase):
             )
             self.assertEqual(
                 Path(commands[2][-1]), output.resolve() / "renegade-platinum"
+            )
+            self.assertEqual(
+                Path(commands[3][-1]),
+                output.resolve() / "blaze-black-volt-white",
+            )
+            self.assertEqual(
+                Path(commands[4][-1]), output.resolve() / "black-white"
             )
 
     def test_build_requires_an_explicit_selection(self) -> None:

@@ -1,0 +1,30 @@
+[pages]
+pokemon = [
+    "bulbasaur",
+    "eevee",
+    "feebas",
+    "rotom-heat",
+]
+abilities = [
+    "overgrow",
+    "pickup",
+]
+moves = [
+    "tackle",
+]
+items = [
+    "focus-sash",
+    "lum-berry",
+    "sitrus-berry",
+]
+encounters = [
+    "area-000",
+    "area-101",
+]
+trainers = [
+    "trainer-0017",
+    "trainer-0090",
+]
+locations = [
+    "header-006",
+]

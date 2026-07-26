@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.pipeline.version_merge import merge_version_datasets
+from romwiki.pipeline.version_merge import (
+    merge_version_comparisons,
+    merge_version_datasets,
+)
 from romwiki.util.errors import DataSourceError
 
 
@@ -54,6 +57,54 @@ class VersionMergeTests(unittest.TestCase):
         with self.assertRaises(DataSourceError):
             merge_version_datasets(black, "black", white, "white")
 
+    def test_merges_shared_and_version_specific_comparisons(self) -> None:
+        black = _comparison(
+            "items",
+            "blaze-black",
+            "black-us",
+            [
+                _comparison_record(1, "changed", ["price"]),
+                _comparison_record(2, "changed", ["trades"]),
+            ],
+        )
+        white = _comparison(
+            "items",
+            "volt-white",
+            "white-us",
+            [
+                _comparison_record(1, "changed", ["price"]),
+                _comparison_record(2, "unchanged", []),
+            ],
+        )
+
+        merged = merge_version_comparisons(
+            black, "blaze-black", white, "volt-white"
+        )
+        records = {record["key"]: record for record in merged["records"]}
+
+        self.assertEqual(
+            merged["counts"],
+            {"unchanged": 0, "changed": 2, "added": 0, "removed": 0},
+        )
+        self.assertNotIn("version_comparisons", records[1])
+        self.assertEqual(
+            set(records[2]["version_comparisons"]),
+            {"blaze-black", "volt-white"},
+        )
+        self.assertEqual(
+            records[2]["version_comparisons"]["volt-white"]["baseline"],
+            "white-us",
+        )
+
+    def test_rejects_mismatched_comparison_kinds(self) -> None:
+        with self.assertRaises(DataSourceError):
+            merge_version_comparisons(
+                _comparison("items", "a", "base-a", []),
+                "a",
+                _comparison("moves", "b", "base-b", []),
+                "b",
+            )
+
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:
     return {
@@ -75,6 +126,47 @@ def _pokemon(member: int, name: str, **overrides: object) -> dict:
     }
     record.update(overrides)
     return record
+
+
+def _comparison(
+    kind: str,
+    game: str,
+    baseline: str,
+    records: list[dict],
+) -> dict:
+    return {
+        "schema_version": 1,
+        "dataset": f"{kind}_comparison",
+        "kind": kind,
+        "game": game,
+        "baseline": baseline,
+        "source": {},
+        "coverage": ["price", "trades"] if kind == "items" else ["power"],
+        "counts": {},
+        "records": records,
+    }
+
+
+def _comparison_record(
+    key: int, status: str, changed_fields: list[str]
+) -> dict:
+    return {
+        "kind": "items",
+        "key": key,
+        "status": status,
+        "label": f"Item {key}",
+        "slug": f"item-{key}",
+        "detail_available": True,
+        "changes": [
+            {
+                "field": field,
+                "label": field.title(),
+                "before": 1,
+                "after": 2,
+            }
+            for field in changed_fields
+        ],
+    }
 
 
 if __name__ == "__main__":

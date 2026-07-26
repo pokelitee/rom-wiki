@@ -46,7 +46,8 @@ _FIELDS = {
     "wild_encounters": (
         "active", "name", "locations", "walking", "surf", "old_rod",
         "good_rod", "super_rod", "special", "encounter_form_rates",
-        "unown_table_id",
+        "unown_table_id", "grass_cave", "doubles_grass", "shaking_spots",
+        "surfing", "surfing_spots", "fishing", "fishing_spots",
     ),
     "trainers": (
         "name", "class_id", "class_name", "battle_type", "double_battle",
@@ -132,6 +133,11 @@ _LABELS = {
     "old_rod": "Old Rod",
     "good_rod": "Good Rod",
     "super_rod": "Super Rod",
+    "grass_cave": "Grass/Cave",
+    "doubles_grass": "Doubles Grass",
+    "shaking_spots": "Shaking Spots",
+    "surfing_spots": "Surfing Spots",
+    "fishing_spots": "Fishing Spots",
     "unknown_value": "Unknown engine value",
     "ai_flags": "AI flags",
     "battle_type": "Battle type",

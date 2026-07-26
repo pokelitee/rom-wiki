@@ -38,7 +38,10 @@ from romwiki.pipeline.personal import extract_personal_dataset, write_personal_d
 from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
-from romwiki.pipeline.version_merge import merge_version_datasets
+from romwiki.pipeline.version_merge import (
+    merge_version_comparisons,
+    merge_version_datasets,
+)
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,
@@ -350,6 +353,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     version_pair_parser.add_argument(
         "--wiki-root", type=Path, help="merged wiki root (defaults below sites/games)"
+    )
+    version_pair_parser.add_argument(
+        "--refresh-baseline",
+        action="store_true",
+        help="ignore and replace cached clean-ROM extraction data",
     )
     _add_dev_argument(version_pair_parser)
     _add_cache_argument(version_pair_parser)
@@ -890,13 +898,35 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     pokedb = PokeDBGeneration.load(args.pokedb)
     primary_game, secondary_game = args.games
     primary_version, secondary_version = args.versions or (primary_game, secondary_game)
+    game_paths = {
+        primary_version: registry.get(primary_game),
+        secondary_version: registry.get(secondary_game),
+    }
+    configured_baselines = {
+        version: paths.base_rom is not None
+        for version, paths in game_paths.items()
+    }
+    if len(set(configured_baselines.values())) != 1:
+        raise LocalConfigError(
+            "Version-pair builds require both games to define base_rom or neither"
+        )
+    compare_to_bases = all(configured_baselines.values())
 
     workflows = {}
     for version, game_id in ((primary_version, primary_game), (secondary_version, secondary_game)):
-        result = inspect_rom(registry.get(game_id).rom(), args.profiles_dir)
+        paths = game_paths[version]
+        result = inspect_rom(paths.rom(), args.profiles_dir)
+        baseline = (
+            inspect_rom(paths.rom(base=True), args.profiles_dir)
+            if compare_to_bases
+            else None
+        )
         workflows[version] = GameBuildWorkflow(
             result,
             pokedb,
+            baseline=baseline,
+            baseline_cache_root=args.data_root / "baselines",
+            refresh_baseline=args.refresh_baseline,
             current_cache_root=args.data_root / "cache",
             refresh_current=args.refresh_cache,
         )
@@ -914,12 +944,26 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     ]
 
     merged_datasets: dict[str, dict] = {}
+    merged_comparisons: dict[str, dict] = {}
     for kind in kinds:
-        primary_dataset = getattr(workflows[primary_version].current, kind)()
-        secondary_dataset = getattr(workflows[secondary_version].current, kind)()
+        primary_build = workflows[primary_version].build(kind)
+        secondary_build = workflows[secondary_version].build(kind)
         merged_datasets[kind] = merge_version_datasets(
-            primary_dataset, primary_version, secondary_dataset, secondary_version
+            primary_build.current,
+            primary_version,
+            secondary_build.current,
+            secondary_version,
         )
+        if (
+            primary_build.comparison is not None
+            and secondary_build.comparison is not None
+        ):
+            merged_comparisons[kind] = merge_version_comparisons(
+                primary_build.comparison,
+                primary_version,
+                secondary_build.comparison,
+                secondary_version,
+            )
 
     site_id = args.site_id
     wiki_root = args.wiki_root or Path("sites/games") / site_id / "wiki"
@@ -930,15 +974,22 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     reference_index = ReferenceIndex.from_datasets(merged_datasets)
     move_dataset = merged_datasets.get("moves")
     for kind, dataset in merged_datasets.items():
+        comparison = merged_comparisons.get(kind)
         _write_dataset_build(
             kind,
             dataset,
-            None,
+            comparison,
             _dataset_output(data_root, kind),
             wiki_root / kind,
             move_dataset=move_dataset,
             reference_index=reference_index,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
+        )
+    if merged_comparisons:
+        page_count = render_changes_pages(merged_comparisons, wiki_root)
+        print(
+            f"Rendered {page_count} change overview pages: "
+            f"{wiki_root / 'changes'}"
         )
 
 

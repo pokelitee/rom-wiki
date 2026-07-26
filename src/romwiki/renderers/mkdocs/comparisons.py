@@ -63,41 +63,67 @@ def comparison_section(
 ) -> list[str]:
     if entry is None:
         return []
+    version_comparisons = entry.get("version_comparisons")
+    if version_comparisons:
+        lines = ["## Hack changes", ""]
+        for version, version_entry in version_comparisons.items():
+            lines.extend(
+                [
+                    f"### {escape_markdown(display_name(version))}",
+                    "",
+                    *_comparison_body(
+                        version_entry,
+                        version_entry.get("baseline") or baseline_name,
+                        source_file,
+                        references,
+                    ),
+                ]
+            )
+        return lines
+    return [
+        "## Hack changes",
+        "",
+        *_comparison_body(
+            entry, baseline_name, source_file, references
+        ),
+    ]
+
+
+def _comparison_body(
+    entry: dict[str, Any],
+    baseline_name: str | None,
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> list[str]:
     baseline = baseline_name or "the clean base game"
     status = entry["status"]
-    lines = ["## Hack changes", ""]
     if status == "unchanged":
         return [
-            *lines,
             f"Verified unchanged from **{escape_markdown(baseline)}** for all compared fields.",
             "",
         ]
     if status == "added":
         return [
-            *lines,
             '!!! success "Added in this hack"',
             f"    This record was added and does not exist in **{escape_markdown(baseline)}**.",
             "",
         ]
     if status == "removed":
         return [
-            *lines,
             '!!! warning "Removed in this hack"',
             f"    This record exists in **{escape_markdown(baseline)}** but not in this hack.",
             "",
         ]
     change_count = len(entry["changes"])
     noun = "field changed" if change_count == 1 else "fields changed"
-    lines.extend(
-        [
-            f"Compared with **{escape_markdown(baseline)}**.",
-            "",
-            '<details markdown="1">',
-            f"<summary>{change_count} {noun}</summary>",
-            "",
-            '<div class="rw-changes">',
-        ]
-    )
+    lines = [
+        f"Compared with **{escape_markdown(baseline)}**.",
+        "",
+        '<details markdown="1">',
+        f"<summary>{change_count} {noun}</summary>",
+        "",
+        '<div class="rw-changes">',
+    ]
     for change in entry["changes"]:
         value = _format_change(
             change,

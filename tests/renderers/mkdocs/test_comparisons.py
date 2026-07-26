@@ -46,6 +46,40 @@ class ComparisonRenderingTests(unittest.TestCase):
         self.assertIn('40<span class="rw-diff-arrow">→</span>60', value)
         self.assertNotIn("| Field | Change |", value)
 
+    def test_renders_version_specific_comparisons(self) -> None:
+        value = "\n".join(
+            comparison_section(
+                {
+                    "status": "changed",
+                    "changes": [],
+                    "version_comparisons": {
+                        "blaze-black": {
+                            "status": "changed",
+                            "baseline": "black-us",
+                            "changes": [
+                                {
+                                    "label": "Power",
+                                    "before": 40,
+                                    "after": 60,
+                                }
+                            ],
+                        },
+                        "volt-white": {
+                            "status": "unchanged",
+                            "baseline": "white-us",
+                            "changes": [],
+                        },
+                    },
+                },
+                None,
+            )
+        )
+
+        self.assertIn("### Blaze Black", value)
+        self.assertIn("Compared with **black-us**", value)
+        self.assertIn("### Volt White", value)
+        self.assertIn("Verified unchanged from **white-us**", value)
+
     def test_complex_changes_render_only_summary_list_deltas(self) -> None:
         section = comparison_section(
             {

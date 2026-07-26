@@ -70,18 +70,26 @@ PERSONAL_TRANSFORMATION_MEMBERS: dict[int, dict[str, str]] = {
 
 # Trainer-party form operands that select a battle form with its own
 # personal record; slugs match the PERSONAL_FORM_MEMBERS entries above.
-# Confirmed exhaustive against every real Black ROM trainer party record
-# (only Wormadam and Basculin ever appear with a nonzero forme -- Deoxys/
-# Rotom/Giratina/Shaymin never do, unlike Generation IV's trainer rosters).
+# Retail Black uses only Wormadam and Basculin here. Blaze Black/Volt White
+# additionally use every Rotom appliance form in trainer parties.
 TRAINER_FORM_SLUGS: dict[tuple[int, int], str] = {
     (413, 1): "wormadam-sandy",
     (413, 2): "wormadam-trash",
+    (479, 1): "rotom-heat",
+    (479, 2): "rotom-wash",
+    (479, 3): "rotom-frost",
+    (479, 4): "rotom-fan",
+    (479, 5): "rotom-mow",
     (550, 1): "basculin-blue-striped",
 }
 
-# No cosmetic-only trainer forms (same personal record, different display
-# name) were found in any real Black ROM trainer party record.
-TRAINER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {}
+# Shellos and Gastrodon's East Sea forms reuse their base personal records.
+# They do not appear in retail Black's trainer parties, but both hacks use
+# them with the same Gen V form operand used by the game elsewhere.
+TRAINER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {
+    (422, 1): "East Sea",
+    (423, 1): "East Sea",
+}
 
 # TM01-95, HM01-06 (Gen5Constants.tmCount / hmCount, Ajarmar/universal-pokemon-randomizer-zx).
 GEN5_TM_COUNT = 95

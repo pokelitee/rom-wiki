@@ -288,6 +288,21 @@ a ROM hack and its base game (e.g. Renegade Platinum vs. Platinum) -- those are
 deliberately different games and keep their existing separate-sites-plus-
 comparison-diff treatment (`pipeline.comparisons`).
 
+When the two sibling profiles are themselves a paired hack, define `base_rom`
+for both local game registrations. The same command then compares each hack
+with its corresponding clean base and merges those results with
+`merge_version_comparisons`. Detail pages preserve separate per-version
+comparisons wherever their values differ. Both registrations must define a
+base or neither may do so; a half-configured paired comparison is rejected.
+Always pass a distinct `--site-id` for a new pair because the command's default
+is the existing `black-white` site.
+
+Same-key records whose current values differ retain both complete records under
+`version_variants`. A combined site must render every material variant and
+include both in its catalog data; do not silently publish only the primary
+record. The Generation V encounter and item renderers are the current examples
+for version-specific encounter tables and NPC trade references.
+
 ## 7. Validate before publication
 
 - Add unit tests for every new binary record and script parser.

@@ -32,6 +32,11 @@ def parse_level_up_learnset(
                     member=species_id,
                 ),
             )
+        if move_id == 0:
+            # Move zero is the engine's "none" sentinel. Blaze Black/Volt
+            # White leave three such disabled entries at the start of
+            # Whimsicott's edited learnset.
+            continue
         moves.append(LevelUpMove(level=level, move_id=move_id))
 
     raise InvalidRomError(f"Gen V learnset record {species_id} has no terminator")
