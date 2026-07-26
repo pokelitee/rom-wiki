@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
@@ -40,12 +41,16 @@ class SiteCatalogTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "dist"
 
-            built = build_sites(
-                catalog,
-                output,
-                build_all=True,
-                runner=lambda command: commands.append(tuple(command)),
-            )
+            # This test verifies multi-site command planning. Generated
+            # content is intentionally absent in a clean CI checkout until
+            # the deployment workflow restores the publication snapshot.
+            with patch("romwiki.sites.build._validate_generated_content"):
+                built = build_sites(
+                    catalog,
+                    output,
+                    build_all=True,
+                    runner=lambda command: commands.append(tuple(command)),
+                )
 
             self.assertEqual(
                 [site.id for site in built],
