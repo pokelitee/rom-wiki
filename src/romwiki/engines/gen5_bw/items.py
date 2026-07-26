@@ -67,7 +67,28 @@ GEN5_ITEM_FIELD_USE_NAMES = (
 #   natural_gift_power: byte @ 7.
 #   natural_gift_type_id: bits 0-4 of the u16 @ 8 -- 0x1F ("no type") for
 #     every non-berry item; real berries carry a real `TYPE_NAMES` index.
+#   prevent_toss: bit 5 of the same u16 -- byte-identical bit position to
+#     Gen4's own `prevent_toss` (`gen4_dppt.items.parse_item_record`).
+#     Verified against the real Black ROM's full item table: true for
+#     exactly 120 items, and every one checked is a real non-discardable
+#     category -- every TM/HM (328-419, 618-620) and every real key item
+#     (Light Stone, Dark Stone, Xtransceiver, the three Gram items): real
+#     items you genuinely cannot toss in Black/White. False for every
+#     regular consumable/ball/stone/berry checked.
+#   selectable: bit 6 of the same u16 -- also Gen4's own bit position.
+#     True for exactly 7 items in the real Black ROM: Pal Pad, Town Map,
+#     Super Rod, Bicycle, Vs. Recorder, Gracidea, and Dowsing MCHN -- every
+#     one of them a real item that can be registered to the touch-screen
+#     quick-select button in Black/White, and nothing else is.
 #   field_pocket_id: bits 7-10 of the same u16 -- see `GEN5_ITEM_POCKET_NAMES`.
+#   battle_pocket_mask: bits 11-15 of the same u16 (also Gen4's own bit
+#     position) -- a battle-bag category bitmask. Verified against the real
+#     Black ROM: Poké Balls all share one bit (0x01), HP-restoring medicine
+#     (Potion, Super Potion, Berry Juice, ...) shares another (0x04),
+#     status-curing medicine (Cheri Berry, Persim Berry, Lum Berry, ...)
+#     shares a third (0x08), and Full Restore -- the one real item that
+#     both cures status *and* restores HP -- is the only item with both
+#     bits set (0x0C), exactly matching what it actually does.
 #   field_use_function_id: byte @ 10 -- see `GEN5_ITEM_FIELD_USE_NAMES`.
 #   battle_use_function_id: byte @ 11 -- a raw ID, not otherwise named
 #     (matching Gen4's own precedent).
@@ -88,11 +109,16 @@ GEN5_ITEM_FIELD_USE_NAMES = (
 #     HP/Attack/Defense/Speed/Sp. Atk/Sp. Def order (the standard internal
 #     stat order).
 #   friendship_low/medium/high_amount: signed bytes @ 31-33.
-# Deliberately not decoded (see plan.md for why): byte 3 (an apparent, only
-# partial duplicate of hp_restored); the X-item battle stat-stage encoding
-# (bytes 15/17/19/20 -- too few real data points since Gen5 removed X
-# Defense/X Sp. Atk entirely); berry growth (the mechanic itself doesn't
-# exist in Gen5).
+# Deliberately not decoded (see plan.md for why): byte 3 (re-checked this
+# session -- it tracks hp_restored/pp_restored exactly for every healing
+# item regardless of whether that item's own hold_effect_id is even
+# non-zero, e.g. Potion's hold_effect_id is 0 but byte 3 is still 20; a
+# genuine `hold_effect_parameter` should only vary with a real held-item
+# effect, so this looks like a shared "amount" field reused by more than
+# one subsystem rather than one coherent fact, and is left undecoded); the
+# X-item battle stat-stage encoding (bytes 15/17/19/20 -- too few real data
+# points since Gen5 removed X Defense/X Sp. Atk entirely); berry growth
+# (the mechanic itself doesn't exist in Gen5).
 NATURAL_GIFT_TYPE_NONE = 0x1F
 
 
@@ -122,6 +148,9 @@ def parse_item_record(
         natural_gift_power=data[7],
         natural_gift_type_id=flags & NATURAL_GIFT_TYPE_NONE,
         field_pocket_id=(flags >> 7) & 0xF,
+        prevent_toss=bool(flags & (1 << 5)),
+        selectable=bool(flags & (1 << 6)),
+        battle_pocket_mask=(flags >> 11) & 0x1F,
         field_use_function_id=data[10],
         battle_use_function_id=data[11],
         party_use=party_use,

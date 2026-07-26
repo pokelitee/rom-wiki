@@ -130,6 +130,9 @@ class Gen5Item:
     # matching this engine's own `TYPE_NAMES` order).
     natural_gift_type_id: int
     field_pocket_id: int
+    prevent_toss: bool
+    selectable: bool
+    battle_pocket_mask: int
     field_use_function_id: int
     battle_use_function_id: int
     party_use: bool

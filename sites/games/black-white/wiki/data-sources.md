@@ -114,7 +114,23 @@ IV's 8 -- Poké Balls, Battle Items, and Mail were folded into a single
 general "Items" pocket), field-use function ID (byte-identical to Generation
 IV's own enumeration, plus one new entry for the Dowsing MCHN -- this
 generation's Itemfinder replacement, with no Generation IV counterpart),
-battle-use function ID (a raw ID, not exhaustively named), Natural Gift
+battle-use function ID (a raw ID, not exhaustively named), whether an item
+can be discarded (`prevent_toss`) and registered to the touch-screen
+quick-select button (`selectable`), and a battle-bag category bitmask
+(`battle_pocket_mask`) -- all three at the exact same bit positions
+Generation IV's own item record already uses, verified against the real
+Black ROM's full item table: `prevent_toss` is true for exactly the 120
+real non-discardable items (every TM/HM, every real key item); `selectable`
+is true for exactly the 7 real quick-select-registerable items (Town Map,
+Bicycle, Super Rod, Vs. Recorder, Dowsing MCHN, Pal Pad, Gracidea);
+`battle_pocket_mask` forms a coherent category bitmask (Poké Balls, HP
+medicine, and status medicine each get their own bit, and Full Restore --
+the one item that does both -- is the only item with both bits set).
+Generation IV's own `hold_effect_parameter` byte was re-checked and
+confirmed to genuinely not carry one coherent fact in this generation: it
+tracks the HP/PP restore amount for every healing item regardless of
+whether that item's own held-item effect ID is even set, which isn't what
+a real hold-effect parameter should do, so it stays undecoded. Natural Gift
 power and type (verified against Oran Berry, Sitrus Berry, and Micle Berry's
 well-documented real types and powers), and party-use effects -- HP/PP
 restoration amounts, six independent per-stat EV change amounts (verified

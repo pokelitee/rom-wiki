@@ -69,6 +69,35 @@ class Gen5ItemTests(unittest.TestCase):
         self.assertEqual(item.battle_use_function_id, 2)
         self.assertEqual(item.natural_gift_type_id, 0x1F)
 
+    def test_decodes_prevent_toss_selectable_and_battle_pocket_mask(self) -> None:
+        # Real Black ROM facts: TM01 has prevent_toss set (you cannot toss a
+        # TM in Black/White); Town Map has selectable set (it can be
+        # registered to the quick-select button); Full Restore has battle
+        # pocket bits 2 and 3 both set (0x0C) since it both restores HP and
+        # cures status.
+        data = bytearray(36)
+        struct.pack_into("<H", data, 8, (1 << 5))
+        item = parse_item_record(
+            bytes(data), item_id=328, data_archive_member=328, archive_path="a/0/2/4"
+        )
+        self.assertTrue(item.prevent_toss)
+        self.assertFalse(item.selectable)
+
+        data = bytearray(36)
+        struct.pack_into("<H", data, 8, (1 << 6))
+        item = parse_item_record(
+            bytes(data), item_id=442, data_archive_member=442, archive_path="a/0/2/4"
+        )
+        self.assertTrue(item.selectable)
+        self.assertFalse(item.prevent_toss)
+
+        data = bytearray(36)
+        struct.pack_into("<H", data, 8, 0b1100 << 11)
+        item = parse_item_record(
+            bytes(data), item_id=23, data_archive_member=23, archive_path="a/0/2/4"
+        )
+        self.assertEqual(item.battle_pocket_mask, 0b1100)
+
     def test_decodes_a_real_berrys_natural_gift(self) -> None:
         # Real Black ROM Oran Berry: type 3 (poison), power 60.
         data = bytearray(36)
