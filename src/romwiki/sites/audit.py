@@ -197,6 +197,7 @@ def audit_site(
     *,
     max_html_bytes: int = 512 * 1024,
     max_images_per_page: int = 150,
+    base_url: str | None = None,
 ) -> SiteAuditReport:
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
@@ -243,10 +244,13 @@ def audit_site(
             )
 
     link_count = 0
+    base_path = unquote(urlsplit(base_url).path).rstrip("/") if base_url else ""
     for page, result in parsed.items():
         for href, line in result.links:
             link_count += 1
-            issue = _validate_link(page, href, line, parsed, existing_files)
+            issue = _validate_link(
+                page, href, line, parsed, existing_files, base_path=base_path
+            )
             if issue is not None:
                 errors.append(issue)
 
@@ -283,6 +287,8 @@ def _validate_link(
     line: int,
     parsed: dict[str, _ParsedPage],
     existing_files: set[str],
+    *,
+    base_path: str = "",
 ) -> SiteAuditIssue | None:
     url = urlsplit(href)
     if url.scheme.lower() in _EXTERNAL_SCHEMES or url.netloc:
@@ -297,7 +303,9 @@ def _validate_link(
     target = (
         source
         if not url.path
-        else _resolve_target(source, unquote(url.path), existing_files)
+        else _resolve_target(
+            source, unquote(url.path), existing_files, base_path=base_path
+        )
     )
     if target is None or target not in existing_files:
         return SiteAuditIssue(
@@ -319,7 +327,19 @@ def _validate_link(
     return None
 
 
-def _resolve_target(source: str, url_path: str, existing_files: set[str]) -> str | None:
+def _resolve_target(
+    source: str,
+    url_path: str,
+    existing_files: set[str],
+    *,
+    base_path: str = "",
+) -> str | None:
+    if (
+        url_path.startswith("/")
+        and base_path
+        and (url_path == base_path or url_path.startswith(f"{base_path}/"))
+    ):
+        url_path = url_path.removeprefix(base_path) or "/"
     if url_path.startswith("/"):
         target = url_path.lstrip("/")
     else:

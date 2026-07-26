@@ -137,6 +137,21 @@ class SiteAuditTests(unittest.TestCase):
 
         self.assertTrue(report.ok, [issue.format() for issue in report.errors])
 
+    def test_resolves_links_below_a_deployment_base_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", '<a href="/rom-wiki/">Home</a>')
+            _write_page(
+                root / "game" / "index.html",
+                '<a href="/rom-wiki/game/">Game</a>',
+            )
+
+            report = audit_site(
+                root, base_url="https://example.test/rom-wiki/"
+            )
+
+        self.assertTrue(report.ok, [issue.format() for issue in report.errors])
+
 
 def _write_page(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)

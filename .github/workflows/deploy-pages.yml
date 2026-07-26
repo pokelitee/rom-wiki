@@ -46,7 +46,7 @@ jobs:
           ROMWIKI_SITE_URL: ${{ steps.pages.outputs.base_url }}
 
       - name: Audit rendered sites
-        run: romwiki site audit dist
+        run: romwiki site audit dist --base-url "${{ steps.pages.outputs.base_url }}"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

@@ -433,6 +433,10 @@ def build_parser() -> argparse.ArgumentParser:
         default=150,
         help="image count that triggers a warning on one page (default: 150)",
     )
+    audit_site_parser.add_argument(
+        "--base-url",
+        help="deployment base URL used to resolve absolute project-site links",
+    )
     snapshot_parser = site_subparsers.add_parser(
         "snapshot", help="archive generated, ROM-free wiki Markdown"
     )
@@ -607,6 +611,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.artifact,
                     max_html_bytes=args.max_page_kb * 1024,
                     max_images_per_page=args.max_images,
+                    base_url=args.base_url,
                 )
                 displayed_errors = report.errors[:100]
                 for issue in (*report.warnings, *displayed_errors):

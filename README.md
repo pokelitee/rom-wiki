@@ -464,6 +464,7 @@ Audit a built artifact for oversized pages and broken links before publishing:
 ```console
 romwiki site audit dist
 romwiki site audit dist --max-page-kb 512 --max-images 150
+romwiki site audit dist --base-url https://example.github.io/rom-wiki/
 ```
 
 `--max-page-kb` (default 512) flags pages whose rendered HTML exceeds the
