@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.snapshot import (
     REQUIRED_WIKI_SECTIONS,
     SNAPSHOT_MANIFEST,
@@ -31,7 +32,7 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
             generated_file.unlink()
             restored_count = restore_generated_wiki_snapshot(root, first)
 
-            self.assertEqual(first_count, len(REQUIRED_WIKI_SECTIONS))
+            self.assertEqual(first_count, len(REQUIRED_WIKI_SECTIONS) + 2)
             self.assertEqual(second_count, first_count)
             self.assertEqual(restored_count, first_count)
             self.assertEqual(first.read_bytes(), second.read_bytes())
@@ -126,4 +127,16 @@ theme = "test-game"
         index.write_text(value, encoding="utf-8")
         first = first or index
     assert first is not None
+    write_public_dataset(
+        game / "wiki",
+        "pokemon",
+        {
+            "schema_version": 1,
+            "dataset": "pokemon",
+            "game": "test-game",
+            "record_count": 0,
+            "records": [],
+        },
+        None,
+    )
     return first

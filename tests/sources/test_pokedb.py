@@ -20,9 +20,7 @@ class PokeDBSpriteTests(unittest.TestCase):
             "sprites": {
                 "front_default": "https://example.test/default.png",
                 "versions": {
-                    "platinum": {
-                        "front_default": "https://example.test/platinum.png"
-                    }
+                    "platinum": {"front_default": "https://example.test/platinum.png"}
                 },
             }
         }
@@ -122,13 +120,23 @@ class PokeDBSpriteTests(unittest.TestCase):
 
     def test_portrait_falls_back_to_home_then_none(self) -> None:
         with_home = self.pokedb.pokemon_portrait(
-            {"sprites": {"other": {"home": {"front_default": "https://example.test/home.png"}}}}
+            {
+                "sprites": {
+                    "other": {
+                        "home": {"front_default": "https://example.test/home.png"}
+                    }
+                }
+            }
         )
         without_artwork = self.pokedb.pokemon_portrait(
             {"sprites": {"front_default": "https://example.test/default.png"}}
         )
         rejects_non_https = self.pokedb.pokemon_portrait(
-            {"sprites": {"other": {"home": {"front_default": "http://example.test/home.png"}}}}
+            {
+                "sprites": {
+                    "other": {"home": {"front_default": "http://example.test/home.png"}}
+                }
+            }
         )
 
         assert with_home is not None

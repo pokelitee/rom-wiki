@@ -71,11 +71,14 @@ def render_move_pages(
     catalog_records = []
     page_count = 0
     name_source = dataset.get("name_sources", {}).get("move_names")
+    dataset_features = frozenset(dataset.get("features", ("move-tutors", "egg-moves")))
     for index, record in enumerate(public_records):
         change = record_comparison(comparison, record["move_id"])
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
-        following = public_records[index + 1] if index + 1 < len(public_records) else None
+        following = (
+            public_records[index + 1] if index + 1 < len(public_records) else None
+        )
         if only_pages is None or record["slug"] in only_pages:
             write_text(
                 output_root / filename,
@@ -87,6 +90,7 @@ def render_move_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    dataset_features,
                 ),
             )
             page_count += 1
@@ -103,9 +107,7 @@ def render_move_pages(
             )
         )
         machines = [machine["name"] for machine in record.get("machines", [])]
-        replaced_name = (
-            record["replaces"]["name"] if record.get("replaces") else None
-        )
+        replaced_name = record["replaces"]["name"] if record.get("replaces") else None
         access_methods = [
             method
             for method, available in (
@@ -116,27 +118,30 @@ def render_move_pages(
             if available
         ]
         catalog_records.append(
-            add_change_status({
-                "id": record["move_id"],
-                "label": record["name"],
-                "slug": record["slug"],
-                "url": f"{record['slug']}/",
-                "type": record["type"]["name"],
-                "damage_class": record["damage_class"]["name"],
-                "power": record["power"],
-                "accuracy": record["accuracy"],
-                "pp": record["pp"],
-                "machines": machines,
-                "access_methods": access_methods,
-                "search_text": " ".join(
-                    (
-                        record["name"],
-                        *machines,
-                        *access_methods,
-                        *((replaced_name,) if replaced_name else ()),
-                    )
-                ).lower(),
-            }, change)
+            add_change_status(
+                {
+                    "id": record["move_id"],
+                    "label": record["name"],
+                    "slug": record["slug"],
+                    "url": f"{record['slug']}/",
+                    "type": record["type"]["name"],
+                    "damage_class": record["damage_class"]["name"],
+                    "power": record["power"],
+                    "accuracy": record["accuracy"],
+                    "pp": record["pp"],
+                    "machines": machines,
+                    "access_methods": access_methods,
+                    "search_text": " ".join(
+                        (
+                            record["name"],
+                            *machines,
+                            *access_methods,
+                            *((replaced_name,) if replaced_name else ()),
+                        )
+                    ).lower(),
+                },
+                change,
+            )
         )
     write_catalog(output_root, "moves", catalog_records)
     write_text(
@@ -159,6 +164,7 @@ def _render_record(
     change: dict[str, Any] | None = None,
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
+    features: frozenset[str] = frozenset({"move-tutors", "egg-moves"}),
 ) -> str:
     source_file = f"moves/{record['slug']}.md"
     source_url = source_file.removesuffix(".md") + "/"
@@ -219,24 +225,26 @@ def _render_record(
                 "",
             ]
         )
-    lines.extend(
-        [
-            "## Tutor compatibility",
-            "",
-            *(
-                _tutor_compatibility(record, source_file, references)
-                if record.get("tutors")
-                else empty_state("No compatible move tutors.")
-            ),
-        ]
-    )
-    lines.extend(
-        [
-            "## Egg move learners",
-            "",
-            *_egg_move_learners(record, source_file, references),
-        ]
-    )
+    if "move-tutors" in features:
+        lines.extend(
+            [
+                "## Tutor compatibility",
+                "",
+                *(
+                    _tutor_compatibility(record, source_file, references)
+                    if record.get("tutors")
+                    else empty_state("No compatible move tutors.")
+                ),
+            ]
+        )
+    if "egg-moves" in features:
+        lines.extend(
+            [
+                "## Egg move learners",
+                "",
+                *_egg_move_learners(record, source_file, references),
+            ]
+        )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -340,8 +348,7 @@ def _reference_effects_section(record: dict[str, Any]) -> list[str]:
     heading_level = (
         "###"
         if any(
-            reference.get(field)
-            for field in ("short_effect", "effect", "flavor_text")
+            reference.get(field) for field in ("short_effect", "effect", "flavor_text")
         )
         else "##"
     )
@@ -393,9 +400,13 @@ def _reference_battle_properties(record: dict[str, Any]) -> list[tuple[str, str]
             label += f" ({ailment_chance}% chance)"
         properties.append(("Secondary effect", label))
     if metadata.get("min_hits") is not None:
-        properties.append(("Hits", _hit_range(metadata["min_hits"], metadata["max_hits"])))
+        properties.append(
+            ("Hits", _hit_range(metadata["min_hits"], metadata["max_hits"]))
+        )
     if metadata.get("min_turns") is not None:
-        properties.append(("Duration", _turn_range(metadata["min_turns"], metadata["max_turns"])))
+        properties.append(
+            ("Duration", _turn_range(metadata["min_turns"], metadata["max_turns"]))
+        )
     return properties
 
 
@@ -495,5 +506,3 @@ def _pokemon_table_link(
         reference_sprite_cell("pokemon", value.get("member"), references),
         link,
     )
-
-

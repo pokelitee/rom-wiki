@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from romwiki.engines.registry import GEN5_BW_ENGINE
 from romwiki.renderers.mkdocs.catalog import (
@@ -90,9 +91,7 @@ def render_encounter_pages(
         change = record_comparison(comparison, record["area_id"])
         filename = f"area-{record['area_id']:03}.md"
         previous = sorted_linked[index - 1] if index else None
-        following = (
-            sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
-        )
+        following = sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             write_text(
                 output_root / filename,
@@ -109,7 +108,9 @@ def render_encounter_pages(
         label = record["name"]
         if name_counts[label] > 1:
             internal_names = ", ".join(
-                dict.fromkeys(location["internal_name"] for location in record["locations"])
+                dict.fromkeys(
+                    location["internal_name"] for location in record["locations"]
+                )
             )
             label = f"{label} — {internal_names}"
         fallback_links.append(
@@ -122,9 +123,7 @@ def render_encounter_pages(
             )
         )
         catalog_records.append(
-            _catalog_record(
-                record, filename.removesuffix(".md") + "/", True, change
-            )
+            _catalog_record(record, filename.removesuffix(".md") + "/", True, change)
         )
     if unlinked:
         for index, record in enumerate(unlinked):
@@ -229,23 +228,28 @@ def _catalog_record(
             dict.fromkeys((*method_pokemon["walking"], *special_species))
         )
     location_names = [location["name"] for location in record.get("locations", [])]
-    return add_change_status({
-        "id": record["area_id"],
-        "label": record["name"],
-        "url": filename,
-        "locations": list(dict.fromkeys(location_names)),
-        "methods": methods,
-        "pokemon": list(dict.fromkeys(species)),
-        "pokemon_refs": [
-            ROUTES.catalog_reference(reference, "encounters/")
-            for reference in unique_references(pokemon_refs)
-        ],
-        "method_pokemon": method_pokemon,
-        "min_level": min(levels) if levels else None,
-        "max_level": max(levels) if levels else None,
-        "referenced": referenced,
-        "search_text": " ".join((record["name"], *location_names, *species)).lower(),
-    }, change)
+    return add_change_status(
+        {
+            "id": record["area_id"],
+            "label": record["name"],
+            "url": filename,
+            "locations": list(dict.fromkeys(location_names)),
+            "methods": methods,
+            "pokemon": list(dict.fromkeys(species)),
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "encounters/")
+                for reference in unique_references(pokemon_refs)
+            ],
+            "method_pokemon": method_pokemon,
+            "min_level": min(levels) if levels else None,
+            "max_level": max(levels) if levels else None,
+            "referenced": referenced,
+            "search_text": " ".join(
+                (record["name"], *location_names, *species)
+            ).lower(),
+        },
+        change,
+    )
 
 
 def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
@@ -256,7 +260,10 @@ def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
         *(entries for entries in special["dual_slot"].values()),
     )
     pokemon = [
-        entry["pokemon"] for group in slotted_groups for entry in group if entry["pokemon"]
+        entry["pokemon"]
+        for group in slotted_groups
+        for entry in group
+        if entry["pokemon"]
     ]
     pokemon.extend(value for value in special["radar"] if value is not None)
     return _unique_pokemon(pokemon)
@@ -469,7 +476,10 @@ def _append_walking(
     lines.extend(["## Walking", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         pokemon_table(
-            ["| Pokémon | Type | Level | Chance |", "| ------- | ---- | ----: | -----: |"],
+            [
+                "| Pokémon | Type | Level | Chance |",
+                "| ------- | ---- | ----: | -----: |",
+            ],
             [
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
@@ -495,7 +505,10 @@ def _append_water(
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         pokemon_table(
-            ["| Pokémon | Type | Levels | Chance |", "| ------- | ---- | -----: | -----: |"],
+            [
+                "| Pokémon | Type | Levels | Chance |",
+                "| ------- | ---- | -----: | -----: |",
+            ],
             [
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
@@ -528,7 +541,9 @@ def _append_special(
         (label, [entry for entry in entries if entry["pokemon"]])
         for label, entries in slotted_groups
     ]
-    populated_slotted = [(label, entries) for label, entries in populated_slotted if entries]
+    populated_slotted = [
+        (label, entries) for label, entries in populated_slotted if entries
+    ]
     radar = _unique_pokemon(value for value in special["radar"] if value)
     unown_forms = special["unown_forms"]
     if not populated_slotted and not radar and not unown_forms:
@@ -538,7 +553,10 @@ def _append_special(
         lines.extend([f"**{label}:**", ""])
         lines.extend(
             pokemon_table(
-                ["| Pokémon | Type | Level | Chance |", "| ------- | ---- | ----: | -----: |"],
+                [
+                    "| Pokémon | Type | Level | Chance |",
+                    "| ------- | ---- | ----: | -----: |",
+                ],
                 [
                     (
                         f"| {sprite_with_link(table_sprite_cell(entry['pokemon'].get('sprite')), _pokemon_link(entry['pokemon'], source_file))} | "
@@ -594,9 +612,7 @@ def _append_special(
 def _slot_type_cell(
     pokemon: dict[str, Any] | None, references: ReferenceIndex | None
 ) -> str:
-    return reference_type_cell(
-        "pokemon", (pokemon or {}).get("id"), references
-    )
+    return reference_type_cell("pokemon", (pokemon or {}).get("id"), references)
 
 
 def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
@@ -669,9 +685,7 @@ def _render_gen5_encounter_pages(
             )
         )
         catalog_records.append(
-            _gen5_catalog_record(
-                record, filename.removesuffix(".md") + "/", change
-            )
+            _gen5_catalog_record(record, filename.removesuffix(".md") + "/", change)
         )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
@@ -719,28 +733,31 @@ def _gen5_catalog_record(
             for name in source_record.get("location_names", [])
         )
     )
-    return add_change_status({
-        "id": record["area_id"],
-        "label": record["name"],
-        "url": filename,
-        "locations": location_names,
-        "methods": list(dict.fromkeys(methods)),
-        "pokemon": list(dict.fromkeys(species)),
-        "pokemon_refs": [
-            ROUTES.catalog_reference(reference, "encounters/")
-            for reference in unique_references(pokemon_refs)
-        ],
-        "method_pokemon": {
-            label: list(dict.fromkeys(values))
-            for label, values in method_pokemon.items()
+    return add_change_status(
+        {
+            "id": record["area_id"],
+            "label": record["name"],
+            "url": filename,
+            "locations": location_names,
+            "methods": list(dict.fromkeys(methods)),
+            "pokemon": list(dict.fromkeys(species)),
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "encounters/")
+                for reference in unique_references(pokemon_refs)
+            ],
+            "method_pokemon": {
+                label: list(dict.fromkeys(values))
+                for label, values in method_pokemon.items()
+            },
+            "min_level": min(levels) if levels else None,
+            "max_level": max(levels) if levels else None,
+            "referenced": True,
+            "search_text": " ".join(
+                (record["name"], *location_names, *species)
+            ).lower(),
         },
-        "min_level": min(levels) if levels else None,
-        "max_level": max(levels) if levels else None,
-        "referenced": True,
-        "search_text": " ".join(
-            (record["name"], *location_names, *species)
-        ).lower(),
-    }, change)
+        change,
+    )
 
 
 def _render_gen5_area(
@@ -810,10 +827,14 @@ def _gen5_area_summary(record: dict[str, Any]) -> list[str]:
     facts = [
         f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
         f"<div><dt>Map index</dt><dd>{record['map_index']}</dd></div>",
-        "<div><dt>Methods</dt><dd>" + (", ".join(methods) if methods else "None") + "</dd></div>",
+        "<div><dt>Methods</dt><dd>"
+        + (", ".join(methods) if methods else "None")
+        + "</dd></div>",
     ]
     if record.get("season"):
-        facts.insert(2, f"<div><dt>Season</dt><dd>{record['season'].title()}</dd></div>")
+        facts.insert(
+            2, f"<div><dt>Season</dt><dd>{record['season'].title()}</dd></div>"
+        )
     return summary_section("rw-encounter-summary", facts)
 
 
@@ -839,7 +860,10 @@ def _append_gen5_method(
     )
     lines.extend(
         pokemon_table(
-            ["| Pokémon | Type | Levels | Chance |", "| ------- | ---- | -----: | -----: |"],
+            [
+                "| Pokémon | Type | Levels | Chance |",
+                "| ------- | ---- | -----: | -----: |",
+            ],
             [
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "

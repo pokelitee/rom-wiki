@@ -35,7 +35,9 @@ class DevPages:
         sections: dict[str, frozenset[str]] = {}
         for section, values in pages.items():
             if not isinstance(section, str) or _PATH_PART.fullmatch(section) is None:
-                raise SiteError(f"Invalid development page section in {path}: {section}")
+                raise SiteError(
+                    f"Invalid development page section in {path}: {section}"
+                )
             if not isinstance(values, list) or any(
                 not isinstance(value, str) or _PATH_PART.fullmatch(value) is None
                 for value in values

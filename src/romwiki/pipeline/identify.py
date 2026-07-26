@@ -48,7 +48,4 @@ def _inspect_image(rom_path: Path) -> tuple[RomImage, str]:
         except InvalidRomError as error:
             failures.append(f"{platform_id}: {error}")
     detail = "; ".join(failures) or "no platforms are registered"
-    raise InvalidRomError(
-        f"No registered platform accepts {rom_path.name} ({detail})"
-    )
-
+    raise InvalidRomError(f"No registered platform accepts {rom_path.name} ({detail})")

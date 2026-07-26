@@ -14,12 +14,16 @@ from romwiki.util.json_io import write_json_atomic
 
 def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
-        raise ProfileError("A known game profile is required for personal-data extraction")
+        raise ProfileError(
+            "A known game profile is required for personal-data extraction"
+        )
     profile = result.match.profile
     try:
         archive_path = profile.layout["personal"]
     except KeyError as error:
-        raise ProfileError(f"Profile {profile.id} does not define a personal archive") from error
+        raise ProfileError(
+            f"Profile {profile.id} does not define a personal archive"
+        ) from error
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).personal

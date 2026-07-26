@@ -3,11 +3,10 @@ template: game-home.html
 title: Pokémon Black & White
 ---
 
-The current baseline covers Pokémon species data: base stats, types, catch rate,
-abilities, EV yields, and TM/HM compatibility. This is the first Generation V
-release supported by this project; other sections (moves, items, trainers, wild
-encounters, locations) are not yet available.
+This wiki covers the retail Pokémon Black and White releases. It includes
+Pokémon, abilities, moves, items, wild encounters, trainers, and locations,
+with ROM provenance and PokéDB reference content kept distinct.
 
 Pokémon Black and White are built and published as one wiki: the two games are
-confirmed byte-for-byte identical across every section this wiki currently
-covers, and every page notes which version(s) a record is available in.
+merged by stable record identity. Shared records appear once and version-specific
+records state which game provides them.

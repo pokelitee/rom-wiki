@@ -32,7 +32,9 @@ class Gen4MachineTests(unittest.TestCase):
         machines = parse_machine_move_table(
             struct.pack("<3H", 10, 20, 30), machine_count=3, tm_count=2
         )
-        self.assertEqual([machine.name for machine in machines], ["TM01", "TM02", "HM01"])
+        self.assertEqual(
+            [machine.name for machine in machines], ["TM01", "TM02", "HM01"]
+        )
 
 
 if __name__ == "__main__":

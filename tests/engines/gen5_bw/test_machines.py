@@ -35,12 +35,60 @@ class Gen5MachineTests(unittest.TestCase):
         machines = parse_machine_move_table(data)
 
         self.assertEqual(len(machines), 101)
-        self.assertEqual((machines[0].kind, machines[0].number, machines[0].move_id, machines[0].item_id), ("tm", 1, 468, 328))
-        self.assertEqual((machines[91].kind, machines[91].number, machines[91].move_id, machines[91].item_id), ("tm", 92, 433, 419))
-        self.assertEqual((machines[92].kind, machines[92].number, machines[92].move_id, machines[92].item_id), ("hm", 1, 15, 420))
-        self.assertEqual((machines[97].kind, machines[97].number, machines[97].move_id, machines[97].item_id), ("hm", 6, 291, 425))
-        self.assertEqual((machines[98].kind, machines[98].number, machines[98].move_id, machines[98].item_id), ("tm", 93, 528, 618))
-        self.assertEqual((machines[100].kind, machines[100].number, machines[100].move_id, machines[100].item_id), ("tm", 95, 555, 620))
+        self.assertEqual(
+            (
+                machines[0].kind,
+                machines[0].number,
+                machines[0].move_id,
+                machines[0].item_id,
+            ),
+            ("tm", 1, 468, 328),
+        )
+        self.assertEqual(
+            (
+                machines[91].kind,
+                machines[91].number,
+                machines[91].move_id,
+                machines[91].item_id,
+            ),
+            ("tm", 92, 433, 419),
+        )
+        self.assertEqual(
+            (
+                machines[92].kind,
+                machines[92].number,
+                machines[92].move_id,
+                machines[92].item_id,
+            ),
+            ("hm", 1, 15, 420),
+        )
+        self.assertEqual(
+            (
+                machines[97].kind,
+                machines[97].number,
+                machines[97].move_id,
+                machines[97].item_id,
+            ),
+            ("hm", 6, 291, 425),
+        )
+        self.assertEqual(
+            (
+                machines[98].kind,
+                machines[98].number,
+                machines[98].move_id,
+                machines[98].item_id,
+            ),
+            ("tm", 93, 528, 618),
+        )
+        self.assertEqual(
+            (
+                machines[100].kind,
+                machines[100].number,
+                machines[100].move_id,
+                machines[100].item_id,
+            ),
+            ("tm", 95, 555, 620),
+        )
 
     def test_rejects_wrong_size(self) -> None:
         with self.assertRaises(InvalidRomError):

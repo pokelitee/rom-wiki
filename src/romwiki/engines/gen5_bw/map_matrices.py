@@ -49,9 +49,7 @@ def parse_map_matrix(data: bytes, *, matrix_id: int) -> Gen5MapMatrix:
             )
         header_ids = tuple(
             value[0]
-            for value in struct.iter_unpack(
-                "<i", data[map_files_end:header_ids_end]
-            )
+            for value in struct.iter_unpack("<i", data[map_files_end:header_ids_end])
         )
 
     return Gen5MapMatrix(

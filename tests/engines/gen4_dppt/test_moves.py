@@ -16,9 +16,7 @@ class Gen4MoveTests(unittest.TestCase):
         struct.pack_into("<b", data, 10, -1)
         data[11:14] = bytes((0x12, 17, 3))
 
-        move = parse_move_record(
-            bytes(data), move_id=85, archive_path="moves.narc"
-        )
+        move = parse_move_record(bytes(data), move_id=85, archive_path="moves.narc")
 
         self.assertEqual(move.effect_id, 6)
         self.assertEqual(move.damage_class_id, 1)

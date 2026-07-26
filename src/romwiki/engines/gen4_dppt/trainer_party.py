@@ -41,13 +41,13 @@ def normalize_trainer_party_member(
         "nature": None,
         "gender": None,
         "ivs": (
-            {"source": "derived", "values": {stat: iv for stat in _STATS}}
+            {"source": "derived", "values": dict.fromkeys(_STATS, iv)}
             if iv <= 31
             else None
         ),
         "evs": {
             "source": "engine-default",
-            "values": {stat: 0 for stat in _STATS},
+            "values": dict.fromkeys(_STATS, 0),
         },
         "calculated_stats": None,
         "source_fields": {
@@ -128,7 +128,7 @@ def _trainer_personality(
 def _trainer_ivs(difficulty: int, rng_seed: int) -> dict[str, Any]:
     iv = difficulty * 31 // 255
     if iv <= 31:
-        return {"source": "derived", "values": {stat: iv for stat in _STATS}}
+        return {"source": "derived", "values": dict.fromkeys(_STATS, iv)}
     # Pokémon creation consumes two RNG calls before regenerating an invalid
     # fixed IV value, then packs three five-bit IVs into each of two calls.
     seed = rng_seed
@@ -190,8 +190,7 @@ def _calculated_stats(
         "hp": (
             1
             if species_id == 292
-            else ((2 * base_stats["hp"] + ivs["hp"] + evs["hp"] // 4) * level)
-            // 100
+            else ((2 * base_stats["hp"] + ivs["hp"] + evs["hp"] // 4) * level) // 100
             + level
             + 10
         )

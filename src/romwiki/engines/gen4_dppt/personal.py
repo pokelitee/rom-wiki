@@ -79,8 +79,7 @@ def parse_personal_record(
     machine_ids = tuple(
         machine_id
         for machine_id in range(1, 129)
-        if machine_masks[(machine_id - 1) // 32]
-        & (1 << ((machine_id - 1) % 32))
+        if machine_masks[(machine_id - 1) // 32] & (1 << ((machine_id - 1) % 32))
     )
     return PokemonPersonalData(
         species_id=species_id,

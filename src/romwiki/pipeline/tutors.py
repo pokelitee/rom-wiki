@@ -26,7 +26,9 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     try:
         parameters = {name: profile.parameters[name] for name in required}
     except KeyError as error:
-        raise ProfileError(f"Profile {profile.id} does not define tutor data") from error
+        raise ProfileError(
+            f"Profile {profile.id} does not define tutor data"
+        ) from error
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors

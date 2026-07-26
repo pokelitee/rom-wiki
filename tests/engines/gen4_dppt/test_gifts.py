@@ -20,7 +20,10 @@ class Gen4GiftTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            [(gift.offset, gift.species_id, gift.level, gift.held_item_id) for gift in gifts],
+            [
+                (gift.offset, gift.species_id, gift.level, gift.held_item_id)
+                for gift in gifts
+            ],
             [(6, 133, 5, 0)],
         )
 

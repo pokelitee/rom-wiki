@@ -13,7 +13,9 @@ from romwiki.util.json_io import write_json_atomic
 
 def extract_static_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
-        raise ProfileError("A known game profile is required for static encounter extraction")
+        raise ProfileError(
+            "A known game profile is required for static encounter extraction"
+        )
     profile = result.match.profile
     try:
         scripts_path = profile.layout["scripts"]

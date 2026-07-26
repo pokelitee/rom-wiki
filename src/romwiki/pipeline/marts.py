@@ -50,9 +50,7 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
     records = [
         {
             **{
-                key: value
-                for key, value in shop.to_dict().items()
-                if key != "item_ids"
+                key: value for key, value in shop.to_dict().items() if key != "item_ids"
             },
             "items": [
                 {"item_id": item_id, "name": item_names[item_id]}

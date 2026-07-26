@@ -30,7 +30,10 @@ class Gen4MartTests(unittest.TestCase):
         commands = parse_mart_commands(make_script(body))
 
         self.assertEqual(
-            [(command.offset, command.kind, command.inventory_id) for command in commands],
+            [
+                (command.offset, command.kind, command.inventory_id)
+                for command in commands
+            ],
             [
                 (6, "common", 1),
                 (14, "specialty", 16),
@@ -109,9 +112,7 @@ class Gen4MartTests(unittest.TestCase):
 
     def test_rejects_truncated_specialized_price_table(self) -> None:
         with self.assertRaises(InvalidRomError):
-            parse_decoration_price_table(
-                bytes(28), offset=0, decoration_count=2
-            )
+            parse_decoration_price_table(bytes(28), offset=0, decoration_count=2)
 
     def test_reads_battle_frontier_item_price_records(self) -> None:
         data = struct.pack("<HHHH", 289, 16, 333, 32)

@@ -66,7 +66,9 @@ def parse_shop_catalog(
     Gen5 game already document -- so there's nothing here to decode).
     """
     shops = []
-    for shop_id, (offset, size) in enumerate(zip(shop_item_offsets, shop_item_sizes)):
+    for shop_id, (offset, size) in enumerate(
+        zip(shop_item_offsets, shop_item_sizes, strict=True)
+    ):
         if shop_id in tm_shop_ids or shop_id in regular_shop_ids:
             continue
         item_ids = struct.unpack_from(f"<{size}H", overlay_data, offset)

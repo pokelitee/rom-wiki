@@ -369,9 +369,7 @@ def _extract_gen4_trainer_locations(
         raise ProfileError(
             f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
         ) from error
-    null_event_id = profile.parameters.get(
-        "null_event_id", engine.ARCHIVE_MEMBER_NONE
-    )
+    null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)
 
     headers, location_names = resolve_map_headers(
         engine,
@@ -402,7 +400,8 @@ def _extract_gen4_trainer_locations(
                 )
             if header.event_file_id not in object_cache:
                 object_cache[header.event_file_id] = engine.parse_object_events(
-                    events.read(header.event_file_id), event_file_id=header.event_file_id
+                    events.read(header.event_file_id),
+                    event_file_id=header.event_file_id,
                 )
             objects = object_cache[header.event_file_id]
         for object_event in objects:
@@ -454,22 +453,26 @@ def _extract_gen4_trainer_locations(
                         opponent_slot=opponent_slot,
                     )
                 )
-    return locations, script_references, {
-        "trainer_locations": {
-            "events_archive": events_path,
-            "map_headers": {"arm9_offset": table_offset, "count": count},
-            "internal_names": map_names_path,
-            "location_names_member": location_names_member,
-            "script_range": [script_start, script_end],
-            "trainer_id_offset": trainer_id_offset,
+    return (
+        locations,
+        script_references,
+        {
+            "trainer_locations": {
+                "events_archive": events_path,
+                "map_headers": {"arm9_offset": table_offset, "count": count},
+                "internal_names": map_names_path,
+                "location_names_member": location_names_member,
+                "script_range": [script_start, script_end],
+                "trainer_id_offset": trainer_id_offset,
+            },
+            "trainer_script_references": {
+                "scripts_archive": scripts_path,
+                "start_trainer_battle_opcode": engine.START_TRAINER_BATTLE,
+                "check_won_battle_opcode": engine.CHECK_WON_BATTLE,
+                "literal_ids_only": True,
+            },
         },
-        "trainer_script_references": {
-            "scripts_archive": scripts_path,
-            "start_trainer_battle_opcode": engine.START_TRAINER_BATTLE,
-            "check_won_battle_opcode": engine.CHECK_WON_BATTLE,
-            "literal_ids_only": True,
-        },
-    }
+    )
 
 
 def write_trainer_dataset(dataset: dict[str, Any], output_path: Path) -> None:

@@ -22,8 +22,35 @@ class Gen5PickupTableTests(unittest.TestCase):
         # Real Black ROM pickup table (overlay 92, offset 1976): resolves to
         # the well-known real Gen5 Pickup item list.
         item_ids = (
-            25, 92, 221, 23, 38, 278, 537, 40, 537, 234, 537, 17, 18, 26, 3,
-            79, 78, 27, 25, 2, 28, 50, 80, 81, 93, 23, 29, 51, 41,
+            25,
+            92,
+            221,
+            23,
+            38,
+            278,
+            537,
+            40,
+            537,
+            234,
+            537,
+            17,
+            18,
+            26,
+            3,
+            79,
+            78,
+            27,
+            25,
+            2,
+            28,
+            50,
+            80,
+            81,
+            93,
+            23,
+            29,
+            51,
+            41,
         )
         overlay_data = _overlay_with_table(0x10, item_ids)
 

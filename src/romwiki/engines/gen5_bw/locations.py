@@ -45,7 +45,9 @@ def parse_map_header_script_files(data: bytes) -> tuple[int, ...]:
         raise InvalidRomError("Gen V map header table has an invalid size")
     count = len(data) // MAP_HEADER_RECORD_SIZE
     return tuple(
-        struct.unpack_from("<H", data, header_id * MAP_HEADER_RECORD_SIZE + _SCRIPT_FILE_OFFSET)[0]
+        struct.unpack_from(
+            "<H", data, header_id * MAP_HEADER_RECORD_SIZE + _SCRIPT_FILE_OFFSET
+        )[0]
         for header_id in range(count)
     )
 
@@ -64,16 +66,13 @@ def parse_map_header_table(
         matrix_id = struct.unpack_from("<H", data, base + _MATRIX_ID_OFFSET)[0]
         if name_index >= len(map_names):
             raise InvalidRomError(
-                f"Gen V map header {header_id} references missing map name "
-                f"{name_index}"
+                f"Gen V map header {header_id} references missing map name {name_index}"
             )
         headers.append(
             Gen5Location(
                 header_id=header_id,
                 name=map_names[name_index],
-                encounter_map_index=(
-                    None if wild_set == _NULL_WILD_SET else wild_set
-                ),
+                encounter_map_index=(None if wild_set == _NULL_WILD_SET else wild_set),
                 matrix_id=matrix_id,
                 provenance=RecordProvenance(
                     source="rom", archive=archive_path, member=header_id

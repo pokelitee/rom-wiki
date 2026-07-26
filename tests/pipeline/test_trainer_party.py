@@ -127,9 +127,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
 
     def test_rejects_unknown_engines(self) -> None:
         with self.assertRaisesRegex(DataSourceError, "unknown_engine"):
-            normalize_trainer_party_member(
-                "unknown_engine", {}, has_custom_moves=False
-            )
+            normalize_trainer_party_member("unknown_engine", {}, has_custom_moves=False)
 
     def test_rejects_invalid_gen4_difficulty(self) -> None:
         with self.assertRaisesRegex(DataSourceError, "difficulty"):

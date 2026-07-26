@@ -53,9 +53,7 @@ class Gen5Instruction:
     next_offset: int
 
 
-def disassemble_function(
-    data: bytes, start: int
-) -> dict[int, Gen5Instruction]:
+def disassemble_function(data: bytes, start: int) -> dict[int, Gen5Instruction]:
     """Disassemble every statically-reachable instruction from `start`.
 
     Returns a dict keyed by instruction start offset. Unknown opcodes (not
@@ -117,9 +115,7 @@ def disassemble_function(
     return instructions
 
 
-def find_calls(
-    data: bytes, start: int, opcode: int
-) -> tuple[Gen5Instruction, ...]:
+def find_calls(data: bytes, start: int, opcode: int) -> tuple[Gen5Instruction, ...]:
     """Find every statically-reachable call to a specific opcode."""
     instructions = disassemble_function(data, start)
     return tuple(

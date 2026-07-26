@@ -20,48 +20,137 @@ RECORD_KEY_FIELDS = {
 
 _FIELDS = {
     "pokemon": (
-        "name", "base_stats", "types", "abilities", "catch_rate",
-        "base_experience", "ev_yields", "held_items", "gender_ratio",
-        "hatch_cycles", "base_friendship", "growth_rate", "egg_groups",
-        "safari_flee_rate", "body_color", "flip_sprite", "evolutions",
-        "machines", "tutor_moves", "level_up_moves", "egg_moves",
+        "name",
+        "base_stats",
+        "types",
+        "abilities",
+        "catch_rate",
+        "base_experience",
+        "ev_yields",
+        "held_items",
+        "gender_ratio",
+        "hatch_cycles",
+        "base_friendship",
+        "growth_rate",
+        "egg_groups",
+        "safari_flee_rate",
+        "body_color",
+        "flip_sprite",
+        "evolutions",
+        "machines",
+        "tutor_moves",
+        "level_up_moves",
+        "egg_moves",
     ),
     "abilities": ("name", "pokemon"),
     "moves": (
-        "name", "type", "damage_class", "power", "accuracy", "pp",
-        "priority", "effect_id", "effect_chance", "target_id", "flags",
-        "contest_effect_id", "contest_type_id", "machines", "tutors",
+        "name",
+        "type",
+        "damage_class",
+        "power",
+        "accuracy",
+        "pp",
+        "priority",
+        "effect_id",
+        "effect_chance",
+        "target_id",
+        "flags",
+        "contest_effect_id",
+        "contest_type_id",
+        "machines",
+        "tutors",
         "egg_move_pokemon",
     ),
     "items": (
-        "name", "price", "pocket", "field_pocket_id", "field_use",
-        "field_use_function_id", "battle_use_function_id", "battle_pocket_mask",
-        "hold_effect_id", "hold_effect_parameter", "pluck_effect_id",
-        "fling_effect_id", "fling_power", "natural_gift_power",
-        "natural_gift_type", "party_use", "party_effects", "prevent_toss",
-        "selectable", "locations", "shops", "wild_held_by", "trainer_held_by",
-        "trainer_battle_items", "gifts", "trades", "evolutions", "revives_into",
+        "name",
+        "price",
+        "pocket",
+        "field_pocket_id",
+        "field_use",
+        "field_use_function_id",
+        "battle_use_function_id",
+        "battle_pocket_mask",
+        "hold_effect_id",
+        "hold_effect_parameter",
+        "pluck_effect_id",
+        "fling_effect_id",
+        "fling_power",
+        "natural_gift_power",
+        "natural_gift_type",
+        "party_use",
+        "party_effects",
+        "prevent_toss",
+        "selectable",
+        "locations",
+        "shops",
+        "wild_held_by",
+        "trainer_held_by",
+        "trainer_battle_items",
+        "gifts",
+        "trades",
+        "evolutions",
+        "revives_into",
         "berry",
     ),
     "wild_encounters": (
-        "active", "name", "locations", "walking", "surf", "old_rod",
-        "good_rod", "super_rod", "special", "encounter_form_rates",
-        "unown_table_id", "grass_cave", "doubles_grass", "shaking_spots",
-        "surfing", "surfing_spots", "fishing", "fishing_spots",
+        "active",
+        "name",
+        "locations",
+        "walking",
+        "surf",
+        "old_rod",
+        "good_rod",
+        "super_rod",
+        "special",
+        "encounter_form_rates",
+        "unown_table_id",
+        "grass_cave",
+        "doubles_grass",
+        "shaking_spots",
+        "surfing",
+        "surfing_spots",
+        "fishing",
+        "fishing_spots",
     ),
     "trainers": (
-        "name", "class_id", "class_name", "battle_type", "double_battle",
-        "ai_flags", "ai_battle_items", "party", "locations",
+        "name",
+        "class_id",
+        "class_name",
+        "battle_type",
+        "double_battle",
+        "ai_flags",
+        "ai_battle_items",
+        "party",
+        "locations",
         "script_references",
     ),
     "locations": (
-        "name", "internal_name", "location_name_id", "matrix_id",
-        "area_data_id", "level_script_id", "text_archive_id",
-        "day_music_id", "night_music_id", "weather_id", "camera_id",
-        "map_flags", "event_file_id", "encounter_id", "connections",
-        "warps", "items", "shops", "pokemon_gifts", "npc_trades",
-        "static_encounters", "roaming_activations", "trainers",
-        "honey_tree", "daily_encounter_pool", "game_corner_prizes",
+        "name",
+        "internal_name",
+        "location_name_id",
+        "matrix_id",
+        "area_data_id",
+        "level_script_id",
+        "text_archive_id",
+        "day_music_id",
+        "night_music_id",
+        "weather_id",
+        "camera_id",
+        "map_flags",
+        "event_file_id",
+        "encounter_id",
+        "connections",
+        "warps",
+        "items",
+        "shops",
+        "pokemon_gifts",
+        "npc_trades",
+        "static_encounters",
+        "roaming_activations",
+        "trainers",
+        "honey_tree",
+        "daily_encounter_pool",
+        "game_corner_prizes",
     ),
 }
 
@@ -70,13 +159,26 @@ _UNORDERED = {
     "abilities": {"pokemon"},
     "moves": {"machines", "tutors", "egg_move_pokemon"},
     "items": {
-        "locations", "shops", "wild_held_by", "trainer_held_by",
-        "trainer_battle_items", "gifts", "trades", "evolutions",
+        "locations",
+        "shops",
+        "wild_held_by",
+        "trainer_held_by",
+        "trainer_battle_items",
+        "gifts",
+        "trades",
+        "evolutions",
     },
     "trainers": {"locations", "script_references"},
     "locations": {
-        "connections", "warps", "items", "shops", "pokemon_gifts",
-        "npc_trades", "static_encounters", "roaming_activations", "trainers",
+        "connections",
+        "warps",
+        "items",
+        "shops",
+        "pokemon_gifts",
+        "npc_trades",
+        "static_encounters",
+        "roaming_activations",
+        "trainers",
     },
 }
 
@@ -176,7 +278,7 @@ def compare_datasets(
     current_records = records_by_key(current, key_name)
     baseline_records = records_by_key(baseline, key_name)
     records = []
-    counts = {status: 0 for status in ("unchanged", "changed", "added", "removed")}
+    counts = dict.fromkeys(("unchanged", "changed", "added", "removed"), 0)
     for key in sorted(set(current_records) | set(baseline_records)):
         after = current_records.get(key)
         before = baseline_records.get(key)
@@ -259,12 +361,8 @@ def _field_changes(
     for field in _FIELDS[kind]:
         previous = _clean(before.get(field))
         current = _clean(after.get(field))
-        previous_semantic = normalize_comparison_value(
-            previous, kind=kind, field=field
-        )
-        current_semantic = normalize_comparison_value(
-            current, kind=kind, field=field
-        )
+        previous_semantic = normalize_comparison_value(previous, kind=kind, field=field)
+        current_semantic = normalize_comparison_value(current, kind=kind, field=field)
         if field in _UNORDERED.get(kind, set()):
             equal = _canonical_set(previous_semantic) == _canonical_set(
                 current_semantic
@@ -295,8 +393,7 @@ def _clean(value: Any) -> Any:
     return {
         key: _clean(item)
         for key, item in value.items()
-        if key
-        not in {"provenance", "reference", "source_fields", "sprite", "sprites"}
+        if key not in {"provenance", "reference", "source_fields", "sprite", "sprites"}
         and not key.endswith("_provenance")
     }
 
@@ -312,10 +409,7 @@ def normalize_comparison_value(
         if field == "machines":
             return [item.get("id") for item in value]
         if field in {"egg_moves", "tutor_moves"}:
-            return [
-                (item.get("move") or item).get("id")
-                for item in value
-            ]
+            return [(item.get("move") or item).get("id") for item in value]
         if field in {"abilities", "types", "egg_groups"}:
             return [item.get("id") for item in value]
         if field == "level_up_moves":
@@ -350,14 +444,20 @@ def normalize_comparison_value(
 def _canonical_set(value: Any) -> list[str]:
     if not isinstance(value, list):
         return [json.dumps(value, sort_keys=True, ensure_ascii=False)]
-    return sorted(json.dumps(item, sort_keys=True, ensure_ascii=False) for item in value)
+    return sorted(
+        json.dumps(item, sort_keys=True, ensure_ascii=False) for item in value
+    )
 
 
 def _record_label(kind: str, record: dict[str, Any]) -> str:
     if kind == "trainers":
         parts = (record.get("class_name"), record.get("name"))
         return " ".join(part for part in parts if part)
-    return str(record.get("name") or record.get("internal_name") or record.get(RECORD_KEY_FIELDS[kind]))
+    return str(
+        record.get("name")
+        or record.get("internal_name")
+        or record.get(RECORD_KEY_FIELDS[kind])
+    )
 
 
 def _has_detail_page(kind: str, record: dict[str, Any]) -> bool:

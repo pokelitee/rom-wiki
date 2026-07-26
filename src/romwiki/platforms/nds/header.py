@@ -80,9 +80,13 @@ class NintendoDSHeader:
 
     def _validate(self) -> None:
         if self.header_size < _MINIMUM_HEADER_SIZE:
-            raise InvalidRomError(f"Invalid Nintendo DS header size: {self.header_size}")
+            raise InvalidRomError(
+                f"Invalid Nintendo DS header size: {self.header_size}"
+            )
         if self.file_allocation_table_size % 8:
-            raise InvalidRomError("Nintendo DS file allocation table has an invalid size")
+            raise InvalidRomError(
+                "Nintendo DS file allocation table has an invalid size"
+            )
 
 
 def _uint32(data: bytes, offset: int) -> int:

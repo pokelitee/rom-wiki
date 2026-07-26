@@ -9,7 +9,9 @@ from romwiki.util.local_config import LocalGameRegistry
 
 
 class LocalGameRegistryTests(unittest.TestCase):
-    def test_resolves_relative_patched_and_base_paths_from_config_directory(self) -> None:
+    def test_resolves_relative_patched_and_base_paths_from_config_directory(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             roms = root / "roms"

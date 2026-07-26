@@ -22,4 +22,3 @@ def create_manifest(result: InspectionResult) -> dict[str, Any]:
 
 def write_manifest(manifest: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, manifest)
-

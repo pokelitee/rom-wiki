@@ -13,6 +13,7 @@ nav:
   - Home: index.md
   - Changes: changes/index.md
   - Data Sources: data-sources.md
+  - Data Downloads: data/index.md
   - Documentation:
       - Overview: docs/index.md
       - Action Replay: docs/codes.md

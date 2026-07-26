@@ -54,9 +54,7 @@ class Gen4MapEvents:
 def parse_map_events(data: bytes, *, event_file_id: int) -> Gen4MapEvents:
     position = 0
     background_count, position = _read_count(data, position, event_file_id)
-    background_end = _skip_records(
-        data, position, background_count, 20, event_file_id
-    )
+    background_end = _skip_records(data, position, background_count, 20, event_file_id)
     backgrounds = []
     for index in range(background_count):
         script_id, event_type, x, z, y, direction = struct.unpack_from(

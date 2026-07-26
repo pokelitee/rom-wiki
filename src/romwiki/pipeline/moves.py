@@ -19,7 +19,9 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
     try:
         archive_path = profile.layout["moves"]
     except KeyError as error:
-        raise ProfileError(f"Profile {profile.id} does not define a move archive") from error
+        raise ProfileError(
+            f"Profile {profile.id} does not define a move archive"
+        ) from error
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).moves

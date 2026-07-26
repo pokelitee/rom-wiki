@@ -44,9 +44,7 @@ class Gen5FossilRevivalTests(unittest.TestCase):
 
         revivals = parse_fossil_revival_table(data)
 
-        self.assertEqual(
-            [(r.item_id, r.species_id) for r in revivals], pairs
-        )
+        self.assertEqual([(r.item_id, r.species_id) for r in revivals], pairs)
 
     def test_ignores_unrelated_variables(self) -> None:
         body = (

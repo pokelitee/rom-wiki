@@ -72,9 +72,7 @@ class BlzCompressionDetectionTests(unittest.TestCase):
 
 class DecompressArm9Tests(unittest.TestCase):
     def test_strips_footer_then_decompresses(self) -> None:
-        compressed = bytes.fromhex(
-            "05500990033000004141411e140000080c000000"
-        )
+        compressed = bytes.fromhex("05500990033000004141411e140000080c000000")
         footer = (0xDEC00621).to_bytes(4, "little") + b"\x00" * 8
         self.assertEqual(decompress_arm9(compressed + footer), b"A" * 32)
 

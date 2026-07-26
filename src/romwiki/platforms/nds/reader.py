@@ -104,5 +104,6 @@ def _validate_regions(header: NintendoDSHeader, image_size: int) -> None:
     }
     for name, (offset, size) in regions.items():
         if offset + size > image_size:
-            raise InvalidRomError(f"Nintendo DS {name} extends past the end of the image")
-
+            raise InvalidRomError(
+                f"Nintendo DS {name} extends past the end of the image"
+            )

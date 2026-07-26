@@ -50,10 +50,7 @@ def _catalog_skeleton(kind: str) -> list[str]:
     return [
         '<div class="rw-catalog__skeleton" data-rw-catalog-skeleton aria-hidden="true">',
         '<div class="rw-skeleton__controls">',
-        *(
-            '<span class="rw-skeleton__field"></span>'
-            for _ in range(filter_count)
-        ),
+        *('<span class="rw-skeleton__field"></span>' for _ in range(filter_count)),
         "</div>",
         '<span class="rw-skeleton__bar"></span>',
         '<div class="rw-skeleton__table">',

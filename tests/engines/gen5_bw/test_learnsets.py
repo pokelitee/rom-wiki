@@ -9,9 +9,7 @@ from romwiki.util.errors import InvalidRomError
 
 class Gen5LearnsetTests(unittest.TestCase):
     def test_decodes_move_and_level_pairs(self) -> None:
-        data = struct.pack(
-            "<8H", 33, 1, 45, 3, 73, 7, 0xFFFF, 0xFFFF
-        )
+        data = struct.pack("<8H", 33, 1, 45, 3, 73, 7, 0xFFFF, 0xFFFF)
 
         learnset = parse_level_up_learnset(
             data, species_id=1, archive_path="wotbl.narc"

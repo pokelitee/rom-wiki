@@ -21,7 +21,25 @@ def _npc_record(
     # scriptUsed, defaultDirection, sightRange, unknown1, unknown2,
     # horizontalLeash, verticalLeash, unknown3, unknown4, x, y, unknown5, z.
     return struct.pack(
-        "<18h", 0, sprite, 0, 0, 0, script_used, 0, sight_range, 0, 0, 0, 0, 0, 0, x, y, 0, z
+        "<18h",
+        0,
+        sprite,
+        0,
+        0,
+        0,
+        script_used,
+        0,
+        sight_range,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        x,
+        y,
+        0,
+        z,
     )
 
 
@@ -49,12 +67,8 @@ class Gen5OverworldTests(unittest.TestCase):
         # Real Black ROM facts: script member 155's NPCs include scriptUsed
         # 3026..3034 and 7040..7048, resolving to real, sequential, sensible
         # trainer records (26-34 and 40-48) when the band is subtracted.
-        self.assertEqual(
-            resolve_common_script_trainer_id(3026, trainer_count=616), 26
-        )
-        self.assertEqual(
-            resolve_common_script_trainer_id(7048, trainer_count=616), 48
-        )
+        self.assertEqual(resolve_common_script_trainer_id(3026, trainer_count=616), 26)
+        self.assertEqual(resolve_common_script_trainer_id(7048, trainer_count=616), 48)
 
     def test_does_not_resolve_local_script_indices(self) -> None:
         self.assertIsNone(resolve_common_script_trainer_id(4, trainer_count=616))
@@ -119,7 +133,9 @@ class Gen5OverworldItemTests(unittest.TestCase):
 
         self.assertEqual(len(furniture), 1)
         self.assertEqual(furniture[0].script_used, 8001)
-        self.assertEqual((furniture[0].x, furniture[0].y, furniture[0].z), (762, 582, 0))
+        self.assertEqual(
+            (furniture[0].x, furniture[0].y, furniture[0].z), (762, 582, 0)
+        )
         self.assertEqual(resolve_hidden_item_id(furniture[0], item_count=627), 1)
 
     def test_does_not_resolve_a_furniture_entry_below_the_hidden_item_band(
@@ -127,8 +143,12 @@ class Gen5OverworldItemTests(unittest.TestCase):
     ) -> None:
         header = bytes((0, 0, 0, 0, 1, 0, 0, 0))
         furniture_record = (
-            struct.pack("<h", 9) + bytes(4) + struct.pack("<i", 0) + bytes(2)
-            + struct.pack("<i", 0) + struct.pack("<i", 0)
+            struct.pack("<h", 9)
+            + bytes(4)
+            + struct.pack("<i", 0)
+            + bytes(2)
+            + struct.pack("<i", 0)
+            + struct.pack("<i", 0)
         )
         furniture = parse_overworld_furniture(header + furniture_record)
 
@@ -140,9 +160,12 @@ class Gen5OverworldItemTests(unittest.TestCase):
 
 
 def _warp_record(*, dest_header: int, dest_warp: int, x: int, y: int, z: int) -> bytes:
-    return struct.pack("<hh", dest_header, dest_warp) + bytes(4) + struct.pack(
-        "<hhh", x, y, z
-    ) + bytes(6)
+    return (
+        struct.pack("<hh", dest_header, dest_warp)
+        + bytes(4)
+        + struct.pack("<hhh", x, y, z)
+        + bytes(6)
+    )
 
 
 class Gen5OverworldWarpTests(unittest.TestCase):

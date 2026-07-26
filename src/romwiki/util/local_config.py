@@ -35,7 +35,9 @@ class LocalGameRegistry:
     def load(cls, path: Path) -> LocalGameRegistry:
         resolved = path.resolve()
         if not resolved.is_file():
-            raise LocalConfigError(f"Local game configuration does not exist: {resolved}")
+            raise LocalConfigError(
+                f"Local game configuration does not exist: {resolved}"
+            )
         try:
             with resolved.open("rb") as stream:
                 data = tomllib.load(stream)
@@ -79,7 +81,9 @@ def _load_game_paths(
     unknown = set(value) - {"patched_rom", "base_rom"}
     if unknown:
         fields = ", ".join(sorted(unknown))
-        raise LocalConfigError(f"Unknown fields for {game_id} in {config_path}: {fields}")
+        raise LocalConfigError(
+            f"Unknown fields for {game_id} in {config_path}: {fields}"
+        )
     patched_rom = _resolve_path(value.get("patched_rom"), root, game_id, "patched_rom")
     base_rom = _resolve_path(
         value.get("base_rom"), root, game_id, "base_rom", optional=True

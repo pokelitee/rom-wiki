@@ -123,9 +123,23 @@ GEN5_MACHINE_TABLE_PREFIX = "87038803"
 # unlike Gen4, no reserved "unknown" placeholder slot.
 TYPE_NAME_COUNT = 17
 TYPE_NAMES = (
-    "normal", "fighting", "flying", "poison", "ground", "rock", "bug",
-    "ghost", "steel", "fire", "water", "grass", "electric", "psychic",
-    "ice", "dragon", "dark",
+    "normal",
+    "fighting",
+    "flying",
+    "poison",
+    "ground",
+    "rock",
+    "bug",
+    "ghost",
+    "steel",
+    "fire",
+    "water",
+    "grass",
+    "electric",
+    "psychic",
+    "ice",
+    "dragon",
+    "dark",
 )
 
 # Unchanged from earlier generations' identical engine-internal ID schemes;
@@ -133,16 +147,43 @@ TYPE_NAMES = (
 # monster/grass, growth rate medium-slow, color green all decode correctly
 # against these tables).
 EGG_GROUP_NAMES = (
-    "none", "monster", "water-1", "bug", "flying", "field", "fairy",
-    "grass", "human-like", "water-3", "mineral", "amorphous", "water-2",
-    "ditto", "dragon", "undiscovered",
+    "none",
+    "monster",
+    "water-1",
+    "bug",
+    "flying",
+    "field",
+    "fairy",
+    "grass",
+    "human-like",
+    "water-3",
+    "mineral",
+    "amorphous",
+    "water-2",
+    "ditto",
+    "dragon",
+    "undiscovered",
 )
 GROWTH_RATE_NAMES = (
-    "medium-fast", "erratic", "fluctuating", "medium-slow", "fast", "slow",
+    "medium-fast",
+    "erratic",
+    "fluctuating",
+    "medium-slow",
+    "fast",
+    "slow",
 )
 COLOR_NAMES = (
-    "red", "blue", "yellow", "green", "black", "brown", "purple", "gray",
-    "white", "pink", "internal",
+    "red",
+    "blue",
+    "yellow",
+    "green",
+    "black",
+    "brown",
+    "purple",
+    "gray",
+    "white",
+    "pink",
+    "internal",
 )
 
 # Name-table entry counts, confirmed empirically by decoding every entry in
@@ -219,8 +260,8 @@ EVOLUTION_METHOD_NAMES = (
 # How each evolution method's parameter operand should be interpreted.
 # Methods absent here either take no parameter or an unknown raw value.
 EVOLUTION_PARAMETER_KINDS = {
-    **{method_id: "level" for method_id in (4, 9, 10, 11, 14, 15, 23)},
-    **{method_id: "item" for method_id in (6, 8, 17, 18, 19, 20)},
+    **dict.fromkeys((4, 9, 10, 11, 14, 15, 23), "level"),
+    **dict.fromkeys((6, 8, 17, 18, 19, 20), "item"),
     12: "personality",
     13: "personality",
     16: "beauty",

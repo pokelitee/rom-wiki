@@ -30,11 +30,29 @@ class MoveEnrichmentTests(unittest.TestCase):
 
         default_enriched = enrich_move_dataset(dataset, pokedb)
         dataset["type_names"] = [
-            "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug",
-            "Ghost", "Steel", "Fairy", "Fire", "Water", "Grass", "Electric",
-            "Psychic", "Ice", "Dragon", "Dark",
+            "Normal",
+            "Fighting",
+            "Flying",
+            "Poison",
+            "Ground",
+            "Rock",
+            "Bug",
+            "Ghost",
+            "Steel",
+            "Fairy",
+            "Fire",
+            "Water",
+            "Grass",
+            "Electric",
+            "Psychic",
+            "Ice",
+            "Dragon",
+            "Dark",
         ]
-        dataset["move_names"] = ["None", *(f"Move {move_id}" for move_id in range(1, 468))]
+        dataset["move_names"] = [
+            "None",
+            *(f"Move {move_id}" for move_id in range(1, 468)),
+        ]
         dataset["move_names"][85] = "Moonblast"
         enriched = enrich_move_dataset(
             dataset,
@@ -69,14 +87,10 @@ class MoveEnrichmentTests(unittest.TestCase):
                     "kind": "special",
                     "location": {"name": "Route 210"},
                     "minimum_friendship": 255,
-                    "compatible_pokemon": [
-                        {"slug": "dragonite", "name": "Dragonite"}
-                    ],
+                    "compatible_pokemon": [{"slug": "dragonite", "name": "Dragonite"}],
                 }
             ],
-            "egg_move_pokemon": [
-                {"slug": "pichu", "name": "Pichu"}
-            ],
+            "egg_move_pokemon": [{"slug": "pichu", "name": "Pichu"}],
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)

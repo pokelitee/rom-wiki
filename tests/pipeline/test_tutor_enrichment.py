@@ -36,8 +36,12 @@ class TutorEnrichmentTests(unittest.TestCase):
             tutor_dataset=tutors,
         )
 
-        self.assertEqual(pokemon["records"][1]["tutor_moves"][0]["move"]["slug"], "move-291")
-        self.assertEqual(pokemon["records"][1]["tutor_moves"][0]["location"]["name"], "Route 212")
+        self.assertEqual(
+            pokemon["records"][1]["tutor_moves"][0]["move"]["slug"], "move-291"
+        )
+        self.assertEqual(
+            pokemon["records"][1]["tutor_moves"][0]["location"]["name"], "Route 212"
+        )
         self.assertEqual(moves["records"][291]["tutors"][0]["shard_costs"]["blue"], 4)
         self.assertEqual(
             moves["records"][291]["tutors"][0]["compatible_pokemon"][0]["slug"],
@@ -61,9 +65,7 @@ class TutorEnrichmentTests(unittest.TestCase):
                 "eligibility_value": 16,
             }
         ]
-        tutors["special_compatibility"] = [
-            {"personal_member": 6, "tutor_ids": [2]}
-        ]
+        tutors["special_compatibility"] = [{"personal_member": 6, "tutor_ids": [2]}]
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
@@ -96,9 +98,7 @@ def _tutor_dataset() -> dict:
                 "table_index": 0,
             }
         ],
-        "compatibility": [
-            {"personal_member": 1, "tutor_ids": [1], "table_index": 0}
-        ],
+        "compatibility": [{"personal_member": 1, "tutor_ids": [1], "table_index": 0}],
     }
 
 

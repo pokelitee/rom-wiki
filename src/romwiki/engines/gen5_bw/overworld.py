@@ -212,7 +212,9 @@ def resolve_hidden_item_id(
     return item_id
 
 
-def resolve_common_script_trainer_id(script_used: int, *, trainer_count: int) -> int | None:
+def resolve_common_script_trainer_id(
+    script_used: int, *, trainer_count: int
+) -> int | None:
     """Resolve a sight-triggered NPC's `script_used` to a literal trainer ID.
 
     Returns `None` for local per-map script indices (`script_used` below the

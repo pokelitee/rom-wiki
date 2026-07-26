@@ -8,8 +8,27 @@ PLATINUM_MATRIX_VOID_HEADER_IDS = frozenset((0, 0xFFFF))
 # order (src/overlay005/honey_tree.c). Which specific tree is the player's guaranteed
 # Munchlax tree is derived from the save file's trainer ID, not ROM data.
 PLATINUM_HONEY_TREE_HEADER_IDS = (
-    347, 349, 350, 353, 354, 356, 362, 363, 366, 367, 371,
-    373, 380, 382, 388, 392, 395, 200, 202, 204, 256,
+    347,
+    349,
+    350,
+    353,
+    354,
+    356,
+    362,
+    363,
+    366,
+    367,
+    371,
+    373,
+    380,
+    382,
+    388,
+    392,
+    395,
+    200,
+    202,
+    204,
+    256,
 )
 # Great Marsh areas 1-6 (src/overlay006/great_marsh_daily_encounters.c); all six
 # areas share the same daily species pool.
@@ -33,11 +52,31 @@ PLATINUM_ROAMING_SLOT_SPECIES_IDS = (481, 488, 491, 146, 145)
 # a raw code address, not ROM archive data).
 PLATINUM_GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID = 144
 NATURE_NAMES = (
-    "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
-    "Bold", "Docile", "Relaxed", "Impish", "Lax",
-    "Timid", "Hasty", "Serious", "Jolly", "Naive",
-    "Modest", "Mild", "Quiet", "Bashful", "Rash",
-    "Calm", "Gentle", "Sassy", "Careful", "Quirky",
+    "Hardy",
+    "Lonely",
+    "Brave",
+    "Adamant",
+    "Naughty",
+    "Bold",
+    "Docile",
+    "Relaxed",
+    "Impish",
+    "Lax",
+    "Timid",
+    "Hasty",
+    "Serious",
+    "Jolly",
+    "Naive",
+    "Modest",
+    "Mild",
+    "Quiet",
+    "Bashful",
+    "Rash",
+    "Calm",
+    "Gentle",
+    "Sassy",
+    "Careful",
+    "Quirky",
 )
 
 # Dataset shapes the enrichment pipeline validates against. These describe
@@ -56,21 +95,63 @@ NATURAL_GIFT_TYPE_NONE = 31
 # Engine ID-to-name tables. The ROM stores these values as bare indexes the
 # game code interprets; the names are the community-standard slugs for them.
 TYPE_NAMES = (
-    "normal", "fighting", "flying", "poison", "ground", "rock", "bug",
-    "ghost", "steel", "unknown", "fire", "water", "grass", "electric",
-    "psychic", "ice", "dragon", "dark",
+    "normal",
+    "fighting",
+    "flying",
+    "poison",
+    "ground",
+    "rock",
+    "bug",
+    "ghost",
+    "steel",
+    "unknown",
+    "fire",
+    "water",
+    "grass",
+    "electric",
+    "psychic",
+    "ice",
+    "dragon",
+    "dark",
 )
 EGG_GROUP_NAMES = (
-    "none", "monster", "water-1", "bug", "flying", "field", "fairy",
-    "grass", "human-like", "water-3", "mineral", "amorphous", "water-2",
-    "ditto", "dragon", "undiscovered",
+    "none",
+    "monster",
+    "water-1",
+    "bug",
+    "flying",
+    "field",
+    "fairy",
+    "grass",
+    "human-like",
+    "water-3",
+    "mineral",
+    "amorphous",
+    "water-2",
+    "ditto",
+    "dragon",
+    "undiscovered",
 )
 GROWTH_RATE_NAMES = (
-    "medium-fast", "erratic", "fluctuating", "medium-slow", "fast", "slow",
+    "medium-fast",
+    "erratic",
+    "fluctuating",
+    "medium-slow",
+    "fast",
+    "slow",
 )
 COLOR_NAMES = (
-    "red", "blue", "yellow", "green", "black", "brown", "purple", "gray",
-    "white", "pink", "internal",
+    "red",
+    "blue",
+    "yellow",
+    "green",
+    "black",
+    "brown",
+    "purple",
+    "gray",
+    "white",
+    "pink",
+    "internal",
 )
 DAMAGE_CLASS_NAMES = ("physical", "special", "status")
 EVOLUTION_METHOD_NAMES = (
@@ -105,8 +186,8 @@ EVOLUTION_METHOD_NAMES = (
 # How each evolution method's parameter operand should be interpreted.
 # Methods absent here either take no parameter or an unknown raw value.
 EVOLUTION_PARAMETER_KINDS = {
-    **{method_id: "level" for method_id in (4, 8, 9, 10, 13, 14, 22, 23)},
-    **{method_id: "item" for method_id in (6, 7, 16, 17, 18, 19)},
+    **dict.fromkeys((4, 8, 9, 10, 13, 14, 22, 23), "level"),
+    **dict.fromkeys((6, 7, 16, 17, 18, 19), "item"),
     11: "personality",
     12: "personality",
     15: "beauty",

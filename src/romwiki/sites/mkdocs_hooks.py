@@ -48,9 +48,7 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         "sections": sorted(_current_sections),
     }
     config.extra["romwiki_games"] = [
-        _site_context(site)
-        for site in catalog.published()
-        if site.kind == "game"
+        _site_context(site) for site in catalog.published() if site.kind == "game"
     ]
     deployment_url = os.environ.get("ROMWIKI_SITE_URL")
     if deployment_url:
@@ -68,9 +66,7 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
 def on_files(files: Files, config: MkDocsConfig) -> Files:
     if _dev_pages is None:
         return files
-    return Files(
-        file for file in files if _dev_pages.includes_document(file.src_uri)
-    )
+    return Files(file for file in files if _dev_pages.includes_document(file.src_uri))
 
 
 def on_page_context(

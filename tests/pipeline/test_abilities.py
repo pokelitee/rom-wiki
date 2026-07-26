@@ -81,9 +81,19 @@ class AbilityDatasetTests(unittest.TestCase):
                         "name": "Bulbasaur",
                         "public": True,
                         "abilities": [
-                            {"id": 65, "slug": "overgrow", "name": "Overgrow", "is_hidden": False},
+                            {
+                                "id": 65,
+                                "slug": "overgrow",
+                                "name": "Overgrow",
+                                "is_hidden": False,
+                            },
                             {"id": 0, "slug": None, "name": None, "is_hidden": False},
-                            {"id": 34, "slug": "chlorophyll", "name": "Chlorophyll", "is_hidden": True},
+                            {
+                                "id": 34,
+                                "slug": "chlorophyll",
+                                "name": "Chlorophyll",
+                                "is_hidden": True,
+                            },
                         ],
                     },
                 ],
@@ -218,12 +228,14 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["status"], "assigned")
         self.assertEqual(
             catalog["records"][0]["pokemon_refs"],
-            [{
-                "kind": "pokemon",
-                "id": 1,
-                "label": "Bulbasaur",
-                "url": "../pokemon/bulbasaur/",
-            }],
+            [
+                {
+                    "kind": "pokemon",
+                    "id": 1,
+                    "label": "Bulbasaur",
+                    "url": "../pokemon/bulbasaur/",
+                }
+            ],
         )
 
     def test_marks_the_hidden_ability_slot_on_the_ability_page(self) -> None:
@@ -291,7 +303,6 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertIn("## Honey generation chance", honey_page)
         self.assertIn("| 1–10 | 5% |", honey_page)
         self.assertIn("| 11–20 | 10% |", honey_page)
-
 
     def test_renders_gen5_pickup_level_ranges(self) -> None:
         dataset = {

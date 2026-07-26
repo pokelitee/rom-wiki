@@ -8,6 +8,7 @@ import tarfile
 from pathlib import Path, PurePosixPath
 
 from romwiki.sites.catalog import SiteCatalog
+from romwiki.sites.data_exports import validate_public_data
 from romwiki.util.errors import SiteError
 
 GENERATED_WIKI_SECTIONS = (
@@ -19,15 +20,16 @@ GENERATED_WIKI_SECTIONS = (
     "trainers",
     "locations",
     "changes",
+    "data",
 )
-REQUIRED_WIKI_SECTIONS = GENERATED_WIKI_SECTIONS[:-1]
+REQUIRED_WIKI_SECTIONS = tuple(
+    section for section in GENERATED_WIKI_SECTIONS if section != "changes"
+)
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
 SNAPSHOT_SCHEMA_VERSION = 1
 
 
-def create_generated_wiki_snapshot(
-    root: Path, output: Path
-) -> int:
+def create_generated_wiki_snapshot(root: Path, output: Path) -> int:
     """Create a deterministic, ROM-free archive of generated Markdown pages."""
     catalog = SiteCatalog.load(root)
     resolved_root = catalog.root
@@ -35,36 +37,34 @@ def create_generated_wiki_snapshot(
     resolved_output = output.resolve()
     resolved_output.parent.mkdir(parents=True, exist_ok=True)
 
-    with resolved_output.open("wb") as raw_stream:
-        with gzip.GzipFile(
-            filename="",
-            mode="wb",
-            fileobj=raw_stream,
-            mtime=0,
-        ) as gzip_stream:
-            with tarfile.open(fileobj=gzip_stream, mode="w") as archive:
-                manifest = json.dumps(
-                    {
-                        "schema_version": SNAPSHOT_SCHEMA_VERSION,
-                        "file_count": len(files),
-                        "source_fingerprint": _source_fingerprint(resolved_root),
-                    },
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode("utf-8")
-                manifest_info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
-                manifest_info.size = len(manifest)
-                manifest_info.mode = 0o644
-                manifest_info.mtime = 0
-                archive.addfile(manifest_info, io.BytesIO(manifest))
-                for path in files:
-                    relative = path.relative_to(resolved_root).as_posix()
-                    data = path.read_bytes()
-                    info = tarfile.TarInfo(relative)
-                    info.size = len(data)
-                    info.mode = 0o644
-                    info.mtime = 0
-                    archive.addfile(info, io.BytesIO(data))
+    with resolved_output.open("wb") as raw_stream, gzip.GzipFile(
+        filename="",
+        mode="wb",
+        fileobj=raw_stream,
+        mtime=0,
+    ) as gzip_stream, tarfile.open(fileobj=gzip_stream, mode="w") as archive:
+        manifest = json.dumps(
+            {
+                "schema_version": SNAPSHOT_SCHEMA_VERSION,
+                "file_count": len(files),
+                "source_fingerprint": _source_fingerprint(resolved_root),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        manifest_info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
+        manifest_info.size = len(manifest)
+        manifest_info.mode = 0o644
+        manifest_info.mtime = 0
+        archive.addfile(manifest_info, io.BytesIO(manifest))
+        for path in files:
+            relative = path.relative_to(resolved_root).as_posix()
+            data = path.read_bytes()
+            info = tarfile.TarInfo(relative)
+            info.size = len(data)
+            info.mode = 0o644
+            info.mtime = 0
+            archive.addfile(info, io.BytesIO(data))
     return len(files)
 
 
@@ -99,8 +99,7 @@ def restore_generated_wiki_snapshot(root: Path, archive_path: Path) -> int:
                     relative.is_absolute()
                     or ".." in relative.parts
                     or not any(
-                        relative.is_relative_to(prefix)
-                        for prefix in allowed_prefixes
+                        relative.is_relative_to(prefix) for prefix in allowed_prefixes
                     )
                 ):
                     raise SiteError(
@@ -119,6 +118,9 @@ def restore_generated_wiki_snapshot(root: Path, archive_path: Path) -> int:
                 raise SiteError(
                     "Generated wiki snapshot file count does not match its manifest"
                 )
+            for site in catalog.sites:
+                if site.kind == "game" and site.published:
+                    validate_public_data(site.config_path.parent / "wiki")
     except (tarfile.TarError, OSError) as error:
         raise SiteError(
             f"Could not restore generated wiki snapshot {resolved_archive}: {error}"
@@ -163,14 +165,11 @@ def _generated_files(catalog: SiteCatalog) -> list[Path]:
                 raise SiteError(
                     f"Generated wiki section is missing for {site.id}: {section}"
                 )
+        validate_public_data(wiki_root)
         for section in GENERATED_WIKI_SECTIONS:
             section_root = wiki_root / section
             if section_root.is_dir():
-                files.extend(
-                    path
-                    for path in section_root.rglob("*")
-                    if path.is_file()
-                )
+                files.extend(path for path in section_root.rglob("*") if path.is_file())
     return sorted(files, key=lambda path: path.as_posix())
 
 
@@ -181,9 +180,7 @@ def _allowed_prefixes(catalog: SiteCatalog) -> tuple[PurePosixPath, ...]:
             continue
         site_root = site.config_path.parent.relative_to(catalog.root)
         for section in GENERATED_WIKI_SECTIONS:
-            prefixes.append(
-                PurePosixPath(site_root.as_posix()) / "wiki" / section
-            )
+            prefixes.append(PurePosixPath(site_root.as_posix()) / "wiki" / section)
     return tuple(prefixes)
 
 

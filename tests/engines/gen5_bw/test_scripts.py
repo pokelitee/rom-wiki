@@ -25,21 +25,16 @@ class Gen5ScriptTests(unittest.TestCase):
         self.assertEqual(commands[1].trainer_ids, (5, 30, 31))
 
     def test_ignores_variable_referenced_and_unverified_battles(self) -> None:
-        body = (
-            struct.pack("<HHHHH", 0x0085, 0x8022, 0, 0, 0x008D)
-            + struct.pack("<HHHHH", 0x0085, 13, 0, 0, 0x0016)
+        body = struct.pack("<HHHHH", 0x0085, 0x8022, 0, 0, 0x008D) + struct.pack(
+            "<HHHHH", 0x0085, 13, 0, 0, 0x0016
         )
 
-        self.assertEqual(
-            parse_trainer_battle_commands(body, trainer_count=1000), ()
-        )
+        self.assertEqual(parse_trainer_battle_commands(body, trainer_count=1000), ())
 
     def test_rejects_out_of_range_trainer_ids(self) -> None:
         body = struct.pack("<HHHHH", 0x0085, 9999, 0, 0, 0x008D)
 
-        self.assertEqual(
-            parse_trainer_battle_commands(body, trainer_count=1000), ()
-        )
+        self.assertEqual(parse_trainer_battle_commands(body, trainer_count=1000), ())
 
 
 if __name__ == "__main__":

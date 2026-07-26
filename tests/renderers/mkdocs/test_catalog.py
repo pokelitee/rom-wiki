@@ -9,8 +9,7 @@ from romwiki.renderers.mkdocs.catalog import _SKELETON_FILTER_COUNTS, write_text
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CATALOG_CONFIG_JS = (
-    REPOSITORY_ROOT
-    / "sites/shared/overrides/assets/javascripts/catalog/config.js"
+    REPOSITORY_ROOT / "sites/shared/overrides/assets/javascripts/catalog/config.js"
 )
 _CATALOG_BLOCK = re.compile(r"^  (\w+): \{\n(.*?)\n  \},", re.MULTILINE | re.DOTALL)
 

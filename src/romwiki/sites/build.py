@@ -77,4 +77,6 @@ def _run_command(command: Sequence[str]) -> None:
     try:
         subprocess.run(command, check=True)
     except subprocess.CalledProcessError as error:
-        raise SiteError(f"MkDocs build failed with exit code {error.returncode}") from error
+        raise SiteError(
+            f"MkDocs build failed with exit code {error.returncode}"
+        ) from error

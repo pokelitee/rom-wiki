@@ -21,6 +21,7 @@ DISPLAY_NAMES = {
     "trainer-ai-item": "Trainer AI item",
 }
 
+
 def empty_state(message: str) -> list[str]:
     return [message, ""]
 
@@ -65,11 +66,7 @@ def evolution_condition(entry: dict[str, Any], source_url: str) -> str:
     parameter = entry["parameter_data"]
     value = parameter.get("value") if parameter is not None else None
     raw_name = parameter.get("name", "") if parameter is not None else ""
-    name = (
-        raw_name.replace("-", " ").title()
-        if raw_name.islower()
-        else raw_name
-    )
+    name = raw_name.replace("-", " ").title() if raw_name.islower() else raw_name
     parameter_label = escape(name)
     parameter_kind = parameter.get("kind") if parameter is not None else None
     if parameter_kind is None:
@@ -149,7 +146,7 @@ def stat_list(
                     f'<span class="rw-stat__delta rw-stat__delta--'
                     f'{"up" if difference > 0 else "down"}" '
                     f'aria-label="{sign}{difference} from base game">'
-                    f'{sign}{difference}</span>'
+                    f"{sign}{difference}</span>"
                 )
         lines.append(
             '<div class="rw-stat">'
@@ -200,7 +197,11 @@ def summary_hero(
         f'<div class="rw-summary__media">{media_html}</div>',
         '<div class="rw-summary__body">',
         *(f'<p class="rw-summary__genus">{escape(genus)}</p>' for _ in [0] if genus),
-        *(f'<div class="rw-summary__badges">{badges_html}</div>' for _ in [0] if badges_html),
+        *(
+            f'<div class="rw-summary__badges">{badges_html}</div>'
+            for _ in [0]
+            if badges_html
+        ),
         '<dl class="rw-summary__facts">',
         *fact_lines,
         "</dl>",
@@ -210,7 +211,10 @@ def summary_hero(
     ]
 
 
-HIDDEN_ABILITY_MARKER = '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>'
+HIDDEN_ABILITY_MARKER = (
+    '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>'
+)
+
 
 def version_availability_note(record: dict[str, Any]) -> list[str]:
     """Flag a record exclusive to one member of a version family.
@@ -305,16 +309,40 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     badges = type_badges(record["types"]) + classification
     fact_lines = [
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
-        *(f"<div><dt>Form</dt><dd>{escape(display_name(form))}</dd></div>" for _ in [0] if form),
-        *(f"<div><dt>Body color</dt><dd>{escape(display_name(body_color))}</dd></div>" for _ in [0] if body_color),
+        *(
+            f"<div><dt>Form</dt><dd>{escape(display_name(form))}</dd></div>"
+            for _ in [0]
+            if form
+        ),
+        *(
+            f"<div><dt>Body color</dt><dd>{escape(display_name(body_color))}</dd></div>"
+            for _ in [0]
+            if body_color
+        ),
         f"<div><dt>Abilities</dt><dd>{abilities}</dd></div>",
         "<div><dt>Base stat total</dt><dd>"
         f"{summary_section_link(sum(record['base_stats'].values()), 'base-stats')}"
         "</dd></div>",
-        *(f"<div><dt>Habitat</dt><dd>{escape(display_name(habitat))}</dd></div>" for _ in [0] if habitat),
-        *(f"<div><dt>Shape</dt><dd>{escape(display_name(shape))}</dd></div>" for _ in [0] if shape),
-        *(f"<div><dt>Height</dt><dd>{escape(measurements['height'])}</dd></div>" for _ in [0] if measurements.get("height")),
-        *(f"<div><dt>Weight</dt><dd>{escape(measurements['weight'])}</dd></div>" for _ in [0] if measurements.get("weight")),
+        *(
+            f"<div><dt>Habitat</dt><dd>{escape(display_name(habitat))}</dd></div>"
+            for _ in [0]
+            if habitat
+        ),
+        *(
+            f"<div><dt>Shape</dt><dd>{escape(display_name(shape))}</dd></div>"
+            for _ in [0]
+            if shape
+        ),
+        *(
+            f"<div><dt>Height</dt><dd>{escape(measurements['height'])}</dd></div>"
+            for _ in [0]
+            if measurements.get("height")
+        ),
+        *(
+            f"<div><dt>Weight</dt><dd>{escape(measurements['weight'])}</dd></div>"
+            for _ in [0]
+            if measurements.get("weight")
+        ),
     ]
     return summary_hero(
         f"{media}{cry_html}", fact_lines, genus=genus, badges_html=badges
@@ -470,9 +498,7 @@ def record_navigation_for(
         return record_nav_link(href, text, direction, sprite)
 
     previous_link = (
-        link(previous, f"← {label(previous)}", "prev")
-        if previous is not None
-        else None
+        link(previous, f"← {label(previous)}", "prev") if previous is not None else None
     )
     following_link = (
         link(following, f"{label(following)} →", "next")
@@ -519,9 +545,11 @@ def reference_description(record: dict[str, Any], empty_message: str) -> list[st
     if short_effect or effect:
         lines.extend(["## Effect", ""])
         if short_effect:
-            lines.append(f'<p><strong>{escape(" ".join(short_effect.split()))}</strong></p>')
+            lines.append(
+                f"<p><strong>{escape(' '.join(short_effect.split()))}</strong></p>"
+            )
         if effect and effect != short_effect:
-            lines.append(f'<p>{escape(" ".join(effect.split()))}</p>')
+            lines.append(f"<p>{escape(' '.join(effect.split()))}</p>")
         lines.append("")
     if flavor_text:
         version_label = (
@@ -581,9 +609,7 @@ def provenance_fact_table(fields: tuple[tuple[str, str], ...]) -> list[str]:
     ]
 
 
-def rom_record_source(
-    archive: str, member: int | str, *, label: str = "Source"
-) -> str:
+def rom_record_source(archive: str, member: int | str, *, label: str = "Source") -> str:
     """The shared "<Label>: exact ROM record from `archive` member `id`."
     sentence every Data provenance section uses to cite its source record.
 
@@ -616,11 +642,12 @@ def badge_requirement(badges: int | None) -> str:
 
 
 def shard_cost(costs: dict[str, int]) -> str:
-    return ", ".join(
-        f"{amount} {color.title()}"
-        for color, amount in costs.items()
-        if amount
-    ) or "Free"
+    return (
+        ", ".join(
+            f"{amount} {color.title()}" for color, amount in costs.items() if amount
+        )
+        or "Free"
+    )
 
 
 def tutor_requirement(tutor: dict[str, Any]) -> str:

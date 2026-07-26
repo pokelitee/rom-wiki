@@ -59,13 +59,13 @@ class Gen4ItemTests(unittest.TestCase):
             )
 
     def test_finds_item_to_archive_member_map(self) -> None:
-        prefix = b"\xAA" * 10
+        prefix = b"\xaa" * 10
         table = bytearray()
         expected = (*range(65), 0, 65)
         for member_id in expected:
             table.extend(struct.pack("<4H", member_id, 10, 20, 30))
         offset, members = find_item_archive_members(
-            prefix + table + b"\xBB" * 10,
+            prefix + table + b"\xbb" * 10,
             item_count=len(expected),
             data_member_count=66,
         )

@@ -141,7 +141,11 @@ class DatasetComparisonTests(unittest.TestCase):
                         {
                             "id": 22,
                             "name": "TM22",
-                            "move": {"id": 76, "name": "Solarbeam", "slug": "solarbeam"},
+                            "move": {
+                                "id": 76,
+                                "name": "Solarbeam",
+                                "slug": "solarbeam",
+                            },
                         }
                     ],
                     "egg_moves": [
@@ -163,7 +167,11 @@ class DatasetComparisonTests(unittest.TestCase):
                         {
                             "id": 22,
                             "name": "TM22",
-                            "move": {"id": 76, "name": "Solar Beam", "slug": "solar-beam"},
+                            "move": {
+                                "id": 76,
+                                "name": "Solar Beam",
+                                "slug": "solar-beam",
+                            },
                         }
                     ],
                     "egg_moves": [

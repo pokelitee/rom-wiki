@@ -64,8 +64,8 @@ def normalize_trainer_party_member(
             if forced_gender_flag in _FORCED_GENDER_NAMES
             else None
         ),
-        "ivs": {"source": "derived", "values": {stat: iv for stat in _STATS}},
-        "evs": {"source": "engine-default", "values": {stat: 0 for stat in _STATS}},
+        "ivs": {"source": "derived", "values": dict.fromkeys(_STATS, iv)},
+        "evs": {"source": "engine-default", "values": dict.fromkeys(_STATS, 0)},
         "calculated_stats": None,
         "source_fields": {
             field: member[field]

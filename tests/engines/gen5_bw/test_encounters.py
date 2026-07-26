@@ -11,12 +11,14 @@ from romwiki.engines.gen5_bw.encounters import (
 from romwiki.util.errors import InvalidRomError
 
 
-def _make_block(rates: dict[str, int], slots: dict[str, list[tuple[int, int, int, int]]]) -> bytes:
+def _make_block(
+    rates: dict[str, int], slots: dict[str, list[tuple[int, int, int, int]]]
+) -> bytes:
     from romwiki.engines.gen5_bw.encounters import METHOD_NAMES, METHOD_SLOT_COUNTS
 
     block = bytearray(SEASON_BLOCK_SIZE)
     cursor = 8
-    for name, count in zip(METHOD_NAMES, METHOD_SLOT_COUNTS):
+    for name, count in zip(METHOD_NAMES, METHOD_SLOT_COUNTS, strict=True):
         block[METHOD_NAMES.index(name)] = rates.get(name, 0)
         method_slots = slots.get(name, [])
         for index in range(count):
@@ -77,9 +79,7 @@ class Gen5EncounterTests(unittest.TestCase):
     def test_decodes_a_forme_bit(self) -> None:
         # Basculin's two color-stripe formes share species ID 550; the high
         # 5 bits of the word are the forme index.
-        data = _make_block(
-            {"fishing": 50}, {"fishing": [(550, 1, 5, 20)]}
-        )
+        data = _make_block({"fishing": 50}, {"fishing": [(550, 1, 5, 20)]})
         areas = parse_encounter_entry(data, map_index=0, archive_path="wild.narc")
         slot = areas[0].fishing.slots[0]
         self.assertEqual(slot.species_id, 550)

@@ -32,9 +32,7 @@ class NarcArchive:
         if magic != b"NARC":
             raise InvalidRomError("NARC archive has invalid magic")
         normalized_version = (
-            ((version & 0xFF) << 8) | (version >> 8)
-            if bom == 0xFFFE
-            else version
+            ((version & 0xFF) << 8) | (version >> 8) if bom == 0xFFFE else version
         )
         if bom not in {0xFEFF, 0xFFFE} or normalized_version != 1:
             raise InvalidRomError("NARC archive has unsupported byte order or version")

@@ -120,6 +120,12 @@ moves, encounters, trainers, and locations. Datasets carry a `schema_version`, a
 game identifier, record counts, source metadata, and record-level provenance where
 appropriate.
 
+Enriched datasets also carry a normalized `features` list derived from the engine
+adapter and exact profile configuration. Renderers use this contract to distinguish
+"this game does not have this mechanic" from "this record has no entries." Version
+families may merge only datasets with identical feature contracts; a mismatch fails
+at the pipeline boundary instead of producing an internally inconsistent site.
+
 Schema versions for independently emitted contracts are declared centrally in
 `schema/versions.py`. Raw and enriched forms have separate constants even when
 both are currently version 1. Raw-cache validation selects the expected version
@@ -212,6 +218,13 @@ catalogs share a Change status filter and column. Every current detail page has 
 explicit base-game section, including a verified-unchanged state, and the generated
 Changes page summarizes all sections.
 
+Full builds also publish each complete normalized dataset as deterministic
+`wiki/data/<kind>.json.gz`, plus comparison datasets when present. A
+machine-readable manifest records schema versions, record counts, compressed sizes,
+and SHA-256 checksums. These archives are the complete data interface; Markdown is
+the curated human interface and catalog JSON remains a small presentation index.
+Snapshot creation and restoration validate the manifest and every archive.
+
 ## Reuse boundaries
 
 There are three common extension cases:
@@ -274,16 +287,15 @@ Nintendo DS. `tests/platforms/test_contract.py` proves this against a
 throwaway fake platform, the same pattern `tests/engines/test_contract.py`
 uses for the engine boundary above.
 
-A second real engine, `gen5_bw` (Pokémon Black/White, Generation V), now
-exists alongside `gen4_dppt` — both on the `nintendo-ds` platform, so this
-proves the engine boundary against real data but not yet a second platform.
-Its personal-data and text-decoding slices needed no platform-layer changes
-and only registry-dict wiring to pick up the engine, confirming the
-platform/engine split holds up; the pipeline generalization it did need is
-described above. A real second platform is still unproven against anything
-but `tests/platforms/test_contract.py`'s fake — a real addition should still
-add its own fixtures (profile identification, raw parsers, normalized output)
-following [Adding a game](adding-a-game.md).
+The `gen4_dppt` and `gen5_bw` engines now exercise the same normalized pipeline
+and shared renderer system against two real generations, including retail games,
+single-version hacks, and sibling-version hack families. Generation-specific
+binary decoding stays in each engine package; optional presentation behavior is
+advertised through dataset capabilities. This validates the engine boundary
+against real data, while a second physical platform remains proven only by
+`tests/platforms/test_contract.py`'s fake adapter. A real platform addition should
+still add profile-identification, parser, and normalized-output fixtures following
+[Adding a game](adding-a-game.md).
 
 Normalized schemas are implemented as Python dataclasses and typed contracts
 serialized to JSON.
@@ -295,7 +307,7 @@ The existing boundary remains the intended long-term design.
 
 ROM-derived Markdown remains ignored as individual files, but deployment must be
 reproducible without distributing ROM inputs. `romwiki site snapshot` packs all
-generated game sections into the deterministic, tracked
+generated game sections and public data archives into the deterministic, tracked
 `sites/generated-wiki.tar.gz` archive. The Pages workflow restores that archive
 before invoking MkDocs. Its manifest fingerprints the parser, pipeline,
 renderer, and profile sources, so a stale snapshot is rejected. Required

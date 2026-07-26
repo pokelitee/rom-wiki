@@ -35,10 +35,12 @@ artifact is hosted below a repository path. Local builds may leave it unset.
 
 Shared frontend assets are divided by responsibility. `theme.css` owns tokens,
 Material integration, and global scrolling; `shell.css` owns navigation and landing
-pages; `records.css` owns record-level components; `controls.css` owns reusable
-select and combobox presentation; and `catalog.css` owns catalog layout and tables.
-Keep responsive rules with the component they modify. The template loads these as
-separate stylesheets rather than chaining CSS imports.
+pages; `records.css` owns shared record primitives; `party.css`,
+`comparisons.css`, and `record-visuals.css` own their larger component families;
+`controls.css` owns reusable select and combobox presentation; and `catalog.css`
+owns catalog layout and tables. Keep responsive rules with the component they
+modify. The template loads these as separate stylesheets rather than chaining CSS
+imports.
 
 `romwiki.js` is a small browser-module entry point. Site-wide behavior lives in
 `site.js`, reusable field behavior in `controls.js`, and display normalization in
@@ -47,6 +49,15 @@ renderers, and interactive orchestration. Modules may depend toward these lower
 layers, but shared controls and formatting must not depend on catalog definitions.
 This structure is shared by every game; do not create game-specific frontend
 bundles for normalized data or appearance differences.
+
+## Optional-section policy
+
+Render a section with an explicit empty state when the mechanic exists for the
+game but this record has no entries. Omit the section when the dataset's
+`features` contract says the mechanic does not exist for that game. Summary and
+hero facts follow the same rule: stable core facts may show `None`, while
+generation-specific facts appear only when supported. This keeps page geometry
+predictable without presenting an absent mechanic as missing extraction.
 
 ## Catalog contract
 
@@ -191,7 +202,10 @@ Trainers also carry an "AI battle items" summary and, when populated, detail
 section: the ROM's
 4-slot `reward_item_ids` array holds items the trainer's own AI may use on its
 party mid-battle (Full Restores, X-stat items), never a reward for the player,
-so the field and its UI are both named for what it actually is. Wild encounter
+so the field and its UI are both named for what it actually is. Gen V trainers
+may separately expose a post-victory party heal and an item given to the player.
+Those are normalized as `healer` and `victory_item`; item pages invert the latter
+into trainer-reward backlinks. Wild encounter
 slot tables show a per-slot catch-rate percentage from the fixed Generation
 III/IV engine weight tables (not ROM data) and combine slots that share a
 species and level(s) into one row with their chances summed, since the ROM

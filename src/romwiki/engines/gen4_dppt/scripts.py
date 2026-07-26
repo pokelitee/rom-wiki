@@ -64,9 +64,7 @@ def parse_trainer_battle_commands(
         if second_trainer != 0 and not 0 < second_trainer < trainer_count:
             continue
         trainer_ids = (
-            (first_trainer, second_trainer)
-            if second_trainer
-            else (first_trainer,)
+            (first_trainer, second_trainer) if second_trainer else (first_trainer,)
         )
         commands.append(
             Gen4TrainerBattleCommand(offset=offset, trainer_ids=trainer_ids)
@@ -115,15 +113,20 @@ def _has_static_battle_result_check(data: bytes, offset: int, opcode: int) -> bo
     following_opcode = struct.unpack_from("<H", data, offset + 6)[0]
     if following_opcode == CHECK_WON_BATTLE:
         return True
-    if opcode not in {
-        START_LEGENDARY_BATTLE,
-        START_FATEFUL_ENCOUNTER,
-        START_GIRATINA_ORIGIN_BATTLE,
-    } or following_opcode != CLEAR_FLAG:
+    if (
+        opcode
+        not in {
+            START_LEGENDARY_BATTLE,
+            START_FATEFUL_ENCOUNTER,
+            START_GIRATINA_ORIGIN_BATTLE,
+        }
+        or following_opcode != CLEAR_FLAG
+    ):
         return False
-    return offset + 12 <= len(data) and struct.unpack_from("<H", data, offset + 10)[
-        0
-    ] == CHECK_WON_BATTLE
+    return (
+        offset + 12 <= len(data)
+        and struct.unpack_from("<H", data, offset + 10)[0] == CHECK_WON_BATTLE
+    )
 
 
 def parse_roaming_activation_commands(

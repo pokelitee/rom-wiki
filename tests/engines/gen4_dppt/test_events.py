@@ -39,7 +39,9 @@ class Gen4EventTests(unittest.TestCase):
 
     def test_rejects_trailing_event_data(self) -> None:
         with self.assertRaises(InvalidRomError):
-            parse_object_events(struct.pack("<IIII", 0, 0, 0, 0) + b"x", event_file_id=1)
+            parse_object_events(
+                struct.pack("<IIII", 0, 0, 0, 0) + b"x", event_file_id=1
+            )
 
     def test_decodes_warp_destination_and_position(self) -> None:
         warp = struct.pack("<6H", 4, 9, 27, 2, 0, 0)

@@ -14,9 +14,10 @@ class Gen4TrainerTests(unittest.TestCase):
     def test_decodes_flags_party_forms_and_trailing_data(self) -> None:
         trainer = bytearray(20)
         struct.pack_into("<BBBB4HII", trainer, 0, 3, 2, 7, 1, 5, 0, 0, 0, 9, 2)
-        party = struct.pack(
-            "<BBHHH4HH", 100, 1, 42, 479 | (2 << 10), 6, 85, 86, 87, 88, 3
-        ) + b"\xff\xff"
+        party = (
+            struct.pack("<BBHHH4HH", 100, 1, 42, 479 | (2 << 10), 6, 85, 86, 87, 88, 3)
+            + b"\xff\xff"
+        )
 
         result = parse_trainer_record(
             bytes(trainer),

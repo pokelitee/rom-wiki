@@ -67,7 +67,9 @@ class PokeDBGeneration:
         try:
             return self.pokemon_by_id[pokemon_id]
         except KeyError as error:
-            raise DataSourceError(f"PokéDB Pokémon ID does not exist: {pokemon_id}") from error
+            raise DataSourceError(
+                f"PokéDB Pokémon ID does not exist: {pokemon_id}"
+            ) from error
 
     def pokemon_for_name(self, name: str) -> dict[str, Any]:
         try:
@@ -79,7 +81,9 @@ class PokeDBGeneration:
         try:
             return self.pokemon_by_species[species]
         except KeyError as error:
-            raise DataSourceError(f"PokéDB species does not exist: {species}") from error
+            raise DataSourceError(
+                f"PokéDB species does not exist: {species}"
+            ) from error
 
     def ability_name(self, ability_id: int) -> str | None:
         if ability_id == 0:
@@ -87,7 +91,9 @@ class PokeDBGeneration:
         try:
             return self.abilities_by_id[ability_id]
         except KeyError as error:
-            raise DataSourceError(f"PokéDB ability ID does not exist: {ability_id}") from error
+            raise DataSourceError(
+                f"PokéDB ability ID does not exist: {ability_id}"
+            ) from error
 
     def ability_reference(
         self, ability_id: int, version: str | None
@@ -122,15 +128,15 @@ class PokeDBGeneration:
         try:
             return self.items_by_id[item_id]
         except KeyError as error:
-            raise DataSourceError(f"PokéDB item ID does not exist: {item_id}") from error
+            raise DataSourceError(
+                f"PokéDB item ID does not exist: {item_id}"
+            ) from error
 
     def item_slug(self, rom_name: str) -> str:
         key = _lookup_key(rom_name)
         return self.items_by_lookup.get(key, name_slug(rom_name))
 
-    def item_reference(
-        self, slug: str, version: str | None
-    ) -> dict[str, Any] | None:
+    def item_reference(self, slug: str, version: str | None) -> dict[str, Any] | None:
         """Return item effect text and icon, if PokéDB has it.
 
         Item mechanics (price, pocket, hold effects, etc.) are exact ROM
@@ -169,7 +175,9 @@ class PokeDBGeneration:
         try:
             return self.moves_by_id[move_id]
         except KeyError as error:
-            raise DataSourceError(f"PokéDB move ID does not exist: {move_id}") from error
+            raise DataSourceError(
+                f"PokéDB move ID does not exist: {move_id}"
+            ) from error
 
     def move_reference(
         self, move_id: int, version: str | None
@@ -286,7 +294,11 @@ class PokeDBGeneration:
             ("back_shiny_female", "Back, female shiny"),
         ):
             url = selected.get(key)
-            if not isinstance(url, str) or not url.startswith("https://") or url in seen:
+            if (
+                not isinstance(url, str)
+                or not url.startswith("https://")
+                or url in seen
+            ):
                 continue
             seen.add(url)
             result.append(
@@ -418,5 +430,3 @@ def _id_name_map(objects: list[dict[str, Any]], resource: str) -> dict[int, str]
 def _lookup_key(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]", "", normalized.casefold())
-
-

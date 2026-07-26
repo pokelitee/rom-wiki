@@ -17,7 +17,9 @@ def _result(rom_sha256: str) -> Mock:
     return result
 
 
-def _context(cache_root: Path, rom_sha256: str = "hash-a", *, refresh: bool = False) -> GameBuildContext:
+def _context(
+    cache_root: Path, rom_sha256: str = "hash-a", *, refresh: bool = False
+) -> GameBuildContext:
     return GameBuildContext(
         _result(rom_sha256), Mock(), cache_root=cache_root, refresh=refresh
     )

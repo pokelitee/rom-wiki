@@ -30,8 +30,8 @@ def parse_pokemon_gift_commands(
     code_offset = parse_script_table(data)
     commands = []
     for offset in range(code_offset, len(data) - 9):
-        opcode, species_id, level, held_item_id, output_variable = (
-            struct.unpack_from("<5H", data, offset)
+        opcode, species_id, level, held_item_id, output_variable = struct.unpack_from(
+            "<5H", data, offset
         )
         if opcode != GIVE_POKEMON_COMMAND:
             continue

@@ -39,9 +39,8 @@ class ReferenceNameTests(unittest.TestCase):
         with patch(
             "romwiki.engines.gen4_dppt.parse_english_message_archive",
             return_value=("Normal",),
-        ):
-            with self.assertRaisesRegex(DataSourceError, "exactly 18 names"):
-                extract_reference_names(profile, Mock(), archive)
+        ), self.assertRaisesRegex(DataSourceError, "exactly 18 names"):
+            extract_reference_names(profile, Mock(), archive)
 
 
 def _profile() -> GameProfile:

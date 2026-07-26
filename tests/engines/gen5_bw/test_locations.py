@@ -61,9 +61,8 @@ class Gen5LocationsTests(unittest.TestCase):
             parse_wild_map_names(data, map_names=_MAP_NAMES)
 
     def test_parses_the_full_header_table(self) -> None:
-        data = (
-            _map_header(name_index=0, wild_set=5)
-            + _map_header(name_index=2, wild_set=0xFFFF)
+        data = _map_header(name_index=0, wild_set=5) + _map_header(
+            name_index=2, wild_set=0xFFFF
         )
 
         headers = parse_map_header_table(
@@ -84,9 +83,8 @@ class Gen5LocationsTests(unittest.TestCase):
         # archive member 14, whose function-table entry 4 (NPC scriptUsed=4,
         # 1-indexed) is Cilan's tutorial `CallTrainerBattle` -- see
         # gen5_bw/overworld.py's module docstring for the full cross-check.
-        data = (
-            _map_header(name_index=0, wild_set=5, script_file=14)
-            + _map_header(name_index=1, wild_set=6, script_file=310)
+        data = _map_header(name_index=0, wild_set=5, script_file=14) + _map_header(
+            name_index=1, wild_set=6, script_file=310
         )
 
         self.assertEqual(parse_map_header_script_files(data), (14, 310))
@@ -96,9 +94,8 @@ class Gen5LocationsTests(unittest.TestCase):
         # (Nuvema Town's outdoor plaza) all report matrix 0 -- see
         # gen5_bw/map_matrices.py's module docstring for the full
         # cross-check against that matrix's own header-ID grid.
-        data = (
-            _map_header(name_index=0, wild_set=5, matrix_id=0)
-            + _map_header(name_index=1, wild_set=6, matrix_id=39)
+        data = _map_header(name_index=0, wild_set=5, matrix_id=0) + _map_header(
+            name_index=1, wild_set=6, matrix_id=39
         )
 
         headers = parse_map_header_table(

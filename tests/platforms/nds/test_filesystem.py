@@ -17,7 +17,7 @@ class NintendoDSFileSystemTests(unittest.TestCase):
         fnt = bytearray(34)
         struct.pack_into("<IHH", fnt, 0, 16, 0, 2)
         struct.pack_into("<IHH", fnt, 8, 24, 0, 0xF000)
-        fnt[16:24] = b"\x84data\x01\xF0\0"
+        fnt[16:24] = b"\x84data\x01\xf0\0"
         fnt[24:34] = b"\x08test.bin\0"
         struct.pack_into("<II", header_data, 0x40, 0x200, len(fnt))
         struct.pack_into("<II", header_data, 0x48, 0x300, 8)

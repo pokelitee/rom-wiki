@@ -133,22 +133,16 @@ def extract_location_dataset(
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).locations
 
-    null_event_id = profile.parameters.get(
-        "null_event_id", engine.ARCHIVE_MEMBER_NONE
-    )
+    null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)
     null_encounter_id = profile.parameters.get(
         "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
     )
     dynamic_warp_header_id = profile.parameters.get(
         "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
     )
-    dynamic_warp_id = profile.parameters.get(
-        "dynamic_warp_id", engine.DYNAMIC_WARP_ID
-    )
+    dynamic_warp_id = profile.parameters.get("dynamic_warp_id", engine.DYNAMIC_WARP_ID)
     matrix_void_header_ids = frozenset(
-        profile.parameters.get(
-            "matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS
-        )
+        profile.parameters.get("matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS)
     )
     honey_tree_header_ids = frozenset(
         profile.parameters.get(
@@ -381,9 +375,7 @@ def extract_location_dataset(
             items_by_event[header.event_file_id] = _extract_gen4_location_items(
                 events_by_id[header.event_file_id], item_names
             )
-        raw_warps_by_header[header.header_id] = events_by_id[
-            header.event_file_id
-        ].warps
+        raw_warps_by_header[header.header_id] = events_by_id[header.event_file_id].warps
         raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
 
     connections = _extract_gen4_matrix_connections(
@@ -418,25 +410,29 @@ def extract_location_dataset(
                 frontier_prices=frontier_prices,
             )
         if header.script_file_id not in gifts_by_script:
-            gifts_by_script[header.script_file_id] = _extract_gen4_location_pokemon_gifts(
-                engine,
-                scripts.read(header.script_file_id),
-                script_file_id=header.script_file_id,
-                pokemon_names=pokemon_names,
-                item_names=item_names,
-                egg_gift_metadata=egg_gifts_by_script.get(
-                    header.script_file_id, []
-                ),
+            gifts_by_script[header.script_file_id] = (
+                _extract_gen4_location_pokemon_gifts(
+                    engine,
+                    scripts.read(header.script_file_id),
+                    script_file_id=header.script_file_id,
+                    pokemon_names=pokemon_names,
+                    item_names=item_names,
+                    egg_gift_metadata=egg_gifts_by_script.get(
+                        header.script_file_id, []
+                    ),
+                )
             )
         if header.script_file_id not in npc_trades_by_script:
-            npc_trades_by_script[header.script_file_id] = _extract_gen4_location_npc_trades(
-                engine,
-                scripts.read(header.script_file_id),
-                script_file_id=header.script_file_id,
-                trade_records=npc_trade_records,
-                trade_names=npc_trade_names,
-                pokemon_names=pokemon_names,
-                item_names=item_names,
+            npc_trades_by_script[header.script_file_id] = (
+                _extract_gen4_location_npc_trades(
+                    engine,
+                    scripts.read(header.script_file_id),
+                    script_file_id=header.script_file_id,
+                    trade_records=npc_trade_records,
+                    trade_names=npc_trade_names,
+                    pokemon_names=pokemon_names,
+                    item_names=item_names,
+                )
             )
         static_encounter_location_key = (
             header.script_file_id,
@@ -452,9 +448,7 @@ def extract_location_dataset(
                     script_is_shared=(
                         len(header_ids_by_script[header.script_file_id]) > 1
                     ),
-                    explicit_header_by_command=(
-                        static_encounter_header_by_command
-                    ),
+                    explicit_header_by_command=(static_encounter_header_by_command),
                     pokemon_names=pokemon_names,
                 )
             )
@@ -538,9 +532,7 @@ def extract_location_dataset(
                 roaming_activations=roaming_by_script[header.script_file_id],
                 npc_trades=npc_trades_by_script[header.script_file_id],
                 honey_tree=(
-                    honey_tree
-                    if header.header_id in honey_tree_header_ids
-                    else None
+                    honey_tree if header.header_id in honey_tree_header_ids else None
                 ),
                 daily_encounter_pool=(
                     great_marsh_pool
@@ -580,22 +572,16 @@ def extract_location_dataset(
             for item in items
         ),
         "hidden_item_count": sum(
-            item.kind == "hidden"
-            for items in items_by_event.values()
-            for item in items
+            item.kind == "hidden" for items in items_by_event.values() for item in items
         ),
         "location_item_reference_count": sum(
             len(record["items"]) for record in records
         ),
         "shop_count": sum(len(record["shops"]) for record in records),
         "shop_item_reference_count": sum(
-            len(shop["items"])
-            for record in records
-            for shop in record["shops"]
+            len(shop["items"]) for record in records for shop in record["shops"]
         ),
-        "pokemon_gift_count": sum(
-            len(record["pokemon_gifts"]) for record in records
-        ),
+        "pokemon_gift_count": sum(len(record["pokemon_gifts"]) for record in records),
         "npc_trade_count": sum(len(record["npc_trades"]) for record in records),
         "static_encounter_count": sum(
             len(record["static_encounters"]) for record in records
@@ -672,9 +658,7 @@ def extract_location_dataset(
                 "specialty_pointer_table_arm9_offset": (
                     specialty_mart_pointer_table_offset
                 ),
-                "decoration_price_table_arm9_offset": (
-                    decoration_price_table_offset
-                ),
+                "decoration_price_table_arm9_offset": (decoration_price_table_offset),
                 "seal_price_table_arm9_offset": seal_price_table_offset,
                 "frontier_price_table": (
                     {
@@ -833,9 +817,7 @@ def _extract_gen5_location_dataset(
                 static_encounters=tuple(
                     static_encounters_by_header.get(header.header_id, ())
                 ),
-                connections=tuple(
-                    connections_by_header.get(header.header_id, ())
-                ),
+                connections=tuple(connections_by_header.get(header.header_id, ())),
                 items=tuple(items),
             ).to_dict()
         )
@@ -936,8 +918,7 @@ def _extract_gen4_location_shops(
                     f"inventory {inventory_index}"
                 )
             source_items = (
-                (item_id, None)
-                for item_id in specialty_inventories[inventory_index]
+                (item_id, None) for item_id in specialty_inventories[inventory_index]
             )
         source_items = tuple(source_items)
         for item_id, _required_badges in source_items:
@@ -1095,9 +1076,7 @@ def _extract_gen4_location_npc_trades(
                 nature=trade.nature,
                 held_item_id=held_item_id,
                 held_item_name=(
-                    item_names[held_item_id]
-                    if held_item_id is not None
-                    else None
+                    item_names[held_item_id] if held_item_id is not None else None
                 ),
                 ot_name=trade_names[trade_count + command.trade_id],
                 ot_id=trade.ot_id,
@@ -1164,9 +1143,7 @@ def _extract_gen4_matrix_connections(
     location_names: tuple[str, ...],
     void_header_ids: frozenset[int],
 ) -> dict[int, list[LocationConnection]]:
-    directions: dict[int, dict[int, set[str]]] = defaultdict(
-        lambda: defaultdict(set)
-    )
+    directions: dict[int, dict[int, set[str]]] = defaultdict(lambda: defaultdict(set))
     for matrix_id in sorted({header.matrix_id for header in headers}):
         if matrix_id >= len(matrices.members):
             raise InvalidRomError(f"Map header references missing matrix {matrix_id}")

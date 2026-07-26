@@ -51,9 +51,7 @@ class Gen5PersonalDataTests(unittest.TestCase):
             parse_personal_record(b"short", species_id=1, archive_path="a/0/1/6")
 
     def test_zero_pads_the_undersized_member_zero_placeholder(self) -> None:
-        record = parse_personal_record(
-            bytes(56), species_id=0, archive_path="a/0/1/6"
-        )
+        record = parse_personal_record(bytes(56), species_id=0, archive_path="a/0/1/6")
 
         self.assertEqual(record.species_id, 0)
         self.assertEqual(record.base_stats.hp, 0)

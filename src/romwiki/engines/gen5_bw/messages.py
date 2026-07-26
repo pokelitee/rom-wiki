@@ -71,9 +71,7 @@ def parse_english_message_archive(
         message_start = base + offset
         message_end = message_start + char_count * 2
         if message_start < table_end or message_end > len(data):
-            raise InvalidRomError(
-                f"Gen V message {index} extends outside its archive"
-            )
+            raise InvalidRomError(f"Gen V message {index} extends outside its archive")
         words = list(struct.unpack_from(f"<{char_count}H", data, message_start))
         messages.append(_decode_message(words, index))
     return tuple(messages)

@@ -26,7 +26,9 @@ class SiteAuditTests(unittest.TestCase):
             )
             assets = root / "assets"
             assets.mkdir()
-            (assets / "site.css").write_text(".rw-link { color: blue; }", encoding="utf-8")
+            (assets / "site.css").write_text(
+                ".rw-link { color: blue; }", encoding="utf-8"
+            )
 
             report = audit_site(root)
 
@@ -42,7 +44,7 @@ class SiteAuditTests(unittest.TestCase):
             root = Path(directory)
             _write_page(
                 root / "index.html",
-                '<img class=rw-table-sprite src=sprite.png alt loading=lazy>',
+                "<img class=rw-table-sprite src=sprite.png alt loading=lazy>",
             )
 
             report = audit_site(root)
@@ -63,11 +65,13 @@ class SiteAuditTests(unittest.TestCase):
             )
             _write_page(
                 root / "detail" / "index.html",
-                '<h2 id=facts>Facts</h2>',
+                "<h2 id=facts>Facts</h2>",
             )
             assets = root / "assets"
             assets.mkdir()
-            (assets / "site.css").write_text(".rw-link { color: blue; }", encoding="utf-8")
+            (assets / "site.css").write_text(
+                ".rw-link { color: blue; }", encoding="utf-8"
+            )
 
             report = audit_site(root)
 
@@ -106,7 +110,10 @@ class SiteAuditTests(unittest.TestCase):
     def test_enforces_page_size_limit_and_warns_on_image_limit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            _write_page(root / "index.html", '<img src="one.png" alt=""><img src="two.png" alt="">')
+            _write_page(
+                root / "index.html",
+                '<img src="one.png" alt=""><img src="two.png" alt="">',
+            )
 
             report = audit_site(root, max_html_bytes=10, max_images_per_page=1)
 
@@ -134,7 +141,7 @@ class SiteAuditTests(unittest.TestCase):
 def _write_page(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        "<!doctype html><html lang=\"en\"><head><title>Test</title></head>"
+        '<!doctype html><html lang="en"><head><title>Test</title></head>'
         f"<body><main><h1>Test</h1>{content}</main></body></html>",
         encoding="utf-8",
     )

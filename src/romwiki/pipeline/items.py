@@ -117,9 +117,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         # item ID (see gen5_bw/scripts.py's module docstring for the full
         # disassembly and cross-check against both real ROMs).
         scripts_path = profile.layout["scripts"]
-        scripts_archive = platform.archive_cls.from_bytes(
-            filesystem.read(scripts_path)
-        )
+        scripts_archive = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
         fossil_revivals = engine.parse_fossil_revival_table(
             scripts_archive.read(fossil_revival_script_file)
         )
@@ -244,7 +242,9 @@ def build_item_dataset(
         ("mart", mart_dataset),
     ):
         if dataset is not None and dataset.get("game") != game:
-            raise DataSourceError(f"Item and {label} datasets must be for the same game")
+            raise DataSourceError(
+                f"Item and {label} datasets must be for the same game"
+            )
 
     relationships: dict[int, dict[str, list[dict[str, Any]]]] = {}
 
@@ -308,6 +308,9 @@ def build_item_dataset(
         }
         for battle_item in battle_items.values():
             add(battle_item["id"], "trainer_battle_items", trainer_reference)
+        victory_item = trainer.get("victory_item")
+        if victory_item:
+            add(victory_item["id"], "trainer_rewards", trainer_reference)
 
     for location in (location_dataset or {}).get("records", []):
         # Gen5's bare-minimum location records have no distinct internal
@@ -450,6 +453,7 @@ def build_item_dataset(
                 "wild_held_by": relation.get("wild_held_by", []),
                 "trainer_held_by": relation.get("trainer_held_by", []),
                 "trainer_battle_items": relation.get("trainer_battle_items", []),
+                "trainer_rewards": relation.get("trainer_rewards", []),
                 "locations": relation.get("locations", []),
                 "shops": relation.get("shops", []),
                 "gifts": relation.get("gifts", []),
@@ -468,7 +472,9 @@ def build_item_dataset(
         "game": game,
         "dataset": "items",
         "record_count": len(records),
-        "referenced_record_count": sum(_item_is_referenced(record) for record in records),
+        "referenced_record_count": sum(
+            _item_is_referenced(record) for record in records
+        ),
         "source": item_dataset["source"],
         "supplemental_sources": {
             "pokemon": pokemon_dataset["source"],
@@ -488,6 +494,7 @@ def _item_is_referenced(record: dict[str, Any]) -> bool:
             "wild_held_by",
             "trainer_held_by",
             "trainer_battle_items",
+            "trainer_rewards",
             "locations",
             "shops",
             "gifts",

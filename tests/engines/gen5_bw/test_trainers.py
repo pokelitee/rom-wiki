@@ -39,9 +39,7 @@ class Gen5TrainerTests(unittest.TestCase):
     def test_decodes_a_simple_single_pokemon_party(self) -> None:
         # Real Black ROM trainer 2 (Lass Jimmy): a level 7 Purrloin, no
         # held item, no custom moves.
-        data = _trainer_header(
-            poketype=0, class_id=1, battle_mode=0, party_count=1
-        )
+        data = _trainer_header(poketype=0, class_id=1, battle_mode=0, party_count=1)
         party_data = struct.pack("<BBHHH", 0, 0, 7, 509, 0)
 
         trainer = parse_trainer_record(
@@ -63,12 +61,8 @@ class Gen5TrainerTests(unittest.TestCase):
         self.assertEqual(trainer.party[0].move_ids, ())
 
     def test_decodes_held_items_and_custom_moves(self) -> None:
-        data = _trainer_header(
-            poketype=3, class_id=2, battle_mode=3, party_count=1
-        )
-        party_data = struct.pack(
-            "<BBHHHH4H", 0, 0, 75, 510, 0, 0, 391, 400, 176, 202
-        )
+        data = _trainer_header(poketype=3, class_id=2, battle_mode=3, party_count=1)
+        party_data = struct.pack("<BBHHHH4H", 0, 0, 75, 510, 0, 0, 391, 400, 176, 202)
 
         trainer = parse_trainer_record(
             data,
@@ -136,9 +130,7 @@ class Gen5TrainerTests(unittest.TestCase):
         # Blaze Black/Volt White leave old party records in some archive
         # members after reducing the party count. The game reads only the
         # count from the trainer header, so those trailing bytes are inert.
-        data = _trainer_header(
-            poketype=0, class_id=0, battle_mode=0, party_count=1
-        )
+        data = _trainer_header(poketype=0, class_id=0, battle_mode=0, party_count=1)
         active = struct.pack("<BBHHH", 0, 0, 20, 1, 0)
         stale = struct.pack("<BBHHH", 0, 0, 30, 2, 0)
 
@@ -156,9 +148,7 @@ class Gen5TrainerTests(unittest.TestCase):
         self.assertEqual(trainer.party[0].species_id, 1)
 
     def test_rejects_nonzero_partial_trailing_party_record(self) -> None:
-        data = _trainer_header(
-            poketype=0, class_id=0, battle_mode=0, party_count=1
-        )
+        data = _trainer_header(poketype=0, class_id=0, battle_mode=0, party_count=1)
         active = struct.pack("<BBHHH", 0, 0, 20, 1, 0)
 
         with self.assertRaises(InvalidRomError):
@@ -173,9 +163,7 @@ class Gen5TrainerTests(unittest.TestCase):
             )
 
     def test_accepts_zero_alignment_padding_after_complete_records(self) -> None:
-        data = _trainer_header(
-            poketype=2, class_id=0, battle_mode=0, party_count=1
-        )
+        data = _trainer_header(poketype=2, class_id=0, battle_mode=0, party_count=1)
         active = struct.pack("<BBHHHH", 0, 0, 20, 1, 0, 0)
 
         trainer = parse_trainer_record(

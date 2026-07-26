@@ -46,7 +46,7 @@ def _make_message_archive(messages: tuple[str, ...]) -> bytes:
     pointer_table = b"".join(
         struct.pack("<IHH", offset, count, 0) for offset, count in entries
     )
-    assert _BASE == len(header) + len(section_offsets)
+    assert len(header) + len(section_offsets) == _BASE
     assert table_start == _BASE + len(size_repeat)
     return header + section_offsets + size_repeat + pointer_table + b"".join(bodies)
 
@@ -118,16 +118,26 @@ class Gen5MessageTests(unittest.TestCase):
 
     def test_rejects_an_unsupported_character_code(self) -> None:
         data = _make_raw_message_archive([[0x0010, 0xFFFF]])
-        with self.assertRaisesRegex(InvalidRomError, "Unsupported Gen V character code"):
+        with self.assertRaisesRegex(
+            InvalidRomError, "Unsupported Gen V character code"
+        ):
             parse_english_message_archive(data)
 
     def test_decodes_a_variable_code_as_a_placeholder(self) -> None:
         # Real Black ROM map-name table (member 89, entry 3, unused by any
         # actual map): two variable codes around a literal "'s ".
         words = [
-            0xF000, 0x0100, 0x0001, 0x0000,
-            ord("'"), ord("s"), ord(" "),
-            0xF000, 0x0105, 0x0001, 0x0001,
+            0xF000,
+            0x0100,
+            0x0001,
+            0x0000,
+            ord("'"),
+            ord("s"),
+            ord(" "),
+            0xF000,
+            0x0105,
+            0x0001,
+            0x0001,
             0xFFFF,
         ]
         data = _make_raw_message_archive([words])
@@ -147,9 +157,12 @@ class Gen5MessageTests(unittest.TestCase):
         # Berry): "If held by a Pokémon, \nit recovers from paralysis." --
         # this control code is what makes the description wrap to a second
         # line rather than being one continuous string.
-        words = [ord(c) for c in "If held, "] + [0xFFFE] + [
-            ord(c) for c in "it recovers."
-        ] + [0xFFFF]
+        words = (
+            [ord(c) for c in "If held, "]
+            + [0xFFFE]
+            + [ord(c) for c in "it recovers."]
+            + [0xFFFF]
+        )
         data = _make_raw_message_archive([words])
 
         result = parse_english_message_archive(data)

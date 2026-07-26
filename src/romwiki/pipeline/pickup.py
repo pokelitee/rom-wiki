@@ -44,9 +44,7 @@ def _extract_gen4(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).items
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
-    item_names = engine.parse_english_message_archive(
-        messages.read(item_names_member)
-    )
+    item_names = engine.parse_english_message_archive(messages.read(item_names_member))
     _, overlay_data = platform.read_overlay(result.image, overlay_id)
     tables = engine.parse_pickup_tables(
         overlay_data,
@@ -127,6 +125,7 @@ def _extract_gen5(result: InspectionResult) -> dict[str, Any]:
                         table.item_ids, level_range
                     ),
                     pickup_engine.PICKUP_SLOT_CHANCES,
+                    strict=True,
                 )
             ],
         }

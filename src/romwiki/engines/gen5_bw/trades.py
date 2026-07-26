@@ -42,9 +42,7 @@ def parse_npc_trade_record(
     ivs = struct.unpack_from("<6I", data, _IVS_OFFSET)
     ot_id = struct.unpack_from("<H", data, _OT_ID_OFFSET)[0]
     held_item_id = struct.unpack_from("<I", data, _HELD_ITEM_OFFSET)[0]
-    requested_species_id = struct.unpack_from(
-        "<I", data, _REQUESTED_SPECIES_OFFSET
-    )[0]
+    requested_species_id = struct.unpack_from("<I", data, _REQUESTED_SPECIES_OFFSET)[0]
     return Gen5NpcTrade(
         trade_id=trade_id,
         nickname=nickname,

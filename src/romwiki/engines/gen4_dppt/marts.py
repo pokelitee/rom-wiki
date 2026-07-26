@@ -58,7 +58,10 @@ def parse_mart_commands(data: bytes) -> tuple[Gen4MartCommand, ...]:
                 if opcode == SEAL_MART_COMMAND
                 else _CLOSE_MART_SEQUENCE
             )
-        if data[suffix_offset : suffix_offset + len(expected_suffix)] != expected_suffix:
+        if (
+            data[suffix_offset : suffix_offset + len(expected_suffix)]
+            != expected_suffix
+        ):
             continue
         commands.append(
             Gen4MartCommand(
@@ -84,9 +87,7 @@ def parse_common_mart_inventory(
             raise InvalidRomError(f"Common mart references invalid item {item_id}")
         if tier == 0:
             raise InvalidRomError("Common mart item has an invalid progression tier")
-        items.append(
-            Gen4CommonMartItem(item_id=item_id, required_badges=tier - 1)
-        )
+        items.append(Gen4CommonMartItem(item_id=item_id, required_badges=tier - 1))
     raise InvalidRomError("Common mart inventory is unterminated")
 
 
@@ -171,9 +172,7 @@ def parse_frontier_price_table(
     for index in range(record_count):
         item_id, price = struct.unpack_from("<HH", data, offset + index * 4)
         if item_id in prices:
-            raise InvalidRomError(
-                f"Battle Frontier price table repeats item {item_id}"
-            )
+            raise InvalidRomError(f"Battle Frontier price table repeats item {item_id}")
         prices[item_id] = price
     return prices
 

@@ -76,16 +76,11 @@ class GameBuildWorkflow:
 
     def build_all(self) -> dict[str, DatasetBuild]:
         baselines = (
-            {
-                kind: self._dataset(self.baseline, kind)
-                for kind in DATASET_KINDS
-            }
+            {kind: self._dataset(self.baseline, kind) for kind in DATASET_KINDS}
             if self.baseline
             else {}
         )
-        currents = {
-            kind: self._dataset(self.current, kind) for kind in DATASET_KINDS
-        }
+        currents = {kind: self._dataset(self.current, kind) for kind in DATASET_KINDS}
         return {
             kind: DatasetBuild(
                 currents[kind],
@@ -100,9 +95,7 @@ class GameBuildWorkflow:
         }
 
     @staticmethod
-    def _dataset(
-        context: GameBuildContext | None, kind: str
-    ) -> dict[str, Any]:
+    def _dataset(context: GameBuildContext | None, kind: str) -> dict[str, Any]:
         if context is None:
             raise DataSourceError("Dataset context is required")
         factory = getattr(context, kind)

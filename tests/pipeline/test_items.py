@@ -59,6 +59,11 @@ class ItemDatasetTests(unittest.TestCase):
                         }
                     ],
                     "ai_battle_items": [],
+                    "victory_item": {
+                        "id": 1,
+                        "slug": "master-ball",
+                        "name": "Master Ball",
+                    },
                 }
             ],
         }
@@ -70,9 +75,7 @@ class ItemDatasetTests(unittest.TestCase):
                     "header_id": 10,
                     "name": "Route 1",
                     "internal_name": "R1",
-                    "items": [
-                        {"item_id": 1, "kind": "visible", "x": 3, "z": 4}
-                    ],
+                    "items": [{"item_id": 1, "kind": "visible", "x": 3, "z": 4}],
                     "shops": [],
                     "pokemon_gifts": [],
                     "npc_trades": [],
@@ -92,6 +95,7 @@ class ItemDatasetTests(unittest.TestCase):
         self.assertEqual(record["slug"], "master-ball")
         self.assertEqual(record["wild_held_by"][0]["name"], "Bulbasaur")
         self.assertEqual(record["trainer_held_by"][0]["trainer_id"], 2)
+        self.assertEqual(record["trainer_rewards"][0]["trainer_id"], 2)
         self.assertEqual(record["locations"][0]["name"], "Route 1")
 
         with tempfile.TemporaryDirectory() as directory:
@@ -116,16 +120,18 @@ class ItemDatasetTests(unittest.TestCase):
         self.assertEqual(catalog["kind"], "items")
         self.assertEqual(
             catalog["records"][0]["features"],
-            ["overworld", "wild-held", "trainer-held"],
+            ["overworld", "wild-held", "trainer-held", "trainer-reward"],
         )
         self.assertEqual(
             catalog["records"][0]["location_refs"],
-            [{
-                "kind": "location",
-                "id": 10,
-                "label": "Route 1",
-                "url": "../locations/header-010/",
-            }],
+            [
+                {
+                    "kind": "location",
+                    "id": 10,
+                    "label": "Route 1",
+                    "url": "../locations/header-010/",
+                }
+            ],
         )
 
 
@@ -264,9 +270,7 @@ class MinimalItemDatasetTests(unittest.TestCase):
             output = Path(directory)
             render_item_pages(dataset, output)
             page = (output / "leftovers.md").read_text(encoding="utf-8")
-            catalog = json.loads(
-                (output / "catalog.json").read_text(encoding="utf-8")
-            )
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertIn("### Blaze Black", page)
         self.assertIn("No gift or trade references.", page)

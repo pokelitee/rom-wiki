@@ -39,7 +39,9 @@ class EngineCapabilityContractTests(unittest.TestCase):
     def test_every_profile_builds_all_dataset_kinds_from_its_real_rom(self) -> None:
         profiles = ProfileRepository.load(_PROFILES_DIR).profiles
         if not _GAMES_CONFIG.is_file():
-            self.skipTest("local game configuration is not available in this environment")
+            self.skipTest(
+                "local game configuration is not available in this environment"
+            )
         registry = LocalGameRegistry.load(_GAMES_CONFIG)
 
         exercised = 0

@@ -33,9 +33,7 @@ class ComparisonRenderingTests(unittest.TestCase):
         changed = comparison_section(
             {
                 "status": "changed",
-                "changes": [
-                    {"label": "Power", "before": 40, "after": 60}
-                ],
+                "changes": [{"label": "Power", "before": 40, "after": 60}],
             },
             "Pokémon Platinum",
         )
@@ -166,11 +164,7 @@ class ComparisonRenderingTests(unittest.TestCase):
 
     def test_pokemon_changes_use_readable_field_specific_summaries(self) -> None:
         references = ReferenceIndex(
-            [
-                entity_reference(
-                    "move", 363, "Natural Gift", "natural-gift"
-                )
-            ]
+            [entity_reference("move", 363, "Natural Gift", "natural-gift")]
         )
         section = comparison_section(
             {
@@ -266,9 +260,7 @@ class ComparisonRenderingTests(unittest.TestCase):
                     "slug": "pound",
                     "status": "changed",
                     "detail_available": True,
-                    "changes": [
-                        {"label": "Power", "before": 40, "after": 60}
-                    ],
+                    "changes": [{"label": "Power", "before": 40, "after": 60}],
                 },
                 {
                     "key": 2,

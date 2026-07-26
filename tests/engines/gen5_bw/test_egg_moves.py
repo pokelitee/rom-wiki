@@ -11,13 +11,24 @@ class Gen5EggMoveTests(unittest.TestCase):
     def test_decodes_a_species_egg_move_set(self) -> None:
         # Real Bulbasaur record: count word (14) followed by 14 move IDs.
         move_ids = (
-            130, 204, 80, 345, 320, 174, 275, 267, 389, 437, 438, 124, 203, 202,
+            130,
+            204,
+            80,
+            345,
+            320,
+            174,
+            275,
+            267,
+            389,
+            437,
+            438,
+            124,
+            203,
+            202,
         )
         data = struct.pack(f"<H{len(move_ids)}H", len(move_ids), *move_ids)
 
-        egg_move_set = parse_egg_move_set(
-            data, species_id=1, archive_path="egg.narc"
-        )
+        egg_move_set = parse_egg_move_set(data, species_id=1, archive_path="egg.narc")
 
         self.assertEqual(egg_move_set.move_ids, move_ids)
         self.assertEqual(egg_move_set.provenance.member, 1)
@@ -31,9 +42,7 @@ class Gen5EggMoveTests(unittest.TestCase):
 
     def test_accepts_the_empty_placeholder_record(self) -> None:
         # Member 0 of the real archive is a zero-length unused placeholder.
-        egg_move_set = parse_egg_move_set(
-            b"", species_id=0, archive_path="egg.narc"
-        )
+        egg_move_set = parse_egg_move_set(b"", species_id=0, archive_path="egg.narc")
         self.assertEqual(egg_move_set.move_ids, ())
 
     def test_rejects_a_count_mismatched_with_the_record_size(self) -> None:

@@ -98,20 +98,30 @@ def _parse_page(text: str, path: str) -> _ParsedPage:
         tag = match.group(0)
         line = line_at(match.start())
         if not re.search(r"\balt\b(\s*=|\s|/?>)", tag, re.IGNORECASE):
-            issues.append(SiteAuditIssue("image-alt", path, "image is missing an alt attribute", line))
+            issues.append(
+                SiteAuditIssue(
+                    "image-alt", path, "image is missing an alt attribute", line
+                )
+            )
         source = _SRC.search(tag)
         if source and _attr_value(source).startswith(("http://", "https://")):
             loading = _LOADING.search(tag)
             if not loading or _attr_value(loading).lower() != "lazy":
                 issues.append(
-                    SiteAuditIssue("image-loading", path, "external image is not lazy-loaded", line)
+                    SiteAuditIssue(
+                        "image-loading", path, "external image is not lazy-loaded", line
+                    )
                 )
 
-    _audit_container_tags(text, path, newlines, _DETAIL_TAG, "details", "summary", issues)
+    _audit_container_tags(
+        text, path, newlines, _DETAIL_TAG, "details", "summary", issues
+    )
     _audit_container_tags(text, path, newlines, _TABLE_TAG, "table", "th", issues)
 
-    headings = [(int(match.group(1)), match.start()) for match in _HEADING.finditer(text)]
-    for (previous, _), (level, position) in zip(headings, headings[1:]):
+    headings = [
+        (int(match.group(1)), match.start()) for match in _HEADING.finditer(text)
+    ]
+    for (previous, _), (level, position) in zip(headings, headings[1:], strict=False):
         if level > previous + 1:
             issues.append(
                 SiteAuditIssue(
@@ -123,18 +133,26 @@ def _parse_page(text: str, path: str) -> _ParsedPage:
             )
     html_tag = re.search(r"<html\b[^>]*>", text, re.IGNORECASE)
     if not html_tag or not re.search(r"\blang\s*=", html_tag.group(0), re.IGNORECASE):
-        issues.append(SiteAuditIssue("document-lang", path, "html element has no language", 1))
+        issues.append(
+            SiteAuditIssue("document-lang", path, "html element has no language", 1)
+        )
     title = re.search(r"<title\b[^>]*>(.*?)</title>", text, re.IGNORECASE | re.DOTALL)
     if not title or not re.sub(r"<[^>]+>", "", title.group(1)).strip():
-        issues.append(SiteAuditIssue("document-title", path, "document has no title", 1))
+        issues.append(
+            SiteAuditIssue("document-title", path, "document has no title", 1)
+        )
     main_count = len(re.findall(r"<main\b", text, re.IGNORECASE))
     if main_count != 1:
         issues.append(
-            SiteAuditIssue("main-count", path, f"expected one main element, found {main_count}", 1)
+            SiteAuditIssue(
+                "main-count", path, f"expected one main element, found {main_count}", 1
+            )
         )
     h1_count = sum(level == 1 for level, _ in headings)
     if h1_count != 1:
-        issues.append(SiteAuditIssue("h1-count", path, f"expected one h1, found {h1_count}", 1))
+        issues.append(
+            SiteAuditIssue("h1-count", path, f"expected one h1, found {h1_count}", 1)
+        )
     return _ParsedPage(ids, links, custom_classes, issues, len(images))
 
 
@@ -301,9 +319,7 @@ def _validate_link(
     return None
 
 
-def _resolve_target(
-    source: str, url_path: str, existing_files: set[str]
-) -> str | None:
+def _resolve_target(source: str, url_path: str, existing_files: set[str]) -> str | None:
     if url_path.startswith("/"):
         target = url_path.lstrip("/")
     else:

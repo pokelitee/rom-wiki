@@ -37,8 +37,7 @@ def parse_map_matrix(data: bytes, *, matrix_id: int) -> Gen4MapMatrix:
         if header_end > len(data):
             raise InvalidRomError(f"Map matrix {matrix_id} header grid is truncated")
         header_ids = tuple(
-            value[0]
-            for value in struct.iter_unpack("<H", data[position:header_end])
+            value[0] for value in struct.iter_unpack("<H", data[position:header_end])
         )
         position = header_end
 

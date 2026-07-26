@@ -141,37 +141,7 @@ class MoveReferenceSectionTests(unittest.TestCase):
 
 class ItemPartyEffectTests(unittest.TestCase):
     def test_includes_stat_ev_friendship_and_guard_effects(self) -> None:
-        effects = {
-            key: False
-            for key in (
-                "heal_sleep",
-                "heal_poison",
-                "heal_burn",
-                "heal_freeze",
-                "heal_paralysis",
-                "heal_confusion",
-                "heal_attract",
-                "guard_spec",
-                "revive",
-                "revive_all",
-                "level_up",
-                "evolve",
-                "pp_up",
-                "pp_max",
-                "pp_restore",
-                "pp_restore_all",
-                "hp_restore",
-                "hp_ev",
-                "attack_ev",
-                "defense_ev",
-                "speed_ev",
-                "special_attack_ev",
-                "special_defense_ev",
-                "friendship_low",
-                "friendship_medium",
-                "friendship_high",
-            )
-        }
+        effects = dict.fromkeys(("heal_sleep", "heal_poison", "heal_burn", "heal_freeze", "heal_paralysis", "heal_confusion", "heal_attract", "guard_spec", "revive", "revive_all", "level_up", "evolve", "pp_up", "pp_max", "pp_restore", "pp_restore_all", "hp_restore", "hp_ev", "attack_ev", "defense_ev", "speed_ev", "special_attack_ev", "special_defense_ev", "friendship_low", "friendship_medium", "friendship_high"), False)
         effects.update(
             {
                 "guard_spec": True,

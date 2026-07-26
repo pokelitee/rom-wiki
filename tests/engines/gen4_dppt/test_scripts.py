@@ -17,18 +17,15 @@ class Gen4ScriptTests(unittest.TestCase):
             + struct.pack("<H", 0x800C)
         )
 
-        commands = parse_trainer_battle_commands(
-            make_script(body), trainer_count=1000
-        )
+        commands = parse_trainer_battle_commands(make_script(body), trainer_count=1000)
 
         self.assertEqual([command.offset for command in commands], [6, 16])
         self.assertEqual(commands[0].trainer_ids, (250,))
         self.assertEqual(commands[1].trainer_ids, (536, 551))
 
     def test_ignores_variables_and_unverified_opcode_values(self) -> None:
-        body = (
-            struct.pack("<HHHH", 0xE5, 0x8004, 0, 0xEC)
-            + struct.pack("<HHHH", 0xE5, 250, 0, 0x16)
+        body = struct.pack("<HHHH", 0xE5, 0x8004, 0, 0xEC) + struct.pack(
+            "<HHHH", 0xE5, 250, 0, 0x16
         )
         self.assertEqual(
             parse_trainer_battle_commands(make_script(body), trainer_count=1000),

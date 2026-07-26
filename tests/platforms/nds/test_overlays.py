@@ -9,7 +9,9 @@ from romwiki.util.errors import InvalidRomError
 
 class NintendoDSOverlayTests(unittest.TestCase):
     def test_parses_overlay_records(self) -> None:
-        overlays = parse_overlay_table(struct.pack("<8I", 5, 100, 200, 30, 150, 160, 9, 0))
+        overlays = parse_overlay_table(
+            struct.pack("<8I", 5, 100, 200, 30, 150, 160, 9, 0)
+        )
 
         self.assertEqual(len(overlays), 1)
         self.assertEqual(overlays[0].id, 5)

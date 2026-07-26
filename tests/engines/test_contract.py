@@ -126,15 +126,23 @@ def _fake_personal_record(member: int) -> dict:
     return {
         "species_id": member,
         "base_stats": {
-            "hp": 40, "attack": 40, "defense": 40, "speed": 40,
-            "special_attack": 40, "special_defense": 40,
+            "hp": 40,
+            "attack": 40,
+            "defense": 40,
+            "speed": 40,
+            "special_attack": 40,
+            "special_defense": 40,
         },
         "type_ids": [1, 2],
         "catch_rate": 100,
         "base_experience": 50,
         "ev_yields": {
-            "hp": 0, "attack": 1, "defense": 0, "speed": 0,
-            "special_attack": 0, "special_defense": 0,
+            "hp": 0,
+            "attack": 1,
+            "defense": 0,
+            "speed": 0,
+            "special_attack": 0,
+            "special_defense": 0,
         },
         "wild_held_items": {"common": 0, "rare": 0},
         "gender_ratio": 127,
@@ -235,9 +243,7 @@ class EngineContractTests(unittest.TestCase):
         )
 
         self.assertEqual(enriched["public_record_count"], _FAKE_MOVE_COUNT - 1)
-        self.assertEqual(
-            enriched["records"][1]["damage_class"]["name"], "ranged"
-        )
+        self.assertEqual(enriched["records"][1]["damage_class"]["name"], "ranged")
         self.assertEqual(enriched["records"][1]["type"]["name"], "aqua")
 
         with tempfile.TemporaryDirectory() as directory:
@@ -248,7 +254,14 @@ class EngineContractTests(unittest.TestCase):
         self.assertEqual(catalog["kind"], "moves")
 
     def test_trainer_enrichment_uses_the_engines_party_normalization(self) -> None:
-        stats = ("hp", "attack", "defense", "special_attack", "special_defense", "speed")
+        stats = (
+            "hp",
+            "attack",
+            "defense",
+            "special_attack",
+            "special_defense",
+            "speed",
+        )
 
         def normalize(member, has_custom_moves):
             return {
@@ -273,7 +286,7 @@ class EngineContractTests(unittest.TestCase):
                 "nature": {"source": "derived", "name": "Sturdy"},
                 "calculated_stats": {
                     "source": "derived",
-                    "values": {stat: 50 for stat in stats},
+                    "values": dict.fromkeys(stats, 50),
                 },
             }
 
@@ -365,7 +378,9 @@ class EngineContractTests(unittest.TestCase):
             count = render_ability_pages(dataset, Path(directory))
         self.assertEqual(count, 2)
 
-    def test_encounter_enrichment_uses_the_registered_engines_slot_chances(self) -> None:
+    def test_encounter_enrichment_uses_the_registered_engines_slot_chances(
+        self,
+    ) -> None:
         _register_fake_engine(_fake_engine_tables())
 
         data = bytearray(424)
@@ -388,9 +403,7 @@ class EngineContractTests(unittest.TestCase):
 
         # The 999 sentinel only appears if enrichment read the chance table
         # off the registered fake engine rather than a hardcoded gen4 import.
-        self.assertEqual(
-            enriched["records"][0]["walking"]["slots"][0]["chance"], 999
-        )
+        self.assertEqual(enriched["records"][0]["walking"]["slots"][0]["chance"], 999)
         # Likewise for the bonus-slot methodology citation: it must come from
         # the registered engine, not a literal gen4/Platinum string baked
         # into the renderer.

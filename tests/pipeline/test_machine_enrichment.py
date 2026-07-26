@@ -43,9 +43,7 @@ class MachineEnrichmentTests(unittest.TestCase):
             [machine["name"] for machine in pokemon["records"][1]["machines"]],
             ["TM01", "HM08"],
         )
-        self.assertEqual(
-            pokemon["records"][1]["machines"][0]["move"]["slug"], "move-1"
-        )
+        self.assertEqual(pokemon["records"][1]["machines"][0]["move"]["slug"], "move-1")
         self.assertEqual(moves["records"][1]["machines"][0]["name"], "TM01")
         self.assertEqual(moves["records"][100]["machines"][0]["name"], "HM08")
 

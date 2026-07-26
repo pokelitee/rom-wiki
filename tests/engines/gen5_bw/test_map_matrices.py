@@ -7,7 +7,9 @@ from romwiki.engines.gen5_bw.map_matrices import parse_map_matrix
 from romwiki.util.errors import InvalidRomError
 
 
-def _matrix(*, matrix_type: int, width: int, height: int, map_files, header_ids=None) -> bytes:
+def _matrix(
+    *, matrix_type: int, width: int, height: int, map_files, header_ids=None
+) -> bytes:
     data = bytes((matrix_type, 0, 0, 0)) + struct.pack("<hh", width, height)
     data += b"".join(struct.pack("<i", value) for value in map_files)
     if header_ids is not None:

@@ -95,7 +95,7 @@ class LocationRenderingTests(unittest.TestCase):
                             "required_badges": None,
                         }
                     ],
-                }
+                },
             ],
             "pokemon_gifts": [
                 {
@@ -273,16 +273,13 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("## Trophy Garden daily rotation", page)
         self.assertNotIn("After National Dex", page)
         self.assertIn("## Game Corner prizes", page)
-        self.assertIn(
-            '[Potion](../items/potion.md)</span> | 17 | 1,000 coins |', page
-        )
+        self.assertIn("[Potion](../items/potion.md)</span> | 17 | 1,000 coins |", page)
         self.assertIn('<a href="#game-corner-prizes">1</a>', page)
         self.assertIn("game corner", catalog["records"][0]["features"])
         self.assertIn(
             "[Togepi](../pokemon/togepi.md)</span> | — |",
             page,
         )
-
 
     def test_renders_great_marsh_daily_pool_with_both_dex_groups(self) -> None:
         record = {

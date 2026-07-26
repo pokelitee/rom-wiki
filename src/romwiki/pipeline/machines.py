@@ -76,17 +76,16 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).machines
     arm9 = platform.read_decompressed_code_binary(result.image)
     prefix = bytes.fromhex(prefix_hex)
-    offset = (
-        find_unique_pattern(arm9, prefix, label="the machine move table in ARM9")
-        + len(prefix)
-    )
+    offset = find_unique_pattern(
+        arm9, prefix, label="the machine move table in ARM9"
+    ) + len(prefix)
     size = engine.MACHINE_COUNT * 2
     if offset + size > len(arm9):
-        raise InvalidRomError("Gen V machine move table is outside the decompressed ARM9")
+        raise InvalidRomError(
+            "Gen V machine move table is outside the decompressed ARM9"
+        )
     data = arm9[offset : offset + size]
-    records = [
-        machine.to_dict() for machine in engine.parse_machine_move_table(data)
-    ]
+    records = [machine.to_dict() for machine in engine.parse_machine_move_table(data)]
     return {
         "schema_version": MACHINES_RAW_SCHEMA_VERSION,
         "game": profile.id,

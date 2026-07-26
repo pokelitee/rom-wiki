@@ -29,7 +29,9 @@ class Gen4TutorTests(unittest.TestCase):
         self.assertEqual(tutors[0].shard_costs.red, 2)
         self.assertEqual(tutors[0].shard_costs.blue, 4)
         self.assertEqual(tutors[0].location_id, 1)
-        self.assertEqual([record.personal_member for record in compatibility], [1, 2, 5])
+        self.assertEqual(
+            [record.personal_member for record in compatibility], [1, 2, 5]
+        )
         self.assertEqual(compatibility[0].tutor_ids, (1,))
         self.assertEqual(compatibility[1].tutor_ids, ())
 
@@ -46,7 +48,9 @@ class Gen4TutorTests(unittest.TestCase):
         struct.pack_into("<HHHH", data, 4, 0x28, 0x8003, 307, 0x16)
         cursor = 16
         for species_id in (6, 157):
-            struct.pack_into("<HHHHBi", data, cursor, 0x11, 0x8001, species_id, 0x1C, 1, 0)
+            struct.pack_into(
+                "<HHHHBi", data, cursor, 0x11, 0x8001, species_id, 0x1C, 1, 0
+            )
             cursor += 13
 
         species = parse_special_tutor_species(

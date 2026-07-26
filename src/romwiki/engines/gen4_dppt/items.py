@@ -51,8 +51,7 @@ def parse_item_record(
 ) -> Gen4Item:
     if len(data) != GEN4_ITEM_RECORD_SIZE:
         raise InvalidRomError(
-            f"Gen IV item record must be {GEN4_ITEM_RECORD_SIZE} bytes, "
-            f"got {len(data)}"
+            f"Gen IV item record must be {GEN4_ITEM_RECORD_SIZE} bytes, got {len(data)}"
         )
     price = struct.unpack_from("<H", data)[0]
     flags = struct.unpack_from("<H", data, 8)[0]

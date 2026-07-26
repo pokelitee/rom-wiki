@@ -90,9 +90,7 @@ def render_trainer_pages(
         filename = f"trainer-{record['trainer_id']:04}.md"
         label = _trainer_label(record)
         previous = sorted_linked[index - 1] if index else None
-        following = (
-            sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
-        )
+        following = sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             write_text(
                 output_root / filename,
@@ -221,27 +219,30 @@ def _catalog_record(
     )
     species = [member["name"] for member in party]
     label = _trainer_label(record)
-    return add_change_status({
-        "id": record["trainer_id"],
-        "label": label,
-        "url": filename,
-        "class_name": record["class_name"],
-        "name": record["name"],
-        "locations": location_names,
-        "location_label": location_label,
-        "location_refs": [
-            ROUTES.catalog_reference(reference, "trainers/")
-            for reference in location_refs
-        ],
-        "linked": linked,
-        "double_battle": record["double_battle"],
-        "party_size": len(record["party"]),
-        "min_level": min(levels),
-        "max_level": max(levels),
-        "pokemon": species,
-        "party": party,
-        "search_text": " ".join((label, *location_names, *species)).lower(),
-    }, change)
+    return add_change_status(
+        {
+            "id": record["trainer_id"],
+            "label": label,
+            "url": filename,
+            "class_name": record["class_name"],
+            "name": record["name"],
+            "locations": location_names,
+            "location_label": location_label,
+            "location_refs": [
+                ROUTES.catalog_reference(reference, "trainers/")
+                for reference in location_refs
+            ],
+            "linked": linked,
+            "double_battle": record["double_battle"],
+            "party_size": len(record["party"]),
+            "min_level": min(levels),
+            "max_level": max(levels),
+            "pokemon": species,
+            "party": party,
+            "search_text": " ".join((label, *location_names, *species)).lower(),
+        },
+        change,
+    )
 
 
 def _render_trainer(
@@ -267,12 +268,8 @@ def _render_trainer(
     ]
     _append_ai_battle_items(lines, grouped_ai_items, source_file)
     _append_locations(lines, record["locations"], source_file)
-    _append_script_references(
-        lines, record.get("script_references", []), source_file
-    )
-    _append_same_name_trainers(
-        lines, record, same_name_records or [], source_file
-    )
+    _append_script_references(lines, record.get("script_references", []), source_file)
+    _append_same_name_trainers(lines, record, same_name_records or [], source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(provenance_section(_trainer_provenance(record)))
     _append_record_navigation(lines, record, previous, following)
@@ -297,7 +294,9 @@ def _ai_item_identity(item: dict[str, Any]) -> int | str:
 def _ai_item_link(grouped: dict[str, Any], source_url: str) -> str:
     item = grouped["item"]
     link = ROUTES.html_link(
-        entity_reference("item", _ai_item_identity(item), item["name"], item.get("slug")),
+        entity_reference(
+            "item", _ai_item_identity(item), item["name"], item.get("slug")
+        ),
         source_url,
     )
     quantity = f" ×{grouped['quantity']}" if grouped["quantity"] > 1 else ""
@@ -418,7 +417,9 @@ def _battle_format_label(record: dict[str, Any]) -> str:
 def _trainer_level_range(record: dict[str, Any]) -> str:
     levels = [member["level"] for member in record["party"]]
     return (
-        f"{min(levels)}" if min(levels) == max(levels) else f"{min(levels)}–{max(levels)}"
+        f"{min(levels)}"
+        if min(levels) == max(levels)
+        else f"{min(levels)}–{max(levels)}"
     )
 
 
@@ -457,9 +458,24 @@ def _trainer_summary(
 ) -> list[str]:
     location_names = _location_names(record)
     level_range = _trainer_level_range(record)
-    ai_items = ", ".join(
-        _ai_item_link(grouped, source_url) for grouped in grouped_ai_items
-    ) or '<span class="rw-summary__empty">None</span>'
+    ai_items = (
+        ", ".join(_ai_item_link(grouped, source_url) for grouped in grouped_ai_items)
+        or '<span class="rw-summary__empty">None</span>'
+    )
+    victory_item = record.get("victory_item")
+    victory_item_link = (
+        ROUTES.html_link(
+            entity_reference(
+                "item",
+                victory_item["id"],
+                victory_item["name"],
+                victory_item.get("slug"),
+            ),
+            source_url,
+        )
+        if victory_item
+        else None
+    )
     return summary_section(
         "rw-trainer-summary",
         [
@@ -478,6 +494,16 @@ def _trainer_summary(
             "<div><dt>Level range</dt><dd>"
             f"{summary_section_link(level_range, 'party')}</dd></div>",
             f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>",
+            *(
+                ["<div><dt>After victory</dt><dd>Heals the player's party</dd></div>"]
+                if record.get("healer")
+                else []
+            ),
+            *(
+                [f"<div><dt>Victory item</dt><dd>{victory_item_link}</dd></div>"]
+                if victory_item_link
+                else []
+            ),
         ],
     )
 
@@ -504,7 +530,9 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 if item_sprite
                 else ""
             )
-            item_name = f'<span class="rw-party-card__item">{item_icon}{item_link}</span>'
+            item_name = (
+                f'<span class="rw-party-card__item">{item_icon}{item_link}</span>'
+            )
         else:
             item_name = "—"
         pokemon_link = ROUTES.html_link(
@@ -581,10 +609,8 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             ]
         )
         if member["moves_source"] == "explicit":
-            move_label = escape(f'{pokemon["name"]} moves', quote=True)
-            lines.append(
-                f'<ol class="rw-party-card__moves" aria-label="{move_label}">'
-            )
+            move_label = escape(f"{pokemon['name']} moves", quote=True)
+            lines.append(f'<ol class="rw-party-card__moves" aria-label="{move_label}">')
             for move_index, move in enumerate(member["moves"], start=1):
                 slug = move["name"]
                 move_link = ROUTES.html_link(

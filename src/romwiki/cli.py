@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Mapping, Sequence
 
 from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.comparisons import write_comparison_dataset
@@ -60,6 +60,7 @@ from romwiki.sites import (
     create_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
 )
+from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.dev_pages import DevPages
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import (
@@ -316,15 +317,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("../pokedb/.output/gen4"),
         help="PokéDB generation output directory",
     )
-    build_game_parser.add_argument(
-        "--data-root", type=Path, default=Path("build/data")
-    )
+    build_game_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
     build_game_parser.add_argument(
         "--wiki-root", type=Path, help="game wiki root (defaults below sites/games)"
     )
 
     version_pair_parser = subparsers.add_parser(
-        "build-version-pair",
+        "build-version-family",
+        aliases=["build-version-pair"],
         help="build one merged wiki for a sibling game-version family",
     )
     version_pair_parser.add_argument(
@@ -342,8 +342,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     version_pair_parser.add_argument(
         "--site-id",
-        default="black-white",
-        help="merged site identifier (defaults below sites/games/<site-id>)",
+        help=(
+            "merged site identifier (required for build-version-family; "
+            "the compatibility alias defaults to black-white)"
+        ),
     )
     version_pair_parser.add_argument(
         "--games-config", type=Path, default=Path(".local/games.toml")
@@ -468,10 +470,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "extract-personal":
             dataset = extract_personal_dataset(result)
             output = args.output or (
-                Path("build/data")
-                / dataset["game"]
-                / "pokemon"
-                / "personal.json"
+                Path("build/data") / dataset["game"] / "pokemon" / "personal.json"
             )
             write_personal_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} personal records: {output}")
@@ -513,20 +512,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "extract-learnsets":
             dataset = extract_learnset_dataset(result)
             output = args.output or (
-                Path("build/data")
-                / dataset["game"]
-                / "pokemon"
-                / "learnsets.json"
+                Path("build/data") / dataset["game"] / "pokemon" / "learnsets.json"
             )
             write_learnset_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} learnsets: {output}")
         elif args.command == "extract-egg-moves":
             dataset = extract_egg_move_dataset(result)
             output = args.output or (
-                Path("build/data")
-                / dataset["game"]
-                / "pokemon"
-                / "egg-moves.json"
+                Path("build/data") / dataset["game"] / "pokemon" / "egg-moves.json"
             )
             write_egg_move_dataset(dataset, output)
             print(
@@ -536,10 +529,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "extract-evolutions":
             dataset = extract_evolution_dataset(result)
             output = args.output or (
-                Path("build/data")
-                / dataset["game"]
-                / "pokemon"
-                / "evolutions.json"
+                Path("build/data") / dataset["game"] / "pokemon" / "evolutions.json"
             )
             write_evolution_dataset(dataset, output)
             print(f"Wrote {dataset['record_count']} evolution records: {output}")
@@ -586,7 +576,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _run_section_build(args, result)
         elif args.command == "build-game":
             _run_full_game_build(args, result)
-        elif args.command == "build-version-pair":
+        elif args.command in {"build-version-family", "build-version-pair"}:
             _run_version_pair_build(args)
         elif args.command == "baseline":
             _run_baseline_build(args)
@@ -617,9 +607,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     f"{report.link_count:,} links{largest_text}"
                 )
                 if not report.ok:
-                    raise SiteError(
-                        f"site audit found {len(report.errors):,} error(s)"
-                    )
+                    raise SiteError(f"site audit found {len(report.errors):,} error(s)")
             elif args.site_command == "list":
                 catalog = SiteCatalog.load(args.root)
                 _print_sites(catalog)
@@ -749,7 +737,9 @@ def _create_build_workflow(
 def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
     if args.hack_only or args.base:
         if args.base_rom is not None:
-            raise LocalConfigError("--base-rom cannot be combined with --hack-only or --base")
+            raise LocalConfigError(
+                "--base-rom cannot be combined with --hack-only or --base"
+            )
         return None
     if args.base_rom is not None:
         resolved = args.base_rom.resolve()
@@ -767,9 +757,7 @@ def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
     return LocalGameRegistry.load(args.games_config).get(args.game).rom(base=True)
 
 
-def _run_section_build(
-    args: argparse.Namespace, result: InspectionResult
-) -> None:
+def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> None:
     kinds = {
         "build-pokemon": ("pokemon", "abilities"),
         "build-encounters": ("encounters",),
@@ -794,9 +782,7 @@ def _run_section_build(
         if args.wiki_output is not None
         else Path("sites/games") / game / "wiki"
     )
-    dev_pages = (
-        DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
-    )
+    dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     data_root = (
         args.data_output.parent.parent
         if args.data_output is not None
@@ -811,7 +797,10 @@ def _run_section_build(
     # GameBuildContext's optional-input accessors, rather than probing with a
     # try/except around the build.
     abilities_dataset = None
-    if args.command == "build-pokemon" and "messages" in workflow.current.profile.layout:
+    if (
+        args.command == "build-pokemon"
+        and "messages" in workflow.current.profile.layout
+    ):
         abilities_dataset = workflow.build("abilities")
     reference_datasets = {}
     if args.command == "build-locations":
@@ -826,14 +815,10 @@ def _run_section_build(
         if move_dataset is not None:
             reference_datasets["moves"] = move_dataset
     reference_index = (
-        ReferenceIndex.from_datasets(reference_datasets)
-        if reference_datasets
-        else None
+        ReferenceIndex.from_datasets(reference_datasets) if reference_datasets else None
     )
     kinds = tuple(
-        kind
-        for kind in kinds
-        if kind != "abilities" or abilities_dataset is not None
+        kind for kind in kinds if kind != "abilities" or abilities_dataset is not None
     )
     for index, kind in enumerate(kinds):
         build = abilities_dataset if kind == "abilities" else workflow.build(kind)
@@ -867,16 +852,12 @@ def _run_section_build(
     render_changes_pages(comparisons, wiki_root)
 
 
-def _run_full_game_build(
-    args: argparse.Namespace, result: InspectionResult
-) -> None:
+def _run_full_game_build(args: argparse.Namespace, result: InspectionResult) -> None:
     workflow = _create_build_workflow(args, result)
     game = workflow.current.profile.id
     data_root = args.data_root / game
     wiki_root = args.wiki_root or Path("sites/games") / game / "wiki"
-    dev_pages = (
-        DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
-    )
+    dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     builds = workflow.build_all()
     reference_index = ReferenceIndex.from_datasets(
         {kind: build.current for kind, build in builds.items()}
@@ -925,6 +906,11 @@ _VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
 
 
 def _run_version_pair_build(args: argparse.Namespace) -> None:
+    if args.site_id is None:
+        if args.command == "build-version-pair":
+            args.site_id = "black-white"
+        else:
+            raise LocalConfigError("build-version-family requires --site-id")
     registry = LocalGameRegistry.load(args.games_config)
     pokedb = PokeDBGeneration.load(args.pokedb)
     games, versions = _version_family_inputs(args.games, args.versions)
@@ -953,18 +939,12 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             refresh_current=args.refresh_cache,
         )
 
-    layouts = [
-        workflows[version].current.profile.layout
-        for version in versions
-    ]
+    layouts = [workflows[version].current.profile.layout for version in versions]
     kinds = [
         kind
         for kind, alternatives in _VERSION_PAIR_SECTION_LAYOUT_KEYS.items()
         if any(
-            all(
-                all(key in layout for key in required_keys)
-                for layout in layouts
-            )
+            all(all(key in layout for key in required_keys) for layout in layouts)
             for required_keys in alternatives
         )
     ]
@@ -972,15 +952,9 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     merged_datasets: dict[str, dict] = {}
     merged_comparisons: dict[str, dict] = {}
     for kind in kinds:
-        builds = {
-            version: workflows[version].build(kind)
-            for version in versions
-        }
+        builds = {version: workflows[version].build(kind) for version in versions}
         merged_datasets[kind] = merge_version_family_datasets(
-            {
-                version: build.current
-                for version, build in builds.items()
-            }
+            {version: build.current for version, build in builds.items()}
         )
         comparisons = {
             version: build.comparison
@@ -988,16 +962,12 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             if build.comparison is not None
         }
         if comparisons:
-            merged_comparisons[kind] = merge_version_family_comparisons(
-                comparisons
-            )
+            merged_comparisons[kind] = merge_version_family_comparisons(comparisons)
 
     site_id = args.site_id
     wiki_root = args.wiki_root or Path("sites/games") / site_id / "wiki"
     data_root = args.data_root / site_id
-    dev_pages = (
-        DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
-    )
+    dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     reference_index = ReferenceIndex.from_datasets(merged_datasets)
     move_dataset = merged_datasets.get("moves")
     for kind, dataset in merged_datasets.items():
@@ -1014,10 +984,7 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
         )
     if merged_comparisons:
         page_count = render_changes_pages(merged_comparisons, wiki_root)
-        print(
-            f"Rendered {page_count} change overview pages: "
-            f"{wiki_root / 'changes'}"
-        )
+        print(f"Rendered {page_count} change overview pages: {wiki_root / 'changes'}")
 
 
 def _version_family_inputs(
@@ -1082,6 +1049,7 @@ def _write_dataset_build(
     if comparison is not None:
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
         write_comparison_dataset(comparison, comparison_output)
+    write_public_dataset(wiki_output.parent, kind, dataset, comparison)
     renderer = {
         "pokemon": render_pokemon_pages,
         "abilities": render_ability_pages,
@@ -1145,7 +1113,9 @@ def _resolve_input_rom(args: argparse.Namespace) -> Path:
             raise LocalConfigError(f"ROM image does not exist: {resolved}")
         return resolved
     if not args.game:
-        raise LocalConfigError("Specify a ROM path or select a configured game with --game")
+        raise LocalConfigError(
+            "Specify a ROM path or select a configured game with --game"
+        )
     game = LocalGameRegistry.load(args.games_config).get(args.game)
     return game.rom(base=args.base)
 

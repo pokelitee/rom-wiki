@@ -31,8 +31,10 @@ def parse_egg_move_table(
             _append_record(records, species_id, move_ids, marker_offset)
             return tuple(records)
 
-        if EGG_MOVE_SPECIES_MARKER_BASE < value <= (
-            EGG_MOVE_SPECIES_MARKER_BASE + GEN4_MAX_SPECIES_ID
+        if (
+            EGG_MOVE_SPECIES_MARKER_BASE
+            < value
+            <= (EGG_MOVE_SPECIES_MARKER_BASE + GEN4_MAX_SPECIES_ID)
         ):
             next_species_id = value - EGG_MOVE_SPECIES_MARKER_BASE
             if species_id is not None:

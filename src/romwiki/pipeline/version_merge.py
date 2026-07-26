@@ -46,6 +46,11 @@ def merge_version_family_datasets(
         raise DataSourceError(
             "Version-family datasets must have the same supported kind"
         )
+    features = first_dataset.get("features", [])
+    if any(dataset.get("features", []) != features for dataset in datasets.values()):
+        raise DataSourceError(
+            "Version-family datasets must have matching feature capabilities"
+        )
 
     key_name = RECORD_KEY_FIELDS[kind]
     records = {
@@ -75,8 +80,7 @@ def merge_version_family_datasets(
         **first_dataset,
         "game": "-".join(versions),
         "source": {
-            version: dataset.get("source")
-            for version, dataset in datasets.items()
+            version: dataset.get("source") for version, dataset in datasets.items()
         },
         "record_count": len(merged_records),
         "records": merged_records,
@@ -120,12 +124,9 @@ def merge_version_family_comparisons(
         )
     coverage = first_comparison.get("coverage")
     if any(
-        comparison.get("coverage") != coverage
-        for comparison in comparisons.values()
+        comparison.get("coverage") != coverage for comparison in comparisons.values()
     ):
-        raise DataSourceError(
-            "Version-family comparisons must have matching coverage"
-        )
+        raise DataSourceError("Version-family comparisons must have matching coverage")
 
     records = {
         version: comparison_by_key(comparison)
@@ -133,10 +134,7 @@ def merge_version_family_comparisons(
     }
     keys = set().union(*(values.keys() for values in records.values()))
     merged_records = []
-    counts = {
-        status: 0
-        for status in ("unchanged", "changed", "added", "removed")
-    }
+    counts = dict.fromkeys(("unchanged", "changed", "added", "removed"), 0)
     for key in sorted(keys, key=_record_sort_key):
         entries = {
             version: records[version][key]
@@ -159,8 +157,7 @@ def merge_version_family_comparisons(
             )
             record["changes"] = _combined_changes(entries.values())
             record["detail_available"] = any(
-                entry.get("detail_available")
-                for entry in entries.values()
+                entry.get("detail_available") for entry in entries.values()
             )
         counts[record["status"]] += 1
         merged_records.append(record)
@@ -169,8 +166,7 @@ def merge_version_family_comparisons(
         **first_comparison,
         "game": "-".join(versions),
         "baseline": " / ".join(
-            str(comparison.get("baseline"))
-            for comparison in comparisons.values()
+            str(comparison.get("baseline")) for comparison in comparisons.values()
         ),
         "source": {
             version: comparison.get("source")
@@ -194,15 +190,10 @@ def _all_equal(values: Iterable[object]) -> bool:
     return all(entry == first for entry in entries)
 
 
-def _all_semantically_equal(
-    kind: str, values: Iterable[dict[str, Any]]
-) -> bool:
+def _all_semantically_equal(kind: str, values: Iterable[dict[str, Any]]) -> bool:
     entries = iter(values)
     first = next(entries)
-    return all(
-        records_semantically_equal(kind, first, entry)
-        for entry in entries
-    )
+    return all(records_semantically_equal(kind, first, entry) for entry in entries)
 
 
 def _record_sort_key(value: object) -> tuple[str, object]:

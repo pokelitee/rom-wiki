@@ -44,10 +44,13 @@ class LocationItemTests(unittest.TestCase):
 
         items = _extract_gen4_location_items(events, tuple(names))
 
-        self.assertEqual([(item.kind, item.item_id) for item in items], [
-            ("visible", 17),
-            ("hidden", 81),
-        ])
+        self.assertEqual(
+            [(item.kind, item.item_id) for item in items],
+            [
+                ("visible", 17),
+                ("hidden", 81),
+            ],
+        )
         self.assertEqual(items[0].hidden_flag, 400)
         self.assertIsNone(items[1].hidden_flag)
 

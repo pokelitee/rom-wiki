@@ -76,6 +76,15 @@ unimplemented category. See
 `sites/games/black-white/wiki/data-sources.md` for the full investigation
 behind each of these.
 
+Blaze Black and Volt White v3.1 reuse the Gen V engine as a paired hack family.
+Each hack is compared with its corresponding retail base, while shared and
+version-specific current records remain explicit in one combined site.
+
+Every full build publishes curated Markdown, compact browser catalogs, and
+deterministic `data/*.json.gz` archives containing the complete normalized
+datasets. See [Data contracts](docs/development/data-contracts.md) for the
+boundary between these outputs.
+
 The project is designed to support additional games without coupling the wiki
 renderer to a particular ROM format. The normalized data contracts and MkDocs
 renderers are reusable, and extraction dispatch resolves the platform and engine

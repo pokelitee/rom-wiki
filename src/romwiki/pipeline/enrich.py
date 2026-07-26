@@ -41,9 +41,7 @@ def enrich_personal_dataset(
     source_records = dataset.get("records")
     expected_count = engine.PERSONAL_RECORD_COUNT
     if not isinstance(source_records, list) or len(source_records) != expected_count:
-        raise DataSourceError(
-            f"Expected exactly {expected_count} personal records"
-        )
+        raise DataSourceError(f"Expected exactly {expected_count} personal records")
     type_names = _resolve_type_names(engine, dataset, type_names)
     move_names = _resolve_move_names(engine, dataset, move_names)
     ability_names = _resolve_ability_names(engine, dataset)
@@ -108,17 +106,17 @@ def enrich_personal_dataset(
             evolution_dataset["source"]
         )
     if machine_dataset is not None:
-        enriched.setdefault("supplemental_sources", {})["machines"] = (
-            machine_dataset["source"]
-        )
+        enriched.setdefault("supplemental_sources", {})["machines"] = machine_dataset[
+            "source"
+        ]
     if tutor_dataset is not None:
-        enriched.setdefault("supplemental_sources", {})["move_tutors"] = (
-            tutor_dataset["source"]
-        )
+        enriched.setdefault("supplemental_sources", {})["move_tutors"] = tutor_dataset[
+            "source"
+        ]
     if egg_move_dataset is not None:
-        enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
-            egg_move_dataset["source"]
-        )
+        enriched.setdefault("supplemental_sources", {})["egg_moves"] = egg_move_dataset[
+            "source"
+        ]
     if static_encounter_dataset is not None:
         enriched.setdefault("supplemental_sources", {})["static_encounters"] = (
             static_encounter_dataset["source"]
@@ -335,13 +333,13 @@ def enrich_move_dataset(
     if machine_dataset is not None:
         enriched["supplemental_sources"] = {"machines": machine_dataset["source"]}
     if tutor_dataset is not None:
-        enriched.setdefault("supplemental_sources", {})["move_tutors"] = (
-            tutor_dataset["source"]
-        )
+        enriched.setdefault("supplemental_sources", {})["move_tutors"] = tutor_dataset[
+            "source"
+        ]
     if egg_move_dataset is not None:
-        enriched.setdefault("supplemental_sources", {})["egg_moves"] = (
-            egg_move_dataset["source"]
-        )
+        enriched.setdefault("supplemental_sources", {})["egg_moves"] = egg_move_dataset[
+            "source"
+        ]
     if dataset.get("name_sources"):
         enriched["name_sources"] = dataset["name_sources"]
     return enriched
@@ -490,7 +488,9 @@ def _enrich_gen5_encounter_area(
             ],
         }
         for name, chances in zip(
-            engine.ENCOUNTER_METHOD_NAMES, engine.ENCOUNTER_METHOD_SLOT_CHANCES
+            engine.ENCOUNTER_METHOD_NAMES,
+            engine.ENCOUNTER_METHOD_SLOT_CHANCES,
+            strict=True,
         )
     }
     active = any(method["rate"] for method in methods.values())
@@ -624,6 +624,15 @@ def _enrich_trainer(
     return {
         **source,
         "party": party,
+        "victory_item": (
+            _with_item_sprite(
+                _item_reference(source["victory_item_id"], pokedb, item_names),
+                pokedb,
+                reference_version,
+            )
+            if source.get("victory_item_id")
+            else None
+        ),
         # The ROM's "reward_item_ids" slots are the trainer's own AI battle
         # items (e.g. a carried Full Restore the AI uses on itself mid-fight)
         # — not something given to the player. See pokeemerald/pokeplatinum
@@ -762,7 +771,7 @@ def _encounter_special_slots(
             "level": walking_slots[slot_index]["level"],
             "chance": chances[slot_index],
         }
-        for species_id, slot_index in zip(species_ids, slot_indices)
+        for species_id, slot_index in zip(species_ids, slot_indices, strict=True)
     ]
 
 
@@ -799,7 +808,9 @@ def _resolve_unown_forms(engine: Any, unown_table_id: int) -> list[str]:
     index = unown_table_id - 1
     if not (0 <= index < len(engine.UNOWN_FORM_TABLES)):
         return []
-    return [engine.UNOWN_FORM_NAMES[form_id] for form_id in engine.UNOWN_FORM_TABLES[index]]
+    return [
+        engine.UNOWN_FORM_NAMES[form_id] for form_id in engine.UNOWN_FORM_TABLES[index]
+    ]
 
 
 def _enrich_record(
@@ -902,9 +913,7 @@ def _enrich_record(
         "sprites": sprites,
         "reference": reference_data,
         "base_stats": source["base_stats"],
-        "types": [
-            _type_id(engine, value, type_names) for value in source["type_ids"]
-        ],
+        "types": [_type_id(engine, value, type_names) for value in source["type_ids"]],
         "catch_rate": source["catch_rate"],
         "base_experience": source["base_experience"],
         "ev_yields": source["ev_yields"],
@@ -975,12 +984,12 @@ def _validate_learnsets(
     if dataset is None:
         return [None] * expected_count
     if dataset.get("game") != game:
-        raise DataSourceError("Personal and learnset datasets must be for the same game")
+        raise DataSourceError(
+            "Personal and learnset datasets must be for the same game"
+        )
     records = dataset.get("records")
     if not isinstance(records, list) or len(records) != expected_count:
-        raise DataSourceError(
-            f"Expected exactly {expected_count} level-up learnsets"
-        )
+        raise DataSourceError(f"Expected exactly {expected_count} level-up learnsets")
     for expected_member, record in enumerate(records):
         if record.get("species_id") != expected_member:
             raise DataSourceError("Learnsets must be ordered by member ID")
@@ -994,12 +1003,12 @@ def _validate_evolutions(
     if dataset is None:
         return [None] * expected_count
     if dataset.get("game") != game:
-        raise DataSourceError("Personal and evolution datasets must be for the same game")
+        raise DataSourceError(
+            "Personal and evolution datasets must be for the same game"
+        )
     records = dataset.get("records")
     if not isinstance(records, list) or len(records) != expected_count:
-        raise DataSourceError(
-            f"Expected exactly {expected_count} evolution records"
-        )
+        raise DataSourceError(f"Expected exactly {expected_count} evolution records")
     for expected_member, record in enumerate(records):
         if record.get("species_id") != expected_member:
             raise DataSourceError("Evolution records must be ordered by member ID")
@@ -1064,9 +1073,13 @@ def _validate_sparse_egg_moves(
             or record.get("table_index") != expected_index
         ):
             raise DataSourceError("Egg move records must be ordered by species ID")
-        if not isinstance(move_ids, (list, tuple)) or not move_ids or any(
-            not isinstance(move_id, int) or not 1 <= move_id <= engine.MAX_MOVE_ID
-            for move_id in move_ids
+        if (
+            not isinstance(move_ids, (list, tuple))
+            or not move_ids
+            or any(
+                not isinstance(move_id, int) or not 1 <= move_id <= engine.MAX_MOVE_ID
+                for move_id in move_ids
+            )
         ):
             raise DataSourceError("Egg move record contains invalid move IDs")
         if len(move_ids) != len(set(move_ids)):
@@ -1116,9 +1129,7 @@ def _validate_machines(
     records = dataset.get("records")
     expected_count = engine.MACHINE_COUNT
     if not isinstance(records, list) or len(records) != expected_count:
-        raise DataSourceError(
-            f"Expected exactly {expected_count} machine records"
-        )
+        raise DataSourceError(f"Expected exactly {expected_count} machine records")
     result = {}
     for expected_id, record in enumerate(records, start=1):
         if record.get("machine_id") != expected_id:
@@ -1184,7 +1195,9 @@ def _validate_tutors(
                 )
             existing = ids_by_member.setdefault(member, [])
             if any(value in existing for value in tutor_ids):
-                raise DataSourceError("Tutor compatibility contains duplicate tutor IDs")
+                raise DataSourceError(
+                    "Tutor compatibility contains duplicate tutor IDs"
+                )
             existing.extend(tutor_ids)
     return tutors, ids_by_member, location_names
 
@@ -1216,9 +1229,7 @@ def _enrich_compatible_tutors(
     return result
 
 
-def _tutor_location(
-    tutor: dict[str, Any], location_names: list[str]
-) -> dict[str, Any]:
+def _tutor_location(tutor: dict[str, Any], location_names: list[str]) -> dict[str, Any]:
     if tutor.get("kind") == "special":
         return {"id": None, "name": tutor["location_name"]}
     location_id = tutor["location_id"]
@@ -1242,7 +1253,9 @@ def _personal_member_reference(
         national_dex_id = member
         name = _pokemon_display_name(member, slug, pokemon_names)
     else:
-        raise DataSourceError(f"Tutor compatibility references internal member {member}")
+        raise DataSourceError(
+            f"Tutor compatibility references internal member {member}"
+        )
     return {
         "member": member,
         "national_dex_id": national_dex_id,
@@ -1260,8 +1273,7 @@ def _enrich_compatible_machines(
 ) -> list[dict[str, Any]]:
     if not machines:
         return [
-            {"id": value, "name": engine.machine_name(value)}
-            for value in machine_ids
+            {"id": value, "name": engine.machine_name(value)} for value in machine_ids
         ]
     result = []
     for machine_id in machine_ids:
@@ -1451,9 +1463,7 @@ def _resolve_type_names(
     result = dict(fallback or {})
     names = _reference_name_table(dataset, "type_names", engine.TYPE_NAME_COUNT)
     if names is not None:
-        result.update(
-            (type_id, name_slug(name)) for type_id, name in enumerate(names)
-        )
+        result.update((type_id, name_slug(name)) for type_id, name in enumerate(names))
     return result
 
 
@@ -1468,15 +1478,11 @@ def _resolve_move_names(
 
 
 def _resolve_ability_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
-    return _reference_name_table(
-        dataset, "ability_names", engine.ABILITY_NAME_COUNT
-    )
+    return _reference_name_table(dataset, "ability_names", engine.ABILITY_NAME_COUNT)
 
 
 def _resolve_pokemon_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
-    names = _reference_name_table(
-        dataset, "pokemon_names", engine.POKEMON_NAME_COUNT
-    )
+    names = _reference_name_table(dataset, "pokemon_names", engine.POKEMON_NAME_COUNT)
     if names is None:
         return None
     return [normalize_display_name(name) for name in names]
@@ -1552,5 +1558,3 @@ def _move_name(
     if move_names is not None and move_id in move_names:
         return move_names[move_id]
     return pokedb.move_name(move_id)
-
-

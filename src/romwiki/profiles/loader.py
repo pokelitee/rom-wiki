@@ -22,10 +22,7 @@ class ProfileRepository:
         if not paths:
             raise ProfileError(f"No TOML profiles found in: {directory}")
 
-        raw_profiles = {
-            path: _read_profile_data(path)
-            for path in paths
-        }
+        raw_profiles = {path: _read_profile_data(path) for path in paths}
         profiles_by_id: dict[str, tuple[Path, dict[str, Any]]] = {}
         for path, data in raw_profiles.items():
             try:
@@ -109,9 +106,7 @@ def _read_profile_data(path: Path) -> dict[str, Any]:
     return data
 
 
-def _merge_tables(
-    parent: dict[str, Any], child: dict[str, Any]
-) -> dict[str, Any]:
+def _merge_tables(parent: dict[str, Any], child: dict[str, Any]) -> dict[str, Any]:
     merged = dict(parent)
     for key, value in child.items():
         inherited = merged.get(key)
@@ -195,8 +190,6 @@ def _load_semantic_names(
             or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) is None
             or semantic_id in result
         ):
-            raise ProfileError(
-                f"Invalid {label} semantic in {path}: {raw_id} = {name}"
-            )
+            raise ProfileError(f"Invalid {label} semantic in {path}: {raw_id} = {name}")
         result[semantic_id] = name
     return result

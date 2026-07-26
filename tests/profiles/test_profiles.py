@@ -65,7 +65,8 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.parameters["static_pokemon_egg_indices"], [5])
         self.assertEqual(len(black.parameters["static_pokemon"]), 31)
         self.assertEqual(
-            black.parameters["static_pokemon"][0], {"species": [304, 0x121], "level": [304, 0x29D]}
+            black.parameters["static_pokemon"][0],
+            {"species": [304, 0x121], "level": [304, 0x29D]},
         )
         self.assertEqual(black.sprite_version, "black-white")
 
@@ -83,7 +84,9 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(
             white.parameters["npc_trades_unused"], [0, 2, 7, 8, 9, 10, 11, 12]
         )
-        self.assertEqual(white.parameters["static_pokemon"], black.parameters["static_pokemon"])
+        self.assertEqual(
+            white.parameters["static_pokemon"], black.parameters["static_pokemon"]
+        )
 
     def test_loads_blaze_black_and_volt_white_profiles(self) -> None:
         profiles = {
@@ -197,8 +200,7 @@ variant = "child"
             )
 
             profiles = {
-                profile.id: profile
-                for profile in ProfileRepository.load(root).profiles
+                profile.id: profile for profile in ProfileRepository.load(root).profiles
             }
 
         child = profiles["child"]

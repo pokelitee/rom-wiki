@@ -13,6 +13,7 @@ nav:
   - Home: index.md
   - Changes: changes/index.md
   - Data Sources: data-sources.md
+  - Data Downloads: data/index.md
   - Game Data:
       - Pokémon: pokemon/index.md
       - Abilities: abilities/index.md

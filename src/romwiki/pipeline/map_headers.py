@@ -12,9 +12,7 @@ from romwiki.util.errors import DataSourceError, InvalidRomError
 def read_code_binary(platform: Any, image: Any) -> bytes:
     """Read the platform's main code binary (the ARM9 blob on Nintendo DS)."""
     if platform.read_code_binary is None:
-        raise DataSourceError(
-            "The selected platform does not expose a code binary"
-        )
+        raise DataSourceError("The selected platform does not expose a code binary")
     return platform.read_code_binary(image)
 
 

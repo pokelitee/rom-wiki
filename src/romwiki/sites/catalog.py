@@ -168,9 +168,7 @@ def _validate_catalog(sites: tuple[SiteDefinition, ...]) -> None:
         raise SiteError("Every game site must include game metadata")
 
 
-def _validate_profile_references(
-    root: Path, sites: tuple[SiteDefinition, ...]
-) -> None:
+def _validate_profile_references(root: Path, sites: tuple[SiteDefinition, ...]) -> None:
     profiles_root = root / "profiles"
     if not profiles_root.is_dir():
         return
@@ -193,10 +191,6 @@ def _validate_profile_references(
             )
         selected = [profiles[profile_id] for profile_id in site.game.profiles]
         if any(profile.platform != site.game.platform for profile in selected):
-            raise SiteError(
-                f"Game site {site.id} platform does not match its profiles"
-            )
+            raise SiteError(f"Game site {site.id} platform does not match its profiles")
         if len({profile.engine for profile in selected}) != 1:
-            raise SiteError(
-                f"Game site {site.id} profiles must use the same engine"
-            )
+            raise SiteError(f"Game site {site.id} profiles must use the same engine")

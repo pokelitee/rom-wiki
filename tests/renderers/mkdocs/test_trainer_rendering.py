@@ -15,17 +15,19 @@ from romwiki.renderers.mkdocs.trainers import (
 
 class TrainerRenderingTests(unittest.TestCase):
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
-        lines = _trainer_provenance({
-            "class_id": 1,
-            "class_gender": "female",
-            "ai_flags": 0,
-            "battle_type": 0,
-            "unknown_byte": 0x30,
-            "provenance": {"archive": "trdata.narc", "member": 5},
-            "party_provenance": {"archive": "trpoke.narc", "member": 5},
-            "locations": [{"name": "Route 202"}],
-            "script_references": [{"name": "Route 203"}],
-        })
+        lines = _trainer_provenance(
+            {
+                "class_id": 1,
+                "class_gender": "female",
+                "ai_flags": 0,
+                "battle_type": 0,
+                "unknown_byte": 0x30,
+                "provenance": {"archive": "trdata.narc", "member": 5},
+                "party_provenance": {"archive": "trpoke.narc", "member": 5},
+                "locations": [{"name": "Route 202"}],
+                "script_references": [{"name": "Route 203"}],
+            }
+        )
         provenance = "\n".join(lines)
 
         self.assertIn("Source: exact ROM trainer record from", provenance)
@@ -137,6 +139,29 @@ class TrainerRenderingTests(unittest.TestCase):
             page,
         )
 
+    def test_summarizes_gen5_post_battle_rewards(self) -> None:
+        record = {
+            "trainer_id": 5,
+            "class_name": "leader",
+            "locations": [],
+            "script_references": [],
+            "double_battle": False,
+            "party": [_party_member([])],
+            "ai_battle_items": [],
+            "healer": True,
+            "victory_item": {
+                "id": 23,
+                "name": "Full Restore",
+                "slug": "full-restore",
+            },
+        }
+
+        page = "\n".join(_trainer_summary(record, [], "trainers/trainer-0005/"))
+
+        self.assertIn("Heals the player's party", page)
+        self.assertIn("<dt>Victory item</dt>", page)
+        self.assertIn("../../items/full-restore/", page)
+
     def test_numbers_explicit_moves_in_rom_order(self) -> None:
         party = [_party_member(["tackle", "growl"])]
 
@@ -153,9 +178,7 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("♂", _party_gender({"name": "Male"}))
         self.assertIn('aria-label="Female"', _party_gender({"name": "Female"}))
         self.assertIn("♀", _party_gender({"name": "Female"}))
-        self.assertIn(
-            'aria-label="Genderless"', _party_gender({"name": "Genderless"})
-        )
+        self.assertIn('aria-label="Genderless"', _party_gender({"name": "Genderless"}))
         self.assertIn("⚲", _party_gender({"name": "Genderless"}))
         unknown = _party_gender({"name": 'Future & "variant"'})
         self.assertIn('aria-label="Future &amp; &quot;variant&quot;"', unknown)
@@ -171,30 +194,30 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("Bulbasaur", page)
         self.assertNotIn("<dt>Nature</dt>", page)
         self.assertNotIn("<dt>Ability</dt>", page)
-        self.assertNotIn("<h4 class=\"rw-party-card__section-title\">Stats</h4>", page)
+        self.assertNotIn('<h4 class="rw-party-card__section-title">Stats</h4>', page)
 
     def test_formats_default_moves_without_a_numbered_slot(self) -> None:
-        page = "\n".join(
-            _party_cards([_party_member([])], "trainers/trainer-0001/")
-        )
+        page = "\n".join(_party_cards([_party_member([])], "trainers/trainer-0001/"))
 
         self.assertNotIn('<ol class="rw-party-card__moves"', page)
         self.assertIn("Uses default level-up moves.", page)
 
     def test_renders_available_party_attributes_compactly(self) -> None:
         member = _party_member([])
-        member.update({
-            "ability": {
-                "id": 65,
-                "name": "Overgrow",
-                "slug": "overgrow",
-                "slot": 1,
-                "source": "derived",
-            },
-            "ivs": {"source": "derived", "values": _stats(12)},
-            "evs": {"source": "engine-default", "values": _stats(0)},
-            "calculated_stats": {"source": "derived", "values": _stats(42)},
-        })
+        member.update(
+            {
+                "ability": {
+                    "id": 65,
+                    "name": "Overgrow",
+                    "slug": "overgrow",
+                    "slot": 1,
+                    "source": "derived",
+                },
+                "ivs": {"source": "derived", "values": _stats(12)},
+                "evs": {"source": "engine-default", "values": _stats(0)},
+                "calculated_stats": {"source": "derived", "values": _stats(42)},
+            }
+        )
 
         page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
 

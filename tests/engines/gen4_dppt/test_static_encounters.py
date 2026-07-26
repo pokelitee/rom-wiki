@@ -31,9 +31,7 @@ class Gen4StaticEncounterTests(unittest.TestCase):
         )
 
     def test_extracts_legendary_battle_with_intervening_flag_clear(self) -> None:
-        body = struct.pack(
-            "<6H", 0x02BD, 480, 60, 0x001F, 0x008E, 0x00EC
-        )
+        body = struct.pack("<6H", 0x02BD, 480, 60, 0x001F, 0x008E, 0x00EC)
 
         encounters = parse_static_encounter_commands(
             make_script(body), species_count=494
@@ -62,12 +60,8 @@ class Gen4StaticEncounterTests(unittest.TestCase):
     def test_extracts_specialized_static_battles(self) -> None:
         body = b"".join(
             (
-                struct.pack(
-                    "<6H", 0x0318, 492, 30, 0x001F, 0x008E, 0x00EC
-                ),
-                struct.pack(
-                    "<6H", 0x0319, 487, 70, 0x001F, 0x008E, 0x00EC
-                ),
+                struct.pack("<6H", 0x0318, 492, 30, 0x001F, 0x008E, 0x00EC),
+                struct.pack("<6H", 0x0319, 487, 70, 0x001F, 0x008E, 0x00EC),
             )
         )
 

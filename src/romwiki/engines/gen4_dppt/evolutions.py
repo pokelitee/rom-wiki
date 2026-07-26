@@ -21,7 +21,9 @@ def parse_evolution_record(
             f"Gen IV evolution record {species_id} has size {len(data)}, "
             f"expected {EVOLUTION_RECORD_SIZE}"
         )
-    padding = struct.unpack_from("<H", data, EVOLUTION_SLOT_COUNT * EVOLUTION_SLOT_SIZE)[0]
+    padding = struct.unpack_from(
+        "<H", data, EVOLUTION_SLOT_COUNT * EVOLUTION_SLOT_SIZE
+    )[0]
     if padding:
         raise InvalidRomError(
             f"Gen IV evolution record {species_id} has nonzero padding: {padding}"

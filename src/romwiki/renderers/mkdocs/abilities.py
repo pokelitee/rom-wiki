@@ -109,17 +109,20 @@ def render_ability_pages(
             for pokemon in record["pokemon"]
         ]
         catalog_records.append(
-            add_change_status({
-                "id": record["ability_id"],
-                "label": record["name"],
-                "slug": record["slug"],
-                "url": f"{record['slug']}/",
-                "pokemon": pokemon_names,
-                "pokemon_refs": pokemon_refs,
-                "pokemon_count": len(pokemon_names),
-                "status": "assigned" if pokemon_names else "unassigned",
-                "search_text": " ".join((record["name"], *pokemon_names)).lower(),
-            }, change)
+            add_change_status(
+                {
+                    "id": record["ability_id"],
+                    "label": record["name"],
+                    "slug": record["slug"],
+                    "url": f"{record['slug']}/",
+                    "pokemon": pokemon_names,
+                    "pokemon_refs": pokemon_refs,
+                    "pokemon_count": len(pokemon_names),
+                    "status": "assigned" if pokemon_names else "unassigned",
+                    "search_text": " ".join((record["name"], *pokemon_names)).lower(),
+                },
+                change,
+            )
         )
 
     write_catalog(output_root, "abilities", catalog_records)
@@ -161,7 +164,10 @@ def _render_record(
     if record["pokemon"]:
         lines.extend(
             pokemon_table(
-                ["| Pokémon | Type | Ability slot |", "| ------- | ---- | ------------ |"],
+                [
+                    "| Pokémon | Type | Ability slot |",
+                    "| ------- | ---- | ------------ |",
+                ],
                 [
                     (
                         f"| {sprite_with_link(table_sprite_cell(pokemon.get('sprite')), _pokemon_link(pokemon, source_file))} | "

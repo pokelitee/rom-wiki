@@ -58,7 +58,9 @@ def parse_trainer_battle_commands(
             trainer_ids = (
                 (first_trainer, second_trainer) if second_trainer else (first_trainer,)
             )
-            commands.append(Gen5TrainerBattleCommand(offset=offset, trainer_ids=trainer_ids))
+            commands.append(
+                Gen5TrainerBattleCommand(offset=offset, trainer_ids=trainer_ids)
+            )
         elif data[offset : offset + 2] == multi_signature:
             if offset + 12 > len(data) or data[offset + 10 : offset + 12] != win_check:
                 continue
@@ -143,5 +145,3 @@ def parse_fossil_revival_table(data: bytes) -> tuple[Gen5FossilRevival, ...]:
         species_id = struct.unpack_from("<H", data, offset + 23)[0]
         revivals.append(Gen5FossilRevival(item_id=item_id, species_id=species_id))
     return tuple(revivals)
-
-

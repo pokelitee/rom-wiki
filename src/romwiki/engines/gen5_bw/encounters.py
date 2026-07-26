@@ -91,7 +91,9 @@ def _parse_block(
 ) -> Gen5EncounterArea:
     methods = {}
     cursor = offset + 8
-    for index, (name, count) in enumerate(zip(METHOD_NAMES, METHOD_SLOT_COUNTS)):
+    for index, (name, count) in enumerate(
+        zip(METHOD_NAMES, METHOD_SLOT_COUNTS, strict=True)
+    ):
         rate = data[offset + index]
         slots = []
         for slot_index in range(count):

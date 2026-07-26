@@ -46,9 +46,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         )
 
         self.assertEqual(args.games, ["red", "blue", "yellow"])
-        self.assertEqual(
-            args.versions, ["red-hack", "blue-hack", "yellow-hack"]
-        )
+        self.assertEqual(args.versions, ["red-hack", "blue-hack", "yellow-hack"])
 
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")
@@ -85,12 +83,8 @@ class VersionFamilyInputTests(unittest.TestCase):
             "white": LocalGamePaths("white", Path("white.nds"), None),
         }
         with_baselines = {
-            "black": LocalGamePaths(
-                "black", Path("black.nds"), Path("base-black.nds")
-            ),
-            "white": LocalGamePaths(
-                "white", Path("white.nds"), Path("base-white.nds")
-            ),
+            "black": LocalGamePaths("black", Path("black.nds"), Path("base-black.nds")),
+            "white": LocalGamePaths("white", Path("white.nds"), Path("base-white.nds")),
         }
 
         self.assertFalse(_version_family_uses_baselines(without_baselines))
@@ -98,9 +92,7 @@ class VersionFamilyInputTests(unittest.TestCase):
 
     def test_rejects_mixed_baseline_configuration(self) -> None:
         paths = {
-            "black": LocalGamePaths(
-                "black", Path("black.nds"), Path("base-black.nds")
-            ),
+            "black": LocalGamePaths("black", Path("black.nds"), Path("base-black.nds")),
             "white": LocalGamePaths("white", Path("white.nds"), None),
         }
 
@@ -116,7 +108,14 @@ class DatasetOutputPathTests(unittest.TestCase):
         )
 
     def test_every_other_kind_uses_the_enriched_filename(self) -> None:
-        for kind in ("pokemon", "abilities", "moves", "items", "encounters", "trainers"):
+        for kind in (
+            "pokemon",
+            "abilities",
+            "moves",
+            "items",
+            "encounters",
+            "trainers",
+        ):
             self.assertEqual(
                 _dataset_output(Path("build/data/game"), kind),
                 Path(f"build/data/game/{kind}/enriched.json"),
@@ -284,9 +283,7 @@ base_rom = "base.nds"
     def test_comparative_build_without_game_or_base_rom_is_rejected(self) -> None:
         args = build_parser().parse_args(["build-game"])
 
-        with self.assertRaisesRegex(
-            LocalConfigError, "require --game or --base-rom"
-        ):
+        with self.assertRaisesRegex(LocalConfigError, "require --game or --base-rom"):
             _resolve_build_baseline(args)
 
     def test_missing_game_and_rom_is_rejected(self) -> None:

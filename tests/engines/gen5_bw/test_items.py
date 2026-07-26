@@ -38,7 +38,10 @@ class Gen5ItemTests(unittest.TestCase):
         struct.pack_into("<H", data, 0, 30)
 
         item = parse_item_record(
-            bytes(data), item_id=17, data_archive_member=17, archive_path="itemdata.narc"
+            bytes(data),
+            item_id=17,
+            data_archive_member=17,
+            archive_path="itemdata.narc",
         )
 
         self.assertEqual(item.price, 300)

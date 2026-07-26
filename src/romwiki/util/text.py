@@ -31,9 +31,7 @@ def normalize_display_name(value: str) -> str:
     start_of_word = True
     for character in value:
         if character.isalpha():
-            characters.append(
-                character.upper() if start_of_word else character.lower()
-            )
+            characters.append(character.upper() if start_of_word else character.lower())
             start_of_word = False
         else:
             characters.append(character)

@@ -82,7 +82,9 @@ def render_pokemon_pages(
         )
         filename = f"{record['slug']}.md"
         previous = public_records[index - 1] if index else None
-        following = public_records[index + 1] if index + 1 < len(public_records) else None
+        following = (
+            public_records[index + 1] if index + 1 < len(public_records) else None
+        )
         if only_pages is None or record["slug"] in only_pages:
             write_text(
                 output_root / filename,
@@ -116,9 +118,7 @@ def render_pokemon_pages(
         stats = record["base_stats"]
         unique_abilities = list(
             {
-                value["name"]: value
-                for value in record["abilities"]
-                if value["name"]
+                value["name"]: value for value in record["abilities"] if value["name"]
             }.values()
         )
         abilities = [value["name"] for value in unique_abilities]
@@ -142,22 +142,25 @@ def render_pokemon_pages(
             dict.fromkeys(value["name"] for value in record["egg_groups"])
         )
         catalog_records.append(
-            add_change_status({
-                "id": record.get("member", dex),
-                "dex": dex,
-                "label": record["name"],
-                "slug": record["slug"],
-                "url": f"{record['slug']}/",
-                "types": types,
-                "abilities": abilities,
-                "ability_refs": ability_refs,
-                "egg_groups": egg_groups,
-                "stats": stats,
-                "bst": sum(stats.values()),
-                "search_text": " ".join(
-                    (record["name"], *types, *abilities, *egg_groups)
-                ).lower(),
-            }, change)
+            add_change_status(
+                {
+                    "id": record.get("member", dex),
+                    "dex": dex,
+                    "label": record["name"],
+                    "slug": record["slug"],
+                    "url": f"{record['slug']}/",
+                    "types": types,
+                    "abilities": abilities,
+                    "ability_refs": ability_refs,
+                    "egg_groups": egg_groups,
+                    "stats": stats,
+                    "bst": sum(stats.values()),
+                    "search_text": " ".join(
+                        (record["name"], *types, *abilities, *egg_groups)
+                    ).lower(),
+                },
+                change,
+            )
         )
     write_catalog(output_root, "pokemon", catalog_records)
     write_text(
@@ -264,9 +267,7 @@ def _render_record(
     preevolutions = preevolutions or []
     lines.extend(["## Evolutions", ""])
     if preevolutions or evolutions:
-        lines.extend(
-            _evolution_list(all_records or [record], record, source_file)
-        )
+        lines.extend(_evolution_list(all_records or [record], record, source_file))
     else:
         lines.extend(empty_state("This Pokémon does not evolve."))
     lines.extend(["## Learnset", "", "### Level-up moves", ""])
@@ -333,9 +334,7 @@ def _render_record(
     return "\n".join(lines)
 
 
-def _item_sprite_cell(
-    item: dict[str, Any], references: ReferenceIndex | None
-) -> str:
+def _item_sprite_cell(item: dict[str, Any], references: ReferenceIndex | None) -> str:
     return reference_sprite_cell("item", item["id"], references)
 
 
@@ -390,7 +389,9 @@ def _sprite_gallery(record: dict[str, Any]) -> list[str]:
     ]
     if not rows:
         return ["## Sprites", "", *empty_state("No sprites are available.")]
-    has_animated = any(animated or animated_shiny for _, _, _, animated, animated_shiny in rows)
+    has_animated = any(
+        animated or animated_shiny for _, _, _, animated, animated_shiny in rows
+    )
     lines = [
         "## Sprites",
         "",
@@ -403,7 +404,13 @@ def _sprite_gallery(record: dict[str, Any]) -> list[str]:
         + ("<span>Animated</span><span>Animated, shiny</span>" if has_animated else ""),
         "</div>",
     ]
-    for label, default_sprite, shiny_sprite, animated_sprite, animated_shiny_sprite in rows:
+    for (
+        label,
+        default_sprite,
+        shiny_sprite,
+        animated_sprite,
+        animated_shiny_sprite,
+    ) in rows:
         cells = [
             _sprite_cell(default_sprite, record["name"]),
             _sprite_cell(shiny_sprite, record["name"]),
@@ -503,16 +510,12 @@ def _other_forms_section(
         forms[0],
     )
     lines = ['<div class="rw-record-tree" aria-label="Other forms">']
-    lines.extend(
-        _evolution_row(base, by_slug, record["slug"], source_url, set(), 0)
-    )
+    lines.extend(_evolution_row(base, by_slug, record["slug"], source_url, set(), 0))
     for form in forms:
         if form["slug"] == base["slug"]:
             continue
         lines.extend(
-            _evolution_row(
-                form, by_slug, record["slug"], source_url, {base["slug"]}, 1
-            )
+            _evolution_row(form, by_slug, record["slug"], source_url, {base["slug"]}, 1)
         )
     lines.extend(["</div>", ""])
     return ["## Other forms", "", *lines]
@@ -575,11 +578,7 @@ def _evolution_list(
                 ancestors.add(parent)
                 pending.append(parent)
     roots = sorted(
-        (
-            slug
-            for slug in {*ancestors, current["slug"]}
-            if not parents.get(slug)
-        ),
+        (slug for slug in {*ancestors, current["slug"]} if not parents.get(slug)),
         key=lambda slug: by_slug[slug].get("member", 0),
     )
     if not roots:
@@ -616,10 +615,7 @@ def _evolution_row(
     sprite = record.get("sprite") or {}
     media = '<span class="rw-record-tree__placeholder" aria-hidden="true">?</span>'
     if sprite.get("url"):
-        media = (
-            f'<img src="{escape(sprite["url"], quote=True)}" alt="" '
-            'loading="lazy">'
-        )
+        media = f'<img src="{escape(sprite["url"], quote=True)}" alt="" loading="lazy">'
     dex = record.get("national_dex_id")
     dex_label = f"#{dex:03}" if isinstance(dex, int) else ""
     name_escaped = escape(record["name"])
@@ -736,8 +732,7 @@ def _append_machines(
     lines.extend(
         [
             ", ".join(
-                machine_link(machine, source_file, references)
-                for machine in machines
+                machine_link(machine, source_file, references) for machine in machines
             ),
             "",
         ]
@@ -861,9 +856,7 @@ def _ev_yield(yields: dict[str, int]) -> str:
         ("Speed", "speed"),
     )
     values = [
-        f"{yields.get(key, 0)} {label}"
-        for label, key in fields
-        if yields.get(key)
+        f"{yields.get(key, 0)} {label}" for label, key in fields if yields.get(key)
     ]
     return ", ".join(values) or "None"
 
@@ -895,9 +888,7 @@ def _append_record_navigation(
             previous,
             following,
             aria_label="Pokémon navigation",
-            identity=lambda value: value.get(
-                "member", value.get("national_dex_id")
-            ),
+            identity=lambda value: value.get("member", value.get("national_dex_id")),
             route_key=lambda value: value["slug"],
             label=lambda value: value["name"],
             sprite_url=lambda value: (value.get("sprite") or {}).get("url"),
@@ -913,7 +904,11 @@ def _tutor_location_link(location: dict[str, Any], source_file: str) -> str:
     if location.get("id") is None:
         return escape(location["name"])
     return entity_markdown_link(
-        "location", location["id"], location["name"], source_file, route_key=location["id"]
+        "location",
+        location["id"],
+        location["name"],
+        source_file,
+        route_key=location["id"],
     )
 
 

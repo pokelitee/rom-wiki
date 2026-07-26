@@ -13,6 +13,7 @@ START_NPC_TRADE = 0x0229
 FINISH_NPC_TRADE = 0x022A
 _NPC_TRADE_SEQUENCE_LIMIT = 64
 
+
 @dataclass(frozen=True, slots=True)
 class Gen4NpcTrade:
     offered_species_id: int
@@ -40,8 +41,7 @@ def parse_npc_trade_record(
 ) -> Gen4NpcTrade:
     if len(data) != NPC_TRADE_RECORD_SIZE:
         raise InvalidRomError(
-            f"Expected {NPC_TRADE_RECORD_SIZE} bytes for an NPC trade, "
-            f"got {len(data)}"
+            f"Expected {NPC_TRADE_RECORD_SIZE} bytes for an NPC trade, got {len(data)}"
         )
 
     offered_species_id = struct.unpack_from("<I", data, 0)[0]

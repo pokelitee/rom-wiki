@@ -102,9 +102,7 @@ def render_item_pages(
                 "items/index.md",
             )
         )
-        source_records = [
-            value for _, value in version_variant_records(record)
-        ]
+        source_records = [value for _, value in version_variant_records(record)]
         features = list(
             dict.fromkeys(
                 feature
@@ -142,31 +140,34 @@ def render_item_pages(
             ]
         )
         catalog_records.append(
-            add_change_status({
-                "id": record["item_id"],
-                "label": record["name"],
-                "slug": record["slug"],
-                "url": f"{record['slug']}/",
-                "pocket": record.get("pocket", {}).get("name"),
-                "field_use": record.get("field_use", {}).get("name"),
-                "category": category,
-                "price": record["price"],
-                "fling_power": record["fling_power"],
-                "features": features,
-                "locations": locations,
-                "location_refs": [
-                    ROUTES.catalog_reference(reference, "items/")
-                    for reference in location_refs
-                ],
-                "search_text": " ".join(
-                    (
-                        record["name"],
-                        *((category,) if category else ()),
-                        *features,
-                        *locations,
-                    )
-                ).lower(),
-            }, change)
+            add_change_status(
+                {
+                    "id": record["item_id"],
+                    "label": record["name"],
+                    "slug": record["slug"],
+                    "url": f"{record['slug']}/",
+                    "pocket": record.get("pocket", {}).get("name"),
+                    "field_use": record.get("field_use", {}).get("name"),
+                    "category": category,
+                    "price": record["price"],
+                    "fling_power": record["fling_power"],
+                    "features": features,
+                    "locations": locations,
+                    "location_refs": [
+                        ROUTES.catalog_reference(reference, "items/")
+                        for reference in location_refs
+                    ],
+                    "search_text": " ".join(
+                        (
+                            record["name"],
+                            *((category,) if category else ()),
+                            *features,
+                            *locations,
+                        )
+                    ).lower(),
+                },
+                change,
+            )
         )
     write_catalog(output_root, "items", catalog_records)
     write_text(
@@ -213,9 +214,7 @@ def _render_record(
             ("Battle use function ID", str(record["battle_use_function_id"]))
         )
     if "battle_pocket_mask" in record:
-        mechanics.append(
-            ("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}")
-        )
+        mechanics.append(("Battle pocket mask", f"{record['battle_pocket_mask']:#04x}"))
     if "party_use" in record:
         mechanics.append(("Usable on party", yes_no(record["party_use"])))
     if record.get("pluck_effect_id"):
@@ -232,9 +231,7 @@ def _render_record(
         )
     party_effects = _party_effects(record)
     if party_effects:
-        mechanics.append(
-            ("Party-use effects", escape(", ".join(party_effects)))
-        )
+        mechanics.append(("Party-use effects", escape(", ".join(party_effects))))
     lines = [
         f"# {record['name']}",
         "",
@@ -336,8 +333,7 @@ def _item_summary(record: dict[str, Any]) -> list[str]:
             )
         )
     fact_lines = [
-        f"<div><dt>{escape(label)}</dt><dd>{value}</dd></div>"
-        for label, value in facts
+        f"<div><dt>{escape(label)}</dt><dd>{value}</dd></div>" for label, value in facts
     ]
     return summary_hero(media, fact_lines)
 
@@ -364,9 +360,7 @@ def _append_locations(
     )
 
 
-def _append_shops(
-    lines: list[str], record: dict[str, Any], source_file: str
-) -> None:
+def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) -> None:
     shops = record["shops"]
     if not shops:
         return
@@ -445,13 +439,14 @@ def _pokemon_sprite_cell(
 def _append_trainers(
     lines: list[str], record: dict[str, Any], source_file: str
 ) -> None:
-    values = [
-        (value, f"Held by {value['pokemon']['name']}")
-        for value in record["trainer_held_by"]
-    ] + [
-        (value, "AI battle item")
-        for value in record["trainer_battle_items"]
-    ]
+    values = (
+        [
+            (value, f"Held by {value['pokemon']['name']}")
+            for value in record["trainer_held_by"]
+        ]
+        + [(value, "AI battle item") for value in record["trainer_battle_items"]]
+        + [(value, "Victory reward") for value in record.get("trainer_rewards", [])]
+    )
     if not values:
         return
     lines.extend(["## Trainer references", ""])
@@ -460,9 +455,7 @@ def _append_trainers(
             "| Trainer | Reference |",
             "| ------- | --------- |",
             *[
-                (
-                    f"| {_trainer_link(value, source_file)} | {kind} |"
-                )
+                (f"| {_trainer_link(value, source_file)} | {kind} |")
                 for value, kind in values
             ],
             "",
@@ -505,9 +498,9 @@ def _append_gifts_and_trades(
 def _gift_trade_values(
     record: dict[str, Any],
 ) -> list[tuple[dict[str, Any], str, dict[str, Any]]]:
-    return [
-        (value, "Gift", value["pokemon"]) for value in record["gifts"]
-    ] + [(value, "Trade", value["pokemon"]) for value in record["trades"]]
+    return [(value, "Gift", value["pokemon"]) for value in record["gifts"]] + [
+        (value, "Trade", value["pokemon"]) for value in record["trades"]
+    ]
 
 
 def _append_gift_trade_table(
@@ -569,9 +562,7 @@ def _append_evolutions(
     )
 
 
-def _append_berry_mechanics(
-    lines: list[str], berry: dict[str, Any] | None
-) -> None:
+def _append_berry_mechanics(lines: list[str], berry: dict[str, Any] | None) -> None:
     if not berry:
         return
     lines.extend(
@@ -760,11 +751,12 @@ def _features(record: dict[str, Any]) -> list[str]:
         ("wild_held_by", "wild-held"),
         ("trainer_held_by", "trainer-held"),
         ("trainer_battle_items", "trainer-ai-item"),
+        ("trainer_rewards", "trainer-reward"),
         ("gifts", "gift"),
         ("trades", "trade"),
         ("evolutions", "evolution"),
     ):
-        if record[field]:
+        if record.get(field):
             values.append(label)
     return values
 
@@ -785,8 +777,6 @@ def _append_record_navigation(
             identity=lambda value: value["item_id"],
             route_key=lambda value: value["slug"],
             label=lambda value: value["name"],
-            sprite_url=lambda value: (value.get("reference") or {}).get(
-                "sprite_url"
-            ),
+            sprite_url=lambda value: (value.get("reference") or {}).get("sprite_url"),
         )
     )

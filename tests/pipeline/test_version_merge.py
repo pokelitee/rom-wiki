@@ -73,6 +73,19 @@ class VersionMergeTests(unittest.TestCase):
         with self.assertRaises(DataSourceError):
             merge_version_datasets(black, "black", white, "white")
 
+    def test_rejects_mismatched_feature_contracts(self) -> None:
+        black = {
+            **_dataset("pokemon", "black-us", [_pokemon(1, "Bulbasaur")]),
+            "features": ["victory-items"],
+        }
+        white = {
+            **_dataset("pokemon", "white-us", [_pokemon(1, "Bulbasaur")]),
+            "features": [],
+        }
+
+        with self.assertRaisesRegex(DataSourceError, "feature capabilities"):
+            merge_version_datasets(black, "black", white, "white")
+
     def test_merges_shared_and_version_specific_comparisons(self) -> None:
         black = _comparison(
             "items",
@@ -93,9 +106,7 @@ class VersionMergeTests(unittest.TestCase):
             ],
         )
 
-        merged = merge_version_comparisons(
-            black, "blaze-black", white, "volt-white"
-        )
+        merged = merge_version_comparisons(black, "blaze-black", white, "volt-white")
         records = {record["key"]: record for record in merged["records"]}
 
         self.assertEqual(
@@ -130,20 +141,14 @@ class VersionMergeTests(unittest.TestCase):
                     "red",
                     [_comparison_record(1, "added", ["price"])],
                 ),
-                "blue-hack": _comparison(
-                    "items", "blue-hack", "blue", []
-                ),
-                "yellow-hack": _comparison(
-                    "items", "yellow-hack", "yellow", []
-                ),
+                "blue-hack": _comparison("items", "blue-hack", "blue", []),
+                "yellow-hack": _comparison("items", "yellow-hack", "yellow", []),
             }
         )
 
         record = merged["records"][0]
         self.assertEqual(record["versions"], ["red-hack"])
-        self.assertEqual(
-            record["version_comparisons"]["red-hack"]["baseline"], "red"
-        )
+        self.assertEqual(record["version_comparisons"]["red-hack"]["baseline"], "red")
 
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:
@@ -205,9 +210,7 @@ def _comparison(
     }
 
 
-def _comparison_record(
-    key: int, status: str, changed_fields: list[str]
-) -> dict:
+def _comparison_record(key: int, status: str, changed_fields: list[str]) -> dict:
     return {
         "kind": "items",
         "key": key,

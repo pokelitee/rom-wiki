@@ -70,7 +70,9 @@ class NintendoDSFileSystem:
         try:
             return self._files_by_path[normalized]
         except KeyError as error:
-            raise InvalidRomError(f"ROM filesystem path does not exist: {normalized}") from error
+            raise InvalidRomError(
+                f"ROM filesystem path does not exist: {normalized}"
+            ) from error
 
     def read(self, file: NintendoDSFile | str | PurePosixPath) -> bytes:
         entry = self.get(file) if isinstance(file, (str, PurePosixPath)) else file
@@ -87,14 +89,14 @@ class NintendoDSFileSystem:
             return stream.read(min(length, file.size))
 
 
-def _parse_filename_table(
-    data: bytes, file_count: int
-) -> dict[int, PurePosixPath]:
+def _parse_filename_table(data: bytes, file_count: int) -> dict[int, PurePosixPath]:
     if len(data) < 8:
         raise InvalidRomError("Nintendo DS filename table is too small")
     directory_count = struct.unpack_from("<H", data, 6)[0]
     if directory_count == 0 or directory_count * 8 > len(data):
-        raise InvalidRomError("Nintendo DS filename table has an invalid directory count")
+        raise InvalidRomError(
+            "Nintendo DS filename table has an invalid directory count"
+        )
 
     directories = []
     for index in range(directory_count):
@@ -111,9 +113,13 @@ def _parse_filename_table(
     def visit(directory_id: int, parent_path: PurePosixPath) -> None:
         index = directory_id - _ROOT_DIRECTORY_ID
         if not 0 <= index < directory_count:
-            raise InvalidRomError(f"Invalid Nintendo DS directory ID: {directory_id:#x}")
+            raise InvalidRomError(
+                f"Invalid Nintendo DS directory ID: {directory_id:#x}"
+            )
         if directory_id in visited:
-            raise InvalidRomError("Nintendo DS filename table contains a directory cycle")
+            raise InvalidRomError(
+                "Nintendo DS filename table contains a directory cycle"
+            )
         visited.add(directory_id)
 
         position, file_id, _ = directories[index]

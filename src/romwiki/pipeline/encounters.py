@@ -128,7 +128,10 @@ def _extract_gen5_wild_map_names(
     # generation reusing this path) simply gets unnamed encounter areas,
     # same as every other optional enrichment input in this codebase.
     profile = result.match.profile
-    if "map_headers" not in profile.layout or "map_names_member" not in profile.parameters:
+    if (
+        "map_headers" not in profile.layout
+        or "map_names_member" not in profile.parameters
+    ):
         return {}, {}
     map_headers_path = profile.layout["map_headers"]
     map_names_member = profile.parameters["map_names_member"]
@@ -165,9 +168,7 @@ def _extract_encounter_locations(
     )
     try:
         layout = {name: profile.layout[name] for name in required_layout}
-        parameters = {
-            name: profile.parameters[name] for name in required_parameters
-        }
+        parameters = {name: profile.parameters[name] for name in required_parameters}
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing encounter location metadata: "

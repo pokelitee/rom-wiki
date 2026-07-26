@@ -41,8 +41,11 @@ class PersonalEnrichmentTests(unittest.TestCase):
             for pokemon_id in range(1, 494)
         }
         for pokemon_id, species in (
-            (386, "deoxys"), (413, "wormadam"), (479, "rotom"),
-            (487, "giratina"), (492, "shaymin"),
+            (386, "deoxys"),
+            (413, "wormadam"),
+            (479, "rotom"),
+            (487, "giratina"),
+            (492, "shaymin"),
         ):
             defaults[pokemon_id] = {
                 "id": pokemon_id,
@@ -225,12 +228,8 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("| Move | Type | Class | Power | Accuracy | PP |", page)
         self.assertIn("## Learnset", page)
         self.assertIn("`0x29222`", page)
-        self.assertIn(
-            '<a href="../ivysaur/">Ivysaur</a>', page
-        )
-        self.assertIn(
-            '<span class="rw-record-tree__name">', page
-        )
+        self.assertIn('<a href="../ivysaur/">Ivysaur</a>', page)
+        self.assertIn('<span class="rw-record-tree__name">', page)
         self.assertIn("Level 16", page)
         self.assertIn(
             'Use <a href="../../items/kings-rock/">King&#x27;s Rock</a>', page
@@ -277,8 +276,12 @@ class PersonalEnrichmentTests(unittest.TestCase):
             {
                 "label": "Sunny Form",
                 "base_stats": {
-                    "hp": 70, "attack": 70, "defense": 70, "speed": 70,
-                    "special_attack": 70, "special_defense": 70,
+                    "hp": 70,
+                    "attack": 70,
+                    "defense": 70,
+                    "speed": 70,
+                    "special_attack": 70,
+                    "special_defense": 70,
                 },
                 "types": [{"id": 9, "name": "fire"}],
             }
@@ -386,9 +389,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         ]
 
         chain = "\n".join(
-            _evolution_list(
-                [eevee, vaporeon, jolteon], jolteon, "pokemon/jolteon.md"
-            )
+            _evolution_list([eevee, vaporeon, jolteon], jolteon, "pokemon/jolteon.md")
         )
 
         self.assertIn("Eevee", chain)
@@ -398,7 +399,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn('aria-current="page"', chain)
         self.assertIn('class="rw-record-tree__current">Current', chain)
         self.assertIn('class="rw-record-tree__dex">#135', chain)
-        self.assertIn('rw-record-tree__row--child', chain)
+        self.assertIn("rw-record-tree__row--child", chain)
         self.assertIn('href="../vaporeon/"', chain)
 
     def test_renders_personality_based_branch_as_a_level_not_a_branch_number(
@@ -423,9 +424,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         ]
 
         chain = "\n".join(
-            _evolution_list(
-                [wurmple, silcoon, cascoon], wurmple, "pokemon/wurmple.md"
-            )
+            _evolution_list([wurmple, silcoon, cascoon], wurmple, "pokemon/wurmple.md")
         )
 
         self.assertIn("Level 7 (random — low personality value)", chain)
@@ -436,7 +435,9 @@ class PersonalEnrichmentTests(unittest.TestCase):
 class SpriteGalleryTests(unittest.TestCase):
     def test_renders_empty_state_when_no_sprites_are_available(self) -> None:
         expected = ["## Sprites", "", "No sprites are available.", ""]
-        self.assertEqual(_sprite_gallery({"name": "Missingno", "sprites": []}), expected)
+        self.assertEqual(
+            _sprite_gallery({"name": "Missingno", "sprites": []}), expected
+        )
         self.assertEqual(_sprite_gallery({"name": "Missingno"}), expected)
 
     def test_still_renders_a_single_known_sprite(self) -> None:
@@ -463,9 +464,21 @@ class SpriteGalleryTests(unittest.TestCase):
             {
                 "name": "Bulbasaur",
                 "sprites": [
-                    {"key": "front_default", "label": "Front", "url": "https://example.test/front.png"},
-                    {"key": "front_shiny", "label": "Front, shiny", "url": "https://example.test/front-shiny.png"},
-                    {"key": "back_default", "label": "Back", "url": "https://example.test/back.png"},
+                    {
+                        "key": "front_default",
+                        "label": "Front",
+                        "url": "https://example.test/front.png",
+                    },
+                    {
+                        "key": "front_shiny",
+                        "label": "Front, shiny",
+                        "url": "https://example.test/front-shiny.png",
+                    },
+                    {
+                        "key": "back_default",
+                        "label": "Back",
+                        "url": "https://example.test/back.png",
+                    },
                 ],
             }
         )
@@ -486,8 +499,16 @@ class SpriteGalleryTests(unittest.TestCase):
             {
                 "name": "Bulbasaur",
                 "sprites": [
-                    {"key": "front_default", "label": "Front", "url": "https://example.test/front.png"},
-                    {"key": "front_shiny", "label": "Front, shiny", "url": "https://example.test/front-shiny.png"},
+                    {
+                        "key": "front_default",
+                        "label": "Front",
+                        "url": "https://example.test/front.png",
+                    },
+                    {
+                        "key": "front_shiny",
+                        "label": "Front, shiny",
+                        "url": "https://example.test/front-shiny.png",
+                    },
                     {
                         "key": "front_default_animated",
                         "label": "Front, animated",
@@ -498,7 +519,7 @@ class SpriteGalleryTests(unittest.TestCase):
         )
 
         page = "\n".join(lines)
-        self.assertIn('rw-sprite-matrix rw-sprite-matrix--animated', page)
+        self.assertIn("rw-sprite-matrix rw-sprite-matrix--animated", page)
         self.assertIn("<span>Animated</span><span>Animated, shiny</span>", page)
         self.assertIn('src="https://example.test/front.gif"', page)
         self.assertEqual(page.count("rw-sprite-matrix__cell--empty"), 1)
@@ -522,8 +543,12 @@ def _bulbasaur_record() -> dict:
             "flavor_text": "A seed was planted on its back at birth.",
             "flavor_text_version": "platinum",
             "base_stats": {
-                "hp": 45, "attack": 49, "defense": 49, "speed": 45,
-                "special_attack": 60, "special_defense": 65,
+                "hp": 45,
+                "attack": 49,
+                "defense": 49,
+                "speed": 45,
+                "special_attack": 60,
+                "special_defense": 65,
             },
             "types": ["grass", "poison"],
             "abilities": ["overgrow"],
@@ -541,8 +566,12 @@ def _bulbasaur_record() -> dict:
             "source_url": "https://github.com/PokeAPI/cries",
         },
         "base_stats": {
-            "hp": 45, "attack": 49, "defense": 49, "speed": 45,
-            "special_attack": 65, "special_defense": 65,
+            "hp": 45,
+            "attack": 49,
+            "defense": 49,
+            "speed": 45,
+            "special_attack": 65,
+            "special_defense": 65,
         },
         "types": [{"name": "grass"}, {"name": "grass"}],
         "abilities": [{"name": "overgrow"}],
@@ -550,8 +579,12 @@ def _bulbasaur_record() -> dict:
         "base_experience": 64,
         "base_friendship": 70,
         "ev_yields": {
-            "hp": 0, "attack": 0, "defense": 0, "speed": 0,
-            "special_attack": 1, "special_defense": 0,
+            "hp": 0,
+            "attack": 0,
+            "defense": 0,
+            "speed": 0,
+            "special_attack": 1,
+            "special_defense": 0,
         },
         "gender_ratio": 31,
         "safari_flee_rate": 0,
@@ -591,9 +624,7 @@ def _bulbasaur_record() -> dict:
                 "move": {"id": 33, "slug": "tackle", "name": "Tackle"},
             }
         ],
-        "egg_moves": [
-            {"id": 130, "slug": "skull-bash", "name": "Skull Bash"}
-        ],
+        "egg_moves": [{"id": 130, "slug": "skull-bash", "name": "Skull Bash"}],
         "egg_move_provenance": {"overlay_offset": 0x29222, "table_index": 0},
         "learnset_provenance": {"archive": "wotbl.narc", "member": 1},
         "evolutions": [
@@ -625,15 +656,23 @@ def _source_record(member: int) -> dict:
     return {
         "species_id": member,
         "base_stats": {
-            "hp": 1, "attack": 1, "defense": 1, "speed": 1,
-            "special_attack": 1, "special_defense": 1,
+            "hp": 1,
+            "attack": 1,
+            "defense": 1,
+            "speed": 1,
+            "special_attack": 1,
+            "special_defense": 1,
         },
         "type_ids": [0, 0],
         "catch_rate": 1,
         "base_experience": 1,
         "ev_yields": {
-            "hp": 0, "attack": 0, "defense": 0, "speed": 0,
-            "special_attack": 0, "special_defense": 0,
+            "hp": 0,
+            "attack": 0,
+            "defense": 0,
+            "speed": 0,
+            "special_attack": 0,
+            "special_defense": 0,
         },
         "wild_held_items": {"common": 0, "rare": 0},
         "gender_ratio": 255,

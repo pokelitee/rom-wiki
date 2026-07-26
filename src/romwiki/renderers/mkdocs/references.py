@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import posixpath
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from html import escape
 from pathlib import PurePosixPath
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,9 +85,7 @@ class ReferenceIndex:
             self.add(reference)
 
     @classmethod
-    def from_datasets(
-        cls, datasets: Mapping[str, dict[str, Any]]
-    ) -> ReferenceIndex:
+    def from_datasets(cls, datasets: Mapping[str, dict[str, Any]]) -> ReferenceIndex:
         index = cls()
         for kind, dataset in datasets.items():
             route_kind = _DATASET_ROUTE_KINDS.get(kind)
@@ -137,7 +136,9 @@ class ReferenceIndex:
         reference = self._references.get((kind, identifier))
         return reference.sprite_url if reference is not None else None
 
-    def types(self, kind: str, identifier: int | str) -> tuple[dict[str, Any], ...] | None:
+    def types(
+        self, kind: str, identifier: int | str
+    ) -> tuple[dict[str, Any], ...] | None:
         reference = self._references.get((kind, identifier))
         return reference.types if reference is not None else None
 
@@ -255,9 +256,7 @@ _DATASET_ROUTE_KINDS = {
 }
 
 
-def _record_reference(
-    kind: str, record: Mapping[str, Any]
-) -> EntityReference | None:
+def _record_reference(kind: str, record: Mapping[str, Any]) -> EntityReference | None:
     if kind in {"pokemon", "move"} and not record.get("public", True):
         return None
     identity_fields = {
@@ -307,7 +306,9 @@ def _record_sprite_url(kind: str, record: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _record_types(kind: str, record: Mapping[str, Any]) -> tuple[dict[str, Any], ...] | None:
+def _record_types(
+    kind: str, record: Mapping[str, Any]
+) -> tuple[dict[str, Any], ...] | None:
     if kind != "pokemon":
         return None
     types = record.get("types")

@@ -40,7 +40,9 @@ class _FakeImage:
 class _FakeArchive:
     def __init__(self, records: list[bytes]) -> None:
         self._records = records
-        self.members = [types.SimpleNamespace(index=index) for index in range(len(records))]
+        self.members = [
+            types.SimpleNamespace(index=index) for index in range(len(records))
+        ]
 
     @classmethod
     def from_bytes(cls, data: bytes, **_kwargs) -> _FakeArchive:
@@ -121,9 +123,7 @@ class PlatformContractTests(unittest.TestCase):
         self.assertEqual(dataset["game"], "fake-game")
         self.assertEqual(dataset["engine"], _FAKE_ENGINE_ID)
         self.assertEqual(dataset["record_count"], 3)
-        self.assertEqual(
-            dataset["records"][1], {"species_id": 1, "value": 9}
-        )
+        self.assertEqual(dataset["records"][1], {"species_id": 1, "value": 9})
 
     def test_inspection_probes_registered_platforms(self) -> None:
         register_platform(_FAKE_PLATFORM_ID, _fake_platform({}))

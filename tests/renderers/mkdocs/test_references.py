@@ -44,27 +44,37 @@ class RouteResolverTests(unittest.TestCase):
 
         self.assertEqual(ROUTES.markdown_link(unresolved, "items/test.md"), "Unknown")
         self.assertEqual(ROUTES.html_link(unresolved, "items/test/"), "Unknown")
-        self.assertNotIn(
-            "url", ROUTES.catalog_reference(unresolved, "items/")
-        )
+        self.assertNotIn("url", ROUTES.catalog_reference(unresolved, "items/"))
 
     def test_indexes_dataset_sprite_urls_without_assuming_a_generation(self) -> None:
-        index = ReferenceIndex.from_datasets({
-            "pokemon": {"records": [{
-                "public": True,
-                "member": 25,
-                "national_dex_id": 25,
-                "name": "Pikachu",
-                "slug": "pikachu",
-                "sprite": {"url": "https://example.test/gen-2/pikachu.png"},
-            }]},
-            "items": {"records": [{
-                "item_id": 17,
-                "name": "Potion",
-                "slug": "potion",
-                "reference": {"sprite_url": "https://example.test/gen-2/potion.png"},
-            }]},
-        })
+        index = ReferenceIndex.from_datasets(
+            {
+                "pokemon": {
+                    "records": [
+                        {
+                            "public": True,
+                            "member": 25,
+                            "national_dex_id": 25,
+                            "name": "Pikachu",
+                            "slug": "pikachu",
+                            "sprite": {"url": "https://example.test/gen-2/pikachu.png"},
+                        }
+                    ]
+                },
+                "items": {
+                    "records": [
+                        {
+                            "item_id": 17,
+                            "name": "Potion",
+                            "slug": "potion",
+                            "reference": {
+                                "sprite_url": "https://example.test/gen-2/potion.png"
+                            },
+                        }
+                    ]
+                },
+            }
+        )
 
         self.assertEqual(
             index.sprite_url("pokemon", 25),

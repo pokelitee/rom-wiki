@@ -45,6 +45,7 @@ class EngineAdapter:
     marts: Any
     static_encounters: Any
     pickup: Any
+    presentation_features: frozenset[str] = frozenset()
     capabilities: frozenset[str] = frozenset()
 
 
@@ -68,6 +69,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         marts=gen4_dppt,
         static_encounters=gen4_dppt,
         pickup=gen4_dppt,
+        presentation_features=frozenset({"contests"}),
     ),
     GEN5_BW_ENGINE: EngineAdapter(
         personal=gen5_bw,
@@ -88,6 +90,12 @@ _ENGINES: dict[str, EngineAdapter] = {
         marts=gen5_bw,
         static_encounters=gen5_bw,
         pickup=gen5_bw,
+        presentation_features=frozenset(
+            {
+                "post-battle-healing",
+                "victory-items",
+            }
+        ),
         capabilities=frozenset({"detached-npc-trades"}),
     ),
 }

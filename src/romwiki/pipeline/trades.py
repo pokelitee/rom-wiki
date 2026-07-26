@@ -30,7 +30,9 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
     filesystem = platform.filesystem_from_image(result.image)
     trades = platform.archive_cls.from_bytes(filesystem.read(trades_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
-    trade_strings = engine.parse_english_message_archive(messages.read(trade_names_member))
+    trade_strings = engine.parse_english_message_archive(
+        messages.read(trade_names_member)
+    )
     if len(trade_strings) != len(trades.members) * 2:
         raise InvalidRomError(
             "NPC trade name bank must contain one nickname and OT name per trade"

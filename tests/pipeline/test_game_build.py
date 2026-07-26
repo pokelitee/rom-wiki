@@ -60,13 +60,11 @@ class GameBuildWorkflowTests(unittest.TestCase):
             "trainers",
             "locations",
         ):
-            getattr(current_context, kind).side_effect = (
-                lambda kind=kind: calls.append(f"current:{kind}")
-                or _empty_dataset(kind, "hack")
+            getattr(current_context, kind).side_effect = lambda kind=kind: (
+                calls.append(f"current:{kind}") or _empty_dataset(kind, "hack")
             )
-            getattr(baseline_context, kind).side_effect = (
-                lambda kind=kind: calls.append(f"baseline:{kind}")
-                or _empty_dataset(kind, "base")
+            getattr(baseline_context, kind).side_effect = lambda kind=kind: (
+                calls.append(f"baseline:{kind}") or _empty_dataset(kind, "base")
             )
         context_type.side_effect = [current_context, baseline_context]
         workflow = GameBuildWorkflow(
@@ -75,9 +73,7 @@ class GameBuildWorkflowTests(unittest.TestCase):
 
         workflow.build_all()
 
-        self.assertTrue(
-            all(call.startswith("baseline:") for call in calls[:7])
-        )
+        self.assertTrue(all(call.startswith("baseline:") for call in calls[:7]))
         self.assertTrue(all(call.startswith("current:") for call in calls[7:]))
 
 

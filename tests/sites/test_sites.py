@@ -58,9 +58,7 @@ class SiteCatalogTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(Path(commands[0][-1]), output.resolve())
-            self.assertEqual(
-                Path(commands[1][-1]), output.resolve() / "platinum-us"
-            )
+            self.assertEqual(Path(commands[1][-1]), output.resolve() / "platinum-us")
             self.assertEqual(
                 Path(commands[2][-1]), output.resolve() / "renegade-platinum"
             )
@@ -68,9 +66,7 @@ class SiteCatalogTests(unittest.TestCase):
                 Path(commands[3][-1]),
                 output.resolve() / "blaze-black-volt-white",
             )
-            self.assertEqual(
-                Path(commands[4][-1]), output.resolve() / "black-white"
-            )
+            self.assertEqual(Path(commands[4][-1]), output.resolve() / "black-white")
 
     def test_build_requires_an_explicit_selection(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

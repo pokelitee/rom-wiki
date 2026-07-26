@@ -13,8 +13,26 @@ from romwiki.util.errors import InvalidRomError
 def make_trade_record() -> bytes:
     return struct.pack(
         "<20I",
-        363, 31, 31, 15, 15, 31, 15, 28, 25643, 0,
-        0, 0, 0, 0, 142, 246, 1, 50, 2, 77,
+        363,
+        31,
+        31,
+        15,
+        15,
+        31,
+        15,
+        28,
+        25643,
+        0,
+        0,
+        0,
+        0,
+        0,
+        142,
+        246,
+        1,
+        50,
+        2,
+        77,
     )
 
 

@@ -283,8 +283,8 @@ may publish as **one** site. Each release still gets its own `GameProfile` under
 a single `profile`, and there is no `sites/games/black-us/` or `.../white-us/`
 directory at all -- only `sites/games/black-white/`.
 
-The `romwiki build-version-pair --games black-us white-us --versions black
-white` command accepts two or more profiles, merges each section with
+The `romwiki build-version-family --games black-us white-us --versions black
+white --site-id black-white` command accepts two or more profiles, merges each section with
 `pipeline.version_merge.merge_version_family_datasets` (which tags every record with
 the `versions` it appears in -- `["black", "white"]` for shared content, a
 single entry for an exclusive), and renders the merged dataset into that one
@@ -301,8 +301,9 @@ with its corresponding clean base and merges those results with
 `merge_version_comparisons`. Detail pages preserve separate per-version
 comparisons wherever their values differ. Both registrations must define a
 base or neither may do so; a half-configured paired comparison is rejected.
-Always pass a distinct `--site-id` for a new pair because the command's default
-is the existing `black-white` site.
+`--site-id` is required by the preferred command, preventing a new family from
+accidentally overwriting an existing site. `build-version-pair` remains as a
+compatibility alias and retains its historical `black-white` default.
 
 Same-key records whose current values differ retain all complete records under
 `version_variants`. Only dataset kinds registered as variant-capable may contain

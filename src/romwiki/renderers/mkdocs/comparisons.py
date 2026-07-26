@@ -49,6 +49,7 @@ _ROUTE_KINDS = {
     "locations": "location",
 }
 
+
 def record_comparison(
     comparison: dict[str, Any] | None, key: int | str
 ) -> dict[str, Any] | None:
@@ -83,9 +84,7 @@ def comparison_section(
     return [
         "## Hack changes",
         "",
-        *_comparison_body(
-            entry, baseline_name, source_file, references
-        ),
+        *_comparison_body(entry, baseline_name, source_file, references),
     ]
 
 
@@ -217,13 +216,10 @@ def render_changes_pages(
             record_cell = f"[{label}]({href})" if href else label
             labels = ", ".join(change["label"] for change in record["changes"])
             lines.append(
-                f"| {record_cell} | "
-                f"{record['status'].title()} | {labels or '—'} |"
+                f"| {record_cell} | {record['status'].title()} | {labels or '—'} |"
             )
             if record["status"] == "removed":
-                removed_paths.add(
-                    Path(kind) / f"{_removed_slug(record)}.md"
-                )
+                removed_paths.add(Path(kind) / f"{_removed_slug(record)}.md")
                 _render_removed_page(comparison, record, changes_root)
                 total_pages += 1
         lines.append("")
@@ -241,7 +237,10 @@ def _change_href(kind: str, record: dict[str, Any]) -> str | None:
     if not record.get("detail_available", True):
         return None
     reference = entity_reference(
-        _ROUTE_KINDS[kind], record["key"], record["label"], record.get("slug") or record["key"]
+        _ROUTE_KINDS[kind],
+        record["key"],
+        record["label"],
+        record.get("slug") or record["key"],
     )
     return ROUTES.markdown_href(reference, "changes/index.md") or "#"
 
@@ -255,7 +254,7 @@ def _render_removed_page(
     lines = [
         f"# {record['label']}",
         "",
-        "!!! warning \"Removed in this hack\"",
+        '!!! warning "Removed in this hack"',
         f"    This record exists in **{comparison['baseline']}** but not in "
         f"**{comparison['game']}**.",
         "",
@@ -289,7 +288,9 @@ def _format_value(value: Any) -> str:
         return escape_table_cell(value) or "—"
     if isinstance(value, (int, float)):
         return str(value)
-    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    encoded = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     exact = escape_table_cell(encoded)
     if isinstance(value, dict):
         summary = escape_table_cell(_mapping_summary(value))
@@ -359,17 +360,23 @@ def _format_named_reference_change(before: Any, after: Any) -> str | None:
 
     def is_reference_like(value: Any) -> bool:
         return value is None or (
-            isinstance(value, dict)
-            and "name" in value
-            and set(value) <= {"id", "name"}
+            isinstance(value, dict) and "name" in value and set(value) <= {"id", "name"}
         )
 
     if not is_reference_like(before) or not is_reference_like(after):
         return None
     if before is None and after is None:
         return None
-    before_label = display_name(before["name"]) if isinstance(before, dict) and before.get("name") else "—"
-    after_label = display_name(after["name"]) if isinstance(after, dict) and after.get("name") else "—"
+    before_label = (
+        display_name(before["name"])
+        if isinstance(before, dict) and before.get("name")
+        else "—"
+    )
+    after_label = (
+        display_name(after["name"])
+        if isinstance(after, dict) and after.get("name")
+        else "—"
+    )
     return _diff(escape(before_label), escape(after_label))
 
 
@@ -423,8 +430,10 @@ def _keyed_records(values: list[Any]) -> dict[Any, dict[str, Any]] | None:
     for value in values:
         if "command_offset" in value:
             key = (
-                value.get("kind"), value.get("inventory_id"),
-                value.get("script_file_id"), value["command_offset"],
+                value.get("kind"),
+                value.get("inventory_id"),
+                value.get("script_file_id"),
+                value["command_offset"],
             )
         elif "item_id" in value:
             key = ("item_id", value["item_id"])
@@ -493,9 +502,7 @@ def _format_pokemon_change(
     if field == "types":
         return _format_slots(before, after, "Type slot")
     if field == "machines":
-        return _format_machine_compatibility(
-            before, after, source_url, references
-        )
+        return _format_machine_compatibility(before, after, source_url, references)
     if field == "egg_moves":
         return _format_compatibility(
             before, after, _move_identity, source_url, references
@@ -602,9 +609,7 @@ def _format_trainer_location_change(
             display = _reference_html(
                 {**old, "id": old.get("header_id")}, "location", source_url, references
             )
-            changed.append(
-                f"{display}: {_diff(str(old_position), str(new_position))}"
-            )
+            changed.append(f"{display}: {_diff(str(old_position), str(new_position))}")
         elif old is not None:
             removed.append(
                 _reference_html(
@@ -686,9 +691,7 @@ def _format_compatibility(
             continue
         value = old or new
         move = value.get("move") if isinstance(value, dict) else None
-        display = _reference_html(
-            move or value, "move", source_url, references
-        )
+        display = _reference_html(move or value, "move", source_url, references)
         old_state = "Compatible" if old else "Not compatible"
         new_state = "Compatible" if new else "Not compatible"
         lines.append(f"{display}: {_diff(old_state, new_state)}")
@@ -753,7 +756,9 @@ def _format_evolutions(
     for target_id in target_ids:
         old = previous.get(target_id)
         new = current.get(target_id)
-        display = _reference_html((old or new)["target"], "pokemon", source_url, references)
+        display = _reference_html(
+            (old or new)["target"], "pokemon", source_url, references
+        )
         if old is not None and new is not None:
             old_condition = evolution_condition(old, source_url)
             new_condition = evolution_condition(new, source_url)
@@ -830,19 +835,18 @@ def _format_mapping_change(
 def _format_lines(values: list[str], trusted: bool = False) -> str:
     if not values:
         return "No changes"
-    rendered = [
-        value if trusted else escape_table_cell(value)
-        for value in values
-    ]
+    rendered = [value if trusted else escape_table_cell(value) for value in values]
     return _format_collection(rendered, "change", "changes")
 
 
 def _format_plain_lines(values: list[str]) -> str:
     if not values:
         return "No changes"
-    return '<ul class="rw-comparison-list">' + "".join(
-        f"<li>{value}</li>" for value in values
-    ) + "</ul>"
+    return (
+        '<ul class="rw-comparison-list">'
+        + "".join(f"<li>{value}</li>" for value in values)
+        + "</ul>"
+    )
 
 
 def _format_collection(values: list[str], singular: str, plural: str) -> str:
@@ -889,7 +893,9 @@ def _level_suffix(value: dict[str, Any]) -> str:
     minimum = value.get("minimum_level")
     maximum = value.get("maximum_level")
     if minimum is not None and maximum is not None:
-        return f" — Lv. {minimum}" if minimum == maximum else f" — Lv. {minimum}–{maximum}"
+        return (
+            f" — Lv. {minimum}" if minimum == maximum else f" — Lv. {minimum}–{maximum}"
+        )
     return ""
 
 
@@ -993,5 +999,3 @@ def _reference_html(
 
 def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-
-
