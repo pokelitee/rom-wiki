@@ -906,9 +906,9 @@ def _render_gen5_location_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     # Name, wild-encounter cross-reference, real trainers, real warps, real
-    # outdoor connections, and real static encounters -- see
-    # gen5_bw/__init__.py's module docstring for why location-linked shops
-    # aren't here yet.
+    # outdoor connections, real field items, and real static encounters --
+    # see gen5_bw/__init__.py's module docstring for why location-linked
+    # shops aren't here yet.
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -963,6 +963,7 @@ def _render_gen5_location_pages(
                     *(["warps"] if record["warps"] else []),
                     *(["static-encounters"] if record["static_encounters"] else []),
                     *(["connections"] if record["connections"] else []),
+                    *(["items"] if record["items"] else []),
                 ],
                 "search_text": record["name"].lower(),
             }
@@ -1015,6 +1016,7 @@ def _render_gen5_location(
     _append_connections(lines, record["connections"], source_file)
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
+    _append_items(lines, record["items"], source_file, references)
     _append_static_encounters(lines, record["static_encounters"], source_file, references)
     lines.extend(
         provenance_section(
@@ -1030,8 +1032,9 @@ def _render_gen5_location(
                 f"`{record['provenance']['member']}`.",
                 "The display name, wild-encounter cross-reference, real "
                 "trainers (both sight-triggered and scripted), real warps, "
-                "real outdoor connections, and real static encounters are "
-                "decoded. Location-linked shops aren't decoded yet.",
+                "real outdoor connections, real field items (visible and "
+                "hidden), and real static encounters are decoded. "
+                "Location-linked shops aren't decoded yet.",
             ]
         )
     )

@@ -338,20 +338,18 @@ game's story.
 
 ## Locations
 
-This section is a deliberately bare minimum, decoded from the map header
-table (`a/0/1/2`, a single-member NARC holding one fixed 48-byte record per
-map -- 427 total). Only two fields are decoded from each record: a
-display-name index (resolved through the map-name text table) and a
-wild-encounter-table cross-reference. These are the only two fields the
-ROM-hacking community's own tooling (Ajarmar/universal-pokemon-randomizer-zx)
-reads from this record, and so the only two that can be checked against a
-known-working reference; no public documentation covers the record's
-remaining ~46 bytes (warps, connections, scripts, music, and whatever else a
-full map header holds), so nothing there is guessed at. Confirmed against
-real Black ROM data: header 6 resolves to "Striaton City" with a wild
-encounter cross-reference to table index 0; every one of the 427 headers has
-a valid name index, and exactly 112 distinct wild-encounter cross-references
-are used, matching the Wild Encounters archive's own 112 members exactly.
+The map header table (`a/0/1/2`, a single-member NARC holding one fixed
+48-byte record per map -- 427 total) started as a deliberate bare minimum
+(just a display-name index and a wild-encounter-table cross-reference, the
+only two fields the ROM-hacking community's own tooling,
+Ajarmar/universal-pokemon-randomizer-zx, reads from this record) and has
+since grown considerably as the rest of this section documents: real
+trainers, warps, outdoor connections, field items, and static encounters
+are all attached to each map page now too. Confirmed against real Black ROM
+data: header 6 resolves to "Striaton City" with a wild encounter
+cross-reference to table index 0; every one of the 427 headers has a valid
+name index, and exactly 112 distinct wild-encounter cross-references are
+used, matching the Wild Encounters archive's own 112 members exactly.
 
 Each location page shows its cross-referenced Wild Encounters table index as
 plain text rather than a direct link to a specific encounter-area page: a
@@ -376,6 +374,23 @@ entrance) have a destination that isn't a literal map at all (the ROM's own
 null-destination sentinel) -- these are shown as a "dynamic destination"
 rather than guessed at, the same concept Generation IV's own Locations
 section already uses for its own Union Room warps.
+
+Field items (Item Balls and hidden items found via the Dowsing MCHN) are now
+decoded too. Visible items are overworld NPCs using one specific, shared
+sprite ID (the item-ball graphic) whose own `scriptUsed` field is a flat
+`7000 + item_id` offset -- verified against the real ROM: that sprite is by
+far the most common NPC sprite in the game, and every one of its
+`scriptUsed - 7000` values resolves to a real, coherent pickup item, never
+a garbage slot. Hidden items work the same way through a different section
+of the same overworld-objects record ("furniture" entries) with a
+`scriptUsed >= 8000` band, resolving to real, well-known real Black/White
+hidden items (Odd Keystone, the four Drives, Adamant Orb, fossils scattered
+near Desert Resort/Relic Castle). Furniture's own `x` coordinate turned out
+to need one extra step: unlike every other overworld record's plain
+integers, it's stored in 16.16 fixed point, caught by comparing a hidden
+item's huge raw `x` value against its own map's NPCs' coordinates (dividing
+by 65536 landed in the exact same magnitude range, across five unrelated
+real maps).
 
 Static (gift/single) Pokémon encounters are now cross-referenced to their
 real map location too, reusing the same map-header-to-script-file lookup
@@ -458,15 +473,21 @@ not just unverified: the best candidate opcode
 without a validating instruction the way trainer battles have. See
 Locations above.
 
+Items' berry-specific data (firmness, size, smoothness, flavor) isn't
+decoded either -- distinct from the already-correctly-excluded soil-growing
+mechanic, this is simply not yet attempted; no candidate archive or field
+has been found for it so far.
+
 Trainers' field map locations/script triggers, Locations' warps/outdoor
-connections/static encounters, and the fossil revival item-to-species
-mapping -- all previously listed here as blocked on this generation's
-script-engine opcode table -- are now resolved (see Trainers/Locations/Items
-above); that opcode table turned out to be adoptable from an actively
-maintained community tool (FrostFalcon/FrostsGen5Editor) the same way Marts/
-NPC trades/Pickup were adopted from Ajarmar/universal-pokemon-randomizer-zx,
-rather than requiring an original ARM disassembly from scratch. Outdoor
-connections specifically turned out not to need the opcode table at all --
-the same tool's documentation of the map header record's `matrix` field and
-a separate `MapMatrix` archive (the same underlying design as this
-project's own Generation IV `map_matrices` support) was enough.
+connections/field items/static encounters, and the fossil revival
+item-to-species mapping -- all previously listed here as blocked on this
+generation's script-engine opcode table -- are now resolved (see
+Trainers/Locations/Items above); that opcode table turned out to be
+adoptable from an actively maintained community tool
+(FrostFalcon/FrostsGen5Editor) the same way Marts/NPC trades/Pickup were
+adopted from Ajarmar/universal-pokemon-randomizer-zx, rather than requiring
+an original ARM disassembly from scratch. Outdoor connections specifically
+turned out not to need the opcode table at all -- the same tool's
+documentation of the map header record's `matrix` field and a separate
+`MapMatrix` archive (the same underlying design as this project's own
+Generation IV `map_matrices` support) was enough.

@@ -54,13 +54,14 @@ def extract_location_dataset(
     result: InspectionResult,
     trainer_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
+    item_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
     if profile.engine == GEN5_BW_ENGINE:
         return _extract_gen5_location_dataset(
-            result, trainer_dataset, static_encounter_dataset
+            result, trainer_dataset, static_encounter_dataset, item_dataset
         )
     try:
         events_path = profile.layout["events"]
@@ -690,13 +691,14 @@ def _extract_gen5_location_dataset(
     result: InspectionResult,
     trainer_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
+    item_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     # Each map header's display name, its wild-encounter-table cross-
     # reference, its real trainers, its real warps, its real static
-    # (gift/single) Pokémon encounters, and its real outdoor connections (now
-    # that Trainers' script-engine gap is unblocked -- see
-    # gen5_bw/__init__.py's module docstring). Location-linked shops still
-    # aren't decoded here.
+    # (gift/single) Pokémon encounters, its real outdoor connections, and its
+    # real field items (now that Trainers' script-engine gap is unblocked --
+    # see gen5_bw/__init__.py's module docstring). Location-linked shops
+    # still aren't decoded here.
     profile = result.match.profile
     try:
         map_headers_path = profile.layout["map_headers"]
@@ -732,9 +734,51 @@ def _extract_gen5_location_dataset(
     connections_by_header = _extract_gen5_matrix_connections(
         engine, headers, map_matrices
     )
+    item_names_by_id = {
+        record["item_id"]: record["name"]
+        for record in (item_dataset or {}).get("records", ())
+    }
+    item_count = max(item_names_by_id, default=-1) + 1
     headers_by_id = {header.header_id: header for header in headers}
     records = []
     for header in headers:
+        items = []
+        if header.header_id < len(overworld_objects.members):
+            overworld_data = overworld_objects.read(header.header_id)
+            for npc in engine.parse_overworld_npcs(overworld_data):
+                item_id = engine.resolve_visible_item_id(npc, item_count=item_count)
+                if item_id is None or item_id not in item_names_by_id:
+                    continue
+                items.append(
+                    LocationItem(
+                        item_id=item_id,
+                        name=item_names_by_id[item_id],
+                        kind="visible",
+                        event_index=npc.index,
+                        x=npc.x,
+                        z=npc.y,
+                        y=npc.z,
+                        hidden_flag=None,
+                    )
+                )
+            for furniture in engine.parse_overworld_furniture(overworld_data):
+                item_id = engine.resolve_hidden_item_id(
+                    furniture, item_count=item_count
+                )
+                if item_id is None or item_id not in item_names_by_id:
+                    continue
+                items.append(
+                    LocationItem(
+                        item_id=item_id,
+                        name=item_names_by_id[item_id],
+                        kind="hidden",
+                        event_index=furniture.index,
+                        x=furniture.x,
+                        z=furniture.y,
+                        y=furniture.z,
+                        hidden_flag=None,
+                    )
+                )
         warps = []
         if header.header_id < len(overworld_objects.members):
             raw_warps = engine.parse_overworld_warps(
@@ -788,6 +832,7 @@ def _extract_gen5_location_dataset(
                 connections=tuple(
                     connections_by_header.get(header.header_id, ())
                 ),
+                items=tuple(items),
             ).to_dict()
         )
     return {
@@ -801,6 +846,7 @@ def _extract_gen5_location_dataset(
         ),
         "trainer_reference_count": sum(len(record["trainers"]) for record in records),
         "warp_reference_count": sum(len(record["warps"]) for record in records),
+        "item_reference_count": sum(len(record["items"]) for record in records),
         "static_encounter_reference_count": sum(
             len(record["static_encounters"]) for record in records
         ),

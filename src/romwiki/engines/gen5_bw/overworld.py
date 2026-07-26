@@ -52,6 +52,8 @@ _MIN_COMMON_SCRIPT_USED = _COMMON_SCRIPT_BAND_SIZE
 @dataclass(frozen=True, slots=True)
 class Gen5OverworldNPC:
     index: int
+    sprite: int
+    flag: int
     script_used: int
     sight_range: int
     x: int
@@ -72,6 +74,8 @@ def parse_overworld_npcs(data: bytes) -> tuple[Gen5OverworldNPC, ...]:
         npcs.append(
             Gen5OverworldNPC(
                 index=index,
+                sprite=fields["sprite"],
+                flag=fields["flag"],
                 script_used=fields["script_used"],
                 sight_range=fields["sight_range"],
                 x=fields["x"],
@@ -81,6 +85,45 @@ def parse_overworld_npcs(data: bytes) -> tuple[Gen5OverworldNPC, ...]:
         )
         pos += _NPC_RECORD_SIZE
     return tuple(npcs)
+
+
+_FURNITURE_RECORD_SIZE = 20
+# Unlike every other overworld record's plain-integer coordinates, furniture's
+# own `x` field is stored in 16.16 fixed point -- found by comparing raw
+# values against the same map's own NPCs: a hidden item's raw `x` divided by
+# this scale lands in the exact same magnitude range as that map's NPCs'
+# plain-integer x coordinates, across five unrelated real maps (e.g. map 6's
+# furniture x values of 744-801 versus its own NPCs' 752-792). `y`/`z` are
+# already plain integers at the same scale as NPCs' own, with no such
+# conversion needed.
+_FURNITURE_X_FIXED_POINT_SCALE = 65536
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5OverworldFurniture:
+    index: int
+    script_used: int
+    x: int
+    y: int
+    z: int
+
+
+def parse_overworld_furniture(data: bytes) -> tuple[Gen5OverworldFurniture, ...]:
+    if len(data) <= _HEADER_SIZE:
+        return ()
+    furniture_count = data[4]
+    pos = _HEADER_SIZE
+    items = []
+    for index in range(furniture_count):
+        script_used = struct.unpack_from("<h", data, pos)[0]
+        x = struct.unpack_from("<i", data, pos + 6)[0] // _FURNITURE_X_FIXED_POINT_SCALE
+        y = struct.unpack_from("<i", data, pos + 12)[0]
+        z = struct.unpack_from("<i", data, pos + 16)[0]
+        items.append(
+            Gen5OverworldFurniture(index=index, script_used=script_used, x=x, y=y, z=z)
+        )
+        pos += _FURNITURE_RECORD_SIZE
+    return tuple(items)
 
 
 _WARP_RECORD_SIZE = 20
@@ -127,6 +170,46 @@ def parse_overworld_warps(data: bytes) -> tuple[Gen5OverworldWarp, ...]:
         )
         pos += _WARP_RECORD_SIZE
     return tuple(warps)
+
+
+# Visible field items are NPC objects using one specific, shared sprite ID
+# (the item-ball graphic) whose `script_used` is a flat `7000 + item_id`
+# offset -- verified against the real Black ROM: sprite 110 is by far the
+# most common NPC sprite in the game (274 uses, next-most-common is 92),
+# and every one of its `script_used - 7000` values resolves to a real,
+# coherent field-pickup item (Hyper Potion, Fire Stone, Full Restore, HP Up,
+# evolution stones, vitamins, berries -- exactly what routes actually give
+# you), never a garbage/unnamed slot.
+_VISIBLE_ITEM_SPRITE = 110
+_VISIBLE_ITEM_SCRIPT_BASE = 7000
+
+# Hidden items (found via the Dowsing MCHN) are furniture entries whose
+# `script_used` is a flat `8000 + item_id` offset -- verified the same way:
+# every real furniture entry with `script_used >= 8000` resolves to a real,
+# well-known hidden-item fact (Odd Keystone, the four Drives, Adamant Orb,
+# the fossils hidden around Desert Resort/Relic Castle -- all real,
+# well-documented Black/White hidden items).
+_HIDDEN_ITEM_SCRIPT_BASE = 8000
+
+
+def resolve_visible_item_id(npc: Gen5OverworldNPC, *, item_count: int) -> int | None:
+    """Resolve a field NPC to the item it represents, if it's an item ball."""
+    if npc.sprite != _VISIBLE_ITEM_SPRITE:
+        return None
+    item_id = npc.script_used - _VISIBLE_ITEM_SCRIPT_BASE
+    if not 0 < item_id < item_count:
+        return None
+    return item_id
+
+
+def resolve_hidden_item_id(
+    furniture: Gen5OverworldFurniture, *, item_count: int
+) -> int | None:
+    """Resolve a furniture entry to the hidden item it represents, if any."""
+    item_id = furniture.script_used - _HIDDEN_ITEM_SCRIPT_BASE
+    if not 0 < item_id < item_count:
+        return None
+    return item_id
 
 
 def resolve_common_script_trainer_id(script_used: int, *, trainer_count: int) -> int | None:

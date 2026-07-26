@@ -50,9 +50,12 @@ from romwiki.engines.gen5_bw.marts import parse_shop_catalog
 from romwiki.engines.gen5_bw.messages import parse_english_message_archive
 from romwiki.engines.gen5_bw.moves import parse_move_record
 from romwiki.engines.gen5_bw.overworld import (
+    parse_overworld_furniture,
     parse_overworld_npcs,
     parse_overworld_warps,
     resolve_common_script_trainer_id,
+    resolve_hidden_item_id,
+    resolve_visible_item_id,
 )
 from romwiki.engines.gen5_bw.personal import parse_personal_record
 from romwiki.engines.gen5_bw.pickup import (
@@ -183,6 +186,7 @@ __all__ = [
     "parse_map_header_table",
     "parse_map_matrix",
     "parse_move_record",
+    "parse_overworld_furniture",
     "parse_overworld_npcs",
     "parse_overworld_warps",
     "parse_personal_record",
@@ -194,6 +198,8 @@ __all__ = [
     "parse_trainer_battle_commands",
     "parse_trainer_record",
     "pickup_level_range_item_ids",
+    "resolve_hidden_item_id",
+    "resolve_visible_item_id",
     "PICKUP_LEVEL_RANGE_COUNT",
     "PICKUP_LEVEL_RANGE_SIZE",
     "PICKUP_SLOT_CHANCES",
