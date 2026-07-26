@@ -1,0 +1,241 @@
+## Pokémon species data
+
+Personal (species) records are decoded from `poketool/personal/pl_personal.narc`,
+a fixed 44-byte record per member. The archive holds 508 members
+(`PERSONAL_RECORD_COUNT`): member 0 is an unused "none" placeholder, members
+1-493 are the national Pokédex species (`GEN4_BASE_SPECIES_COUNT`), member 494
+is an internal "egg" record, member 495 is an internal "bad egg" record, and
+members 496-507 are 12 alternate-forme records (Deoxys's three alternate
+formes, Wormadam's Sandy/Trash cloaks, Giratina's Origin Forme, Shaymin's Sky
+Forme, and Rotom's four appliance forms), each resolved to its real
+species/form identity and given its own page rather than treated as a
+separate species.
+
+Each record holds: base stats, type IDs, catch rate, base experience, a
+per-stat EV-yield bitmask (2 bits each for HP/Attack/Defense/Speed/Special
+Attack/Special Defense), common and rare wild held items, gender ratio, hatch
+cycles, base friendship, growth rate, egg groups, both ability slots (this
+generation predates the Hidden Ability slot Generation V adds), safari flee
+rate, body color and sprite-flip flag (packed into one byte), and a 128-bit
+TM/HM compatibility mask covering every machine ID from 1 to 128.
+
+Level-up learnsets are decoded from `poketool/personal/wotbl.narc`: one member
+per personal-data member, a variable-length list of packed 16-bit entries
+(level in the high 7 bits, move ID in the low 9 bits) terminated by `0xFFFF`,
+with an optional trailing zero pad byte. Evolutions come from
+`poketool/personal/evo.narc`, a fixed 44-byte, 7-slot record per member (method
+ID, parameter, and target species ID per slot, 6 bytes each) with two trailing
+padding bytes that must be zero; slots are contiguous, so an empty slot always
+marks the end of a species' real evolution methods.
+
+Egg moves are decoded from a flat, dense table in ARM9 overlay 5 (not a NARC
+archive, unlike Generation V's per-species `a/1/2/3` layout) at a fixed
+offset: a single stream of packed 16-bit words where species boundaries are
+marked by a value in the `20001`-`20493` range (`20000 + species_id`) rather
+than by a fixed-size per-species block, terminated by `0xFFFF`. Species
+markers must appear in strictly increasing order and move IDs must fall in
+the valid `1`-`467` range, both enforced as validation rather than assumed.
+
+## Items
+
+Item records are decoded from a fixed-layout 34-byte record per member.
+Item ID does not map directly to its archive member: a separate 8-byte-record
+ARM9 table supplies the real item-ID-to-member mapping, located by
+fingerprinting its own first 64 entries (which are always the identity
+mapping) and then validated as a true bijection onto every archive member
+before being trusted.
+
+Each record holds: price, hold-effect ID and its associated parameter byte,
+pluck-effect ID, fling effect ID and power, Natural Gift power and type,
+a flags word (Natural Gift type, `prevent_toss`, `selectable`, field pocket
+ID, and a battle-pocket category bitmask — the same bit layout Generation V's
+own item records reuse), field-use and battle-use function IDs, a party-use
+flag, a 56-bit party-effect bitfield (healing, EV changes, status cures,
+friendship changes, and stat-stage flags), six signed per-stat EV-change
+amounts, HP/PP restore amounts, and three signed friendship-change amounts
+for low/mid/high current-friendship bands.
+
+Common Poké Mart stock and badge requirements come from a shared ARM9
+progression table; specialty inventories (Veilstone's decoration counter,
+Sunyshore's weekday seal shop, and the Battle Frontier's BP exchange) come
+from a separate ARM9 inventory-pointer table selected by each clerk's own
+field-script command, with prices read from their own dedicated ARM9 tables
+(a 28-byte decoration-goods table, a 10-byte seal-price table, and a 41-entry
+Battle Frontier BP-price table in ARM9 overlay 7) rather than the main
+item-price field, since none of the three are ordinary money-priced items.
+The Game Corner's Prize Exchange counter (Veilstone, header 144) reads its
+own fixed 19-entry {item, price} ARM9 table the same way, verified
+byte-for-byte against the decompilation.
+
+Direct Pokémon gifts are decoded from literal `GivePokemon` field commands,
+including their level and held item; a handful of egg gifts come from
+profile-anchored `[script-file, byte-offset]` facts instead, since `GiveEgg`'s
+own opcode has no reliable adjacent signature to distinguish a real command
+from an unrelated operand the way `GivePokemon`'s does. Conditional script
+branches can make some listed gift outcomes mutually exclusive rather than
+all simultaneously obtainable in one playthrough. See this game's own notes
+below for exactly which egg gifts it configures.
+
+Static (gift/single) Pokémon encounters are decoded from literal
+`WildBattle`, `LegendaryBattle`, `FatefulEncounter`, and
+`GiratinaOriginBattle` field commands, each validated by a following
+battle-result check (`CheckWonBattle`, or for the latter two, a `ClearFlag`
+then `CheckWonBattle`). The latter two commands preserve the
+encounter-specific setup used at Flower Paradise and in the Distortion World.
+Some static encounters have their map location recorded as explicit profile
+metadata (`static_encounter_locations`) rather than resolved automatically,
+since their script member is shared/common rather than a dedicated map
+script; commands whose species or level comes from a script variable instead
+of a literal value are excluded until their control flow can be resolved
+exactly rather than guessed at.
+
+In-game trades are joined from literal `InitNPCTrade`/`StartNPCTrade` field
+command sequences and four fixed 80-byte records in
+`fielddata/pokemon_trade/fld_trade.narc`. Each record supplies the requested
+and offered species, six fixed IVs (reordered from the ROM's own raw field
+order to HP/Attack/Defense/Special Attack/Special Defense/Speed), a
+personality value whose value modulo 25 selects one of the 25 standard
+natures, held item, OT ID/gender/language, and a requested-species check.
+Nicknames and OT names come from message member 370, one nickname and one OT
+name per trade in the same fixed order as the records; the received Pokémon
+inherits the level of the Pokémon traded away rather than a stored level.
+
+Pickup and Honey Gather's held-item tables come from four fixed arrays in
+ARM9 overlay 16 (18 common-tier entries, 11 rare-tier entries, and their own
+9- and 10-entry per-level-range rate curves) — a different, unpacked shape
+from Generation V's single sliding-window array, since this generation gives
+each ability its own independent common/rare list rather than sharing one
+array between them. Fossil revival (which Pokémon reviving each of the seven
+fossil items produces) comes from its own fixed 7-entry ARM9 table.
+
+## Moves
+
+Move records are decoded from a fixed-layout 16-byte record per member; move
+ID maps directly to archive member index. The archive holds 471 members
+(`MOVE_RECORD_COUNT`), with real move IDs running from 1 to 467
+(`MAX_MOVE_ID`). Each record holds: an opaque effect ID, damage class
+(physical/special/status), power, type, accuracy, PP, secondary-effect
+chance, target, a signed priority value, a battle-flags byte, and (unlike
+Generation V, which removed Contests) a contest-effect ID and contest-type
+ID.
+
+## Wild encounters
+
+Wild encounters are decoded from `fielddata/encountdata/pl_enc_data.narc`,
+one record per area in one of two fixed sizes (380 or 424 bytes; the larger
+variant adds a Super Rod table absent from the smaller one). Each record
+holds a walking-grass table (a rate word followed by 12 level/species pairs)
+and four fishing-rod tables (Old Rod, Good Rod, Super Rod where present, and
+Surf), each a rate word followed by 5 slots of (max level byte, min level
+byte, species ID word). Slot-chance percentages aren't stored in the ROM —
+like every generation since Generation III, they're a fixed engine weighting
+applied by slot position (e.g. walking: 20/20/10/10/10/10/5/5/4/4/1/1).
+
+Several special-encounter categories overwrite specific walking-slot indices
+rather than being separate tables: swarms overwrite slots 0-1, time-of-day
+(day/night) replacements overwrite slots 2-3, and dual-slot substitutions (5
+Game Boy Advance titles, each with its own species pair) overwrite slots 8-9.
+A separate 4-species Poké Radar table exists per area but is generally not
+applied, since most real Radar encounters instead continue the current
+chain's species through a separate in-game routine this project doesn't
+model. Unown's per-area letter set is resolved from the record's own table
+ID against 8 grouped 28-letter tables taken directly from the game's own
+decompiled source; a table ID of 0 means the area has no Unown encounters.
+
+Real in-game location names are attached via the map header table (see
+Locations below): each area's own encounter-table cross-reference and
+display-name index resolve through the same header records the Locations
+and Trainers sections use.
+
+## Trainers
+
+Trainer data is decoded from `poketool/trainer/trdata.narc` (20-byte fixed
+record per member) and party data from `poketool/trainer/trpoke.narc`
+(variable-size per trainer, driven by the trainer's own flags). The trainer
+record holds: flags (custom moves/held items), class ID, party size, four AI
+battle items, AI flags, and a battle type (single/double; this generation has
+no Triple or Rotation format, both introduced in Generation V). Each party
+member is a packed 6-byte base record (difficulty, a byte combining ability
+slot and forced-gender flag, level, and a packed species/form word) plus an
+optional 2-byte held item and/or 8-byte custom-move block depending on the
+trainer's own flags, and a trailing 2-byte "ball seal" field always present
+regardless of flags.
+
+Trainer class gender is read from a dedicated one-byte-per-class ARM9 table:
+a value of 1 means the class is female, values 0 and 2 both mean male (2
+being a mixed/double-battle-class value with no independent gender meaning
+of its own).
+
+Real map locations and script triggers are resolved two ways: overworld
+object events carry the trainer ID directly in a fixed script-ID range
+(3000-3999, with a documented +1 offset between script ID and trainer ID),
+and scripted/talk-triggered battles are found by scanning each map's own
+script file for a literal `StartTrainerBattle` command immediately followed
+6 bytes later by a `CheckWonBattle` result check — the same
+"opcode-signature-plus-validating-follow-on-command" pattern this project's
+Generation V engine later adopted for its own equivalent trainer-battle scan.
+
+## Locations
+
+The map header table isn't a NARC archive in this generation — it's parsed
+directly out of the ARM9 code binary at a fixed offset, one 24-byte record
+per map. Each header holds: area data ID, matrix ID, script file ID, level
+script ID, text archive ID, day/night music IDs, encounter-table ID, event
+file ID, location-name ID, map-label window ID, weather ID, camera ID, and a
+flags word (packed map-type/battle-background/permission bits, kept raw
+rather than fully decoded). Internal map names come from a separate
+fixed-size table (`fielddata/maptable/mapname.bin`).
+
+Outdoor connections come from a separate `MapMatrix` archive
+(`fielddata/mapmatrix/map_matrix.narc`) referenced by each header's own
+matrix ID — the same underlying two-archive design (map headers plus a
+separate matrix archive) Generation V's own Locations support reuses, just a
+differently shaped record here: a variable-length member with an ASCII name,
+an optional grid of real header IDs (for outdoor regions), and an optional
+parallel altitude grid.
+
+Visible field items (Item Balls) and hidden items (found via the Itemfinder)
+are both decoded from map event data rather than the overworld-object records
+Generation V uses: visible items are object events using the item-ball
+graphics ID whose own script ID is a flat `7000 + item_id` offset, and hidden
+items are background events of a specific event type whose script ID is a
+flat `8000 + item_id` offset, each validated against the real item-name
+table rather than assumed.
+
+Several bonus-encounter categories specific to this generation are decoded
+from a separate archive (`arc/encdata_ex.narc`), not the main wild encounter
+table: honey-tree header IDs (each offering common/uncommon/rare species
+pools, taken directly from the game's own decompiled `HoneyTree_TryInteract`
+header-ID table), Great Marsh header IDs sharing one daily species pool, and
+Trophy Garden's own single header ID with its own daily pool. All of these
+expose only what the ROM stores as fixed data — species pools, not which
+entry is active on a given save file, since that's derived from save-file
+state (a daily seed or save-persisted rotation) rather than a ROM fact.
+
+Static encounters (see Items above) are attached to their real map locations
+using the same script-file cross-reference mechanism trainer battles use.
+
+## Text and names
+
+Pokémon, ability, move, item, and location display names are decoded
+directly from the ROM's own message archive by member index, rather than
+from PokéDB. Trainer names, trainer class names, decoration names, seal
+names, and NPC-trade nickname/OT-name text each have their own dedicated
+member in the same archive. PokéDB supplies stable page slugs and links
+without overriding any of these ROM-decoded names.
+
+## Not yet available
+
+The ROM's own Pokédex and move/ability/item description text banks aren't
+extracted yet: this needs dedicated offset research of its own, so PokéDB's
+effect description and flavor-text quote are shown instead, version-matched
+to the profile's base game, while every structured mechanical field remains
+ROM-derived and authoritative. This is the same gap Generation V's own
+description text has, for the same reason.
+
+Which honey-tree slathering yields, which four trees are a save file's
+guaranteed Rare trees on a given file, and which Great Marsh/Trophy Garden
+pool entries are live today are all derived from save-file state rather than
+ROM data, so those specific, per-save selections are intentionally left
+unrendered — the same policy that keeps Poké Radar chains and the dual-slot
+"today's" pick unrendered elsewhere in this project.

@@ -55,6 +55,13 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
     deployment_url = os.environ.get("ROMWIKI_SITE_URL")
     if deployment_url:
         config.site_url = _deployment_site_url(deployment_url, current)
+    # pymdownx.snippets resolves relative base_path entries against the
+    # process's current working directory, not the config file -- set it to
+    # an absolute path here so shared partials resolve the same way
+    # regardless of where `mkdocs build` is invoked from.
+    config.mdx_configs.setdefault("pymdownx.snippets", {})["base_path"] = [
+        str(root / "sites" / "shared" / "partials")
+    ]
     return config
 
 

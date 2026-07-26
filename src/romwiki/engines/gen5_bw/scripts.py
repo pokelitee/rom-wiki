@@ -17,7 +17,6 @@ from dataclasses import dataclass
 # command" pattern this project's `gen4_dppt/scripts.py` already uses for
 # Platinum's `StartTrainerBattle`/`CheckWonBattle`, so no full script
 # disassembler is needed to find these.
-FUNCTION_TABLE_END = 0xFD13
 START_TRAINER_BATTLE = 0x0085
 START_TRAINER_MULTI_BATTLE = 0x0086
 CHECK_TRAINER_BATTLE_WON = 0x008D
@@ -146,23 +145,3 @@ def parse_fossil_revival_table(data: bytes) -> tuple[Gen5FossilRevival, ...]:
     return tuple(revivals)
 
 
-def parse_function_table(data: bytes) -> tuple[int, ...]:
-    """Read a Gen V script file's function-offset header table.
-
-    Each member of the `Scripts` archive (`layout.scripts`) starts with a
-    table of dword byte-offsets to its own script functions, terminated by an
-    entry whose low 16 bits equal `FUNCTION_TABLE_END` (0xFD13). Verified
-    against real Black ROM data across many script files (11/15/22/23-entry
-    tables all agreeing exactly with the number of local script functions
-    each map's NPCs reference -- see `gen5_bw/overworld.py`).
-    """
-    offsets = []
-    pos = 0
-    n = len(data)
-    while pos + 4 <= n:
-        value = struct.unpack_from("<I", data, pos)[0]
-        if (value & 0xFFFF) == FUNCTION_TABLE_END:
-            break
-        offsets.append(value)
-        pos += 4
-    return tuple(offsets)

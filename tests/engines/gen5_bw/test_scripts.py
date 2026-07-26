@@ -3,10 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5_bw.scripts import (
-    parse_function_table,
-    parse_trainer_battle_commands,
-)
+from romwiki.engines.gen5_bw.scripts import parse_trainer_battle_commands
 
 
 class Gen5ScriptTests(unittest.TestCase):
@@ -43,21 +40,6 @@ class Gen5ScriptTests(unittest.TestCase):
         self.assertEqual(
             parse_trainer_battle_commands(body, trainer_count=1000), ()
         )
-
-    def test_parses_function_offset_table(self) -> None:
-        data = (
-            struct.pack("<I", 0x137)
-            + struct.pack("<I", 0x55C)
-            + struct.pack("<I", 0x23FD13)
-            + b"\x00" * 8
-        )
-
-        self.assertEqual(parse_function_table(data), (0x137, 0x55C))
-
-    def test_function_table_handles_no_entries(self) -> None:
-        data = struct.pack("<I", 0xFD13)
-
-        self.assertEqual(parse_function_table(data), ())
 
 
 if __name__ == "__main__":

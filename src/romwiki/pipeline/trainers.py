@@ -69,7 +69,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         locations_by_trainer,
         script_references_by_trainer,
         location_source,
-    ) = _extract_trainer_locations(
+    ) = _extract_gen4_trainer_locations(
         engine,
         platform,
         result,
@@ -339,7 +339,7 @@ def _extract_gen5_trainer_locations(
     )
 
 
-def _extract_trainer_locations(
+def _extract_gen4_trainer_locations(
     engine: Any,
     platform: Any,
     result: InspectionResult,

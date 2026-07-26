@@ -30,6 +30,7 @@ from romwiki.schema import (
     LocationStaticEncounter,
     LocationTrainerReference,
     LocationWarp,
+    RecordProvenance,
 )
 from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
@@ -377,7 +378,7 @@ def extract_location_dataset(
             events_by_id[header.event_file_id] = engine.parse_map_events(
                 events.read(header.event_file_id), event_file_id=header.event_file_id
             )
-            items_by_event[header.event_file_id] = _extract_location_items(
+            items_by_event[header.event_file_id] = _extract_gen4_location_items(
                 events_by_id[header.event_file_id], item_names
             )
         raw_warps_by_header[header.header_id] = events_by_id[
@@ -385,7 +386,7 @@ def extract_location_dataset(
         ].warps
         raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
 
-    connections = _extract_matrix_connections(
+    connections = _extract_gen4_matrix_connections(
         engine, headers, matrices, location_names, matrix_void_header_ids
     )
     trainers = _extract_trainer_references(result, trainer_dataset)
@@ -397,7 +398,7 @@ def extract_location_dataset(
                 f"{header.script_file_id}"
             )
         if header.script_file_id not in shops_by_script:
-            shops_by_script[header.script_file_id] = _extract_location_shops(
+            shops_by_script[header.script_file_id] = _extract_gen4_location_shops(
                 engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
@@ -417,7 +418,7 @@ def extract_location_dataset(
                 frontier_prices=frontier_prices,
             )
         if header.script_file_id not in gifts_by_script:
-            gifts_by_script[header.script_file_id] = _extract_location_pokemon_gifts(
+            gifts_by_script[header.script_file_id] = _extract_gen4_location_pokemon_gifts(
                 engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
@@ -428,7 +429,7 @@ def extract_location_dataset(
                 ),
             )
         if header.script_file_id not in npc_trades_by_script:
-            npc_trades_by_script[header.script_file_id] = _extract_location_npc_trades(
+            npc_trades_by_script[header.script_file_id] = _extract_gen4_location_npc_trades(
                 engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
@@ -443,7 +444,7 @@ def extract_location_dataset(
         )
         if static_encounter_location_key not in static_encounters_by_location:
             static_encounters_by_location[static_encounter_location_key] = (
-                _extract_location_static_encounters(
+                _extract_gen4_location_static_encounters(
                     engine,
                     scripts.read(header.script_file_id),
                     script_file_id=header.script_file_id,
@@ -552,6 +553,9 @@ def extract_location_dataset(
                     game_corner_prizes
                     if header.header_id == game_corner_header_id
                     else ()
+                ),
+                provenance=RecordProvenance(
+                    source="rom", archive="arm9", member=header.header_id
                 ),
             ).to_dict()
         )
@@ -864,7 +868,7 @@ def _extract_gen5_location_dataset(
     }
 
 
-def _extract_location_shops(
+def _extract_gen4_location_shops(
     engine: Any,
     script: bytes,
     *,
@@ -977,7 +981,7 @@ def _extract_location_shops(
     return tuple(shops)
 
 
-def _extract_location_pokemon_gifts(
+def _extract_gen4_location_pokemon_gifts(
     engine: Any,
     script: bytes,
     *,
@@ -1026,7 +1030,7 @@ def _extract_location_pokemon_gifts(
     return tuple(sorted(gifts, key=lambda gift: gift.command_offset))
 
 
-def _extract_location_static_encounters(
+def _extract_gen4_location_static_encounters(
     engine: Any,
     script: bytes,
     *,
@@ -1064,7 +1068,7 @@ def _extract_location_static_encounters(
     return tuple(encounters)
 
 
-def _extract_location_npc_trades(
+def _extract_gen4_location_npc_trades(
     engine: Any,
     script: bytes,
     *,
@@ -1110,7 +1114,7 @@ def _extract_location_npc_trades(
     return tuple(trades)
 
 
-def _extract_location_items(
+def _extract_gen4_location_items(
     events: Any, item_names: tuple[str, ...]
 ) -> tuple[LocationItem, ...]:
     items = []
@@ -1153,7 +1157,7 @@ def _extract_location_items(
     return tuple(items)
 
 
-def _extract_matrix_connections(
+def _extract_gen4_matrix_connections(
     engine: Any,
     headers: tuple[Any, ...],
     matrices: Any,
@@ -1256,7 +1260,7 @@ def _extract_gen5_matrix_connections(
     `layout.map_matrices`; adjacent grid cells are real, geographically
     adjacent maps. A cell value of -1 means "no map there" (verified: real
     grids are ragged rectangles, not fully packed). Mirrors Gen IV's own
-    `_extract_matrix_connections` algorithm, adapted to Gen V's differently-
+    `_extract_gen4_matrix_connections` algorithm, adapted to Gen V's differently-
     shaped `Gen5MapMatrix` (no separate location-name-id indirection --
     `Gen5Location.name` is already the display name).
     """

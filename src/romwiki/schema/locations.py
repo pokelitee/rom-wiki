@@ -174,6 +174,7 @@ class Gen4Location:
     honey_tree: LocationHoneyTree | None
     daily_encounter_pool: LocationDailyEncounterPool | None
     game_corner_prizes: tuple[LocationGameCornerPrize, ...]
+    provenance: RecordProvenance
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

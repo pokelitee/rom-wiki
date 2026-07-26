@@ -19,12 +19,13 @@ _WILD_SET_OFFSET = 20
 _NULL_WILD_SET = 0xFFFF
 # Byte offset 6 (u16): the map's own dedicated member index in `layout.scripts`
 # (`a/0/5/7`) -- undecoded until this session. Verified against real Black ROM
-# data: for several maps, walking the function this field's script member
-# points to (via `gen5_bw/scripts.py`'s function table) at the offset an NPC's
-# `scriptUsed` field (1-indexed) selects lands on real, in-range script
-# content -- see `gen5_bw/overworld.py`'s module docstring for the full
-# cross-check. Offset 8 (the very next u16) is a second, related script
-# member (consistently `script_file_offset + 1`) whose purpose isn't decoded.
+# data: for several maps, walking that script member's own function-offset
+# header table (dword offsets terminated by an entry whose low 16 bits equal
+# 0xFD13) to the offset an NPC's `scriptUsed` field (1-indexed) selects lands
+# on real, in-range script content -- see `gen5_bw/overworld.py`'s module
+# docstring for the full cross-check. Offset 8 (the very next u16) is a
+# second, related script member (consistently `script_file_offset + 1`)
+# whose purpose isn't decoded.
 _SCRIPT_FILE_OFFSET = 6
 
 

@@ -67,7 +67,6 @@ from romwiki.engines.gen5_bw.pickup import (
 )
 from romwiki.engines.gen5_bw.scripts import (
     parse_fossil_revival_table,
-    parse_function_table,
     parse_trainer_battle_commands,
 )
 from romwiki.engines.gen5_bw.static_encounters import parse_static_encounters
@@ -194,7 +193,6 @@ __all__ = [
     "parse_pickup_table",
     "parse_shop_catalog",
     "parse_static_encounters",
-    "parse_function_table",
     "parse_trainer_battle_commands",
     "parse_trainer_record",
     "pickup_level_range_item_ids",

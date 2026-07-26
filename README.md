@@ -58,6 +58,24 @@ across every raw and enriched dataset as the clean normalized baseline for
 Renegade Platinum comparisons. Comparative builds annotate every supported
 catalog and detail page and generate a game-wide Changes overview.
 
+Pokémon Black and White (`black-us`/`white-us` profiles) are supported through
+a second, independent engine adapter (`gen5_bw`), reaching feature parity with
+the Generation IV engine's own datasets: Pokémon, moves, abilities (including
+Pickup/Honey Gather item tables), egg moves, evolutions, TM/HM machines,
+items (including fossil-revival species), wild encounters, trainers (with
+real map locations resolved from the field-script engine), and locations
+(warps, outdoor map connections, static/gift encounters, and visible/hidden
+field items). Two gaps remain, both confirmed blockers rather than
+unattempted work: location-linked shops, whose map-to-inventory mapping isn't
+stored in any discoverable NARC or ARM9 data table this project's tooling can
+reach; and Thundurus/Tornadus's roaming activation, since the unmodified
+retail ROM stores executable code rather than a data word at the species
+offset. Berry soil-growth mechanics are confirmed absent from Generation V
+entirely (no Berry Farming feature exists in Black/White), not an
+unimplemented category. See
+`sites/games/black-white/wiki/data-sources.md` for the full investigation
+behind each of these.
+
 The project is designed to support additional games without coupling the wiki
 renderer to a particular ROM format. The normalized data contracts and MkDocs
 renderers are reusable, and extraction dispatch resolves the platform and engine
