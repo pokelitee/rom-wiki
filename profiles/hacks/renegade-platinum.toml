@@ -12,6 +12,26 @@ rom_versions = [1]
 [reference]
 sprite_version = "platinum"
 
+[type_chart]
+chart = "gen4"
+additional_types = ["fairy"]
+
+[type_chart.overrides]
+"fairy>fighting" = "2"
+"fairy>dragon" = "2"
+"fairy>dark" = "2"
+"fairy>fire" = "1/2"
+"fairy>poison" = "1/2"
+"fairy>steel" = "1/2"
+"fighting>fairy" = "1/2"
+"bug>fairy" = "1/2"
+"dark>fairy" = "1/2"
+"dragon>fairy" = "0"
+"poison>fairy" = "2"
+"steel>fairy" = "2"
+"ghost>steel" = "1"
+"dark>steel" = "1"
+
 [layout]
 personal = "poketool/personal/pl_personal.narc"
 encounters = "fielddata/encountdata/pl_enc_data.narc"

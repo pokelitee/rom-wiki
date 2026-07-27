@@ -372,6 +372,26 @@
   align-items: center;
   gap: .4rem;
 }
+.rw-type-chart {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+.rw-type-chart table {
+  width: max-content;
+  min-width: 100%;
+  white-space: nowrap;
+}
+.rw-type-chart th:first-child,
+.rw-type-chart td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--md-default-bg-color);
+}
+.rw-type-chart th:first-child {
+  z-index: 2;
+}
 
 @media (max-width: 44rem) {
   .rw-summary {

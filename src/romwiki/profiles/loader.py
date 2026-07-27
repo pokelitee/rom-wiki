@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.platforms.registry import RomImage
-from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
+from romwiki.profiles.models import GameProfile, HashMatch, KnownHash, TypeChartConfig
 from romwiki.util.errors import ProfileError
 
 
@@ -66,8 +66,14 @@ class ProfileRepository:
                     raise ProfileError(
                         f"Profile {profile_id} extends unknown profile {parent_id}"
                     )
+                parent = resolve(parent_id, (*ancestors, profile_id))
+                if "type_chart" in parent and "type_chart" not in data:
+                    raise ProfileError(
+                        f"Inherited profile {profile_id} must explicitly declare "
+                        "its type chart"
+                    )
                 merged = _merge_tables(
-                    resolve(parent_id, (*ancestors, profile_id)),
+                    parent,
                     data,
                 )
             merged["profile"].pop("extends", None)
@@ -139,6 +145,7 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
         move_names = _load_semantic_names(
             semantics_data.get("moves", {}), path, "move", 0xFFFF
         )
+        type_chart = _load_type_chart(data.get("type_chart"), path)
         hashes = tuple(
             KnownHash(
                 algorithm=item["algorithm"].lower(),
@@ -166,6 +173,7 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
             sprite_version=sprite_version,
             type_names=type_names,
             move_names=move_names,
+            type_chart=type_chart,
             layout=dict(data.get("layout", {})),
             parameters=dict(data.get("parameters", {})),
         )
@@ -193,3 +201,30 @@ def _load_semantic_names(
             raise ProfileError(f"Invalid {label} semantic in {path}: {raw_id} = {name}")
         result[semantic_id] = name
     return result
+
+
+def _load_type_chart(value: object, path: Path) -> TypeChartConfig | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ProfileError(f"Invalid type chart metadata in {path}")
+    chart = value.get("chart")
+    additional_types = value.get("additional_types", ())
+    overrides = value.get("overrides", {})
+    if (
+        not isinstance(chart, str)
+        or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", chart) is None
+        or not isinstance(additional_types, (list, tuple))
+        or not all(
+            isinstance(name, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name)
+            for name in additional_types
+        )
+        or len(set(additional_types)) != len(additional_types)
+        or not isinstance(overrides, dict)
+        or not all(
+            isinstance(key, str) and isinstance(item, str)
+            for key, item in overrides.items()
+        )
+    ):
+        raise ProfileError(f"Invalid type chart metadata in {path}")
+    return TypeChartConfig(chart, tuple(additional_types), dict(overrides))

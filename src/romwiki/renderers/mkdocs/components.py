@@ -40,7 +40,10 @@ def escape_table_cell(value: str) -> str:
     return escape(value).replace("|", "&#124;")
 
 
-def type_badges(types: list[dict[str, Any]]) -> str:
+def type_badges(
+    types: list[dict[str, Any]],
+    type_chart_href: str | None = None,
+) -> str:
     badges = []
     seen = set()
     for value in types:
@@ -49,9 +52,13 @@ def type_badges(types: list[dict[str, Any]]) -> str:
             continue
         seen.add(name)
         label = display_name(name)
-        badges.append(
-            f'<span class="rw-type rw-type--{escape(name)}">{escape(label)}</span>'
-        )
+        badge = f'<span class="rw-type rw-type--{escape(name)}">{escape(label)}</span>'
+        if type_chart_href is not None:
+            badge = (
+                f'<a href="{escape(type_chart_href)}#{escape(name)}" '
+                f'aria-label="{escape(label)} type effectiveness">{badge}</a>'
+            )
+        badges.append(badge)
     return '<span class="rw-type-list">' + "".join(badges) + "</span>"
 
 
@@ -262,7 +269,10 @@ def ability_link(value: dict[str, Any], source_url: str) -> str:
     return link
 
 
-def pokemon_summary(record: dict[str, Any]) -> list[str]:
+def pokemon_summary(
+    record: dict[str, Any],
+    type_chart_href: str | None = None,
+) -> list[str]:
     portrait = record.get("portrait") or record.get("sprite")
     if portrait:
         media = (
@@ -306,7 +316,7 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
     body_color = (record.get("body_color") or {}).get("name")
     habitat = reference.get("habitat")
     shape = reference.get("shape")
-    badges = type_badges(record["types"]) + classification
+    badges = type_badges(record["types"], type_chart_href) + classification
     fact_lines = [
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
         *(

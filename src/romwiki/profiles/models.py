@@ -15,6 +15,13 @@ class KnownHash:
 
 
 @dataclass(frozen=True, slots=True)
+class TypeChartConfig:
+    chart: str
+    additional_types: tuple[str, ...] = ()
+    overrides: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
 class GameProfile:
     id: str
     name: str
@@ -27,6 +34,7 @@ class GameProfile:
     sprite_version: str | None = None
     type_names: Mapping[int, str] = field(default_factory=dict)
     move_names: Mapping[int, str] = field(default_factory=dict)
+    type_chart: TypeChartConfig | None = None
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, Any] = field(default_factory=dict)
 

@@ -12,6 +12,12 @@ from tests.conftest import make_header
 
 
 class ProfileRepositoryTests(unittest.TestCase):
+    def test_all_data_profiles_explicitly_select_a_type_chart(self) -> None:
+        profiles = ProfileRepository.load(Path("profiles")).profiles
+
+        self.assertTrue(profiles)
+        self.assertTrue(all(profile.type_chart is not None for profile in profiles))
+
     def test_loads_clean_platinum_baseline_profile(self) -> None:
         profiles = ProfileRepository.load(Path("profiles")).profiles
 
@@ -229,6 +235,46 @@ variant = "child"
 
             with self.assertRaisesRegex(ProfileError, "unknown profile missing"):
                 ProfileRepository.load(Path(directory))
+
+    def test_inherited_profile_cannot_silently_inherit_a_type_chart(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "base.toml").write_text(
+                """
+[profile]
+id = "base"
+name = "Base"
+platform = "nintendo-ds"
+engine = "gen4_dppt"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [0]
+[type_chart]
+chart = "gen4"
+[[hashes]]
+algorithm = "sha256"
+value = "base"
+variant = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "child.toml").write_text(
+                """
+[profile]
+id = "child"
+name = "Child"
+extends = "base"
+[[hashes]]
+algorithm = "sha256"
+value = "child"
+variant = "child"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "explicitly declare"):
+                ProfileRepository.load(root)
 
     def test_inherited_profile_requires_its_own_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

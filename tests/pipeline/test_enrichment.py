@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 
 from romwiki.pipeline.enrich import enrich_personal_dataset
+from romwiki.pipeline.type_charts import build_type_dataset
+from romwiki.profiles.loader import ProfileRepository
 from romwiki.renderers.mkdocs import render_pokemon_pages
 from romwiki.renderers.mkdocs.pokemon import (
     _evolution_list,
@@ -270,6 +272,28 @@ class PersonalEnrichmentTests(unittest.TestCase):
             page,
         )
         self.assertNotIn(">Mythical<", page)
+
+    def test_renders_defensive_type_effectiveness(self) -> None:
+        record = _bulbasaur_record()
+        record["types"].append({"id": 3, "name": "poison"})
+        profile = next(
+            profile
+            for profile in ProfileRepository.load(Path("profiles")).profiles
+            if profile.id == "renegade-platinum"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages(
+                {"records": [record]},
+                output,
+                type_dataset=build_type_dataset(profile),
+            )
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Type effectiveness", page)
+        self.assertIn("| ¼× |", page)
+        self.assertIn('href="../types/#fire"', page)
+        self.assertNotIn("| 1× |", page)
 
     def test_renders_battle_only_forms_section_when_present(self) -> None:
         record = _bulbasaur_record()

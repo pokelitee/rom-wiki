@@ -44,6 +44,7 @@ from romwiki.pipeline.relationships import (
 from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
+from romwiki.pipeline.type_charts import build_type_dataset
 from romwiki.pipeline.version_merge import (
     merge_version_family_comparisons,
     merge_version_family_datasets,
@@ -56,6 +57,7 @@ from romwiki.renderers.mkdocs import (
     render_move_pages,
     render_pokemon_pages,
     render_trainer_pages,
+    render_type_chart,
 )
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
@@ -833,10 +835,13 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     ):
         abilities_dataset = workflow.build("abilities")
     relationship_index = None
+    type_dataset = None
     relationship_datasets: dict[str, dict] = {}
     if args.command == "build-pokemon":
         relationship_datasets = _current_relationship_datasets(workflow.current)
         relationship_index = build_relationship_index(relationship_datasets)
+        type_dataset = build_type_dataset(workflow.current.profile)
+        _write_type_build(type_dataset, data_root, wiki_root)
     elif args.command == "build-moves":
         relationship_datasets = {"pokemon": workflow.current.pokemon()}
         relationship_index = build_relationship_index(relationship_datasets)
@@ -881,6 +886,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             move_dataset=move_dataset,
             reference_index=reference_index,
             relationship_index=relationship_index,
+            type_dataset=type_dataset,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
@@ -906,6 +912,8 @@ def _run_full_game_build(args: argparse.Namespace, result: InspectionResult) -> 
         current_datasets["trades"] = trades
     reference_index = ReferenceIndex.from_datasets(current_datasets)
     relationship_index = build_relationship_index(current_datasets)
+    type_dataset = build_type_dataset(workflow.current.profile)
+    _write_type_build(type_dataset, data_root, wiki_root)
     comparisons = {}
     for kind, build in builds.items():
         _write_dataset_build(
@@ -917,6 +925,7 @@ def _run_full_game_build(args: argparse.Namespace, result: InspectionResult) -> 
             move_dataset=builds["moves"].current,
             reference_index=reference_index,
             relationship_index=relationship_index,
+            type_dataset=type_dataset,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
@@ -1029,6 +1038,19 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     reference_index = ReferenceIndex.from_datasets(merged_datasets)
     relationship_index = build_relationship_index(relationship_datasets)
     move_dataset = merged_datasets.get("moves")
+    type_datasets = [
+        build_type_dataset(workflows[version].current.profile, game=site_id)
+        for version in versions
+    ]
+    if any(
+        dataset["records"] != type_datasets[0]["records"]
+        for dataset in type_datasets[1:]
+    ):
+        raise LocalConfigError(
+            "Version-family profiles must declare matching type charts"
+        )
+    type_dataset = type_datasets[0]
+    _write_type_build(type_dataset, data_root, wiki_root)
     for kind, dataset in merged_datasets.items():
         comparison = merged_comparisons.get(kind)
         _write_dataset_build(
@@ -1040,6 +1062,7 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             move_dataset=move_dataset,
             reference_index=reference_index,
             relationship_index=relationship_index,
+            type_dataset=type_dataset,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
     if merged_comparisons:
@@ -1104,6 +1127,7 @@ def _write_dataset_build(
     move_dataset: dict | None = None,
     reference_index: ReferenceIndex | None = None,
     relationship_index: RelationshipIndex | None = None,
+    type_dataset: dict | None = None,
     only_pages: frozenset[str] | None = None,
 ) -> None:
     write_enriched_dataset(dataset, data_output)
@@ -1128,6 +1152,7 @@ def _write_dataset_build(
             move_dataset,
             reference_index,
             relationship_index,
+            type_dataset,
             only_pages=only_pages,
         )
     elif kind == "moves":
@@ -1149,6 +1174,19 @@ def _write_dataset_build(
         )
     print(f"Wrote {len(dataset['records'])} {kind} records: {data_output}")
     print(f"Rendered {page_count} {kind} pages: {wiki_output}")
+
+
+def _write_type_build(
+    dataset: dict,
+    data_root: Path,
+    wiki_root: Path,
+) -> None:
+    data_output = _dataset_output(data_root, "types")
+    write_enriched_dataset(dataset, data_output)
+    write_public_dataset(wiki_root, "types", dataset, None)
+    page_count = render_type_chart(dataset, wiki_root / "types")
+    print(f"Wrote {len(dataset['records'])} types: {data_output}")
+    print(f"Rendered {page_count} type chart page: {wiki_root / 'types'}")
 
 
 def _current_relationship_datasets(

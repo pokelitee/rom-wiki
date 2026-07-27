@@ -11,6 +11,7 @@ from romwiki.pipeline.relationships import (
     WildEncounterReference,
     build_relationship_index,
 )
+from romwiki.pipeline.type_charts import defensive_effectiveness
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -61,6 +62,7 @@ def render_pokemon_pages(
     move_dataset: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
     relationships: RelationshipIndex | None = None,
+    type_dataset: dict[str, Any] | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -110,6 +112,7 @@ def render_pokemon_pages(
                     comparison.get("baseline") if comparison else None,
                     references,
                     relationships,
+                    type_dataset,
                 ),
             )
             page_count += 1
@@ -201,6 +204,7 @@ def _render_record(
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
     relationships: RelationshipIndex | None = None,
+    type_dataset: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"pokemon/{record['slug']}.md"
     stats = record["base_stats"]
@@ -216,7 +220,8 @@ def _render_record(
         f"# {record['name']}",
         "",
         *version_availability_note(record),
-        *pokemon_summary(record),
+        *pokemon_summary(record, "../types/" if type_dataset is not None else None),
+        *_defensive_effectiveness_section(record, type_dataset),
         *_reference_entry(reference),
         *_sprite_gallery(record),
         "## Base stats",
@@ -360,6 +365,60 @@ def _render_record(
     )
     _append_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _defensive_effectiveness_section(
+    record: dict[str, Any],
+    type_dataset: dict[str, Any] | None,
+) -> list[str]:
+    if type_dataset is None:
+        return []
+    defending_types = tuple(
+        dict.fromkeys(str(value["name"]) for value in record["types"])
+    )
+    effectiveness = defensive_effectiveness(type_dataset, defending_types)
+    rows = []
+    for multiplier in ("4", "2", "1/2", "1/4", "0"):
+        types = effectiveness.get(multiplier)
+        if not types:
+            continue
+        rows.append(
+            f"| {_effectiveness_label(multiplier)} | {_linked_type_badges(types)} |"
+        )
+    return [
+        "## Type effectiveness",
+        "",
+        "Defensive matchups for this Pokémon's current type combination. "
+        "Neutral damage is omitted.",
+        "",
+        "| Damage taken | Attacking types |",
+        "| -----------: | --------------- |",
+        *rows,
+        "",
+    ]
+
+
+def _effectiveness_label(multiplier: str) -> str:
+    return {
+        "4": "4×",
+        "2": "2×",
+        "1/2": "½×",
+        "1/4": "¼×",
+        "0": "0×",
+    }[multiplier]
+
+
+def _linked_type_badges(types: tuple[str, ...]) -> str:
+    return (
+        '<span class="rw-type-list">'
+        + "".join(
+            f'<a href="../types/#{escape(name)}" aria-label="{escape(display_name(name))} '
+            f'type effectiveness"><span class="rw-type rw-type--{escape(name)}">'
+            f"{escape(display_name(name))}</span></a>"
+            for name in types
+        )
+        + "</span>"
+    )
 
 
 def _item_sprite_cell(item: dict[str, Any], references: ReferenceIndex | None) -> str:
@@ -983,7 +1042,10 @@ def _wild_conditions(encounter: WildEncounterReference) -> str:
 
 
 def _availability_versions(versions: tuple[str, ...]) -> str:
-    return " / ".join(escape_table_cell(display_name(version)) for version in versions) or "—"
+    return (
+        " / ".join(escape_table_cell(display_name(version)) for version in versions)
+        or "—"
+    )
 
 
 def _acquisition_detail(
@@ -1022,9 +1084,7 @@ def _append_trainer_appearances(
     )
     for appearance in appearances:
         trainer_label = " ".join(
-            value
-            for value in (appearance.class_name, appearance.trainer_name)
-            if value
+            value for value in (appearance.class_name, appearance.trainer_name) if value
         )
         trainer = entity_markdown_link(
             "trainer",
