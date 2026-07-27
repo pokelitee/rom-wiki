@@ -334,6 +334,18 @@ may publish as **one** site. Each release still gets its own `GameProfile` under
 a single `profile`, and there is no `sites/games/black-us/` or `.../white-us/`
 directory at all -- only `sites/games/black-white/`.
 
+The descriptor must also provide one stable lowercase-hyphenated version label per
+profile in the same order:
+
+```toml
+[game]
+profiles = ["black-us", "white-us"]
+versions = ["black", "white"]
+```
+
+The catalog-driven `romwiki regenerate` command uses these labels directly; it
+does not infer user-facing version identity from profile IDs.
+
 The `romwiki build-version-family --games black-us white-us --versions black
 white --site-id black-white` command accepts two or more profiles, merges each section with
 `pipeline.version_merge.merge_version_family_datasets` (which tags every record with
@@ -382,6 +394,7 @@ references.
 - Run the full test suite and build the individual site and combined Pages artifact.
 - Run `romwiki site snapshot` after validating the complete generated output,
   then test `romwiki site restore-snapshot` from a clean checkout.
+- Run `romwiki regenerate --all` to verify the descriptor-driven complete workflow.
 - Run `romwiki build-game --game <id>` twice and confirm the second run reuses the
   baseline cache.
 - Test catalogs with missing optional values, duplicate labels, and enough records

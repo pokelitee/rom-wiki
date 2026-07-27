@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import tomllib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -16,6 +17,7 @@ _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 @dataclass(frozen=True, slots=True)
 class GameMetadata:
     profiles: tuple[str, ...]
+    versions: tuple[str, ...]
     data_driven: bool
     generation: int
     base_game: str
@@ -74,6 +76,25 @@ class SiteCatalog:
     def published(self) -> tuple[SiteDefinition, ...]:
         return tuple(site for site in self.sites if site.published)
 
+    def select(
+        self,
+        site_ids: Sequence[str] = (),
+        *,
+        all_published: bool = False,
+    ) -> tuple[SiteDefinition, ...]:
+        if all_published and site_ids:
+            raise SiteError("Specify site identifiers or --all, not both")
+        if not all_published and not site_ids:
+            raise SiteError("Specify at least one site identifier or --all")
+        selected = (
+            self.published()
+            if all_published
+            else tuple(self.get(site_id) for site_id in site_ids)
+        )
+        if len({site.id for site in selected}) != len(selected):
+            raise SiteError("A site may only be selected once")
+        return selected
+
 
 def _load_site(path: Path, root: Path) -> SiteDefinition:
     if not path.is_file():
@@ -119,10 +140,31 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
             raise SiteError(f"Invalid data_driven flag in {path.relative_to(root)}")
         raw_profiles = game.get("profile", game.get("profiles", ()))
         profiles = (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
+        raw_versions = game.get("versions", ())
+        versions = tuple(raw_versions) if isinstance(raw_versions, list) else ()
         if (data_driven and not profiles) or not all(
             isinstance(value, str) for value in profiles
         ):
             raise SiteError(f"Invalid profile(s) in {path.relative_to(root)}")
+        if (
+            len(profiles) > 1
+            and (
+                len(versions) != len(profiles)
+                or not all(
+                    isinstance(value, str) and _SLUG_PATTERN.fullmatch(value)
+                    for value in versions
+                )
+            )
+        ):
+            raise SiteError(
+                f"Version-family site must define one valid version label per "
+                f"profile in {path.relative_to(root)}"
+            )
+        if len(profiles) <= 1 and versions:
+            raise SiteError(
+                f"Single-profile site cannot define versions in "
+                f"{path.relative_to(root)}"
+            )
         slug_fields: dict[str, Any] = {
             "base_game": game["base_game"],
             "platform": game["platform"],
@@ -146,6 +188,7 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
             raise SiteError(f"Invalid platform name in {path.relative_to(root)}")
         return GameMetadata(
             profiles=profiles,
+            versions=versions,
             data_driven=data_driven,
             generation=generation,
             base_game=slug_fields["base_game"],

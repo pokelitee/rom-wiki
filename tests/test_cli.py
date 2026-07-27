@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from romwiki.cli import (
     _comparison_workflow_kind,
@@ -13,12 +14,19 @@ from romwiki.cli import (
     _load_comparisons,
     _resolve_build_baseline,
     _resolve_input_rom,
+    _run_regeneration,
     _version_family_inputs,
     _version_family_uses_baselines,
     build_parser,
     main,
 )
-from romwiki.util.errors import LocalConfigError
+from romwiki.sites import (
+    GameMetadata,
+    SiteAuditReport,
+    SiteCatalog,
+    SiteDefinition,
+)
+from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGamePaths
 
 
@@ -49,6 +57,15 @@ class MainErrorHandlingTests(unittest.TestCase):
 
         self.assertEqual(args.games, ["red", "blue", "yellow"])
         self.assertEqual(args.versions, ["red-hack", "blue-hack", "yellow-hack"])
+
+    def test_regenerate_parser_exposes_complete_workflow_options(self) -> None:
+        args = build_parser().parse_args(
+            ["regenerate", "--all", "--refresh", "--snapshot"]
+        )
+
+        self.assertTrue(args.regenerate_all)
+        self.assertTrue(args.refresh)
+        self.assertTrue(args.snapshot)
 
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")
@@ -313,6 +330,145 @@ base_rom = "base.nds"
             LocalConfigError, "Specify a ROM path or select a configured game"
         ):
             _resolve_input_rom(args)
+
+
+class RegenerationTests(unittest.TestCase):
+    def test_dispatches_single_and_version_family_builds_from_site_metadata(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pokedb_root = root / "pokedb"
+            (pokedb_root / "gen4").mkdir(parents=True)
+            (pokedb_root / "gen5").mkdir()
+            roms = root / "roms"
+            roms.mkdir()
+            for name in ("platinum-us", "black-us", "white-us"):
+                (roms / f"{name}.nds").touch()
+            games_config = root / "games.toml"
+            games_config.write_text(
+                """
+[games.platinum-us]
+patched_rom = "roms/platinum-us.nds"
+[games.black-us]
+patched_rom = "roms/black-us.nds"
+[games.white-us]
+patched_rom = "roms/white-us.nds"
+""".strip(),
+                encoding="utf-8",
+            )
+            sites = (
+                _site(root, "portal", "portal", None),
+                _site(
+                    root,
+                    "platinum",
+                    "game",
+                    _game(("platinum-us",), (), 4),
+                ),
+                _site(
+                    root,
+                    "black-white",
+                    "game",
+                    _game(("black-us", "white-us"), ("black", "white"), 5),
+                ),
+            )
+            catalog = SiteCatalog(root, sites)
+            args = SimpleNamespace(
+                root=root,
+                site_ids=[],
+                regenerate_all=True,
+                games_config=games_config,
+                profiles_dir=root / "profiles",
+                pokedb_root=pokedb_root,
+                data_root=root / "data",
+                output=root / "dist",
+                refresh=True,
+                snapshot=False,
+                snapshot_output=root / "snapshot.tar.gz",
+                max_page_kb=512,
+                max_images=150,
+                base_url=None,
+            )
+
+            def inspection(path: Path, profiles_dir: Path) -> SimpleNamespace:
+                del profiles_dir
+                profile_id = path.stem
+                return SimpleNamespace(
+                    match=SimpleNamespace(profile=SimpleNamespace(id=profile_id))
+                )
+
+            report = SiteAuditReport(3, 10, 100, ("index.html", 50), (), ())
+            with (
+                patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
+                patch("romwiki.cli.inspect_rom", side_effect=inspection),
+                patch("romwiki.cli._run_full_game_build") as build_game,
+                patch("romwiki.cli._run_version_pair_build") as build_family,
+                patch(
+                    "romwiki.cli.build_sites",
+                    return_value=catalog.published(),
+                ),
+                patch("romwiki.cli.audit_site", return_value=report),
+            ):
+                _run_regeneration(args)
+
+            single_args = build_game.call_args.args[0]
+            self.assertEqual(single_args.game, "platinum-us")
+            self.assertEqual(
+                single_args.wiki_root,
+                root / "sites" / "platinum" / "wiki",
+            )
+            self.assertTrue(single_args.hack_only)
+            family_args = build_family.call_args.args[0]
+            self.assertEqual(family_args.games, ["black-us", "white-us"])
+            self.assertEqual(family_args.versions, ["black", "white"])
+            self.assertEqual(family_args.site_id, "black-white")
+            self.assertTrue(family_args.refresh_cache)
+
+    def test_snapshot_requires_complete_regeneration(self) -> None:
+        args = SimpleNamespace(
+            snapshot=True,
+            regenerate_all=False,
+        )
+
+        with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
+            _run_regeneration(args)
+
+
+def _game(
+    profiles: tuple[str, ...],
+    versions: tuple[str, ...],
+    generation: int,
+) -> GameMetadata:
+    return GameMetadata(
+        profiles=profiles,
+        versions=versions,
+        data_driven=True,
+        generation=generation,
+        base_game="test",
+        platform="nintendo-ds",
+        platform_name="Nintendo DS",
+        creator="Test",
+        theme="test",
+    )
+
+
+def _site(
+    root: Path,
+    site_id: str,
+    kind: str,
+    game: GameMetadata | None,
+) -> SiteDefinition:
+    return SiteDefinition(
+        id=site_id,
+        name=site_id,
+        kind=kind,
+        slug="" if kind == "portal" else site_id,
+        published=True,
+        order=0,
+        config_path=root / "sites" / site_id / "mkdocs.yml",
+        description="",
+        game=game,
+    )
 
 
 if __name__ == "__main__":

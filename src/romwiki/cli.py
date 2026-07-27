@@ -62,7 +62,9 @@ from romwiki.renderers.mkdocs import (
 from romwiki.renderers.mkdocs.comparisons import render_changes_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import (
+    SiteAuditReport,
     SiteCatalog,
+    SiteDefinition,
     audit_site,
     build_sites,
     create_generated_wiki_snapshot,
@@ -378,6 +380,55 @@ def build_parser() -> argparse.ArgumentParser:
     _add_dev_argument(version_pair_parser)
     _add_cache_argument(version_pair_parser)
 
+    regenerate_parser = subparsers.add_parser(
+        "regenerate",
+        help="regenerate selected game data, build sites, and audit the artifact",
+    )
+    regenerate_parser.add_argument("site_ids", nargs="*", help="game site identifiers")
+    regenerate_parser.add_argument(
+        "--all",
+        action="store_true",
+        dest="regenerate_all",
+        help="regenerate every published data-driven game and build all sites",
+    )
+    regenerate_parser.add_argument(
+        "--games-config", type=Path, default=Path(".local/games.toml")
+    )
+    regenerate_parser.add_argument(
+        "--profiles-dir", type=Path, default=Path("profiles")
+    )
+    regenerate_parser.add_argument(
+        "--pokedb-root",
+        type=Path,
+        default=Path("../pokedb/.output"),
+        help="directory containing gen<N> PokéDB outputs",
+    )
+    regenerate_parser.add_argument(
+        "--data-root", type=Path, default=Path("build/data")
+    )
+    regenerate_parser.add_argument(
+        "--output", type=Path, default=Path("dist"), help="artifact output directory"
+    )
+    regenerate_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="replace current-ROM and clean-baseline extraction caches",
+    )
+    regenerate_parser.add_argument(
+        "--snapshot",
+        action="store_true",
+        help="update the generated-wiki snapshot after a successful audit",
+    )
+    regenerate_parser.add_argument(
+        "--snapshot-output",
+        type=Path,
+        default=Path("sites/generated-wiki.tar.gz"),
+    )
+    regenerate_parser.add_argument("--max-page-kb", type=int, default=512)
+    regenerate_parser.add_argument("--max-images", type=int, default=150)
+    regenerate_parser.add_argument("--base-url")
+    _add_site_root_argument(regenerate_parser)
+
     baseline_parser = subparsers.add_parser(
         "baseline", help="manage clean-ROM baseline caches"
     )
@@ -609,6 +660,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _run_full_game_build(args, result)
         elif args.command in {"build-version-family", "build-version-pair"}:
             _run_version_pair_build(args)
+        elif args.command == "regenerate":
+            _run_regeneration(args)
         elif args.command == "baseline":
             _run_baseline_build(args)
         elif args.command == "site":
@@ -619,27 +672,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     max_images_per_page=args.max_images,
                     base_url=args.base_url,
                 )
-                displayed_errors = report.errors[:100]
-                for issue in (*report.warnings, *displayed_errors):
-                    print(issue.format(), file=sys.stderr)
-                if len(report.errors) > len(displayed_errors):
-                    print(
-                        f"... {len(report.errors) - len(displayed_errors):,} "
-                        "additional error(s) omitted",
-                        file=sys.stderr,
-                    )
-                largest = report.largest_page
-                largest_text = (
-                    f"; largest: {largest[0]} ({largest[1] / 1024:.1f} KiB)"
-                    if largest
-                    else ""
-                )
-                print(
-                    f"Audited {report.page_count:,} pages and "
-                    f"{report.link_count:,} links{largest_text}"
-                )
-                if not report.ok:
-                    raise SiteError(f"site audit found {len(report.errors):,} error(s)")
+                _report_site_audit(report)
             elif args.site_command == "list":
                 catalog = SiteCatalog.load(args.root)
                 _print_sites(catalog)
@@ -1073,6 +1106,162 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
     if merged_comparisons:
         page_count = render_changes_pages(merged_comparisons, wiki_root)
         print(f"Rendered {page_count} change overview pages: {wiki_root / 'changes'}")
+
+
+def _run_regeneration(args: argparse.Namespace) -> None:
+    if args.snapshot and not args.regenerate_all:
+        raise SiteError("--snapshot requires --all")
+
+    catalog = SiteCatalog.load(args.root)
+    selected = catalog.select(
+        args.site_ids,
+        all_published=args.regenerate_all,
+    )
+    data_sites = tuple(
+        site
+        for site in selected
+        if site.kind == "game"
+        and site.game is not None
+        and site.game.data_driven
+    )
+    registry = (
+        LocalGameRegistry.load(args.games_config) if data_sites else None
+    )
+
+    prepared: list[tuple[SiteDefinition, tuple[LocalGamePaths, ...], Path]] = []
+    for site in data_sites:
+        assert site.game is not None
+        pokedb = args.pokedb_root / f"gen{site.game.generation}"
+        if not pokedb.is_dir():
+            raise LocalConfigError(
+                f"PokéDB generation output does not exist for {site.id}: "
+                f"{pokedb.resolve()}"
+            )
+        assert registry is not None
+        paths = tuple(registry.get(profile) for profile in site.game.profiles)
+        for profile, game_paths in zip(site.game.profiles, paths, strict=True):
+            _validate_regeneration_rom(
+                game_paths.rom(),
+                profile,
+                args.profiles_dir,
+            )
+        uses_baselines = (
+            paths[0].base_rom is not None
+            if len(paths) == 1
+            else _version_family_uses_baselines(
+                dict(zip(site.game.versions, paths, strict=True))
+            )
+        )
+        if uses_baselines:
+            for game_paths in paths:
+                baseline = inspect_rom(game_paths.rom(base=True), args.profiles_dir)
+                if baseline.match is None:
+                    raise LocalConfigError(
+                        f"Base ROM for {game_paths.game_id} does not match a profile"
+                    )
+        prepared.append((site, paths, pokedb))
+
+    print(f"Validated regeneration inputs for {len(prepared):,} data-driven site(s)")
+    for site, paths, pokedb in prepared:
+        game = site.game
+        assert game is not None
+        print(f"Regenerating {site.id}")
+        if len(game.profiles) == 1:
+            build_args = argparse.Namespace(
+                input_rom=None,
+                rom_override=None,
+                game=game.profiles[0],
+                base=False,
+                games_config=args.games_config,
+                profiles_dir=args.profiles_dir,
+                base_rom=None,
+                hack_only=paths[0].base_rom is None,
+                refresh_baseline=args.refresh,
+                refresh_cache=args.refresh,
+                dev=False,
+                pokedb=pokedb,
+                data_root=args.data_root,
+                wiki_root=site.config_path.parent / "wiki",
+            )
+            result = inspect_rom(paths[0].rom(), args.profiles_dir)
+            _run_full_game_build(build_args, result)
+        else:
+            build_args = argparse.Namespace(
+                command="build-version-family",
+                games=list(game.profiles),
+                versions=list(game.versions),
+                site_id=site.id,
+                games_config=args.games_config,
+                profiles_dir=args.profiles_dir,
+                pokedb=pokedb,
+                data_root=args.data_root,
+                wiki_root=site.config_path.parent / "wiki",
+                refresh_baseline=args.refresh,
+                refresh_cache=args.refresh,
+                dev=False,
+            )
+            _run_version_pair_build(build_args)
+
+    built = build_sites(
+        catalog,
+        args.output,
+        site_ids=args.site_ids,
+        build_all=args.regenerate_all,
+    )
+    for site in built:
+        print(f"Built {site.id}: {site.output_path(args.output.resolve())}")
+
+    report = audit_site(
+        args.output,
+        max_html_bytes=args.max_page_kb * 1024,
+        max_images_per_page=args.max_images,
+        base_url=args.base_url,
+    )
+    _report_site_audit(report)
+
+    if args.snapshot:
+        count = create_generated_wiki_snapshot(args.root, args.snapshot_output)
+        print(
+            f"Archived {count:,} generated wiki files: {args.snapshot_output}"
+        )
+
+
+def _validate_regeneration_rom(
+    path: Path,
+    expected_profile: str,
+    profiles_dir: Path,
+) -> None:
+    result = inspect_rom(path, profiles_dir)
+    actual_profile = result.match.profile.id if result.match is not None else None
+    if actual_profile != expected_profile:
+        actual = actual_profile or "no profile"
+        raise LocalConfigError(
+            f"ROM for {expected_profile} matched {actual}, not {expected_profile}"
+        )
+
+
+def _report_site_audit(report: SiteAuditReport) -> None:
+    displayed_errors = report.errors[:100]
+    for issue in (*report.warnings, *displayed_errors):
+        print(issue.format(), file=sys.stderr)
+    if len(report.errors) > len(displayed_errors):
+        print(
+            f"... {len(report.errors) - len(displayed_errors):,} "
+            "additional error(s) omitted",
+            file=sys.stderr,
+        )
+    largest = report.largest_page
+    largest_text = (
+        f"; largest: {largest[0]} ({largest[1] / 1024:.1f} KiB)"
+        if largest
+        else ""
+    )
+    print(
+        f"Audited {report.page_count:,} pages and "
+        f"{report.link_count:,} links{largest_text}"
+    )
+    if not report.ok:
+        raise SiteError(f"site audit found {len(report.errors):,} error(s)")
 
 
 def _version_family_inputs(

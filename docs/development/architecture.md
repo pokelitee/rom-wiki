@@ -348,3 +348,11 @@ renderer, and profile sources, so a stale snapshot is rejected. Required
 generated sections are validated before a site build, preventing an absent
 publication input from degrading into a successful landing-page-only
 deployment.
+
+`romwiki regenerate` is the catalog-driven owner of complete local regeneration.
+It preflights all selected ROM registrations and generation-specific PokéDB
+outputs before writing, dispatches single-profile and version-family sites through
+their existing build workflows, builds the selected MkDocs sites, and audits the
+combined artifact. Snapshot creation is an optional final step restricted to
+complete `--all` runs. This orchestration layer does not reimplement extraction,
+merging, rendering, site building, auditing, or snapshot behavior.

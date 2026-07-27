@@ -20,19 +20,7 @@ def build_sites(
     build_all: bool = False,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
-    if build_all and site_ids:
-        raise SiteError("Specify site identifiers or --all, not both")
-    if not build_all and not site_ids:
-        raise SiteError("Specify at least one site identifier or --all")
-
-    selected = (
-        catalog.published()
-        if build_all
-        else tuple(catalog.get(site_id) for site_id in site_ids)
-    )
-    if len({site.id for site in selected}) != len(selected):
-        raise SiteError("A site may only be selected once")
-
+    selected = catalog.select(site_ids, all_published=build_all)
     ordered = tuple(
         sorted(selected, key=lambda site: (site.kind != "portal", site.order))
     )

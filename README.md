@@ -179,6 +179,42 @@ follow the same baseline policy. `inspect`, `manifest`, and `extract-*` stay
 single-ROM audit commands and never implicitly parse another image. MkDocs itself
 only consumes generated files and never opens a ROM.
 
+### Complete regeneration
+
+Use the site-catalog-driven workflow to regenerate every published data-driven
+game, build all published sites, and audit the combined artifact:
+
+```console
+romwiki regenerate --all
+```
+
+The command validates every required local ROM and PokéDB generation before it
+writes generated content. Single-profile sites dispatch through `build-game`;
+version-family sites dispatch through `build-version-family` with the profiles and
+version labels declared in `game.toml`. Documentation-only sites skip data
+generation but remain part of the final MkDocs build.
+
+Normal runs reuse hash- and schema-validated extraction caches. Force current and
+baseline re-extraction with:
+
+```console
+romwiki regenerate --all --refresh
+```
+
+After generation, site building, and auditing all succeed, the same command can
+update the tracked publication snapshot:
+
+```console
+romwiki regenerate --all --snapshot
+```
+
+`--snapshot` requires `--all`, preventing a partial selection from replacing the
+complete snapshot. For focused work, provide site IDs instead:
+
+```console
+romwiki regenerate platinum renegade-platinum
+```
+
 When a hack shares an existing retail profile's complete layout, it can inherit
 that configuration and override only its identity and hashes:
 
@@ -446,6 +482,9 @@ pages, update the deterministic, ROM-free publication snapshot:
 ```console
 romwiki site snapshot
 ```
+
+The preferred complete workflow is `romwiki regenerate --all --snapshot`; these
+lower-level site commands remain useful when generated data already exists.
 
 The tracked `sites/generated-wiki.tar.gz` contains generated Markdown, not ROMs.
 It also records a source/profile fingerprint, so deployment rejects an archive

@@ -10,6 +10,7 @@ description = "A data-driven reference for Pokémon Black and White (USA) -- Pok
 
 [game]
 profiles = ["black-us", "white-us"]
+versions = ["black", "white"]
 generation = 5
 base_game = "black-white"
 platform = "nintendo-ds"

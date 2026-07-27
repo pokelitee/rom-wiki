@@ -35,6 +35,11 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertEqual(game.platform, "nintendo-ds")
         self.assertEqual(game.platform_name, "Nintendo DS")
         self.assertEqual(game.theme, "platinum")
+        self.assertEqual(game.versions, ())
+        black_white = catalog.get("black-white").game
+        self.assertIsNotNone(black_white)
+        assert black_white is not None
+        self.assertEqual(black_white.versions, ("black", "white"))
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

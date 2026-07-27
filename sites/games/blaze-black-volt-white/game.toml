@@ -10,6 +10,7 @@ description = "A data-driven reference for Pokémon Blaze Black and Volt White v
 
 [game]
 profiles = ["blaze-black", "volt-white"]
+versions = ["blaze-black", "volt-white"]
 generation = 5
 base_game = "black-white"
 platform = "nintendo-ds"
