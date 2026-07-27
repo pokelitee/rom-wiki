@@ -6,9 +6,9 @@ from fractions import Fraction
 from typing import Any
 
 from romwiki.profiles.models import GameProfile
+from romwiki.schema.versions import TYPE_CHART_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, ProfileError
 
-TYPE_CHART_SCHEMA_VERSION = 1
 _MULTIPLIERS = {
     "0": Fraction(0),
     "1/4": Fraction(1, 4),
@@ -166,6 +166,18 @@ def build_type_dataset(
         "game": game or profile.id,
         "engine": profile.engine,
         "chart": config.chart,
+        "source_kind": (
+            "profile-override"
+            if config.additional_types or config.overrides
+            else "engine-canonical"
+        ),
+        "provenance": {
+            "profile": profile.id,
+            "engine": profile.engine,
+            "chart": config.chart,
+            "additional_types": list(config.additional_types),
+            "overrides": dict(sorted(config.overrides.items())),
+        },
         "record_count": len(types),
         "records": [
             {

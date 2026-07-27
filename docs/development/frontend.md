@@ -68,7 +68,7 @@ predictable without presenting an absent mechanic as missing extraction.
 Each generated section writes `catalog.json` with this envelope:
 
 ```json
-{"schema_version":1,"kind":"pokemon","records":[]}
+{"schema_version":2,"kind":"pokemon","records":[]}
 ```
 
 The `kind` selects the shared filters, columns, and sorting behavior. Every record
@@ -105,6 +105,13 @@ held items link to their item or Pokémon pages without deriving a slug from dis
 text. A missing route remains visible as plain text. Tutor location list positions
 are not map-header IDs, so tutor locations remain unlinked until a profile supplies
 an explicit map-header identity.
+
+A separate presentation relationship index derives approved reverse joins once per
+build. Pokémon availability and trainer appearances, level-up and machine learners,
+and Generation V location-to-encounter links all consume this shared index.
+Catalog-only metrics such as obtainability, encounter-location counts, minimum
+known obtainable level, trainer appearances, and learner counts must be derived
+from it rather than from page-specific dataset scans.
 
 Multi-select facets are reserved for fields where each record can contain several
 values. They remain open while options are toggled and default to matching every

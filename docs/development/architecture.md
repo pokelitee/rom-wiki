@@ -160,6 +160,13 @@ dataset. This is required for hacks that change forms, names, sprites, or abilit
 slots. PokéDB remains a reference and fallback source, not the authority for a
 game's mechanics.
 
+Exact trainer rewards use a shared normalized contract while retaining
+generation-specific decoding. Engine parsers expose the stored multiplier and its
+provenance; `pipeline/trainer_rewards.py` calculates a payout only when every
+required input is exact. AI battle items, post-victory items, and prize money are
+separate concepts throughout extraction and rendering. An unsupported or
+incomplete payout is omitted rather than estimated.
+
 Derived datasets may invert normalized relationships without parsing the ROM again.
 For example, the ability dataset combines the ROM ability-name table with ability
 assignments already present in normalized Pokémon records, producing ability pages
@@ -167,10 +174,33 @@ and Pokémon backlinks from one authoritative extraction. The item dataset follo
 the same pattern, joining normalized mechanics with item references from Pokémon,
 trainers, locations, shops, gifts, trades, and evolutions.
 
+Cross-dataset reverse links used only for presentation are built once per full or
+version-family build by `pipeline/relationships.py`. Its focused
+`RelationshipIndex` covers Pokémon encounters, acquisition sources and trainer
+appearances; move learners; and location-to-encounter variants. It preserves stable
+IDs, forms, versions, deterministic ordering, and deduplication before a renderer
+sees the data. Renderers format those references but do not rescan unrelated
+datasets to recreate joins. Focused single-section commands may construct the same
+index from companion datasets made available by the build context.
+
+The relationship index is deliberately a presentation artifact, not a normalized
+download. Its source facts and forward relationships already exist in the public
+datasets; publishing the reverse index would create a second contract that could
+drift without adding ROM facts.
+
 Normalized relationships identify entities by stable IDs, not page paths. The
 MkDocs reference resolver maps those identities and resolved route keys to Markdown
 source links or published directory URLs. This keeps routing out of extraction and
 ensures catalog and detail-page links share one implementation.
+
+Type effectiveness follows a separate engine/profile contract. Each data-driven
+profile must explicitly select a chart registered by its engine. A hack may declare
+additional types and validated sparse matchup overrides; it cannot silently inherit
+its parent's chart selection. `pipeline/type_charts.py` validates the complete
+effective matrix, represents multipliers exactly, emits the normalized public
+`types` dataset, and provides the single defensive calculator reused by Pokémon
+pages. This keeps generation mechanics out of renderers while allowing future
+ROM-native chart extraction without changing their contract.
 
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
 ROM message tables supply names when configured; PokéDB supplies canonical names

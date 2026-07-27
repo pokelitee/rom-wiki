@@ -11,6 +11,7 @@ from romwiki.pipeline.type_charts import (
     validate_type_chart,
 )
 from romwiki.profiles.models import GameProfile, KnownHash, TypeChartConfig
+from romwiki.schema.versions import TYPE_CHART_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, ProfileError
 
 
@@ -39,6 +40,22 @@ class TypeChartTests(unittest.TestCase):
         self.assertEqual(TYPE_CHARTS["gen4"].engine, "gen4_dppt")
         self.assertEqual(TYPE_CHARTS["gen5"].engine, "gen5_bw")
 
+    def test_records_canonical_chart_provenance(self) -> None:
+        dataset = build_type_dataset(_profile("gen5_bw", "gen5"))
+
+        self.assertEqual(dataset["schema_version"], TYPE_CHART_SCHEMA_VERSION)
+        self.assertEqual(dataset["source_kind"], "engine-canonical")
+        self.assertEqual(
+            dataset["provenance"],
+            {
+                "profile": "test",
+                "engine": "gen5_bw",
+                "chart": "gen5",
+                "additional_types": [],
+                "overrides": {},
+            },
+        )
+
     def test_selected_generation_chart_can_have_different_matchups(self) -> None:
         matrix = dict(TYPE_CHARTS["gen5"].matrix)
         matrix["ghost", "steel"] = "1"
@@ -63,6 +80,16 @@ class TypeChartTests(unittest.TestCase):
         )
         dataset = build_type_dataset(profile)
 
+        self.assertEqual(dataset["source_kind"], "profile-override")
+        self.assertEqual(dataset["provenance"]["additional_types"], ["fairy"])
+        self.assertEqual(
+            dataset["provenance"]["overrides"],
+            {
+                "dragon>fairy": "0",
+                "ghost>steel": "1",
+                "steel>fairy": "2",
+            },
+        )
         fairy = defensive_effectiveness(dataset, ("fairy",))
         self.assertIn("dragon", fairy["0"])
         self.assertIn("steel", fairy["2"])

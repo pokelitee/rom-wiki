@@ -133,6 +133,33 @@ names cannot be decoded from the image:
 Fallback names must be lowercase hyphenated values and must never replace a
 successfully decoded ROM name.
 
+Every data-driven profile must explicitly select a type chart registered by its
+engine:
+
+```toml
+[type_chart]
+chart = "gen4"
+```
+
+Do not rely on profile inheritance for this declaration: a child hack must make
+the choice explicit so altered mechanics cannot silently inherit a base chart.
+When a hack adds a type or changes matchups, list the additional types and only
+the verified sparse overrides:
+
+```toml
+[type_chart]
+chart = "gen4"
+additional_types = ["fairy"]
+
+[type_chart.overrides]
+"fairy>dragon" = "2"
+"dragon>fairy" = "0"
+```
+
+Override keys are `attacking>defending`; multiplier values use the exact strings
+accepted by the type-chart contract. Profile loading and dataset construction
+reject unknown types, duplicate or incomplete charts, and invalid multipliers.
+
 Item IDs may map to different item-data archive members. Engine adapters should
 decode that mapping from the ROM rather than assuming an item ID is also an
 archive index. The Generation IV adapter locates and validates the complete ARM9
@@ -200,6 +227,20 @@ renderer. This keeps DV/Stat Experience generations separate from IV/EV formulas
 When a mechanic depends on an engine table outside the party record, expose its
 location through the game profile. For D/P/Pt, `trainer_class_gender_offset`
 locates the ARM9 class-gender table used by deterministic trainer Pokémon PIDs.
+Exact trainer prize money follows the same boundary. The engine parser should
+decode its stored multiplier and provenance, while the shared reward pipeline
+calculates the normalized payout. For the supported D/P/Pt layout, profiles locate
+the class multiplier table with:
+
+```toml
+[parameters]
+trainer_class_prize_overlay_id = 16
+trainer_class_prize_offset = 0x359E0
+```
+
+Only configure verified locations for the exact ROM revision. Do not infer
+multipliers from trainer class names, and keep AI battle items and post-victory
+items separate from money rewards.
 
 At minimum, each dataset should include:
 
@@ -273,10 +314,10 @@ Documentation-only sites may set `data_driven = false` in `[game]` and omit
 skip generated-data snapshot validation and data-section cards. Add real profiles
 and remove the flag when ROM extraction support is ready.
 
-Renderers should emit a `schema_version: 1` catalog beside each supported section
-index. Catalog records contain only the fields needed for browsing and filtering;
-the normalized dataset remains authoritative. Preserve a complete Markdown link
-fallback so new categories remain usable without JavaScript.
+Renderers should emit the current catalog schema version beside each supported
+section index. Catalog records contain only the fields needed for browsing and
+filtering; the normalized dataset remains authoritative. Preserve a complete
+Markdown link fallback so new categories remain usable without JavaScript.
 
 ### Sibling game versions (e.g. Black/White)
 
@@ -323,9 +364,13 @@ references.
 - Add profile identification tests for supported hashes and rejection tests for
   near matches.
 - Add normalized contract and renderer tests.
+- Test explicit type-chart selection and any hack overrides, including single- and
+  dual-type defensive calculations, immunities, and fractional multipliers.
 - For trainer support, test explicit/default move provenance, unavailable optional
-  attributes, engine-derived attributes, and resolution against the game's own
-  Pokémon dataset.
+  attributes, engine-derived attributes, exact reward inputs, and resolution
+  against the game's own Pokémon dataset.
+- Test presentation relationships independently for forms, sibling versions,
+  deterministic ordering, deduplication, and absent optional datasets.
 - Add baseline-versus-hack comparison fixtures for every supported dataset.
 - Extract the complete target and reconcile record counts against its archives.
 - Manually verify representative records from every content category.
