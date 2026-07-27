@@ -4,6 +4,12 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.relationships import (
+    AcquisitionReference,
+    RelationshipIndex,
+    WildEncounterReference,
+    build_relationship_index,
+)
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -19,6 +25,7 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
     empty_state,
+    escape_table_cell,
     evolution_condition,
     fact_grid,
     machine_link,
@@ -52,6 +59,7 @@ def render_pokemon_pages(
     comparison: dict[str, Any] | None = None,
     move_dataset: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -76,6 +84,7 @@ def render_pokemon_pages(
     move_lookup = {
         record["move_id"]: record for record in (move_dataset or {}).get("records", [])
     }
+    relationships = relationships or build_relationship_index({"pokemon": dataset})
     for index, record in enumerate(public_records):
         change = record_comparison(
             comparison, record.get("member", record["national_dex_id"])
@@ -99,6 +108,7 @@ def render_pokemon_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    relationships,
                 ),
             )
             page_count += 1
@@ -186,6 +196,7 @@ def _render_record(
     change: dict[str, Any] | None = None,
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
 ) -> str:
     source_file = f"pokemon/{record['slug']}.md"
     stats = record["base_stats"]
@@ -261,8 +272,16 @@ def _render_record(
         )
     else:
         lines.extend(empty_state("No wild held items."))
-    lines.extend(["", "## Static encounters", ""])
-    _append_static_encounters(lines, record.get("static_encounters", []))
+    relationships = relationships or build_relationship_index(
+        {"pokemon": {"game": "", "records": [record]}}
+    )
+    lines.extend(["", "## Availability", ""])
+    _append_availability(
+        lines,
+        relationships.pokemon_wild_encounters.get(record["slug"], ()),
+        relationships.pokemon_acquisition.get(record["slug"], ()),
+        source_file,
+    )
     lines.extend(_other_forms_section(record, all_records or [record], source_file))
     preevolutions = preevolutions or []
     lines.extend(["## Evolutions", ""])
@@ -805,23 +824,176 @@ def _append_egg_moves(
     )
 
 
-def _append_static_encounters(
-    lines: list[str], encounters: list[dict[str, Any]]
+def _append_availability(
+    lines: list[str],
+    wild_encounters: tuple[WildEncounterReference, ...],
+    acquisition: tuple[AcquisitionReference, ...],
+    source_file: str,
 ) -> None:
-    if not encounters:
-        lines.extend(empty_state("No static (gift/single) encounters."))
+    if not wild_encounters and not acquisition:
+        lines.extend(empty_state("No acquisition source is available."))
         return
+    if wild_encounters:
+        lines.extend(
+            [
+                "### Wild encounters",
+                "",
+                "| Encounter area | Location | Method | Levels | Chance | Conditions | Version |",
+                "| -------------- | -------- | ------ | -----: | -----: | ---------- | ------- |",
+            ]
+        )
+        for encounter in wild_encounters:
+            area = entity_markdown_link(
+                "encounter",
+                encounter.area_id,
+                encounter.area_name,
+                source_file,
+                route_key=encounter.area_id,
+            )
+            locations = _availability_locations(encounter.locations, source_file)
+            lines.append(
+                f"| {area} | {locations} | {escape_table_cell(encounter.method)} | "
+                f"{_availability_levels(encounter.minimum_level, encounter.maximum_level)} | "
+                f"{_availability_chance(encounter.chance)} | "
+                f"{_wild_conditions(encounter)} | "
+                f"{_availability_versions(encounter.versions)} |"
+            )
+        lines.append("")
+
+    grouped: dict[str, list[AcquisitionReference]] = {}
+    for reference in acquisition:
+        grouped.setdefault(reference.kind, []).append(reference)
+    headings = (
+        ("static", "Static encounters"),
+        ("gift", "Gifts"),
+        ("egg", "Gift eggs"),
+        ("trade", "In-game trades"),
+        ("fossil-revival", "Fossil revival"),
+        ("honey-tree", "Honey trees"),
+        ("great_marsh", "Great Marsh daily rotation"),
+        ("trophy_garden", "Trophy Garden daily rotation"),
+    )
+    rendered_kinds = set()
+    for kind, heading in headings:
+        references = grouped.get(kind)
+        if not references:
+            continue
+        rendered_kinds.add(kind)
+        _append_acquisition_table(lines, heading, references, source_file)
+    for kind in sorted(grouped.keys() - rendered_kinds):
+        _append_acquisition_table(
+            lines,
+            display_name(kind),
+            grouped[kind],
+            source_file,
+        )
+
+
+def _append_acquisition_table(
+    lines: list[str],
+    heading: str,
+    references: list[AcquisitionReference],
+    source_file: str,
+) -> None:
     lines.extend(
         [
-            "| Level |",
-            "| ----: |",
-            *[
-                f"| {'Egg' if entry['is_egg'] else entry['level']} |"
-                for entry in encounters
-            ],
+            f"### {heading}",
             "",
+            "| Location | Level | Details | Version |",
+            "| -------- | ----: | ------- | ------- |",
         ]
     )
+    for reference in references:
+        location = _availability_location(
+            reference.location_id,
+            reference.location_name,
+            source_file,
+        )
+        detail = _acquisition_detail(reference, source_file)
+        lines.append(
+            f"| {location} | "
+            f"{reference.level if reference.level is not None else '—'} | "
+            f"{detail} | {_availability_versions(reference.versions)} |"
+        )
+    lines.append("")
+
+
+def _availability_locations(
+    locations: tuple[tuple[int | None, str], ...],
+    source_file: str,
+) -> str:
+    if not locations:
+        return "—"
+    return " / ".join(
+        _availability_location(header_id, name, source_file)
+        for header_id, name in locations
+    )
+
+
+def _availability_location(
+    header_id: int | None,
+    name: str | None,
+    source_file: str,
+) -> str:
+    if not name:
+        return "—"
+    if header_id is None:
+        return escape_table_cell(name)
+    return entity_markdown_link(
+        "location",
+        header_id,
+        name,
+        source_file,
+        route_key=header_id,
+    )
+
+
+def _availability_levels(minimum: int | None, maximum: int | None) -> str:
+    if minimum is None and maximum is None:
+        return "—"
+    if minimum == maximum or maximum is None:
+        return str(minimum)
+    if minimum is None:
+        return str(maximum)
+    return f"{minimum}–{maximum}"
+
+
+def _availability_chance(chance: int | float | None) -> str:
+    if chance is None:
+        return "—"
+    return f"{chance:g}%"
+
+
+def _wild_conditions(encounter: WildEncounterReference) -> str:
+    values = []
+    if encounter.condition:
+        values.append(display_name(encounter.condition.replace(": ", "-")))
+    if encounter.season:
+        values.append(display_name(encounter.season))
+    return " / ".join(values) or "—"
+
+
+def _availability_versions(versions: tuple[str, ...]) -> str:
+    return " / ".join(escape_table_cell(display_name(version)) for version in versions) or "—"
+
+
+def _acquisition_detail(
+    reference: AcquisitionReference,
+    source_file: str,
+) -> str:
+    if (
+        reference.source_item_id is not None
+        and reference.source_item_slug is not None
+        and reference.detail
+    ):
+        return entity_markdown_link(
+            "item",
+            reference.source_item_id,
+            reference.detail,
+            source_file,
+            route_key=reference.source_item_slug,
+        )
+    return escape_table_cell(reference.detail) if reference.detail else "—"
 
 
 def _move_cells(

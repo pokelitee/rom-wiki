@@ -27,7 +27,7 @@ from romwiki.pipeline.moves import extract_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset
 from romwiki.pipeline.pickup import extract_pickup_dataset
 from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
-from romwiki.pipeline.trades import extract_npc_trade_dataset
+from romwiki.pipeline.trades import enrich_npc_trade_dataset, extract_npc_trade_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset
 from romwiki.schema.versions import (
@@ -169,6 +169,15 @@ class GameBuildContext:
             return None
         return self._raw("static-encounters/raw", extract_static_encounter_dataset)
 
+    def trades(self) -> dict[str, Any] | None:
+        dataset = self.trades_raw()
+        if dataset is None:
+            return None
+        return self._memo(
+            "trades/enriched",
+            lambda: enrich_npc_trade_dataset(dataset, self.pokemon()),
+        )
+
     def pokemon(self) -> dict[str, Any]:
         return attach_features(
             self._memo(
@@ -270,7 +279,7 @@ class GameBuildContext:
                     self.pokemon(),
                     self.trainers(),
                     self.locations(),
-                    trade_dataset=self.trades_raw(),
+                    trade_dataset=self.trades(),
                     mart_dataset=self.marts_raw(),
                     reference_version=self.profile.base_game,
                 ),

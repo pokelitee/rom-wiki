@@ -185,6 +185,7 @@ class RelationshipIndexTests(unittest.TestCase):
         wild = index.pokemon_wild_encounters["basculin-blue-striped"]
         self.assertEqual(len(wild), 1)
         self.assertEqual((wild[0].season, wild[0].method), ("spring", "Fishing"))
+        self.assertEqual(wild[0].locations, ((6, "Route 1"),))
         self.assertNotIn("basculin-red-striped", index.pokemon_wild_encounters)
         variants = index.location_encounters[6]
         self.assertEqual(
@@ -251,8 +252,11 @@ class RelationshipIndexTests(unittest.TestCase):
 
         self.assertEqual(len(references), 2)
         self.assertEqual(
-            [(value.minimum_level, value.versions) for value in references],
-            [(2, ("black",)), (3, ("white",))],
+            [
+                (value.minimum_level, value.chance, value.versions)
+                for value in references
+            ],
+            [(2, 40, ("black",)), (3, 20, ("white",))],
         )
 
     def test_omits_absent_optional_datasets(self) -> None:
@@ -268,6 +272,34 @@ class RelationshipIndexTests(unittest.TestCase):
         self.assertEqual(index.pokemon_wild_encounters, {})
         self.assertEqual(index.pokemon_trainers, {})
         self.assertEqual(index.location_encounters, {})
+
+    def test_indexes_detached_trades_without_inventing_a_location(self) -> None:
+        datasets = _datasets(pokemon=[_pokemon(1, "bulbasaur")])
+        datasets["trades"] = _dataset(
+            "trades",
+            [
+                {
+                    "trade_id": 2,
+                    "offered_pokemon": {
+                        "species_id": 1,
+                        "slug": "bulbasaur",
+                        "name": "Bulbasaur",
+                    },
+                    "requested_pokemon": {
+                        "species_id": 4,
+                        "slug": "charmander",
+                        "name": "Charmander",
+                    },
+                }
+            ],
+        )
+
+        trade = build_relationship_index(datasets).pokemon_acquisition["bulbasaur"][0]
+
+        self.assertEqual(trade.kind, "trade")
+        self.assertEqual(trade.detail, "Trade for Charmander")
+        self.assertIsNone(trade.location_id)
+        self.assertIsNone(trade.location_name)
 
     def test_rejects_datasets_for_different_games(self) -> None:
         datasets = _datasets(pokemon=[_pokemon(1, "bulbasaur")])

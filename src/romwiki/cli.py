@@ -37,6 +37,10 @@ from romwiki.pipeline.marts import extract_mart_dataset
 from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
 from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
+from romwiki.pipeline.relationships import (
+    RelationshipIndex,
+    build_relationship_index,
+)
 from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
@@ -828,6 +832,11 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
         and "messages" in workflow.current.profile.layout
     ):
         abilities_dataset = workflow.build("abilities")
+    relationship_index = None
+    relationship_datasets: dict[str, dict] = {}
+    if args.command == "build-pokemon":
+        relationship_datasets = _current_relationship_datasets(workflow.current)
+        relationship_index = build_relationship_index(relationship_datasets)
     reference_datasets = {}
     if args.command == "build-locations":
         reference_datasets = {
@@ -835,7 +844,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             "items": workflow.current.items(),
         }
     elif args.command == "build-pokemon":
-        reference_datasets = {"pokemon": workflow.current.pokemon()}
+        reference_datasets = dict(relationship_datasets)
         if abilities_dataset is not None:
             reference_datasets["abilities"] = abilities_dataset.current
         if move_dataset is not None:
@@ -866,6 +875,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             wiki_output,
             move_dataset=move_dataset,
             reference_index=reference_index,
+            relationship_index=relationship_index,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
@@ -885,9 +895,12 @@ def _run_full_game_build(args: argparse.Namespace, result: InspectionResult) -> 
     wiki_root = args.wiki_root or Path("sites/games") / game / "wiki"
     dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     builds = workflow.build_all()
-    reference_index = ReferenceIndex.from_datasets(
-        {kind: build.current for kind, build in builds.items()}
-    )
+    current_datasets = {kind: build.current for kind, build in builds.items()}
+    trades = workflow.current.trades()
+    if trades is not None:
+        current_datasets["trades"] = trades
+    reference_index = ReferenceIndex.from_datasets(current_datasets)
+    relationship_index = build_relationship_index(current_datasets)
     comparisons = {}
     for kind, build in builds.items():
         _write_dataset_build(
@@ -898,6 +911,7 @@ def _run_full_game_build(args: argparse.Namespace, result: InspectionResult) -> 
             wiki_root / kind,
             move_dataset=builds["moves"].current,
             reference_index=reference_index,
+            relationship_index=relationship_index,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
@@ -990,11 +1004,27 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
         if comparisons:
             merged_comparisons[kind] = merge_version_family_comparisons(comparisons)
 
+    trade_datasets = {
+        version: trade
+        for version, workflow in workflows.items()
+        if (trade := workflow.current.trades()) is not None
+    }
+    relationship_datasets = dict(merged_datasets)
+    if trade_datasets:
+        if len(trade_datasets) != len(workflows):
+            raise LocalConfigError(
+                "Version-family games must have matching trade capabilities"
+            )
+        relationship_datasets["trades"] = merge_version_family_datasets(
+            trade_datasets
+        )
+
     site_id = args.site_id
     wiki_root = args.wiki_root or Path("sites/games") / site_id / "wiki"
     data_root = args.data_root / site_id
     dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     reference_index = ReferenceIndex.from_datasets(merged_datasets)
+    relationship_index = build_relationship_index(relationship_datasets)
     move_dataset = merged_datasets.get("moves")
     for kind, dataset in merged_datasets.items():
         comparison = merged_comparisons.get(kind)
@@ -1006,6 +1036,7 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             wiki_root / kind,
             move_dataset=move_dataset,
             reference_index=reference_index,
+            relationship_index=relationship_index,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
     if merged_comparisons:
@@ -1069,6 +1100,7 @@ def _write_dataset_build(
     *,
     move_dataset: dict | None = None,
     reference_index: ReferenceIndex | None = None,
+    relationship_index: RelationshipIndex | None = None,
     only_pages: frozenset[str] | None = None,
 ) -> None:
     write_enriched_dataset(dataset, data_output)
@@ -1092,6 +1124,7 @@ def _write_dataset_build(
             comparison,
             move_dataset,
             reference_index,
+            relationship_index,
             only_pages=only_pages,
         )
     else:
@@ -1104,6 +1137,20 @@ def _write_dataset_build(
         )
     print(f"Wrote {len(dataset['records'])} {kind} records: {data_output}")
     print(f"Rendered {page_count} {kind} pages: {wiki_output}")
+
+
+def _current_relationship_datasets(
+    context: GameBuildContext,
+) -> dict[str, dict]:
+    datasets = {
+        "pokemon": context.pokemon(),
+        "encounters": context.encounters(),
+        "trainers": context.trainers(),
+        "locations": context.locations(),
+        "items": context.items(),
+        "trades": context.trades(),
+    }
+    return {kind: dataset for kind, dataset in datasets.items() if dataset is not None}
 
 
 def _dataset_output(data_root: Path, kind: str) -> Path:

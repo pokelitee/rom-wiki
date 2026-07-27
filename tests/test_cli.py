@@ -4,9 +4,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from romwiki.cli import (
     _comparison_workflow_kind,
+    _current_relationship_datasets,
     _dataset_output,
     _load_comparisons,
     _resolve_build_baseline,
@@ -120,6 +122,24 @@ class DatasetOutputPathTests(unittest.TestCase):
                 _dataset_output(Path("build/data/game"), kind),
                 Path(f"build/data/game/{kind}/enriched.json"),
             )
+
+
+class RelationshipDatasetTests(unittest.TestCase):
+    def test_collects_companions_and_omits_unsupported_datasets(self) -> None:
+        datasets = {
+            kind: {"game": "test", "records": []}
+            for kind in ("pokemon", "encounters", "items")
+        }
+        context = SimpleNamespace(
+            pokemon=lambda: datasets["pokemon"],
+            encounters=lambda: datasets["encounters"],
+            trainers=lambda: None,
+            locations=lambda: None,
+            items=lambda: datasets["items"],
+            trades=lambda: None,
+        )
+
+        self.assertEqual(_current_relationship_datasets(context), datasets)
 
 
 class ComparisonWorkflowKindTests(unittest.TestCase):

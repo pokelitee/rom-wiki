@@ -16,6 +16,7 @@ RECORD_KEY_FIELDS = {
     "wild_encounters": "area_id",
     "trainers": "trainer_id",
     "locations": "header_id",
+    "trades": "trade_id",
 }
 
 _FIELDS = {
@@ -123,6 +124,14 @@ _FIELDS = {
         "party",
         "locations",
         "script_references",
+    ),
+    "trades": (
+        "offered_species_id",
+        "offered_forme_id",
+        "requested_species_id",
+        "held_item_id",
+        "offered_pokemon",
+        "requested_pokemon",
     ),
     "locations": (
         "name",

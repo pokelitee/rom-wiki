@@ -47,6 +47,8 @@ class AcquisitionReference:
     location_name: str | None
     level: int | None
     detail: str | None
+    source_item_id: int | None
+    source_item_slug: str | None
     versions: tuple[str, ...]
 
 
@@ -87,23 +89,29 @@ def build_relationship_index(
     """Derive renderer-facing cross-dataset relationships once per build."""
     _validate_datasets(datasets)
     pokemon_records = _records(datasets, "pokemon")
+    encounter_records = _records(datasets, "encounters")
+    trainer_records = _records(datasets, "trainers")
+    location_records = _records(datasets, "locations")
+    item_records = _records(datasets, "items")
+    trade_records = _records(datasets, "trades")
     aliases = _pokemon_aliases(pokemon_records)
 
-    wild = _wild_encounters(_records(datasets, "encounters"), aliases)
-    trainers = _trainer_appearances(_records(datasets, "trainers"), aliases)
+    wild = _wild_encounters(encounter_records, location_records, aliases)
+    trainers = _trainer_appearances(trainer_records, aliases)
     acquisition = _acquisition_references(
         pokemon_records,
-        _records(datasets, "locations"),
-        _records(datasets, "items"),
+        location_records,
+        item_records,
+        trade_records,
         aliases,
     )
     level_up, machines = _move_learners(pokemon_records)
     location_encounters = _location_encounters(
-        _records(datasets, "locations"),
-        _records(datasets, "encounters"),
+        location_records,
+        encounter_records,
     )
     return RelationshipIndex(
-        pokemon_wild_encounters=_freeze(wild, _wild_sort_key),
+        pokemon_wild_encounters=_freeze_wild(wild),
         pokemon_trainers=_freeze(trainers, _trainer_sort_key),
         pokemon_acquisition=_freeze(acquisition, _acquisition_sort_key),
         move_level_up_learners=_freeze(level_up, _learner_sort_key),
@@ -116,7 +124,9 @@ def _validate_datasets(datasets: Mapping[str, dict[str, Any]]) -> None:
     games = {
         str(dataset["game"])
         for dataset in datasets.values()
-        if dataset is not None and dataset.get("records") is not None
+        if dataset is not None
+        and dataset.get("records") is not None
+        and dataset.get("game") is not None
     }
     if len(games) > 1:
         raise DataSourceError("Relationship datasets must be for the same game")
@@ -210,16 +220,18 @@ _ENCOUNTER_METHODS = (
 
 def _wild_encounters(
     records: list[dict[str, Any]],
+    locations: list[dict[str, Any]],
     aliases: Mapping[int | str, str],
 ) -> dict[str, list[WildEncounterReference]]:
     result: dict[str, list[WildEncounterReference]] = defaultdict(list)
+    location_index = _encounter_location_index(locations)
     for merged_record in records:
         for versions, record in _record_variants(merged_record):
             common = {
                 "area_id": record["area_id"],
                 "area_name": record["name"],
                 "season": record.get("season"),
-                "locations": _encounter_locations(record),
+                "locations": _encounter_locations(record, location_index),
                 "versions": versions,
             }
             for key, label in _ENCOUNTER_METHODS:
@@ -298,18 +310,46 @@ def _add_wild_reference(
 
 def _encounter_locations(
     record: Mapping[str, Any],
+    location_index: Mapping[tuple[str, int], tuple[tuple[int, str], ...]],
 ) -> tuple[tuple[int | None, str], ...]:
+    values: list[tuple[int | None, str]] = []
     locations = record.get("locations")
     if isinstance(locations, list):
-        return tuple(
+        values.extend(
             (location.get("header_id"), location["name"])
             for location in locations
             if isinstance(location, dict) and isinstance(location.get("name"), str)
         )
-    names = record.get("location_names")
-    if isinstance(names, list):
-        return tuple((None, name) for name in names if isinstance(name, str))
-    return ()
+    lookup_key = (
+        ("map-index", record["map_index"])
+        if isinstance(record.get("map_index"), int)
+        else ("area-id", record["area_id"])
+    )
+    values.extend(location_index.get(lookup_key, ()))
+    if not values:
+        names = record.get("location_names")
+        if isinstance(names, list):
+            values.extend((None, name) for name in names if isinstance(name, str))
+    return tuple(dict.fromkeys(values))
+
+
+def _encounter_location_index(
+    records: list[dict[str, Any]],
+) -> dict[tuple[str, int], tuple[tuple[int, str], ...]]:
+    values: dict[tuple[str, int], list[tuple[int, str]]] = defaultdict(list)
+    for record in records:
+        if isinstance(record.get("encounter_id"), int):
+            values[("area-id", record["encounter_id"])].append(
+                (record["header_id"], record["name"])
+            )
+        if isinstance(record.get("encounter_map_index"), int):
+            values[("map-index", record["encounter_map_index"])].append(
+                (record["header_id"], record["name"])
+            )
+    return {
+        key: tuple(dict.fromkeys(locations))
+        for key, locations in values.items()
+    }
 
 
 def _trainer_appearances(
@@ -368,6 +408,7 @@ def _acquisition_references(
     pokemon_records: list[dict[str, Any]],
     location_records: list[dict[str, Any]],
     item_records: list[dict[str, Any]],
+    trade_records: list[dict[str, Any]],
     aliases: Mapping[int | str, str],
 ) -> dict[str, list[AcquisitionReference]]:
     result: dict[str, list[AcquisitionReference]] = defaultdict(list)
@@ -379,7 +420,8 @@ def _acquisition_references(
             "versions": versions,
         }
         for gift in location.get("pokemon_gifts", []):
-            _add_acquisition(result, aliases, gift, "gift", common)
+            gift_kind = "egg" if gift.get("kind") == "egg" else "gift"
+            _add_acquisition(result, aliases, gift, gift_kind, common)
         for encounter in location.get("static_encounters", []):
             _add_acquisition(result, aliases, encounter, "static", common)
         for trade in location.get("npc_trades", []):
@@ -431,9 +473,36 @@ def _acquisition_references(
                     "location_id": None,
                     "location_name": None,
                     "detail": item.get("name"),
+                    "source_item_id": item.get("item_id"),
+                    "source_item_slug": item.get("slug"),
                     "versions": _record_versions(item),
                 },
             )
+
+    for trade in trade_records:
+        offered = trade.get("offered_pokemon")
+        requested = trade.get("requested_pokemon") or {}
+        if not isinstance(offered, dict):
+            continue
+        _add_acquisition(
+            result,
+            aliases,
+            {
+                "pokemon": offered,
+                "species_id": offered.get("species_id"),
+                "detail": (
+                    f"Trade for {requested.get('name')}"
+                    if requested.get("name")
+                    else "In-game trade"
+                ),
+            },
+            "trade",
+            {
+                "location_id": None,
+                "location_name": None,
+                "versions": _record_versions(trade),
+            },
+        )
 
     # Preserve static encounters that have no resolved location record.
     for pokemon in pokemon_records:
@@ -446,11 +515,13 @@ def _acquisition_references(
             result[slug].append(
                 AcquisitionReference(
                     pokemon_slug=slug,
-                    kind="static",
+                    kind="egg" if encounter.get("is_egg") else "static",
                     location_id=location.get("header_id"),
                     location_name=location.get("name"),
-                    level=encounter.get("level"),
+                    level=None if encounter.get("is_egg") else encounter.get("level"),
                     detail=encounter.get("command"),
+                    source_item_id=None,
+                    source_item_slug=None,
                     versions=versions,
                 )
             )
@@ -482,6 +553,8 @@ def _add_acquisition(
                 "detail",
                 value.get("command", common.get("detail")),
             ),
+            source_item_id=common.get("source_item_id"),
+            source_item_slug=common.get("source_item_slug"),
             versions=tuple(common.get("versions", ())),
         )
     )
@@ -579,6 +652,46 @@ def _freeze(
     }
 
 
+def _freeze_wild(
+    values: Mapping[str, list[WildEncounterReference]],
+) -> dict[str, tuple[WildEncounterReference, ...]]:
+    result = {}
+    for slug, entries in sorted(values.items()):
+        grouped: dict[tuple[Any, ...], WildEncounterReference] = {}
+        for entry in entries:
+            key = (
+                entry.pokemon_slug,
+                entry.area_id,
+                entry.area_name,
+                entry.method,
+                entry.minimum_level,
+                entry.maximum_level,
+                entry.condition,
+                entry.season,
+                entry.locations,
+                entry.versions,
+            )
+            existing = grouped.get(key)
+            if existing is None or existing.chance is None or entry.chance is None:
+                grouped.setdefault(key, entry)
+                continue
+            grouped[key] = WildEncounterReference(
+                pokemon_slug=entry.pokemon_slug,
+                area_id=entry.area_id,
+                area_name=entry.area_name,
+                method=entry.method,
+                minimum_level=entry.minimum_level,
+                maximum_level=entry.maximum_level,
+                chance=existing.chance + entry.chance,
+                condition=entry.condition,
+                season=entry.season,
+                locations=entry.locations,
+                versions=entry.versions,
+            )
+        result[slug] = tuple(sorted(grouped.values(), key=_wild_sort_key))
+    return result
+
+
 def _deduplicate(values: Iterable[Any]) -> Iterable[Any]:
     seen = set()
     for value in values:
@@ -613,6 +726,7 @@ def _acquisition_sort_key(value: AcquisitionReference) -> tuple[Any, ...]:
         value.location_id if value.location_id is not None else -1,
         value.level if value.level is not None else -1,
         value.detail or "",
+        value.source_item_id if value.source_item_id is not None else -1,
         value.versions,
     )
 
