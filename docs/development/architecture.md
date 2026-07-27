@@ -199,7 +199,11 @@ additional types and validated sparse matchup overrides; it cannot silently inhe
 its parent's chart selection. `pipeline/type_charts.py` validates the complete
 effective matrix, represents multipliers exactly, emits the normalized public
 `types` dataset, and provides the single defensive calculator reused by Pokémon
-pages. This keeps generation mechanics out of renderers while allowing future
+pages. Generation-specific registrations point to immutable chart-family data, so
+Generations II through V share one authoritative matrix while retaining explicit
+`gen2`, `gen3`, `gen4`, or `gen5` profile identity as their engines are added. A
+future changed chart receives a new family rather than conditionals in the shared
+calculator. This keeps generation mechanics out of renderers while allowing future
 ROM-native chart extraction without changing their contract.
 
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.

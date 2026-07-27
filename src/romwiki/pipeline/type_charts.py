@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from types import MappingProxyType
 from typing import Any
 
 from romwiki.profiles.models import GameProfile
@@ -39,10 +41,24 @@ _TYPE_NAMES = (
 
 
 @dataclass(frozen=True, slots=True)
+class TypeChartFamily:
+    id: str
+    types: tuple[str, ...]
+    matrix: Mapping[tuple[str, str], str]
+
+
+@dataclass(frozen=True, slots=True)
 class RegisteredTypeChart:
     engine: str
-    types: tuple[str, ...]
-    matrix: dict[tuple[str, str], str]
+    family: TypeChartFamily
+
+    @property
+    def types(self) -> tuple[str, ...]:
+        return self.family.types
+
+    @property
+    def matrix(self) -> Mapping[tuple[str, str], str]:
+        return self.family.matrix
 
 
 def _canonical_matrix() -> dict[tuple[str, str], str]:
@@ -108,10 +124,16 @@ def _canonical_matrix() -> dict[tuple[str, str], str]:
     return matrix
 
 
-_CANONICAL_MATRIX = _canonical_matrix()
+TYPE_CHART_FAMILIES = {
+    "gen2-5": TypeChartFamily(
+        "gen2-5",
+        _TYPE_NAMES,
+        MappingProxyType(_canonical_matrix()),
+    ),
+}
 TYPE_CHARTS = {
-    "gen4": RegisteredTypeChart("gen4_dppt", _TYPE_NAMES, dict(_CANONICAL_MATRIX)),
-    "gen5": RegisteredTypeChart("gen5_bw", _TYPE_NAMES, dict(_CANONICAL_MATRIX)),
+    "gen4": RegisteredTypeChart("gen4_dppt", TYPE_CHART_FAMILIES["gen2-5"]),
+    "gen5": RegisteredTypeChart("gen5_bw", TYPE_CHART_FAMILIES["gen2-5"]),
 }
 
 
@@ -166,6 +188,7 @@ def build_type_dataset(
         "game": game or profile.id,
         "engine": profile.engine,
         "chart": config.chart,
+        "chart_family": registered.family.id,
         "source_kind": (
             "profile-override"
             if config.additional_types or config.overrides
@@ -175,6 +198,7 @@ def build_type_dataset(
             "profile": profile.id,
             "engine": profile.engine,
             "chart": config.chart,
+            "chart_family": registered.family.id,
             "additional_types": list(config.additional_types),
             "overrides": dict(sorted(config.overrides.items())),
         },

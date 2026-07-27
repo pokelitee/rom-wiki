@@ -42,10 +42,11 @@ cannot silently ship missing or corrupt data.
 The archives never contain ROM or patch bytes. External reference fields remain
 labeled as PokéDB-derived; exact mechanics and comparisons remain ROM-derived.
 
-The normalized `types` archive records the selected chart, attacking and defending
-type identities, exact multipliers, game identity, source kind, and provenance.
-Profiles explicitly select an engine chart or provide validated overrides, so the
-dataset never infers mechanics merely from displayed type names.
+The normalized `types` archive records the selected generation chart and its shared
+chart family, attacking and defending type identities, exact multipliers, game
+identity, source kind, and provenance. Profiles explicitly select an engine chart
+or provide validated overrides, so the dataset never infers mechanics merely from
+displayed type names.
 
 Trainer data keeps prize money distinct from AI battle items and victory items.
 Calculated base prize money is serialized only when all generation-specific inputs

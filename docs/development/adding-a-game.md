@@ -159,6 +159,11 @@ additional_types = ["fairy"]
 Override keys are `attacking>defending`; multiplier values use the exact strings
 accepted by the type-chart contract. Profile loading and dataset construction
 reject unknown types, duplicate or incomplete charts, and invalid multipliers.
+When several generations have identical effectiveness rules, register their
+generation-specific chart IDs against one immutable family matrix. This preserves
+clear profile identity and provenance without duplicating matchup data. A genuine
+generation change receives a new family; do not add generation conditionals to the
+calculator or renderer.
 
 Item IDs may map to different item-data archive members. Engine adapters should
 decode that mapping from the ROM rather than assuming an item ID is also an

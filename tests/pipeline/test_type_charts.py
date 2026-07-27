@@ -6,6 +6,7 @@ from unittest.mock import patch
 from romwiki.pipeline.type_charts import (
     TYPE_CHARTS,
     RegisteredTypeChart,
+    TypeChartFamily,
     build_type_dataset,
     defensive_effectiveness,
     validate_type_chart,
@@ -39,6 +40,8 @@ class TypeChartTests(unittest.TestCase):
         self.assertIsNot(TYPE_CHARTS["gen4"], TYPE_CHARTS["gen5"])
         self.assertEqual(TYPE_CHARTS["gen4"].engine, "gen4_dppt")
         self.assertEqual(TYPE_CHARTS["gen5"].engine, "gen5_bw")
+        self.assertIs(TYPE_CHARTS["gen4"].family, TYPE_CHARTS["gen5"].family)
+        self.assertEqual(TYPE_CHARTS["gen4"].family.id, "gen2-5")
 
     def test_records_canonical_chart_provenance(self) -> None:
         dataset = build_type_dataset(_profile("gen5_bw", "gen5"))
@@ -51,6 +54,7 @@ class TypeChartTests(unittest.TestCase):
                 "profile": "test",
                 "engine": "gen5_bw",
                 "chart": "gen5",
+                "chart_family": "gen2-5",
                 "additional_types": [],
                 "overrides": {},
             },
@@ -59,7 +63,14 @@ class TypeChartTests(unittest.TestCase):
     def test_selected_generation_chart_can_have_different_matchups(self) -> None:
         matrix = dict(TYPE_CHARTS["gen5"].matrix)
         matrix["ghost", "steel"] = "1"
-        fixture = RegisteredTypeChart("gen5_bw", TYPE_CHARTS["gen5"].types, matrix)
+        fixture = RegisteredTypeChart(
+            "gen5_bw",
+            TypeChartFamily(
+                "gen5-fixture",
+                TYPE_CHARTS["gen5"].types,
+                matrix,
+            ),
+        )
         with patch.dict(TYPE_CHARTS, {"gen5-fixture": fixture}):
             canonical = build_type_dataset(_profile("gen5_bw", "gen5"))
             changed = build_type_dataset(_profile("gen5_bw", "gen5-fixture"))
@@ -122,20 +133,33 @@ class TypeChartTests(unittest.TestCase):
         with self.assertRaisesRegex(DataSourceError, "unique"):
             validate_type_chart(
                 RegisteredTypeChart(
-                    "test", ("normal", "normal"), {("normal", "normal"): "1"}
+                    "test",
+                    TypeChartFamily(
+                        "test",
+                        ("normal", "normal"),
+                        {("normal", "normal"): "1"},
+                    ),
                 )
             )
         with self.assertRaisesRegex(DataSourceError, "missing"):
-            validate_type_chart(RegisteredTypeChart("test", ("normal",), {}))
+            validate_type_chart(
+                RegisteredTypeChart(
+                    "test",
+                    TypeChartFamily("test", ("normal",), {}),
+                )
+            )
         with self.assertRaisesRegex(DataSourceError, "unknown"):
             validate_type_chart(
                 RegisteredTypeChart(
                     "test",
-                    ("normal",),
-                    {
-                        ("normal", "normal"): "1",
-                        ("normal", "missing"): "1",
-                    },
+                    TypeChartFamily(
+                        "test",
+                        ("normal",),
+                        {
+                            ("normal", "normal"): "1",
+                            ("normal", "missing"): "1",
+                        },
+                    ),
                 )
             )
 
