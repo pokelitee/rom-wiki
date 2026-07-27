@@ -11,7 +11,7 @@
 }
 
 .md-banner {
-  background: color-mix(in srgb, var(--rw-accent) 86%, #17213c);
+  background: color-mix(in srgb, var(--rw-accent-strong) 86%, #17213c);
 }
 .md-banner__inner {
   margin: 0 auto;
@@ -352,8 +352,8 @@
   margin-top: 1.25rem;
   padding: .55rem .8rem;
   border-radius: .45rem;
-  color: #fff !important;
-  background: var(--rw-accent);
+  color: var(--rw-on-accent) !important;
+  background: var(--rw-accent-strong);
   font-size: .7rem;
   font-weight: 750;
   transition: filter .16s, transform .16s, box-shadow .16s;

@@ -1,6 +1,8 @@
 :root {
   --rw-accent: #5267a8;
   --rw-accent-rgb: 82, 103, 168;
+  --rw-accent-strong: #5267a8;
+  --rw-on-accent: #ffffff;
   --rw-surface: #ffffff;
   --rw-surface-muted: #f5f6fa;
   --rw-border: #dfe2eb;
@@ -21,9 +23,16 @@
   --rw-negative: #c94c45;
   --rw-gender-male: #3976c6;
   --rw-gender-female: #c9457c;
+  --md-primary-fg-color: var(--rw-accent-strong);
+  --md-primary-fg-color--light: var(--rw-accent);
+  --md-primary-fg-color--dark: var(--rw-accent-strong);
+  --md-accent-fg-color: var(--rw-accent);
 }
 
 [data-md-color-scheme="slate"] {
+  --rw-accent: #9dacdc;
+  --rw-accent-rgb: 157, 172, 220;
+  --rw-accent-strong: #4c5f98;
   --rw-surface: #202531;
   --rw-surface-muted: #191e29;
   --rw-border: #353c4c;
@@ -36,9 +45,52 @@
   --rw-gender-female: #d36995;
 }
 
-html[data-romwiki-theme="platinum"] {
-  --rw-accent: #596b9f;
-  --rw-accent-rgb: 89, 107, 159;
+html[data-romwiki-theme="platinum"],
+.rw-game-card[data-theme="platinum"] {
+  --rw-accent: #53689a;
+  --rw-accent-rgb: 83, 104, 154;
+  --rw-accent-strong: #53689a;
+  --rw-surface: #fcfcfe;
+  --rw-surface-muted: #f2f4f9;
+  --rw-border: #d9deea;
+  --rw-text-muted: #596174;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(48, 58, 88, 0.12);
+}
+
+html[data-romwiki-theme="black-white"],
+.rw-game-card[data-theme="black-white"] {
+  --rw-accent: #3f4652;
+  --rw-accent-rgb: 63, 70, 82;
+  --rw-accent-strong: #343a45;
+  --rw-surface: #ffffff;
+  --rw-surface-muted: #f3f3f4;
+  --rw-border: #d7d9dc;
+  --rw-text-muted: #5d626b;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(20, 23, 28, 0.13);
+}
+
+html[data-md-color-scheme="slate"][data-romwiki-theme="platinum"],
+html[data-md-color-scheme="slate"] .rw-game-card[data-theme="platinum"] {
+  --rw-accent: #aebde3;
+  --rw-accent-rgb: 174, 189, 227;
+  --rw-accent-strong: #4f6293;
+  --rw-surface: #202532;
+  --rw-surface-muted: #191e2a;
+  --rw-border: #394155;
+  --rw-text-muted: #b7bfd2;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(5, 8, 16, 0.3);
+}
+
+html[data-md-color-scheme="slate"][data-romwiki-theme="black-white"],
+html[data-md-color-scheme="slate"] .rw-game-card[data-theme="black-white"] {
+  --rw-accent: #c4cad4;
+  --rw-accent-rgb: 196, 202, 212;
+  --rw-accent-strong: #414954;
+  --rw-surface: #202225;
+  --rw-surface-muted: #181a1d;
+  --rw-border: #3b3f45;
+  --rw-text-muted: #b9bdc4;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.34);
 }
 
 @media (pointer: fine) {

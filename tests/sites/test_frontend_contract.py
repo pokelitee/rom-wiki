@@ -18,6 +18,20 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("scheme: slate", config)
         self.assertIn("@media (forced-colors: active)", theme)
 
+    def test_published_game_themes_define_light_and_dark_palettes(self) -> None:
+        theme = (STYLES / "theme.css").read_text(encoding="utf-8")
+
+        for token in ("platinum", "black-white"):
+            self.assertIn(f'html[data-romwiki-theme="{token}"]', theme)
+            self.assertIn(f'.rw-game-card[data-theme="{token}"]', theme)
+            self.assertIn(
+                f'html[data-md-color-scheme="slate"][data-romwiki-theme="{token}"]',
+                theme,
+            )
+
+        self.assertIn("--rw-accent-strong:", theme)
+        self.assertIn("--rw-on-accent:", theme)
+
     def test_interactive_and_dense_components_keep_accessibility_states(self) -> None:
         css = "\n".join(
             path.read_text(encoding="utf-8") for path in sorted(STYLES.glob("*.css"))

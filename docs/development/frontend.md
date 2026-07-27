@@ -20,6 +20,10 @@ token to custom properties such as `--rw-accent`; components consume the variabl
 rather than game names. Components must support the default and slate Material
 schemes and remain readable without color.
 
+Each published theme defines light and dark values for its accent, filled accent,
+surfaces, borders, muted text, and shadows. The portal applies the same tokens to
+game cards so their visual identity is visible before entering a game site.
+
 `theme.css` also defines a fixed set of custom properties independent of any
 game's appearance token: `--rw-positive`/`--rw-negative` for change-status
 colors and `--rw-gender-male`/`--rw-gender-female` for gender indicators, each
