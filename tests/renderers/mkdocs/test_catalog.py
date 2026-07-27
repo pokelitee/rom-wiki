@@ -75,6 +75,8 @@ class CatalogPresentationTests(unittest.TestCase):
         self.assertIn('"Always hits"', text)
         self.assertIn('["Map header", locationIdentifier]', text)
         self.assertIn('sorts: [["label", "Area"]', text)
+        self.assertIn('{ key: "obtainability", label: "Obtainability" }', text)
+        self.assertIn('["Availability", pokemonAvailability]', text)
 
     def test_encounter_ranges_collapse_equal_levels(self) -> None:
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")

@@ -248,10 +248,16 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("4 Red, 4 Green", page)
         self.assertIn("[Frenzy Plant](../moves/frenzy-plant.md)", page)
         self.assertIn("Friendship 255", page)
-        self.assertEqual(catalog["schema_version"], 1)
+        self.assertEqual(catalog["schema_version"], 2)
         self.assertEqual(catalog["kind"], "pokemon")
         self.assertEqual(catalog["records"][0]["bst"], 318)
         self.assertEqual(catalog["records"][0]["trainer_count"], 0)
+        self.assertEqual(
+            catalog["records"][0]["obtainability"], "no known acquisition"
+        )
+        self.assertFalse(catalog["records"][0]["wild_obtainable"])
+        self.assertEqual(catalog["records"][0]["encounter_location_count"], 0)
+        self.assertIsNone(catalog["records"][0]["minimum_obtainable_level"])
         self.assertEqual(catalog["records"][0]["egg_groups"], ["monster", "grass"])
         self.assertEqual(catalog["records"][0]["url"], "bulbasaur/")
 

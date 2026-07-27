@@ -129,6 +129,8 @@ def render_move_pages(
             if available
         ]
         learner_counts, learner_count = _learner_summary(record, relationships)
+        if relationships is not None and learner_count == 0:
+            access_methods.append("no known learners")
         catalog_records.append(
             add_change_status(
                 {

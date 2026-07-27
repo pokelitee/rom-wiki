@@ -155,6 +155,7 @@ def render_pokemon_pages(
         egg_groups = list(
             dict.fromkeys(value["name"] for value in record["egg_groups"])
         )
+        availability = _catalog_availability(record["slug"], relationships)
         catalog_records.append(
             add_change_status(
                 {
@@ -170,6 +171,7 @@ def render_pokemon_pages(
                     "trainer_count": len(
                         relationships.pokemon_trainers.get(record["slug"], ())
                     ),
+                    **availability,
                     "stats": stats,
                     "bst": sum(stats.values()),
                     "search_text": " ".join(
@@ -190,6 +192,47 @@ def render_pokemon_pages(
         ),
     )
     return page_count
+
+
+def _catalog_availability(
+    pokemon_slug: str, relationships: RelationshipIndex
+) -> dict[str, Any]:
+    wild_encounters = relationships.pokemon_wild_encounters.get(pokemon_slug, ())
+    acquisitions = relationships.pokemon_acquisition.get(pokemon_slug, ())
+    known_levels = [
+        level
+        for level in (
+            *(encounter.minimum_level for encounter in wild_encounters),
+            *(acquisition.level for acquisition in acquisitions),
+        )
+        if level is not None
+    ]
+    encounter_locations = {
+        location
+        for encounter in wild_encounters
+        for location in encounter.locations
+    }
+    acquisition_kinds = {acquisition.kind for acquisition in acquisitions}
+    direct_acquisition_kinds = {
+        "egg",
+        "gift",
+        "static",
+        "trade",
+    }
+    if wild_encounters:
+        obtainability = "wild"
+    elif acquisitions and acquisition_kinds <= direct_acquisition_kinds:
+        obtainability = "static, gift, or trade only"
+    elif acquisitions:
+        obtainability = "other special acquisition only"
+    else:
+        obtainability = "no known acquisition"
+    return {
+        "obtainability": obtainability,
+        "wild_obtainable": bool(wild_encounters),
+        "encounter_location_count": len(encounter_locations),
+        "minimum_obtainable_level": min(known_levels) if known_levels else None,
+    }
 
 
 def _render_record(

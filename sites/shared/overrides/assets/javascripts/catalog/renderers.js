@@ -96,6 +96,18 @@ export function accessMethods(record) {
   );
 }
 
+export function pokemonAvailability(record) {
+  const details = [];
+  if (record.encounter_location_count) {
+    details.push(`${record.encounter_location_count.toLocaleString()} location${record.encounter_location_count === 1 ? "" : "s"}`);
+  }
+  if (record.minimum_obtainable_level != null) {
+    details.push(`Lv. ${record.minimum_obtainable_level}`);
+  }
+  const label = title(record.obtainability);
+  return text(details.length ? `${label} \u00B7 ${details.join(" \u00B7 ")}` : label);
+}
+
 export function trainerParty(record) {
   const wrap = document.createElement("span");
   wrap.className = "rw-catalog__list";

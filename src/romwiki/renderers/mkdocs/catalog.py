@@ -31,7 +31,7 @@ def prune_catalog_pages(output_root: Path, filenames: set[str]) -> None:
 # sites/shared/overrides/assets/javascripts/catalog/config.js — keep in sync
 # when that config changes.
 _SKELETON_FILTER_COUNTS = {
-    "pokemon": 11,
+    "pokemon": 16,
     "abilities": 6,
     "items": 13,
     "moves": 9,
