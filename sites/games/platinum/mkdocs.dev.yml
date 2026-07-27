@@ -1,10 +1,10 @@
 INHERIT: mkdocs.yml
 
 site_name: Pokémon Platinum Wiki (Development)
-site_dir: ../../../build/mkdocs-dev/platinum-us
+site_dir: ../../../build/mkdocs-dev/platinum
 
 extra:
-  romwiki_site_id: platinum-us
+  romwiki_site_id: platinum
   romwiki_dev_pages: dev-pages.toml
 
 validation:

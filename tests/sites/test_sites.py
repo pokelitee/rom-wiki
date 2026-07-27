@@ -20,7 +20,7 @@ class SiteCatalogTests(unittest.TestCase):
             [site.id for site in catalog.sites],
             [
                 "portal",
-                "platinum-us",
+                "platinum",
                 "renegade-platinum",
                 "blaze-black-volt-white",
                 "black-white",
@@ -56,14 +56,14 @@ class SiteCatalogTests(unittest.TestCase):
                 [site.id for site in built],
                 [
                     "portal",
-                    "platinum-us",
+                    "platinum",
                     "renegade-platinum",
                     "blaze-black-volt-white",
                     "black-white",
                 ],
             )
             self.assertEqual(Path(commands[0][-1]), output.resolve())
-            self.assertEqual(Path(commands[1][-1]), output.resolve() / "platinum-us")
+            self.assertEqual(Path(commands[1][-1]), output.resolve() / "platinum")
             self.assertEqual(
                 Path(commands[2][-1]), output.resolve() / "renegade-platinum"
             )

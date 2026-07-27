@@ -37,7 +37,7 @@ class MkDocsHooksTests(unittest.TestCase):
         self.assertEqual(
             [game["id"] for game in games],
             [
-                "platinum-us",
+                "platinum",
                 "renegade-platinum",
                 "blaze-black-volt-white",
                 "black-white",
@@ -122,7 +122,7 @@ class MkDocsHooksTests(unittest.TestCase):
         self.assertEqual(
             [game["id"] for game in context["romwiki"]["games"]],
             [
-                "platinum-us",
+                "platinum",
                 "renegade-platinum",
                 "blaze-black-volt-white",
                 "black-white",

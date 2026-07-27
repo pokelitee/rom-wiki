@@ -1,8 +1,8 @@
 [site]
-id = "platinum-us"
+id = "platinum"
 name = "Pokémon Platinum"
 kind = "game"
-slug = "platinum-us"
+slug = "platinum"
 published = true
 order = 5
 mkdocs_config = "mkdocs.yml"
