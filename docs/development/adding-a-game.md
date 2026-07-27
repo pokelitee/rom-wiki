@@ -268,6 +268,11 @@ The game MkDocs configuration inherits `sites/shared/mkdocs.base.yml`, points
 `theme.custom_dir` at the shared overrides, and registers the repository-local
 MkDocs hook. Copy the relative-path pattern from the existing game site.
 
+Documentation-only sites may set `data_driven = false` in `[game]` and omit
+`profile`/`profiles`. They remain first-class catalog and deployment entries but
+skip generated-data snapshot validation and data-section cards. Add real profiles
+and remove the flag when ROM extraction support is ready.
+
 Renderers should emit a `schema_version: 1` catalog beside each supported section
 index. Catalog records contain only the fields needed for browsing and filtering;
 the normalized dataset remains authoritative. Preserve a complete Markdown link

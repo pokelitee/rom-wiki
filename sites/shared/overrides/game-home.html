@@ -11,6 +11,7 @@
       <span>Based on {{ romwiki.current.base_game | replace('-', ' ') | title }}</span>
     </div>
   </section>
+  {% if romwiki.current.data_driven %}
   <section aria-labelledby="explore-heading">
     <div class="rw-section-heading"><div><p class="rw-eyebrow">Browse the data</p><h2 id="explore-heading">Explore</h2></div></div>
     <div class="rw-section-grid">
@@ -44,4 +45,7 @@
       <a href="{{ romwiki.portal_url }}methodology/">Read the methodology</a>
     </div>
   </section>
+  {% else %}
+  <div class="rw-prose-intro">{{ page.content }}</div>
+  {% endif %}
 {% endblock %}

@@ -40,6 +40,7 @@ class MkDocsHooksTests(unittest.TestCase):
                 "platinum",
                 "renegade-platinum",
                 "blaze-black-volt-white",
+                "blaze-black-2-volt-white-2",
                 "black-white",
             ],
         )
@@ -125,6 +126,7 @@ class MkDocsHooksTests(unittest.TestCase):
                 "platinum",
                 "renegade-platinum",
                 "blaze-black-volt-white",
+                "blaze-black-2-volt-white-2",
                 "black-white",
             ],
         )

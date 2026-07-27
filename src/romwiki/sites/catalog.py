@@ -16,6 +16,7 @@ _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 @dataclass(frozen=True, slots=True)
 class GameMetadata:
     profiles: tuple[str, ...]
+    data_driven: bool
     generation: int
     base_game: str
     platform: str
@@ -113,11 +114,14 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
         generation = game["generation"]
         if not isinstance(generation, int) or generation < 1:
             raise SiteError(f"Invalid game generation in {path.relative_to(root)}")
-        raw_profiles = game["profile"] if "profile" in game else game["profiles"]
-        profiles = (
-            (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
-        )
-        if not profiles or not all(isinstance(value, str) for value in profiles):
+        data_driven = game.get("data_driven", True)
+        if not isinstance(data_driven, bool):
+            raise SiteError(f"Invalid data_driven flag in {path.relative_to(root)}")
+        raw_profiles = game.get("profile", game.get("profiles", ()))
+        profiles = (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
+        if (data_driven and not profiles) or not all(
+            isinstance(value, str) for value in profiles
+        ):
             raise SiteError(f"Invalid profile(s) in {path.relative_to(root)}")
         slug_fields: dict[str, Any] = {
             "base_game": game["base_game"],
@@ -142,6 +146,7 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
             raise SiteError(f"Invalid platform name in {path.relative_to(root)}")
         return GameMetadata(
             profiles=profiles,
+            data_driven=data_driven,
             generation=generation,
             base_game=slug_fields["base_game"],
             platform=slug_fields["platform"],
@@ -177,7 +182,7 @@ def _validate_profile_references(root: Path, sites: tuple[SiteDefinition, ...]) 
         for profile in ProfileRepository.load(profiles_root).profiles
     }
     for site in sites:
-        if site.game is None:
+        if site.game is None or not site.game.data_driven:
             continue
         missing = [
             profile_id

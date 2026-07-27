@@ -1,0 +1,17 @@
+INHERIT: ../../shared/mkdocs.base.yml
+
+site_name: Pokémon Blaze Black 2 & Volt White 2 Wiki
+site_description: A documentation reference for Pokémon Blaze Black 2 and Volt White 2
+docs_dir: wiki
+hooks:
+  - ../../../src/romwiki/sites/mkdocs_hooks.py
+
+theme:
+  custom_dir: ../../shared/overrides
+
+nav:
+  - Home: index.md
+  - Documentation:
+      - Overview: docs/index.md
+      - Changelog: docs/changelog.md
+      - Action Replay: docs/codes.md

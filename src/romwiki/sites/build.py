@@ -58,7 +58,7 @@ def build_sites(
 
 
 def _validate_generated_content(site: SiteDefinition) -> None:
-    if site.kind != "game":
+    if site.kind != "game" or (site.game is not None and not site.game.data_driven):
         return
     wiki_root = site.config_path.parent / "wiki"
     missing = [

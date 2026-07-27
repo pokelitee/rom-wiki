@@ -39,6 +39,8 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.snippets:
       check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
   - toc:
       permalink: true
 

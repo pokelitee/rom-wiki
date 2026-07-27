@@ -23,6 +23,7 @@ class SiteCatalogTests(unittest.TestCase):
                 "platinum",
                 "renegade-platinum",
                 "blaze-black-volt-white",
+                "blaze-black-2-volt-white-2",
                 "black-white",
             ],
         )
@@ -59,6 +60,7 @@ class SiteCatalogTests(unittest.TestCase):
                     "platinum",
                     "renegade-platinum",
                     "blaze-black-volt-white",
+                    "blaze-black-2-volt-white-2",
                     "black-white",
                 ],
             )
@@ -71,7 +73,20 @@ class SiteCatalogTests(unittest.TestCase):
                 Path(commands[3][-1]),
                 output.resolve() / "blaze-black-volt-white",
             )
-            self.assertEqual(Path(commands[4][-1]), output.resolve() / "black-white")
+            self.assertEqual(
+                Path(commands[4][-1]),
+                output.resolve() / "blaze-black-2-volt-white-2",
+            )
+            self.assertEqual(Path(commands[5][-1]), output.resolve() / "black-white")
+
+    def test_documentation_only_site_does_not_require_profiles(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        site = catalog.get("blaze-black-2-volt-white-2")
+
+        self.assertIsNotNone(site.game)
+        assert site.game is not None
+        self.assertFalse(site.game.data_driven)
+        self.assertEqual(site.game.profiles, ())
 
     def test_build_requires_an_explicit_selection(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

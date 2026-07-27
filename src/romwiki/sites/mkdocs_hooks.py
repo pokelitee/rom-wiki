@@ -133,6 +133,7 @@ def _site_context(site: SiteDefinition) -> dict[str, Any]:
         "kind": site.kind,
         "slug": site.slug,
         "description": site.description,
+        "data_driven": game.data_driven if game else False,
         "generation": game.generation if game else None,
         "base_game": game.base_game if game else None,
         "platform": game.platform if game else None,

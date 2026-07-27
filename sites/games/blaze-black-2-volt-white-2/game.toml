@@ -1,0 +1,20 @@
+[site]
+id = "blaze-black-2-volt-white-2"
+name = "Pokémon Blaze Black 2 & Volt White 2"
+kind = "game"
+slug = "blaze-black-2-volt-white-2"
+published = true
+order = 17
+mkdocs_config = "mkdocs.yml"
+description = "A documentation reference for Pokémon Blaze Black 2 and Volt White 2"
+
+[game]
+data_driven = false
+generation = 5
+base_game = "black-2-white-2"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "Drayano"
+
+[appearance]
+theme = "black-white"
