@@ -7,6 +7,7 @@ from typing import Any
 from romwiki.pipeline.relationships import (
     AcquisitionReference,
     RelationshipIndex,
+    TrainerAppearance,
     WildEncounterReference,
     build_relationship_index,
 )
@@ -163,6 +164,9 @@ def render_pokemon_pages(
                     "abilities": abilities,
                     "ability_refs": ability_refs,
                     "egg_groups": egg_groups,
+                    "trainer_count": len(
+                        relationships.pokemon_trainers.get(record["slug"], ())
+                    ),
                     "stats": stats,
                     "bst": sum(stats.values()),
                     "search_text": " ".join(
@@ -280,6 +284,11 @@ def _render_record(
         lines,
         relationships.pokemon_wild_encounters.get(record["slug"], ()),
         relationships.pokemon_acquisition.get(record["slug"], ()),
+        source_file,
+    )
+    _append_trainer_appearances(
+        lines,
+        relationships.pokemon_trainers.get(record["slug"], ()),
         source_file,
     )
     lines.extend(_other_forms_section(record, all_records or [record], source_file))
@@ -994,6 +1003,65 @@ def _acquisition_detail(
             route_key=reference.source_item_slug,
         )
     return escape_table_cell(reference.detail) if reference.detail else "—"
+
+
+def _append_trainer_appearances(
+    lines: list[str],
+    appearances: tuple[TrainerAppearance, ...],
+    source_file: str,
+) -> None:
+    if not appearances:
+        return
+    lines.extend(
+        [
+            "## Used by trainers",
+            "",
+            "| Trainer | Party slot | Level | Held item | Location | Version |",
+            "| ------- | ---------: | ----: | --------- | -------- | ------- |",
+        ]
+    )
+    for appearance in appearances:
+        trainer_label = " ".join(
+            value
+            for value in (appearance.class_name, appearance.trainer_name)
+            if value
+        )
+        trainer = entity_markdown_link(
+            "trainer",
+            appearance.trainer_id,
+            trainer_label,
+            source_file,
+            route_key=appearance.trainer_id,
+        )
+        held_item = _trainer_held_item(appearance, source_file)
+        location = (
+            _availability_locations(appearance.locations, source_file)
+            if appearance.linked
+            else "Unlinked"
+        )
+        lines.append(
+            f"| {trainer} | {appearance.party_position} | {appearance.level} | "
+            f"{held_item} | {location} | "
+            f"{_availability_versions(appearance.versions)} |"
+        )
+    lines.append("")
+
+
+def _trainer_held_item(
+    appearance: TrainerAppearance,
+    source_file: str,
+) -> str:
+    if appearance.held_item_name is None:
+        return "—"
+    if appearance.held_item_id is None:
+        return escape_table_cell(appearance.held_item_name)
+    return entity_markdown_link(
+        "item",
+        appearance.held_item_id,
+        appearance.held_item_name,
+        source_file,
+        route_key=appearance.held_item_slug,
+    )
 
 
 def _move_cells(

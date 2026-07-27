@@ -249,6 +249,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["schema_version"], 1)
         self.assertEqual(catalog["kind"], "pokemon")
         self.assertEqual(catalog["records"][0]["bst"], 318)
+        self.assertEqual(catalog["records"][0]["trainer_count"], 0)
         self.assertEqual(catalog["records"][0]["egg_groups"], ["monster", "grass"])
         self.assertEqual(catalog["records"][0]["url"], "bulbasaur/")
 

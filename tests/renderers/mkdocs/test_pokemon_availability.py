@@ -4,9 +4,13 @@ import unittest
 
 from romwiki.pipeline.relationships import (
     AcquisitionReference,
+    TrainerAppearance,
     WildEncounterReference,
 )
-from romwiki.renderers.mkdocs.pokemon import _append_availability
+from romwiki.renderers.mkdocs.pokemon import (
+    _append_availability,
+    _append_trainer_appearances,
+)
 
 
 class PokemonAvailabilityTests(unittest.TestCase):
@@ -77,6 +81,38 @@ class PokemonAvailabilityTests(unittest.TestCase):
         self.assertEqual(lines, ["No acquisition source is available.", ""])
 
 
+class PokemonTrainerAppearanceTests(unittest.TestCase):
+    def test_renders_every_party_slot_with_items_locations_and_versions(self) -> None:
+        appearances = (
+            _appearance(1, linked=True, versions=("black",)),
+            _appearance(2, linked=True, versions=("black",)),
+            _appearance(1, trainer_id=20, linked=False, versions=("white",)),
+        )
+        lines: list[str] = []
+
+        _append_trainer_appearances(
+            lines,
+            appearances,
+            "pokemon/bulbasaur.md",
+        )
+
+        page = "\n".join(lines)
+        self.assertEqual(page.count("[Ace Trainer Sam]"), 2)
+        self.assertIn("[Ace Trainer Lee](../trainers/trainer-0020.md)", page)
+        self.assertIn("[Miracle Seed](../items/miracle-seed.md)", page)
+        self.assertIn("[Route 1](../locations/header-006.md)", page)
+        self.assertIn("| Unlinked | White |", page)
+        self.assertIn("| 1 | 15 |", page)
+        self.assertIn("| 2 | 15 |", page)
+
+    def test_omits_the_section_when_no_trainer_uses_the_pokemon(self) -> None:
+        lines: list[str] = []
+
+        _append_trainer_appearances(lines, (), "pokemon/bulbasaur.md")
+
+        self.assertEqual(lines, [])
+
+
 def _acquisition(
     kind: str,
     *,
@@ -97,6 +133,29 @@ def _acquisition(
         source_item_id=source_item_id,
         source_item_slug=source_item_slug,
         versions=(),
+    )
+
+
+def _appearance(
+    party_position: int,
+    *,
+    trainer_id: int = 10,
+    linked: bool,
+    versions: tuple[str, ...],
+) -> TrainerAppearance:
+    return TrainerAppearance(
+        pokemon_slug="bulbasaur",
+        trainer_id=trainer_id,
+        trainer_name="Sam" if trainer_id == 10 else "Lee",
+        class_name="Ace Trainer",
+        party_position=party_position,
+        level=15,
+        held_item_id=202,
+        held_item_name="Miracle Seed",
+        held_item_slug="miracle-seed",
+        locations=((6, "Route 1"),) if linked else (),
+        linked=linked,
+        versions=versions,
     )
 
 

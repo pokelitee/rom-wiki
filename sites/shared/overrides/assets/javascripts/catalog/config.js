@@ -32,9 +32,9 @@ export const CATALOGS = {
   pokemon: {
     searchPlaceholder: "Search Pokémon, types, or abilities",
     filters: [{ key: "types", label: "Type", multi: true }, { key: "abilities", label: "Ability", control: "combobox" }, { key: "egg_groups", label: "Egg group", multi: true }],
-    ranges: [{ key: "bst", label: "BST" }],
-    sorts: [["dex", "Pokédex number"], ["label", "Name"], ["bst", "Base stat total"], ["stats.hp", "HP"], ["stats.attack", "Attack"], ["stats.defense", "Defense"], ["stats.special_attack", "Sp. Atk"], ["stats.special_defense", "Sp. Def"], ["stats.speed", "Speed"]],
-    columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (record) => referenceList(record.ability_refs)], ["HP", (record) => stat(record, "hp")], ["Atk", (record) => stat(record, "attack")], ["Def", (record) => stat(record, "defense")], ["SpA", (record) => stat(record, "special_attack")], ["SpD", (record) => stat(record, "special_defense")], ["Spe", (record) => stat(record, "speed")], ["BST", (record) => text(record.bst, "rw-catalog__number")]],
+    ranges: [{ key: "bst", label: "BST" }, { key: "trainer_count", label: "Trainer appearances" }],
+    sorts: [["dex", "Pokédex number"], ["label", "Name"], ["bst", "Base stat total"], ["trainer_count", "Trainer appearances"], ["stats.hp", "HP"], ["stats.attack", "Attack"], ["stats.defense", "Defense"], ["stats.special_attack", "Sp. Atk"], ["stats.special_defense", "Sp. Def"], ["stats.speed", "Speed"]],
+    columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (record) => referenceList(record.ability_refs)], ["Trainers", (record) => text(record.trainer_count, "rw-catalog__number")], ["HP", (record) => stat(record, "hp")], ["Atk", (record) => stat(record, "attack")], ["Def", (record) => stat(record, "defense")], ["SpA", (record) => stat(record, "special_attack")], ["SpD", (record) => stat(record, "special_defense")], ["Spe", (record) => stat(record, "speed")], ["BST", (record) => text(record.bst, "rw-catalog__number")]],
   },
   moves: {
     searchPlaceholder: "Search moves or machine numbers",
