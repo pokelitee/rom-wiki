@@ -5,7 +5,7 @@ export function initializeSite() {
     picker.addEventListener("change", () => {
       if (picker.value) window.location.assign(picker.value);
     });
-    enhanceSelect(picker, "Choose a game");
+    enhanceSelect(picker, "Choose a game", { popover: true });
   });
 
   document.querySelectorAll("img[data-rw-sprite]").forEach((image) => {

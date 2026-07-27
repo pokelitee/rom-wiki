@@ -44,6 +44,33 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("justify-self: end", css)
         self.assertIn(".rw-party-card__stats caption", css)
 
+    def test_header_game_picker_uses_a_top_layer_menu(self) -> None:
+        site = (
+            ROOT
+            / "sites"
+            / "shared"
+            / "overrides"
+            / "assets"
+            / "javascripts"
+            / "site.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("[data-rw-game-picker]", site)
+        self.assertIn("{ popover: true }", site)
+
+        controls = (
+            ROOT
+            / "sites"
+            / "shared"
+            / "overrides"
+            / "assets"
+            / "javascripts"
+            / "controls.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"showPopover" in HTMLElement.prototype', controls)
+        self.assertIn('menu.setAttribute("popover", "auto")', controls)
+        self.assertIn("menu.showPopover()", controls)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -170,8 +170,9 @@ function closeCombobox(widget) {
   parts.activeIndex = -1;
 }
 
-export function enhanceSelect(select, label) {
+export function enhanceSelect(select, label, { popover = false } = {}) {
   if (selectWidgets.has(select)) return;
+  if (popover && !("showPopover" in HTMLElement.prototype)) return;
   const widget = document.createElement("div");
   widget.className = "rw-select";
   widget.classList.toggle("rw-select--multiple", select.multiple);
@@ -184,6 +185,7 @@ export function enhanceSelect(select, label) {
   const menu = document.createElement("div");
   menu.id = `rw-select-menu-${++elementSequence}`;
   menu.className = "rw-select__menu";
+  if (popover) menu.setAttribute("popover", "auto");
   menu.hidden = true;
   const optionList = document.createElement("div");
   optionList.className = "rw-select__options";
@@ -305,6 +307,12 @@ export function enhanceSelect(select, label) {
   widget.addEventListener("focusout", (event) => {
     if (!widget.contains(event.relatedTarget)) closeSelect(widget);
   });
+  if (popover) {
+    menu.addEventListener("toggle", (event) => {
+      if (event.newState !== "closed") return;
+      markSelectClosed({ menu, trigger, widget });
+    });
+  }
 
   select.hidden = true;
   select.setAttribute("aria-hidden", "true");
@@ -324,6 +332,7 @@ export function enhanceSelect(select, label) {
     modeInput,
     optionList,
     trigger,
+    popover,
     widget,
   };
   selectWidgets.set(select, parts);
@@ -372,6 +381,7 @@ function openSelect(widget, focus = "selected") {
   widget.classList.add("rw-select--open");
   parts.trigger.setAttribute("aria-expanded", "true");
   parts.menu.hidden = false;
+  if (parts.popover) parts.menu.showPopover();
   positionMenu(widget, parts.trigger, parts.menu);
   if (focus) {
     const options = [...parts.menu.querySelectorAll(".rw-select__option")];
@@ -387,7 +397,14 @@ function openSelect(widget, focus = "selected") {
 function closeSelect(widget) {
   const parts = selectWidgets.get(widget);
   if (!parts) return;
-  widget.classList.remove("rw-select--open");
+  if (parts.popover && parts.menu.matches(":popover-open")) {
+    parts.menu.hidePopover();
+  }
+  markSelectClosed(parts);
+}
+
+function markSelectClosed(parts) {
+  parts.widget.classList.remove("rw-select--open");
   parts.trigger.setAttribute("aria-expanded", "false");
   parts.menu.hidden = true;
 }
@@ -405,6 +422,23 @@ function positionMenu(widget, anchor, menu) {
   widget.classList.remove("rw-menu--above", "rw-menu--align-right");
   const anchorBounds = anchor.getBoundingClientRect();
   const menuBounds = menu.getBoundingClientRect();
+  if (menu.matches(":popover-open")) {
+    const gutter = 16;
+    const gap = 6;
+    const left = Math.max(
+      gutter,
+      Math.min(anchorBounds.left, window.innerWidth - menuBounds.width - gutter)
+    );
+    const spaceBelow = window.innerHeight - anchorBounds.bottom;
+    const above = menuBounds.height > spaceBelow - gutter
+      && anchorBounds.top > spaceBelow;
+    menu.style.left = `${left}px`;
+    menu.style.top = above
+      ? `${Math.max(gutter, anchorBounds.top - menuBounds.height - gap)}px`
+      : `${anchorBounds.bottom + gap}px`;
+    menu.style.minWidth = `${anchorBounds.width}px`;
+    return;
+  }
   if (menuBounds.right > window.innerWidth - 16) {
     widget.classList.add("rw-menu--align-right");
   }

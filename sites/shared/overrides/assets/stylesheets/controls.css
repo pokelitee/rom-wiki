@@ -42,6 +42,11 @@
   background: var(--rw-surface);
   box-shadow: var(--rw-shadow);
 }
+.rw-select__menu[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+}
 .rw-select__menu[hidden] {
   display: none;
 }

@@ -62,13 +62,21 @@
 .rw-sitebar__divider {
   opacity: 0.55;
 }
-.rw-game-picker select {
-  max-width: 15rem;
+.rw-game-picker {
+  min-width: 0;
+}
+.rw-game-picker select,
+.rw-game-picker .rw-select {
+  width: min(15rem, calc(100vw - 7rem));
+}
+.rw-game-picker select,
+.rw-game-picker .rw-select__trigger {
   padding: 0.25rem 1.8rem 0.25rem 0.45rem;
   border: 1px solid rgba(255,255,255,.32);
   border-radius: .35rem;
   color: #fff;
   background-color: rgba(0,0,0,.16);
+  box-shadow: none;
   font: inherit;
   cursor: pointer;
   appearance: none;
@@ -78,11 +86,13 @@
   background-size: .55rem auto;
   transition: border-color .16s, background-color .16s, box-shadow .16s;
 }
-.rw-game-picker select:hover {
+.rw-game-picker select:hover,
+.rw-game-picker .rw-select__trigger:hover {
   border-color: rgba(255,255,255,.68);
   background-color: rgba(0,0,0,.24);
 }
-.rw-game-picker select:focus {
+.rw-game-picker select:focus-visible,
+.rw-game-picker .rw-select__trigger:focus-visible {
   border-color: #fff;
   outline: none;
   box-shadow: 0 0 0 3px rgba(255,255,255,.2);
@@ -92,31 +102,12 @@
   background: #fff;
 }
 .rw-game-picker .rw-select__trigger {
+  width: 100%;
   min-height: 1.65rem;
-  max-width: 15rem;
-  padding: .25rem 1.8rem .25rem .45rem;
-  border: 1px solid rgba(255,255,255,.32);
-  border-radius: .35rem;
-  color: #fff;
-  background-color: rgba(0,0,0,.16);
-  box-shadow: none;
-  font: inherit;
-  background-image: var(--rw-select-chevron-inverse);
-}
-.rw-game-picker .rw-select__trigger:hover {
-  border-color: rgba(255,255,255,.68);
-  background-color: rgba(0,0,0,.24);
-}
-.rw-game-picker .rw-select__trigger:focus-visible {
-  border-color: #fff;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.2);
 }
 .rw-game-picker .rw-select__menu {
-  right: 0;
-  left: auto;
   min-width: 12rem;
 }
-
 .rw-hero {
   position: relative;
   overflow: hidden;
