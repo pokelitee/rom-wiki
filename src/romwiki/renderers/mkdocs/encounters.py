@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import GEN5_BW_ENGINE
+from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -633,11 +634,6 @@ def _render_gen5_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    # This generation's areas don't have real map *header* cross-references
-    # yet (that needs the still-unresearched script engine -- see
-    # gen5_bw/__init__.py's module docstring), so unlike the Gen IV path
-    # above there's no linked/unlinked split -- every area is listed the same
-    # way. Real display names (from the map-name table) are attached, though.
     records = sorted(
         (record for record in dataset["records"] if record["active"]),
         key=lambda record: record["area_id"],
@@ -648,9 +644,9 @@ def _render_gen5_encounter_pages(
         {
             "index.md",
             *(
-                f"area-{record['area_id']:03}.md"
+                f"{encounter_route_key(record)}.md"
                 for record in records
-                if only_pages is None or f"area-{record['area_id']:03}" in only_pages
+                if _gen5_page_selected(record, only_pages)
             ),
         },
     )
@@ -659,10 +655,10 @@ def _render_gen5_encounter_pages(
     page_count = 0
     for index, record in enumerate(records):
         change = record_comparison(comparison, record["area_id"])
-        filename = f"area-{record['area_id']:03}.md"
+        filename = f"{encounter_route_key(record)}.md"
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
-        if only_pages is None or filename.removesuffix(".md") in only_pages:
+        if _gen5_page_selected(record, only_pages):
             write_text(
                 output_root / filename,
                 _render_gen5_area(
@@ -679,7 +675,10 @@ def _render_gen5_encounter_pages(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "encounter", record["area_id"], record["name"], record["area_id"]
+                    "encounter_variant",
+                    record["area_id"],
+                    record["name"],
+                    encounter_route_key(record),
                 ),
                 "encounters/index.md",
             )
@@ -698,6 +697,17 @@ def _render_gen5_encounter_pages(
         ),
     )
     return page_count
+
+
+def _gen5_page_selected(
+    record: dict[str, Any],
+    only_pages: frozenset[str] | None,
+) -> bool:
+    return (
+        only_pages is None
+        or str(encounter_route_key(record)) in only_pages
+        or f"area-{record['area_id']:03}" in only_pages
+    )
 
 
 def _gen5_catalog_record(
@@ -768,7 +778,7 @@ def _render_gen5_area(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> str:
-    source_file = f"encounters/area-{record['area_id']:03}.md"
+    source_file = f"encounters/{encounter_route_key(record)}.md"
     lines = [
         f"# {record['name']}",
         "",
@@ -809,10 +819,9 @@ def _render_gen5_area(
                 "only each slot's species and level(s) are ROM data — they are "
                 "fixed, publicly documented Generation III+ engine weights applied "
                 "by slot position.",
-                "Location names come from the ROM's own map header table "
-                "(cross-referenced by wild-encounter-table index); the map headers "
-                "themselves aren't cross-linked as their own pages yet — see the "
-                "site's data sources page for why.",
+                "Location names come from the ROM's own map header table and are "
+                "cross-referenced to location pages by the shared wild-encounter "
+                "table index.",
             ]
         )
     )
@@ -885,13 +894,13 @@ def _append_gen5_record_navigation(
 ) -> None:
     lines.extend(
         record_navigation_for(
-            "encounter",
-            f"encounters/area-{record['area_id']:03}/",
+            "encounter_variant",
+            f"encounters/{encounter_route_key(record)}/",
             previous,
             following,
             aria_label="Wild encounter navigation",
-            identity=lambda value: value["area_id"],
-            route_key=lambda value: value["area_id"],
+            identity=encounter_route_key,
+            route_key=encounter_route_key,
             label=lambda value: value["name"],
         )
     )

@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.util.errors import DataSourceError
 
 
@@ -13,6 +14,7 @@ class WildEncounterReference:
     pokemon_slug: str
     area_id: int
     area_name: str
+    encounter_route_key: int | str
     method: str
     minimum_level: int | None
     maximum_level: int | None
@@ -73,6 +75,7 @@ class LocationEncounterReference:
     area_id: int
     map_index: int
     season: str | None
+    encounter_route_key: int | str
     versions: tuple[str, ...]
 
 
@@ -119,7 +122,7 @@ def build_relationship_index(
         pokemon_acquisition=_freeze(acquisition, _acquisition_sort_key),
         move_level_up_learners=_freeze(level_up, _learner_sort_key),
         move_machine_learners=_freeze(machines, _learner_sort_key),
-        location_encounters=_freeze(location_encounters, _location_sort_key),
+        location_encounters=_freeze_location_encounters(location_encounters),
     )
 
 
@@ -231,6 +234,7 @@ def _wild_encounters(
             common = {
                 "area_id": record["area_id"],
                 "area_name": record["name"],
+                "encounter_route_key": encounter_route_key(record),
                 "season": record.get("season"),
                 "locations": _encounter_locations(record, location_index),
                 "versions": versions,
@@ -641,6 +645,7 @@ def _location_encounters(
                     area_id=encounter["area_id"],
                     map_index=map_index,
                     season=encounter.get("season"),
+                    encounter_route_key=encounter_route_key(encounter),
                     versions=encounter_versions or location_versions,
                 )
             )
@@ -668,6 +673,7 @@ def _freeze_wild(
                 entry.pokemon_slug,
                 entry.area_id,
                 entry.area_name,
+                entry.encounter_route_key,
                 entry.method,
                 entry.minimum_level,
                 entry.maximum_level,
@@ -684,6 +690,7 @@ def _freeze_wild(
                 pokemon_slug=entry.pokemon_slug,
                 area_id=entry.area_id,
                 area_name=entry.area_name,
+                encounter_route_key=entry.encounter_route_key,
                 method=entry.method,
                 minimum_level=entry.minimum_level,
                 maximum_level=entry.maximum_level,
@@ -694,6 +701,47 @@ def _freeze_wild(
                 versions=entry.versions,
             )
         result[slug] = tuple(sorted(grouped.values(), key=_wild_sort_key))
+    return result
+
+
+def _freeze_location_encounters(
+    values: Mapping[int, list[LocationEncounterReference]],
+) -> dict[int, tuple[LocationEncounterReference, ...]]:
+    result = {}
+    for header_id, entries in sorted(values.items()):
+        grouped: dict[tuple[int, int, str | None, int | str], set[str]] = defaultdict(
+            set
+        )
+        for entry in entries:
+            grouped[
+                (
+                    entry.area_id,
+                    entry.map_index,
+                    entry.season,
+                    entry.encounter_route_key,
+                )
+            ].update(entry.versions)
+        result[header_id] = tuple(
+            sorted(
+                (
+                    LocationEncounterReference(
+                        header_id=header_id,
+                        area_id=area_id,
+                        map_index=map_index,
+                        season=season,
+                        encounter_route_key=route_key,
+                        versions=tuple(sorted(versions)),
+                    )
+                    for (
+                        area_id,
+                        map_index,
+                        season,
+                        route_key,
+                    ), versions in grouped.items()
+                ),
+                key=_location_sort_key,
+            )
+        )
     return result
 
 

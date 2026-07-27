@@ -196,6 +196,11 @@ class RelationshipIndexTests(unittest.TestCase):
             [(entry.area_id, entry.season) for entry in variants],
             [(8, "spring"), (9, "summer")],
         )
+        self.assertEqual(
+            [entry.encounter_route_key for entry in variants],
+            ["map-003-spring", "map-003-summer"],
+        )
+        self.assertEqual(wild[0].encounter_route_key, "map-003-spring")
 
     def test_preserves_version_variants_and_deduplicates_equal_slots(self) -> None:
         black = {
@@ -262,6 +267,40 @@ class RelationshipIndexTests(unittest.TestCase):
             ],
             [(2, 40, ("black",)), (3, 20, ("white",))],
         )
+
+    def test_combines_versions_for_the_same_location_encounter_variant(self) -> None:
+        variant = {
+            "area_id": 1,
+            "map_index": 0,
+            "season": "spring",
+            "name": "Route 1",
+        }
+        index = build_relationship_index(
+            _datasets(
+                encounters=[
+                    {
+                        **variant,
+                        "versions": ["black", "white"],
+                        "version_variants": {
+                            "black": variant,
+                            "white": variant,
+                        },
+                    }
+                ],
+                locations=[
+                    {
+                        "header_id": 6,
+                        "name": "Route 1",
+                        "encounter_map_index": 0,
+                    }
+                ],
+            )
+        )
+
+        references = index.location_encounters[6]
+        self.assertEqual(len(references), 1)
+        self.assertEqual(references[0].encounter_route_key, "map-000-spring")
+        self.assertEqual(references[0].versions, ("black", "white"))
 
     def test_omits_absent_optional_datasets(self) -> None:
         index = build_relationship_index(

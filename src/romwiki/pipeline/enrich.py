@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
+from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.pipeline.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
@@ -502,6 +503,7 @@ def _enrich_gen5_encounter_area(
         "area_id": source["area_id"],
         "map_index": source["map_index"],
         "season": source.get("season"),
+        "slug": encounter_route_key(source),
         "name": " / ".join(location_names) or label,
         "location_names": location_names,
         "active": active,

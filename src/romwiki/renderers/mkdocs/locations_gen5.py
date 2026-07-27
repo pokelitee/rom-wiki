@@ -4,6 +4,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.relationships import (
+    LocationEncounterReference,
+    RelationshipIndex,
+)
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -11,6 +15,7 @@ from romwiki.renderers.mkdocs.catalog import (
     write_text,
 )
 from romwiki.renderers.mkdocs.components import (
+    display_name,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -32,6 +37,7 @@ def render_gen5_location_pages(
     dataset: dict[str, Any],
     output_root: Path,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -63,7 +69,17 @@ def render_gen5_location_pages(
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             write_text(
                 output_root / filename,
-                _render_gen5_location(record, previous, following, references),
+                _render_gen5_location(
+                    record,
+                    previous,
+                    following,
+                    references,
+                    (
+                        relationships.location_encounters.get(record["header_id"], ())
+                        if relationships
+                        else ()
+                    ),
+                ),
             )
             page_count += 1
         label = record["name"]
@@ -118,7 +134,9 @@ def _render_gen5_location(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
     references: ReferenceIndex | None = None,
+    encounters: tuple[LocationEncounterReference, ...] = (),
 ) -> str:
+    source_file = f"locations/{_filename(record['header_id'])}"
     facts = [f"<div><dt>Header ID</dt><dd>{record['header_id']}</dd></div>"]
     if record["encounter_map_index"] is not None:
         facts.append(
@@ -131,19 +149,8 @@ def _render_gen5_location(
         *summary_section("rw-location-summary", facts),
     ]
     if record["encounter_map_index"] is not None:
-        lines.extend(
-            [
-                "## Wild encounters",
-                "",
-                "This location's wild encounters come from Wild Encounters "
-                f"table index `{record['encounter_map_index']}`. Not linked "
-                "directly to a specific encounter-area page here, since a "
-                "single table index can expand into up to 4 seasonal areas — "
-                "search the Wild Encounters catalog for this index instead.",
-                "",
-            ]
-        )
-    source_file = f"locations/{_filename(record['header_id'])}"
+        lines.extend(["## Wild encounters", ""])
+        _append_encounter_variants(lines, encounters, source_file)
     _append_connections(lines, record["connections"], source_file)
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
@@ -159,6 +166,16 @@ def _render_gen5_location(
                     (
                         ("Header ID", f"`{record['header_id']}`"),
                         ("Matrix ID", f"`{record['matrix_id']}`"),
+                        *(
+                            (
+                                (
+                                    "Wild encounter table index",
+                                    f"`{record['encounter_map_index']}`",
+                                ),
+                            )
+                            if record["encounter_map_index"] is not None
+                            else ()
+                        ),
                     )
                 ),
                 "Source: exact ROM map header record from "
@@ -186,3 +203,46 @@ def _render_gen5_location(
         )
     )
     return "\n".join(lines)
+
+
+def _append_encounter_variants(
+    lines: list[str],
+    encounters: tuple[LocationEncounterReference, ...],
+    source_file: str,
+) -> None:
+    if not encounters:
+        lines.extend(
+            [
+                "No rendered encounter-area variant matches this location's "
+                "wild-encounter table index.",
+                "",
+            ]
+        )
+        return
+    lines.extend(
+        [
+            "| Season | Encounter area | Version |",
+            "| ------ | -------------- | ------- |",
+        ]
+    )
+    for encounter in encounters:
+        label = f"Map {encounter.map_index:03}" + (
+            f" ({encounter.season.title()})" if encounter.season else ""
+        )
+        link = ROUTES.markdown_link(
+            entity_reference(
+                "encounter_variant",
+                encounter.area_id,
+                label,
+                encounter.encounter_route_key,
+            ),
+            source_file,
+        )
+        versions = (
+            " / ".join(display_name(value) for value in encounter.versions) or "—"
+        )
+        lines.append(
+            f"| {encounter.season.title() if encounter.season else 'All'} | "
+            f"{link} | {versions} |"
+        )
+    lines.append("")

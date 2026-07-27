@@ -847,6 +847,11 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
         relationship_index = build_relationship_index(relationship_datasets)
     reference_datasets = {}
     if args.command == "build-locations":
+        relationship_datasets = {
+            "locations": workflow.current.locations(),
+            "encounters": workflow.current.encounters(),
+        }
+        relationship_index = build_relationship_index(relationship_datasets)
         reference_datasets = {
             "pokemon": workflow.current.pokemon(),
             "items": workflow.current.items(),
@@ -1155,7 +1160,7 @@ def _write_dataset_build(
             type_dataset,
             only_pages=only_pages,
         )
-    elif kind == "moves":
+    elif kind in {"moves", "locations"}:
         page_count = renderer(
             dataset,
             wiki_output,

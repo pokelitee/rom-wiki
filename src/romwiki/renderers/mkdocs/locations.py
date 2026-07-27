@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import GEN5_BW_ENGINE
+from romwiki.pipeline.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -54,6 +55,7 @@ def render_location_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -63,7 +65,11 @@ def render_location_pages(
         )
 
         return render_gen5_location_pages(
-            dataset, output_root, references, only_pages=only_pages
+            dataset,
+            output_root,
+            references,
+            relationships,
+            only_pages=only_pages,
         )
     records = dataset["records"]
     output_root.mkdir(parents=True, exist_ok=True)
@@ -419,9 +425,7 @@ def _append_shops(
             )
             price = shop_price(item["price"], currency)
             if shop.get("is_main_game") is not None:
-                availability = (
-                    "Main game" if shop["is_main_game"] else "Post-game"
-                )
+                availability = "Main game" if shop["is_main_game"] else "Post-game"
             else:
                 availability = badge_requirement(item["required_badges"])
             lines.append(

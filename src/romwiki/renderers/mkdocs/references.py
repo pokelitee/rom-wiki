@@ -241,6 +241,7 @@ ROUTES = RouteResolver(
             markdown=lambda key: f"encounters/area-{int(key):03}.md",
             published=lambda key: f"encounters/area-{int(key):03}/",
         ),
+        "encounter_variant": _slug_route("encounters"),
     }
 )
 

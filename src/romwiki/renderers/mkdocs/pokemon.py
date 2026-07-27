@@ -911,12 +911,17 @@ def _append_availability(
             ]
         )
         for encounter in wild_encounters:
+            encounter_kind = (
+                "encounter_variant"
+                if isinstance(encounter.encounter_route_key, str)
+                else "encounter"
+            )
             area = entity_markdown_link(
-                "encounter",
+                encounter_kind,
                 encounter.area_id,
                 encounter.area_name,
                 source_file,
-                route_key=encounter.area_id,
+                route_key=encounter.encounter_route_key,
             )
             locations = _availability_locations(encounter.locations, source_file)
             lines.append(

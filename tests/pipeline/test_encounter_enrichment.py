@@ -179,6 +179,7 @@ class Gen5EncounterEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["active_record_count"], 1)
         record = enriched["records"][0]
         self.assertEqual(record["name"], "Route 1")
+        self.assertEqual(record["slug"], "map-000")
         slot = record["grass_cave"]["slots"][0]
         self.assertEqual(slot["pokemon"]["name"], "Bulbasaur")
         self.assertEqual(slot["minimum_level"], 3)
@@ -218,7 +219,7 @@ class Gen5EncounterEnrichmentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             count = render_encounter_pages(enriched, output, comparison)
-            page = (output / "area-000.md").read_text(encoding="utf-8")
+            page = (output / "map-000.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)

@@ -5,11 +5,88 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from romwiki.pipeline.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_location_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 
 
 class LocationRenderingTests(unittest.TestCase):
+    def test_links_gen5_location_to_all_seasonal_encounter_variants(self) -> None:
+        record = {
+            "header_id": 6,
+            "name": "Route 1",
+            "encounter_map_index": 3,
+            "matrix_id": 0,
+            "provenance": {"archive": "a/0/1/2", "member": 6},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        nonseasonal_record = {
+            **record,
+            "header_id": 7,
+            "name": "Dreamyard",
+            "encounter_map_index": 4,
+            "provenance": {"archive": "a/0/1/2", "member": 7},
+        }
+        encounters = [
+            {
+                "area_id": 8,
+                "map_index": 3,
+                "season": "spring",
+                "name": "Route 1",
+                "versions": ["black"],
+            },
+            {
+                "area_id": 9,
+                "map_index": 3,
+                "season": "summer",
+                "name": "Route 1",
+                "versions": ["white"],
+            },
+            {
+                "area_id": 10,
+                "map_index": 4,
+                "season": None,
+                "name": "Dreamyard",
+            },
+        ]
+        dataset = {
+            "game": "test",
+            "engine": "gen5_bw",
+            "records": [record, nonseasonal_record],
+        }
+        relationships = build_relationship_index(
+            {
+                "locations": dataset,
+                "encounters": {
+                    "game": "test",
+                    "records": encounters,
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(
+                dataset,
+                output,
+                relationships=relationships,
+            )
+            page = (output / "header-006.md").read_text(encoding="utf-8")
+            nonseasonal_page = (output / "header-007.md").read_text(encoding="utf-8")
+
+        self.assertIn("[Map 003 (Spring)](../encounters/map-003-spring.md)", page)
+        self.assertIn("[Map 003 (Summer)](../encounters/map-003-summer.md)", page)
+        self.assertIn("| Spring |", page)
+        self.assertIn("| Black |", page)
+        self.assertIn("Wild encounter table index | `3`", page)
+        self.assertIn("[Map 004](../encounters/map-004.md)", nonseasonal_page)
+        self.assertIn("| All |", nonseasonal_page)
+
     def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
         record = {
             "header_id": 105,
