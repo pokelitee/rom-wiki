@@ -240,7 +240,7 @@ Every game descriptor also provides the portal and shared frontend metadata:
 ```toml
 [site]
 id = "renegade-platinum"
-name = "Renegade Platinum"
+name = "Pokémon Renegade Platinum"
 kind = "game"
 slug = "renegade-platinum"
 published = true

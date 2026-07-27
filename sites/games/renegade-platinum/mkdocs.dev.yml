@@ -1,6 +1,6 @@
 INHERIT: mkdocs.yml
 
-site_name: Renegade Platinum Wiki (Development)
+site_name: Pokémon Renegade Platinum Wiki (Development)
 site_dir: ../../../build/mkdocs-dev/renegade-platinum
 
 extra:

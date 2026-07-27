@@ -1,6 +1,6 @@
 INHERIT: ../../shared/mkdocs.base.yml
 
-site_name: Renegade Platinum Wiki
+site_name: Pokémon Renegade Platinum Wiki
 site_description: A data-driven reference for Pokémon Renegade Platinum
 docs_dir: wiki
 hooks:

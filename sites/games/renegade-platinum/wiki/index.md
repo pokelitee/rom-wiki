@@ -1,6 +1,6 @@
 ---
 template: game-home.html
-title: Renegade Platinum
+title: Pokémon Renegade Platinum
 ---
 
 The current baseline covers Pokémon, abilities, items, moves, wild encounters,
