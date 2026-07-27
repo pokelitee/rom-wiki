@@ -22,6 +22,19 @@ class TrainerRenderingTests(unittest.TestCase):
                 "ai_flags": 0,
                 "battle_type": 0,
                 "unknown_byte": 0x30,
+                "base_prize_money": {
+                    "amount": 4320,
+                    "final_party_level": 27,
+                    "multiplier": 40,
+                    "base_factor": 4,
+                    "battle_format_multiplier": 1,
+                    "multiplier_provenance": {
+                        "source": "rom",
+                        "overlay_id": 16,
+                        "offset": 0x35A00,
+                        "class_id": 32,
+                    },
+                },
                 "provenance": {"archive": "trdata.narc", "member": 5},
                 "party_provenance": {"archive": "trpoke.narc", "member": 5},
                 "locations": [{"name": "Route 202"}],
@@ -36,6 +49,7 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("`StartTrainerBattle`", provenance)
         self.assertIn("| Unknown byte | `0x30` |", provenance)
         self.assertIn("| Class gender | Female |", provenance)
+        self.assertIn("ARM9 overlay `16` at byte offset `0x35A00`", provenance)
 
     def test_renders_same_name_trainers_without_assuming_identity(self) -> None:
         current = _related_trainer(5, "Route 202", 8, "Starly")
@@ -176,6 +190,7 @@ class TrainerRenderingTests(unittest.TestCase):
                 "final_party_level": 20,
                 "multiplier": 30,
                 "base_factor": 4,
+                "battle_format_multiplier": 1,
             },
         }
 

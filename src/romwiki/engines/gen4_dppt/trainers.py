@@ -22,6 +22,17 @@ def parse_trainer_class_genders(data: bytes, *, count: int) -> tuple[str, ...]:
     return tuple("female" if value == 1 else "male" for value in data)
 
 
+def parse_trainer_class_prize_multipliers(
+    data: bytes, *, count: int
+) -> tuple[int, ...]:
+    if len(data) != count:
+        raise InvalidRomError(
+            "Gen IV trainer class prize multiplier table has size "
+            f"{len(data)}; expected {count}"
+        )
+    return tuple(data)
+
+
 def parse_trainer_record(
     data: bytes,
     party_data: bytes,
@@ -30,6 +41,7 @@ def parse_trainer_record(
     name: str,
     class_names: tuple[str, ...],
     class_genders: tuple[str, ...],
+    class_prize_multipliers: tuple[int, ...],
     trainer_archive: str,
     party_archive: str,
 ) -> Gen4Trainer:
@@ -45,6 +57,11 @@ def parse_trainer_record(
     if class_id >= len(class_genders):
         raise InvalidRomError(
             f"Trainer {trainer_id} references missing class gender {class_id}"
+        )
+    if class_id >= len(class_prize_multipliers):
+        raise InvalidRomError(
+            f"Trainer {trainer_id} references missing class prize multiplier "
+            f"{class_id}"
         )
     reward_items = struct.unpack_from("<4H", data, 4)
     ai_flags, battle_type = struct.unpack_from("<II", data, 12)
@@ -95,6 +112,7 @@ def parse_trainer_record(
         class_id=class_id,
         class_name=class_names[class_id],
         class_gender=class_genders[class_id],
+        victory_money_multiplier=class_prize_multipliers[class_id],
         has_custom_moves=has_custom_moves,
         has_held_items=has_held_items,
         unknown_byte=unknown_byte,

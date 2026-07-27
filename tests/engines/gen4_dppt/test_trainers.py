@@ -7,6 +7,9 @@ from romwiki.engines.gen4_dppt import (
     parse_trainer_class_genders,
     parse_trainer_record,
 )
+from romwiki.engines.gen4_dppt.trainers import (
+    parse_trainer_class_prize_multipliers,
+)
 from romwiki.util.errors import InvalidRomError
 
 
@@ -26,6 +29,7 @@ class Gen4TrainerTests(unittest.TestCase):
             name="Tristan",
             class_names=("Pokémon Trainer", "Youngster", "Ace Trainer"),
             class_genders=("female", "male", "male"),
+            class_prize_multipliers=(0, 4, 12),
             trainer_archive="trdata.narc",
             party_archive="trpoke.narc",
         )
@@ -34,6 +38,7 @@ class Gen4TrainerTests(unittest.TestCase):
         self.assertTrue(result.has_held_items)
         self.assertTrue(result.double_battle)
         self.assertEqual(result.class_gender, "male")
+        self.assertEqual(result.victory_money_multiplier, 12)
         self.assertEqual(result.party[0].species_id, 479)
         self.assertEqual(result.party[0].form_id, 2)
         self.assertEqual(result.party[0].move_ids, (85, 86, 87, 88))
@@ -50,6 +55,7 @@ class Gen4TrainerTests(unittest.TestCase):
                 name="",
                 class_names=("Pokémon Trainer",),
                 class_genders=("male",),
+                class_prize_multipliers=(0,),
                 trainer_archive="trdata.narc",
                 party_archive="trpoke.narc",
             )
@@ -61,6 +67,14 @@ class Gen4TrainerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(InvalidRomError, "unknown values"):
             parse_trainer_class_genders(b"\x03", count=1)
+
+    def test_decodes_trainer_class_prize_multiplier_table(self) -> None:
+        self.assertEqual(
+            parse_trainer_class_prize_multipliers(b"\x00\x04\x28", count=3),
+            (0, 4, 40),
+        )
+        with self.assertRaisesRegex(InvalidRomError, "has size 2; expected 3"):
+            parse_trainer_class_prize_multipliers(b"\x00\x04", count=3)
 
 
 if __name__ == "__main__":

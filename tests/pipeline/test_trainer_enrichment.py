@@ -358,6 +358,13 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
                 "final_party_level": 20,
                 "multiplier": 30,
                 "base_factor": 4,
+                "battle_format_multiplier": 1,
+                "multiplier_provenance": {
+                    "source": "rom",
+                    "archive": "trdata.narc",
+                    "member": 1,
+                    "offset": 17,
+                },
             },
         )
 

@@ -371,6 +371,21 @@ def _trainer_provenance(record: dict[str, Any]) -> list[str]:
         facts.append(
             ("Victory money multiplier", f"`{record['victory_money_multiplier']}`")
         )
+    base_prize_money = record.get("base_prize_money")
+    if base_prize_money:
+        facts.extend(
+            [
+                (
+                    "Prize-money final party level",
+                    f"`{base_prize_money['final_party_level']}`",
+                ),
+                ("Prize-money base factor", f"`{base_prize_money['base_factor']}`"),
+                (
+                    "Prize-money battle-format factor",
+                    f"`{base_prize_money['battle_format_multiplier']}`",
+                ),
+            ]
+        )
     entries = [
         *provenance_fact_table(facts),
         (
@@ -381,6 +396,22 @@ def _trainer_provenance(record: dict[str, Any]) -> list[str]:
             f"`{record['party_provenance']['member']}`."
         ),
     ]
+    if base_prize_money:
+        multiplier_source = base_prize_money.get("multiplier_provenance") or {}
+        if "overlay_id" in multiplier_source:
+            entries.append(
+                "Prize-money multiplier source: ARM9 overlay "
+                f"`{multiplier_source['overlay_id']}` at byte offset "
+                f"`0x{multiplier_source['offset']:X}` for trainer class "
+                f"`{multiplier_source['class_id']}`."
+            )
+        elif multiplier_source.get("archive"):
+            entries.append(
+                "Prize-money multiplier source: trainer record byte "
+                f"`0x{multiplier_source['offset']:X}` in "
+                f"`{multiplier_source['archive']}` member "
+                f"`{multiplier_source['member']}`."
+            )
     if record.get("locations"):
         entries.append(
             "Overworld locations: trainer event objects whose script IDs "

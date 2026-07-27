@@ -178,6 +178,9 @@ from romwiki.engines.gen4_dppt.trainers import (
     parse_trainer_class_genders,
     parse_trainer_record,
 )
+from romwiki.engines.gen4_dppt.trainers import (
+    parse_trainer_class_prize_multipliers as parse_trainer_class_prize_multipliers,
+)
 from romwiki.engines.gen4_dppt.tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,
     TUTOR_RECORD_SIZE,

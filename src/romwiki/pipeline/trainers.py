@@ -28,6 +28,10 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         names_member = profile.parameters["trainer_names_member"]
         classes_member = profile.parameters["trainer_classes_member"]
         class_gender_offset = profile.parameters["trainer_class_gender_offset"]
+        class_prize_overlay_id = profile.parameters[
+            "trainer_class_prize_overlay_id"
+        ]
+        class_prize_offset = profile.parameters["trainer_class_prize_offset"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing trainer metadata: {error.args[0]}"
@@ -49,6 +53,11 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         arm9_data[class_gender_offset : class_gender_offset + len(classes)],
         count=len(classes),
     )
+    _, prize_overlay = platform.read_overlay(result.image, class_prize_overlay_id)
+    class_prize_multipliers = engine.parse_trainer_class_prize_multipliers(
+        prize_overlay[class_prize_offset : class_prize_offset + len(classes)],
+        count=len(classes),
+    )
     if len(names) < len(trainers.members):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
 
@@ -60,6 +69,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             name=names[member.index],
             class_names=classes,
             class_genders=class_genders,
+            class_prize_multipliers=class_prize_multipliers,
             trainer_archive=trainer_path,
             party_archive=party_path,
         )
@@ -79,13 +89,21 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         trainer_count=len(parsed_records),
     )
     records = [
-        replace(
-            record,
-            locations=tuple(locations_by_trainer.get(record.trainer_id, ())),
-            script_references=tuple(
-                script_references_by_trainer.get(record.trainer_id, ())
-            ),
-        ).to_dict()
+        {
+            **replace(
+                record,
+                locations=tuple(locations_by_trainer.get(record.trainer_id, ())),
+                script_references=tuple(
+                    script_references_by_trainer.get(record.trainer_id, ())
+                ),
+            ).to_dict(),
+            "victory_money_multiplier_provenance": {
+                "source": "rom",
+                "overlay_id": class_prize_overlay_id,
+                "offset": class_prize_offset + record.class_id,
+                "class_id": record.class_id,
+            },
+        }
         for record in parsed_records
     ]
     return {
@@ -111,6 +129,11 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             "trainer_class_genders": {
                 "arm9_offset": class_gender_offset,
                 "count": len(class_genders),
+            },
+            "trainer_class_prize_multipliers": {
+                "overlay_id": class_prize_overlay_id,
+                "offset": class_prize_offset,
+                "count": len(class_prize_multipliers),
             },
             **location_source,
         },

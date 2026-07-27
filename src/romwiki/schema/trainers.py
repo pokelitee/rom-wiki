@@ -117,6 +117,7 @@ class Gen4Trainer:
     class_id: int
     class_name: str
     class_gender: Literal["male", "female"]
+    victory_money_multiplier: int
     has_custom_moves: bool
     has_held_items: bool
     unknown_byte: int

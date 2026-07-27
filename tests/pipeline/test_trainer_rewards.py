@@ -22,6 +22,8 @@ class TrainerRewardTests(unittest.TestCase):
                 "final_party_level": 20,
                 "multiplier": 12,
                 "base_factor": 4,
+                "battle_format_multiplier": 1,
+                "multiplier_provenance": None,
             },
         )
 
@@ -39,13 +41,30 @@ class TrainerRewardTests(unittest.TestCase):
             )
         )
 
-    def test_omits_unsupported_engine(self) -> None:
-        self.assertIsNone(
+    def test_applies_gen4_double_battle_multiplier(self) -> None:
+        self.assertEqual(
             calculate_base_prize_money(
                 {
                     "victory_money_multiplier": 12,
                     "party": [{"level": 20}],
+                    "double_battle": True,
                 },
                 engine="gen4_dppt",
+            ),
+            {
+                "amount": 1920,
+                "final_party_level": 20,
+                "multiplier": 12,
+                "base_factor": 4,
+                "battle_format_multiplier": 2,
+                "multiplier_provenance": None,
+            },
+        )
+
+    def test_omits_unsupported_engine(self) -> None:
+        self.assertIsNone(
+            calculate_base_prize_money(
+                {"victory_money_multiplier": 12, "party": [{"level": 20}]},
+                engine="future",
             )
         )
