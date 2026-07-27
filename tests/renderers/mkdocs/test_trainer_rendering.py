@@ -162,6 +162,27 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("<dt>Victory item</dt>", page)
         self.assertIn("../../items/full-restore/", page)
 
+    def test_summarizes_exact_base_prize_money(self) -> None:
+        record = {
+            "trainer_id": 5,
+            "class_name": "leader",
+            "locations": [],
+            "script_references": [],
+            "double_battle": False,
+            "party": [_party_member([])],
+            "ai_battle_items": [],
+            "base_prize_money": {
+                "amount": 2400,
+                "final_party_level": 20,
+                "multiplier": 30,
+                "base_factor": 4,
+            },
+        }
+
+        page = "\n".join(_trainer_summary(record, [], "trainers/trainer-0005/"))
+
+        self.assertIn("<dt>Base prize money</dt><dd>&#8381;2,400</dd>", page)
+
     def test_numbers_explicit_moves_in_rom_order(self) -> None:
         party = [_party_member(["tackle", "growl"])]
 

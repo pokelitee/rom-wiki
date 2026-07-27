@@ -10,6 +10,7 @@ from romwiki.pipeline.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
+from romwiki.pipeline.trainer_rewards import calculate_base_prize_money
 from romwiki.schema.versions import (
     ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
     MOVES_ENRICHED_SCHEMA_VERSION,
@@ -626,6 +627,7 @@ def _enrich_trainer(
     return {
         **source,
         "party": party,
+        "base_prize_money": calculate_base_prize_money(source, engine=engine),
         "victory_item": (
             _with_item_sprite(
                 _item_reference(source["victory_item_id"], pokedb, item_names),

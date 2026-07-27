@@ -476,6 +476,7 @@ def _trainer_summary(
         if victory_item
         else None
     )
+    base_prize_money = record.get("base_prize_money")
     return summary_section(
         "rw-trainer-summary",
         [
@@ -493,6 +494,14 @@ def _trainer_summary(
             f"{summary_section_link(len(record['party']), 'party')}</dd></div>",
             "<div><dt>Level range</dt><dd>"
             f"{summary_section_link(level_range, 'party')}</dd></div>",
+            *(
+                [
+                    "<div><dt>Base prize money</dt><dd>"
+                    f"&#8381;{base_prize_money['amount']:,}</dd></div>"
+                ]
+                if base_prize_money
+                else []
+            ),
             f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>",
             *(
                 ["<div><dt>After victory</dt><dd>Heals the player's party</dd></div>"]

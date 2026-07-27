@@ -351,6 +351,15 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
         self.assertIsNone(party_member["nature"])
         self.assertIsNone(party_member["calculated_stats"])
         self.assertEqual(party_member["ivs"]["values"]["speed"], 31)
+        self.assertEqual(
+            enriched["records"][0]["base_prize_money"],
+            {
+                "amount": 2400,
+                "final_party_level": 20,
+                "multiplier": 30,
+                "base_factor": 4,
+            },
+        )
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
