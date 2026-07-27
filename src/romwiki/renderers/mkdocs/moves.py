@@ -4,6 +4,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.relationships import MoveLearnerReference, RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -19,6 +20,7 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
     empty_state,
+    escape_table_cell,
     fact_grid,
     machine_link,
     name_table_source,
@@ -51,6 +53,7 @@ def render_move_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -91,6 +94,7 @@ def render_move_pages(
                     comparison.get("baseline") if comparison else None,
                     references,
                     dataset_features,
+                    relationships,
                 ),
             )
             page_count += 1
@@ -111,12 +115,20 @@ def render_move_pages(
         access_methods = [
             method
             for method, available in (
+                (
+                    "level up",
+                    bool(
+                        relationships
+                        and relationships.move_level_up_learners.get(record["move_id"])
+                    ),
+                ),
                 ("machine", bool(machines)),
                 ("move tutor", bool(record.get("tutors"))),
                 ("egg move", bool(record.get("egg_move_pokemon"))),
             )
             if available
         ]
+        learner_counts, learner_count = _learner_summary(record, relationships)
         catalog_records.append(
             add_change_status(
                 {
@@ -131,6 +143,8 @@ def render_move_pages(
                     "pp": record["pp"],
                     "machines": machines,
                     "access_methods": access_methods,
+                    "learner_count": learner_count,
+                    "learner_counts": learner_counts,
                     "search_text": " ".join(
                         (
                             record["name"],
@@ -165,6 +179,7 @@ def _render_record(
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
     features: frozenset[str] = frozenset({"move-tutors", "egg-moves"}),
+    relationships: RelationshipIndex | None = None,
 ) -> str:
     source_file = f"moves/{record['slug']}.md"
     source_url = source_file.removesuffix(".md") + "/"
@@ -225,26 +240,15 @@ def _render_record(
                 "",
             ]
         )
-    if "move-tutors" in features:
-        lines.extend(
-            [
-                "## Tutor compatibility",
-                "",
-                *(
-                    _tutor_compatibility(record, source_file, references)
-                    if record.get("tutors")
-                    else empty_state("No compatible move tutors.")
-                ),
-            ]
+    lines.extend(
+        _learned_by_section(
+            record,
+            source_file,
+            references,
+            relationships,
+            features,
         )
-    if "egg-moves" in features:
-        lines.extend(
-            [
-                "## Egg move learners",
-                "",
-                *_egg_move_learners(record, source_file, references),
-            ]
-        )
+    )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -426,6 +430,147 @@ def _optional_value(value: int) -> str:
 
 def _accuracy(value: int) -> str:
     return f"{value}%" if value else "Always hits"
+
+
+def _learned_by_section(
+    record: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+    relationships: RelationshipIndex | None,
+    features: frozenset[str],
+) -> list[str]:
+    level_up = (
+        relationships.move_level_up_learners.get(record["move_id"], ())
+        if relationships
+        else ()
+    )
+    machines = (
+        relationships.move_machine_learners.get(record["move_id"], ())
+        if relationships
+        else ()
+    )
+    sections = [
+        (
+            "Level up",
+            _relationship_learner_table(
+                level_up, source_file, references, detail="level"
+            ),
+        ),
+        (
+            "Machines",
+            _relationship_learner_table(
+                machines, source_file, references, detail="machine"
+            ),
+        ),
+    ]
+    if "move-tutors" in features:
+        sections.append(
+            (
+                "Move tutors",
+                (
+                    _tutor_compatibility(record, source_file, references)
+                    if record.get("tutors")
+                    else empty_state("No compatible move tutors.")
+                ),
+            )
+        )
+    if "egg-moves" in features:
+        sections.append(
+            (
+                "Egg moves",
+                _egg_move_learners(record, source_file, references),
+            )
+        )
+    lines = ["## Learned by", ""]
+    for heading, content in sections:
+        lines.extend([f"### {heading}", "", *content])
+    return lines
+
+
+def _relationship_learner_table(
+    learners: tuple[MoveLearnerReference, ...],
+    source_file: str,
+    references: ReferenceIndex | None,
+    *,
+    detail: str,
+) -> list[str]:
+    if not learners:
+        return empty_state(
+            "No level-up learners."
+            if detail == "level"
+            else "No machine-compatible Pokémon."
+        )
+    detail_heading = "Level" if detail == "level" else "Machine"
+    rows = []
+    for learner in learners:
+        pokemon = {
+            "member": learner.pokemon_id,
+            "name": learner.pokemon_name,
+            "slug": learner.pokemon_slug,
+        }
+        detail_value = (
+            str(learner.level)
+            if detail == "level" and learner.level is not None
+            else learner.machine_name or "—"
+        )
+        rows.append(
+            "| "
+            f"{_pokemon_table_link(pokemon, source_file, references, True)} | "
+            f"{escape_table_cell(display_name(learner.pokemon_form)) if learner.pokemon_form else '—'} | "
+            f"{escape_table_cell(detail_value)} | "
+            f"{_learner_versions(learner.versions)} |"
+        )
+    return pokemon_table(
+        [
+            f"| Pokémon | Form | {detail_heading} | Version |",
+            "| ------- | ---- | ------- | ------- |",
+        ],
+        rows,
+    )
+
+
+def _learner_versions(versions: tuple[str, ...]) -> str:
+    return (
+        " / ".join(escape_table_cell(display_name(version)) for version in versions)
+        or "—"
+    )
+
+
+def _learner_summary(
+    record: dict[str, Any],
+    relationships: RelationshipIndex | None,
+) -> tuple[dict[str, int], int]:
+    move_id = record["move_id"]
+    learners_by_method = {
+        "level_up": {
+            learner.pokemon_slug
+            for learner in (
+                relationships.move_level_up_learners.get(move_id, ())
+                if relationships
+                else ()
+            )
+        },
+        "machine": {
+            learner.pokemon_slug
+            for learner in (
+                relationships.move_machine_learners.get(move_id, ())
+                if relationships
+                else ()
+            )
+        },
+        "move_tutor": {
+            pokemon["slug"]
+            for tutor in record.get("tutors", ())
+            for pokemon in tutor.get("compatible_pokemon", ())
+        },
+        "egg_move": {pokemon["slug"] for pokemon in record.get("egg_move_pokemon", ())},
+    }
+    counts = {
+        method: len(pokemon_slugs)
+        for method, pokemon_slugs in learners_by_method.items()
+    }
+    all_learners = set().union(*learners_by_method.values())
+    return counts, len(all_learners)
 
 
 def _tutor_compatibility(

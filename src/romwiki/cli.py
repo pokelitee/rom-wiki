@@ -837,6 +837,9 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     if args.command == "build-pokemon":
         relationship_datasets = _current_relationship_datasets(workflow.current)
         relationship_index = build_relationship_index(relationship_datasets)
+    elif args.command == "build-moves":
+        relationship_datasets = {"pokemon": workflow.current.pokemon()}
+        relationship_index = build_relationship_index(relationship_datasets)
     reference_datasets = {}
     if args.command == "build-locations":
         reference_datasets = {
@@ -849,6 +852,8 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             reference_datasets["abilities"] = abilities_dataset.current
         if move_dataset is not None:
             reference_datasets["moves"] = move_dataset
+    elif args.command == "build-moves":
+        reference_datasets = dict(relationship_datasets)
     reference_index = (
         ReferenceIndex.from_datasets(reference_datasets) if reference_datasets else None
     )
@@ -1015,9 +1020,7 @@ def _run_version_pair_build(args: argparse.Namespace) -> None:
             raise LocalConfigError(
                 "Version-family games must have matching trade capabilities"
             )
-        relationship_datasets["trades"] = merge_version_family_datasets(
-            trade_datasets
-        )
+        relationship_datasets["trades"] = merge_version_family_datasets(trade_datasets)
 
     site_id = args.site_id
     wiki_root = args.wiki_root or Path("sites/games") / site_id / "wiki"
@@ -1123,6 +1126,15 @@ def _write_dataset_build(
             wiki_output,
             comparison,
             move_dataset,
+            reference_index,
+            relationship_index,
+            only_pages=only_pages,
+        )
+    elif kind == "moves":
+        page_count = renderer(
+            dataset,
+            wiki_output,
+            comparison,
             reference_index,
             relationship_index,
             only_pages=only_pages,

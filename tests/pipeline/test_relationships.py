@@ -93,9 +93,7 @@ class RelationshipIndexTests(unittest.TestCase):
                 {
                     "header_id": 204,
                     "name": "Route 204",
-                    "pokemon_gifts": [
-                        {"species_id": 1, "level": 5, "kind": "pokemon"}
-                    ],
+                    "pokemon_gifts": [{"species_id": 1, "level": 5, "kind": "pokemon"}],
                     "static_encounters": [],
                     "npc_trades": [],
                     "honey_tree": None,
@@ -122,8 +120,14 @@ class RelationshipIndexTests(unittest.TestCase):
             {(entry.kind, entry.location_name) for entry in acquisition},
             {("gift", "Route 204"), ("static", None)},
         )
+        self.assertEqual(index.move_level_up_learners[22][0].pokemon_slug, "bulbasaur")
         self.assertEqual(
-            index.move_level_up_learners[22][0].pokemon_slug, "bulbasaur"
+            (
+                index.move_level_up_learners[22][0].pokemon_id,
+                index.move_level_up_learners[22][0].pokemon_name,
+                index.move_level_up_learners[22][0].pokemon_form,
+            ),
+            (1, "Bulbasaur", None),
         )
         machine = index.move_machine_learners[202][0]
         self.assertEqual((machine.machine_name, machine.machine_kind), ("TM19", "tm"))

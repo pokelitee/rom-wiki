@@ -55,7 +55,10 @@ class AcquisitionReference:
 @dataclass(frozen=True, slots=True)
 class MoveLearnerReference:
     move_id: int
+    pokemon_id: int | str
+    pokemon_name: str
     pokemon_slug: str
+    pokemon_form: str | None
     method: str
     level: int | None
     machine_id: int | None
@@ -132,9 +135,7 @@ def _validate_datasets(datasets: Mapping[str, dict[str, Any]]) -> None:
         raise DataSourceError("Relationship datasets must be for the same game")
 
 
-def _records(
-    datasets: Mapping[str, dict[str, Any]], kind: str
-) -> list[dict[str, Any]]:
+def _records(datasets: Mapping[str, dict[str, Any]], kind: str) -> list[dict[str, Any]]:
     dataset = datasets.get(kind)
     if dataset is None:
         return []
@@ -346,10 +347,7 @@ def _encounter_location_index(
             values[("map-index", record["encounter_map_index"])].append(
                 (record["header_id"], record["name"])
             )
-    return {
-        key: tuple(dict.fromkeys(locations))
-        for key, locations in values.items()
-    }
+    return {key: tuple(dict.fromkeys(locations)) for key, locations in values.items()}
 
 
 def _trainer_appearances(
@@ -569,12 +567,13 @@ def _move_learners(
     level_up: dict[int, list[MoveLearnerReference]] = defaultdict(list)
     machines: dict[int, list[MoveLearnerReference]] = defaultdict(list)
     for pokemon in pokemon_records:
-        if not pokemon.get("public", True) or not isinstance(
-            pokemon.get("slug"), str
-        ):
+        if not pokemon.get("public", True) or not isinstance(pokemon.get("slug"), str):
             continue
         versions = _record_versions(pokemon)
         slug = pokemon["slug"]
+        pokemon_id = pokemon.get("member", slug)
+        pokemon_name = str(pokemon.get("name", slug))
+        pokemon_form = pokemon.get("form")
         for entry in pokemon.get("level_up_moves", []):
             move = entry.get("move")
             if not isinstance(move, dict) or not isinstance(move.get("id"), int):
@@ -582,7 +581,10 @@ def _move_learners(
             level_up[move["id"]].append(
                 MoveLearnerReference(
                     move_id=move["id"],
+                    pokemon_id=pokemon_id,
+                    pokemon_name=pokemon_name,
                     pokemon_slug=slug,
+                    pokemon_form=pokemon_form,
                     method="level-up",
                     level=entry.get("level"),
                     machine_id=None,
@@ -598,7 +600,10 @@ def _move_learners(
             machines[move["id"]].append(
                 MoveLearnerReference(
                     move_id=move["id"],
+                    pokemon_id=pokemon_id,
+                    pokemon_name=pokemon_name,
                     pokemon_slug=slug,
+                    pokemon_form=pokemon_form,
                     method="machine",
                     level=None,
                     machine_id=machine.get("id"),
@@ -614,8 +619,8 @@ def _location_encounters(
     locations: list[dict[str, Any]],
     encounters: list[dict[str, Any]],
 ) -> dict[int, list[LocationEncounterReference]]:
-    by_map_index: dict[int, list[tuple[tuple[str, ...], dict[str, Any]]]] = (
-        defaultdict(list)
+    by_map_index: dict[int, list[tuple[tuple[str, ...], dict[str, Any]]]] = defaultdict(
+        list
     )
     for merged_record in encounters:
         for versions, record in _record_variants(merged_record):
