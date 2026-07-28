@@ -30,6 +30,7 @@ class MkDocsHooksTests(unittest.TestCase):
         html = (
             '<a href="../pokemon/buneary.md">Buneary</a>'
             '<a href="../types/index.md#fire">Fire</a>'
+            "<a href=../moves/tackle.md>Tackle</a>"
             '<a href="https://example.test/readme.md">External</a>'
         )
 
@@ -41,9 +42,10 @@ class MkDocsHooksTests(unittest.TestCase):
 
         self.assertIn('href="../../pokemon/buneary/"', rewritten)
         self.assertIn('href="../../types/#fire"', rewritten)
+        self.assertIn('href="../../moves/tackle/"', rewritten)
         self.assertIn('href="https://example.test/readme.md"', rewritten)
 
-    def test_on_page_content_normalizes_links_in_production_builds(self) -> None:
+    def test_on_post_page_normalizes_links_in_final_production_html(self) -> None:
         config = _load_and_configure(GAME_CONFIG)
         file = File(
             "abilities/klutz.md",
@@ -53,11 +55,10 @@ class MkDocsHooksTests(unittest.TestCase):
         )
         page = Page("Klutz", file, config)
 
-        rewritten = mkdocs_hooks.on_page_content(
+        rewritten = mkdocs_hooks.on_post_page(
             '<a href="../types/index.md#fire">Fire</a>',
             page,
             config,
-            Files([file]),
         )
 
         self.assertIn('href="../../types/#fire"', rewritten)

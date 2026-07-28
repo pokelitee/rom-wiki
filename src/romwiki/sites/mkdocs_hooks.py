@@ -19,7 +19,10 @@ _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None
 _current_sections: set[str] = set()
 _dev_pages: DevPages | None = None
-_HREF = re.compile(r"""(\bhref\s*=\s*)(["'])(.*?)\2""", re.IGNORECASE)
+_HREF = re.compile(
+    r"""(\bhref\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""",
+    re.IGNORECASE,
+)
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
@@ -73,14 +76,13 @@ def on_files(files: Files, config: MkDocsConfig) -> Files:
     return Files(file for file in files if _dev_pages.includes_document(file.src_uri))
 
 
-def on_page_content(
-    html: str,
+def on_post_page(
+    output: str,
     page: Page,
     config: MkDocsConfig,
-    files: Files,
 ) -> str:
-    del config, files
-    return _rewrite_markdown_links(html, page.file.src_uri, page.url)
+    del config
+    return _rewrite_markdown_links(output, page.file.src_uri, page.url)
 
 
 def on_page_context(
@@ -119,7 +121,7 @@ def _rewrite_markdown_links(
     """Normalize local Markdown targets to their published URLs."""
 
     def replace(match: re.Match[str]) -> str:
-        href = match.group(3)
+        href = next(value for value in match.groups()[1:] if value is not None)
         url = urlsplit(href)
         if (
             url.scheme
@@ -140,7 +142,7 @@ def _rewrite_markdown_links(
         published = posixpath.relpath(target_url.rstrip("/"), source_url.rstrip("/"))
         published += "/"
         rewritten = urlunsplit(("", "", published, url.query, url.fragment))
-        return f"{match.group(1)}{match.group(2)}{rewritten}{match.group(2)}"
+        return f'{match.group(1)}"{rewritten}"'
 
     return _HREF.sub(replace, html)
 
