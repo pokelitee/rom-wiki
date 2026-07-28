@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
+import logging
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from time import perf_counter
 
 from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.comparisons import write_comparison_dataset
@@ -80,12 +82,28 @@ from romwiki.util.errors import (
     SiteError,
 )
 from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
+from romwiki.util.logging import configure_logging, timed_operation
+
+_LOG = logging.getLogger("romwiki")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="romwiki",
         description="Extract structured Pokémon ROM data for static wikis.",
+    )
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="show detailed diagnostic output",
+    )
+    output_group.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="show warnings and errors only",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -519,6 +537,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    configure_logging(verbose=args.verbose, quiet=args.quiet)
     try:
         # Every subcommand that needs a `result` below registers ROM input
         # arguments via `_add_input_arguments`; keying off that attribute
@@ -667,35 +686,51 @@ def main(argv: Sequence[str] | None = None) -> int:
             _run_baseline_build(args)
         elif args.command == "site":
             if args.site_command == "audit":
-                report = audit_site(
-                    args.artifact,
-                    max_html_bytes=args.max_page_kb * 1024,
-                    max_images_per_page=args.max_images,
-                    base_url=args.base_url,
-                )
+                with timed_operation(_LOG, "Site audit"):
+                    report = audit_site(
+                        args.artifact,
+                        max_html_bytes=args.max_page_kb * 1024,
+                        max_images_per_page=args.max_images,
+                        base_url=args.base_url,
+                    )
                 _report_site_audit(report)
             elif args.site_command == "list":
                 catalog = SiteCatalog.load(args.root)
                 _print_sites(catalog)
             elif args.site_command == "build":
                 catalog = SiteCatalog.load(args.root)
-                built = build_sites(
-                    catalog,
-                    args.output,
-                    site_ids=args.site_ids,
-                    build_all=args.build_all,
-                )
+                with timed_operation(_LOG, "Site builds"):
+                    built = build_sites(
+                        catalog,
+                        args.output,
+                        site_ids=args.site_ids,
+                        build_all=args.build_all,
+                    )
                 for site in built:
-                    print(f"Built {site.id}: {site.output_path(args.output.resolve())}")
+                    _LOG.info(
+                        "Built %s: %s",
+                        site.id,
+                        site.output_path(args.output.resolve()),
+                    )
             elif args.site_command == "snapshot":
-                count = create_generated_wiki_snapshot(args.root, args.output)
-                print(f"Archived {count:,} generated wiki files: {args.output}")
+                with timed_operation(_LOG, "Generated wiki snapshot"):
+                    count = create_generated_wiki_snapshot(args.root, args.output)
+                _LOG.info(
+                    "Archived %s generated wiki files: %s",
+                    f"{count:,}",
+                    args.output,
+                )
             elif args.site_command == "restore-snapshot":
-                count = restore_generated_wiki_snapshot(args.root, args.archive)
-                print(f"Restored {count:,} generated wiki files: {args.archive}")
+                with timed_operation(_LOG, "Generated wiki snapshot restore"):
+                    count = restore_generated_wiki_snapshot(args.root, args.archive)
+                _LOG.info(
+                    "Restored %s generated wiki files: %s",
+                    f"{count:,}",
+                    args.archive,
+                )
         return 0
     except RomWikiError as error:
-        print(f"error: {error}", file=sys.stderr)
+        _LOG.error("%s", error)
         return 2
 
 
@@ -980,7 +1015,11 @@ def _run_full_game_build(
             for path in comparison_root.glob("*.json"):
                 path.unlink()
     page_count = render_changes_pages(comparisons, wiki_root)
-    print(f"Rendered {page_count} change overview pages: {wiki_root / 'changes'}")
+    _LOG.info(
+        "Rendered %s change overview pages: %s",
+        page_count,
+        wiki_root / "changes",
+    )
 
 
 # Sections a version-pair site can build, keyed to the profile layout entry
@@ -1120,10 +1159,16 @@ def _run_version_pair_build(
         )
     if merged_comparisons:
         page_count = render_changes_pages(merged_comparisons, wiki_root)
-        print(f"Rendered {page_count} change overview pages: {wiki_root / 'changes'}")
+        _LOG.info(
+            "Rendered %s change overview pages: %s",
+            page_count,
+            wiki_root / "changes",
+        )
 
 
 def _run_regeneration(args: argparse.Namespace) -> None:
+    regeneration_started = perf_counter()
+    _LOG.info("Complete regeneration started")
     if args.snapshot and not args.regenerate_all:
         raise SiteError("--snapshot requires --all")
 
@@ -1206,11 +1251,15 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                 baselines[index] = baseline
         prepared.append((site, paths, tuple(current), tuple(baselines), pokedb))
 
-    print(f"Validated regeneration inputs for {len(prepared):,} data-driven site(s)")
+    _LOG.info(
+        "Validated regeneration inputs for %s data-driven site(s)",
+        f"{len(prepared):,}",
+    )
     for site, paths, current, baselines, pokedb in prepared:
         game = site.game
         assert game is not None
-        print(f"Regenerating {site.id}")
+        site_started = perf_counter()
+        _LOG.info("Regenerating %s", site.id)
         if len(game.profiles) == 1:
             build_args = argparse.Namespace(
                 input_rom=None,
@@ -1268,33 +1317,47 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                 )
             }
             _run_version_pair_build(build_args, workflows=workflows)
+        _LOG.info(
+            "Regenerated %s in %.1fs",
+            site.id,
+            perf_counter() - site_started,
+        )
 
-    built = build_sites(
-        catalog,
-        args.output,
-        site_ids=args.site_ids,
-        build_all=args.regenerate_all,
-    )
+    with timed_operation(_LOG, "Site builds"):
+        built = build_sites(
+            catalog,
+            args.output,
+            site_ids=args.site_ids,
+            build_all=args.regenerate_all,
+        )
     for site in built:
-        print(f"Built {site.id}: {site.output_path(args.output.resolve())}")
+        _LOG.info("Built %s: %s", site.id, site.output_path(args.output.resolve()))
 
-    report = audit_site(
-        args.output,
-        max_html_bytes=args.max_page_kb * 1024,
-        max_images_per_page=args.max_images,
-        base_url=args.base_url,
-    )
+    with timed_operation(_LOG, "Site audit"):
+        report = audit_site(
+            args.output,
+            max_html_bytes=args.max_page_kb * 1024,
+            max_images_per_page=args.max_images,
+            base_url=args.base_url,
+        )
     _report_site_audit(report)
 
     if args.snapshot:
-        count = create_generated_wiki_snapshot(
-            args.root,
+        with timed_operation(_LOG, "Generated wiki snapshot"):
+            count = create_generated_wiki_snapshot(
+                args.root,
+                args.snapshot_output,
+                catalog=catalog,
+            )
+        _LOG.info(
+            "Archived %s generated wiki files: %s",
+            f"{count:,}",
             args.snapshot_output,
-            catalog=catalog,
         )
-        print(
-            f"Archived {count:,} generated wiki files: {args.snapshot_output}"
-        )
+    _LOG.info(
+        "Complete regeneration finished in %.1fs",
+        perf_counter() - regeneration_started,
+    )
 
 
 def _validate_regeneration_rom(
@@ -1348,14 +1411,26 @@ def _regeneration_profiles(
 
 
 def _report_site_audit(report: SiteAuditReport) -> None:
+    warning_counts = Counter(issue.code for issue in report.warnings)
+    if _LOG.isEnabledFor(logging.DEBUG):
+        for issue in report.warnings:
+            _LOG.warning("%s", issue.format())
+    elif warning_counts:
+        summary = ", ".join(
+            f"{code}={count:,}" for code, count in sorted(warning_counts.items())
+        )
+        _LOG.warning(
+            "Site audit found %s warning(s): %s; rerun with --verbose for details",
+            f"{len(report.warnings):,}",
+            summary,
+        )
     displayed_errors = report.errors[:100]
-    for issue in (*report.warnings, *displayed_errors):
-        print(issue.format(), file=sys.stderr)
+    for issue in displayed_errors:
+        _LOG.error("%s", issue.format())
     if len(report.errors) > len(displayed_errors):
-        print(
-            f"... {len(report.errors) - len(displayed_errors):,} "
-            "additional error(s) omitted",
-            file=sys.stderr,
+        _LOG.error(
+            "... %s additional error(s) omitted",
+            f"{len(report.errors) - len(displayed_errors):,}",
         )
     largest = report.largest_page
     largest_text = (
@@ -1363,9 +1438,11 @@ def _report_site_audit(report: SiteAuditReport) -> None:
         if largest
         else ""
     )
-    print(
-        f"Audited {report.page_count:,} pages and "
-        f"{report.link_count:,} links{largest_text}"
+    _LOG.info(
+        "Audited %s pages and %s links%s",
+        f"{report.page_count:,}",
+        f"{report.link_count:,}",
+        largest_text,
     )
     if not report.ok:
         raise SiteError(f"site audit found {len(report.errors):,} error(s)")
@@ -1473,8 +1550,13 @@ def _write_dataset_build(
             reference_index,
             only_pages=only_pages,
         )
-    print(f"Wrote {len(dataset['records'])} {kind} records: {data_output}")
-    print(f"Rendered {page_count} {kind} pages: {wiki_output}")
+    _LOG.info(
+        "Wrote %s %s records: %s",
+        len(dataset["records"]),
+        kind,
+        data_output,
+    )
+    _LOG.info("Rendered %s %s pages: %s", page_count, kind, wiki_output)
 
 
 def _write_type_build(
@@ -1486,8 +1568,12 @@ def _write_type_build(
     write_enriched_dataset(dataset, data_output)
     write_public_dataset(wiki_root, "types", dataset, None)
     page_count = render_type_chart(dataset, wiki_root / "types")
-    print(f"Wrote {len(dataset['records'])} types: {data_output}")
-    print(f"Rendered {page_count} type chart page: {wiki_root / 'types'}")
+    _LOG.info("Wrote %s types: %s", len(dataset["records"]), data_output)
+    _LOG.info(
+        "Rendered %s type chart page: %s",
+        page_count,
+        wiki_root / "types",
+    )
 
 
 def _current_relationship_datasets(

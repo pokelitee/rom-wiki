@@ -7,7 +7,7 @@ import json
 import tarfile
 from pathlib import Path, PurePosixPath
 
-from romwiki.sites.catalog import SiteCatalog
+from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.sites.data_exports import validate_public_data
 from romwiki.util.errors import SiteError
 
@@ -127,7 +127,7 @@ def restore_generated_wiki_snapshot(root: Path, archive_path: Path) -> int:
                     "Generated wiki snapshot file count does not match its manifest"
                 )
             for site in catalog.sites:
-                if site.kind == "game" and site.published:
+                if _is_published_data_site(site):
                     validate_public_data(site.config_path.parent / "wiki")
     except (tarfile.TarError, OSError) as error:
         raise SiteError(
@@ -164,7 +164,7 @@ def _read_snapshot_manifest(
 def _generated_files(catalog: SiteCatalog) -> list[Path]:
     files = []
     for site in catalog.published():
-        if site.kind != "game":
+        if not _is_published_data_site(site):
             continue
         wiki_root = site.config_path.parent / "wiki"
         for section in REQUIRED_WIKI_SECTIONS:
@@ -184,12 +184,21 @@ def _generated_files(catalog: SiteCatalog) -> list[Path]:
 def _allowed_prefixes(catalog: SiteCatalog) -> tuple[PurePosixPath, ...]:
     prefixes = []
     for site in catalog.sites:
-        if site.kind != "game":
+        if not _is_published_data_site(site):
             continue
         site_root = site.config_path.parent.relative_to(catalog.root)
         for section in GENERATED_WIKI_SECTIONS:
             prefixes.append(PurePosixPath(site_root.as_posix()) / "wiki" / section)
     return tuple(prefixes)
+
+
+def _is_published_data_site(site: SiteDefinition) -> bool:
+    return (
+        site.kind == "game"
+        and site.published
+        and site.game is not None
+        and site.game.data_driven
+    )
 
 
 def _source_fingerprint(root: Path) -> str:

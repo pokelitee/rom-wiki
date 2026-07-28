@@ -12,6 +12,7 @@ from romwiki.cli import (
     _current_relationship_datasets,
     _dataset_output,
     _load_comparisons,
+    _report_site_audit,
     _resolve_build_baseline,
     _resolve_input_rom,
     _run_regeneration,
@@ -22,6 +23,7 @@ from romwiki.cli import (
 )
 from romwiki.sites import (
     GameMetadata,
+    SiteAuditIssue,
     SiteAuditReport,
     SiteCatalog,
     SiteDefinition,
@@ -66,6 +68,15 @@ class MainErrorHandlingTests(unittest.TestCase):
         self.assertTrue(args.regenerate_all)
         self.assertTrue(args.refresh)
         self.assertTrue(args.snapshot)
+
+    def test_parser_exposes_global_logging_options(self) -> None:
+        verbose = build_parser().parse_args(["--verbose", "regenerate", "--all"])
+        quiet = build_parser().parse_args(["--quiet", "regenerate", "--all"])
+
+        self.assertTrue(verbose.verbose)
+        self.assertFalse(verbose.quiet)
+        self.assertTrue(quiet.quiet)
+        self.assertFalse(quiet.verbose)
 
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")
@@ -451,6 +462,29 @@ patched_rom = "roms/white-us.nds"
 
         with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
             _run_regeneration(args)
+
+    def test_site_audit_warnings_are_summarized_by_default(self) -> None:
+        report = SiteAuditReport(
+            1,
+            2,
+            100,
+            ("index.html", 100),
+            (),
+            (
+                SiteAuditIssue("image-count", "one.html", "too many"),
+                SiteAuditIssue("image-count", "two.html", "too many"),
+                SiteAuditIssue("css-unused", "assets", "unused"),
+            ),
+        )
+
+        with self.assertLogs("romwiki", level="WARNING") as captured:
+            _report_site_audit(report)
+
+        output = "\n".join(captured.output)
+        self.assertIn("3 warning(s)", output)
+        self.assertIn("css-unused=1", output)
+        self.assertIn("image-count=2", output)
+        self.assertNotIn("one.html", output)
 
 
 def _game(

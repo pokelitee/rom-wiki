@@ -87,6 +87,45 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
 
             self.assertEqual(_source_fingerprint(root), lf_fingerprint)
 
+    def test_snapshot_ignores_published_documentation_only_games(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            documentation = root / "sites" / "games" / "documentation"
+            documentation.mkdir(parents=True)
+            (documentation / "mkdocs.yml").write_text(
+                "site_name: Documentation\n", encoding="utf-8"
+            )
+            (documentation / "game.toml").write_text(
+                """
+[site]
+id = "documentation"
+name = "Documentation"
+kind = "game"
+slug = "documentation"
+published = true
+order = 2
+mkdocs_config = "mkdocs.yml"
+[game]
+data_driven = false
+generation = 1
+base_game = "documentation"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "Tester"
+[appearance]
+theme = "documentation"
+""".strip(),
+                encoding="utf-8",
+            )
+            archive = root / "snapshot.tar.gz"
+
+            count = create_generated_wiki_snapshot(root, archive)
+            restored_count = restore_generated_wiki_snapshot(root, archive)
+
+            self.assertEqual(count, len(REQUIRED_WIKI_SECTIONS) + 2)
+            self.assertEqual(restored_count, count)
+
 
 def _make_site(root: Path) -> Path:
     portal = root / "sites" / "portal"
