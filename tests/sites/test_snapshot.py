@@ -20,6 +20,9 @@ from romwiki.util.errors import SiteError
 
 
 class GeneratedWikiSnapshotTests(unittest.TestCase):
+    def test_type_chart_is_required_generated_content(self) -> None:
+        self.assertIn("types", REQUIRED_WIKI_SECTIONS)
+
     def test_snapshot_is_deterministic_and_restorable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

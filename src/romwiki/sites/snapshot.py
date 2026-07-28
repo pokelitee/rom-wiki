@@ -30,6 +30,7 @@ GENERATED_WIKI_SECTIONS = (
     "encounters",
     "trainers",
     "locations",
+    "types",
     "changes",
     "data",
 )
