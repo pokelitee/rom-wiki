@@ -80,9 +80,7 @@ def on_page_content(
     files: Files,
 ) -> str:
     del config, files
-    if _dev_pages is None:
-        return html
-    return _rewrite_filtered_markdown_links(html, page.file.src_uri, page.url)
+    return _rewrite_markdown_links(html, page.file.src_uri, page.url)
 
 
 def on_page_context(
@@ -113,12 +111,12 @@ def on_page_context(
     return context
 
 
-def _rewrite_filtered_markdown_links(
+def _rewrite_markdown_links(
     html: str,
     source_file: str,
     source_url: str,
 ) -> str:
-    """Publish local Markdown links whose targets were filtered from a dev build."""
+    """Normalize local Markdown targets to their published URLs."""
 
     def replace(match: re.Match[str]) -> str:
         href = match.group(3)
