@@ -130,6 +130,9 @@ theme = "documentation"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             generated_file = _make_site(root)
+            archive = root / "snapshot.tar.gz"
+            create_generated_wiki_snapshot(root, archive)
+            original_archive = archive.read_bytes()
             generated_file.write_text(
                 '<a href="../../types/index.md#fire">Fire</a>',
                 encoding="utf-8",
@@ -139,7 +142,9 @@ theme = "documentation"
                 SiteError,
                 "raw HTML must use a published URL",
             ):
-                create_generated_wiki_snapshot(root, root / "snapshot.tar.gz")
+                create_generated_wiki_snapshot(root, archive)
+
+            self.assertEqual(archive.read_bytes(), original_archive)
 
 
 def _make_site(root: Path) -> Path:
