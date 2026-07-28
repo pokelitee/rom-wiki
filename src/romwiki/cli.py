@@ -49,6 +49,7 @@ from romwiki.pipeline.version_merge import (
     merge_version_family_comparisons,
     merge_version_family_datasets,
 )
+from romwiki.profiles.loader import ProfileRepository
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,
@@ -937,8 +938,13 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     render_changes_pages(comparisons, wiki_root)
 
 
-def _run_full_game_build(args: argparse.Namespace, result: InspectionResult) -> None:
-    workflow = _create_build_workflow(args, result)
+def _run_full_game_build(
+    args: argparse.Namespace,
+    result: InspectionResult,
+    *,
+    workflow: GameBuildWorkflow | None = None,
+) -> None:
+    workflow = workflow or _create_build_workflow(args, result)
     game = workflow.current.profile.id
     data_root = args.data_root / game
     wiki_root = args.wiki_root or Path("sites/games") / game / "wiki"
@@ -997,38 +1003,47 @@ _VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
 }
 
 
-def _run_version_pair_build(args: argparse.Namespace) -> None:
+def _run_version_pair_build(
+    args: argparse.Namespace,
+    *,
+    workflows: Mapping[str, GameBuildWorkflow] | None = None,
+) -> None:
     if args.site_id is None:
         if args.command == "build-version-pair":
             args.site_id = "black-white"
         else:
             raise LocalConfigError("build-version-family requires --site-id")
-    registry = LocalGameRegistry.load(args.games_config)
-    pokedb = PokeDBGeneration.load(args.pokedb)
     games, versions = _version_family_inputs(args.games, args.versions)
-    game_paths = {
-        version: registry.get(game_id)
-        for version, game_id in zip(versions, games, strict=True)
-    }
-    compare_to_bases = _version_family_uses_baselines(game_paths)
+    if workflows is None:
+        registry = LocalGameRegistry.load(args.games_config)
+        pokedb = PokeDBGeneration.load(args.pokedb)
+        game_paths = {
+            version: registry.get(game_id)
+            for version, game_id in zip(versions, games, strict=True)
+        }
+        compare_to_bases = _version_family_uses_baselines(game_paths)
 
-    workflows = {}
-    for version in versions:
-        paths = game_paths[version]
-        result = inspect_rom(paths.rom(), args.profiles_dir)
-        baseline = (
-            inspect_rom(paths.rom(base=True), args.profiles_dir)
-            if compare_to_bases
-            else None
-        )
-        workflows[version] = GameBuildWorkflow(
-            result,
-            pokedb,
-            baseline=baseline,
-            baseline_cache_root=args.data_root / "baselines",
-            refresh_baseline=args.refresh_baseline,
-            current_cache_root=args.data_root / "cache",
-            refresh_current=args.refresh_cache,
+        workflows = {}
+        for version in versions:
+            paths = game_paths[version]
+            result = inspect_rom(paths.rom(), args.profiles_dir)
+            baseline = (
+                inspect_rom(paths.rom(base=True), args.profiles_dir)
+                if compare_to_bases
+                else None
+            )
+            workflows[version] = GameBuildWorkflow(
+                result,
+                pokedb,
+                baseline=baseline,
+                baseline_cache_root=args.data_root / "baselines",
+                refresh_baseline=args.refresh_baseline,
+                current_cache_root=args.data_root / "cache",
+                refresh_current=args.refresh_cache,
+            )
+    elif set(workflows) != set(versions):
+        raise LocalConfigError(
+            "Prepared version-family workflows do not match configured versions"
         )
 
     layouts = [workflows[version].current.profile.layout for version in versions]
@@ -1127,23 +1142,46 @@ def _run_regeneration(args: argparse.Namespace) -> None:
     registry = (
         LocalGameRegistry.load(args.games_config) if data_sites else None
     )
+    profiles = (
+        _regeneration_profiles(catalog, args.profiles_dir) if data_sites else None
+    )
+    pokedb_generations: dict[Path, PokeDBGeneration] = {}
+    inspections: dict[Path, InspectionResult] = {}
 
-    prepared: list[tuple[SiteDefinition, tuple[LocalGamePaths, ...], Path]] = []
+    prepared: list[
+        tuple[
+            SiteDefinition,
+            tuple[LocalGamePaths, ...],
+            tuple[InspectionResult, ...],
+            tuple[InspectionResult | None, ...],
+            PokeDBGeneration,
+        ]
+    ] = []
     for site in data_sites:
         assert site.game is not None
-        pokedb = args.pokedb_root / f"gen{site.game.generation}"
-        if not pokedb.is_dir():
+        assert profiles is not None
+        pokedb_path = args.pokedb_root / f"gen{site.game.generation}"
+        if not pokedb_path.is_dir():
             raise LocalConfigError(
                 f"PokéDB generation output does not exist for {site.id}: "
-                f"{pokedb.resolve()}"
+                f"{pokedb_path.resolve()}"
             )
+        resolved_pokedb = pokedb_path.resolve()
+        if resolved_pokedb not in pokedb_generations:
+            pokedb_generations[resolved_pokedb] = PokeDBGeneration.load(resolved_pokedb)
+        pokedb = pokedb_generations[resolved_pokedb]
         assert registry is not None
         paths = tuple(registry.get(profile) for profile in site.game.profiles)
+        current = []
         for profile, game_paths in zip(site.game.profiles, paths, strict=True):
-            _validate_regeneration_rom(
-                game_paths.rom(),
-                profile,
-                args.profiles_dir,
+            current.append(
+                _validate_regeneration_rom(
+                    game_paths.rom(),
+                    profile,
+                    args.profiles_dir,
+                    profiles,
+                    inspections,
+                )
             )
         uses_baselines = (
             paths[0].base_rom is not None
@@ -1152,17 +1190,24 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                 dict(zip(site.game.versions, paths, strict=True))
             )
         )
+        baselines: list[InspectionResult | None] = [None] * len(paths)
         if uses_baselines:
-            for game_paths in paths:
-                baseline = inspect_rom(game_paths.rom(base=True), args.profiles_dir)
+            for index, game_paths in enumerate(paths):
+                baseline = _inspect_regeneration_rom(
+                    game_paths.rom(base=True),
+                    args.profiles_dir,
+                    profiles,
+                    inspections,
+                )
                 if baseline.match is None:
                     raise LocalConfigError(
                         f"Base ROM for {game_paths.game_id} does not match a profile"
                     )
-        prepared.append((site, paths, pokedb))
+                baselines[index] = baseline
+        prepared.append((site, paths, tuple(current), tuple(baselines), pokedb))
 
     print(f"Validated regeneration inputs for {len(prepared):,} data-driven site(s)")
-    for site, paths, pokedb in prepared:
+    for site, paths, current, baselines, pokedb in prepared:
         game = site.game
         assert game is not None
         print(f"Regenerating {site.id}")
@@ -1179,12 +1224,20 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                 refresh_baseline=args.refresh,
                 refresh_cache=args.refresh,
                 dev=False,
-                pokedb=pokedb,
+                pokedb=args.pokedb_root / f"gen{game.generation}",
                 data_root=args.data_root,
                 wiki_root=site.config_path.parent / "wiki",
             )
-            result = inspect_rom(paths[0].rom(), args.profiles_dir)
-            _run_full_game_build(build_args, result)
+            workflow = GameBuildWorkflow(
+                current[0],
+                pokedb,
+                baseline=baselines[0],
+                baseline_cache_root=args.data_root / "baselines",
+                refresh_baseline=args.refresh,
+                current_cache_root=args.data_root / "cache",
+                refresh_current=args.refresh,
+            )
+            _run_full_game_build(build_args, current[0], workflow=workflow)
         else:
             build_args = argparse.Namespace(
                 command="build-version-family",
@@ -1193,14 +1246,28 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                 site_id=site.id,
                 games_config=args.games_config,
                 profiles_dir=args.profiles_dir,
-                pokedb=pokedb,
+                pokedb=args.pokedb_root / f"gen{game.generation}",
                 data_root=args.data_root,
                 wiki_root=site.config_path.parent / "wiki",
                 refresh_baseline=args.refresh,
                 refresh_cache=args.refresh,
                 dev=False,
             )
-            _run_version_pair_build(build_args)
+            workflows = {
+                version: GameBuildWorkflow(
+                    result,
+                    pokedb,
+                    baseline=baseline,
+                    baseline_cache_root=args.data_root / "baselines",
+                    refresh_baseline=args.refresh,
+                    current_cache_root=args.data_root / "cache",
+                    refresh_current=args.refresh,
+                )
+                for version, result, baseline in zip(
+                    game.versions, current, baselines, strict=True
+                )
+            }
+            _run_version_pair_build(build_args, workflows=workflows)
 
     built = build_sites(
         catalog,
@@ -1220,7 +1287,11 @@ def _run_regeneration(args: argparse.Namespace) -> None:
     _report_site_audit(report)
 
     if args.snapshot:
-        count = create_generated_wiki_snapshot(args.root, args.snapshot_output)
+        count = create_generated_wiki_snapshot(
+            args.root,
+            args.snapshot_output,
+            catalog=catalog,
+        )
         print(
             f"Archived {count:,} generated wiki files: {args.snapshot_output}"
         )
@@ -1230,14 +1301,50 @@ def _validate_regeneration_rom(
     path: Path,
     expected_profile: str,
     profiles_dir: Path,
-) -> None:
-    result = inspect_rom(path, profiles_dir)
+    profiles: ProfileRepository,
+    inspections: dict[Path, InspectionResult],
+) -> InspectionResult:
+    result = _inspect_regeneration_rom(
+        path,
+        profiles_dir,
+        profiles,
+        inspections,
+    )
     actual_profile = result.match.profile.id if result.match is not None else None
     if actual_profile != expected_profile:
         actual = actual_profile or "no profile"
         raise LocalConfigError(
             f"ROM for {expected_profile} matched {actual}, not {expected_profile}"
         )
+    return result
+
+
+def _inspect_regeneration_rom(
+    path: Path,
+    profiles_dir: Path,
+    profiles: ProfileRepository,
+    inspections: dict[Path, InspectionResult],
+) -> InspectionResult:
+    resolved = path.resolve()
+    if resolved not in inspections:
+        inspections[resolved] = inspect_rom(
+            resolved,
+            profiles_dir,
+            profiles=profiles,
+        )
+    return inspections[resolved]
+
+
+def _regeneration_profiles(
+    catalog: SiteCatalog,
+    profiles_dir: Path,
+) -> ProfileRepository:
+    if (
+        catalog.profile_repository is not None
+        and profiles_dir.resolve() == (catalog.root / "profiles").resolve()
+    ):
+        return catalog.profile_repository
+    return ProfileRepository.load(profiles_dir)
 
 
 def _report_site_audit(report: SiteAuditReport) -> None:

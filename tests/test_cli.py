@@ -369,7 +369,7 @@ patched_rom = "roms/white-us.nds"
                     root,
                     "black-white",
                     "game",
-                    _game(("black-us", "white-us"), ("black", "white"), 5),
+                    _game(("black-us", "white-us"), ("black", "white"), 4),
                 ),
             )
             catalog = SiteCatalog(root, sites)
@@ -390,8 +390,13 @@ patched_rom = "roms/white-us.nds"
                 base_url=None,
             )
 
-            def inspection(path: Path, profiles_dir: Path) -> SimpleNamespace:
-                del profiles_dir
+            def inspection(
+                path: Path,
+                profiles_dir: Path,
+                *,
+                profiles: object,
+            ) -> SimpleNamespace:
+                del profiles_dir, profiles
                 profile_id = path.stem
                 return SimpleNamespace(
                     match=SimpleNamespace(profile=SimpleNamespace(id=profile_id))
@@ -400,7 +405,15 @@ patched_rom = "roms/white-us.nds"
             report = SiteAuditReport(3, 10, 100, ("index.html", 50), (), ())
             with (
                 patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
-                patch("romwiki.cli.inspect_rom", side_effect=inspection),
+                patch("romwiki.cli._regeneration_profiles", return_value=object()),
+                patch(
+                    "romwiki.cli.PokeDBGeneration.load",
+                    return_value=object(),
+                ) as load_pokedb,
+                patch(
+                    "romwiki.cli.inspect_rom",
+                    side_effect=inspection,
+                ) as inspect,
                 patch("romwiki.cli._run_full_game_build") as build_game,
                 patch("romwiki.cli._run_version_pair_build") as build_family,
                 patch(
@@ -411,6 +424,8 @@ patched_rom = "roms/white-us.nds"
             ):
                 _run_regeneration(args)
 
+            self.assertEqual(inspect.call_count, 3)
+            self.assertEqual(load_pokedb.call_count, 1)
             single_args = build_game.call_args.args[0]
             self.assertEqual(single_args.game, "platinum-us")
             self.assertEqual(
@@ -423,6 +438,10 @@ patched_rom = "roms/white-us.nds"
             self.assertEqual(family_args.versions, ["black", "white"])
             self.assertEqual(family_args.site_id, "black-white")
             self.assertTrue(family_args.refresh_cache)
+            self.assertEqual(
+                set(build_family.call_args.kwargs["workflows"]),
+                {"black", "white"},
+            )
 
     def test_snapshot_requires_complete_regeneration(self) -> None:
         args = SimpleNamespace(

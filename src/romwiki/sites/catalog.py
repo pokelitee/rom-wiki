@@ -44,9 +44,15 @@ class SiteDefinition:
 
 
 class SiteCatalog:
-    def __init__(self, root: Path, sites: tuple[SiteDefinition, ...]) -> None:
+    def __init__(
+        self,
+        root: Path,
+        sites: tuple[SiteDefinition, ...],
+        profile_repository: ProfileRepository | None = None,
+    ) -> None:
         self.root = root
         self.sites = sites
+        self.profile_repository = profile_repository
 
     @classmethod
     def load(cls, root: Path) -> SiteCatalog:
@@ -64,8 +70,9 @@ class SiteCatalog:
             )
         )
         _validate_catalog(sites)
-        _validate_profile_references(resolved_root, sites)
-        return cls(resolved_root, sites)
+        profiles = _load_profile_repository(resolved_root)
+        _validate_profile_references(sites, profiles)
+        return cls(resolved_root, sites, profiles)
 
     def get(self, site_id: str) -> SiteDefinition:
         for site in self.sites:
@@ -216,13 +223,22 @@ def _validate_catalog(sites: tuple[SiteDefinition, ...]) -> None:
         raise SiteError("Every game site must include game metadata")
 
 
-def _validate_profile_references(root: Path, sites: tuple[SiteDefinition, ...]) -> None:
+def _load_profile_repository(root: Path) -> ProfileRepository | None:
     profiles_root = root / "profiles"
     if not profiles_root.is_dir():
+        return None
+    return ProfileRepository.load(profiles_root)
+
+
+def _validate_profile_references(
+    sites: tuple[SiteDefinition, ...],
+    repository: ProfileRepository | None,
+) -> None:
+    if repository is None:
         return
     profiles = {
         profile.id: profile
-        for profile in ProfileRepository.load(profiles_root).profiles
+        for profile in repository.profiles
     }
     for site in sites:
         if site.game is None or not site.game.data_driven:

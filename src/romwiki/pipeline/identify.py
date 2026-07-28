@@ -32,10 +32,15 @@ class InspectionResult:
         return result
 
 
-def inspect_rom(rom_path: Path, profiles_dir: Path) -> InspectionResult:
+def inspect_rom(
+    rom_path: Path,
+    profiles_dir: Path,
+    *,
+    profiles: ProfileRepository | None = None,
+) -> InspectionResult:
     image, image_platform = _inspect_image(rom_path)
-    profiles = ProfileRepository.load(profiles_dir)
-    match = profiles.identify(image, platform=image_platform)
+    repository = profiles or ProfileRepository.load(profiles_dir)
+    match = repository.identify(image, platform=image_platform)
     return InspectionResult(image=image, match=match)
 
 

@@ -29,9 +29,17 @@ SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
 SNAPSHOT_SCHEMA_VERSION = 2
 
 
-def create_generated_wiki_snapshot(root: Path, output: Path) -> int:
+def create_generated_wiki_snapshot(
+    root: Path,
+    output: Path,
+    *,
+    catalog: SiteCatalog | None = None,
+) -> int:
     """Create a deterministic, ROM-free archive of generated Markdown pages."""
-    catalog = SiteCatalog.load(root)
+    if catalog is None:
+        catalog = SiteCatalog.load(root)
+    elif root.resolve() != catalog.root:
+        raise SiteError("Generated wiki snapshot catalog does not match its root")
     resolved_root = catalog.root
     files = _generated_files(catalog)
     resolved_output = output.resolve()

@@ -255,10 +255,12 @@ def audit_site(
                 errors.append(issue)
 
     used_classes = set().union(*(page.custom_classes for page in parsed.values()))
-    for asset in resolved_root.rglob("*.js"):
+    for asset in (path for path in artifact_files if path.suffix.lower() == ".js"):
         used_classes.update(_CUSTOM_CLASS.findall(asset.read_text(encoding="utf-8")))
     defined_classes: set[str] = set()
-    for stylesheet in resolved_root.rglob("*.css"):
+    for stylesheet in (
+        path for path in artifact_files if path.suffix.lower() == ".css"
+    ):
         defined_classes.update(
             _CUSTOM_CSS_CLASS.findall(stylesheet.read_text(encoding="utf-8"))
         )
