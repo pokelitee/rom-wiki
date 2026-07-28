@@ -1202,6 +1202,8 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             PokeDBGeneration,
         ]
     ] = []
+    preflight_started = perf_counter()
+    _LOG.info("Regeneration preflight started")
     for site in data_sites:
         assert site.game is not None
         assert profiles is not None
@@ -1252,8 +1254,9 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         prepared.append((site, paths, tuple(current), tuple(baselines), pokedb))
 
     _LOG.info(
-        "Validated regeneration inputs for %s data-driven site(s)",
+        "Validated regeneration inputs for %s data-driven site(s) in %.1fs",
         f"{len(prepared):,}",
+        perf_counter() - preflight_started,
     )
     for site, paths, current, baselines, pokedb in prepared:
         game = site.game

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 import posixpath
 import re
 from bisect import bisect_right
@@ -8,6 +10,9 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from romwiki.util.errors import SiteError
+
+_LOG = logging.getLogger("romwiki")
+_PAGE_PROGRESS_INTERVAL = 1_000
 
 # minify_html drops attribute-value quotes whenever a value has no
 # whitespace/quote/`=`/angle-bracket characters (e.g. `href=../..` instead of
@@ -202,7 +207,13 @@ def audit_site(
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
         raise SiteError(f"Site artifact does not exist: {resolved_root}")
-    artifact_files = [path for path in resolved_root.rglob("*") if path.is_file()]
+    _LOG.info("Discovering site artifact files")
+    artifact_files = [
+        Path(directory) / name
+        for directory, _, names in os.walk(resolved_root)
+        for name in names
+    ]
+    _LOG.info("Discovered %s artifact files", f"{len(artifact_files):,}")
     html_files = sorted(
         path for path in artifact_files if path.suffix.lower() == ".html"
     )
@@ -217,7 +228,7 @@ def audit_site(
     warnings: list[SiteAuditIssue] = []
     total_bytes = 0
     largest_page: tuple[str, int] | None = None
-    for page in html_files:
+    for page_number, page in enumerate(html_files, start=1):
         relative = page.relative_to(resolved_root).as_posix()
         size = page.stat().st_size
         total_bytes += size
@@ -242,8 +253,16 @@ def audit_site(
                     f"page has {result.image_count} images; limit is {max_images_per_page}",
                 )
             )
+        if page_number % _PAGE_PROGRESS_INTERVAL == 0:
+            _LOG.info(
+                "Audit parsed %s/%s pages",
+                f"{page_number:,}",
+                f"{len(html_files):,}",
+            )
 
     link_count = 0
+    total_links = sum(len(result.links) for result in parsed.values())
+    _LOG.info("Validating %s links", f"{total_links:,}")
     base_path = unquote(urlsplit(base_url).path).rstrip("/") if base_url else ""
     for page, result in parsed.items():
         for href, line in result.links:

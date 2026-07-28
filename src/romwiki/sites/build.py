@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -8,8 +9,10 @@ from pathlib import Path
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.sites.snapshot import REQUIRED_WIKI_SECTIONS
 from romwiki.util.errors import SiteError
+from romwiki.util.logging import timed_operation
 
 CommandRunner = Callable[[Sequence[str]], None]
+_LOG = logging.getLogger("romwiki")
 
 
 def build_sites(
@@ -29,19 +32,20 @@ def build_sites(
     for site in ordered:
         _validate_generated_content(site)
         destination = site.output_path(resolved_output)
-        command_runner(
-            (
-                sys.executable,
-                "-m",
-                "mkdocs",
-                "build",
-                "--clean",
-                "--config-file",
-                str(site.config_path),
-                "--site-dir",
-                str(destination),
+        with timed_operation(_LOG, f"MkDocs build for {site.id}"):
+            command_runner(
+                (
+                    sys.executable,
+                    "-m",
+                    "mkdocs",
+                    "build",
+                    "--clean",
+                    "--config-file",
+                    str(site.config_path),
+                    "--site-dir",
+                    str(destination),
+                )
             )
-        )
     return ordered
 
 

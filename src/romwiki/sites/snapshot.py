@@ -4,12 +4,17 @@ import gzip
 import hashlib
 import io
 import json
+import logging
+import os
 import tarfile
 from pathlib import Path, PurePosixPath
 
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.sites.data_exports import validate_public_data
 from romwiki.util.errors import SiteError
+
+_LOG = logging.getLogger("romwiki")
+_SNAPSHOT_PROGRESS_INTERVAL = 2_000
 
 GENERATED_WIKI_SECTIONS = (
     "pokemon",
@@ -65,7 +70,7 @@ def create_generated_wiki_snapshot(
         manifest_info.mode = 0o644
         manifest_info.mtime = 0
         archive.addfile(manifest_info, io.BytesIO(manifest))
-        for path in files:
+        for file_number, path in enumerate(files, start=1):
             relative = path.relative_to(resolved_root).as_posix()
             data = path.read_bytes()
             info = tarfile.TarInfo(relative)
@@ -73,6 +78,12 @@ def create_generated_wiki_snapshot(
             info.mode = 0o644
             info.mtime = 0
             archive.addfile(info, io.BytesIO(data))
+            if file_number % _SNAPSHOT_PROGRESS_INTERVAL == 0:
+                _LOG.info(
+                    "Snapshot archived %s/%s files",
+                    f"{file_number:,}",
+                    f"{len(files):,}",
+                )
     return len(files)
 
 
@@ -177,7 +188,11 @@ def _generated_files(catalog: SiteCatalog) -> list[Path]:
         for section in GENERATED_WIKI_SECTIONS:
             section_root = wiki_root / section
             if section_root.is_dir():
-                files.extend(path for path in section_root.rglob("*") if path.is_file())
+                files.extend(
+                    Path(directory) / name
+                    for directory, _, names in os.walk(section_root)
+                    for name in names
+                )
     return sorted(files, key=lambda path: path.as_posix())
 
 
