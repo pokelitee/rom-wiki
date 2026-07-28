@@ -38,12 +38,24 @@ class MkDocsHooksTests(unittest.TestCase):
             html,
             "abilities/klutz.md",
             "abilities/klutz/",
+            source_relative=True,
         )
 
         self.assertIn('href="../../pokemon/buneary/"', rewritten)
         self.assertIn('href="../../types/#fire"', rewritten)
         self.assertIn('href="../../moves/tackle/"', rewritten)
         self.assertIn('href="https://example.test/readme.md"', rewritten)
+
+    def test_rewrites_published_markdown_paths_without_changing_depth(self) -> None:
+        rewritten = mkdocs_hooks._rewrite_markdown_links(
+            '<a href="../../types/index.md#fire">Fire</a>'
+            '<a href=../../pokemon/buneary.md>Buneary</a>',
+            "abilities/klutz.md",
+            "abilities/klutz/",
+        )
+
+        self.assertIn('href="../../types/#fire"', rewritten)
+        self.assertIn('href="../../pokemon/buneary/"', rewritten)
 
     def test_on_post_page_normalizes_links_in_final_production_html(self) -> None:
         config = _load_and_configure(GAME_CONFIG)
@@ -61,7 +73,7 @@ class MkDocsHooksTests(unittest.TestCase):
             config,
         )
 
-        self.assertIn('href="../../types/#fire"', rewritten)
+        self.assertIn('href="../types/#fire"', rewritten)
 
     def test_on_config_registers_current_site_and_published_games(self) -> None:
         config = _load_and_configure(GAME_CONFIG)

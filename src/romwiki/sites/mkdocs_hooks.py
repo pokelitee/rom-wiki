@@ -82,7 +82,12 @@ def on_post_page(
     config: MkDocsConfig,
 ) -> str:
     del config
-    return _rewrite_markdown_links(output, page.file.src_uri, page.url)
+    return _rewrite_markdown_links(
+        output,
+        page.file.src_uri,
+        page.url,
+        source_relative=_dev_pages is not None,
+    )
 
 
 def on_page_context(
@@ -117,6 +122,8 @@ def _rewrite_markdown_links(
     html: str,
     source_file: str,
     source_url: str,
+    *,
+    source_relative: bool = False,
 ) -> str:
     """Normalize local Markdown targets to their published URLs."""
 
@@ -130,18 +137,25 @@ def _rewrite_markdown_links(
             or not url.path.lower().endswith(".md")
         ):
             return match.group(0)
-        target_file = posixpath.normpath(
-            posixpath.join(posixpath.dirname(source_file), url.path)
-        )
-        target_url = (
-            posixpath.dirname(target_file)
-            if posixpath.basename(target_file).lower() == "index.md"
-            else target_file.removesuffix(".md")
-        )
-        target_url += "/"
-        published = posixpath.relpath(target_url.rstrip("/"), source_url.rstrip("/"))
-        published += "/"
-        rewritten = urlunsplit(("", "", published, url.query, url.fragment))
+        if source_relative:
+            target_file = posixpath.normpath(
+                posixpath.join(posixpath.dirname(source_file), url.path)
+            )
+            target_url = (
+                posixpath.dirname(target_file)
+                if posixpath.basename(target_file).lower() == "index.md"
+                else target_file.removesuffix(".md")
+            )
+            path = (
+                posixpath.relpath(target_url, source_url.rstrip("/")).rstrip("/") + "/"
+            )
+        else:
+            path = (
+                posixpath.dirname(url.path) or "."
+                if posixpath.basename(url.path).lower() == "index.md"
+                else url.path.removesuffix(".md")
+            ).rstrip("/") + "/"
+        rewritten = urlunsplit(("", "", path, url.query, url.fragment))
         return f'{match.group(1)}"{rewritten}"'
 
     return _HREF.sub(replace, html)
