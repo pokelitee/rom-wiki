@@ -38,6 +38,11 @@ REQUIRED_WIKI_SECTIONS = tuple(
 )
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
 SNAPSHOT_SCHEMA_VERSION = 2
+_NON_GENERATION_SOURCES = {
+    "sites/audit.py",
+    "sites/build.py",
+    "sites/mkdocs_hooks.py",
+}
 
 
 def create_generated_wiki_snapshot(
@@ -252,15 +257,20 @@ def _is_published_data_site(site: SiteDefinition) -> bool:
 
 def _source_fingerprint(root: Path) -> str:
     digest = hashlib.sha256()
+    source_root = root / "src" / "romwiki"
     paths = [
         path
         for directory, pattern in (
-            (root / "src" / "romwiki", "*.py"),
+            (source_root, "*.py"),
             (root / "profiles", "*.toml"),
         )
         if directory.is_dir()
         for path in directory.rglob(pattern)
         if path.is_file()
+        and (
+            directory != source_root
+            or path.relative_to(source_root).as_posix() not in _NON_GENERATION_SOURCES
+        )
     ]
     for path in sorted(paths, key=lambda value: value.as_posix()):
         relative = path.relative_to(root).as_posix().encode("utf-8")

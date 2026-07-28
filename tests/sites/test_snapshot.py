@@ -87,6 +87,17 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
 
             self.assertEqual(_source_fingerprint(root), lf_fingerprint)
 
+    def test_source_fingerprint_ignores_publishing_only_code(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            hook = root / "src" / "romwiki" / "sites" / "mkdocs_hooks.py"
+            hook.parent.mkdir(parents=True)
+            hook.write_text("VALUE = 1\n", encoding="utf-8")
+            original = _source_fingerprint(root)
+            hook.write_text("VALUE = 2\n", encoding="utf-8")
+
+            self.assertEqual(_source_fingerprint(root), original)
+
     def test_snapshot_ignores_published_documentation_only_games(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
