@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
+import posixpath
+import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure.files import Files
@@ -16,6 +19,7 @@ _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None
 _current_sections: set[str] = set()
 _dev_pages: DevPages | None = None
+_HREF = re.compile(r"""(\bhref\s*=\s*)(["'])(.*?)\2""", re.IGNORECASE)
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
@@ -69,6 +73,18 @@ def on_files(files: Files, config: MkDocsConfig) -> Files:
     return Files(file for file in files if _dev_pages.includes_document(file.src_uri))
 
 
+def on_page_content(
+    html: str,
+    page: Page,
+    config: MkDocsConfig,
+    files: Files,
+) -> str:
+    del config, files
+    if _dev_pages is None:
+        return html
+    return _rewrite_filtered_markdown_links(html, page.file.src_uri, page.url)
+
+
 def on_page_context(
     context: dict[str, Any],
     page: Page,
@@ -95,6 +111,40 @@ def on_page_context(
         ],
     }
     return context
+
+
+def _rewrite_filtered_markdown_links(
+    html: str,
+    source_file: str,
+    source_url: str,
+) -> str:
+    """Publish local Markdown links whose targets were filtered from a dev build."""
+
+    def replace(match: re.Match[str]) -> str:
+        href = match.group(3)
+        url = urlsplit(href)
+        if (
+            url.scheme
+            or url.netloc
+            or url.path.startswith("/")
+            or not url.path.lower().endswith(".md")
+        ):
+            return match.group(0)
+        target_file = posixpath.normpath(
+            posixpath.join(posixpath.dirname(source_file), url.path)
+        )
+        target_url = (
+            posixpath.dirname(target_file)
+            if posixpath.basename(target_file).lower() == "index.md"
+            else target_file.removesuffix(".md")
+        )
+        target_url += "/"
+        published = posixpath.relpath(target_url.rstrip("/"), source_url.rstrip("/"))
+        published += "/"
+        rewritten = urlunsplit(("", "", published, url.query, url.fragment))
+        return f"{match.group(1)}{match.group(2)}{rewritten}{match.group(2)}"
+
+    return _HREF.sub(replace, html)
 
 
 def _nav_sections(nav_config: Any) -> set[str]:

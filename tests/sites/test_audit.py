@@ -8,6 +8,24 @@ from romwiki.sites.audit import audit_site
 
 
 class SiteAuditTests(unittest.TestCase):
+    def test_rejects_markdown_source_links_in_published_html(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(
+                root / "index.html",
+                '<a href="types/index.md#fire">Fire</a>',
+            )
+            markdown = root / "types" / "index.md"
+            markdown.parent.mkdir(parents=True)
+            markdown.write_text("# Types\n", encoding="utf-8")
+
+            report = audit_site(root)
+
+        self.assertEqual(
+            [issue.code for issue in report.errors],
+            ["published-markdown-link"],
+        )
+
     def test_accepts_accessible_pages_and_valid_local_links(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

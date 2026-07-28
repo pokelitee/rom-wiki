@@ -126,6 +126,21 @@ theme = "documentation"
             self.assertEqual(count, len(REQUIRED_WIKI_SECTIONS) + 2)
             self.assertEqual(restored_count, count)
 
+    def test_snapshot_rejects_markdown_targets_inside_raw_html(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            generated_file = _make_site(root)
+            generated_file.write_text(
+                '<a href="../../types/index.md#fire">Fire</a>',
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                SiteError,
+                "raw HTML must use a published URL",
+            ):
+                create_generated_wiki_snapshot(root, root / "snapshot.tar.gz")
+
 
 def _make_site(root: Path) -> Path:
     portal = root / "sites" / "portal"

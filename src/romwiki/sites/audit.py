@@ -321,6 +321,13 @@ def _validate_link(
             f"unsupported link scheme in {href!r}",
             line,
         )
+    if unquote(url.path).lower().endswith(".md"):
+        return SiteAuditIssue(
+            "published-markdown-link",
+            source,
+            f"published HTML links to a Markdown source: {href!r}",
+            line,
+        )
     target = (
         source
         if not url.path

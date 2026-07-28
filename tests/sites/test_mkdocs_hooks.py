@@ -26,6 +26,23 @@ def _load_and_configure(config_path: Path):
 
 
 class MkDocsHooksTests(unittest.TestCase):
+    def test_rewrites_links_to_pages_filtered_from_dev_build(self) -> None:
+        html = (
+            '<a href="../pokemon/buneary.md">Buneary</a>'
+            '<a href="../types/index.md#fire">Fire</a>'
+            '<a href="https://example.test/readme.md">External</a>'
+        )
+
+        rewritten = mkdocs_hooks._rewrite_filtered_markdown_links(
+            html,
+            "abilities/klutz.md",
+            "abilities/klutz/",
+        )
+
+        self.assertIn('href="../../pokemon/buneary/"', rewritten)
+        self.assertIn('href="../../types/#fire"', rewritten)
+        self.assertIn('href="https://example.test/readme.md"', rewritten)
+
     def test_on_config_registers_current_site_and_published_games(self) -> None:
         config = _load_and_configure(GAME_CONFIG)
 
