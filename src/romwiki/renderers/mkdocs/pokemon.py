@@ -50,6 +50,7 @@ from romwiki.renderers.mkdocs.components import (
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    encounter_route_kind,
     entity_markdown_link,
     entity_reference,
 )
@@ -954,13 +955,8 @@ def _append_availability(
             ]
         )
         for encounter in wild_encounters:
-            encounter_kind = (
-                "encounter_variant"
-                if isinstance(encounter.encounter_route_key, str)
-                else "encounter"
-            )
             area = entity_markdown_link(
-                encounter_kind,
+                encounter_route_kind(encounter.encounter_route_key),
                 encounter.area_id,
                 encounter.area_name,
                 source_file,

@@ -19,6 +19,7 @@ from romwiki.renderers.mkdocs.components import (
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    encounter_route_kind,
     entity_reference,
     escape_markdown,
     resolved_reference,
@@ -44,7 +45,6 @@ _ROUTE_KINDS = {
     "abilities": "ability",
     "moves": "move",
     "items": "item",
-    "wild_encounters": "encounter",
     "trainers": "trainer",
     "locations": "location",
 }
@@ -236,11 +236,17 @@ def _change_href(kind: str, record: dict[str, Any]) -> str | None:
         return f"{kind}/{_removed_slug(record)}.md"
     if not record.get("detail_available", True):
         return None
+    route_key = record.get("slug") or record["key"]
+    route_kind = (
+        encounter_route_kind(route_key)
+        if kind == "wild_encounters"
+        else _ROUTE_KINDS[kind]
+    )
     reference = entity_reference(
-        _ROUTE_KINDS[kind],
+        route_kind,
         record["key"],
         record["label"],
-        record.get("slug") or record["key"],
+        route_key,
     )
     return ROUTES.markdown_href(reference, "changes/index.md") or "#"
 

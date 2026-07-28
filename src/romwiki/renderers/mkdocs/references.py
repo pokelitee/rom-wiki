@@ -152,6 +152,11 @@ def entity_reference(
     return EntityReference(kind, identifier, label, route_key)
 
 
+def encounter_route_kind(route_key: int | str) -> str:
+    """Select the route family for a normalized encounter page identity."""
+    return "encounter_variant" if isinstance(route_key, str) else "encounter"
+
+
 def pokemon_markdown_link(
     identifier: int | str,
     label: str,

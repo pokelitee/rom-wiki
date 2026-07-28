@@ -285,6 +285,49 @@ class ComparisonRenderingTests(unittest.TestCase):
             self.assertTrue(snapshot.is_file())
             self.assertIn("Removed in this hack", snapshot.read_text(encoding="utf-8"))
 
+    def test_links_encounter_changes_across_route_families(self) -> None:
+        cases = (
+            (7, None, "../encounters/area-007.md"),
+            (7, "map-007-spring", "../encounters/map-007-spring.md"),
+        )
+        for key, slug, expected_href in cases:
+            with self.subTest(slug=slug), tempfile.TemporaryDirectory() as directory:
+                comparison = {
+                    "kind": "wild_encounters",
+                    "game": "hack",
+                    "baseline": "base",
+                    "counts": {
+                        "unchanged": 0,
+                        "changed": 1,
+                        "added": 0,
+                        "removed": 0,
+                    },
+                    "records": [
+                        {
+                            "key": key,
+                            "label": "Encounter area",
+                            "slug": slug,
+                            "status": "changed",
+                            "detail_available": True,
+                            "changes": [
+                                {
+                                    "label": "Walking",
+                                    "before": {},
+                                    "after": {},
+                                }
+                            ],
+                        }
+                    ],
+                }
+                root = Path(directory)
+
+                render_changes_pages({"encounters": comparison}, root)
+
+                overview = (root / "changes" / "index.md").read_text(
+                    encoding="utf-8"
+                )
+                self.assertIn(expected_href, overview)
+
 
 if __name__ == "__main__":
     unittest.main()
