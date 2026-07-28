@@ -480,6 +480,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     site_subparsers = site_parser.add_subparsers(dest="site_command", required=True)
     list_parser = site_subparsers.add_parser("list", help="list configured sites")
+    list_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit compact machine-readable site metadata",
+    )
+    list_parser.add_argument(
+        "--published",
+        action="store_true",
+        help="list published sites only",
+    )
     _add_site_root_argument(list_parser)
 
     build_site_parser = site_subparsers.add_parser(
@@ -696,7 +706,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 _report_site_audit(report)
             elif args.site_command == "list":
                 catalog = SiteCatalog.load(args.root)
-                _print_sites(catalog)
+                _print_sites(
+                    catalog,
+                    as_json=args.json,
+                    published_only=args.published,
+                )
             elif args.site_command == "build":
                 catalog = SiteCatalog.load(args.root)
                 with timed_operation(_LOG, "Site builds"):
@@ -1642,8 +1656,28 @@ def _add_site_root_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _print_sites(catalog: SiteCatalog) -> None:
-    for site in catalog.sites:
+def _print_sites(
+    catalog: SiteCatalog,
+    *,
+    as_json: bool = False,
+    published_only: bool = False,
+) -> None:
+    sites = catalog.published() if published_only else catalog.sites
+    if as_json:
+        print(
+            json.dumps(
+                [
+                    {
+                        "id": site.id,
+                        "data_driven": bool(site.game and site.game.data_driven),
+                    }
+                    for site in sites
+                ],
+                separators=(",", ":"),
+            )
+        )
+        return
+    for site in sites:
         state = "published" if site.published else "draft"
         location = "/" if not site.slug else f"/{site.slug}/"
         print(f"{site.id:<24} {state:<9} {location}  {site.name}")

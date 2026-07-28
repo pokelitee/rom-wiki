@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       base_url: ${{ steps.pages.outputs.base_url }}
+      sites: ${{ steps.sites.outputs.matrix }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -39,20 +40,19 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
+      - name: Resolve published site matrix
+        id: sites
+        run: echo "matrix=$(romwiki site list --published --json)" >> "$GITHUB_OUTPUT"
+
   build:
-    name: Build ${{ matrix.site }}
+    name: Build ${{ matrix.site.id }}
     needs: prepare
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       matrix:
-        site:
-          - portal
-          - platinum-us
-          - renegade-platinum
-          - blaze-black-volt-white
-          - black-white
+        site: ${{ fromJSON(needs.prepare.outputs.sites) }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -67,18 +67,18 @@ jobs:
         run: python -m pip install ".[docs]"
 
       - name: Restore generated wiki pages
-        if: matrix.site != 'portal'
+        if: matrix.site.data_driven
         run: romwiki site restore-snapshot
 
       - name: Build site
-        run: romwiki site build "${{ matrix.site }}" --output dist
+        run: romwiki site build "${{ matrix.site.id }}" --output dist
         env:
           ROMWIKI_SITE_URL: ${{ needs.prepare.outputs.base_url }}
 
       - name: Upload site artifact
         uses: actions/upload-artifact@v4
         with:
-          name: site-${{ matrix.site }}
+          name: site-${{ matrix.site.id }}
           path: dist
           if-no-files-found: error
           retention-days: 1

@@ -78,6 +78,27 @@ class MainErrorHandlingTests(unittest.TestCase):
         self.assertTrue(quiet.quiet)
         self.assertFalse(quiet.verbose)
 
+    def test_site_list_emits_published_json_for_automation(self) -> None:
+        with patch("builtins.print") as output:
+            exit_code = main(["site", "list", "--published", "--json"])
+
+        self.assertEqual(exit_code, 0)
+        sites = json.loads(output.call_args.args[0])
+        self.assertEqual(
+            [site["id"] for site in sites],
+            [
+                "portal",
+                "platinum",
+                "renegade-platinum",
+                "blaze-black-volt-white",
+                "blaze-black-2-volt-white-2",
+                "black-white",
+            ],
+        )
+        self.assertFalse(sites[0]["data_driven"])
+        self.assertTrue(sites[1]["data_driven"])
+        self.assertFalse(sites[4]["data_driven"])
+
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")
         if not rom_path.is_file():
