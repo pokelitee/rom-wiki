@@ -215,6 +215,14 @@ complete snapshot. For focused work, provide site IDs instead:
 romwiki regenerate platinum renegade-platinum
 ```
 
+Operational output includes timestamps and elapsed times for expensive phases.
+Use the global `--verbose` option before the command to show every audit warning,
+or `--quiet` to show warnings and errors only:
+
+```console
+romwiki --verbose regenerate --all
+```
+
 When a hack shares an existing retail profile's complete layout, it can inherit
 that configuration and override only its identity and hashes:
 
