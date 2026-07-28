@@ -22,7 +22,7 @@ from romwiki.renderers.mkdocs.components import (
     empty_state,
     escape_table_cell,
     fact_grid,
-    machine_link,
+    machine_html_link,
     name_table_source,
     pokemon_table,
     provenance_fact_table,
@@ -191,7 +191,7 @@ def _render_record(
             (
                 "Machine",
                 ", ".join(
-                    machine_link(machine, source_url, references, as_html=True)
+                    machine_html_link(machine, source_url, references)
                     for machine in record["machines"]
                 ),
             )

@@ -30,7 +30,7 @@ from romwiki.renderers.mkdocs.components import (
     escape_table_cell,
     evolution_condition,
     fact_grid,
-    machine_link,
+    machine_markdown_link,
     name_table_source,
     pokedex_quote,
     pokemon_summary,
@@ -251,6 +251,7 @@ def _render_record(
     type_dataset: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"pokemon/{record['slug']}.md"
+    source_url = source_file.removesuffix(".md") + "/"
     stats = record["base_stats"]
     held_items = [item for item in record.get("held_items", []) if item["id"]]
     machines = record["machines"]
@@ -264,8 +265,8 @@ def _render_record(
         f"# {record['name']}",
         "",
         *version_availability_note(record),
-        *pokemon_summary(record, "../types/" if type_dataset is not None else None),
-        *_defensive_effectiveness_section(record, type_dataset),
+        *pokemon_summary(record, source_url if type_dataset is not None else None),
+        *_defensive_effectiveness_section(record, type_dataset, source_url),
         *_reference_entry(reference),
         *_sprite_gallery(record),
         "## Base stats",
@@ -414,6 +415,7 @@ def _render_record(
 def _defensive_effectiveness_section(
     record: dict[str, Any],
     type_dataset: dict[str, Any] | None,
+    source_url: str,
 ) -> list[str]:
     if type_dataset is None:
         return []
@@ -427,7 +429,8 @@ def _defensive_effectiveness_section(
         if not types:
             continue
         rows.append(
-            f"| {_effectiveness_label(multiplier)} | {_linked_type_badges(types)} |"
+            f"| {_effectiveness_label(multiplier)} | "
+            f"{type_badges([{'name': name} for name in types], source_url)} |"
         )
     return [
         "## Type effectiveness",
@@ -450,19 +453,6 @@ def _effectiveness_label(multiplier: str) -> str:
         "1/4": "¼×",
         "0": "0×",
     }[multiplier]
-
-
-def _linked_type_badges(types: tuple[str, ...]) -> str:
-    return (
-        '<span class="rw-type-list">'
-        + "".join(
-            f'<a href="../types/#{escape(name)}" aria-label="{escape(display_name(name))} '
-            f'type effectiveness"><span class="rw-type rw-type--{escape(name)}">'
-            f"{escape(display_name(name))}</span></a>"
-            for name in types
-        )
-        + "</span>"
-    )
 
 
 def _item_sprite_cell(item: dict[str, Any], references: ReferenceIndex | None) -> str:
@@ -847,7 +837,7 @@ def _append_machines(
                 "| ------- | ---- | ---- | ----- | ----: | -------: | -: |",
                 *[
                     (
-                        f"| {machine_link(machine, source_file, references)} | "
+                        f"| {machine_markdown_link(machine, source_file, references)} | "
                         f"{_record_link('move', machine['move'], source_file)} | "
                         f"{_move_cells(machine['move'], move_lookup)} |"
                     )
@@ -863,7 +853,8 @@ def _append_machines(
     lines.extend(
         [
             ", ".join(
-                machine_link(machine, source_file, references) for machine in machines
+                machine_markdown_link(machine, source_file, references)
+                for machine in machines
             ),
             "",
         ]

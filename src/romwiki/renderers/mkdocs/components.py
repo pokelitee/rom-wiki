@@ -42,7 +42,7 @@ def escape_table_cell(value: str) -> str:
 
 def type_badges(
     types: list[dict[str, Any]],
-    type_chart_href: str | None = None,
+    source_url: str | None = None,
 ) -> str:
     badges = []
     seen = set()
@@ -53,9 +53,16 @@ def type_badges(
         seen.add(name)
         label = display_name(name)
         badge = f'<span class="rw-type rw-type--{escape(name)}">{escape(label)}</span>'
-        if type_chart_href is not None:
+        if source_url is not None:
+            href = ROUTES.published_href(
+                entity_reference("type", name, label, name),
+                source_url,
+            )
+            if href is None:
+                badges.append(badge)
+                continue
             badge = (
-                f'<a href="{escape(type_chart_href)}#{escape(name)}" '
+                f'<a href="{escape(href, quote=True)}" '
                 f'aria-label="{escape(label)} type effectiveness">{badge}</a>'
             )
         badges.append(badge)
@@ -271,7 +278,7 @@ def ability_link(value: dict[str, Any], source_url: str) -> str:
 
 def pokemon_summary(
     record: dict[str, Any],
-    type_chart_href: str | None = None,
+    type_source_url: str | None = None,
 ) -> list[str]:
     portrait = record.get("portrait") or record.get("sprite")
     if portrait:
@@ -316,7 +323,7 @@ def pokemon_summary(
     body_color = (record.get("body_color") or {}).get("name")
     habitat = reference.get("habitat")
     shape = reference.get("shape")
-    badges = type_badges(record["types"], type_chart_href) + classification
+    badges = type_badges(record["types"], type_source_url) + classification
     fact_lines = [
         f"<div><dt>National Pokédex</dt><dd>{dex_label}</dd></div>",
         *(
@@ -400,21 +407,28 @@ def pokemon_table(header_lines: list[str], row_lines: list[str]) -> list[str]:
     return [*header_lines, *row_lines, ""]
 
 
-def machine_link(
+def machine_markdown_link(
     machine: dict[str, Any],
     source_file: str,
     references: ReferenceIndex | None,
-    *,
-    as_html: bool = False,
 ) -> str:
     item_id = machine.get("item_id")
     if item_id is None:
-        name = str(machine["name"])
-        return escape(name) if as_html else escape_markdown(name)
+        return escape_markdown(str(machine["name"]))
     reference = resolved_reference("item", item_id, machine["name"], index=references)
-    if as_html:
-        return ROUTES.html_link(reference, source_file)
     return ROUTES.markdown_link(reference, source_file)
+
+
+def machine_html_link(
+    machine: dict[str, Any],
+    source_url: str,
+    references: ReferenceIndex | None,
+) -> str:
+    item_id = machine.get("item_id")
+    if item_id is None:
+        return escape(str(machine["name"]))
+    reference = resolved_reference("item", item_id, machine["name"], index=references)
+    return ROUTES.html_link(reference, source_url)
 
 
 def summary_section(class_name: str, fact_lines: list[str]) -> list[str]:

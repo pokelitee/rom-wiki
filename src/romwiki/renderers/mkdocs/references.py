@@ -29,17 +29,27 @@ class RouteResolver:
         self._routes = dict(routes)
 
     def markdown_href(self, reference: EntityReference, source_file: str) -> str | None:
+        """Resolve a link embedded in Markdown relative to its `.md` source."""
+        if not source_file.endswith(".md"):
+            raise ValueError(
+                f"Markdown link source must be a .md file, got {source_file!r}"
+            )
         target = self._target(reference, published=False)
         if target is None:
             return None
         source_parent = str(PurePosixPath(source_file).parent)
-        return posixpath.relpath(target, source_parent)
+        return _relative_href(target, source_parent, trailing_slash=False)
 
     def published_href(self, reference: EntityReference, source_url: str) -> str | None:
+        """Resolve raw HTML/catalog links relative to a published page URL."""
+        if source_url and not source_url.endswith("/"):
+            raise ValueError(
+                f"Published link source must end in '/', got {source_url!r}"
+            )
         target = self._target(reference, published=True)
         if target is None:
             return None
-        return posixpath.relpath(target, source_url.rstrip("/")) + "/"
+        return _relative_href(target, source_url.rstrip("/"), trailing_slash=True)
 
     def catalog_reference(
         self, reference: EntityReference, source_url: str
@@ -73,7 +83,7 @@ class RouteResolver:
         if definition is None:
             return None
         factory = definition.published if published else definition.markdown
-        return factory(reference.route_key).rstrip("/")
+        return factory(reference.route_key)
 
 
 class ReferenceIndex:
@@ -228,12 +238,26 @@ def _slug_route(section: str) -> RouteDefinition:
     )
 
 
+def _relative_href(target: str, source: str, *, trailing_slash: bool) -> str:
+    path, separator, fragment = target.partition("#")
+    href = posixpath.relpath(path.rstrip("/"), source)
+    if trailing_slash:
+        href += "/"
+    if separator:
+        href += f"#{fragment}"
+    return href
+
+
 ROUTES = RouteResolver(
     {
         "pokemon": _slug_route("pokemon"),
         "ability": _slug_route("abilities"),
         "item": _slug_route("items"),
         "move": _slug_route("moves"),
+        "type": RouteDefinition(
+            markdown=lambda key: f"types/index.md#{key}",
+            published=lambda key: f"types/#{key}",
+        ),
         "location": RouteDefinition(
             markdown=lambda key: f"locations/header-{int(key):03}.md",
             published=lambda key: f"locations/header-{int(key):03}/",
@@ -256,6 +280,7 @@ _DATASET_ROUTE_KINDS = {
     "abilities": "ability",
     "moves": "move",
     "items": "item",
+    "types": "type",
     "encounters": "encounter",
     "trainers": "trainer",
     "locations": "location",
@@ -270,6 +295,7 @@ def _record_reference(kind: str, record: Mapping[str, Any]) -> EntityReference |
         "ability": "ability_id",
         "move": "move_id",
         "item": "item_id",
+        "type": "id",
         "encounter": "area_id",
         "trainer": "trainer_id",
         "location": "header_id",
@@ -279,6 +305,7 @@ def _record_reference(kind: str, record: Mapping[str, Any]) -> EntityReference |
         "ability": "slug",
         "move": "slug",
         "item": "slug",
+        "type": "name",
         "encounter": "area_id",
         "trainer": "trainer_id",
         "location": "header_id",

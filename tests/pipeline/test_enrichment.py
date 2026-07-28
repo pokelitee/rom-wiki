@@ -298,7 +298,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
 
         self.assertIn("## Type effectiveness", page)
         self.assertIn("| ¼× |", page)
-        self.assertIn('href="../types/#fire"', page)
+        self.assertIn('href="../../types/#fire"', page)
         self.assertNotIn("| 1× |", page)
 
     def test_renders_battle_only_forms_section_when_present(self) -> None:
