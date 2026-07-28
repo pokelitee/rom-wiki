@@ -504,7 +504,8 @@ romwiki site restore-snapshot
 ```
 
 `site build` fails when a required generated section is absent, preventing a
-clean checkout from silently publishing only hand-written landing pages.
+clean checkout from silently publishing incomplete data. This includes the type
+chart and each other generated section linked from record pages.
 
 Audit a built artifact for oversized pages and broken links before publishing:
 

@@ -344,10 +344,11 @@ reproducible without distributing ROM inputs. `romwiki site snapshot` packs all
 generated game sections and public data archives into the deterministic, tracked
 `sites/generated-wiki.tar.gz` archive. The Pages workflow restores that archive
 before invoking MkDocs. Its manifest fingerprints the parser, pipeline,
-renderer, and profile sources, so a stale snapshot is rejected. Required
-generated sections are validated before a site build, preventing an absent
-publication input from degrading into a successful landing-page-only
-deployment.
+renderer, and profile sources, so a stale snapshot is rejected; publishing-only
+build, audit, and MkDocs hook changes do not invalidate generated content.
+Required Pokémon, ability, item, move, encounter, trainer, location, type-chart,
+and public-data sections are validated before a site build, preventing an absent
+publication input from degrading into a successful partial deployment.
 
 `romwiki regenerate` is the catalog-driven owner of complete local regeneration.
 It preflights all selected ROM registrations and generation-specific PokéDB

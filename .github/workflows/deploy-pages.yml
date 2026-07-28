@@ -38,7 +38,7 @@ jobs:
 
       - name: Configure Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Resolve published site matrix
         id: sites
@@ -76,7 +76,7 @@ jobs:
           ROMWIKI_SITE_URL: ${{ needs.prepare.outputs.base_url }}
 
       - name: Upload site artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site-${{ matrix.site.id }}
           path: dist
@@ -102,7 +102,7 @@ jobs:
         run: python -m pip install .
 
       - name: Assemble site artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: site-*
           path: dist
@@ -112,7 +112,7 @@ jobs:
         run: romwiki site audit dist --base-url "${{ needs.prepare.outputs.base_url }}"
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
@@ -128,4 +128,4 @@ jobs:
     steps:
       - name: Deploy GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

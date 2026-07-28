@@ -26,38 +26,24 @@ def _load_and_configure(config_path: Path):
 
 
 class MkDocsHooksTests(unittest.TestCase):
-    def test_rewrites_local_markdown_links_to_published_urls(self) -> None:
+    def test_rewrites_links_to_pages_filtered_from_dev_build(self) -> None:
         html = (
             '<a href="../pokemon/buneary.md">Buneary</a>'
             '<a href="../types/index.md#fire">Fire</a>'
-            "<a href=../moves/tackle.md>Tackle</a>"
             '<a href="https://example.test/readme.md">External</a>'
         )
 
-        rewritten = mkdocs_hooks._rewrite_markdown_links(
+        rewritten = mkdocs_hooks._rewrite_filtered_markdown_links(
             html,
             "abilities/klutz.md",
             "abilities/klutz/",
-            source_relative=True,
         )
 
         self.assertIn('href="../../pokemon/buneary/"', rewritten)
         self.assertIn('href="../../types/#fire"', rewritten)
-        self.assertIn('href="../../moves/tackle/"', rewritten)
         self.assertIn('href="https://example.test/readme.md"', rewritten)
 
-    def test_rewrites_published_markdown_paths_without_changing_depth(self) -> None:
-        rewritten = mkdocs_hooks._rewrite_markdown_links(
-            '<a href="../../types/index.md#fire">Fire</a>'
-            '<a href=../../pokemon/buneary.md>Buneary</a>',
-            "abilities/klutz.md",
-            "abilities/klutz/",
-        )
-
-        self.assertIn('href="../../types/#fire"', rewritten)
-        self.assertIn('href="../../pokemon/buneary/"', rewritten)
-
-    def test_on_post_page_normalizes_links_in_final_production_html(self) -> None:
+    def test_on_page_content_leaves_production_html_unchanged(self) -> None:
         config = _load_and_configure(GAME_CONFIG)
         file = File(
             "abilities/klutz.md",
@@ -66,14 +52,16 @@ class MkDocsHooksTests(unittest.TestCase):
             config.use_directory_urls,
         )
         page = Page("Klutz", file, config)
+        html = '<a href="../types/index.md#fire">Fire</a>'
 
-        rewritten = mkdocs_hooks.on_post_page(
-            '<a href="../types/index.md#fire">Fire</a>',
+        rendered = mkdocs_hooks.on_page_content(
+            html,
             page,
             config,
+            Files([file]),
         )
 
-        self.assertIn('href="../types/#fire"', rewritten)
+        self.assertEqual(rendered, html)
 
     def test_on_config_registers_current_site_and_published_games(self) -> None:
         config = _load_and_configure(GAME_CONFIG)

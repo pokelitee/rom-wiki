@@ -19,10 +19,7 @@ _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None
 _current_sections: set[str] = set()
 _dev_pages: DevPages | None = None
-_HREF = re.compile(
-    r"""(\bhref\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""",
-    re.IGNORECASE,
-)
+_HREF = re.compile(r"""(\bhref\s*=\s*)(["'])(.*?)\2""", re.IGNORECASE)
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
@@ -76,18 +73,16 @@ def on_files(files: Files, config: MkDocsConfig) -> Files:
     return Files(file for file in files if _dev_pages.includes_document(file.src_uri))
 
 
-def on_post_page(
-    output: str,
+def on_page_content(
+    html: str,
     page: Page,
     config: MkDocsConfig,
+    files: Files,
 ) -> str:
-    del config
-    return _rewrite_markdown_links(
-        output,
-        page.file.src_uri,
-        page.url,
-        source_relative=_dev_pages is not None,
-    )
+    del config, files
+    if _dev_pages is None:
+        return html
+    return _rewrite_filtered_markdown_links(html, page.file.src_uri, page.url)
 
 
 def on_page_context(
@@ -118,17 +113,15 @@ def on_page_context(
     return context
 
 
-def _rewrite_markdown_links(
+def _rewrite_filtered_markdown_links(
     html: str,
     source_file: str,
     source_url: str,
-    *,
-    source_relative: bool = False,
 ) -> str:
-    """Normalize local Markdown targets to their published URLs."""
+    """Publish local Markdown links whose targets were filtered from a dev build."""
 
     def replace(match: re.Match[str]) -> str:
-        href = next(value for value in match.groups()[1:] if value is not None)
+        href = match.group(3)
         url = urlsplit(href)
         if (
             url.scheme
@@ -137,26 +130,19 @@ def _rewrite_markdown_links(
             or not url.path.lower().endswith(".md")
         ):
             return match.group(0)
-        if source_relative:
-            target_file = posixpath.normpath(
-                posixpath.join(posixpath.dirname(source_file), url.path)
-            )
-            target_url = (
-                posixpath.dirname(target_file)
-                if posixpath.basename(target_file).lower() == "index.md"
-                else target_file.removesuffix(".md")
-            )
-            path = (
-                posixpath.relpath(target_url, source_url.rstrip("/")).rstrip("/") + "/"
-            )
-        else:
-            path = (
-                posixpath.dirname(url.path) or "."
-                if posixpath.basename(url.path).lower() == "index.md"
-                else url.path.removesuffix(".md")
-            ).rstrip("/") + "/"
-        rewritten = urlunsplit(("", "", path, url.query, url.fragment))
-        return f'{match.group(1)}"{rewritten}"'
+        target_file = posixpath.normpath(
+            posixpath.join(posixpath.dirname(source_file), url.path)
+        )
+        target_url = (
+            posixpath.dirname(target_file)
+            if posixpath.basename(target_file).lower() == "index.md"
+            else target_file.removesuffix(".md")
+        )
+        target_url += "/"
+        published = posixpath.relpath(target_url.rstrip("/"), source_url.rstrip("/"))
+        published += "/"
+        rewritten = urlunsplit(("", "", published, url.query, url.fragment))
+        return f"{match.group(1)}{match.group(2)}{rewritten}{match.group(2)}"
 
     return _HREF.sub(replace, html)
 
