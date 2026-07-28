@@ -75,11 +75,14 @@ jobs:
         env:
           ROMWIKI_SITE_URL: ${{ needs.prepare.outputs.base_url }}
 
+      - name: Package site
+        run: tar -czf "site-${{ matrix.site.id }}.tar.gz" -C dist .
+
       - name: Upload site artifact
         uses: actions/upload-artifact@v4
         with:
           name: site-${{ matrix.site.id }}
-          path: dist
+          path: site-${{ matrix.site.id }}.tar.gz
           if-no-files-found: error
           retention-days: 1
 
@@ -105,8 +108,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: site-*
-          path: dist
+          path: artifacts
           merge-multiple: true
+
+      - name: Extract site artifacts
+        run: |
+          mkdir -p dist
+          for archive in artifacts/site-*.tar.gz; do
+            tar -xzf "$archive" -C dist
+          done
 
       - name: Audit rendered sites
         run: romwiki site audit dist --base-url "${{ needs.prepare.outputs.base_url }}"
