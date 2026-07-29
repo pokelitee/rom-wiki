@@ -1,0 +1,24 @@
+INHERIT: ../../shared/mkdocs.base.yml
+
+site_name: Pokémon Black 2 & White 2 Wiki
+site_description: A data-driven reference for Pokémon Black 2 and White 2
+docs_dir: wiki
+hooks:
+  - ../../../src/romwiki/sites/mkdocs_hooks.py
+
+theme:
+  custom_dir: ../../shared/overrides
+
+nav:
+  - Home: index.md
+  - Data Sources: data-sources.md
+  - Data Downloads: data/index.md
+  - Game Data:
+      - Pokémon: pokemon/index.md
+      - Abilities: abilities/index.md
+      - Items: items/index.md
+      - Moves: moves/index.md
+      - Type Chart: types/index.md
+      - Wild Encounters: encounters/index.md
+      - Trainers: trainers/index.md
+      - Locations: locations/index.md

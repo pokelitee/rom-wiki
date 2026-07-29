@@ -35,6 +35,7 @@ class SiteCatalogTests(unittest.TestCase):
                 "blaze-black-volt-white",
                 "blaze-black-2-volt-white-2",
                 "black-white",
+                "black-2-white-2",
             ],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
@@ -51,6 +52,10 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertIsNotNone(black_white)
         assert black_white is not None
         self.assertEqual(black_white.versions, ("black", "white"))
+        black_2_white_2 = catalog.get("black-2-white-2").game
+        self.assertIsNotNone(black_2_white_2)
+        assert black_2_white_2 is not None
+        self.assertEqual(black_2_white_2.versions, ("black-2", "white-2"))
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
@@ -78,6 +83,7 @@ class SiteCatalogTests(unittest.TestCase):
                     "blaze-black-volt-white",
                     "blaze-black-2-volt-white-2",
                     "black-white",
+                    "black-2-white-2",
                 ],
             )
             self.assertEqual(Path(commands[0][-1]), output.resolve())
@@ -94,6 +100,9 @@ class SiteCatalogTests(unittest.TestCase):
                 output.resolve() / "blaze-black-2-volt-white-2",
             )
             self.assertEqual(Path(commands[5][-1]), output.resolve() / "black-white")
+            self.assertEqual(
+                Path(commands[6][-1]), output.resolve() / "black-2-white-2"
+            )
 
     def test_dev_build_uses_game_dev_configs_and_the_portal_config(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

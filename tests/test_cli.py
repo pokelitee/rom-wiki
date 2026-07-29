@@ -199,6 +199,7 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "blaze-black-volt-white",
                 "blaze-black-2-volt-white-2",
                 "black-white",
+                "black-2-white-2",
             ],
         )
         self.assertFalse(sites[0]["data_driven"])

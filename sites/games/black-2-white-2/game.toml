@@ -1,0 +1,21 @@
+[site]
+id = "black-2-white-2"
+name = "Pokémon Black 2 & White 2"
+kind = "game"
+slug = "black-2-white-2"
+published = true
+order = 22
+mkdocs_config = "mkdocs.yml"
+description = "A data-driven reference for Pokémon Black 2 and White 2 (USA/Europe)"
+
+[game]
+profiles = ["black-2-us", "white-2-us"]
+versions = ["black-2", "white-2"]
+generation = 5
+base_game = "black-2-white-2"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "Game Freak"
+
+[appearance]
+theme = "black-white"

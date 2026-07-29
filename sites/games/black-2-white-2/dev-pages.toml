@@ -1,0 +1,31 @@
+[pages]
+pokemon = [
+    "bulbasaur",
+    "eevee",
+    "darmanitan-standard",
+    "kyurem-white",
+    "kyurem-black",
+    "keldeo-resolute",
+]
+abilities = [
+    "overgrow",
+    "water-absorb",
+    "teravolt",
+]
+moves = [
+    "tackle",
+]
+items = [
+    "master-ball",
+    "potion",
+    "leftovers",
+]
+encounters = [
+    "area-000",
+]
+trainers = [
+    "trainer-0000",
+]
+locations = [
+    "header-000",
+]

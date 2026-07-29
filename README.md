@@ -20,6 +20,7 @@ committed.
 | Pokémon Platinum | Data-driven Generation IV baseline |
 | Pokémon Renegade Platinum | Data-driven comparison against Platinum |
 | Pokémon Black & White | Data-driven sibling-version family |
+| Pokémon Black 2 & White 2 | Data-driven sibling-version family |
 | Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
 | Pokémon Blaze Black 2 & Volt White 2 | Data-driven paired-hack comparison |
 
