@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from romwiki.sites import SiteCatalog, build_sites
+from romwiki.sites.build import _run_command
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
 from romwiki.util.errors import SiteError
 
@@ -13,6 +14,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class SiteCatalogTests(unittest.TestCase):
+    def test_build_command_can_set_the_combined_site_url(self) -> None:
+        with patch("romwiki.sites.build.subprocess.run") as run:
+            _run_command(("python", "-m", "mkdocs"), site_url="http://localhost:8000/")
+
+        environment = run.call_args.kwargs["env"]
+        self.assertEqual(environment["ROMWIKI_SITE_URL"], "http://localhost:8000/")
+
     def test_loads_portal_and_game_sites_in_display_order(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
 

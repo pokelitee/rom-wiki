@@ -6,12 +6,14 @@ import unittest
 from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 from romwiki.sites.catalog import SiteCatalog
 from romwiki.sites.server import (
     DevelopmentRequestHandler,
     ReloadState,
+    _development_site_url,
     _prepare_output,
     _validate_server_options,
     serve_sites,
@@ -20,6 +22,16 @@ from romwiki.util.errors import SiteError
 
 
 class DevelopmentServerTests(unittest.TestCase):
+    def test_development_site_url_normalizes_local_bind_hosts(self) -> None:
+        self.assertEqual(
+            _development_site_url("127.0.0.1", 8000),
+            "http://localhost:8000/",
+        )
+        self.assertEqual(
+            _development_site_url("::", 8000),
+            "http://localhost:8000/",
+        )
+
     def test_rejects_output_inside_watched_sources_and_invalid_ports(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -118,6 +130,49 @@ class DevelopmentServerTests(unittest.TestCase):
                 with urlopen(f"http://{host}:{port}/", timeout=5) as response:
                     self.assertTrue(response.geturl().endswith("/platinum/"))
                     self.assertIn("Platinum", response.read().decode())
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_missing_pages_use_the_nearest_generated_404(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            game = root / "platinum"
+            game.mkdir()
+            (root / "404.html").write_text(
+                "<!doctype html><body>Portal not found</body>",
+                encoding="utf-8",
+            )
+            (game / "404.html").write_text(
+                "<!doctype html><body>Platinum not found</body>",
+                encoding="utf-8",
+            )
+            handler = partial(
+                DevelopmentRequestHandler,
+                directory=str(root),
+                reload_state=ReloadState(),
+            )
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                with self.assertRaises(HTTPError) as game_error:
+                    urlopen(f"http://{host}:{port}/platinum/missing/", timeout=5)
+                self.assertEqual(game_error.exception.code, 404)
+                self.assertIn(
+                    "Platinum not found",
+                    game_error.exception.read().decode(),
+                )
+
+                with self.assertRaises(HTTPError) as portal_error:
+                    urlopen(f"http://{host}:{port}/missing/", timeout=5)
+                self.assertEqual(portal_error.exception.code, 404)
+                self.assertIn(
+                    "Portal not found",
+                    portal_error.exception.read().decode(),
+                )
             finally:
                 server.shutdown()
                 server.server_close()

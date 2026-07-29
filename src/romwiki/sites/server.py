@@ -94,8 +94,15 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
             return
         html_path = self._requested_html_path()
         if html_path is None:
+            not_found_path = self._not_found_path(request_path)
+            if not_found_path is not None:
+                self._send_html(not_found_path, status=404)
+                return
             super().do_GET()
             return
+        self._send_html(html_path)
+
+    def _send_html(self, html_path: Path, *, status: int = 200) -> None:
         try:
             content = html_path.read_bytes()
         except OSError:
@@ -107,7 +114,7 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
             content = (
                 content[:position] + _RELOAD_SCRIPT + marker + content[position + 7 :]
             )
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
@@ -135,6 +142,17 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
             candidate if candidate.is_file() and candidate.suffix == ".html" else None
         )
 
+    def _not_found_path(self, request_path: str) -> Path | None:
+        suffix = Path(unquote(request_path)).suffix
+        if suffix and suffix != ".html":
+            return None
+        parts = [part for part in unquote(request_path).split("/") if part]
+        candidates = []
+        if parts:
+            candidates.append(self._root / parts[0] / "404.html")
+        candidates.append(self._root / "404.html")
+        return next((path for path in candidates if path.is_file()), None)
+
 
 def serve_sites(
     catalog: SiteCatalog,
@@ -150,12 +168,14 @@ def serve_sites(
     catalog.select(site_ids, all_published=serve_all)
     _validate_server_options(catalog.root, resolved_output, port)
     _prepare_output(resolved_output)
+    site_url = _development_site_url(host, port)
     built = build_sites(
         catalog,
         resolved_output,
         site_ids=site_ids,
         build_all=serve_all,
         dev=dev,
+        site_url=site_url,
     )
 
     reload_state = ReloadState()
@@ -170,6 +190,7 @@ def serve_sites(
             site_ids,
             serve_all,
             dev,
+            site_url,
             changes,
             stop,
             reload_state,
@@ -270,6 +291,13 @@ def _landing_path(sites: Sequence[SiteDefinition]) -> str:
     return "/"
 
 
+def _development_site_url(host: str, port: int) -> str:
+    display_host = "localhost" if host in {"0.0.0.0", "127.0.0.1", "::"} else host
+    if ":" in display_host and not display_host.startswith("["):
+        display_host = f"[{display_host}]"
+    return f"http://{display_host}:{port}/"
+
+
 def _start_source_observer(root: Path, changes: threading.Event) -> Any:
     try:
         from watchdog.events import FileSystemEventHandler
@@ -306,6 +334,7 @@ def _rebuild_worker(
     site_ids: Sequence[str],
     serve_all: bool,
     dev: bool,
+    site_url: str,
     changes: threading.Event,
     stop: threading.Event,
     reload_state: ReloadState,
@@ -328,6 +357,7 @@ def _rebuild_worker(
                 site_ids=site_ids,
                 build_all=serve_all,
                 dev=dev,
+                site_url=site_url,
             )
         except SiteError as error:
             _LOG.error("Development rebuild failed: %s", error)

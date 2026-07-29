@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -22,6 +23,7 @@ def build_sites(
     site_ids: Sequence[str] = (),
     build_all: bool = False,
     dev: bool = False,
+    site_url: str | None = None,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
     selected = catalog.select(site_ids, all_published=build_all)
@@ -29,7 +31,9 @@ def build_sites(
         sorted(selected, key=lambda site: (site.kind != "portal", site.order))
     )
     resolved_output = output_root.resolve()
-    command_runner = runner or _run_command
+    command_runner = runner or (
+        lambda command: _run_command(command, site_url=site_url)
+    )
     for site in ordered:
         _validate_generated_content(site)
         destination = site.output_path(resolved_output)
@@ -78,9 +82,13 @@ def _validate_generated_content(site: SiteDefinition) -> None:
         )
 
 
-def _run_command(command: Sequence[str]) -> None:
+def _run_command(command: Sequence[str], *, site_url: str | None = None) -> None:
+    environment = None
+    if site_url is not None:
+        environment = os.environ.copy()
+        environment["ROMWIKI_SITE_URL"] = site_url
     try:
-        subprocess.run(command, check=True)
+        subprocess.run(command, check=True, env=environment)
     except subprocess.CalledProcessError as error:
         raise SiteError(
             f"MkDocs build failed with exit code {error.returncode}"

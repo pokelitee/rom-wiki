@@ -2,7 +2,7 @@
 
 {% block extrahead %}
   {{ super() }}
-  {% set romwiki_theme = romwiki.current.theme if romwiki else "portal" %}
+  {% set romwiki_theme = romwiki.current.theme if romwiki else config.extra.romwiki_site.theme | default("portal") %}
   <meta name="romwiki-theme" content="{{ romwiki_theme }}">
   <script>
     (function () {
