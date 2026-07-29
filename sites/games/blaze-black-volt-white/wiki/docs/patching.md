@@ -1,3 +1,5 @@
+## General
+
 Patching is incredibly easy. Simply place a ROM of Black or White into the folder containing this Readme and the xdelta patches, and run the appropriate batch file for your choice of game.
 
 Note that the ROM must be CLEAN. That is, no anti-piracy patch (the BB/VW patch covers the exp problem) and no other changes, either. Doing so may screw with the checksum, which will prevent the patch working.
