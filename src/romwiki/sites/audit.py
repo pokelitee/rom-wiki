@@ -21,6 +21,13 @@ _PAGE_PROGRESS_INTERVAL = 1_000
 _ATTR_VALUE = r'(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'=<>`]+))'
 _CUSTOM_CLASS = re.compile(r"\brw-[a-zA-Z0-9_-]+\b")
 _CUSTOM_CSS_CLASS = re.compile(r"\.((?:rw-)[a-zA-Z0-9_-]+)")
+_CONDITIONALLY_RENDERED_CLASSES = frozenset(
+    {
+        "rw-party-card__gender--unknown",
+        "rw-party-card__moves-empty",
+        "rw-record-tree__placeholder",
+    }
+)
 _EXTERNAL_SCHEMES = {"data", "http", "https", "mailto", "tel"}
 _ID = re.compile(rf"\bid={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
 _HREF = re.compile(rf"<a\b[^>]*\bhref={_ATTR_VALUE}", re.IGNORECASE | re.DOTALL)
@@ -283,7 +290,10 @@ def audit_site(
         defined_classes.update(
             _CUSTOM_CSS_CLASS.findall(stylesheet.read_text(encoding="utf-8"))
         )
-    for class_name in sorted(defined_classes - used_classes):
+    unused_classes = (
+        defined_classes - used_classes - _CONDITIONALLY_RENDERED_CLASSES
+    )
+    for class_name in sorted(unused_classes):
         warnings.append(
             SiteAuditIssue(
                 "css-unused",

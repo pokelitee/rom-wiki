@@ -125,6 +125,28 @@ class SiteAuditTests(unittest.TestCase):
         self.assertIn("table-header", codes)
         self.assertIn("css-unused", codes)
 
+    def test_ignores_conditionally_rendered_fallback_styles(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", "")
+            (root / "site.css").write_text(
+                """
+                .rw-party-card__gender--unknown {}
+                .rw-party-card__moves-empty {}
+                .rw-record-tree__placeholder {}
+                .rw-actually-unused {}
+                """,
+                encoding="utf-8",
+            )
+
+            report = audit_site(root)
+
+        css_warnings = [
+            issue for issue in report.warnings if issue.code == "css-unused"
+        ]
+        self.assertEqual(len(css_warnings), 1)
+        self.assertIn("rw-actually-unused", css_warnings[0].message)
+
     def test_enforces_page_size_limit_and_warns_on_image_limit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
