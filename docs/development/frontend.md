@@ -158,6 +158,17 @@ configuration, watches shared and site sources, and reloads open browser pages
 after successful rebuilds. The portal uses its normal configuration because its
 source is already small.
 
+Use the same command with one or more site identifiers for a focused preview:
+
+```console
+romwiki site serve renegade-platinum --dev
+romwiki site serve platinum renegade-platinum --dev
+```
+
+The server replaces its output directory at startup so a focused preview cannot
+serve stale sites left by an earlier combined build. A single game redirects the
+root request to that game's path.
+
 Use the lightweight Renegade Platinum configuration while iterating on shared
 templates, styles, and catalog behavior:
 

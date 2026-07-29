@@ -525,21 +525,27 @@ some pages, like widely tutor-compatible moves (e.g. Snore, learnable by
 hundreds of Pokémon at one tutor location), legitimately have a large,
 correct image count.
 
-Preview an individual site with live reload:
+Preview an individual site through the same combined-development interface:
 
 ```console
-python -m mkdocs serve --config-file sites/games/renegade-platinum/mkdocs.yml
+romwiki site serve renegade-platinum --dev
 ```
 
-Preview the portal and every published wiki as one lightweight, live-reloading
-development site:
+The root URL redirects to the selected game. Multiple site identifiers may be
+provided when a focused cross-wiki preview is useful:
+
+```console
+romwiki site serve platinum renegade-platinum --dev
+```
+
+Preview the portal and every published wiki:
 
 ```console
 romwiki site serve --all --dev
 ```
 
-The combined server defaults to `http://localhost:8000/` and writes its temporary
-artifact below `build/mkdocs-dev/`. Shared templates and assets, site
+The server defaults to `http://localhost:8000/` and replaces its temporary
+artifact below `build/mkdocs-dev/` at startup. Shared templates and assets, site
 configuration, and wiki content are watched; a successful rebuild reloads open
 browser pages. Use `--host`, `--port`, or `--output` to override the defaults.
 

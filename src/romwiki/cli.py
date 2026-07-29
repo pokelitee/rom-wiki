@@ -477,7 +477,7 @@ def build_parser() -> argparse.ArgumentParser:
     baseline_build_parser.add_argument("--refresh", action="store_true")
 
     site_parser = subparsers.add_parser(
-        "site", help="list or build independently configured wiki sites"
+        "site", help="list, build, serve, and audit configured wiki sites"
     )
     site_subparsers = site_parser.add_subparsers(dest="site_command", required=True)
     list_parser = site_subparsers.add_parser("list", help="list configured sites")
@@ -524,7 +524,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         default=Path("build/mkdocs-dev"),
-        help="combined development artifact directory",
+        help="served artifact directory",
     )
     serve_site_parser.add_argument(
         "--host",

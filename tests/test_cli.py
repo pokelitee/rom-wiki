@@ -70,6 +70,25 @@ class MainErrorHandlingTests(unittest.TestCase):
             port=9000,
         )
 
+    def test_individual_dev_server_arguments_are_forwarded(self) -> None:
+        catalog = object()
+        with (
+            patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
+            patch("romwiki.cli.serve_sites") as serve,
+        ):
+            exit_code = main(["site", "serve", "renegade-platinum", "--dev"])
+
+        self.assertEqual(exit_code, 0)
+        serve.assert_called_once_with(
+            catalog,
+            Path("build/mkdocs-dev"),
+            site_ids=["renegade-platinum"],
+            serve_all=False,
+            dev=True,
+            host="127.0.0.1",
+            port=8000,
+        )
+
     def test_an_unknown_command_is_rejected_by_argparse(self) -> None:
         with self.assertRaises(SystemExit):
             main(["not-a-real-command"])

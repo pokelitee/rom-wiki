@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import threading
 from collections.abc import Sequence
 from functools import partial
@@ -10,7 +11,7 @@ from typing import Any
 from urllib.parse import unquote, urlsplit
 
 from romwiki.sites.build import build_sites
-from romwiki.sites.catalog import SiteCatalog
+from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.util.errors import SiteError
 
 _LOG = logging.getLogger("romwiki")
@@ -69,15 +70,24 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         *args: Any,
         directory: str,
         reload_state: ReloadState,
+        landing_path: str = "/",
         **kwargs: Any,
     ) -> None:
         self._root = Path(directory).resolve()
         self._reload_state = reload_state
+        self._landing_path = landing_path
         super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self) -> None:
-        if urlsplit(self.path).path == _RELOAD_ENDPOINT:
+        request_path = urlsplit(self.path).path
+        if request_path == _RELOAD_ENDPOINT:
             self._send_reload_version()
+            return
+        if request_path == "/" and self._landing_path != "/":
+            self.send_response(302)
+            self.send_header("Location", self._landing_path)
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
             return
         html_path = self._requested_html_path()
         if html_path is None:
@@ -136,8 +146,10 @@ def serve_sites(
     port: int = 8000,
 ) -> None:
     resolved_output = output_root.resolve()
+    catalog.select(site_ids, all_published=serve_all)
     _validate_server_options(catalog.root, resolved_output, port)
-    build_sites(
+    _prepare_output(resolved_output)
+    built = build_sites(
         catalog,
         resolved_output,
         site_ids=site_ids,
@@ -168,6 +180,7 @@ def serve_sites(
         DevelopmentRequestHandler,
         directory=str(resolved_output),
         reload_state=reload_state,
+        landing_path=_landing_path(built),
     )
     try:
         server = ThreadingHTTPServer((host, port), handler)
@@ -186,7 +199,12 @@ def serve_sites(
         display_host = (
             "localhost" if actual_host in {"0.0.0.0", "127.0.0.1"} else actual_host
         )
-        _LOG.info("Serving combined wiki at http://%s:%s/", display_host, actual_port)
+        _LOG.info(
+            "Serving wiki at http://%s:%s%s",
+            display_host,
+            actual_port,
+            _landing_path(built),
+        )
         _LOG.info("Watching site sources for changes; press Ctrl+C to stop")
         server.serve_forever()
     except KeyboardInterrupt:
@@ -205,6 +223,23 @@ def serve_sites(
 def _validate_server_options(root: Path, output_root: Path, port: int) -> None:
     if not 0 <= port <= 65535:
         raise SiteError(f"Development server port is out of range: {port}")
+    resolved_root = root.resolve()
+    if (
+        output_root == resolved_root
+        or resolved_root.is_relative_to(output_root)
+        or output_root == Path(output_root.anchor)
+    ):
+        raise SiteError(f"Unsafe development output directory: {output_root}")
+    if output_root.is_relative_to(resolved_root):
+        artifact_roots = (resolved_root / "build", resolved_root / "dist")
+        if not any(
+            output_root == artifact_root or output_root.is_relative_to(artifact_root)
+            for artifact_root in artifact_roots
+        ):
+            raise SiteError(
+                "Repository-local development output must be below build/ or dist/: "
+                f"{output_root}"
+            )
     for source in (root / "sites", root / "src" / "romwiki" / "sites"):
         resolved_source = source.resolve()
         if output_root == resolved_source or output_root.is_relative_to(
@@ -213,6 +248,25 @@ def _validate_server_options(root: Path, output_root: Path, port: int) -> None:
             raise SiteError(
                 f"Development output cannot be inside watched sources: {output_root}"
             )
+
+
+def _prepare_output(output_root: Path) -> None:
+    try:
+        if output_root.exists():
+            if not output_root.is_dir():
+                raise SiteError(f"Development output is not a directory: {output_root}")
+            shutil.rmtree(output_root)
+        output_root.mkdir(parents=True)
+    except OSError as error:
+        raise SiteError(
+            f"Could not prepare development output {output_root}: {error}"
+        ) from error
+
+
+def _landing_path(sites: Sequence[SiteDefinition]) -> str:
+    if len(sites) == 1 and sites[0].kind == "game":
+        return f"/{sites[0].slug}/"
+    return "/"
 
 
 def _start_source_observer(root: Path, changes: threading.Event) -> Any:
