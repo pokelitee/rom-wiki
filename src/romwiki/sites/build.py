@@ -21,6 +21,7 @@ def build_sites(
     *,
     site_ids: Sequence[str] = (),
     build_all: bool = False,
+    dev: bool = False,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
     selected = catalog.select(site_ids, all_published=build_all)
@@ -32,6 +33,7 @@ def build_sites(
     for site in ordered:
         _validate_generated_content(site)
         destination = site.output_path(resolved_output)
+        config_path = _site_config_path(site, dev=dev)
         with timed_operation(_LOG, f"MkDocs build for {site.id}"):
             command_runner(
                 (
@@ -41,12 +43,23 @@ def build_sites(
                     "build",
                     "--clean",
                     "--config-file",
-                    str(site.config_path),
+                    str(config_path),
                     "--site-dir",
                     str(destination),
                 )
             )
     return ordered
+
+
+def _site_config_path(site: SiteDefinition, *, dev: bool) -> Path:
+    if not dev:
+        return site.config_path
+    dev_config = site.config_path.with_name("mkdocs.dev.yml")
+    if dev_config.is_file():
+        return dev_config
+    if site.kind == "portal":
+        return site.config_path
+    raise SiteError(f"Development MkDocs configuration is missing for {site.id}")
 
 
 def _validate_generated_content(site: SiteDefinition) -> None:

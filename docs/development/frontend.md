@@ -146,6 +146,18 @@ indexes slower and less reliable.
 
 ## Development preview
 
+Use the combined development server when changing shared templates, styles, or
+behavior across the portal and game sites:
+
+```console
+romwiki site serve --all --dev
+```
+
+It builds one artifact below `build/mkdocs-dev/`, uses every game's lightweight
+configuration, watches shared and site sources, and reloads open browser pages
+after successful rebuilds. The portal uses its normal configuration because its
+source is already small.
+
 Use the lightweight Renegade Platinum configuration while iterating on shared
 templates, styles, and catalog behavior:
 

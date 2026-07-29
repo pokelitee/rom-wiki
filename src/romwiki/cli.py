@@ -72,6 +72,7 @@ from romwiki.sites import (
     build_sites,
     create_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
+    serve_sites,
 )
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.dev_pages import DevPages
@@ -503,6 +504,40 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", type=Path, default=Path("dist"), help="artifact output directory"
     )
     _add_site_root_argument(build_site_parser)
+    serve_site_parser = site_subparsers.add_parser(
+        "serve",
+        help="build, serve, and live-reload selected wiki sites",
+    )
+    serve_site_parser.add_argument("site_ids", nargs="*", help="site identifiers")
+    serve_site_parser.add_argument(
+        "--all",
+        action="store_true",
+        dest="serve_all",
+        help="serve all published sites",
+    )
+    serve_site_parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="use lightweight development MkDocs configurations",
+    )
+    serve_site_parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("build/mkdocs-dev"),
+        help="combined development artifact directory",
+    )
+    serve_site_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="interface to bind (default: 127.0.0.1)",
+    )
+    serve_site_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="port to bind (default: 8000)",
+    )
+    _add_site_root_argument(serve_site_parser)
     audit_site_parser = site_subparsers.add_parser(
         "audit", help="validate a rendered multi-site artifact"
     )
@@ -726,6 +761,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                         site.id,
                         site.output_path(args.output.resolve()),
                     )
+            elif args.site_command == "serve":
+                catalog = SiteCatalog.load(args.root)
+                serve_sites(
+                    catalog,
+                    args.output,
+                    site_ids=args.site_ids,
+                    serve_all=args.serve_all,
+                    dev=args.dev,
+                    host=args.host,
+                    port=args.port,
+                )
             elif args.site_command == "snapshot":
                 with timed_operation(_LOG, "Generated wiki snapshot"):
                     count = create_generated_wiki_snapshot(args.root, args.output)

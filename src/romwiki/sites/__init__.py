@@ -6,6 +6,7 @@ from romwiki.sites.catalog import (
     SiteCatalog,
     SiteDefinition,
 )
+from romwiki.sites.server import serve_sites
 from romwiki.sites.snapshot import (
     create_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
@@ -22,4 +23,5 @@ __all__ = [
     "build_sites",
     "create_generated_wiki_snapshot",
     "restore_generated_wiki_snapshot",
+    "serve_sites",
 ]

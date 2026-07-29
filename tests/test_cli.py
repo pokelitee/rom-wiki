@@ -38,6 +38,38 @@ class MainErrorHandlingTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 2)
 
+    def test_combined_dev_server_arguments_are_forwarded(self) -> None:
+        catalog = object()
+        with (
+            patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
+            patch("romwiki.cli.serve_sites") as serve,
+        ):
+            exit_code = main(
+                [
+                    "site",
+                    "serve",
+                    "--all",
+                    "--dev",
+                    "--output",
+                    "build/preview",
+                    "--host",
+                    "0.0.0.0",
+                    "--port",
+                    "9000",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        serve.assert_called_once_with(
+            catalog,
+            Path("build/preview"),
+            site_ids=[],
+            serve_all=True,
+            dev=True,
+            host="0.0.0.0",
+            port=9000,
+        )
+
     def test_an_unknown_command_is_rejected_by_argparse(self) -> None:
         with self.assertRaises(SystemExit):
             main(["not-a-real-command"])

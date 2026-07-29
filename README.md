@@ -531,6 +531,18 @@ Preview an individual site with live reload:
 python -m mkdocs serve --config-file sites/games/renegade-platinum/mkdocs.yml
 ```
 
+Preview the portal and every published wiki as one lightweight, live-reloading
+development site:
+
+```console
+romwiki site serve --all --dev
+```
+
+The combined server defaults to `http://localhost:8000/` and writes its temporary
+artifact below `build/mkdocs-dev/`. Shared templates and assets, site
+configuration, and wiki content are watched; a successful rebuild reloads open
+browser pages. Use `--host`, `--port`, or `--output` to override the defaults.
+
 For a faster frontend development loop, use the lightweight game configuration:
 
 ```console
@@ -548,9 +560,9 @@ romwiki build-pokemon --game renegade-platinum --dev
 See [Frontend](docs/development/frontend.md#development-preview) for what the
 `--dev` configuration and flag actually build and skip.
 
-The portal can be previewed by using `sites/portal/mkdocs.yml` instead. Each site
-inherits the shared responsive theme, light and dark palettes, catalog interface,
-and game selector from `sites/shared/`.
+The portal can be previewed alone by using `sites/portal/mkdocs.yml` instead. Each
+site inherits the shared responsive theme, light and dark palettes, catalog
+interface, and game selector from `sites/shared/`.
 
 Large generated sections expose progressively rendered catalogs with search,
 filters, sorting, and bookmarkable query parameters. A complete static link list

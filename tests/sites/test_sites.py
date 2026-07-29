@@ -85,6 +85,30 @@ class SiteCatalogTests(unittest.TestCase):
             )
             self.assertEqual(Path(commands[5][-1]), output.resolve() / "black-white")
 
+    def test_dev_build_uses_game_dev_configs_and_the_portal_config(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        commands: list[tuple[str, ...]] = []
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch("romwiki.sites.build._validate_generated_content"),
+        ):
+            built = build_sites(
+                catalog,
+                Path(directory),
+                build_all=True,
+                dev=True,
+                runner=lambda command: commands.append(tuple(command)),
+            )
+
+        configs = {
+            site.id: Path(command[command.index("--config-file") + 1])
+            for site, command in zip(built, commands, strict=True)
+        }
+        self.assertEqual(configs["portal"].name, "mkdocs.yml")
+        for site in built:
+            if site.kind == "game":
+                self.assertEqual(configs[site.id].name, "mkdocs.dev.yml")
+
     def test_documentation_only_site_does_not_require_profiles(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         site = catalog.get("blaze-black-2-volt-white-2")
