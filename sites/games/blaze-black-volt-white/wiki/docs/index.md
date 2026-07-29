@@ -1,3 +1,7 @@
+This page reproduces Drayano's official Renegade Platinum documentation and
+credits verbatim; first-person references ("I", "my", "me") refer to Drayano,
+the hack's creator, not this wiki.
+
 ## Summary
 
 Pokémon Blaze Black and Pokémon Volt White are edits of the regular Pokémon Black and White versions which self-contain all 649 Pokémon, allowing a player a large amount of variety. In addition, BB/VW also have edited trainers, an increased difficulty level, improvements to many Pokémon and more. They are the spiritual successor of my two other hacks, Pokémon Fire Red Omega and Pokémon Spirit Gold. Blaze Black and Volt White were also - with one minor exception - the first of their kind to be made.
