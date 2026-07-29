@@ -645,7 +645,7 @@ patched_rom = "roms/white-us.nds"
                     side_effect=inspection,
                 ) as inspect,
                 patch("romwiki.cli._run_full_game_build") as build_game,
-                patch("romwiki.cli._run_version_pair_build") as build_family,
+                patch("romwiki.cli._run_version_family_build") as build_family,
                 patch(
                     "romwiki.cli.build_sites",
                     return_value=catalog.published(),

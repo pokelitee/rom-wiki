@@ -15,19 +15,23 @@ committed.
 
 ## Supported sites
 
-| Site | Status |
+| Site | Publication model |
 | --- | --- |
-| Pokémon Platinum | Complete data-driven Generation IV baseline |
-| Pokémon Renegade Platinum | Complete hack comparison against Platinum |
-| Pokémon Black & White | Data-driven sibling-version Generation V site |
+| Pokémon Platinum | Data-driven Generation IV baseline |
+| Pokémon Renegade Platinum | Data-driven comparison against Platinum |
+| Pokémon Black & White | Data-driven sibling-version family |
 | Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
-| Pokémon Blaze Black 2 & Volt White 2 | Documentation-only site |
+| Pokémon Blaze Black 2 & Volt White 2 | Documentation only |
 
 The current Generation IV and V engines cover Pokémon, abilities, moves, items,
 learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,
 trades, static encounters, and other engine-specific mechanics where exact
 extraction is supported. Each site's data-sources page records its exact input
 versions, provenance, and known limitations.
+
+“Data-driven” means a site is generated from normalized ROM datasets; it does
+not imply exhaustive extraction of every mechanic. Exact coverage belongs in
+the site's data-sources page rather than a broad completion label.
 
 ## Setup
 

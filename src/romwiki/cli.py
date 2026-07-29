@@ -245,59 +245,59 @@ def build_parser() -> argparse.ArgumentParser:
         help="game wiki root (default: site catalog entry for the matched profile)",
     )
 
-    version_pair_parser = build_subparsers.add_parser(
+    family_parser = build_subparsers.add_parser(
         "family",
         help="build one merged wiki for a sibling game-version family",
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--games",
         nargs="+",
         metavar="GAME",
         required=True,
         help="two or more game identifiers from the local game configuration",
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--versions",
         nargs="+",
         metavar="LABEL",
         help="version labels used for tagging records (default: the --games values)",
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--site-id",
         required=True,
         help=(
             "merged site identifier used for data and wiki output"
         ),
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--games-config", type=Path, default=Path(".local/games.toml")
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--profiles-dir", type=Path, default=Path("profiles")
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--pokedb",
         type=Path,
         help="PokéDB generation output directory (default: derived from the ROM profiles)",
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--data-root",
         type=Path,
         default=Path("build/data"),
         help="generated data root (default: build/data)",
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--wiki-root",
         type=Path,
         help="merged game wiki root (default: resolved from --site-id)",
     )
-    version_pair_parser.add_argument(
+    family_parser.add_argument(
         "--refresh-baseline",
         action="store_true",
         help="ignore and replace cached clean-ROM extraction data",
     )
-    _add_dev_argument(version_pair_parser)
-    _add_cache_argument(version_pair_parser)
+    _add_dev_argument(family_parser)
+    _add_cache_argument(family_parser)
 
     regenerate_parser = subparsers.add_parser(
         "regenerate",
@@ -676,8 +676,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _run_section_build(args, result)
         elif args.command == "build-game":
             _run_full_game_build(args, result)
-        elif args.command in {"build-version-family", "build-version-pair"}:
-            _run_version_pair_build(args)
+        elif args.command == "build-version-family":
+            _run_version_family_build(args)
         elif args.command == "regenerate":
             _run_regeneration(args)
         elif args.command == "baseline":
@@ -1040,16 +1040,17 @@ def _run_full_game_build(
     )
 
 
-# Sections a version-pair site can build, keyed to the profile layout entry
-# that gates them (None means always attempted, like GameBuildContext.pokemon()
-# and .items()). A section is only built when both sibling profiles configure
+# Sections a version-family site can build, keyed to the profile layout entry
+# that gates them (an empty key set means always attempted, like
+# GameBuildContext.pokemon() and .items()). A section is only built when all
+# sibling profiles configure
 # every required layout entry, matching the declarative-gate convention
 # GameBuildContext's optional-input accessors already use.
 # Each kind maps to one or more alternative required-key sets (a kind
 # qualifies if any one set's keys are all present) -- Locations' two very
 # different implementations (Gen IV's full map-matrix-based one vs. Gen V's
 # bare-minimum map-header one) both use this same gating dict.
-_VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
+_VERSION_FAMILY_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
     "pokemon": ((),),
     "abilities": (("messages",),),
     "items": (("item_data", "messages"),),
@@ -1060,7 +1061,7 @@ _VERSION_PAIR_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
 }
 
 
-def _run_version_pair_build(
+def _run_version_family_build(
     args: argparse.Namespace,
     *,
     workflows: Mapping[str, GameBuildWorkflow] | None = None,
@@ -1122,7 +1123,7 @@ def _run_version_pair_build(
     layouts = [workflows[version].current.profile.layout for version in versions]
     kinds = [
         kind
-        for kind, alternatives in _VERSION_PAIR_SECTION_LAYOUT_KEYS.items()
+        for kind, alternatives in _VERSION_FAMILY_SECTION_LAYOUT_KEYS.items()
         if any(
             all(all(key in layout for key in required_keys) for layout in layouts)
             for required_keys in alternatives
@@ -1326,7 +1327,6 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             _run_full_game_build(build_args, current[0], workflow=workflow)
         else:
             build_args = argparse.Namespace(
-                command="build-version-family",
                 games=list(game.profiles),
                 versions=list(game.versions),
                 site_id=site.id,
@@ -1353,7 +1353,7 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                     game.versions, current, baselines, strict=True
                 )
             }
-            _run_version_pair_build(build_args, workflows=workflows)
+            _run_version_family_build(build_args, workflows=workflows)
         _LOG.info(
             "Regenerated %s in %.1fs",
             site.id,

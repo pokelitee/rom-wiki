@@ -351,23 +351,24 @@ The catalog-driven `romwiki regenerate` command uses these labels directly; it
 does not infer user-facing version identity from profile IDs.
 
 The `romwiki build family --games black-us white-us --versions black white
---site-id black-white` command accepts two or more profiles, merges each section with
-`pipeline.version_merge.merge_version_family_datasets` (which tags every record with
-the `versions` it appears in -- `["black", "white"]` for shared content, a
-single entry for an exclusive), and renders the merged dataset into that one
-site. Renderers surface a "Black only"/"White only" callout automatically via
-`components.version_availability_note` whenever a record's `versions` list has
-exactly one entry; shared records get no callout. Do not use this pattern for
-a ROM hack and its base game (e.g. Renegade Platinum vs. Platinum) -- those are
-deliberately different games and keep their existing separate-sites-plus-
-comparison-diff treatment (`pipeline.comparisons`).
+--site-id black-white` command accepts two or more local game registrations
+and merges each section with
+`pipeline.version_merge.merge_version_family_datasets`. Every record is tagged
+with the `versions` it appears in -- `["black", "white"]` for shared content
+or a single entry for an exclusive -- before the merged dataset is rendered
+into that one site. Renderers surface a "Black only"/"White only" callout
+automatically via `components.version_availability_note` whenever a record's
+`versions` list has exactly one entry; shared records get no callout. Do not use
+this pattern for a ROM hack and its base game (e.g. Renegade Platinum vs.
+Platinum) -- those are deliberately different games and keep their existing
+separate-sites-plus-comparison-diff treatment (`pipeline.comparisons`).
 
-When the two sibling profiles are themselves a paired hack, define `base_rom`
-for both local game registrations. The same command then compares each hack
+When sibling profiles are themselves a hack family, define `base_rom` for every
+local game registration. The same command then compares each hack
 with its corresponding clean base and merges those results with
-`merge_version_comparisons`. Detail pages preserve separate per-version
-comparisons wherever their values differ. Both registrations must define a
-base or neither may do so; a half-configured paired comparison is rejected.
+`merge_version_family_comparisons`. Detail pages preserve separate per-version
+comparisons wherever their values differ. Every registration must define a
+base or none may do so; a partially configured family comparison is rejected.
 `--site-id` is required, preventing a new family from accidentally overwriting an
 existing site. The deprecated `build-version-pair` spelling remains temporarily
 available but follows the same explicit-site rule.
