@@ -1,133 +1,51 @@
 # ROM Wiki
 
-ROM Wiki is an extensible Pokémon game-data extraction framework and static-wiki
-generator. Initial development targets Pokémon Platinum and Renegade Platinum.
+ROM Wiki extracts structured Pokémon game data from locally supplied ROM images
+and publishes normalized datasets and static MkDocs wikis.
 
-The project separates four concerns:
+The project keeps four concerns separate:
 
-1. platform readers open game containers without interpreting Pokémon data;
-2. engine adapters decode game-specific records;
-3. normalized models combine ROM facts, PokéDB reference data, and annotations;
-4. renderers generate MkDocs source from the normalized dataset.
+1. platform readers open game containers;
+2. engine adapters decode generation-specific records;
+3. pipelines normalize, enrich, and compare game data;
+4. renderers and site tooling publish human- and machine-readable references.
 
-## Current status
+ROM images, patches, keys, saves, and copyrighted extracted assets are never
+committed.
 
-Renegade Platinum is the first complete baseline implementation. It identifies
-Nintendo DS images, reads their filesystem and NARC archives, and generates
-normalized datasets and wiki pages for Pokémon, moves, wild encounters,
-trainers, and locations. The location dataset also includes items, shops,
-warps, connections, gifts, static encounters, roaming activations,
-in-game trades, honey tree encounter pools, Great Marsh/Trophy Garden daily
-rotation pools, and Game Corner prize exchanges. Extracted records retain ROM
-provenance where practical.
+## Supported sites
 
-Honey trees and the Great Marsh/Trophy Garden dailies read from
-`arc/encdata_ex.narc`, a second encounter archive separate from the wild
-encounter tables, and only expose what the ROM stores as fixed data: species
-pools, not which entry is active. Which honey tree slathering yields, which
-four trees are a save file's guaranteed Rare trees, and which Great
-Marsh/Trophy Garden pool entries are live today are all derived from save-file
-state (trainer ID, a daily seed, or a save-persisted rotation), not ROM data,
-so those selections are out of scope by the same policy that keeps Poké Radar
-chains and dual-slot "today's" pick unrendered elsewhere in this project.
+| Site | Status |
+| --- | --- |
+| Pokémon Platinum | Complete data-driven Generation IV baseline |
+| Pokémon Renegade Platinum | Complete hack comparison against Platinum |
+| Pokémon Black & White | Data-driven sibling-version Generation V site |
+| Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
+| Pokémon Blaze Black 2 & Volt White 2 | Documentation-only site |
 
-Each roaming-Pokémon activation is now resolved to its species: the
-species-per-slot assignment is a compiled ARM9 constant (not a NARC table),
-verified against every real scripted activation call across both ROMs
-(Verity Cavern → Mesprit, Fullmoon Island → Cresselia, Eterna City →
-Moltres/Zapdos). Roamer level is also a compiled constant, but its exact ARM9
-bytes were not locatable without a symbol table or disassembler, so level is
-intentionally left unrendered rather than guessed — a hack that rebalances
-difficulty could plausibly have changed it. Renegade Platinum removes all
-three scripted roaming activations that exist in the base game.
+The current Generation IV and V engines cover Pokémon, abilities, moves, items,
+learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,
+trades, static encounters, and other engine-specific mechanics where exact
+extraction is supported. Each site's data-sources page records its exact input
+versions, provenance, and known limitations.
 
-The Game Corner's Prize Exchange counter reads a fixed 19-entry {item, price}
-table at a literal ARM9 code offset (`game_corner_prize_table_offset`), not a
-NARC table — verified byte-for-byte against the decompilation for the retail
-ROM, then located at the identical offset in Renegade Platinum, which patches
-the same table in place with an entirely different, held-item-focused prize
-list (e.g. Life Orb, Leftovers, Focus Sash) rather than vanilla Platinum's TMs.
+## Setup
 
-Some Gen IV data categories are known but not yet extracted: the ROM's own
-Pokédex/description text banks. This needs dedicated offset research and is
-tracked as follow-up work rather than silently approximated.
+ROM Wiki requires Python 3.12 or newer.
 
-The exact USA retail release of Pokémon Platinum is also registered as the
-`platinum-us` profile. It reuses the Generation IV engine and has been validated
-across every raw and enriched dataset as the clean normalized baseline for
-Renegade Platinum comparisons. Comparative builds annotate every supported
-catalog and detail page and generate a game-wide Changes overview.
-
-Pokémon Black and White (`black-us`/`white-us` profiles) are supported through
-a second, independent engine adapter (`gen5_bw`), reaching feature parity with
-the Generation IV engine's own datasets: Pokémon, moves, abilities (including
-Pickup/Honey Gather item tables), egg moves, evolutions, TM/HM machines,
-items (including fossil-revival species), wild encounters, trainers (with
-real map locations resolved from the field-script engine), and locations
-(warps, outdoor map connections, static/gift encounters, visible/hidden
-field items, and script-linked shops). Standard Poké Marts are identified as
-dynamic badge-tier shops; specialty and TM inventories are linked to their
-exact locations. The remaining confirmed blocker is Thundurus/Tornadus's
-roaming activation, since the unmodified retail ROM stores executable code
-rather than a data word at the species offset. Berry soil-growth mechanics
-are confirmed absent from Generation V
-entirely (no Berry Farming feature exists in Black/White), not an
-unimplemented category. See
-`sites/games/black-white/wiki/data-sources.md` for the full investigation
-behind each of these.
-
-Blaze Black and Volt White v3.1 reuse the Gen V engine as a paired hack family.
-Each hack is compared with its corresponding retail base, while shared and
-version-specific current records remain explicit in one combined site.
-
-Every full build publishes curated Markdown, compact browser catalogs, and
-deterministic `data/*.json.gz` archives containing the complete normalized
-datasets. See [Data contracts](docs/development/data-contracts.md) for the
-boundary between these outputs.
-
-The project is designed to support additional games without coupling the wiki
-renderer to a particular ROM format. The normalized data contracts and MkDocs
-renderers are reusable, and extraction dispatch resolves the platform and engine
-adapter for a profile through the registries in `src/romwiki/platforms/registry.py`
-and `src/romwiki/engines/registry.py` rather than importing the Nintendo DS
-`gen4_dppt` engine directly. Supporting a different platform or generation still
-requires writing a new platform reader and/or engine adapter and registering it;
-it is not only a profile change. Registering an engine is enough to make an
-existing pipeline module *dispatch* to it, but a pipeline module that has only
-ever been exercised by one engine can still carry that engine's unstated
-assumptions. Implementing a second real engine (`gen5_bw`, alongside `gen4_dppt`)
-found two: `pipeline/locations.py` required several Platinum-only Sinnoh
-mechanics (honey trees, Trophy Garden, Great Marsh, decorations, seals, Battle
-Frontier) unconditionally, and `pipeline/build_context.py` eagerly required
-several ancillary Pokémon-enrichment datasets (learnsets, evolutions, machines,
-tutors, egg moves, pickup) that a new engine's first slice may not have yet.
-Both needed small, targeted fixes — gating the feature on whether the profile
-actually configures it — not a redesign. Expect a new engine to occasionally
-need this kind of pipeline generalization, not just registration.
-
-See [Architecture](docs/development/architecture.md) for the data flow and
-current extension boundaries, and [Adding a game](docs/development/adding-a-game.md)
-for the implementation checklist.
-
-## Development setup
-
-```console
+```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev,docs]"
 ```
 
-### Local game inputs
-
-Keep machine-specific ROM paths in the ignored `.local/games.toml` registry rather
-than committed profiles. Start from the tracked example:
+Create the ignored local game registry:
 
 ```powershell
 New-Item -ItemType Directory -Force .local | Out-Null
 Copy-Item config/games.example.toml .local/games.toml
 ```
 
-Paths are relative to the configuration file. A hack entry may declare both its
-patched image and the clean base release used for normalized comparisons:
+Paths in `.local/games.toml` are relative to that file:
 
 ```toml
 version = 1
@@ -137,473 +55,121 @@ patched_rom = "roms/Pokemon - Renegade Platinum.nds"
 base_rom = "roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-Select the patched image by game ID, or add `--base` to select its clean base:
+Committed profiles identify and decode supported ROM revisions; the local
+registry only supplies machine-specific paths.
+
+## Common workflows
+
+Identify a configured ROM or its clean comparison base:
 
 ```console
 romwiki inspect --game renegade-platinum
-romwiki inspect --game renegade-platinum --base
-romwiki build-game --game renegade-platinum
-romwiki extract-personal --game renegade-platinum --base
+romwiki inspect --game renegade-platinum --base --json
 ```
 
-`build-game` is the normal complete workflow. It finishes and caches all clean-ROM
-raw extraction before parsing the hack, then builds Pokémon, abilities, moves,
-items, encounters, trainers, locations, semantic comparison JSON, and the wiki.
-Cached baseline data lives under `build/data/baselines/<base-profile>/` and is
-reused while its profile, ROM hash, schema, and cache revision still match.
-
-The same caching also applies to the hack ROM's raw extraction, cached under
-`build/data/cache/<profile>/`. If the hack ROM's hash hasn't changed since the
-last build, extraction is skipped and the cached data is reused; enrichment and
-rendering still run, but this cuts out the slowest step of an unchanged rebuild.
-Pass `--refresh-cache` to force re-extraction regardless.
+Build every dataset and wiki section for one game:
 
 ```console
-romwiki baseline build --game renegade-platinum
-romwiki baseline build --game renegade-platinum --scope pokemon moves
-romwiki build-game --game renegade-platinum --refresh-baseline
-romwiki build-game --game renegade-platinum --refresh-cache
+romwiki build game --game renegade-platinum
 ```
 
-Configured builds require the registered base ROM by default. For an explicit ROM
-path, supply `--base-rom`; use `--hack-only` only when intentionally generating a
-site without comparisons:
+When a clean base is configured, the build extracts and caches it before
+current-game data. It then enriches normalized datasets, writes semantic
+comparisons, renders the configured site, and publishes deterministic compressed
+data downloads. The owning site is resolved from the profile, so profile and site
+IDs do not need to be identical.
 
-```console
-romwiki build-game --rom "D:\Games\hack.nds" --base-rom "D:\Games\base.nds"
-romwiki build-moves --rom "D:\Games\hack.nds" --hack-only
-```
-
-The individual `build-*` commands remain useful during focused development and
-follow the same baseline policy. `inspect`, `manifest`, and `extract-*` stay
-single-ROM audit commands and never implicitly parse another image. MkDocs itself
-only consumes generated files and never opens a ROM.
-
-### Complete regeneration
-
-Use the site-catalog-driven workflow to regenerate every published data-driven
-game, build all published sites, and audit the combined artifact:
-
-```console
-romwiki regenerate --all
-```
-
-The command validates every required local ROM and PokéDB generation before it
-writes generated content. Single-profile sites dispatch through `build-game`;
-version-family sites dispatch through `build-version-family` with the profiles and
-version labels declared in `game.toml`. Documentation-only sites skip data
-generation but remain part of the final MkDocs build.
-
-Normal runs reuse hash- and schema-validated extraction caches. Force current and
-baseline re-extraction with:
-
-```console
-romwiki regenerate --all --refresh
-```
-
-After generation, site building, and auditing all succeed, the same command can
-update the tracked publication snapshot:
-
-```console
-romwiki regenerate --all --snapshot
-```
-
-`--snapshot` requires `--all`, preventing a partial selection from replacing the
-complete snapshot. For focused work, provide site IDs instead:
+Regenerate selected sites, or every published site:
 
 ```console
 romwiki regenerate platinum renegade-platinum
+romwiki regenerate --all
 ```
 
-Operational output includes timestamps and elapsed times for expensive phases.
-Use the global `--verbose` option before the command to show every audit warning,
-or `--quiet` to show warnings and errors only:
+`regenerate` preflights every required ROM and PokéDB generation before writing,
+then builds and audits the combined artifact. Add `--refresh` to replace current
+and baseline extraction caches. After reviewing a complete build, add
+`--snapshot` to update the tracked ROM-free publication snapshot:
+
+```console
+romwiki regenerate --all --refresh --snapshot
+```
+
+Global diagnostic options precede the command:
 
 ```console
 romwiki --verbose regenerate --all
 ```
 
-When a hack shares an existing retail profile's complete layout, it can inherit
-that configuration and override only its identity and hashes:
+## Focused development
 
-```toml
-[profile]
-id = "example-hack"
-name = "Example Hack"
-extends = "retail-profile"
-
-[[hashes]]
-algorithm = "sha256"
-value = "..."
-variant = "v1"
-```
-
-Nested TOML tables merge recursively; child scalar and array values replace
-their inherited values. Unknown parents and inheritance cycles are rejected.
-
-Use `--games-config` for a different registry. `--rom` provides a one-command
-override, and the original positional path remains supported:
+Single-ROM audit extraction and focused rendered builds are grouped by dataset:
 
 ```console
-romwiki inspect --rom "D:\Games\patched.nds"
-romwiki inspect "D:\Games\patched.nds"
+romwiki extract personal --game platinum-us
+romwiki extract encounters --game platinum-us
+romwiki build pokemon --game renegade-platinum
+romwiki build moves --game renegade-platinum --dev
 ```
 
-Only the selected path is validated for inspection and raw extraction. Comparative
-builds validate both configured paths before building. Profiles remain responsible
-for identifying each image; registering a path does not make an otherwise
-unsupported base release extractable.
-
-Inspect a locally supplied game image:
+Build a sibling-version family into one configured site:
 
 ```console
-romwiki inspect ".local/roms/Pokemon - Platinum Version (USA).nds"
-romwiki inspect ".local/roms/Pokemon - Platinum Version (USA).nds" --json
+romwiki build family --games black-us white-us --versions black white --site-id black-white
 ```
 
-Write the machine-readable manifest used by later extraction stages:
+Manage baseline caches explicitly when needed:
 
 ```console
-romwiki manifest ".local/roms/Pokemon - Platinum Version (USA).nds" --output build/data/manifest.json
+romwiki baseline build --game renegade-platinum
+romwiki baseline build --game renegade-platinum --scope pokemon moves
 ```
 
-Extract the first normalized Pokémon dataset:
+See [CLI reference](docs/cli-reference.md) for every command, input-selection
+rule, output option, and compatibility alias.
 
-```console
-romwiki extract-personal ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
+## Site development
 
-This writes `build/data/platinum-us/pokemon/personal.json`. Generated data is
-ignored until its publication and review policy is finalized.
-
-Extract exact level-up learnsets as a standalone audit dataset:
-
-```console
-romwiki extract-learnsets ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-This writes `build/data/platinum-us/pokemon/learnsets.json`. Each entry
-preserves the level and move order stored for its species or form.
-
-Extract exact egg move lists from the packed ARM9 table:
-
-```console
-romwiki extract-egg-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-This writes `build/data/platinum-us/pokemon/egg-moves.json`. Each record
-preserves the species marker, move order, table index, and overlay offset.
-
-Extract exact evolution methods and parameters:
-
-```console
-romwiki extract-evolutions ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-This writes `build/data/platinum-us/pokemon/evolutions.json`, including
-the ROM's internal item-name catalog used to resolve item-based conditions.
-
-Extract exact TM/HM move assignments:
-
-```console
-romwiki extract-machines ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-This writes `build/data/platinum-us/machines/raw.json`. The Pokémon and
-move builds join these assignments with the compatibility flags stored in each
-Pokémon personal record.
-
-Extract exact move-tutor assignments, requirements, locations, and compatibility:
-
-```console
-romwiki extract-tutors ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-This writes `build/data/platinum-us/tutors/raw.json`. The 38 shard-tutor
-records and 505 Pokémon/form compatibility rows come from ARM9 overlay 5. Four
-additional scripted tutors—Draco Meteor, Blast Burn, Hydro Cannon, and Frenzy
-Plant—are decoded from their field-script commands and eligibility checks.
-
-Extract the Pickup and Honey Gather item and rate tables:
-
-```console
-romwiki extract-pickup ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-This writes `build/data/platinum-us/pickup/raw.json`. Both abilities'
-tables are compiled data in ARM9 overlay 16, not a NARC table; the offsets
-were verified byte-for-byte against the decompilation, then confirmed
-identical between the base game and Renegade Platinum. `build-pokemon` joins
-this into the Pickup and Honey Gather ability pages automatically.
-
-Build enriched records and the Pokémon wiki pages using the local PokéDB output:
-
-```console
-romwiki build-pokemon --game renegade-platinum
-```
-
-The Pokémon build combines personal records, wild held-item slots, level-up and
-egg moves, evolutions, TM/HM compatibility, and move-tutor compatibility from the ROM, then uses
-PokéDB to resolve stable Pokémon and move names and links.
-
-This keeps the enriched audit dataset under `build/` and renders publishable
-Markdown into `sites/games/renegade-platinum/wiki/pokemon/`. The same command also
-derives the normalized ability catalog from ROM names and personal-data assignments,
-then renders it under `sites/games/renegade-platinum/wiki/abilities/`. The extracted
-ability data covers the name table, per-Pokémon assignments, and — for Pickup
-and Honey Gather specifically — their item and rate tables; the in-game
-description text lives in separate message banks that ROM Wiki does not yet
-extract, so ability pages carry PokéDB's effect description and flavor-text quote.
-
-Extract and render wild encounter tables:
-
-```console
-romwiki extract-encounters ".local/roms/Pokemon - Platinum Version (USA).nds"
-romwiki build-encounters ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-Encounter pages use archive member IDs as stable file names while displaying the
-in-game location names resolved through Platinum's map headers. Populated archive
-members without a static map-header reference remain available in a separate
-unreferenced section for auditing. Each slot's catch chance is derived from the
-fixed, publicly documented Generation III/IV per-slot weight tables (not stored
-in the ROM's encounter records, which only hold each slot's species and
-level(s)); slots for the same species and level(s) are combined into one row
-with their chances summed rather than shown as repeated rows.
-
-Special-encounter categories are also extracted: swarms, time-of-day
-replacements, and dual-slot substitutions (from connecting a Game Boy Advance
-game via dual-slot mode) each replace a specific walking-slot species only, so
-the level and chance shown for them are that slot's own values, not separate
-ROM data. Poké Radar encounters are shown with species and type but no fixed
-level or chance, since the ROM only populates that table for one specific
-shake outcome and most radar encounters instead continue the current chain's
-species. Unown's per-area letter set is resolved from the ROM's own table
-index. The Great Marsh and Trophy Garden daily rotations, which reuse two of
-the same slot positions, are not yet extracted — see "Current status" below.
-
-Extract and render trainer parties:
-
-```console
-romwiki extract-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
-romwiki build-trainers ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-Trainer pages include battle type, levels, held items, custom moves, the
-trainer's own AI battle items (consumables and stat boosters its AI may use on
-its own party mid-battle — never given to the player), and exact map locations
-resolved from standard trainer objects and literal scripted battle commands.
-Archive member IDs provide stable page names even when several trainers share
-a name; the catalog's static fallback list also appends each trainer's level
-range and party preview so genuinely identical-looking entries (e.g. many
-unrelated grunts of the same class) stay distinguishable without opening a
-page. Dynamically selected facility and rematch trainers, along with unused
-records, remain in a separate unlinked section until their invocation paths can be
-resolved without guessing.
-
-Extract and render map locations and navigation:
-
-```console
-romwiki extract-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
-romwiki build-locations ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-Location pages combine map headers with exact visible and hidden item pickups;
-common, specialty, decoration, weekday seal-shop, and Battle Frontier BP
-inventories and prices; event warps; outdoor map-matrix connections; wild
-encounter tables; literal Pokémon and egg gifts; in-game trades; scripted static
-encounters; roaming Pokémon activations; honey tree and Great Marsh/Trophy
-Garden daily encounter pools; Game Corner prize exchanges; and trainer
-references. Each map header keeps a stable page even when several interiors
-share the same displayed location name.
-
-Extract and render move mechanics:
-
-```console
-romwiki extract-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
-romwiki build-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-Move pages report the exact type, damage class, power, accuracy, PP, priority,
-effect ID, targeting, flag, and contest fields stored in the hack's active move
-archive. Move and type names come from configured ROM message tables. The move
-records themselves carry only an opaque effect ID — the in-game description
-text lives in separate message banks that ROM Wiki does not yet extract — so
-PokéDB supplies the effect text and flavor-text quote, alongside canonical
-comparison names and fallback metadata; ROM-derived values remain
-authoritative for every field the move records store.
-
-Extract and render the item catalog:
-
-```console
-romwiki extract-items ".local/roms/Pokemon - Platinum Version (USA).nds"
-romwiki build-items ".local/roms/Pokemon - Platinum Version (USA).nds"
-```
-
-Item pages combine the ROM item-name table, the 34-byte item mechanics records,
-and the ARM9 item-to-archive-member map. The enriched build links overworld and
-hidden pickups, shops, wild and trainer held items, trainers' own AI battle
-items, gifts, trades, item-based evolutions, and — for the seven fossil
-items — which Pokémon reviving them produces, from another fixed ARM9 table
-verified identical between the base game and Renegade Platinum. The 64 berry
-items also carry their full growth and contest-flavor mechanics, read from
-`itemtool/itemdata/nuts_data.narc`. As with abilities and moves,
-PokéDB supplies the item's effect description, flavor-text quote, and icon:
-the ROM's item records store mechanics, while the in-game description text
-lives in message banks that ROM Wiki does not yet extract.
-
-Profiles are loaded from `profiles/` by default. Use `--profiles-dir` to select a
-different directory.
-
-## Multi-site wiki
-
-The repository publishes one umbrella Pages artifact while keeping each game as an
-independent MkDocs site. The portal is emitted at the artifact root and game sites
-are emitted under stable slugs such as `/renegade-platinum/`.
-
-```text
-sites/
-├── portal/                    # Umbrella landing site
-├── games/
-│   └── renegade-platinum/     # Independent game site
-└── shared/                    # Shared templates and assets
-dist/                          # Ignored combined Pages artifact
-```
-
-List configured sites:
+List, build, preview, and audit the site catalog:
 
 ```console
 romwiki site list
-```
-
-Build one game locally or every published site for deployment:
-
-```console
-romwiki site build renegade-platinum --output dist
+romwiki site serve --all --dev
 romwiki site build --all --output dist
+romwiki site audit dist
 ```
 
-Generated game pages are ignored individually so the repository does not carry
-thousands of noisy Markdown diffs. After rebuilding and validating ROM-derived
-pages, update the deterministic, ROM-free publication snapshot:
-
-```console
-romwiki site snapshot
-```
-
-The preferred complete workflow is `romwiki regenerate --all --snapshot`; these
-lower-level site commands remain useful when generated data already exists.
-
-The tracked `sites/generated-wiki.tar.gz` contains generated Markdown, not ROMs.
-It also records a source/profile fingerprint, so deployment rejects an archive
-created by stale parser or renderer code. Deployment restores it before running
-MkDocs:
+Generated game pages are archived in `sites/generated-wiki.tar.gz` rather than
+tracked individually. A clean checkout restores them with:
 
 ```console
 romwiki site restore-snapshot
 ```
 
-`site build` fails when a required generated section is absent, preventing a
-clean checkout from silently publishing incomplete data. This includes the type
-chart and every other required generated section.
+See [Frontend](docs/development/frontend.md) for the shared design system and
+development-preview contract.
 
-Audit a built artifact for oversized pages and broken links before publishing:
+## Project documentation
 
-```console
-romwiki site audit dist
-romwiki site audit dist --max-page-kb 512 --max-images 150
-romwiki site audit dist --base-url https://example.github.io/rom-wiki/
-```
-
-`--max-page-kb` (default 512) flags pages whose rendered HTML exceeds the
-configured size; the command exits with an error if any are found, and this
-is the same check the GitHub Pages workflow runs against the built artifact
-before deploying. `--max-images` (default 150) is a softer signal: it prints
-a warning (not an error) for pages with more images than that, useful for
-spotting an accidental duplicate-row bug, but it doesn't fail the build —
-some pages, like widely tutor-compatible moves (e.g. Snore, learnable by
-hundreds of Pokémon at one tutor location), legitimately have a large,
-correct image count.
-
-Preview an individual site through the same combined-development interface:
-
-```console
-romwiki site serve renegade-platinum --dev
-```
-
-The root URL redirects to the selected game. Multiple site identifiers may be
-provided when a focused cross-wiki preview is useful:
-
-```console
-romwiki site serve platinum renegade-platinum --dev
-```
-
-Preview the portal and every published wiki:
-
-```console
-romwiki site serve --all --dev
-```
-
-The server defaults to `http://localhost:8000/` and replaces its temporary
-artifact below `build/mkdocs-dev/` at startup. Shared templates and assets, site
-configuration, and wiki content are watched; a successful rebuild reloads open
-browser pages. Use `--host`, `--port`, or `--output` to override the defaults.
-
-For a faster frontend development loop, use the lightweight game configuration:
-
-```console
-python -m mkdocs serve --dirty --config-file sites/games/renegade-platinum/mkdocs.dev.yml
-```
-
-Add `--dev` to any `build-*` command (including `build-game`) to match this at
-generation time:
-
-```console
-romwiki build-game --game renegade-platinum --dev
-romwiki build-pokemon --game renegade-platinum --dev
-```
-
-See [Frontend](docs/development/frontend.md#development-preview) for what the
-`--dev` configuration and flag actually build and skip.
-
-The portal can be previewed alone by using `sites/portal/mkdocs.yml` instead. Each
-site inherits the shared responsive theme, light and dark palettes, catalog
-interface, and game selector from `sites/shared/`.
-
-Large generated sections expose progressively rendered catalogs with search,
-filters, sorting, and bookmarkable query parameters. A complete static link list
-remains available when JavaScript is disabled or a catalog cannot be loaded.
-
-The GitHub Pages workflow builds only committed structured data and maintained wiki
-content. It never requires or downloads a game image.
+- [CLI reference](docs/cli-reference.md): commands, inputs, outputs, and workflows.
+- [Architecture](docs/development/architecture.md): extraction and publication
+  boundaries.
+- [Adding a game](docs/development/adding-a-game.md): implementation checklist.
+- [Data contracts](docs/development/data-contracts.md): normalized and published
+  JSON guarantees.
+- [Frontend](docs/development/frontend.md): templates, catalogs, components, and
+  review requirements.
 
 ## PokéDB
 
-PokéDB is consumed as an external reference dataset rather than imported through
-its internal implementation. Standalone build commands derive the default local
-path as `../pokedb/.output/gen<N>` from the matched ROM profile's engine. Use
-`--pokedb` to provide a different generation output directory.
+PokéDB is a local external reference dataset for canonical names, links,
+descriptive text, and optional media URLs. Exact mechanics and comparisons remain
+ROM-derived.
 
-Beyond canonical names and links, PokéDB supplies the descriptive text the
-structured ROM records do not carry: Pokémon genus/height/weight/flavor text,
-and — for abilities, moves, and items — the human-readable effect description
-and Pokédex-style flavor-text quote, version-matched to the profile's
-`base_game` where PokéDB has per-version text. Gen IV ROMs do store their own
-Pokédex and description text in separate message banks; ROM Wiki does not yet
-extract those banks, so this display text describes the base game and a hack
-that edits it is not yet reflected (extracting the ROM's own text banks is a
-planned follow-up). ROM-derived values remain authoritative for every
-structured field the extraction reads; PokéDB never overrides one and is never
-the mechanic baseline for hack-changes comparisons.
-
-Pokémon pages, trainer party members, and items may also reference a sprite or
-icon URL selected from PokéDB. Sprites and icons are loaded lazily from the
-upstream PokéAPI sprites repository; ROM Wiki does not download, cache, or
-publish copies of those image files. Missing or unreachable images degrade to a
-text placeholder.
+Build commands derive `../pokedb/.output/gen<N>` from the matched engine by
+default. Use `--pokedb` or `--pokedb-root` to select another local output.
 
 ## Legal notice
 
-This repository does not include game images, patches, keys, or extracted
-copyrighted assets. Users must supply legally obtained inputs locally. Common game
-image and save-file extensions are ignored by Git.
+This repository does not include game images, patches, keys, saves, or extracted
+copyrighted assets. Users must supply legally obtained inputs locally.

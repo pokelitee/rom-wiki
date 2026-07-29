@@ -31,7 +31,7 @@ class EngineCapabilityContractTests(unittest.TestCase):
     function (fragile, and it'd duplicate each extractor's own branching),
     this drives the real pipeline end-to-end against the real ROM for every
     currently configured profile, so a wiring mismatch fails here instead of
-    at first `build-version-pair` run. Skipped per-profile when its ROM
+    at first `build family` run. Skipped per-profile when its ROM
     isn't available locally (matching `test_cli.py`'s own precedent), so
     this suite still runs in environments without ROM fixtures.
     """

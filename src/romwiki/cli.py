@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -88,6 +89,30 @@ from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
 from romwiki.util.logging import configure_logging, timed_operation
 
 _LOG = logging.getLogger("romwiki")
+_LEGACY_COMMANDS = {
+    "manifest": ("inspect", "--manifest-output"),
+    "extract-personal": ("extract", "personal"),
+    "extract-encounters": ("extract", "encounters"),
+    "extract-trainers": ("extract", "trainers"),
+    "extract-locations": ("extract", "locations"),
+    "extract-moves": ("extract", "moves"),
+    "extract-items": ("extract", "items"),
+    "extract-learnsets": ("extract", "learnsets"),
+    "extract-egg-moves": ("extract", "egg-moves"),
+    "extract-evolutions": ("extract", "evolutions"),
+    "extract-machines": ("extract", "machines"),
+    "extract-tutors": ("extract", "tutors"),
+    "extract-pickup": ("extract", "pickup"),
+    "build-pokemon": ("build", "pokemon"),
+    "build-encounters": ("build", "encounters"),
+    "build-trainers": ("build", "trainers"),
+    "build-locations": ("build", "locations"),
+    "build-moves": ("build", "moves"),
+    "build-items": ("build", "items"),
+    "build-game": ("build", "game"),
+    "build-version-family": ("build", "family"),
+    "build-version-pair": ("build", "family"),
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -113,225 +138,91 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_parser = subparsers.add_parser("inspect", help="identify a ROM image")
     _add_input_arguments(inspect_parser)
     inspect_parser.add_argument("--json", action="store_true", help="emit JSON")
-
-    manifest_parser = subparsers.add_parser(
-        "manifest", help="write a machine-readable input manifest"
-    )
-    _add_input_arguments(manifest_parser)
-    manifest_parser.add_argument(
-        "--output",
+    inspect_parser.add_argument(
+        "--manifest-output",
         type=Path,
-        default=Path("build/data/manifest.json"),
-        help="manifest output path",
+        help="write a versioned input manifest to this path",
     )
 
-    personal_parser = subparsers.add_parser(
-        "extract-personal", help="extract normalized Pokémon personal data"
+    extract_parser = subparsers.add_parser(
+        "extract", help="write one normalized single-ROM audit dataset"
     )
-    _add_input_arguments(personal_parser)
-    personal_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/pokemon)",
+    extract_subparsers = extract_parser.add_subparsers(
+        dest="extract_kind", required=True
     )
 
-    encounter_parser = subparsers.add_parser(
-        "extract-encounters", help="extract normalized wild encounter data"
+    extract_specs = (
+        ("personal", "extract normalized Pokémon personal data", "pokemon"),
+        ("encounters", "extract normalized wild encounter data", "encounters"),
+        ("trainers", "extract normalized trainer and party data", "trainers"),
+        ("locations", "extract normalized map locations and navigation", "locations"),
+        ("moves", "extract normalized move mechanics", "moves"),
+        ("items", "extract normalized item mechanics", "items"),
+        ("learnsets", "extract normalized level-up learnsets", "pokemon"),
+        ("egg-moves", "extract normalized Pokémon egg moves", "pokemon"),
+        ("evolutions", "extract normalized Pokémon evolutions", "pokemon"),
+        ("machines", "extract TM/HM move assignments", "machines"),
+        ("tutors", "extract move tutor assignments and compatibility", "tutors"),
+        ("pickup", "extract Pickup/Honey Gather item and rate tables", "pickup"),
     )
-    _add_input_arguments(encounter_parser)
-    encounter_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/encounters)",
+    for kind, help_text, output_group in extract_specs:
+        extract_kind_parser = extract_subparsers.add_parser(kind, help=help_text)
+        _add_input_arguments(extract_kind_parser)
+        extract_kind_parser.add_argument(
+            "--output",
+            type=Path,
+            help=(
+                "dataset output path "
+                f"(default: below build/data/<profile>/{output_group})"
+            ),
+        )
+
+    build_group_parser = subparsers.add_parser(
+        "build", help="build one section, game, or sibling-version family"
+    )
+    build_subparsers = build_group_parser.add_subparsers(
+        dest="build_command", required=True
     )
 
-    trainer_parser = subparsers.add_parser(
-        "extract-trainers", help="extract normalized trainer and party data"
+    build_specs = (
+        ("pokemon", "extract, enrich, and render Pokémon pages", "enriched"),
+        (
+            "encounters",
+            "extract, enrich, and render wild encounter pages",
+            "enriched",
+        ),
+        ("trainers", "extract, enrich, and render trainer pages", "enriched"),
+        ("locations", "extract and render location navigation pages", "normalized"),
+        ("moves", "extract, enrich, and render move pages", "enriched"),
+        ("items", "extract, enrich, and render item pages", "enriched"),
     )
-    _add_input_arguments(trainer_parser)
-    trainer_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/trainers)",
-    )
+    for kind, help_text, data_label in build_specs:
+        section_parser = build_subparsers.add_parser(kind, help=help_text)
+        _add_input_arguments(section_parser)
+        section_parser.add_argument(
+            "--pokedb",
+            type=Path,
+            help=(
+                "PokéDB generation output directory "
+                "(default: derived from the ROM profile)"
+            ),
+        )
+        section_parser.add_argument(
+            "--data-output",
+            type=Path,
+            help=f"{data_label} dataset JSON output file",
+        )
+        section_parser.add_argument(
+            "--wiki-output",
+            type=Path,
+            help="generated section directory",
+        )
+        _add_comparison_arguments(section_parser)
+        _add_dev_argument(section_parser)
+        _add_cache_argument(section_parser)
 
-    location_parser = subparsers.add_parser(
-        "extract-locations", help="extract normalized map locations and navigation"
-    )
-    _add_input_arguments(location_parser)
-    location_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/locations)",
-    )
-
-    move_parser = subparsers.add_parser(
-        "extract-moves", help="extract normalized move mechanics"
-    )
-    _add_input_arguments(move_parser)
-    move_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/moves)",
-    )
-
-    item_parser = subparsers.add_parser(
-        "extract-items", help="extract normalized item mechanics"
-    )
-    _add_input_arguments(item_parser)
-    item_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/items)",
-    )
-
-    learnset_parser = subparsers.add_parser(
-        "extract-learnsets", help="extract normalized level-up learnsets"
-    )
-    _add_input_arguments(learnset_parser)
-    learnset_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/pokemon)",
-    )
-
-    egg_move_parser = subparsers.add_parser(
-        "extract-egg-moves", help="extract normalized Pokémon egg moves"
-    )
-    _add_input_arguments(egg_move_parser)
-    egg_move_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/pokemon)",
-    )
-
-    evolution_parser = subparsers.add_parser(
-        "extract-evolutions", help="extract normalized Pokémon evolutions"
-    )
-    _add_input_arguments(evolution_parser)
-    evolution_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/pokemon)",
-    )
-
-    machine_parser = subparsers.add_parser(
-        "extract-machines", help="extract TM/HM move assignments"
-    )
-    _add_input_arguments(machine_parser)
-    machine_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/machines)",
-    )
-
-    tutor_parser = subparsers.add_parser(
-        "extract-tutors", help="extract move tutor assignments and compatibility"
-    )
-    _add_input_arguments(tutor_parser)
-    tutor_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/tutors)",
-    )
-
-    pickup_parser = subparsers.add_parser(
-        "extract-pickup", help="extract Pickup/Honey Gather item and rate tables"
-    )
-    _add_input_arguments(pickup_parser)
-    pickup_parser.add_argument(
-        "--output",
-        type=Path,
-        help="dataset output path (defaults below build/data/<profile>/pickup)",
-    )
-
-    pokemon_parser = subparsers.add_parser(
-        "build-pokemon", help="extract, enrich, and render Pokémon pages"
-    )
-    _add_input_arguments(pokemon_parser)
-    pokemon_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        help="PokéDB generation output directory (default: derived from the ROM profile)",
-    )
-    pokemon_parser.add_argument("--data-output", type=Path)
-    pokemon_parser.add_argument("--wiki-output", type=Path)
-
-    build_encounters_parser = subparsers.add_parser(
-        "build-encounters", help="extract, enrich, and render wild encounter pages"
-    )
-    _add_input_arguments(build_encounters_parser)
-    build_encounters_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        help="PokéDB generation output directory (default: derived from the ROM profile)",
-    )
-    build_encounters_parser.add_argument("--data-output", type=Path)
-    build_encounters_parser.add_argument("--wiki-output", type=Path)
-
-    build_trainers_parser = subparsers.add_parser(
-        "build-trainers", help="extract, enrich, and render trainer pages"
-    )
-    _add_input_arguments(build_trainers_parser)
-    build_trainers_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        help="PokéDB generation output directory (default: derived from the ROM profile)",
-    )
-    build_trainers_parser.add_argument("--data-output", type=Path)
-    build_trainers_parser.add_argument("--wiki-output", type=Path)
-
-    build_locations_parser = subparsers.add_parser(
-        "build-locations", help="extract and render location navigation pages"
-    )
-    _add_input_arguments(build_locations_parser)
-    build_locations_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        help="PokéDB generation output directory (default: derived from the ROM profile)",
-    )
-    build_locations_parser.add_argument("--data-output", type=Path)
-    build_locations_parser.add_argument("--wiki-output", type=Path)
-
-    build_moves_parser = subparsers.add_parser(
-        "build-moves", help="extract, enrich, and render move pages"
-    )
-    _add_input_arguments(build_moves_parser)
-    build_moves_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        help="PokéDB generation output directory (default: derived from the ROM profile)",
-    )
-    build_moves_parser.add_argument("--data-output", type=Path)
-    build_moves_parser.add_argument("--wiki-output", type=Path)
-
-    build_items_parser = subparsers.add_parser(
-        "build-items", help="extract, enrich, and render item pages"
-    )
-    _add_input_arguments(build_items_parser)
-    build_items_parser.add_argument(
-        "--pokedb",
-        type=Path,
-        help="PokéDB generation output directory (default: derived from the ROM profile)",
-    )
-    build_items_parser.add_argument("--data-output", type=Path)
-    build_items_parser.add_argument("--wiki-output", type=Path)
-
-    build_parsers = (
-        pokemon_parser,
-        build_encounters_parser,
-        build_trainers_parser,
-        build_locations_parser,
-        build_moves_parser,
-        build_items_parser,
-    )
-    for build_parser in build_parsers:
-        _add_comparison_arguments(build_parser)
-        _add_dev_argument(build_parser)
-        _add_cache_argument(build_parser)
-
-    build_game_parser = subparsers.add_parser(
-        "build-game", help="build every dataset and wiki section for one game"
+    build_game_parser = build_subparsers.add_parser(
+        "game", help="build every dataset and wiki section for one game"
     )
     _add_input_arguments(build_game_parser)
     _add_comparison_arguments(build_game_parser)
@@ -342,14 +233,20 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
-    build_game_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
     build_game_parser.add_argument(
-        "--wiki-root", type=Path, help="game wiki root (defaults below sites/games)"
+        "--data-root",
+        type=Path,
+        default=Path("build/data"),
+        help="generated data root (default: build/data)",
+    )
+    build_game_parser.add_argument(
+        "--wiki-root",
+        type=Path,
+        help="game wiki root (default: site catalog entry for the matched profile)",
     )
 
-    version_pair_parser = subparsers.add_parser(
-        "build-version-family",
-        aliases=["build-version-pair"],
+    version_pair_parser = build_subparsers.add_parser(
+        "family",
         help="build one merged wiki for a sibling game-version family",
     )
     version_pair_parser.add_argument(
@@ -367,9 +264,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     version_pair_parser.add_argument(
         "--site-id",
+        required=True,
         help=(
-            "merged site identifier (required for build-version-family; "
-            "the compatibility alias defaults to black-white)"
+            "merged site identifier used for data and wiki output"
         ),
     )
     version_pair_parser.add_argument(
@@ -384,10 +281,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="PokéDB generation output directory (default: derived from the ROM profiles)",
     )
     version_pair_parser.add_argument(
-        "--data-root", type=Path, default=Path("build/data")
+        "--data-root",
+        type=Path,
+        default=Path("build/data"),
+        help="generated data root (default: build/data)",
     )
     version_pair_parser.add_argument(
-        "--wiki-root", type=Path, help="merged wiki root (defaults below sites/games)"
+        "--wiki-root",
+        type=Path,
+        help="merged game wiki root (default: resolved from --site-id)",
     )
     version_pair_parser.add_argument(
         "--refresh-baseline",
@@ -468,7 +370,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     baseline_build_parser.add_argument(
-        "--data-root", type=Path, default=Path("build/data")
+        "--data-root",
+        type=Path,
+        default=Path("build/data"),
+        help="generated data root (default: build/data)",
     )
     baseline_build_parser.add_argument(
         "--scope", nargs="+", choices=DATASET_KINDS, default=list(DATASET_KINDS)
@@ -476,7 +381,7 @@ def build_parser() -> argparse.ArgumentParser:
     baseline_build_parser.add_argument("--refresh", action="store_true")
 
     site_parser = subparsers.add_parser(
-        "site", help="list, build, serve, and audit configured wiki sites"
+        "site", help="list, build, serve, audit, snapshot, and restore wiki sites"
     )
     site_subparsers = site_parser.add_subparsers(dest="site_command", required=True)
     list_parser = site_subparsers.add_parser("list", help="list configured sites")
@@ -579,9 +484,57 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _normalize_legacy_argv(
+    argv: Sequence[str],
+) -> tuple[tuple[str, ...], str | None]:
+    values = list(argv)
+    command_index = next(
+        (
+            index
+            for index, value in enumerate(values)
+            if value not in {"-v", "--verbose", "-q", "--quiet"}
+        ),
+        None,
+    )
+    if command_index is None:
+        return tuple(values), None
+    command = values[command_index]
+    if command == "manifest":
+        values[command_index] = "inspect"
+        if "--output" in values:
+            values = [
+                "--manifest-output" if value == "--output" else value
+                for value in values
+            ]
+        else:
+            values.extend(("--manifest-output", "build/data/manifest.json"))
+        return tuple(values), command
+    replacement = _LEGACY_COMMANDS.get(command)
+    if replacement is None:
+        return tuple(values), None
+    values[command_index : command_index + 1] = replacement
+    return tuple(values), command
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw_argv = tuple(sys.argv[1:] if argv is None else argv)
+    normalized_argv, legacy_command = _normalize_legacy_argv(raw_argv)
+    args = build_parser().parse_args(normalized_argv)
     configure_logging(verbose=args.verbose, quiet=args.quiet)
+    if legacy_command is not None:
+        _LOG.warning(
+            "Command %s is deprecated; use %s",
+            legacy_command,
+            " ".join(_LEGACY_COMMANDS.get(legacy_command, ("inspect",))),
+        )
+    if args.command == "extract":
+        args.command = f"extract-{args.extract_kind}"
+    elif args.command == "build":
+        args.command = (
+            "build-version-family"
+            if args.build_command == "family"
+            else f"build-{args.build_command}"
+        )
     try:
         # Every subcommand that needs a `result` below registers ROM input
         # arguments via `_add_input_arguments`; keying off that attribute
@@ -590,10 +543,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if hasattr(args, "rom_override"):
             result = inspect_rom(_resolve_input_rom(args), args.profiles_dir)
         if args.command == "inspect":
-            _print_inspection(result, as_json=args.json)
-        elif args.command == "manifest":
-            write_manifest(create_manifest(result), args.output)
-            print(f"Wrote manifest: {args.output}")
+            if args.manifest_output is not None:
+                write_manifest(create_manifest(result), args.manifest_output)
+                print(f"Wrote manifest: {args.manifest_output}")
+            if args.manifest_output is None or args.json:
+                _print_inspection(result, as_json=args.json)
         elif args.command == "extract-personal":
             dataset = extract_personal_dataset(result)
             output = args.output or (
@@ -918,7 +872,8 @@ def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
         raise LocalConfigError(
             "Comparative builds require --game or --base-rom; use --hack-only to opt out"
         )
-    return LocalGameRegistry.load(args.games_config).get(args.game).rom(base=True)
+    paths = LocalGameRegistry.load(args.games_config).get(args.game)
+    return paths.base_rom
 
 
 def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> None:
@@ -944,7 +899,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     wiki_root = (
         args.wiki_output.parent
         if args.wiki_output is not None
-        else Path("sites/games") / game / "wiki"
+        else _profile_wiki_root(game)
     )
     dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     data_root = (
@@ -1045,7 +1000,7 @@ def _run_full_game_build(
     workflow = workflow or _create_build_workflow(args, result)
     game = workflow.current.profile.id
     data_root = args.data_root / game
-    wiki_root = args.wiki_root or Path("sites/games") / game / "wiki"
+    wiki_root = args.wiki_root or _profile_wiki_root(game)
     dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     builds = workflow.build_all()
     current_datasets = {kind: build.current for kind, build in builds.items()}
@@ -1111,10 +1066,7 @@ def _run_version_pair_build(
     workflows: Mapping[str, GameBuildWorkflow] | None = None,
 ) -> None:
     if args.site_id is None:
-        if args.command == "build-version-pair":
-            args.site_id = "black-white"
-        else:
-            raise LocalConfigError("build-version-family requires --site-id")
+        raise LocalConfigError("build family requires --site-id")
     games, versions = _version_family_inputs(args.games, args.versions)
     if workflows is None:
         registry = LocalGameRegistry.load(args.games_config)
@@ -1206,7 +1158,7 @@ def _run_version_pair_build(
         relationship_datasets["trades"] = merge_version_family_datasets(trade_datasets)
 
     site_id = args.site_id
-    wiki_root = args.wiki_root or Path("sites/games") / site_id / "wiki"
+    wiki_root = args.wiki_root or _site_wiki_root(site_id)
     data_root = args.data_root / site_id
     dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
     reference_index = ReferenceIndex.from_datasets(merged_datasets)
@@ -1600,6 +1552,38 @@ def _resolve_pokedb_path(
         )
     generation = generations.pop()
     return Path("../pokedb/.output") / f"gen{generation}"
+
+
+def _profile_wiki_root(profile_id: str, *, root: Path = Path(".")) -> Path:
+    resolved_root = root.resolve()
+    if not (resolved_root / "sites").is_dir():
+        return Path("sites/games") / profile_id / "wiki"
+    catalog = SiteCatalog.load(resolved_root)
+    matches = [
+        site
+        for site in catalog.sites
+        if site.game is not None
+        and site.game.data_driven
+        and profile_id in site.game.profiles
+    ]
+    if len(matches) > 1:
+        site_ids = ", ".join(site.id for site in matches)
+        raise SiteError(
+            f"Profile {profile_id} belongs to multiple game sites: {site_ids}"
+        )
+    if matches:
+        return matches[0].config_path.parent / "wiki"
+    return Path("sites/games") / profile_id / "wiki"
+
+
+def _site_wiki_root(site_id: str, *, root: Path = Path(".")) -> Path:
+    resolved_root = root.resolve()
+    if (resolved_root / "sites").is_dir():
+        catalog = SiteCatalog.load(resolved_root)
+        matches = [site for site in catalog.sites if site.id == site_id]
+        if matches:
+            return matches[0].config_path.parent / "wiki"
+    return Path("sites/games") / site_id / "wiki"
 
 
 def _write_dataset_build(

@@ -12,11 +12,14 @@ from romwiki.cli import (
     _current_relationship_datasets,
     _dataset_output,
     _load_comparisons,
+    _normalize_legacy_argv,
+    _profile_wiki_root,
     _report_site_audit,
     _resolve_build_baseline,
     _resolve_input_rom,
     _resolve_pokedb_path,
     _run_regeneration,
+    _site_wiki_root,
     _version_family_inputs,
     _version_family_uses_baselines,
     build_parser,
@@ -97,10 +100,56 @@ class MainErrorHandlingTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             main(["not-a-real-command"])
 
+    def test_top_level_help_exposes_grouped_commands_only(self) -> None:
+        parser = build_parser()
+        subparsers = next(
+            action for action in parser._actions if getattr(action, "choices", None)
+        )
+
+        self.assertEqual(
+            set(subparsers.choices),
+            {"inspect", "extract", "build", "regenerate", "baseline", "site"},
+        )
+
+    def test_legacy_commands_are_normalized_without_exposing_them(self) -> None:
+        normalized, command = _normalize_legacy_argv(
+            ["build-game", "--game", "renegade-platinum"]
+        )
+        manifest, manifest_command = _normalize_legacy_argv(
+            ["manifest", "game.nds", "--output", "manifest.json"]
+        )
+        default_manifest, _ = _normalize_legacy_argv(["manifest", "game.nds"])
+        pair, pair_command = _normalize_legacy_argv(
+            ["build-version-pair", "--games", "black-us", "white-us"]
+        )
+
+        self.assertEqual(
+            normalized,
+            ("build", "game", "--game", "renegade-platinum"),
+        )
+        self.assertEqual(command, "build-game")
+        self.assertEqual(
+            manifest,
+            (
+                "inspect",
+                "game.nds",
+                "--manifest-output",
+                "manifest.json",
+            ),
+        )
+        self.assertEqual(manifest_command, "manifest")
+        self.assertEqual(
+            default_manifest[-2:],
+            ("--manifest-output", "build/data/manifest.json"),
+        )
+        self.assertNotIn("--site-id", pair)
+        self.assertEqual(pair_command, "build-version-pair")
+
     def test_version_family_parser_accepts_three_games_and_labels(self) -> None:
         args = build_parser().parse_args(
             [
-                "build-version-pair",
+                "build",
+                "family",
                 "--games",
                 "red",
                 "blue",
@@ -109,6 +158,8 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "red-hack",
                 "blue-hack",
                 "yellow-hack",
+                "--site-id",
+                "test-family",
             ]
         )
 
@@ -257,6 +308,30 @@ class DatasetOutputPathTests(unittest.TestCase):
             )
 
 
+class WikiOutputPathTests(unittest.TestCase):
+    def test_resolves_profile_to_its_catalog_site(self) -> None:
+        self.assertEqual(
+            _profile_wiki_root("platinum-us", root=REPOSITORY_ROOT),
+            REPOSITORY_ROOT / "sites/games/platinum/wiki",
+        )
+        self.assertEqual(
+            _profile_wiki_root("renegade-platinum", root=REPOSITORY_ROOT),
+            REPOSITORY_ROOT / "sites/games/renegade-platinum/wiki",
+        )
+
+    def test_unknown_profile_retains_the_conventional_fallback(self) -> None:
+        self.assertEqual(
+            _profile_wiki_root("new-game", root=REPOSITORY_ROOT),
+            Path("sites/games/new-game/wiki"),
+        )
+
+    def test_resolves_family_site_from_the_catalog(self) -> None:
+        self.assertEqual(
+            _site_wiki_root("black-white", root=REPOSITORY_ROOT),
+            REPOSITORY_ROOT / "sites/games/black-white/wiki",
+        )
+
+
 class RelationshipDatasetTests(unittest.TestCase):
     def test_collects_companions_and_omits_unsupported_datasets(self) -> None:
         datasets = {
@@ -383,18 +458,41 @@ base_rom = "base.nds"
                 encoding="utf-8",
             )
             args = build_parser().parse_args(
-                ["build-game", "--game", "test", "--games-config", str(config)]
+                ["build", "game", "--game", "test", "--games-config", str(config)]
             )
 
             self.assertEqual(_resolve_build_baseline(args), base.resolve())
+
+    def test_configured_retail_build_without_base_is_standalone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rom = root / "retail.nds"
+            rom.touch()
+            config = root / "games.toml"
+            config.write_text(
+                "[games.retail]\npatched_rom='retail.nds'\n",
+                encoding="utf-8",
+            )
+            args = build_parser().parse_args(
+                [
+                    "build",
+                    "game",
+                    "--game",
+                    "retail",
+                    "--games-config",
+                    str(config),
+                ]
+            )
+
+            self.assertIsNone(_resolve_build_baseline(args))
 
     def test_explicit_build_requires_base_or_hack_only(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             rom = Path(directory) / "hack.nds"
             rom.touch()
-            args = build_parser().parse_args(["build-moves", str(rom)])
+            args = build_parser().parse_args(["build", "moves", str(rom)])
             hack_only = build_parser().parse_args(
-                ["build-moves", str(rom), "--hack-only"]
+                ["build", "moves", str(rom), "--hack-only"]
             )
 
             with self.assertRaisesRegex(LocalConfigError, "require --base-rom"):
@@ -406,14 +504,14 @@ base_rom = "base.nds"
             base = Path(directory) / "base.nds"
             base.touch()
             args = build_parser().parse_args(
-                ["build-game", "--game", "test", "--base-rom", str(base)]
+                ["build", "game", "--game", "test", "--base-rom", str(base)]
             )
 
             self.assertEqual(_resolve_build_baseline(args), base.resolve())
 
     def test_rejects_a_missing_explicit_base_rom_path(self) -> None:
         args = build_parser().parse_args(
-            ["build-game", "--game", "test", "--base-rom", "missing-base.nds"]
+            ["build", "game", "--game", "test", "--base-rom", "missing-base.nds"]
         )
 
         with self.assertRaisesRegex(LocalConfigError, "does not exist"):
@@ -421,10 +519,26 @@ base_rom = "base.nds"
 
     def test_rejects_base_rom_combined_with_hack_only_or_base(self) -> None:
         hack_only_args = build_parser().parse_args(
-            ["build-game", "--game", "test", "--base-rom", "base.nds", "--hack-only"]
+            [
+                "build",
+                "game",
+                "--game",
+                "test",
+                "--base-rom",
+                "base.nds",
+                "--hack-only",
+            ]
         )
         base_args = build_parser().parse_args(
-            ["build-game", "--game", "test", "--base-rom", "base.nds", "--base"]
+            [
+                "build",
+                "game",
+                "--game",
+                "test",
+                "--base-rom",
+                "base.nds",
+                "--base",
+            ]
         )
 
         for args in (hack_only_args, base_args):
@@ -434,7 +548,7 @@ base_rom = "base.nds"
                 _resolve_build_baseline(args)
 
     def test_comparative_build_without_game_or_base_rom_is_rejected(self) -> None:
-        args = build_parser().parse_args(["build-game"])
+        args = build_parser().parse_args(["build", "game"])
 
         with self.assertRaisesRegex(LocalConfigError, "require --game or --base-rom"):
             _resolve_build_baseline(args)

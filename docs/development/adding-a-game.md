@@ -30,7 +30,7 @@ the complete comparative workflow:
 
 ```console
 romwiki baseline build --game example-hack
-romwiki build-game --game example-hack
+romwiki build game --game example-hack
 ```
 
 Do not build a mechanic baseline from PokéDB. It supplies names, links,
@@ -350,8 +350,8 @@ versions = ["black", "white"]
 The catalog-driven `romwiki regenerate` command uses these labels directly; it
 does not infer user-facing version identity from profile IDs.
 
-The `romwiki build-version-family --games black-us white-us --versions black
-white --site-id black-white` command accepts two or more profiles, merges each section with
+The `romwiki build family --games black-us white-us --versions black white
+--site-id black-white` command accepts two or more profiles, merges each section with
 `pipeline.version_merge.merge_version_family_datasets` (which tags every record with
 the `versions` it appears in -- `["black", "white"]` for shared content, a
 single entry for an exclusive), and renders the merged dataset into that one
@@ -368,9 +368,9 @@ with its corresponding clean base and merges those results with
 `merge_version_comparisons`. Detail pages preserve separate per-version
 comparisons wherever their values differ. Both registrations must define a
 base or neither may do so; a half-configured paired comparison is rejected.
-`--site-id` is required by the preferred command, preventing a new family from
-accidentally overwriting an existing site. `build-version-pair` remains as a
-compatibility alias and retains its historical `black-white` default.
+`--site-id` is required, preventing a new family from accidentally overwriting an
+existing site. The deprecated `build-version-pair` spelling remains temporarily
+available but follows the same explicit-site rule.
 
 Same-key records whose current values differ retain all complete records under
 `version_variants`. Only dataset kinds registered as variant-capable may contain
@@ -399,7 +399,7 @@ references.
 - Run `romwiki site snapshot` after validating the complete generated output,
   then test `romwiki site restore-snapshot` from a clean checkout.
 - Run `romwiki regenerate --all` to verify the descriptor-driven complete workflow.
-- Run `romwiki build-game --game <id>` twice and confirm the second run reuses the
+- Run `romwiki build game --game <id>` twice and confirm the second run reuses the
   baseline cache.
 - Test catalogs with missing optional values, duplicate labels, and enough records
   to exercise progressive rendering.

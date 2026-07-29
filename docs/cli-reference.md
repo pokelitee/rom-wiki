@@ -1,0 +1,250 @@
+# CLI reference
+
+ROM Wiki exposes six top-level command groups:
+
+```text
+inspect     identify one ROM and optionally write an input manifest
+extract     write one normalized single-ROM audit dataset
+build       extract, enrich, compare, and render game data
+regenerate  regenerate sites from the site catalog
+baseline    manage clean-ROM extraction caches
+site        list, build, serve, audit, snapshot, and restore sites
+```
+
+Use `romwiki <command> --help` and nested help such as
+`romwiki build game --help` for the authoritative option list.
+
+Global `--verbose` and `--quiet` options must precede the command:
+
+```console
+romwiki --verbose regenerate --all
+```
+
+## ROM inputs
+
+Commands that operate on one ROM accept three input forms:
+
+```console
+romwiki inspect --game renegade-platinum
+romwiki inspect --rom "D:\Games\patched.nds"
+romwiki inspect "D:\Games\patched.nds"
+```
+
+`--game` resolves a path from `.local/games.toml`. `--rom` is an explicit
+one-command override. The positional path is retained for compatibility.
+Conflicting input forms are rejected.
+
+Use `--base` with `--game` to select that registration's clean base image:
+
+```console
+romwiki inspect --game renegade-platinum --base
+```
+
+Use `--games-config` or `--profiles-dir` to replace their repository defaults.
+Path registration does not make an unsupported ROM extractable; the selected
+image must still match a committed profile.
+
+## Inspect
+
+Identify a ROM:
+
+```console
+romwiki inspect --game platinum-us
+romwiki inspect --game platinum-us --json
+```
+
+Write a versioned provenance manifest:
+
+```console
+romwiki inspect --game platinum-us --manifest-output build/data/manifest.json
+```
+
+The manifest is a standalone audit record. Extraction caches and later build
+stages maintain their own manifests and do not consume this file.
+
+## Extract
+
+`extract` writes one normalized single-ROM audit dataset without enrichment,
+comparison, or rendering:
+
+```console
+romwiki extract personal --game platinum-us
+romwiki extract encounters --game platinum-us
+romwiki extract trainers --game platinum-us
+```
+
+Available kinds are:
+
+| Kind | Default output below `build/data/<profile>/` |
+| --- | --- |
+| `personal` | `pokemon/personal.json` |
+| `learnsets` | `pokemon/learnsets.json` |
+| `egg-moves` | `pokemon/egg-moves.json` |
+| `evolutions` | `pokemon/evolutions.json` |
+| `machines` | `machines/raw.json` |
+| `tutors` | `tutors/raw.json` |
+| `pickup` | `pickup/raw.json` |
+| `moves` | `moves/raw.json` |
+| `items` | `items/raw.json` |
+| `encounters` | `encounters/raw.json` |
+| `trainers` | `trainers/raw.json` |
+| `locations` | `locations/raw.json` |
+
+Every kind accepts `--output` to replace its default file.
+
+## Build
+
+Build commands load the generation-appropriate PokéDB directory automatically.
+Use `--pokedb` to override it.
+
+### One game
+
+The normal per-game workflow is:
+
+```console
+romwiki build game --game renegade-platinum
+```
+
+It builds all normalized datasets, comparisons, public downloads, and rendered
+sections. When the profile belongs to one catalog site, that site's wiki root is
+selected automatically. Use `--wiki-root` only for an intentional alternative
+destination.
+
+Configured builds use `base_rom` when the registration defines one. Registrations
+without a base build as standalone games. For explicit paths, supply `--base-rom`;
+use `--hack-only` only when intentionally omitting comparisons:
+
+```console
+romwiki build game --rom "D:\Games\hack.nds" --base-rom "D:\Games\base.nds"
+romwiki build moves --rom "D:\Games\hack.nds" --hack-only
+```
+
+Current-ROM extraction is cached below `build/data/cache/<profile>/`; clean
+baselines are cached below `build/data/baselines/<base-profile>/`.
+`--refresh-cache` and `--refresh-baseline` replace those caches.
+
+### One section
+
+Focused section builds remain available for renderer and extraction development:
+
+```console
+romwiki build pokemon --game renegade-platinum
+romwiki build encounters --game renegade-platinum
+romwiki build trainers --game renegade-platinum
+romwiki build locations --game renegade-platinum
+romwiki build moves --game renegade-platinum
+romwiki build items --game renegade-platinum
+```
+
+They follow the same baseline policy as a full game build. `--data-output` names
+the primary dataset file, while `--wiki-output` names the generated section
+directory. `--dev` renders only the representative detail pages declared by the
+site's `dev-pages.toml`, while retaining complete catalog data.
+
+### Sibling-version family
+
+Two or more sibling versions can publish into one site:
+
+```console
+romwiki build family --games black-us white-us --versions black white --site-id black-white
+```
+
+`--site-id` is required. Each version label tags shared and exclusive records.
+If any registration defines `base_rom`, every registration in the family must
+define one so comparisons can be merged consistently.
+
+## Regenerate
+
+`regenerate` is the complete catalog-driven workflow:
+
+```console
+romwiki regenerate platinum renegade-platinum
+romwiki regenerate --all
+```
+
+It:
+
+1. validates every selected site, local ROM registration, profile match, and
+   PokéDB generation;
+2. dispatches single-profile and version-family data builds;
+3. builds the selected MkDocs sites into one artifact;
+4. audits the combined artifact.
+
+Normal runs reuse validated caches. `--refresh` replaces current and baseline
+caches. `--snapshot` is restricted to `--all` and archives the successfully
+audited generated content:
+
+```console
+romwiki regenerate --all --refresh --snapshot
+```
+
+## Baseline caches
+
+Warm every clean-ROM baseline dataset or a selected scope:
+
+```console
+romwiki baseline build --game renegade-platinum
+romwiki baseline build --game renegade-platinum --scope pokemon moves
+```
+
+Use `--refresh` to replace valid baseline cache entries.
+
+## Sites
+
+List all sites or published automation metadata:
+
+```console
+romwiki site list
+romwiki site list --published --json
+```
+
+Build one or every published site:
+
+```console
+romwiki site build renegade-platinum --output dist
+romwiki site build --all --output dist
+```
+
+Serve a focused selection or every published site with live reload:
+
+```console
+romwiki site serve renegade-platinum --dev
+romwiki site serve --all --dev
+```
+
+Audit a combined artifact:
+
+```console
+romwiki site audit dist
+romwiki site audit dist --max-page-kb 512 --max-images 150
+```
+
+Create or restore the deterministic ROM-free publication snapshot:
+
+```console
+romwiki site snapshot
+romwiki site restore-snapshot
+```
+
+Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
+because it guarantees generation, site building, and auditing succeeded before
+the snapshot is replaced.
+
+## Compatibility commands
+
+The previous flat command spellings remain accepted temporarily and emit a
+deprecation warning:
+
+```text
+extract-personal       -> extract personal
+extract-<kind>         -> extract <kind>
+build-pokemon          -> build pokemon
+build-<section>        -> build <section>
+build-game             -> build game
+build-version-family   -> build family
+build-version-pair     -> build family
+manifest               -> inspect --manifest-output
+```
+
+The deprecated `build-version-pair` spelling follows the same rule as
+`build family`: every version family must provide `--site-id` explicitly.
