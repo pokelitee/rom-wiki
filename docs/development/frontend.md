@@ -10,6 +10,12 @@ styles.
 and Markdown extensions. Each site inherits that file and points at
 `sites/shared/overrides/` for templates and assets.
 
+Material instant navigation is intentionally disabled. The combined artifact is
+made up of independently built MkDocs applications, each with its own theme
+metadata, JavaScript state, and search index. Crossing a wiki boundary must load
+the complete target document so those site-specific resources are initialized
+correctly.
+
 The repository-local MkDocs hook reads the existing site catalog for every build
 and adds the current site, portal URL, and published games to template context. It
 calculates links from each page depth, so navigation works both with `mkdocs serve`

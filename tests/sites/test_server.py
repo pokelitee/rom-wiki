@@ -66,6 +66,7 @@ class DevelopmentServerTests(unittest.TestCase):
                 "<!doctype html><body><p>ROM Wiki</p></body>",
                 encoding="utf-8",
             )
+            (root / "app.js").write_text("console.log('ready');", encoding="utf-8")
             reload_state = ReloadState()
             handler = partial(
                 DevelopmentRequestHandler,
@@ -82,6 +83,9 @@ class DevelopmentServerTests(unittest.TestCase):
                     self.assertEqual(response.headers["Cache-Control"], "no-store")
                 self.assertIn("/__romwiki_dev__/version", html)
                 self.assertIn("<p>ROM Wiki</p>", html)
+
+                with urlopen(f"http://{host}:{port}/app.js", timeout=5) as response:
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
 
                 self.assertEqual(self._version(host, port), "0")
                 reload_state.advance()

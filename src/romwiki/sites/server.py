@@ -78,6 +78,10 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self._landing_path = landing_path
         super().__init__(*args, directory=directory, **kwargs)
 
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def do_GET(self) -> None:
         request_path = urlsplit(self.path).path
         if request_path == _RELOAD_ENDPOINT:
@@ -86,7 +90,6 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         if request_path == "/" and self._landing_path != "/":
             self.send_response(302)
             self.send_header("Location", self._landing_path)
-            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             return
         html_path = self._requested_html_path()
@@ -107,7 +110,6 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
-        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(content)
 
@@ -119,7 +121,6 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
-        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(content)
 

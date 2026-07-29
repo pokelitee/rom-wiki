@@ -6,8 +6,6 @@ theme:
   features:
     - navigation.sections
     - navigation.top
-    - navigation.instant
-    - navigation.instant.progress
     - search.suggest
     - search.highlight
     - content.tooltips

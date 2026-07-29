@@ -4,6 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
+from romwiki.schema.versions import CATALOG_SCHEMA_VERSION
 from romwiki.sites import SUPPORTED_THEMES, SiteCatalog
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +43,16 @@ def _contrast(first: str, second: str) -> float:
 
 
 class FrontendContractTests(unittest.TestCase):
+    def test_browser_catalog_schema_matches_generated_catalogs(self) -> None:
+        catalog = (
+            OVERRIDES / "assets" / "javascripts" / "catalog" / "catalog.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            f"data.schema_version !== {CATALOG_SCHEMA_VERSION}",
+            catalog,
+        )
+
     def test_shared_theme_supports_light_dark_and_high_contrast(self) -> None:
         config = (ROOT / "sites" / "shared" / "mkdocs.base.yml").read_text(
             encoding="utf-8"
@@ -50,6 +61,7 @@ class FrontendContractTests(unittest.TestCase):
 
         self.assertIn("scheme: default", config)
         self.assertIn("scheme: slate", config)
+        self.assertNotIn("navigation.instant", config)
         self.assertIn("@media (forced-colors: active)", theme)
 
     def test_published_themes_define_applicable_light_and_dark_palettes(self) -> None:
@@ -177,6 +189,8 @@ class FrontendContractTests(unittest.TestCase):
         )
         self.assertIn('localStorage.getItem("romwiki.color-scheme")', template)
         self.assertIn('__md_set("__palette"', template)
+        self.assertIn('primary: "indigo"', template)
+        self.assertIn('accent: "indigo"', template)
         self.assertIn('"romwiki.color-scheme"', entrypoint)
         self.assertIn("localStorage.setItem", entrypoint)
 
