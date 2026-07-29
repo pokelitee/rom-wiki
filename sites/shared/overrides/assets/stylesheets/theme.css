@@ -1,4 +1,5 @@
-:root {
+:root,
+html[data-romwiki-theme="portal"] {
   --rw-accent: #5267a8;
   --rw-accent-rgb: 82, 103, 168;
   --rw-accent-strong: #5267a8;
@@ -29,7 +30,7 @@
   --md-accent-fg-color: var(--rw-accent);
 }
 
-[data-md-color-scheme="slate"] {
+body[data-md-color-scheme="slate"] {
   --rw-accent: #9dacdc;
   --rw-accent-rgb: 157, 172, 220;
   --rw-accent-strong: #4c5f98;
@@ -43,6 +44,12 @@
   --rw-negative: #d36e69;
   --rw-gender-male: #5d8fd0;
   --rw-gender-female: #d36995;
+  --rw-scrollbar-thumb: rgba(var(--rw-accent-rgb), 0.44);
+  --rw-scrollbar-thumb-hover: rgba(var(--rw-accent-rgb), 0.7);
+  --md-primary-fg-color: var(--rw-accent-strong);
+  --md-primary-fg-color--light: var(--rw-accent);
+  --md-primary-fg-color--dark: var(--rw-accent-strong);
+  --md-accent-fg-color: var(--rw-accent);
 }
 
 html[data-romwiki-theme="platinum"],
@@ -69,8 +76,8 @@ html[data-romwiki-theme="black-white"],
   --rw-shadow: 0 0.5rem 1.75rem rgba(20, 23, 28, 0.13);
 }
 
-html[data-md-color-scheme="slate"][data-romwiki-theme="platinum"],
-html[data-md-color-scheme="slate"] .rw-game-card[data-theme="platinum"] {
+html[data-romwiki-theme="platinum"] body[data-md-color-scheme="slate"],
+body[data-md-color-scheme="slate"] .rw-game-card[data-theme="platinum"] {
   --rw-accent: #aebde3;
   --rw-accent-rgb: 174, 189, 227;
   --rw-accent-strong: #4f6293;
@@ -81,8 +88,8 @@ html[data-md-color-scheme="slate"] .rw-game-card[data-theme="platinum"] {
   --rw-shadow: 0 0.5rem 1.75rem rgba(5, 8, 16, 0.3);
 }
 
-html[data-md-color-scheme="slate"][data-romwiki-theme="black-white"],
-html[data-md-color-scheme="slate"] .rw-game-card[data-theme="black-white"] {
+html[data-romwiki-theme="black-white"] body[data-md-color-scheme="slate"],
+body[data-md-color-scheme="slate"] .rw-game-card[data-theme="black-white"] {
   --rw-accent: #c4cad4;
   --rw-accent-rgb: 196, 202, 212;
   --rw-accent-strong: #414954;

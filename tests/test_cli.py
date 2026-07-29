@@ -522,7 +522,6 @@ def _game(
         platform="nintendo-ds",
         platform_name="Nintendo DS",
         creator="Test",
-        theme="test",
     )
 
 
@@ -541,6 +540,7 @@ def _site(
         order=0,
         config_path=root / "sites" / site_id / "mkdocs.yml",
         description="",
+        theme="portal" if kind == "portal" else "platinum",
         game=game,
     )
 

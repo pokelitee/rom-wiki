@@ -2,14 +2,36 @@
 
 {% block extrahead %}
   {{ super() }}
-  <meta name="romwiki-theme" content="{{ romwiki.current.theme if romwiki else 'portal' }}">
+  {% set romwiki_theme = romwiki.current.theme if romwiki else "portal" %}
+  <meta name="romwiki-theme" content="{{ romwiki_theme }}">
   <script>
-    document.documentElement.classList.add("rw-js");
-    window.setTimeout(function () {
-      if (!document.documentElement.classList.contains("rw-js-ready")) {
-        document.documentElement.classList.remove("rw-js");
+    (function () {
+      var root = document.documentElement;
+      root.dataset.romwikiTheme = "{{ romwiki_theme }}";
+      root.classList.add("rw-js");
+
+      try {
+        var scheme = localStorage.getItem("romwiki.color-scheme");
+        if (scheme === "default" || scheme === "slate") {
+          __md_set("__palette", {
+            color: {
+              media: scheme === "slate"
+                ? "(prefers-color-scheme: dark)"
+                : "(prefers-color-scheme: light)",
+              scheme: scheme
+            }
+          });
+        }
+      } catch (error) {
+        // Storage can be unavailable in privacy-restricted browsing contexts.
       }
-    }, 4000);
+
+      window.setTimeout(function () {
+        if (!root.classList.contains("rw-js-ready")) {
+          root.classList.remove("rw-js");
+        }
+      }, 4000);
+    })();
   </script>
   <link rel="stylesheet" href="{{ 'assets/stylesheets/theme.css' | url }}">
   <link rel="stylesheet" href="{{ 'assets/stylesheets/controls.css' | url }}">

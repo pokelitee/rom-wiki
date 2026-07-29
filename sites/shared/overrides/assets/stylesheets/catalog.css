@@ -88,8 +88,8 @@ html:not(.rw-js) .rw-catalog {
   transition: color .16s, background-color .16s, box-shadow .16s, transform .08s;
 }
 .rw-catalog__reset:hover {
-  color: #fff;
-  background: var(--rw-accent);
+  color: var(--rw-on-accent);
+  background: var(--rw-accent-strong);
 }
 .rw-catalog__reset:focus-visible {
   outline: none;
@@ -253,8 +253,8 @@ html:not(.rw-js) .rw-catalog {
   width: .85rem;
   height: .85rem;
   border-radius: 50%;
-  color: #fff;
-  background: var(--rw-accent);
+  color: var(--rw-on-accent);
+  background: var(--rw-accent-strong);
   font-size: .58rem;
   font-weight: 850;
   line-height: 1;

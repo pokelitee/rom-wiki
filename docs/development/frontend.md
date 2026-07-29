@@ -15,14 +15,23 @@ and adds the current site, portal URL, and published games to template context. 
 calculates links from each page depth, so navigation works both with `mkdocs serve`
 and when the combined artifact is hosted below a GitHub Pages repository path.
 
-Appearance tokens are declared in a game's `[appearance]` table. Shared CSS maps a
-token to custom properties such as `--rw-accent`; components consume the variables
-rather than game names. Components must support the default and slate Material
-schemes and remain readable without color.
+Appearance tokens are declared in every site descriptor's `[appearance]` table,
+including the portal. Shared CSS maps a token to custom properties such as
+`--rw-accent`; components consume the variables rather than game names. Components
+must support the default and slate Material schemes and remain readable without
+color.
 
 Each published theme defines light and dark values for its accent, filled accent,
 surfaces, borders, muted text, and shadows. The portal applies the same tokens to
 game cards so their visual identity is visible before entering a game site.
+Material owns the active color-scheme attribute on the document body; shared
+selectors combine that body state with the site token on the document root. The
+head template applies site identity before loading CSS and synchronizes an explicit
+light/dark choice across the independently built wiki roots.
+
+Use `--rw-accent` for foreground text, borders, and decorative fills.
+Controls with text or icons on a solid theme-colored background use
+`--rw-accent-strong` with `--rw-on-accent`.
 
 `theme.css` also defines a fixed set of custom properties independent of any
 game's appearance token: `--rw-positive`/`--rw-negative` for change-status

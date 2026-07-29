@@ -307,8 +307,10 @@ theme = "platinum"
 ```
 
 IDs, platform names, and theme tokens use lowercase hyphenated values. Add the
-theme token's CSS variables to the shared stylesheet only when the existing palette
-is unsuitable. Do not create a game-specific copy of the shared templates.
+theme token to `SUPPORTED_THEMES` and define its light and dark CSS variables in the
+shared stylesheet only when the existing palettes are unsuitable. The frontend
+contract derives published tokens from the site catalog and verifies both selector
+coverage and contrast. Do not create a game-specific copy of the shared templates.
 
 The game MkDocs configuration inherits `sites/shared/mkdocs.base.yml`, points
 `theme.custom_dir` at the shared overrides, and registers the repository-local

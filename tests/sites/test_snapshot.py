@@ -128,7 +128,7 @@ platform = "nintendo-ds"
 platform_name = "Nintendo DS"
 creator = "Tester"
 [appearance]
-theme = "documentation"
+theme = "platinum"
 """.strip(),
                 encoding="utf-8",
             )
@@ -178,6 +178,8 @@ slug = ""
 published = true
 order = 0
 mkdocs_config = "mkdocs.yml"
+[appearance]
+theme = "portal"
 """.strip(),
         encoding="utf-8",
     )
@@ -199,7 +201,7 @@ platform = "nintendo-ds"
 platform_name = "Nintendo DS"
 creator = "Tester"
 [appearance]
-theme = "test-game"
+theme = "platinum"
 """.strip(),
         encoding="utf-8",
     )

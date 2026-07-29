@@ -111,13 +111,13 @@
   box-shadow: 0 0 0 2px rgba(var(--rw-accent-rgb), .24);
 }
 .rw-select__match-option--selected {
-  color: #fff;
-  background: var(--rw-accent);
+  color: var(--rw-on-accent);
+  background: var(--rw-accent-strong);
   box-shadow: var(--rw-control-shadow);
 }
 .rw-select__match-option--selected:hover,
 .rw-select__match-option--selected:focus-visible {
-  color: #fff;
+  color: var(--rw-on-accent);
 }
 .rw-select__options {
   display: grid;
@@ -169,8 +169,9 @@
 }
 .rw-select--multiple .rw-select__option--selected::after {
   content: "✓";
-  border-color: var(--rw-accent);
-  background: var(--rw-accent);
+  border-color: var(--rw-accent-strong);
+  color: var(--rw-on-accent);
+  background: var(--rw-accent-strong);
 }
 .rw-select__clear {
   position: sticky;

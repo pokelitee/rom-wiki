@@ -1,10 +1,44 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
+from romwiki.sites import SUPPORTED_THEMES, SiteCatalog
+
 ROOT = Path(__file__).resolve().parents[2]
+OVERRIDES = ROOT / "sites" / "shared" / "overrides"
 STYLES = ROOT / "sites" / "shared" / "overrides" / "assets" / "stylesheets"
+
+
+def _rule_properties(css: str, selector: str) -> dict[str, str]:
+    selector_start = css.index(selector)
+    block_start = css.index("{", selector_start)
+    block_end = css.index("}", block_start)
+    return {
+        name: value.strip()
+        for name, value in re.findall(
+            r"(--[\w-]+|[\w-]+)\s*:\s*([^;]+);",
+            css[block_start + 1 : block_end],
+        )
+    }
+
+
+def _relative_luminance(color: str) -> float:
+    channels = [int(color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+    linear = [
+        channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+        for channel in channels
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def _contrast(first: str, second: str) -> float:
+    lighter, darker = sorted(
+        (_relative_luminance(first), _relative_luminance(second)),
+        reverse=True,
+    )
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 class FrontendContractTests(unittest.TestCase):
@@ -18,19 +52,133 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("scheme: slate", config)
         self.assertIn("@media (forced-colors: active)", theme)
 
-    def test_published_game_themes_define_light_and_dark_palettes(self) -> None:
+    def test_published_themes_define_applicable_light_and_dark_palettes(self) -> None:
         theme = (STYLES / "theme.css").read_text(encoding="utf-8")
+        catalog = SiteCatalog.load(ROOT)
+        published_themes = {site.theme for site in catalog.published()}
 
-        for token in ("platinum", "black-white"):
+        self.assertLessEqual(published_themes, set(SUPPORTED_THEMES))
+        self.assertIn('html[data-romwiki-theme="portal"]', theme)
+        self.assertIn('body[data-md-color-scheme="slate"]', theme)
+
+        for token in SUPPORTED_THEMES - {"portal"}:
             self.assertIn(f'html[data-romwiki-theme="{token}"]', theme)
             self.assertIn(f'.rw-game-card[data-theme="{token}"]', theme)
             self.assertIn(
-                f'html[data-md-color-scheme="slate"][data-romwiki-theme="{token}"]',
+                f'html[data-romwiki-theme="{token}"] '
+                'body[data-md-color-scheme="slate"]',
+                theme,
+            )
+            self.assertIn(
+                'body[data-md-color-scheme="slate"] '
+                f'.rw-game-card[data-theme="{token}"]',
                 theme,
             )
 
-        self.assertIn("--rw-accent-strong:", theme)
-        self.assertIn("--rw-on-accent:", theme)
+    def test_theme_text_and_filled_accents_meet_wcag_aa_contrast(self) -> None:
+        css = (STYLES / "theme.css").read_text(encoding="utf-8")
+        root = _rule_properties(css, ":root")
+        dark_root = {
+            **root,
+            **_rule_properties(css, 'body[data-md-color-scheme="slate"]'),
+        }
+
+        for token in SUPPORTED_THEMES:
+            light = root
+            dark = dark_root
+            if token != "portal":
+                light = {
+                    **root,
+                    **_rule_properties(
+                        css,
+                        f'html[data-romwiki-theme="{token}"]',
+                    ),
+                }
+                dark = {
+                    **dark_root,
+                    **_rule_properties(
+                        css,
+                        f'html[data-romwiki-theme="{token}"] '
+                        'body[data-md-color-scheme="slate"]',
+                    ),
+                }
+
+            for scheme, properties in (("light", light), ("dark", dark)):
+                with self.subTest(theme=token, scheme=scheme):
+                    self.assertGreaterEqual(
+                        _contrast(
+                            properties["--rw-accent"],
+                            properties["--rw-surface"],
+                        ),
+                        4.5,
+                    )
+                    self.assertGreaterEqual(
+                        _contrast(
+                            properties["--rw-on-accent"],
+                            properties["--rw-accent-strong"],
+                        ),
+                        4.5,
+                    )
+                    self.assertGreaterEqual(
+                        _contrast(
+                            properties["--rw-text-muted"],
+                            properties["--rw-surface"],
+                        ),
+                        4.5,
+                    )
+
+    def test_dark_scheme_recomputes_derived_theme_tokens_on_the_body(self) -> None:
+        css = (STYLES / "theme.css").read_text(encoding="utf-8")
+        dark = _rule_properties(css, 'body[data-md-color-scheme="slate"]')
+
+        self.assertEqual(
+            dark["--rw-scrollbar-thumb"],
+            "rgba(var(--rw-accent-rgb), 0.44)",
+        )
+        self.assertEqual(
+            dark["--rw-scrollbar-thumb-hover"],
+            "rgba(var(--rw-accent-rgb), 0.7)",
+        )
+        self.assertEqual(
+            dark["--md-primary-fg-color"],
+            "var(--rw-accent-strong)",
+        )
+        self.assertEqual(dark["--md-accent-fg-color"], "var(--rw-accent)")
+
+    def test_filled_accent_components_use_filled_theme_tokens(self) -> None:
+        css = "\n".join(
+            path.read_text(encoding="utf-8") for path in sorted(STYLES.glob("*.css"))
+        )
+
+        for selector in (
+            ".rw-catalog__reset:hover",
+            ".rw-js .rw-catalog--failed .rw-catalog__status::before",
+            ".rw-record-tree__current",
+            ".rw-select__match-option--selected",
+            ".rw-select--multiple .rw-select__option--selected::after",
+        ):
+            properties = _rule_properties(css, selector)
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    properties["background"],
+                    "var(--rw-accent-strong)",
+                )
+                self.assertEqual(properties["color"], "var(--rw-on-accent)")
+
+    def test_theme_and_color_preference_initialize_before_styles(self) -> None:
+        template = (OVERRIDES / "main.html").read_text(encoding="utf-8")
+        entrypoint = (OVERRIDES / "assets" / "javascripts" / "romwiki.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertLess(
+            template.index("root.dataset.romwikiTheme"),
+            template.index("theme.css"),
+        )
+        self.assertIn('localStorage.getItem("romwiki.color-scheme")', template)
+        self.assertIn('__md_set("__palette"', template)
+        self.assertIn('"romwiki.color-scheme"', entrypoint)
+        self.assertIn("localStorage.setItem", entrypoint)
 
     def test_interactive_and_dense_components_keep_accessibility_states(self) -> None:
         css = "\n".join(

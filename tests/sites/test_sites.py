@@ -28,13 +28,14 @@ class SiteCatalogTests(unittest.TestCase):
             ],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
-        game = catalog.get("renegade-platinum").game
+        renegade_platinum = catalog.get("renegade-platinum")
+        self.assertEqual(renegade_platinum.theme, "platinum")
+        game = renegade_platinum.game
         self.assertIsNotNone(game)
         assert game is not None
         self.assertEqual(game.creator, "Drayano")
         self.assertEqual(game.platform, "nintendo-ds")
         self.assertEqual(game.platform_name, "Nintendo DS")
-        self.assertEqual(game.theme, "platinum")
         self.assertEqual(game.versions, ())
         black_white = catalog.get("black-white").game
         self.assertIsNotNone(black_white)
@@ -136,6 +137,8 @@ published = true
 order = 0
 mkdocs_config = "mkdocs.yml"
 description = "Portal"
+[appearance]
+theme = "portal"
 """.strip(),
                 encoding="utf-8",
             )
@@ -158,7 +161,7 @@ platform = "nintendo-ds"
 platform_name = "Nintendo DS"
 creator = "Tester"
 [appearance]
-theme = "Bad Theme"
+theme = "missing-theme"
 """.strip(),
                 encoding="utf-8",
             )

@@ -12,6 +12,7 @@ from romwiki.util.errors import SiteError
 
 SiteKind = Literal["portal", "game"]
 _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SUPPORTED_THEMES = frozenset({"black-white", "platinum", "portal"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +25,6 @@ class GameMetadata:
     platform: str
     platform_name: str
     creator: str
-    theme: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +37,7 @@ class SiteDefinition:
     order: int
     config_path: Path
     description: str
+    theme: str
     game: GameMetadata | None = None
 
     def output_path(self, output_root: Path) -> Path:
@@ -108,37 +109,48 @@ def _load_site(path: Path, root: Path) -> SiteDefinition:
         raise SiteError(f"Site descriptor does not exist: {path.relative_to(root)}")
     try:
         with path.open("rb") as stream:
-            data = tomllib.load(stream)["site"]
-        kind = data["kind"]
+            descriptor = tomllib.load(stream)
+        site = descriptor["site"]
+        kind = site["kind"]
         if kind not in {"portal", "game"}:
             raise SiteError(f"Invalid site kind in {path}: {kind}")
-        slug = data["slug"]
+        slug = site["slug"]
         if slug and not _SLUG_PATTERN.fullmatch(slug):
             raise SiteError(f"Invalid site slug in {path}: {slug}")
-        config_path = (path.parent / data["mkdocs_config"]).resolve()
+        theme = descriptor["appearance"]["theme"]
+        if not isinstance(theme, str) or not _SLUG_PATTERN.fullmatch(theme):
+            raise SiteError(f"Invalid theme in {path.relative_to(root)}: {theme}")
+        if theme not in SUPPORTED_THEMES:
+            raise SiteError(f"Unsupported theme in {path.relative_to(root)}: {theme}")
+        config_path = (path.parent / site["mkdocs_config"]).resolve()
         if not config_path.is_relative_to(root) or not config_path.is_file():
             raise SiteError(f"Invalid MkDocs configuration for {path}")
         return SiteDefinition(
-            id=data["id"],
-            name=data["name"],
+            id=site["id"],
+            name=site["name"],
             kind=kind,
             slug=slug,
-            published=data["published"],
-            order=data["order"],
+            published=site["published"],
+            order=site["order"],
             config_path=config_path,
-            description=data.get("description", ""),
-            game=_load_game_metadata(path, root) if kind == "game" else None,
+            description=site.get("description", ""),
+            theme=theme,
+            game=(
+                _load_game_metadata(path, root, descriptor["game"])
+                if kind == "game"
+                else None
+            ),
         )
     except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
         raise SiteError(f"Invalid site descriptor {path}: {error}") from error
 
 
-def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
+def _load_game_metadata(
+    path: Path,
+    root: Path,
+    game: dict[str, Any],
+) -> GameMetadata:
     try:
-        with path.open("rb") as stream:
-            data = tomllib.load(stream)
-        game = data["game"]
-        appearance = data["appearance"]
         generation = game["generation"]
         if not isinstance(generation, int) or generation < 1:
             raise SiteError(f"Invalid game generation in {path.relative_to(root)}")
@@ -146,21 +158,20 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
         if not isinstance(data_driven, bool):
             raise SiteError(f"Invalid data_driven flag in {path.relative_to(root)}")
         raw_profiles = game.get("profile", game.get("profiles", ()))
-        profiles = (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
+        profiles = (
+            (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
+        )
         raw_versions = game.get("versions", ())
         versions = tuple(raw_versions) if isinstance(raw_versions, list) else ()
         if (data_driven and not profiles) or not all(
             isinstance(value, str) for value in profiles
         ):
             raise SiteError(f"Invalid profile(s) in {path.relative_to(root)}")
-        if (
-            len(profiles) > 1
-            and (
-                len(versions) != len(profiles)
-                or not all(
-                    isinstance(value, str) and _SLUG_PATTERN.fullmatch(value)
-                    for value in versions
-                )
+        if len(profiles) > 1 and (
+            len(versions) != len(profiles)
+            or not all(
+                isinstance(value, str) and _SLUG_PATTERN.fullmatch(value)
+                for value in versions
             )
         ):
             raise SiteError(
@@ -175,7 +186,6 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
         slug_fields: dict[str, Any] = {
             "base_game": game["base_game"],
             "platform": game["platform"],
-            "theme": appearance["theme"],
         }
         for profile in profiles:
             if not _SLUG_PATTERN.fullmatch(profile):
@@ -202,9 +212,8 @@ def _load_game_metadata(path: Path, root: Path) -> GameMetadata:
             platform=slug_fields["platform"],
             platform_name=platform_name.strip(),
             creator=creator.strip(),
-            theme=slug_fields["theme"],
         )
-    except (KeyError, TypeError, tomllib.TOMLDecodeError) as error:
+    except (KeyError, TypeError) as error:
         raise SiteError(f"Invalid game metadata {path}: {error}") from error
 
 
@@ -236,10 +245,7 @@ def _validate_profile_references(
 ) -> None:
     if repository is None:
         return
-    profiles = {
-        profile.id: profile
-        for profile in repository.profiles
-    }
+    profiles = {profile.id: profile for profile in repository.profiles}
     for site in sites:
         if site.game is None or not site.game.data_driven:
             continue

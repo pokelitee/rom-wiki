@@ -189,7 +189,7 @@ def _site_context(site: SiteDefinition) -> dict[str, Any]:
         "platform": game.platform if game else None,
         "platform_name": game.platform_name if game else None,
         "creator": game.creator if game else None,
-        "theme": game.theme if game else "portal",
+        "theme": site.theme,
     }
 
 
