@@ -10,7 +10,7 @@ from romwiki.renderers.mkdocs.types import render_type_chart
 
 
 class TypeChartRenderingTests(unittest.TestCase):
-    def test_renders_one_matrix_page_with_stable_type_anchors(self) -> None:
+    def test_renders_one_matrix_page_with_plain_type_labels(self) -> None:
         profile = next(
             profile
             for profile in ProfileRepository.load(Path("profiles")).profiles
@@ -24,8 +24,10 @@ class TypeChartRenderingTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertIn("# Type effectiveness", page)
-        self.assertIn("[Fairy](#fairy)", page)
-        self.assertIn('<span id="fairy"></span>', page)
+        self.assertIn("| Fairy |", page)
+        self.assertIn("| **Fairy** |", page)
+        self.assertNotIn("](#", page)
+        self.assertNotIn('<span id="', page)
         self.assertIn("**0×**", page)
         self.assertIn('class="rw-type-chart__axis"', page)
         self.assertIn('aria-label="Attacking by row, defending by column"', page)

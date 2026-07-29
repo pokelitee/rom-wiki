@@ -251,7 +251,6 @@ def _render_record(
     type_dataset: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"pokemon/{record['slug']}.md"
-    source_url = source_file.removesuffix(".md") + "/"
     stats = record["base_stats"]
     held_items = [item for item in record.get("held_items", []) if item["id"]]
     machines = record["machines"]
@@ -265,14 +264,14 @@ def _render_record(
         f"# {record['name']}",
         "",
         *version_availability_note(record),
-        *pokemon_summary(record, source_url if type_dataset is not None else None),
-        *_defensive_effectiveness_section(record, type_dataset, source_url),
+        *pokemon_summary(record),
         *_reference_entry(reference),
         *_sprite_gallery(record),
         "## Base stats",
         "",
         *stat_list(stats, baseline_stats),
         "",
+        *_defensive_effectiveness_section(record, type_dataset),
         *_battle_forms_section(record),
         "## Training",
         "",
@@ -415,7 +414,6 @@ def _render_record(
 def _defensive_effectiveness_section(
     record: dict[str, Any],
     type_dataset: dict[str, Any] | None,
-    source_url: str,
 ) -> list[str]:
     if type_dataset is None:
         return []
@@ -430,7 +428,7 @@ def _defensive_effectiveness_section(
             continue
         rows.append(
             f"| {_effectiveness_label(multiplier)} | "
-            f"{type_badges([{'name': name} for name in types], source_url)} |"
+            f"{type_badges([{'name': name} for name in types])} |"
         )
     return [
         "## Type effectiveness",

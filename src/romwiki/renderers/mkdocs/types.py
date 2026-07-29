@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -11,9 +10,7 @@ from romwiki.renderers.mkdocs.components import display_name
 def render_type_chart(dataset: dict[str, Any], output_root: Path) -> int:
     output_root.mkdir(parents=True, exist_ok=True)
     records = dataset["records"]
-    headers = " | ".join(
-        f"[{display_name(record['name'])}](#{record['name']})" for record in records
-    )
+    headers = " | ".join(display_name(record["name"]) for record in records)
     alignments = " | ".join("---:" for _ in records)
     lines = [
         "# Type effectiveness",
@@ -36,10 +33,7 @@ def render_type_chart(dataset: dict[str, Any], output_root: Path) -> int:
         values = " | ".join(
             _display_multiplier(matchup["multiplier"]) for matchup in record["matchups"]
         )
-        name = record["name"]
-        lines.append(
-            f'| <span id="{escape(name)}"></span>**{display_name(name)}** | {values} |'
-        )
+        lines.append(f"| **{display_name(record['name'])}** | {values} |")
     lines.extend(["", "</div>", ""])
     write_text(output_root / "index.md", "\n".join(lines))
     return 1

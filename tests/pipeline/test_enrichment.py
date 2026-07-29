@@ -298,8 +298,11 @@ class PersonalEnrichmentTests(unittest.TestCase):
 
         self.assertIn("## Type effectiveness", page)
         self.assertIn("| ¼× |", page)
-        self.assertIn('href="../../types/#fire"', page)
+        self.assertNotIn('href="../../types/#', page)
+        self.assertNotIn("type effectiveness", page.split("## Type effectiveness", 1)[1])
         self.assertNotIn("| 1× |", page)
+        self.assertLess(page.index("## Base stats"), page.index("## Type effectiveness"))
+        self.assertLess(page.index("## Type effectiveness"), page.index("## Training"))
 
     def test_renders_battle_only_forms_section_when_present(self) -> None:
         record = _bulbasaur_record()

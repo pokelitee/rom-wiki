@@ -44,7 +44,6 @@ class RouteResolverTests(unittest.TestCase):
             ),
             ("item", "potion", "../items/potion.md", "../../items/potion/"),
             ("move", "tackle", "../moves/tackle.md", "../../moves/tackle/"),
-            ("type", "fire", "../types/index.md#fire", "../../types/#fire"),
             (
                 "location",
                 7,
@@ -81,6 +80,22 @@ class RouteResolverTests(unittest.TestCase):
                     ROUTES.published_href(reference, "pokemon/bulbasaur/"),
                     published_href,
                 )
+
+    def test_keeps_type_references_as_plain_text(self) -> None:
+        type_reference = entity_reference("type", "fire", "Fire", "fire")
+
+        self.assertEqual(
+            ROUTES.markdown_link(type_reference, "pokemon/charizard.md"),
+            "Fire",
+        )
+        self.assertEqual(
+            ROUTES.html_link(type_reference, "pokemon/charizard/"),
+            "Fire",
+        )
+        self.assertNotIn(
+            "url",
+            ROUTES.catalog_reference(type_reference, "pokemon/"),
+        )
 
     def test_serializes_catalog_reference_with_stable_identity(self) -> None:
         pokemon = entity_reference("pokemon", 1, "Bulbasaur", "bulbasaur")

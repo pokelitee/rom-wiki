@@ -29,7 +29,7 @@ class MkDocsHooksTests(unittest.TestCase):
     def test_rewrites_links_to_pages_filtered_from_dev_build(self) -> None:
         html = (
             '<a href="../pokemon/buneary.md">Buneary</a>'
-            '<a href="../types/index.md#fire">Fire</a>'
+            '<a href="../moves/tackle.md#effects">Effects</a>'
             '<a href="https://example.test/readme.md">External</a>'
         )
 
@@ -40,7 +40,7 @@ class MkDocsHooksTests(unittest.TestCase):
         )
 
         self.assertIn('href="../../pokemon/buneary/"', rewritten)
-        self.assertIn('href="../../types/#fire"', rewritten)
+        self.assertIn('href="../../moves/tackle/#effects"', rewritten)
         self.assertIn('href="https://example.test/readme.md"', rewritten)
 
     def test_on_page_content_leaves_production_html_unchanged(self) -> None:
@@ -52,7 +52,7 @@ class MkDocsHooksTests(unittest.TestCase):
             config.use_directory_urls,
         )
         page = Page("Klutz", file, config)
-        html = '<a href="../types/index.md#fire">Fire</a>'
+        html = '<a href="../abilities/klutz.md#effects">Effects</a>'
 
         rendered = mkdocs_hooks.on_page_content(
             html,

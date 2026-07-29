@@ -59,10 +59,16 @@ class EvolutionConditionTests(unittest.TestCase):
 
 
 class ComponentEscapingTests(unittest.TestCase):
-    def test_type_badges_use_published_fragment_routes(self) -> None:
-        badges = type_badges([{"name": "fire"}], "pokemon/charizard/")
+    def test_type_badges_are_presentational(self) -> None:
+        badges = type_badges([{"name": "fire"}])
 
-        self.assertIn('href="../../types/#fire"', badges)
+        self.assertEqual(
+            badges,
+            '<span class="rw-type-list">'
+            '<span class="rw-type rw-type--fire">Fire</span>'
+            "</span>",
+        )
+        self.assertNotIn("<a ", badges)
 
     def test_escapes_text_and_attribute_values(self) -> None:
         hostile = 'fire" onmouseover="alert(1)&<script>'

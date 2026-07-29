@@ -170,16 +170,16 @@ class SiteAuditTests(unittest.TestCase):
 
         self.assertTrue(report.ok, [issue.format() for issue in report.errors])
 
-    def test_accepts_nested_pokemon_link_to_type_chart_fragment(self) -> None:
+    def test_accepts_nested_page_link_to_fragment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             _write_page(
                 root / "pokemon" / "bulbasaur" / "index.html",
-                '<a href="../../types/#grass">Grass</a>',
+                '<a href="../../abilities/overgrow/#effects">Effects</a>',
             )
             _write_page(
-                root / "types" / "index.html",
-                '<span id="grass">Grass</span>',
+                root / "abilities" / "overgrow" / "index.html",
+                '<span id="effects">Effects</span>',
             )
 
             report = audit_site(root)

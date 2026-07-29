@@ -216,15 +216,20 @@ appearance depends on browser font rasterization.
 Renderer helpers produce semantic classes for type badges, summaries, stat bars,
 fact grids, exact clean-ROM comparisons, compact link lists, party cards, record
 navigation, and provenance details. Exact numeric values and normal links remain
-in the document; visualization is supplementary. Pokémon detail pages group move
-sources under one learnset section and include the common type, class, power,
-accuracy, and PP fields alongside source-specific level, machine, location, and
-requirement columns. Evolution sections derive a complete branch-aware graph from
-the ROM evolution dataset, stack wide branches into readable rows, make each species
-card navigable, highlight the current record, and guard against cycles. Long chains
-retain horizontal overflow as a narrow-viewport fallback. Branch outcomes remain
-separate horizontal paths so multi-stage lineage stays unambiguous. The lightweight
-development build retains Eevee and Wurmple as representative branch-layout fixtures.
+in the document; visualization is supplementary. Type badges are presentational
+labels rather than links. The complete type chart remains available through site
+navigation, and its row and column labels are plain text because they do not lead
+to distinct content. Pokémon detail pages place their defensive effectiveness
+summary after base stats, then group move sources under one learnset section and
+include the common type, class, power, accuracy, and PP fields alongside
+source-specific level, machine, location, and requirement columns. Evolution
+sections derive a complete branch-aware graph from the ROM evolution dataset,
+stack wide branches into readable rows, make each species card navigable,
+highlight the current record, and guard against cycles. Long chains retain
+horizontal overflow as a narrow-viewport fallback. Branch outcomes remain separate
+horizontal paths so multi-stage lineage stays unambiguous. The lightweight
+development build retains Eevee and Wurmple as representative branch-layout
+fixtures.
 
 Pokémon sprites are optional external URLs selected during enrichment. The summary
 uses one default image and the detail gallery includes all available version-specific

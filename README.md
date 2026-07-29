@@ -505,7 +505,7 @@ romwiki site restore-snapshot
 
 `site build` fails when a required generated section is absent, preventing a
 clean checkout from silently publishing incomplete data. This includes the type
-chart and each other generated section linked from record pages.
+chart and every other required generated section.
 
 Audit a built artifact for oversized pages and broken links before publishing:
 
