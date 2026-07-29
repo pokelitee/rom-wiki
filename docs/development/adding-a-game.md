@@ -311,6 +311,8 @@ theme token to `SUPPORTED_THEMES` and define its light and dark CSS variables in
 shared stylesheet only when the existing palettes are unsuitable. The frontend
 contract derives published tokens from the site catalog and verifies both selector
 coverage and contrast. Do not create a game-specific copy of the shared templates.
+The descriptor's generation must match the generation declared by its registered
+engine adapter.
 
 The game MkDocs configuration inherits `sites/shared/mkdocs.base.yml`, points
 `theme.custom_dir` at the shared overrides, and registers the repository-local

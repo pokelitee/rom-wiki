@@ -273,7 +273,7 @@ Extract the first normalized Pokémon dataset:
 romwiki extract-personal ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/pokemon/personal.json`. Generated data is
+This writes `build/data/platinum-us/pokemon/personal.json`. Generated data is
 ignored until its publication and review policy is finalized.
 
 Extract exact level-up learnsets as a standalone audit dataset:
@@ -282,7 +282,7 @@ Extract exact level-up learnsets as a standalone audit dataset:
 romwiki extract-learnsets ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/pokemon/learnsets.json`. Each entry
+This writes `build/data/platinum-us/pokemon/learnsets.json`. Each entry
 preserves the level and move order stored for its species or form.
 
 Extract exact egg move lists from the packed ARM9 table:
@@ -291,7 +291,7 @@ Extract exact egg move lists from the packed ARM9 table:
 romwiki extract-egg-moves ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/pokemon/egg-moves.json`. Each record
+This writes `build/data/platinum-us/pokemon/egg-moves.json`. Each record
 preserves the species marker, move order, table index, and overlay offset.
 
 Extract exact evolution methods and parameters:
@@ -300,7 +300,7 @@ Extract exact evolution methods and parameters:
 romwiki extract-evolutions ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/pokemon/evolutions.json`, including
+This writes `build/data/platinum-us/pokemon/evolutions.json`, including
 the ROM's internal item-name catalog used to resolve item-based conditions.
 
 Extract exact TM/HM move assignments:
@@ -309,7 +309,7 @@ Extract exact TM/HM move assignments:
 romwiki extract-machines ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/machines/raw.json`. The Pokémon and
+This writes `build/data/platinum-us/machines/raw.json`. The Pokémon and
 move builds join these assignments with the compatibility flags stored in each
 Pokémon personal record.
 
@@ -319,7 +319,7 @@ Extract exact move-tutor assignments, requirements, locations, and compatibility
 romwiki extract-tutors ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/tutors/raw.json`. The 38 shard-tutor
+This writes `build/data/platinum-us/tutors/raw.json`. The 38 shard-tutor
 records and 505 Pokémon/form compatibility rows come from ARM9 overlay 5. Four
 additional scripted tutors—Draco Meteor, Blast Burn, Hydro Cannon, and Frenzy
 Plant—are decoded from their field-script commands and eligibility checks.
@@ -330,7 +330,7 @@ Extract the Pickup and Honey Gather item and rate tables:
 romwiki extract-pickup ".local/roms/Pokemon - Platinum Version (USA).nds"
 ```
 
-This writes `build/data/renegade-platinum/pickup/raw.json`. Both abilities'
+This writes `build/data/platinum-us/pickup/raw.json`. Both abilities'
 tables are compiled data in ARM9 overlay 16, not a NARC table; the offsets
 were verified byte-for-byte against the decompilation, then confirmed
 identical between the base game and Renegade Platinum. `build-pokemon` joins
@@ -580,8 +580,9 @@ content. It never requires or downloads a game image.
 ## PokéDB
 
 PokéDB is consumed as an external reference dataset rather than imported through
-its internal implementation. The default local path is `../pokedb/.output/gen4`,
-with a configurable remote data-branch fallback for CI.
+its internal implementation. Standalone build commands derive the default local
+path as `../pokedb/.output/gen<N>` from the matched ROM profile's engine. Use
+`--pokedb` to provide a different generation output directory.
 
 Beyond canonical names and links, PokéDB supplies the descriptive text the
 structured ROM records do not carry: Pokémon genus/height/weight/flavor text,

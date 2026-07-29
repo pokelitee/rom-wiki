@@ -15,12 +15,14 @@ from romwiki.cli import (
     _report_site_audit,
     _resolve_build_baseline,
     _resolve_input_rom,
+    _resolve_pokedb_path,
     _run_regeneration,
     _version_family_inputs,
     _version_family_uses_baselines,
     build_parser,
     main,
 )
+from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import (
     GameMetadata,
     SiteAuditIssue,
@@ -30,6 +32,8 @@ from romwiki.sites import (
 )
 from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGamePaths
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class MainErrorHandlingTests(unittest.TestCase):
@@ -191,6 +195,35 @@ class VersionFamilyInputTests(unittest.TestCase):
 
         self.assertFalse(_version_family_uses_baselines(without_baselines))
         self.assertTrue(_version_family_uses_baselines(with_baselines))
+
+    def test_derives_pokedb_generation_from_profiles(self) -> None:
+        repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
+        profiles = {profile.id: profile for profile in repository.profiles}
+
+        self.assertEqual(
+            _resolve_pokedb_path(None, (profiles["platinum-us"],)),
+            Path("../pokedb/.output/gen4"),
+        )
+        self.assertEqual(
+            _resolve_pokedb_path(
+                None,
+                (profiles["black-us"], profiles["white-us"]),
+            ),
+            Path("../pokedb/.output/gen5"),
+        )
+
+    def test_explicit_pokedb_path_overrides_profile_generation(self) -> None:
+        repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
+        profile = next(
+            profile
+            for profile in repository.profiles
+            if profile.id == "black-us"
+        )
+
+        self.assertEqual(
+            _resolve_pokedb_path(Path("custom/pokedb"), (profile,)),
+            Path("custom/pokedb"),
+        )
 
     def test_rejects_mixed_baseline_configuration(self) -> None:
         paths = {

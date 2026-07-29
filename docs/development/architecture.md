@@ -282,7 +282,10 @@ that do not provide it.
 `src/romwiki/platforms/registry.py` and `src/romwiki/engines/registry.py` are the
 plug-in boundary. Each maps a stable string key (`GameProfile.platform`,
 `GameProfile.engine`) to a small adapter exposing that platform's image/filesystem/
-archive primitives, or that engine's parsers and constants. Pipeline modules resolve
+archive primitives, or that engine's generation metadata, parsers, and constants.
+The CLI uses the engine generation to select the matching local PokéDB output by
+default, and the site catalog verifies descriptor generation metadata against it.
+Pipeline modules resolve
 `get_platform(profile.platform)` and `get_engine(profile.engine)` instead of
 importing `platforms.nds` or `engines.gen4_dppt` directly; only the registries
 themselves, and each engine/platform's own package, are allowed to name a specific

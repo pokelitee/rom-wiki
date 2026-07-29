@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sites.build import _run_command
+from romwiki.sites.catalog import _validate_profile_references
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
 from romwiki.util.errors import SiteError
 
@@ -125,6 +127,20 @@ class SiteCatalogTests(unittest.TestCase):
         assert site.game is not None
         self.assertFalse(site.game.data_driven)
         self.assertEqual(site.game.profiles, ())
+
+    def test_rejects_generation_that_does_not_match_profile_engine(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        site = catalog.get("platinum")
+        self.assertIsNotNone(site.game)
+        assert site.game is not None
+        self.assertIsNotNone(catalog.profile_repository)
+        mismatched = replace(site, game=replace(site.game, generation=5))
+
+        with self.assertRaisesRegex(SiteError, "generation does not match"):
+            _validate_profile_references(
+                (mismatched,),
+                catalog.profile_repository,
+            )
 
     def test_build_requires_an_explicit_selection(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

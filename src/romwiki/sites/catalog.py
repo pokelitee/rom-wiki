@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from romwiki.engines.registry import get_engine
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.util.errors import SiteError
 
@@ -264,3 +265,12 @@ def _validate_profile_references(
             raise SiteError(f"Game site {site.id} platform does not match its profiles")
         if len({profile.engine for profile in selected}) != 1:
             raise SiteError(f"Game site {site.id} profiles must use the same engine")
+        engine = get_engine(selected[0].engine)
+        if engine.generation is None:
+            raise SiteError(
+                f"Game site {site.id} uses an engine without generation metadata"
+            )
+        if engine.generation != site.game.generation:
+            raise SiteError(
+                f"Game site {site.id} generation does not match its profiles"
+            )

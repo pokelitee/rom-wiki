@@ -108,10 +108,9 @@ class PlatformContractTests(unittest.TestCase):
         tables = types.SimpleNamespace(
             parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=3
         )
-        register_engine(
-            _FAKE_ENGINE_ID,
-            EngineAdapter(**dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)),
-        )
+        engine_fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)
+        engine_fields["generation"] = None
+        register_engine(_FAKE_ENGINE_ID, EngineAdapter(**engine_fields))
         profile = _fake_profile()
         result = InspectionResult(
             image=_FakeImage(),

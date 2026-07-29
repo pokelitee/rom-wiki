@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from time import perf_counter
 
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.comparisons import write_comparison_dataset
 from romwiki.pipeline.egg_moves import (
@@ -52,6 +53,7 @@ from romwiki.pipeline.version_merge import (
     merge_version_family_datasets,
 )
 from romwiki.profiles.loader import ProfileRepository
+from romwiki.profiles.models import GameProfile
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,
@@ -250,8 +252,7 @@ def build_parser() -> argparse.ArgumentParser:
     pokemon_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     pokemon_parser.add_argument("--data-output", type=Path)
     pokemon_parser.add_argument("--wiki-output", type=Path)
@@ -263,8 +264,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_encounters_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     build_encounters_parser.add_argument("--data-output", type=Path)
     build_encounters_parser.add_argument("--wiki-output", type=Path)
@@ -276,8 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_trainers_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     build_trainers_parser.add_argument("--data-output", type=Path)
     build_trainers_parser.add_argument("--wiki-output", type=Path)
@@ -289,8 +288,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_locations_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     build_locations_parser.add_argument("--data-output", type=Path)
     build_locations_parser.add_argument("--wiki-output", type=Path)
@@ -302,8 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_moves_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     build_moves_parser.add_argument("--data-output", type=Path)
     build_moves_parser.add_argument("--wiki-output", type=Path)
@@ -315,8 +312,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_items_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     build_items_parser.add_argument("--data-output", type=Path)
     build_items_parser.add_argument("--wiki-output", type=Path)
@@ -344,8 +340,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_game_parser.add_argument(
         "--pokedb",
         type=Path,
-        default=Path("../pokedb/.output/gen4"),
-        help="PokéDB generation output directory",
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     build_game_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
     build_game_parser.add_argument(
@@ -384,7 +379,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--profiles-dir", type=Path, default=Path("profiles")
     )
     version_pair_parser.add_argument(
-        "--pokedb", type=Path, default=Path("../pokedb/.output/gen5")
+        "--pokedb",
+        type=Path,
+        help="PokéDB generation output directory (default: derived from the ROM profiles)",
     )
     version_pair_parser.add_argument(
         "--data-root", type=Path, default=Path("build/data")
@@ -466,7 +463,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--profiles-dir", type=Path, default=Path("profiles")
     )
     baseline_build_parser.add_argument(
-        "--pokedb", type=Path, default=Path("../pokedb/.output/gen4")
+        "--pokedb",
+        type=Path,
+        help="PokéDB generation output directory (default: derived from the ROM profile)",
     )
     baseline_build_parser.add_argument(
         "--data-root", type=Path, default=Path("build/data")
@@ -876,7 +875,11 @@ def _create_build_workflow(
     args: argparse.Namespace,
     result: InspectionResult,
 ) -> GameBuildWorkflow:
-    pokedb = PokeDBGeneration.load(args.pokedb)
+    if result.match is None:
+        raise LocalConfigError("The ROM did not match a game profile")
+    pokedb = PokeDBGeneration.load(
+        _resolve_pokedb_path(args.pokedb, (result.match.profile,))
+    )
     baseline_path = _resolve_build_baseline(args)
     baseline = (
         inspect_rom(baseline_path, args.profiles_dir)
@@ -1115,17 +1118,36 @@ def _run_version_pair_build(
     games, versions = _version_family_inputs(args.games, args.versions)
     if workflows is None:
         registry = LocalGameRegistry.load(args.games_config)
-        pokedb = PokeDBGeneration.load(args.pokedb)
         game_paths = {
             version: registry.get(game_id)
             for version, game_id in zip(versions, games, strict=True)
         }
         compare_to_bases = _version_family_uses_baselines(game_paths)
 
+        current_results = {
+            version: inspect_rom(game_paths[version].rom(), args.profiles_dir)
+            for version in versions
+        }
+        unmatched = [
+            version
+            for version, result in current_results.items()
+            if result.match is None
+        ]
+        if unmatched:
+            raise LocalConfigError(
+                "Version-family ROMs did not match game profiles: "
+                f"{', '.join(unmatched)}"
+            )
+        profiles = tuple(
+            result.match.profile
+            for result in current_results.values()
+            if result.match is not None
+        )
+        pokedb = PokeDBGeneration.load(_resolve_pokedb_path(args.pokedb, profiles))
         workflows = {}
         for version in versions:
             paths = game_paths[version]
-            result = inspect_rom(paths.rom(), args.profiles_dir)
+            result = current_results[version]
             baseline = (
                 inspect_rom(paths.rom(base=True), args.profiles_dir)
                 if compare_to_bases
@@ -1543,9 +1565,11 @@ def _version_family_uses_baselines(
 def _run_baseline_build(args: argparse.Namespace) -> None:
     paths = LocalGameRegistry.load(args.games_config).get(args.game)
     result = inspect_rom(paths.rom(base=True), args.profiles_dir)
-    pokedb = PokeDBGeneration.load(args.pokedb)
     if result.match is None:
         raise LocalConfigError("The configured base ROM did not match a game profile")
+    pokedb = PokeDBGeneration.load(
+        _resolve_pokedb_path(args.pokedb, (result.match.profile,))
+    )
     cache_root = args.data_root / "baselines" / result.match.profile.id
     context = GameBuildContext(
         result, pokedb, cache_root=cache_root, refresh=args.refresh
@@ -1556,6 +1580,26 @@ def _run_baseline_build(args: argparse.Namespace) -> None:
         f"Cached {len(args.scope)} baseline dataset groups for "
         f"{result.match.profile.id}: {cache_root}"
     )
+
+
+def _resolve_pokedb_path(
+    configured: Path | None,
+    profiles: Sequence[GameProfile],
+) -> Path:
+    if configured is not None:
+        return configured
+    generations = {get_engine(profile.engine).generation for profile in profiles}
+    if None in generations:
+        engines = ", ".join(sorted({profile.engine for profile in profiles}))
+        raise LocalConfigError(
+            f"Engine generation metadata is missing for: {engines}; specify --pokedb"
+        )
+    if len(generations) != 1:
+        raise LocalConfigError(
+            "Selected profiles use different generations; specify compatible profiles"
+        )
+    generation = generations.pop()
+    return Path("../pokedb/.output") / f"gen{generation}"
 
 
 def _write_dataset_build(
