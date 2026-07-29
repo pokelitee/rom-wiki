@@ -5,6 +5,7 @@ site_dir: ../../../build/mkdocs-dev/blaze-black-2-volt-white-2
 
 extra:
   romwiki_site_id: blaze-black-2-volt-white-2
+  romwiki_dev_pages: dev-pages.toml
 
 validation:
   links:

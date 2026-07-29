@@ -11,7 +11,20 @@ theme:
 
 nav:
   - Home: index.md
+  - Changes: changes/index.md
+  - Data Sources: data-sources.md
+  - Data Downloads: data/index.md
   - Documentation:
       - Overview: docs/index.md
+      - Patching: docs/patching.md
       - Changelog: docs/changelog.md
       - Action Replay: docs/codes.md
+  - Game Data:
+      - Pokémon: pokemon/index.md
+      - Abilities: abilities/index.md
+      - Items: items/index.md
+      - Moves: moves/index.md
+      - Type Chart: types/index.md
+      - Wild Encounters: encounters/index.md
+      - Trainers: trainers/index.md
+      - Locations: locations/index.md

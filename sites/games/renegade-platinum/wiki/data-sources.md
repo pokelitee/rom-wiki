@@ -1,11 +1,32 @@
 # Data sources
 
-The primary source is Renegade Platinum standard v1.3.0, a hack built on the
-same Generation IV DS engine (`gen4_dppt`) as the retail USA Pokémon
-Platinum release. Structured reference data from PokéDB and explicit
-annotations supplement facts that aren't represented directly in
-table-driven ROM data (see PokéDB below); ROM-derived values remain
-authoritative for every field the ROM's own records store.
+## Primary ROM
+
+- Pokémon Renegade Platinum standard v1.3.0: header code `CPUE`, ROM version 1,
+  SHA-256
+  `c76667d191a8c9032ced5650ba87206d5286102c83fb85bb7226484283bbf72c`.
+
+## Publication model
+
+Renegade Platinum is published as a single-game hack reference. Every supported
+dataset is compared with the exact USA retail Pokémon Platinum ROM (header code
+`CPUE`, ROM version 0, SHA-256
+`ede62292aa7f7014ff27d42097e769753380531739889c29b968b67b80f80678`).
+
+## Coverage and provenance
+
+The wiki derives Pokémon, abilities, items, moves, the type chart, wild
+encounters, trainers, and locations directly from the patched ROM. PokéDB
+supplies reference names, descriptions, links, and sprites; it is not used as a
+mechanics baseline. Explicit annotations supplement facts that are not
+represented directly in table-driven ROM data, while ROM-derived values remain
+authoritative for every field stored by the ROM.
+
+## Engine notes
+
+Renegade Platinum uses the same Generation IV DS engine (`gen4_dppt`) as retail
+Platinum. Its profile changes table contents and selected semantics without
+introducing a separate binary-format engine.
 
 The sections below describe the shared Generation IV DS-engine record
 formats and decoding techniques (identical between this hack and the retail

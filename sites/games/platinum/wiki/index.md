@@ -3,7 +3,11 @@ template: game-home.html
 title: Pokémon Platinum
 ---
 
-The current baseline covers Pokémon, abilities, items, moves, wild encounters,
-trainers, and locations, including their linked shops, gifts, trades, and
-connections. This is the exact USA retail release used as the clean comparison
-baseline for Renegade Platinum's Changes pages.
+This wiki covers the exact USA retail release of Pokémon Platinum. It publishes
+ROM-derived Pokémon, abilities, items, moves, the type chart, wild encounters,
+trainers, and locations, including linked shops, gifts, trades, and
+connections. ROM provenance and PokéDB reference content are kept distinct.
+
+Pokémon Platinum is published as a single-game retail reference. The same
+verified ROM is used as the clean comparison baseline for Renegade Platinum's
+Changes pages.

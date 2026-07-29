@@ -4,10 +4,11 @@ title: Pokémon Blaze Black & Volt White
 ---
 
 This wiki covers the original full v3.1 releases of Pokémon Blaze Black and
-Pokémon Volt White by Drayano. The two hacks are built and published as one
-reference: shared records appear once, while version-specific encounter tables,
-trades, and comparisons are labeled explicitly.
+Pokémon Volt White by Drayano. It publishes ROM-derived Pokémon, abilities,
+items, moves, the type chart, wild encounters, trainers, and locations. ROM
+provenance and PokéDB reference content are kept distinct.
 
-Every supported mechanic is extracted from locally supplied patched ROMs and
-compared with the corresponding clean retail game: Blaze Black against Pokémon
-Black, and Volt White against Pokémon White.
+The two hacks are published as one paired hack reference: shared records appear
+once, while version-specific records are labeled explicitly. Every supported
+dataset is compared with its exact retail baseline—Blaze Black against Pokémon
+Black and Volt White against Pokémon White—and collected on the Changes pages.

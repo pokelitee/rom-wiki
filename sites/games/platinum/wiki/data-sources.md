@@ -1,14 +1,29 @@
 # Data sources
 
-The primary source is the exact USA retail release of Pokémon Platinum
-(header code CPUE, ROM version 0), the same clean image used as Renegade
-Platinum's own comparison baseline. This is this project's first supported
-release and its Generation IV reference engine (`gen4_dppt`); every other
-engine this project has added since (Generation V's `gen5_bw`) is checked
-against the patterns established here. Structured reference data from PokéDB
-and explicit annotations supplement facts that aren't represented directly in
-table-driven ROM data (see PokéDB below); ROM-derived values remain
-authoritative for every field the ROM's own records store.
+## Primary ROM
+
+- Pokémon Platinum (USA): header code `CPUE`, ROM version 0, SHA-256
+  `ede62292aa7f7014ff27d42097e769753380531739889c29b968b67b80f80678`.
+
+## Publication model
+
+Platinum is published as a single-game retail reference. This exact ROM is also
+the clean comparison baseline for the Renegade Platinum wiki.
+
+## Coverage and provenance
+
+The wiki derives Pokémon, abilities, items, moves, the type chart, wild
+encounters, trainers, and locations directly from the ROM. PokéDB supplies
+reference names, descriptions, links, and sprites; it is not used as a
+mechanics baseline. Explicit annotations supplement facts that are not
+represented directly in table-driven ROM data, while ROM-derived values remain
+authoritative for every field stored by the ROM.
+
+## Engine notes
+
+Platinum uses the Generation IV reference engine (`gen4_dppt`). The later
+Generation V engines (`gen5_bw` and `gen5_b2w2`) follow the extraction and
+provenance boundaries established here where their platform structures match.
 
 The sections below describe the shared Generation IV DS-engine record
 formats and decoding techniques; this page adds this specific release's own
