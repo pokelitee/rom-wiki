@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
+from romwiki.engines.registry import GEN5_ENGINES, get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import (
     code_load_address,
@@ -61,7 +61,7 @@ def extract_location_dataset(
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
-    if profile.engine == GEN5_BW_ENGINE:
+    if profile.engine in GEN5_ENGINES:
         return _extract_gen5_location_dataset(
             result,
             trainer_dataset,
@@ -706,6 +706,11 @@ def _extract_gen5_location_dataset(
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).locations
     filesystem = platform.filesystem_from_image(result.image)
+    field_archive_options = {}
+    if profile.parameters.get(
+        "field_archives_allow_incorrect_data_block_size", False
+    ):
+        field_archive_options["allow_incorrect_data_block_size"] = True
     messages_path = profile.layout["messages"]
     map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
@@ -721,10 +726,12 @@ def _extract_gen5_location_dataset(
         engine, profile, messages, script_file_ids, static_encounter_dataset
     )
     overworld_objects = platform.archive_cls.from_bytes(
-        filesystem.read(overworld_objects_path)
+        filesystem.read(overworld_objects_path), **field_archive_options
     )
     map_matrices = platform.archive_cls.from_bytes(filesystem.read(map_matrices_path))
-    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), **field_archive_options
+    )
     connections_by_header = _extract_gen5_matrix_connections(
         engine, headers, map_matrices
     )

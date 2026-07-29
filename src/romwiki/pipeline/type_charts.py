@@ -51,6 +51,7 @@ class TypeChartFamily:
 class RegisteredTypeChart:
     engine: str
     family: TypeChartFamily
+    compatible_engines: frozenset[str] = frozenset()
 
     @property
     def types(self) -> tuple[str, ...]:
@@ -59,6 +60,9 @@ class RegisteredTypeChart:
     @property
     def matrix(self) -> Mapping[tuple[str, str], str]:
         return self.family.matrix
+
+    def supports(self, engine: str) -> bool:
+        return engine == self.engine or engine in self.compatible_engines
 
 
 def _canonical_matrix() -> dict[tuple[str, str], str]:
@@ -133,7 +137,11 @@ TYPE_CHART_FAMILIES = {
 }
 TYPE_CHARTS = {
     "gen4": RegisteredTypeChart("gen4_dppt", TYPE_CHART_FAMILIES["gen2-5"]),
-    "gen5": RegisteredTypeChart("gen5_bw", TYPE_CHART_FAMILIES["gen2-5"]),
+    "gen5": RegisteredTypeChart(
+        "gen5_bw",
+        TYPE_CHART_FAMILIES["gen2-5"],
+        compatible_engines=frozenset({"gen5_b2w2"}),
+    ),
 }
 
 
@@ -151,7 +159,7 @@ def build_type_dataset(
         raise ProfileError(
             f"Profile {profile.id} selects unknown type chart {config.chart!r}"
         ) from error
-    if registered.engine != profile.engine:
+    if not registered.supports(profile.engine):
         raise ProfileError(
             f"Type chart {config.chart!r} is for {registered.engine}, "
             f"not {profile.engine}"

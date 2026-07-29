@@ -1,0 +1,44 @@
+[profile]
+id = "white-2-us"
+name = "Pokémon White Version 2 (USA/Europe)"
+platform = "nintendo-ds"
+engine = "gen5_b2w2"
+base_game = "white-2"
+
+[header]
+game_codes = ["IRDO"]
+rom_versions = [0]
+
+[type_chart]
+chart = "gen5"
+
+[layout]
+personal = "a/0/1/6"
+messages = "a/0/0/2"
+item_data = "a/0/2/4"
+moves = "a/0/2/1"
+learnsets = "a/0/1/8"
+evolutions = "a/0/1/9"
+egg_moves = "a/1/2/4"
+encounters = "a/1/2/7"
+trainer_data = "a/0/9/1"
+trainer_parties = "a/0/9/2"
+map_headers = "a/0/1/2"
+scripts = "a/0/5/6"
+overworld_objects = "a/1/2/6"
+map_matrices = "a/0/0/9"
+
+[parameters]
+pokemon_names_member = 90
+ability_names_member = 374
+move_names_member = 403
+item_names_member = 64
+machine_move_prefix = "87038803"
+trainer_names_member = 382
+trainer_classes_member = 383
+map_names_member = 109
+
+[[hashes]]
+algorithm = "sha256"
+value = "3e50aec3db401332175a5d2b5fe2a68ac1a05ec63995dba9d1506b1b51837446"
+variant = "usa-europe-retail"

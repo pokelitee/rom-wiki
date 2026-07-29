@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
+from romwiki.engines.registry import GEN5_ENGINES, get_engine
 from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.pipeline.trainer_party import (
     derive_trainer_party_attributes,
@@ -146,7 +146,7 @@ def enrich_encounter_dataset(
     # enrichment function rather than a branch inside the Gen IV one.
     enrich_area = (
         _enrich_gen5_encounter_area
-        if dataset.get("engine") == GEN5_BW_ENGINE
+        if dataset.get("engine") in GEN5_ENGINES
         else _enrich_encounter_area
     )
 
@@ -536,13 +536,16 @@ def _enrich_trainer(
         )
         species_id = pokemon["species_id"]
         form_id = pokemon["form_id"]
+        game_record = None
         if form_id:
             slug = engine_tables.TRAINER_FORM_SLUGS.get((species_id, form_id))
             cosmetic_form = engine_tables.TRAINER_COSMETIC_FORM_LABELS.get(
                 (species_id, form_id)
             )
             if slug is not None:
-                reference = pokedb.pokemon_for_name(slug)
+                if pokemon_records is not None:
+                    game_record = pokemon_records.get(slug)
+                reference = None if game_record else pokedb.pokemon_for_name(slug)
             elif cosmetic_form is not None:
                 reference = pokedb.pokemon_for_id(species_id)
             else:
@@ -552,9 +555,8 @@ def _enrich_trainer(
         else:
             reference = pokedb.pokemon_for_id(species_id)
             cosmetic_form = None
-        game_record = None
-        if pokemon_records is not None:
-            game_record = pokemon_records.get(slug if form_id and slug else species_id)
+            if pokemon_records is not None:
+                game_record = pokemon_records.get(species_id)
         pokemon = derive_trainer_party_attributes(
             engine,
             pokemon,
@@ -564,7 +566,14 @@ def _enrich_trainer(
             gender_ratio=(game_record.get("gender_ratio") if game_record else None),
             base_stats=(game_record.get("base_stats") if game_record else None),
         )
-        pokemon_slug = game_record["slug"] if game_record else reference["name"]
+        if game_record:
+            pokemon_slug = (
+                game_record.get("base_species")
+                if not game_record.get("public", True)
+                else game_record["slug"]
+            ) or game_record["slug"]
+        else:
+            pokemon_slug = reference["name"]
         if game_record:
             pokemon_name = game_record["name"]
         elif form_id and slug:
@@ -840,7 +849,8 @@ def _enrich_record(
 ) -> dict[str, Any]:
     member = source["species_id"]
     transformation_members = getattr(engine, "TRANSFORMATION_MEMBERS", {})
-    if member in engine.INTERNAL_MEMBERS:
+    is_internal = member in engine.INTERNAL_MEMBERS
+    if is_internal:
         slug = engine.INTERNAL_MEMBERS[member]
         identity = {"national_dex_id": None, "base_species": None, "form": None}
         sprite = None
@@ -867,7 +877,9 @@ def _enrich_record(
     elif member in transformation_members:
         transformation = transformation_members[member]
         base_slug = transformation["base_slug"]
-        slug = f"{base_slug}-{name_slug(transformation['label'])}"
+        slug = transformation.get(
+            "slug", f"{base_slug}-{name_slug(transformation['label'])}"
+        )
         identity = {
             "national_dex_id": None,
             "base_species": base_slug,
@@ -917,65 +929,111 @@ def _enrich_record(
         "sprites": sprites,
         "reference": reference_data,
         "base_stats": source["base_stats"],
-        "types": [_type_id(engine, value, type_names) for value in source["type_ids"]],
+        "types": (
+            []
+            if is_internal
+            else [_type_id(engine, value, type_names) for value in source["type_ids"]]
+        ),
         "catch_rate": source["catch_rate"],
         "base_experience": source["base_experience"],
         "ev_yields": source["ev_yields"],
-        "held_items": [
-            {"rarity": rarity, **_item_reference(value, pokedb, item_names)}
-            for rarity, value in (
-                ("common", source["wild_held_items"]["common"]),
-                ("rare", source["wild_held_items"]["rare"]),
-                *(
-                    [("dark_grass", source["wild_held_items"]["dark_grass"])]
-                    if source["wild_held_items"].get("dark_grass") is not None
-                    else []
-                ),
-            )
-        ],
+        "held_items": (
+            []
+            if is_internal
+            else [
+                {"rarity": rarity, **_item_reference(value, pokedb, item_names)}
+                for rarity, value in (
+                    ("common", source["wild_held_items"]["common"]),
+                    ("rare", source["wild_held_items"]["rare"]),
+                    *(
+                        [("dark_grass", source["wild_held_items"]["dark_grass"])]
+                        if source["wild_held_items"].get("dark_grass") is not None
+                        else []
+                    ),
+                )
+            ]
+        ),
         "gender_ratio": source["gender_ratio"],
         "hatch_cycles": source["hatch_cycles"],
         "base_friendship": source["base_friendship"],
-        "growth_rate": _named_id(
-            source["growth_rate_id"], engine.GROWTH_RATE_NAMES, "growth rate"
+        "growth_rate": (
+            None
+            if is_internal
+            else _named_id(
+                source["growth_rate_id"], engine.GROWTH_RATE_NAMES, "growth rate"
+            )
         ),
-        "egg_groups": [
-            _named_id(value, engine.EGG_GROUP_NAMES, "egg group")
-            for value in source["egg_group_ids"]
-        ],
-        "abilities": [
-            {**_ability_id(value, pokedb, ability_names), "is_hidden": index == 2}
-            for index, value in enumerate(source["ability_ids"])
-        ],
+        "egg_groups": (
+            []
+            if is_internal
+            else [
+                _named_id(value, engine.EGG_GROUP_NAMES, "egg group")
+                for value in source["egg_group_ids"]
+            ]
+        ),
+        "abilities": (
+            []
+            if is_internal
+            else [
+                {**_ability_id(value, pokedb, ability_names), "is_hidden": index == 2}
+                for index, value in enumerate(source["ability_ids"])
+            ]
+        ),
         "safari_flee_rate": source["safari_flee_rate"],
-        "body_color": _named_id(
-            source["body_color_id"], engine.COLOR_NAMES, "body color"
+        "body_color": (
+            None
+            if is_internal
+            else _named_id(source["body_color_id"], engine.COLOR_NAMES, "body color")
         ),
         "flip_sprite": source["flip_sprite"],
-        "machines": _enrich_compatible_machines(
-            engine, source["machine_ids"], machines, pokedb, move_names
+        "machines": (
+            []
+            if is_internal
+            else _enrich_compatible_machines(
+                engine, source["machine_ids"], machines, pokedb, move_names
+            )
         ),
-        "tutor_moves": _enrich_compatible_tutors(
-            tutor_ids, tutors, tutor_locations, pokedb, move_names
+        "tutor_moves": (
+            []
+            if is_internal
+            else _enrich_compatible_tutors(
+                tutor_ids, tutors, tutor_locations, pokedb, move_names
+            )
         ),
-        "level_up_moves": _enrich_level_up_moves(learnset, pokedb, move_names),
-        "learnset_provenance": learnset["provenance"] if learnset is not None else None,
-        "egg_moves": _enrich_egg_moves(egg_move_set, pokedb, move_names),
-        "egg_move_provenance": _egg_move_provenance(egg_move_set),
+        "level_up_moves": (
+            [] if is_internal else _enrich_level_up_moves(learnset, pokedb, move_names)
+        ),
+        "learnset_provenance": (
+            None
+            if is_internal or learnset is None
+            else learnset["provenance"]
+        ),
+        "egg_moves": (
+            [] if is_internal else _enrich_egg_moves(egg_move_set, pokedb, move_names)
+        ),
+        "egg_move_provenance": (
+            None if is_internal else _egg_move_provenance(egg_move_set)
+        ),
         "static_encounters": [
             {"level": entry["level"], "is_egg": entry["is_egg"]}
-            for entry in static_encounters
+            for entry in (() if is_internal else static_encounters)
         ],
-        "evolutions": _enrich_evolutions(
-            engine,
-            evolution_set,
-            pokedb,
-            evolution_item_names,
-            move_names,
-            pokemon_names,
+        "evolutions": (
+            []
+            if is_internal
+            else _enrich_evolutions(
+                engine,
+                evolution_set,
+                pokedb,
+                evolution_item_names,
+                move_names,
+                pokemon_names,
+            )
         ),
         "evolution_provenance": (
-            evolution_set["provenance"] if evolution_set is not None else None
+            evolution_set["provenance"]
+            if not is_internal and evolution_set is not None
+            else None
         ),
         "provenance": source["provenance"],
     }

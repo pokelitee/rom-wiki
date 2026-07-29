@@ -25,7 +25,8 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).evolutions
+    adapter = get_engine(profile.engine)
+    engine = adapter.evolutions
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
     message_archive = platform.archive_cls.from_bytes(
@@ -40,7 +41,7 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
             species_id=member.index,
             archive_path=archive_path,
         ).to_dict()
-        for member in archive.members
+        for member in archive.members[: adapter.personal.PERSONAL_RECORD_COUNT]
     ]
     return {
         "schema_version": POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION,

@@ -35,11 +35,15 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
     # aren't personal records at all (e.g. Gen V's `a/0/1/6` has a non-record
     # table appended after the last species/forme entry).
     members = archive.members[: engine.PERSONAL_RECORD_COUNT]
+    parser_options = {}
+    if profile.parameters.get("repair_invalid_secondary_egg_group", False):
+        parser_options["repair_invalid_secondary_egg_group"] = True
     records = [
         engine.parse_personal_record(
             archive.read(member.index),
             species_id=member.index,
             archive_path=archive_path,
+            **parser_options,
         ).to_dict()
         for member in members
     ]

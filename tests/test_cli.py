@@ -203,7 +203,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         )
         self.assertFalse(sites[0]["data_driven"])
         self.assertTrue(sites[1]["data_driven"])
-        self.assertFalse(sites[4]["data_driven"])
+        self.assertTrue(sites[4]["data_driven"])
 
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")

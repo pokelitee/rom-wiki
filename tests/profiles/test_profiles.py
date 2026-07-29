@@ -120,6 +120,41 @@ class ProfileRepositoryTests(unittest.TestCase):
             "232043c9e3f979fff9e1fd67b78d759928e7849b4c2516477b43538fbf7bf851",
         )
 
+    def test_loads_black_2_and_white_2_baseline_profiles(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+
+        black_2 = profiles["black-2-us"]
+        white_2 = profiles["white-2-us"]
+
+        self.assertEqual(black_2.engine, "gen5_b2w2")
+        self.assertEqual(black_2.game_codes, ("IREO",))
+        self.assertEqual(black_2.layout["trainer_data"], "a/0/9/1")
+        self.assertEqual(black_2.layout["encounters"], "a/1/2/7")
+        self.assertEqual(black_2.parameters["pokemon_names_member"], 90)
+        self.assertEqual(black_2.parameters["move_names_member"], 403)
+        self.assertEqual(white_2.engine, "gen5_b2w2")
+        self.assertEqual(white_2.game_codes, ("IRDO",))
+        self.assertEqual(white_2.hashes[0].algorithm, "sha256")
+
+    def test_loads_blaze_black_2_and_volt_white_2_profiles(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+
+        blaze = profiles["blaze-black-2"]
+        volt = profiles["volt-white-2"]
+
+        self.assertEqual(blaze.engine, "gen5_b2w2")
+        self.assertEqual(blaze.base_game, "black-2")
+        self.assertEqual(blaze.hashes[0].variant, "complete-v1.1")
+        self.assertEqual(volt.engine, "gen5_b2w2")
+        self.assertEqual(volt.base_game, "white-2")
+        self.assertEqual(volt.hashes[0].variant, "complete-v1.1")
+
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "test.toml"

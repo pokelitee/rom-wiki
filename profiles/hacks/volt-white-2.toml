@@ -1,0 +1,18 @@
+[profile]
+id = "volt-white-2"
+name = "Pokémon Volt White 2 v1.1 Complete"
+extends = "white-2-us"
+
+[type_chart]
+chart = "gen5"
+
+[parameters]
+learnsets_allow_incorrect_data_block_size = true
+encounters_allow_trailing_data = true
+repair_invalid_secondary_egg_group = true
+field_archives_allow_incorrect_data_block_size = true
+
+[[hashes]]
+algorithm = "sha256"
+value = "cb9480a842e86bcef40d069d42a4955a31a1c8850f80c5e62e2151c478f66cf4"
+variant = "complete-v1.1"

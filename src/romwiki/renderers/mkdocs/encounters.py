@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_BW_ENGINE
+from romwiki.engines.registry import GEN5_ENGINES
 from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -60,7 +60,7 @@ def render_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    if dataset.get("engine") == GEN5_BW_ENGINE:
+    if dataset.get("engine") in GEN5_ENGINES:
         return _render_gen5_encounter_pages(
             dataset,
             output_root,

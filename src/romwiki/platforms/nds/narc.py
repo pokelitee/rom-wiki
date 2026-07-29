@@ -23,7 +23,14 @@ class NarcArchive:
         self.members = members
 
     @classmethod
-    def from_bytes(cls, data: bytes, *, allow_truncated: bool = False) -> NarcArchive:
+    def from_bytes(
+        cls,
+        data: bytes,
+        *,
+        allow_truncated: bool = False,
+        allow_trailing_data: bool = False,
+        allow_incorrect_data_block_size: bool = False,
+    ) -> NarcArchive:
         if len(data) < 0x10:
             raise InvalidRomError("NARC archive is too small")
         magic, bom, version, file_size, header_size, block_count = struct.unpack_from(
@@ -36,7 +43,10 @@ class NarcArchive:
         )
         if bom not in {0xFEFF, 0xFFFE} or normalized_version != 1:
             raise InvalidRomError("NARC archive has unsupported byte order or version")
-        if file_size != len(data) and not (allow_truncated and file_size > len(data)):
+        size_is_allowed = (allow_truncated and file_size > len(data)) or (
+            allow_trailing_data and file_size < len(data)
+        )
+        if file_size != len(data) and not size_is_allowed:
             raise InvalidRomError("NARC archive size does not match its header")
         if header_size != 0x10 or block_count != 3:
             raise InvalidRomError("NARC archive has an unsupported block layout")
@@ -56,7 +66,13 @@ class NarcArchive:
             data, data_block_offset, b"GMIF", allow_truncated=allow_truncated
         )
         if data_block_offset + data_block_size != file_size:
-            raise InvalidRomError("NARC blocks do not fill the declared archive")
+            if (
+                not allow_incorrect_data_block_size
+                or file_size != len(data)
+                or data_block_offset + data_block_size > file_size
+            ):
+                raise InvalidRomError("NARC blocks do not fill the declared archive")
+            data_block_size = file_size - data_block_offset
 
         raw_data_offset = data_block_offset + 8
         raw_data_size = data_block_size - 8

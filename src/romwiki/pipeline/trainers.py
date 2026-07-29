@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
+from romwiki.engines.registry import GEN5_ENGINES, get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
@@ -19,7 +19,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
-    if profile.engine == GEN5_BW_ENGINE:
+    if profile.engine in GEN5_ENGINES:
         return _extract_gen5_trainer_dataset(result)
     try:
         trainer_path = profile.layout["trainer_data"]
@@ -263,16 +263,21 @@ def _extract_gen5_trainer_locations(
     """
     assert result.match is not None
     profile = result.match.profile
-    try:
-        map_headers_path = profile.layout["map_headers"]
-        scripts_path = profile.layout["scripts"]
-        overworld_objects_path = profile.layout["overworld_objects"]
-        messages_path = profile.layout["messages"]
-        map_names_member = profile.parameters["map_names_member"]
-    except KeyError as error:
-        raise ProfileError(
-            f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
-        ) from error
+    required_layout = (
+        "map_headers",
+        "scripts",
+        "overworld_objects",
+        "messages",
+    )
+    if any(name not in profile.layout for name in required_layout) or (
+        "map_names_member" not in profile.parameters
+    ):
+        return {}, {}, {}
+    map_headers_path = profile.layout["map_headers"]
+    scripts_path = profile.layout["scripts"]
+    overworld_objects_path = profile.layout["overworld_objects"]
+    messages_path = profile.layout["messages"]
+    map_names_member = profile.parameters["map_names_member"]
 
     map_headers_archive = platform.archive_cls.from_bytes(
         filesystem.read(map_headers_path)
@@ -285,11 +290,18 @@ def _extract_gen5_trainer_locations(
     )
     script_file_ids = engine.parse_map_header_script_files(map_headers_data)
 
+    field_archive_options = {}
+    if profile.parameters.get(
+        "field_archives_allow_incorrect_data_block_size", False
+    ):
+        field_archive_options["allow_incorrect_data_block_size"] = True
     scripts = platform.archive_cls.from_bytes(
-        filesystem.read(scripts_path), allow_truncated=True
+        filesystem.read(scripts_path),
+        allow_truncated=True,
+        **field_archive_options,
     )
     overworld_objects = platform.archive_cls.from_bytes(
-        filesystem.read(overworld_objects_path)
+        filesystem.read(overworld_objects_path), **field_archive_options
     )
 
     locations: dict[int, list[TrainerLocation]] = {}

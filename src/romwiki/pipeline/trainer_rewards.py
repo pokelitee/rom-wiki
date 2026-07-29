@@ -3,14 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.engines.registry import GEN4_DPPT_ENGINE, GEN5_BW_ENGINE
+from romwiki.engines.registry import GEN4_DPPT_ENGINE, GEN5_ENGINES
 
 
 def calculate_base_prize_money(
     trainer: Mapping[str, Any], *, engine: str
 ) -> dict[str, Any] | None:
     """Return an exact, engine-neutral base payout when all inputs are known."""
-    if engine not in {GEN4_DPPT_ENGINE, GEN5_BW_ENGINE}:
+    if engine != GEN4_DPPT_ENGINE and engine not in GEN5_ENGINES:
         return None
 
     party = trainer.get("party")
@@ -27,7 +27,7 @@ def calculate_base_prize_money(
         2 if engine == GEN4_DPPT_ENGINE and trainer.get("double_battle") else 1
     )
     multiplier_provenance = trainer.get("victory_money_multiplier_provenance")
-    if multiplier_provenance is None and engine == GEN5_BW_ENGINE:
+    if multiplier_provenance is None and engine in GEN5_ENGINES:
         record_provenance = trainer.get("provenance", {})
         if record_provenance.get("archive") is not None:
             multiplier_provenance = {

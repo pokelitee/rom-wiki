@@ -240,6 +240,71 @@ class TrainerEnrichmentTests(unittest.TestCase):
 
 
 class Gen5TrainerEnrichmentTests(unittest.TestCase):
+    def test_links_battle_only_forms_to_their_public_base_page(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 1,
+            "class_id": 1,
+            "has_custom_moves": False,
+            "reward_item_ids": (),
+            "party": [
+                {
+                    "difficulty": 0,
+                    "ability_slot": 0,
+                    "forced_gender_flag": 0,
+                    "level": 20,
+                    "species_id": 555,
+                    "form_id": 1,
+                    "held_item_id": None,
+                    "move_ids": (),
+                }
+            ],
+        }
+        pokemon_record = {
+            "slug": "darmanitan-zen",
+            "name": "Darmanitan Zen",
+            "public": False,
+            "base_species": "darmanitan-standard",
+            "gender_ratio": 127,
+            "base_stats": {
+                "hp": 105,
+                "attack": 30,
+                "defense": 105,
+                "special_attack": 140,
+                "special_defense": 105,
+                "speed": 55,
+            },
+            "sprite": None,
+            "types": [],
+            "abilities": [],
+        }
+
+        trainer = _enrich_trainer(
+            source,
+            pokedb,
+            None,
+            None,
+            engine="gen5_b2w2",
+            pokemon_records={"darmanitan-zen": pokemon_record},
+        )
+
+        self.assertEqual(
+            trainer["party"][0]["pokemon"],
+            {
+                "id": 555,
+                "slug": "darmanitan-standard",
+                "name": "Darmanitan Zen",
+                "sprite": None,
+                "types": [],
+            },
+        )
+
     def test_resolves_hack_trainer_forms(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={422: {"id": 422, "name": "shellos", "species": "shellos"}},

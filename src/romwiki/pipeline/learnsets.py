@@ -23,16 +23,22 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).learnsets
+    adapter = get_engine(profile.engine)
+    engine = adapter.learnsets
     filesystem = platform.filesystem_from_image(result.image)
-    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    archive = platform.archive_cls.from_bytes(
+        filesystem.read(archive_path),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "learnsets_allow_incorrect_data_block_size", False
+        ),
+    )
     records = [
         engine.parse_level_up_learnset(
             archive.read(member.index),
             species_id=member.index,
             archive_path=archive_path,
         ).to_dict()
-        for member in archive.members
+        for member in archive.members[: adapter.personal.PERSONAL_RECORD_COUNT]
     ]
     return {
         "schema_version": POKEMON_LEARNSETS_RAW_SCHEMA_VERSION,

@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_BW_ENGINE, get_engine
+from romwiki.engines.registry import GEN5_ENGINES, get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
@@ -19,7 +19,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for encounter extraction")
     profile = result.match.profile
-    if profile.engine == GEN5_BW_ENGINE:
+    if profile.engine in GEN5_ENGINES:
         return _extract_gen5_encounter_dataset(result)
     try:
         archive_path = profile.layout["encounters"]
@@ -31,7 +31,12 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).encounters
     filesystem = platform.filesystem_from_image(result.image)
-    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    archive = platform.archive_cls.from_bytes(
+        filesystem.read(archive_path),
+        allow_trailing_data=profile.parameters.get(
+            "encounters_allow_trailing_data", False
+        ),
+    )
     reference_names = extract_reference_names(profile, filesystem)
     parsed_records = [
         engine.parse_encounter_record(
@@ -83,7 +88,12 @@ def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).encounters
     filesystem = platform.filesystem_from_image(result.image)
-    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    archive = platform.archive_cls.from_bytes(
+        filesystem.read(archive_path),
+        allow_trailing_data=profile.parameters.get(
+            "encounters_allow_trailing_data", False
+        ),
+    )
     reference_names = extract_reference_names(profile, filesystem)
     areas = [
         area

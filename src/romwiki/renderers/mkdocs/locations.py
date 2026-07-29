@@ -4,7 +4,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_BW_ENGINE
+from romwiki.engines.registry import GEN5_ENGINES
 from romwiki.pipeline.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -59,7 +59,7 @@ def render_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    if dataset.get("engine") == GEN5_BW_ENGINE:
+    if dataset.get("engine") in GEN5_ENGINES:
         from romwiki.renderers.mkdocs.locations_gen5 import (
             render_gen5_location_pages,
         )

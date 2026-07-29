@@ -98,12 +98,12 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 ### Engine decoders
 
 `src/romwiki/engines/` groups binary and script parsers first by generation and
-then by engine family. The current `gen4/dppt` and `gen5/bw` leaf packages decode
-the D/P/Pt and Black/White formats. Their stable profile-facing engine IDs remain
-`gen4_dppt` and `gen5_bw`.
+then by engine family. The current `gen4/dppt`, `gen5/bw`, and `gen5/b2w2` leaf
+packages decode the D/P/Pt, Black/White, and Black 2/White 2 formats. Their stable
+profile-facing engine IDs are `gen4_dppt`, `gen5_bw`, and `gen5_b2w2`.
 
 A generation package is a namespace, not a selectable engine. When a second
-family is implemented, such as `gen5/b2w2` or `gen4/hgss`, begin with a separate
+family is implemented, such as `gen4/hgss`, begin with a separate
 leaf adapter. Promote a parser into the parent generation package only after real
 ROM fixtures prove that its format and behavior are shared by at least two
 families. Leaf packages may depend on their generation's shared modules, but

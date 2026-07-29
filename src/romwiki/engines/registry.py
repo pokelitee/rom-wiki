@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import romwiki.engines.gen4.dppt as gen4_dppt
+import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.util.errors import DataSourceError
 
@@ -15,6 +16,22 @@ from romwiki.util.errors import DataSourceError
 # literals keeps that dispatch centralized on one source of truth.
 GEN4_DPPT_ENGINE = "gen4_dppt"
 GEN5_BW_ENGINE = "gen5_bw"
+GEN5_B2W2_ENGINE = "gen5_b2w2"
+GEN5_ENGINES = frozenset({GEN5_BW_ENGINE, GEN5_B2W2_ENGINE})
+
+
+@dataclass(frozen=True, slots=True)
+class _EngineNamespaceOverlay:
+    """Use family-specific facts while retaining verified shared Gen V facts."""
+
+    primary: Any
+    fallback: Any
+
+    def __getattr__(self, name: str) -> Any:
+        try:
+            return getattr(self.primary, name)
+        except AttributeError:
+            return getattr(self.fallback, name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +104,34 @@ _ENGINES: dict[str, EngineAdapter] = {
         learnsets=gen5_bw,
         reference_names=gen5_bw,
         enrich=gen5_bw,
+        trainer_party=gen5_bw,
+        trades=gen5_bw,
+        marts=gen5_bw,
+        static_encounters=gen5_bw,
+        pickup=gen5_bw,
+        generation=5,
+        presentation_features=frozenset(
+            {
+                "post-battle-healing",
+                "victory-items",
+            }
+        ),
+        capabilities=frozenset({"detached-npc-trades"}),
+    ),
+    GEN5_B2W2_ENGINE: EngineAdapter(
+        personal=gen5_b2w2,
+        locations=gen5_bw,
+        trainers=gen5_bw,
+        encounters=gen5_bw,
+        evolutions=gen5_bw,
+        items=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
+        machines=gen5_bw,
+        moves=gen5_bw,
+        tutors=gen5_b2w2,
+        egg_moves=gen5_bw,
+        learnsets=gen5_bw,
+        reference_names=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
+        enrich=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
         trainer_party=gen5_bw,
         trades=gen5_bw,
         marts=gen5_bw,

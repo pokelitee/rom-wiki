@@ -35,6 +35,30 @@ class NarcArchiveTests(unittest.TestCase):
         self.assertEqual(archive.read(0), b"abc")
         self.assertEqual(archive.read(1), b"d")
 
+    def test_can_ignore_explicitly_allowed_data_after_the_declared_archive(
+        self,
+    ) -> None:
+        data = make_narc() + b"tool-output"
+
+        with self.assertRaisesRegex(InvalidRomError, "size does not match"):
+            NarcArchive.from_bytes(data)
+
+        archive = NarcArchive.from_bytes(data, allow_trailing_data=True)
+        self.assertEqual(archive.read(1), b"de")
+
+    def test_can_infer_an_explicitly_allowed_incorrect_data_block_size(self) -> None:
+        data = bytearray(make_narc())
+        data.extend(b"\0" * 8)
+        struct.pack_into("<I", data, 8, len(data))
+
+        with self.assertRaisesRegex(InvalidRomError, "blocks do not fill"):
+            NarcArchive.from_bytes(data)
+
+        archive = NarcArchive.from_bytes(
+            data, allow_incorrect_data_block_size=True
+        )
+        self.assertEqual(archive.read(1), b"de")
+
 
 if __name__ == "__main__":
     unittest.main()

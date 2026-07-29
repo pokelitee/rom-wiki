@@ -36,6 +36,15 @@ class TypeChartTests(unittest.TestCase):
         self.assertIn("bug", steel_flying["1/4"])
         self.assertIn("ground", steel_flying["0"])
 
+    def test_gen5_chart_supports_b2w2(self) -> None:
+        dataset = build_type_dataset(_profile("gen5_b2w2", "gen5"))
+
+        self.assertEqual(dataset["engine"], "gen5_b2w2")
+        self.assertIn(
+            "electric",
+            defensive_effectiveness(dataset, ("water",))["2"],
+        )
+
     def test_keeps_generation_charts_separately_registered(self) -> None:
         self.assertIsNot(TYPE_CHARTS["gen4"], TYPE_CHARTS["gen5"])
         self.assertEqual(TYPE_CHARTS["gen4"].engine, "gen4_dppt")

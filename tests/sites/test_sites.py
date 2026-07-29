@@ -119,14 +119,17 @@ class SiteCatalogTests(unittest.TestCase):
             if site.kind == "game":
                 self.assertEqual(configs[site.id].name, "mkdocs.dev.yml")
 
-    def test_documentation_only_site_does_not_require_profiles(self) -> None:
+    def test_b2w2_site_uses_paired_hack_profiles(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         site = catalog.get("blaze-black-2-volt-white-2")
 
         self.assertIsNotNone(site.game)
         assert site.game is not None
-        self.assertFalse(site.game.data_driven)
-        self.assertEqual(site.game.profiles, ())
+        self.assertTrue(site.game.data_driven)
+        self.assertEqual(
+            site.game.profiles,
+            ("blaze-black-2", "volt-white-2"),
+        )
 
     def test_rejects_generation_that_does_not_match_profile_engine(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

@@ -27,6 +27,19 @@ class TrainerRewardTests(unittest.TestCase):
             },
         )
 
+    def test_calculates_b2w2_payout_with_gen5_rules(self) -> None:
+        payout = calculate_base_prize_money(
+            {
+                "victory_money_multiplier": 10,
+                "party": [{"level": 25}],
+                "provenance": {"archive": "a/0/9/1", "member": 1},
+            },
+            engine="gen5_b2w2",
+        )
+
+        self.assertEqual(payout["amount"], 1000)
+        self.assertEqual(payout["multiplier_provenance"]["offset"], 17)
+
     def test_omits_payout_when_an_exact_input_is_missing(self) -> None:
         self.assertIsNone(
             calculate_base_prize_money(
