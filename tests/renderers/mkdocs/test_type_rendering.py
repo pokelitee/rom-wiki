@@ -27,6 +27,9 @@ class TypeChartRenderingTests(unittest.TestCase):
         self.assertIn("[Fairy](#fairy)", page)
         self.assertIn('<span id="fairy"></span>', page)
         self.assertIn("**0×**", page)
+        self.assertIn('class="rw-type-chart__axis"', page)
+        self.assertIn('aria-label="Attacking by row, defending by column"', page)
+        self.assertIn("Atk ↓ / Def →</span>", page)
 
 
 if __name__ == "__main__":

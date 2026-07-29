@@ -27,7 +27,9 @@ def render_type_chart(dataset: dict[str, Any], output_root: Path) -> int:
         "",
         '<div class="rw-type-chart" markdown="1">',
         "",
-        f"| Attacking ↓ / Defending → | {headers} |",
+        '| <span class="rw-type-chart__axis" '
+        'aria-label="Attacking by row, defending by column">'
+        f"Atk ↓ / Def →</span> | {headers} |",
         f"| :------------------------ | {alignments} |",
     ]
     for record in records:

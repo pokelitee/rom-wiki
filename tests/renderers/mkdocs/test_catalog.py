@@ -52,16 +52,24 @@ class SkeletonFilterCountsTests(unittest.TestCase):
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
         expected = {}
         for kind, body in _CATALOG_BLOCK.findall(text):
-            filter_count = range_count = 0
+            filter_count = range_count = sort_count = 0
             for line in body.splitlines():
                 stripped = line.strip()
                 if stripped.startswith("filters:"):
                     filter_count = stripped.count("{ key:")
                 elif stripped.startswith("ranges:"):
                     range_count = stripped.count("{ key:")
-            # search box (1) + filters (plus the injected change-status
-            # filter) + two fields per range + sort-by (1) + direction (1).
-            expected[kind] = 1 + (filter_count + 1) + range_count * 2 + 1 + 1
+                elif stripped.startswith("sorts:"):
+                    sort_count = stripped.count('["')
+            # Search (1) + filters (including change status) + two fields per
+            # range + sort-by when it has choices + direction (1).
+            expected[kind] = (
+                1
+                + (filter_count + 1)
+                + range_count * 2
+                + (1 if sort_count > 1 else 0)
+                + 1
+            )
 
         self.assertEqual(_SKELETON_FILTER_COUNTS, expected)
 
@@ -71,17 +79,49 @@ class CatalogPresentationTests(unittest.TestCase):
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
 
         self.assertIn('["Base price", (record)', text)
-        self.assertIn('["Fling power", (record)', text)
         self.assertIn('"Always hits"', text)
-        self.assertIn('["Map header", locationIdentifier]', text)
         self.assertIn('sorts: [["label", "Area"]', text)
         self.assertIn('{ key: "obtainability", label: "Obtainability" }', text)
         self.assertIn('["Availability", pokemonAvailability]', text)
+        self.assertIn('["Party", trainerPartySummary]', text)
+
+    def test_list_pages_omit_detail_only_and_technical_fields(self) -> None:
+        text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
+
+        for value in (
+            '"Item ID"',
+            '"Ability ID"',
+            '"Move ID"',
+            '"Trainer ID"',
+            '"Header ID"',
+            '"Area ID"',
+            'label: "Field use"',
+            'label: "Fling power"',
+            'label: "Trainer appearances"',
+            'label: "Encounter locations"',
+            'label: "Minimum obtainable level"',
+            'label: "Location status"',
+            '["Map header",',
+            '["Learners",',
+        ):
+            with self.subTest(value=value):
+                self.assertNotIn(value, text)
 
     def test_encounter_ranges_collapse_equal_levels(self) -> None:
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
 
         self.assertIn("record.min_level === record.max_level", text)
+
+    def test_pokemon_availability_omits_minimum_level(self) -> None:
+        renderers = CATALOG_CONFIG_JS.with_name("renderers.js").read_text(
+            encoding="utf-8"
+        )
+        availability = renderers.split("export function pokemonAvailability", 1)[
+            1
+        ].split("export function", 1)[0]
+
+        self.assertNotIn("minimum_obtainable_level", availability)
+        self.assertNotIn("Lv.", availability)
 
 
 if __name__ == "__main__":

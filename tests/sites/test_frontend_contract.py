@@ -53,6 +53,15 @@ class FrontendContractTests(unittest.TestCase):
             catalog,
         )
 
+    def test_catalogs_hide_filters_and_sort_controls_without_choices(self) -> None:
+        catalog = (
+            OVERRIDES / "assets" / "javascripts" / "catalog" / "catalog.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(".filter(({ values }) => values.length > 1)", catalog)
+        self.assertIn("if (config.sorts.length > 1)", catalog)
+        self.assertIn('singleSort ? "Order" : "Direction"', catalog)
+
     def test_shared_theme_supports_light_dark_and_high_contrast(self) -> None:
         config = (ROOT / "sites" / "shared" / "mkdocs.base.yml").read_text(
             encoding="utf-8"
@@ -205,6 +214,22 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn(".rw-party-card__move-meta", css)
         self.assertIn("justify-self: end", css)
         self.assertIn(".rw-party-card__stats caption", css)
+
+    def test_sticky_type_chart_corner_has_an_opaque_background(self) -> None:
+        css = (STYLES / "records.css").read_text(encoding="utf-8")
+        corner = _rule_properties(
+            css,
+            ".md-typeset .rw-type-chart table:not([class]) thead th:first-child",
+        )
+
+        self.assertEqual(corner["background-color"], "var(--rw-surface)")
+        self.assertEqual(corner["isolation"], "isolate")
+        self.assertEqual(corner["background-clip"], "border-box")
+        self.assertIn(
+            "thead th:first-child::before",
+            css,
+        )
+        self.assertIn("var(--rw-surface)", css)
 
     def test_header_game_picker_uses_a_top_layer_menu(self) -> None:
         site = (

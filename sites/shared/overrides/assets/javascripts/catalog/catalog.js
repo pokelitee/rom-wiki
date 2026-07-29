@@ -56,7 +56,11 @@ function enhanceCatalog(root, records, config) {
   search.input.value = params.get("q") || "";
   form.append(search.label);
 
-  for (const filter of config.filters) {
+  const filterOptions = config.filters
+    .map((filter) => ({ filter, values: valuesFor(records, filter.key) }))
+    .filter(({ values }) => values.length > 1);
+  const filters = filterOptions.map(({ filter }) => filter);
+  for (const { filter, values } of filterOptions) {
     const { key, label } = filter;
     const kind = filter.control === "combobox" ? "input" : "select";
     const field = control(kind, label, key);
@@ -66,7 +70,7 @@ function enhanceCatalog(root, records, config) {
       enhanceCombobox(
         field.input,
         label,
-        valuesFor(records, key).map((value) => displayFilter(key, value)),
+        values.map((value) => displayFilter(key, value)),
       );
     } else {
       field.input.multiple = Boolean(filter.multi);
@@ -74,7 +78,7 @@ function enhanceCatalog(root, records, config) {
       if (!filter.multi) {
         field.input.append(new Option(field.input.dataset.placeholder, ""));
       }
-      valuesFor(records, key).forEach((value) => {
+      values.forEach((value) => {
         field.input.append(new Option(displayFilter(key, value), String(value)));
       });
     }
@@ -110,15 +114,24 @@ function enhanceCatalog(root, records, config) {
     }
   }
 
-  const sort = control("select", "Sort by", "sort");
-  for (const [key, label] of config.sorts) sort.input.append(new Option(label, key));
-  sort.input.dataset.default = config.sorts[0][0];
-  sort.input.value = params.get("sort") || config.sorts[0][0];
-  form.append(sort.label);
+  if (config.sorts.length > 1) {
+    const sort = control("select", "Sort by", "sort");
+    for (const [key, label] of config.sorts) {
+      sort.input.append(new Option(label, key));
+    }
+    sort.input.dataset.default = config.sorts[0][0];
+    sort.input.value = params.get("sort") || config.sorts[0][0];
+    form.append(sort.label);
+  }
 
-  const direction = control("select", "Direction", "direction");
-  direction.input.append(new Option("Ascending", "asc"));
-  direction.input.append(new Option("Descending", "desc"));
+  const singleSort = config.sorts.length === 1;
+  const direction = control(
+    "select",
+    singleSort ? "Order" : "Direction",
+    "direction",
+  );
+  direction.input.append(new Option(singleSort ? "A\u2013Z" : "Ascending", "asc"));
+  direction.input.append(new Option(singleSort ? "Z\u2013A" : "Descending", "desc"));
   direction.input.dataset.default = "asc";
   direction.input.value = params.get("direction") || "asc";
   form.append(direction.label);
@@ -179,7 +192,7 @@ function enhanceCatalog(root, records, config) {
     const query = String(values.q || "").trim().toLowerCase();
     const filtered = records.filter((record) => {
       if (query && !record.search_text.includes(query)) return false;
-      const matchesFilters = config.filters.every((filter) => {
+      const matchesFilters = filters.every((filter) => {
         const { key } = filter;
         const selected = filter.multi ? values[key] || [] : String(values[key] || "");
         if (filter.multi ? selected.length === 0 : !selected) return true;

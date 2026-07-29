@@ -86,10 +86,6 @@ export function numberOrDash(value) {
   return text(value || "—", "rw-catalog__number");
 }
 
-export function stat(record, key) {
-  return text(record.stats[key], "rw-catalog__number");
-}
-
 export function accessMethods(record) {
   return text(
     record.access_methods.map((value) => displayFilter("access_methods", value)).join(", ") || "—"
@@ -101,32 +97,13 @@ export function pokemonAvailability(record) {
   if (record.encounter_location_count) {
     details.push(`${record.encounter_location_count.toLocaleString()} location${record.encounter_location_count === 1 ? "" : "s"}`);
   }
-  if (record.minimum_obtainable_level != null) {
-    details.push(`Lv. ${record.minimum_obtainable_level}`);
-  }
   const label = title(record.obtainability);
   return text(details.length ? `${label} \u00B7 ${details.join(" \u00B7 ")}` : label);
 }
 
-export function trainerParty(record) {
-  const wrap = document.createElement("span");
-  wrap.className = "rw-catalog__list";
-  record.party.forEach((member, index) => {
-    if (index) wrap.append(", ");
-    wrap.append(
-      `Lv. ${member.level} `,
-      member.pokemon_ref ? referenceLink(member.pokemon_ref) : member.name,
-    );
-  });
-  return wrap;
-}
-
-export function locationIdentifier(record) {
-  const wrap = document.createElement("span");
-  wrap.className = "rw-catalog__map-id";
-  wrap.append(
-    text(record.internal_name, "rw-catalog__code"),
-    text(`Header ${record.id}`, "rw-catalog__number"),
-  );
-  return wrap;
+export function trainerPartySummary(record) {
+  const level = record.min_level === record.max_level
+    ? `Lv. ${record.min_level}`
+    : `Lv. ${record.min_level}\u2013${record.max_level}`;
+  return text(`${level} \u00B7 ${record.party_size.toLocaleString()} Pokémon`);
 }

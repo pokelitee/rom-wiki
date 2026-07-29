@@ -26,17 +26,17 @@ def prune_catalog_pages(output_root: Path, filenames: set[str]) -> None:
 
 # Filter field count per catalog kind, so the loading skeleton's control
 # row previews roughly the number of fields the interactive catalog renders:
-# the search box (1) + "filters" (plus the injected change-status filter)
-# + two fields per "ranges" entry + sort-by (1) + direction (1), mirroring
-# sites/shared/overrides/assets/javascripts/catalog/config.js — keep in sync
-# when that config changes.
+# the search box (1) + configured filters (plus the injected change-status
+# filter) + two fields per range + sort-by when multiple sorts exist +
+# direction (1), mirroring catalog/config.js. Runtime filters with fewer than
+# two values are omitted, so this intentionally represents the maximum layout.
 _SKELETON_FILTER_COUNTS = {
-    "pokemon": 16,
-    "abilities": 6,
-    "items": 13,
+    "pokemon": 10,
+    "abilities": 5,
+    "items": 10,
     "moves": 9,
-    "trainers": 11,
-    "locations": 5,
+    "trainers": 10,
+    "locations": 4,
     "encounters": 8,
 }
 # Matches DEFAULT_PAGE_SIZE in
