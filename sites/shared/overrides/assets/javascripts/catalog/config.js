@@ -30,7 +30,7 @@ export const CATALOGS = {
   },
   pokemon: {
     searchPlaceholder: "Search Pokémon, types, or abilities",
-    filters: [{ key: "types", label: "Type", multi: true }, { key: "abilities", label: "Ability", control: "combobox" }, { key: "egg_groups", label: "Egg group", multi: true }, { key: "obtainability", label: "Obtainability" }],
+    filters: [{ key: "types", label: "Type", multi: true }, { key: "abilities", label: "Ability", control: "combobox" }, { key: "egg_groups", label: "Egg group", multi: true }, { key: "availability_methods", label: "Availability", multi: true }],
     ranges: [{ key: "bst", label: "BST" }],
     sorts: [["dex", "Pokédex number"], ["label", "Name"], ["bst", "Base stat total"]],
     columns: [["Pokémon", pokemonName], ["Type", typeList], ["Abilities", (record) => referenceList(record.ability_refs)], ["Availability", pokemonAvailability], ["BST", (record) => text(record.bst, "rw-catalog__number")]],

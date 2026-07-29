@@ -83,7 +83,7 @@ predictable without presenting an absent mechanic as missing extraction.
 Each generated section writes `catalog.json` with this envelope:
 
 ```json
-{"schema_version":2,"kind":"pokemon","records":[]}
+{"schema_version":3,"kind":"pokemon","records":[]}
 ```
 
 The `kind` selects the shared filters, columns, and sorting behavior. Every record
@@ -124,9 +124,12 @@ an explicit map-header identity.
 A separate presentation relationship index derives approved reverse joins once per
 build. Pokémon availability and trainer appearances, level-up and machine learners,
 and Generation V location-to-encounter links all consume this shared index.
-Catalog-only metrics such as obtainability, encounter-location counts, minimum
-known obtainable level, trainer appearances, and learner counts must be derived
-from it rather than from page-specific dataset scans.
+Catalog-only fields such as direct availability methods, wild-location counts,
+trainer appearances, and learner counts must be derived from it rather than from
+page-specific dataset scans. Availability is multi-valued because one Pokémon may
+have several direct sources. The explicit `no-known-direct-source` value means the
+index found no wild, static, gift, egg, trade, revival, or special encounter source;
+it does not claim the Pokémon is unobtainable through evolution.
 
 Multi-select facets are reserved for fields where each record can contain several
 values. They remain open while options are toggled and default to matching every

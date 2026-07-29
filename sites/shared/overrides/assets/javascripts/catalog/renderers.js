@@ -93,12 +93,14 @@ export function accessMethods(record) {
 }
 
 export function pokemonAvailability(record) {
-  const details = [];
-  if (record.encounter_location_count) {
-    details.push(`${record.encounter_location_count.toLocaleString()} location${record.encounter_location_count === 1 ? "" : "s"}`);
-  }
-  const label = title(record.obtainability);
-  return text(details.length ? `${label} \u00B7 ${details.join(" \u00B7 ")}` : label);
+  const methods = record.availability_methods.map((method) => {
+    const label = displayFilter("availability_methods", method);
+    if (method !== "wild" || !record.wild_location_count) return label;
+    const count = record.wild_location_count.toLocaleString();
+    const locations = record.wild_location_count === 1 ? "location" : "locations";
+    return `${label} (${count} ${locations})`;
+  });
+  return text(methods.join(" \u00B7 "));
 }
 
 export function trainerPartySummary(record) {

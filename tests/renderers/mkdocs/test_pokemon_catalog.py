@@ -37,28 +37,34 @@ class PokemonCatalogAvailabilityTests(unittest.TestCase):
         self.assertEqual(
             _catalog_availability("bulbasaur", relationships),
             {
-                "obtainability": "wild",
-                "wild_obtainable": True,
-                "encounter_location_count": 2,
-                "minimum_obtainable_level": 5,
+                "availability_methods": ["wild", "gift"],
+                "wild_location_count": 2,
             },
         )
 
-    def test_classifies_direct_nonwild_acquisition(self) -> None:
+    def test_preserves_each_direct_nonwild_acquisition_method(self) -> None:
         relationships = _relationships(
             acquisitions=(
                 _acquisition("bulbasaur", "static", level=15),
                 _acquisition("bulbasaur", "trade", level=None),
+                _acquisition("bulbasaur", "honey-tree", level=None),
             )
         )
 
         self.assertEqual(
             _catalog_availability("bulbasaur", relationships),
             {
-                "obtainability": "static, gift, or trade only",
-                "wild_obtainable": False,
-                "encounter_location_count": 0,
-                "minimum_obtainable_level": 15,
+                "availability_methods": ["static", "trade", "honey-tree"],
+                "wild_location_count": 0,
+            },
+        )
+
+    def test_marks_records_without_a_direct_source_explicitly(self) -> None:
+        self.assertEqual(
+            _catalog_availability("bulbasaur", _relationships()),
+            {
+                "availability_methods": ["no-known-direct-source"],
+                "wild_location_count": 0,
             },
         )
 

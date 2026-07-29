@@ -81,7 +81,10 @@ class CatalogPresentationTests(unittest.TestCase):
         self.assertIn('["Base price", (record)', text)
         self.assertIn('"Always hits"', text)
         self.assertIn('sorts: [["label", "Area"]', text)
-        self.assertIn('{ key: "obtainability", label: "Obtainability" }', text)
+        self.assertIn(
+            '{ key: "availability_methods", label: "Availability", multi: true }',
+            text,
+        )
         self.assertIn('["Availability", pokemonAvailability]', text)
         self.assertIn('["Party", trainerPartySummary]', text)
 
@@ -112,7 +115,7 @@ class CatalogPresentationTests(unittest.TestCase):
 
         self.assertIn("record.min_level === record.max_level", text)
 
-    def test_pokemon_availability_omits_minimum_level(self) -> None:
+    def test_pokemon_availability_lists_methods_without_minimum_level(self) -> None:
         renderers = CATALOG_CONFIG_JS.with_name("renderers.js").read_text(
             encoding="utf-8"
         )
@@ -122,6 +125,26 @@ class CatalogPresentationTests(unittest.TestCase):
 
         self.assertNotIn("minimum_obtainable_level", availability)
         self.assertNotIn("Lv.", availability)
+        self.assertIn('displayFilter("availability_methods", method)', availability)
+        self.assertIn("record.wild_location_count", availability)
+
+    def test_availability_methods_have_clear_display_names(self) -> None:
+        formatting = (
+            CATALOG_CONFIG_JS.parent.parent / "formatting.js"
+        ).read_text(encoding="utf-8")
+
+        for label in (
+            '"Wild encounter"',
+            '"Static encounter"',
+            '"Gift egg"',
+            '"In-game trade"',
+            '"Honey Tree"',
+            '"Great Marsh rotation"',
+            '"Trophy Garden rotation"',
+            '"No known direct source"',
+        ):
+            with self.subTest(label=label):
+                self.assertIn(label, formatting)
 
 
 if __name__ == "__main__":
