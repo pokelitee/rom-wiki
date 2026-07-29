@@ -12,7 +12,7 @@ import types
 import unittest
 from pathlib import Path
 
-from romwiki.engines.gen4_dppt import parse_encounter_record
+from romwiki.engines.gen4.dppt import parse_encounter_record
 from romwiki.engines.registry import (
     EngineAdapter,
     register_engine,

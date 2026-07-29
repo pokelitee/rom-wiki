@@ -22,7 +22,7 @@ class Gen5PickupTable:
     # The 29-word table found by byte-pattern search in the Battle overlay
     # (`PickupOvlNumber`) -- unlike Generation IV's separate common/rare item
     # lists, this generation packs every level range's items into one shared,
-    # sliding-window array (see `gen5_bw/pickup.py`).
+    # sliding-window array (see `gen5/bw/pickup.py`).
     item_ids: tuple[int, ...]
     provenance: RecordProvenance
 

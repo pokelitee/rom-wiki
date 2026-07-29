@@ -97,9 +97,17 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 
 ### Engine decoders
 
-`src/romwiki/engines/` contains binary and script parsers for an engine family.
-The current `gen4_dppt` package decodes the Generation IV D/P/Pt formats used by
-Renegade Platinum.
+`src/romwiki/engines/` groups binary and script parsers first by generation and
+then by engine family. The current `gen4/dppt` and `gen5/bw` leaf packages decode
+the D/P/Pt and Black/White formats. Their stable profile-facing engine IDs remain
+`gen4_dppt` and `gen5_bw`.
+
+A generation package is a namespace, not a selectable engine. When a second
+family is implemented, such as `gen5/b2w2` or `gen4/hgss`, begin with a separate
+leaf adapter. Promote a parser into the parent generation package only after real
+ROM fixtures prove that its format and behavior are shared by at least two
+families. Leaf packages may depend on their generation's shared modules, but
+must not depend on sibling leaves.
 
 Engine decoders should return typed facts, validate bounds and identifiers, and
 avoid page-layout decisions. Exact ROM-derived values take priority over external
@@ -107,7 +115,7 @@ documentation.
 
 When an engine stores a semantic value indirectly, its engine package also owns
 the translator for that encoding. For example,
-`engines/gen4_dppt/trainer_party.py` translates Gen IV trainer-party records into
+`engines/gen4/dppt/trainer_party.py` translates Gen IV trainer-party records into
 the shared party contract. `pipeline/trainer_party.py` dispatches by the explicit
 `engine` field on the raw dataset; it must not accumulate generation-specific
 branches itself.
@@ -287,15 +295,16 @@ The CLI uses the engine generation to select the matching local PokéDB output b
 default, and the site catalog verifies descriptor generation metadata against it.
 Pipeline modules resolve
 `get_platform(profile.platform)` and `get_engine(profile.engine)` instead of
-importing `platforms.nds` or `engines.gen4_dppt` directly; only the registries
+importing `platforms.nds` or `engines.gen4.dppt` directly; only the registries
 themselves, and each engine/platform's own package, are allowed to name a specific
 implementation. `pipeline/trainer_party.py` predates the shared registries and uses
 the same dict-dispatch shape locally, scoped to the one contract it translates.
 
 Adding a second platform or engine is additive at the registry boundary: a new
-`platforms/<platform>/` or `engines/<engine>/` package, one new entry in the
-relevant registry dict, and a profile that declares the new `platform`/`engine`
-keys — no pipeline module needs to change to *dispatch* to it. But a pipeline
+`platforms/<platform>/` or `engines/<generation>/<family>/` package, one new
+entry in the relevant registry dict, and a profile that declares the matching
+`platform`/`engine` keys. No pipeline module needs to change to *dispatch* to
+it. But a pipeline
 module that has only ever run against one engine can still carry that engine's
 unstated assumptions, invisible until a second real engine exercises the same
 code path. Implementing `gen5_bw` (alongside `gen4_dppt`) found two:

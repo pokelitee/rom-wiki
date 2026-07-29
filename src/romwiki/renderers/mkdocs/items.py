@@ -114,7 +114,7 @@ def render_item_pages(
         locations = list(
             dict.fromkeys(
                 # Gen5's shop references have no map-header cross-reference
-                # (see gen5_bw/__init__.py's module docstring) and use
+                # (see gen5/bw/__init__.py's module docstring) and use
                 # "shop_name" instead of "name" -- fall back to it here.
                 reference.get("name", reference.get("shop_name"))
                 for source_record in source_records
@@ -134,7 +134,7 @@ def render_item_pages(
                 for field in ("locations", "shops", "gifts", "trades")
                 for reference in source_record[field]
                 # Gen5's NPC trades have no map-header cross-reference (see
-                # gen5_bw/__init__.py's module docstring), so they're excluded
+                # gen5/bw/__init__.py's module docstring), so they're excluded
                 # from this location-entity list rather than linked wrong.
                 if reference.get("header_id") is not None
             ]
@@ -532,7 +532,7 @@ def _append_gift_trade_table(
 
 def _location_or_trade_cell(value: dict[str, Any], source_file: str) -> str:
     # Gen5's NPC trades aren't linked to a specific map header (no
-    # script-engine location resolution -- see gen5_bw/__init__.py's module
+    # script-engine location resolution -- see gen5/bw/__init__.py's module
     # docstring), so they show the trade NPC's name/nickname as plain text
     # instead of a location link.
     if "header_id" in value:

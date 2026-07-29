@@ -107,7 +107,7 @@ static_pokemon = [
 # The fossil scientist's own script (same file the 9 fossil-revival static
 # encounters above already use) picks a species by literally comparing the
 # handed-over item ID against each real fossil item -- see
-# gen5_bw/scripts.py's `parse_fossil_revival_table` for the disassembly this
+# gen5/bw/scripts.py's `parse_fossil_revival_table` for the disassembly this
 # was decoded from and its cross-check against both real ROMs.
 fossil_revival_script_file = 877
 

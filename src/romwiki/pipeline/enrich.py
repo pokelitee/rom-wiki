@@ -142,7 +142,7 @@ def enrich_encounter_dataset(
     engine = get_engine(dataset["engine"]).enrich
     pokemon_names = _resolve_pokemon_names(engine, dataset)
     # Generation V's wild-encounter mechanics don't share Generation IV's
-    # shape (see gen5_bw/encounters.py) so they get their own per-area
+    # shape (see gen5/bw/encounters.py) so they get their own per-area
     # enrichment function rather than a branch inside the Gen IV one.
     enrich_area = (
         _enrich_gen5_encounter_area

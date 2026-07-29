@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-import romwiki.engines.gen4_dppt as gen4_dppt
-import romwiki.engines.gen5_bw as gen5_bw
+import romwiki.engines.gen4.dppt as gen4_dppt
+import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.util.errors import DataSourceError
 
 # Canonical engine-name strings, for the handful of pipeline/renderer call

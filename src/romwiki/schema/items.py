@@ -88,7 +88,7 @@ class Gen5ItemPartyEffects:
     # pp_max/critical_hit_stages have no confirmed bit here), this
     # generation's confirmed party-use effects live in their own dedicated
     # byte-per-concept fields rather than one shared flag word. See
-    # gen5_bw/items.py's module comment for exactly how each field below was
+    # gen5/bw/items.py's module comment for exactly how each field below was
     # verified against real ROM data.
     heal_sleep: bool
     heal_poison: bool

@@ -180,16 +180,24 @@ filesystem/archive types, and header-matching function as a new entry in
 `src/romwiki/platforms/registry.py`'s `_PLATFORMS` dict, and give the profile a
 matching `platform` key.
 
-Add engine parsers under `src/romwiki/engines/<engine>/` for each supported record
-type. Keep parsers small, typed, and independently testable. Preserve raw source
-locations in provenance and reject malformed or out-of-range records instead of
-silently guessing. Register the new engine's modules as a new `EngineAdapter` entry
-in `src/romwiki/engines/registry.py`'s `_ENGINES` dict; pipeline modules resolve
-parsers and constants through `get_engine(profile.engine)` rather than importing an
-engine package directly, so this registration is what makes an existing pipeline
-module's extraction and enrichment logic *dispatch* to the new engine. Extend
-`tests/engines/test_contract.py`'s fake-engine coverage if the new engine exercises
-a shared code path the fake engine doesn't yet cover.
+Add engine parsers under
+`src/romwiki/engines/<generation>/<family>/` for each supported record type.
+Generation packages are internal namespaces; profiles continue to select stable
+leaf adapter IDs such as `gen4_dppt` and `gen5_bw`. Keep parsers small, typed, and
+independently testable. Preserve raw source locations in provenance and reject
+malformed or out-of-range records instead of silently guessing. Register the new
+engine's modules as a new `EngineAdapter` entry in
+`src/romwiki/engines/registry.py`'s `_ENGINES` dict; pipeline modules resolve
+parsers and constants through `get_engine(profile.engine)` rather than importing
+an engine package directly, so this registration is what makes an existing
+pipeline module's extraction and enrichment logic *dispatch* to the new engine.
+Extend `tests/engines/test_contract.py`'s fake-engine coverage if the new engine
+exercises a shared code path the fake engine doesn't yet cover.
+
+Start each distinct game family as its own leaf package. If real fixtures for two
+families prove a parser is identical, move that parser into their parent
+generation package and have both leaves consume it. Do not make one leaf depend
+on another or add a shared abstraction based only on expected compatibility.
 
 Registration alone is not always the *only* change needed, though. A pipeline
 module that has only ever been exercised by one engine can carry that engine's
@@ -216,7 +224,7 @@ Add an adapter or pipeline that maps engine records into the schemas under
 and rendering.
 
 Trainer party formats require an engine translator under
-`src/romwiki/engines/<engine>/trainer_party.py`. Register it in
+`src/romwiki/engines/<generation>/<family>/trainer_party.py`. Register it in
 `pipeline/trainer_party.py` and emit the shared contract from
 `schema/trainers.py`. Do not teach the shared trainer renderer about a generation's
 difficulty byte, PID algorithm, ability flags, or EV defaults. Preserve those raw

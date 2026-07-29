@@ -1315,7 +1315,7 @@ def _extract_gen5_matrix_connections(
 ) -> dict[int, list[LocationConnection]]:
     """Derive real outdoor connections from each header's matrix grid.
 
-    Each map header's `matrix_id` (see `gen5_bw/locations.py`'s
+    Each map header's `matrix_id` (see `gen5/bw/locations.py`'s
     `_MATRIX_ID_OFFSET` docstring) selects a grid of real header IDs from
     `layout.map_matrices`; adjacent grid cells are real, geographically
     adjacent maps. A cell value of -1 means "no map there" (verified: real

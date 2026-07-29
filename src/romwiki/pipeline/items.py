@@ -114,7 +114,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         # Gen V has no fixed ARM9 table like Gen IV's -- the fossil
         # scientist's own script (`layout.scripts`) picks a species by
         # literally comparing the handed-over item against each real fossil
-        # item ID (see gen5_bw/scripts.py's module docstring for the full
+        # item ID (see gen5/bw/scripts.py's module docstring for the full
         # disassembly and cross-check against both real ROMs).
         scripts_path = profile.layout["scripts"]
         scripts_archive = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
@@ -376,7 +376,7 @@ def build_item_dataset(
                 )
 
     # Unlike Gen4's script-linked NPC trades above, Gen5's aren't attached to
-    # a specific map header (see gen5_bw/__init__.py's module docstring), so
+    # a specific map header (see gen5/bw/__init__.py's module docstring), so
     # this is a flat pass over a standalone trade dataset instead of nested
     # inside the location loop.
     for trade in (trade_dataset or {}).get("records", []):

@@ -6,8 +6,8 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from romwiki.engines.gen4_dppt import parse_encounter_record
-from romwiki.engines.gen5_bw import parse_encounter_entry
+from romwiki.engines.gen4.dppt import parse_encounter_record
+from romwiki.engines.gen5.bw import parse_encounter_entry
 from romwiki.pipeline.enrich import enrich_encounter_dataset
 from romwiki.renderers.mkdocs import render_encounter_pages
 from romwiki.sources import PokeDBGeneration
