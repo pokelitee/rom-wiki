@@ -1,5 +1,8 @@
+# Representative detail pages for `romwiki site serve --dev`.
+# Keep every section populated and cover generation-specific render states.
 [pages]
 pokemon = [
+    "arbok",
     "bulbasaur",
     "eevee",
     "wurmple",

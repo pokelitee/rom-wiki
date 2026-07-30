@@ -1,5 +1,8 @@
+# Representative detail pages for `romwiki site serve --dev`.
+# Keep every section populated and cover generation-specific render states.
 [pages]
 pokemon = [
+    "alomomola",
     "bulbasaur",
     "eevee",
     "darmanitan-standard",
@@ -14,18 +17,30 @@ abilities = [
 ]
 moves = [
     "tackle",
+    "acid-armor",
+    "cut",
+    "struggle-bug",
 ]
 items = [
     "master-ball",
     "potion",
     "leftovers",
+    "covenant-ore",
 ]
 encounters = [
-    "area-000",
+    "map-000",
+    "map-009",
 ]
 trainers = [
-    "trainer-0000",
+    "trainer-0099",
+    "trainer-0145",
+    "trainer-0284",
+    "trainer-0345",
 ]
 locations = [
     "header-000",
+    "header-001",
+    "header-006",
+    "header-113",
+    "header-178",
 ]
