@@ -4,9 +4,9 @@ import tempfile
 import threading
 import unittest
 from functools import partial
-from http.server import ThreadingHTTPServer
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
@@ -18,31 +18,41 @@ from romwiki.sites.server import (
     _prepare_output,
     _should_rebuild_for_event,
     _validate_server_options,
-    _write_response_body,
     serve_sites,
 )
 from romwiki.util.errors import SiteError
 
 
 class DevelopmentServerTests(unittest.TestCase):
-    def test_response_writer_ignores_client_disconnects(self) -> None:
+    def test_request_handler_ignores_client_disconnects(self) -> None:
+        handler = object.__new__(DevelopmentRequestHandler)
         for error in (
             BrokenPipeError(),
             ConnectionAbortedError(),
             ConnectionResetError(),
         ):
-            with self.subTest(error=type(error).__name__):
-                stream = Mock()
-                stream.write.side_effect = error
+            with (
+                self.subTest(error=type(error).__name__),
+                patch.object(
+                    SimpleHTTPRequestHandler,
+                    "handle",
+                    side_effect=error,
+                ),
+            ):
+                handler.handle()
 
-                _write_response_body(stream, b"response")
+    def test_request_handler_preserves_unexpected_errors(self) -> None:
+        handler = object.__new__(DevelopmentRequestHandler)
 
-    def test_response_writer_preserves_unexpected_write_errors(self) -> None:
-        stream = Mock()
-        stream.write.side_effect = OSError("disk failure")
-
-        with self.assertRaisesRegex(OSError, "disk failure"):
-            _write_response_body(stream, b"response")
+        with (
+            patch.object(
+                SimpleHTTPRequestHandler,
+                "handle",
+                side_effect=OSError("disk failure"),
+            ),
+            self.assertRaisesRegex(OSError, "disk failure"),
+        ):
+            handler.handle()
 
     def test_rebuild_filter_ignores_generated_and_cache_activity(self) -> None:
         ignored_paths = (

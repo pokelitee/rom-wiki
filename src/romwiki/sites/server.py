@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any
 from urllib.parse import unquote, urlsplit
 
 from romwiki.sites.build import build_sites
@@ -83,6 +83,12 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self._landing_path = landing_path
         super().__init__(*args, directory=directory, **kwargs)
 
+    def handle(self) -> None:
+        try:
+            super().handle()
+        except ConnectionError:
+            _LOG.debug("Development client disconnected before response completed")
+
     def end_headers(self) -> None:
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
@@ -123,7 +129,7 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
-        _write_response_body(self.wfile, content)
+        self.wfile.write(content)
 
     def log_message(self, format: str, *args: Any) -> None:
         _LOG.debug("Development server: " + format, *args)
@@ -134,7 +140,7 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
-        _write_response_body(self.wfile, content)
+        self.wfile.write(content)
 
     def _requested_html_path(self) -> Path | None:
         request_path = unquote(urlsplit(self.path).path).lstrip("/")
@@ -301,13 +307,6 @@ def _development_site_url(host: str, port: int) -> str:
     if ":" in display_host and not display_host.startswith("["):
         display_host = f"[{display_host}]"
     return f"http://{display_host}:{port}/"
-
-
-def _write_response_body(stream: BinaryIO, content: bytes) -> None:
-    try:
-        stream.write(content)
-    except ConnectionError:
-        _LOG.debug("Development client disconnected before response completed")
 
 
 def _start_source_observer(root: Path, changes: threading.Event) -> Any:
