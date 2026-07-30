@@ -435,9 +435,8 @@ def build_item_dataset(
     slug_counts: dict[str, int] = {}
     for source in item_dataset["records"]:
         if source["public"]:
-            slug_counts[pokedb.item_slug(source["name"])] = (
-                slug_counts.get(pokedb.item_slug(source["name"]), 0) + 1
-            )
+            page_slug = pokedb.item_slug(source["name"])
+            slug_counts[page_slug] = slug_counts.get(page_slug, 0) + 1
 
     records = []
     for source in item_dataset["records"]:

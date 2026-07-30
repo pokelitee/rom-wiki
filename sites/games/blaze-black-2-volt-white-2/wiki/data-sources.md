@@ -33,6 +33,11 @@ mechanics baseline.
 ## Engine notes
 
 The hacks retain the retail B2W2 record formats and use the `gen5_b2w2` engine.
+Map headers therefore decode wild-encounter archive indexes from the low twelve
+bits of B2W2's flagged field and treat `0xFFF` as null. The profiles select
+PokéDB's `black-white` sprite set because that is the available Generation V
+reference set; unavailable version-specific images still use the normal generic
+fallback.
 The v1.1 Complete patcher leaves incorrect declared data-block sizes in the
 learnset, field-script, and overworld NARCs, and trailing data in the encounter
 NARC. Compatibility for those known archives is enabled only by these hack

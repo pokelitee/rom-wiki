@@ -231,7 +231,13 @@ resolved slug for items, since their ROM item IDs don't align with PokéDB's) ar
 the sole source for effect text and Pokédex-style flavor-text quotes, matched to
 a profile's `base_game` version where PokéDB carries per-version text. Trainer
 party members carry a Pokémon sprite and, when applicable, a held-item icon
-through the same lookups. PokéDB is never the mechanic baseline: exact change
+through the same lookups. Item page slugs remain derived from the ROM display
+name and stable ROM ID. A separate reference-slug resolver may expand known
+display abbreviations such as `MCHN`, X-item names, and Apricorn colors, but only
+accepts a candidate that actually exists in the loaded PokéDB generation. This
+keeps reference icons and descriptions available without guessing page identity
+or coupling it to mismatched external item IDs. PokéDB is never the mechanic
+baseline: exact change
 sections compare the parsed clean ROM with the parsed hack, and ROM-derived
 values remain authoritative; the `_clean()` comparison step strips every
 `reference`/`sprite`/`sprites` object before diffing so presentation data never

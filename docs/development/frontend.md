@@ -41,11 +41,15 @@ Controls with text or icons on a solid theme-colored background use
 
 `theme.css` also defines a fixed set of custom properties independent of any
 game's appearance token: `--rw-positive`/`--rw-negative` for change-status
-colors and `--rw-gender-male`/`--rw-gender-female` for gender indicators, each
-with separate light- and dark-mode values verified for WCAG AA contrast
-against `--rw-surface`, plus `--rw-select-chevron`/`--rw-select-chevron-inverse`
-for the shared dropdown icon. Components reference these directly rather than
-redefining colors locally.
+colors, `--rw-gender-male`/`--rw-gender-female` for gender indicators, and
+`--rw-effectiveness-*` for type-matchup states. Effectiveness colors preserve
+one family for resisted values and one for effective values, with stronger
+variants distinguishing ¼× from ½× and 4× from 2×; immunity remains a separate
+state and neutral damage is unfilled. Each token has separate light- and
+dark-mode values verified for WCAG AA contrast. The file also owns
+`--rw-select-chevron`/`--rw-select-chevron-inverse` for the shared dropdown
+icon. Components reference these tokens directly rather than redefining colors
+locally.
 
 The shared `404.html` provides portal- and game-aware recovery links. GitHub Pages
 builds pass the deployment root through `ROMWIKI_SITE_URL`; the MkDocs hook derives
@@ -167,6 +171,12 @@ configuration, watches shared and site sources, and reloads open browser pages
 after successful rebuilds. The portal uses its normal configuration because its
 source is already small.
 
+The watcher responds only to supported source-file changes and ignores generated
+output, Python cache directories, filesystem access events, and other editor metadata.
+This prevents its own builds and browser requests from triggering another build.
+An interrupted browser request is handled as a normal development disconnect
+rather than printed as a server traceback.
+
 Use the same command with one or more site identifiers for a focused preview:
 
 ```console
@@ -190,6 +200,12 @@ payload, and includes one representative detail page from each generated section
 The remaining generated Markdown pages are excluded, and development output is
 written below `build/mkdocs-dev/`. Link validation for excluded detail pages is
 disabled only in this configuration.
+
+Each game site's `dev-pages.toml` must keep a non-empty selection for Pokémon,
+abilities, moves, items, encounters, trainers, and locations. Choose records that
+exercise the site's distinct rendering states, and update the manifest whenever a
+new detail component needs a stable review fixture. The manifest changes only
+which detail Markdown is rendered; catalogs and shared pages remain complete.
 
 Always use the production configuration or the multi-site build before deployment.
 The deploy workflow runs the unit suite, builds each published site concurrently,
@@ -220,12 +236,15 @@ Renderer helpers produce semantic classes for type badges, summaries, stat bars,
 fact grids, exact clean-ROM comparisons, compact link lists, party cards, record
 navigation, and provenance details. Exact numeric values and normal links remain
 in the document; visualization is supplementary. Type badges are presentational
-labels rather than links. The complete type chart remains available through site
-navigation, and its row and column labels are plain text because they do not lead
-to distinct content. Pokémon detail pages place their defensive effectiveness
-summary after base stats, then group move sources under one learnset section and
-include the common type, class, power, accuracy, and PP fields alongside
-source-specific level, machine, location, and requirement columns. Evolution
+labels rather than links and appear on both axes of the complete type chart.
+That chart uses scoped row and column headers, one Material-owned horizontal
+scroll container, and a sticky attacking-type column. Its exact multiplier text
+and accessible labels remain present alongside the shared effectiveness colors.
+Pokémon detail pages reuse the same multiplier component for defensive
+effectiveness, including ¼× and 4× compound matchups, and place the summary after
+base stats. Move sources are grouped under one learnset section and include the
+common type, class, power, accuracy, and PP fields alongside source-specific
+level, machine, location, and requirement columns. Evolution
 sections derive a complete branch-aware graph from the ROM evolution dataset,
 stack wide branches into readable rows, make each species card navigable,
 highlight the current record, and guard against cycles. Long chains retain

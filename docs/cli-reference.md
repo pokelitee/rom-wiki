@@ -141,6 +141,15 @@ the primary dataset file, while `--wiki-output` names the generated section
 directory. `--dev` renders only the representative detail pages declared by the
 site's `dev-pages.toml`, while retaining complete catalog data.
 
+The same flag is available for a complete single-game or sibling-family data
+build. This regenerates the lightweight Markdown selected by the manifest
+without building or serving MkDocs:
+
+```console
+romwiki build game --game renegade-platinum --dev
+romwiki build family --games black-us white-us --versions black white --site-id black-white --dev
+```
+
 ### Sibling-version family
 
 Two or more sibling versions can publish into one site:

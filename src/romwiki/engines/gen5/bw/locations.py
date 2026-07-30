@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from romwiki.engines.gen5.locations import (
-    parse_map_header_script_files as _parse_map_header_script_files,
+    parse_map_header_script_files as parse_map_header_script_files,
 )
 from romwiki.engines.gen5.locations import (
     parse_map_header_table as _parse_map_header_table,
@@ -12,10 +12,6 @@ from romwiki.engines.gen5.locations import (
 from romwiki.schema import Gen5Location
 
 _WILD_SET_MASK = 0xFFFF
-
-
-def parse_map_header_script_files(data: bytes) -> tuple[int, ...]:
-    return _parse_map_header_script_files(data)
 
 
 def parse_map_header_table(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from html import escape
 from typing import Any
 
@@ -20,15 +21,28 @@ DISPLAY_NAMES = {
     "vs-seeker": "Vs. Seeker",
     "trainer-ai-item": "Trainer AI item",
 }
-EFFECTIVENESS_PRESENTATION = {
-    "0": ("0×", "immune", "No effect"),
-    "1/4": ("¼×", "resisted", "One-quarter effectiveness"),
-    "1/2": ("½×", "resisted", "Not very effective"),
-    "1": ("—", "neutral", "Normal effectiveness"),
-    "2": ("2×", "effective", "Super effective"),
-    "4": ("4×", "effective", "Four-times effectiveness"),
+
+
+@dataclass(frozen=True, slots=True)
+class _EffectivenessPresentation:
+    display: str
+    state: str
+    description: str
+    strong: bool = False
+
+
+_EFFECTIVENESS_PRESENTATION = {
+    "0": _EffectivenessPresentation("0×", "immune", "No effect"),
+    "1/4": _EffectivenessPresentation(
+        "¼×", "resisted", "One-quarter effectiveness", strong=True
+    ),
+    "1/2": _EffectivenessPresentation("½×", "resisted", "Not very effective"),
+    "1": _EffectivenessPresentation("—", "neutral", "Normal effectiveness"),
+    "2": _EffectivenessPresentation("2×", "effective", "Super effective"),
+    "4": _EffectivenessPresentation(
+        "4×", "effective", "Four-times effectiveness", strong=True
+    ),
 }
-STRONG_EFFECTIVENESS_MULTIPLIERS = {"1/4", "4"}
 
 
 def empty_state(message: str) -> list[str]:
@@ -63,30 +77,44 @@ def type_badges(types: list[dict[str, Any]]) -> str:
     return '<span class="rw-type-list">' + "".join(badges) + "</span>"
 
 
-def effectiveness_presentation(multiplier: str) -> tuple[str, str, str]:
+def effectiveness_description(multiplier: str) -> str:
+    return _effectiveness_presentation(multiplier).description
+
+
+def _effectiveness_presentation(multiplier: str) -> _EffectivenessPresentation:
     try:
-        return EFFECTIVENESS_PRESENTATION[multiplier]
+        return _EFFECTIVENESS_PRESENTATION[multiplier]
     except KeyError:
         display = f"{multiplier}×"
-        return display, "neutral", f"{display} effectiveness"
+        return _EffectivenessPresentation(
+            display, "neutral", f"{display} effectiveness"
+        )
 
 
 def effectiveness_value(multiplier: str) -> str:
-    display, state, description = effectiveness_presentation(multiplier)
-    content = escape(display)
-    if state in {"effective", "immune"}:
+    return _effectiveness_element(multiplier, "span", "rw-effectiveness__value")
+
+
+def effectiveness_table_cell(multiplier: str) -> str:
+    return _effectiveness_element(multiplier, "td", "rw-effectiveness")
+
+
+def _effectiveness_element(multiplier: str, tag: str, base_class: str) -> str:
+    presentation = _effectiveness_presentation(multiplier)
+    content = escape(presentation.display)
+    if presentation.state in {"effective", "immune"}:
         content = f"<strong>{content}</strong>"
-    classes = effectiveness_classes(multiplier, state)
+    classes = _effectiveness_classes(presentation)
     return (
-        f'<span class="rw-effectiveness__value {classes}" '
-        f'aria-label="{escape(description)}: {escape(display)}">'
-        f"{content}</span>"
+        f'<{tag} class="{base_class} {classes}" '
+        f'aria-label="{escape(presentation.description)}: '
+        f'{escape(presentation.display)}">{content}</{tag}>'
     )
 
 
-def effectiveness_classes(multiplier: str, state: str) -> str:
-    classes = [f"rw-effectiveness--{state}"]
-    if multiplier in STRONG_EFFECTIVENESS_MULTIPLIERS:
+def _effectiveness_classes(presentation: _EffectivenessPresentation) -> str:
+    classes = [f"rw-effectiveness--{presentation.state}"]
+    if presentation.strong:
         classes.append("rw-effectiveness--strong")
     return " ".join(classes)
 

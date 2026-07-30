@@ -6,7 +6,7 @@ from pathlib import Path
 
 from romwiki.pipeline.type_charts import build_type_dataset
 from romwiki.profiles.loader import ProfileRepository
-from romwiki.renderers.mkdocs.types import _effectiveness_cell, render_type_chart
+from romwiki.renderers.mkdocs.types import render_type_chart
 
 
 class TypeChartRenderingTests(unittest.TestCase):
@@ -49,14 +49,6 @@ class TypeChartRenderingTests(unittest.TestCase):
         self.assertIn('class="rw-type-chart__axis"', page)
         self.assertIn('aria-label="Attacking by row, defending by column"', page)
         self.assertIn("Atk ↓ / Def →</span>", page)
-
-    def test_renders_compound_effectiveness_multipliers(self) -> None:
-        self.assertIn("rw-effectiveness--resisted", _effectiveness_cell("1/4"))
-        self.assertIn("rw-effectiveness--strong", _effectiveness_cell("1/4"))
-        self.assertIn("One-quarter effectiveness: ¼×", _effectiveness_cell("1/4"))
-        self.assertIn("rw-effectiveness--effective", _effectiveness_cell("4"))
-        self.assertIn("rw-effectiveness--strong", _effectiveness_cell("4"))
-        self.assertIn("Four-times effectiveness: 4×", _effectiveness_cell("4"))
 
 
 if __name__ == "__main__":

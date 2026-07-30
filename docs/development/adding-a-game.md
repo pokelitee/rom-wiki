@@ -279,7 +279,9 @@ Create:
 
 ```text
 sites/games/<game-id>/
+|-- dev-pages.toml
 |-- game.toml
+|-- mkdocs.dev.yml
 |-- mkdocs.yml
 `-- wiki/
     |-- index.md
@@ -325,6 +327,10 @@ engine adapter.
 The game MkDocs configuration inherits `sites/shared/mkdocs.base.yml`, points
 `theme.custom_dir` at the shared overrides, and registers the repository-local
 MkDocs hook. Copy the relative-path pattern from the existing game site.
+Its development configuration inherits the game configuration and loads
+`dev-pages.toml`. Keep a non-empty representative selection for every generated
+detail section: Pokémon, abilities, moves, items, encounters, trainers, and
+locations.
 
 Documentation-only sites may set `data_driven = false` in `[game]` and omit
 `profile`/`profiles`. They remain first-class catalog and deployment entries but

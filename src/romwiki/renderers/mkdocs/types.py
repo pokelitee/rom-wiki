@@ -6,8 +6,8 @@ from typing import Any
 
 from romwiki.renderers.mkdocs.catalog import write_text
 from romwiki.renderers.mkdocs.components import (
-    effectiveness_classes,
-    effectiveness_presentation,
+    effectiveness_description,
+    effectiveness_table_cell,
     effectiveness_value,
     type_badges,
 )
@@ -49,7 +49,7 @@ def render_type_chart(dataset: dict[str, Any], output_root: Path) -> int:
                 "<tr>",
                 f'<th scope="row">{_type_badge(record["name"])}</th>',
                 *(
-                    _effectiveness_cell(matchup["multiplier"])
+                    effectiveness_table_cell(matchup["multiplier"])
                     for matchup in record["matchups"]
                 ),
                 "</tr>",
@@ -65,23 +65,9 @@ def _type_badge(name: str) -> str:
 
 
 def _legend_item(multiplier: str) -> str:
-    _, _, description = effectiveness_presentation(multiplier)
     return (
         "<li>"
         f"{effectiveness_value(multiplier)}"
-        f"<span>{escape(description.lower())}</span>"
+        f"<span>{escape(effectiveness_description(multiplier).lower())}</span>"
         "</li>"
-    )
-
-
-def _effectiveness_cell(multiplier: str) -> str:
-    display, state, description = effectiveness_presentation(multiplier)
-    content = escape(display)
-    if state in {"effective", "immune"}:
-        content = f"<strong>{content}</strong>"
-    classes = effectiveness_classes(multiplier, state)
-    return (
-        f'<td class="rw-effectiveness {classes}" '
-        f'aria-label="{escape(description)}: {escape(display)}">'
-        f"{content}</td>"
     )

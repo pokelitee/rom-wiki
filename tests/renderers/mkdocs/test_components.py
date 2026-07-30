@@ -5,6 +5,7 @@ import unittest
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
+    effectiveness_table_cell,
     effectiveness_value,
     evolution_condition,
     fact_grid,
@@ -86,6 +87,16 @@ class ComponentEscapingTests(unittest.TestCase):
         self.assertIn("rw-effectiveness--strong", quadruple)
         self.assertIn("Four-times effectiveness: 4×", quadruple)
         self.assertIn("<strong>4×</strong>", quadruple)
+        self.assertIn(
+            "rw-effectiveness--resisted rw-effectiveness--strong",
+            effectiveness_table_cell("1/4"),
+        )
+        self.assertEqual(
+            effectiveness_table_cell("4"),
+            '<td class="rw-effectiveness rw-effectiveness--effective '
+            'rw-effectiveness--strong" aria-label="Four-times effectiveness: '
+            '4×"><strong>4×</strong></td>',
+        )
 
     def test_escapes_text_and_attribute_values(self) -> None:
         hostile = 'fire" onmouseover="alert(1)&<script>'

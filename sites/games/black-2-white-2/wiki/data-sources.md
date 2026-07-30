@@ -28,4 +28,9 @@ mechanics baseline.
 Black 2 and White 2 use the shared Generation V parsers where their binary
 formats match Black and White, with a dedicated B2W2 engine layer for personal
 record size, alternate-form members, Pokéstar Studios records, item field-use
-IDs, archive bounds, and other sequel-specific constants.
+IDs, archive bounds, and other sequel-specific constants. Their map headers pack
+flags into the high four bits of the wild-encounter field, so the engine resolves
+encounter archive indexes from the low twelve bits and treats `0xFFF` as the null
+value. The profiles select PokéDB's `black-white` sprite set because that is the
+available Generation V reference set; unavailable version-specific images still
+fall back through the normal generic-sprite policy.
