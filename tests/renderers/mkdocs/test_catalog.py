@@ -87,17 +87,21 @@ class CatalogPresentationTests(unittest.TestCase):
         )
         self.assertIn('["Availability", pokemonAvailability]', text)
         self.assertIn('["Party", trainerPartySummary]', text)
+        self.assertEqual(text.count('["ID", routeId]'), 3)
+        self.assertEqual(text.count('["route_id", "ID"]'), 3)
 
-    def test_list_pages_omit_detail_only_and_technical_fields(self) -> None:
+        catalog = CATALOG_CONFIG_JS.with_name("catalog.js").read_text(encoding="utf-8")
+        self.assertIn('new Set(["encounters", "trainers", "locations"])', catalog)
+        self.assertIn("data.records.map(withRouteId)", catalog)
+        self.assertIn('record.url.replace(/\\/$/, "")', catalog)
+
+    def test_list_pages_omit_unrelated_detail_only_fields(self) -> None:
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
 
         for value in (
             '"Item ID"',
             '"Ability ID"',
             '"Move ID"',
-            '"Trainer ID"',
-            '"Header ID"',
-            '"Area ID"',
             'label: "Field use"',
             'label: "Fling power"',
             'label: "Trainer appearances"',
@@ -129,9 +133,9 @@ class CatalogPresentationTests(unittest.TestCase):
         self.assertIn("record.wild_location_count", availability)
 
     def test_availability_methods_have_clear_display_names(self) -> None:
-        formatting = (
-            CATALOG_CONFIG_JS.parent.parent / "formatting.js"
-        ).read_text(encoding="utf-8")
+        formatting = (CATALOG_CONFIG_JS.parent.parent / "formatting.js").read_text(
+            encoding="utf-8"
+        )
 
         for label in (
             '"Wild encounter"',

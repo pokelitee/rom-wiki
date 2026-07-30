@@ -36,7 +36,7 @@ _SKELETON_FILTER_COUNTS = {
     "items": 10,
     "moves": 9,
     "trainers": 10,
-    "locations": 4,
+    "locations": 5,
     "encounters": 8,
 }
 # Matches DEFAULT_PAGE_SIZE in

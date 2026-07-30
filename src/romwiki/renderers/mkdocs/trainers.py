@@ -219,9 +219,11 @@ def _catalog_record(
     )
     species = [member["name"] for member in party]
     label = _trainer_label(record)
+    route_id = filename.removesuffix("/")
     return add_change_status(
         {
             "id": record["trainer_id"],
+            "route_id": route_id,
             "label": label,
             "url": filename,
             "class_name": record["class_name"],
@@ -239,7 +241,9 @@ def _catalog_record(
             "max_level": max(levels),
             "pokemon": species,
             "party": party,
-            "search_text": " ".join((label, *location_names, *species)).lower(),
+            "search_text": " ".join(
+                (label, route_id, *location_names, *species)
+            ).lower(),
         },
         change,
     )

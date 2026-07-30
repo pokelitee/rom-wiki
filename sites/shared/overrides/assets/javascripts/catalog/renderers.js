@@ -14,6 +14,10 @@ export function recordLink(record) {
   return link;
 }
 
+export function routeId(record) {
+  return text(record.route_id || "—", "rw-catalog__id");
+}
+
 function referenceLink(reference) {
   if (!reference?.url) return text(reference?.label || "—");
   const link = document.createElement("a");

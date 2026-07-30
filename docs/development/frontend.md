@@ -92,6 +92,10 @@ Each generated section writes `catalog.json` with this envelope:
 
 The `kind` selects the shared filters, columns, and sorting behavior. Every record
 has a stable ID, display label, final directory URL, and normalized `search_text`.
+World catalogs also expose the exact final route segment as `route_id`; their
+tables show it in a shared ID column after the recognizable record name.
+Location labels therefore remain the ROM display name even when several map
+headers share it, with values such as `header-340` providing the disambiguation.
 Section-specific fields provide only the values visible, searchable, sortable,
 or filterable in the catalog. Catalog definitions may use select or searchable
 combobox facets, numeric ranges, sort direction, and correlations between facets.

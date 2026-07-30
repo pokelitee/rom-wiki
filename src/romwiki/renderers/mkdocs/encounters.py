@@ -229,9 +229,11 @@ def _catalog_record(
             dict.fromkeys((*method_pokemon["walking"], *special_species))
         )
     location_names = [location["name"] for location in record.get("locations", [])]
+    route_id = filename.removesuffix("/")
     return add_change_status(
         {
             "id": record["area_id"],
+            "route_id": route_id,
             "label": record["name"],
             "url": filename,
             "locations": list(dict.fromkeys(location_names)),
@@ -246,7 +248,7 @@ def _catalog_record(
             "max_level": max(levels) if levels else None,
             "referenced": referenced,
             "search_text": " ".join(
-                (record["name"], *location_names, *species)
+                (record["name"], route_id, *location_names, *species)
             ).lower(),
         },
         change,
@@ -743,9 +745,11 @@ def _gen5_catalog_record(
             for name in source_record.get("location_names", [])
         )
     )
+    route_id = filename.removesuffix("/")
     return add_change_status(
         {
             "id": record["area_id"],
+            "route_id": route_id,
             "label": record["name"],
             "url": filename,
             "locations": location_names,
@@ -763,7 +767,7 @@ def _gen5_catalog_record(
             "max_level": max(levels) if levels else None,
             "referenced": True,
             "search_text": " ".join(
-                (record["name"], *location_names, *species)
+                (record["name"], route_id, *location_names, *species)
             ).lower(),
         },
         change,

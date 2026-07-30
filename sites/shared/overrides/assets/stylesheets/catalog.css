@@ -335,6 +335,12 @@ html:not(.rw-js) .rw-catalog {
   color: var(--rw-text-muted);
   font-variant-numeric: tabular-nums;
 }
+.rw-catalog__id {
+  color: var(--rw-text-muted);
+  font-family: var(--md-code-font-family);
+  font-size: .9em;
+  white-space: nowrap;
+}
 .rw-catalog__list {
   display: block;
   min-width: 12rem;

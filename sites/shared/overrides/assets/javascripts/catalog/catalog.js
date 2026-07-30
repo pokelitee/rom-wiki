@@ -4,6 +4,7 @@ import { CATALOGS } from "./config.js";
 
 const PAGE_SIZES = [25, 50, 100, 200];
 const DEFAULT_PAGE_SIZE = 50;
+const ROUTE_ID_KINDS = new Set(["encounters", "trainers", "locations"]);
 
 export function initializeCatalogs() {
   document.querySelectorAll("[data-rw-catalog]").forEach(loadCatalog);
@@ -19,7 +20,10 @@ async function loadCatalog(root) {
     if (data.schema_version !== 3 || !config || !Array.isArray(data.records)) {
       throw new Error("Unsupported catalog format");
     }
-    enhanceCatalog(root, data.records, config);
+    const records = ROUTE_ID_KINDS.has(data.kind)
+      ? data.records.map(withRouteId)
+      : data.records;
+    enhanceCatalog(root, records, config);
     root.removeAttribute("aria-busy");
     const fallback = document.querySelector("[data-rw-catalog-fallback]");
     if (fallback) fallback.hidden = true;
@@ -35,6 +39,16 @@ async function loadCatalog(root) {
       fallback.classList.add("rw-catalog-fallback--visible");
     }
   }
+}
+
+function withRouteId(record) {
+  if (record.route_id || typeof record.url !== "string") return record;
+  const routeId = record.url.replace(/\/$/, "");
+  return {
+    ...record,
+    route_id: routeId,
+    search_text: `${record.search_text || ""} ${routeId}`.trim(),
+  };
 }
 
 function enhanceCatalog(root, records, config) {

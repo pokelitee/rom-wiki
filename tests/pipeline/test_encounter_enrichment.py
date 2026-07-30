@@ -83,6 +83,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         # slot's level (5) and fixed chance (20%).
         self.assertIn("| 5 | 20% |", page)
         self.assertEqual(catalog["kind"], "encounters")
+        self.assertEqual(catalog["records"][0]["route_id"], "area-000")
         self.assertIn("Ivysaur", catalog["records"][0]["pokemon"])
         self.assertIn("ivysaur", catalog["records"][0]["search_text"])
         self.assertEqual(catalog["records"][0]["methods"], ["walking"])
@@ -231,6 +232,7 @@ class Gen5EncounterEnrichmentTests(unittest.TestCase):
         self.assertIn("[Ivysaur](../pokemon/ivysaur.md)", page)
         self.assertIn("## Hack changes", page)
         self.assertEqual(catalog["kind"], "encounters")
+        self.assertEqual(catalog["records"][0]["route_id"], "map-000")
         self.assertEqual(catalog["records"][0]["methods"], ["Grass/Cave"])
         self.assertIn("Bulbasaur", catalog["records"][0]["pokemon"])
         self.assertIn("Ivysaur", catalog["records"][0]["pokemon"])

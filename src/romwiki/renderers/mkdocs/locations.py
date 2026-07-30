@@ -85,7 +85,6 @@ def render_location_pages(
             ),
         },
     )
-    name_counts = Counter(record["name"] for record in records)
     fallback_links = []
     catalog_records = []
     page_count = 0
@@ -117,16 +116,16 @@ def render_location_pages(
                 ),
             )
             page_count += 1
-        label = record["name"]
-        if name_counts[label] > 1:
-            label = (
-                f"{label} — {record['internal_name']} (header {record['header_id']})"
-            )
+        route_id = filename.removesuffix(".md")
+        fallback_label = f"{record['name']} — {route_id}"
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "location", record["header_id"], label, record["header_id"]
+                    "location",
+                    record["header_id"],
+                    fallback_label,
+                    record["header_id"],
                 ),
                 "locations/index.md",
             )
@@ -154,11 +153,14 @@ def render_location_pages(
             add_change_status(
                 {
                     "id": record["header_id"],
-                    "label": label,
-                    "url": filename.removesuffix(".md") + "/",
+                    "route_id": route_id,
+                    "label": record["name"],
+                    "url": route_id + "/",
                     "internal_name": record["internal_name"],
                     "features": features,
-                    "search_text": f"{record['name']} {record['internal_name']}".lower(),
+                    "search_text": (
+                        f"{record['name']} {record['internal_name']} {route_id}".lower()
+                    ),
                 },
                 change,
             )

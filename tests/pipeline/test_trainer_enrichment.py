@@ -182,6 +182,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             page,
         )
         self.assertEqual(catalog["kind"], "trainers")
+        self.assertEqual(catalog["records"][0]["route_id"], "trainer-0000")
         self.assertEqual(catalog["records"][0]["min_level"], 5)
         party_member = enriched["records"][0]["party"][0]
         self.assertEqual(party_member["moves_source"], "explicit")

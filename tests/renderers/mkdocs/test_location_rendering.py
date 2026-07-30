@@ -119,7 +119,49 @@ class LocationRenderingTests(unittest.TestCase):
 
         self.assertNotIn("## Wild encounters", page)
         self.assertNotIn("No rendered encounter-area variant", page)
+        self.assertEqual(catalog["records"][0]["route_id"], "header-006")
         self.assertNotIn("encounters", catalog["records"][0]["features"])
+
+    def test_keeps_duplicate_gen5_location_labels_clean(self) -> None:
+        base = {
+            "name": "Route 1",
+            "encounter_map_index": None,
+            "matrix_id": 0,
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        dataset = {
+            "engine": "gen5_bw",
+            "records": [
+                {
+                    **base,
+                    "header_id": 6,
+                    "provenance": {"archive": "a/0/1/2", "member": 6},
+                },
+                {
+                    **base,
+                    "header_id": 7,
+                    "provenance": {"archive": "a/0/1/2", "member": 7},
+                },
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output)
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            [(record["label"], record["route_id"]) for record in catalog["records"]],
+            [("Route 1", "header-006"), ("Route 1", "header-007")],
+        )
+        self.assertTrue(
+            all("(header " not in record["label"] for record in catalog["records"])
+        )
 
     def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
         record = {

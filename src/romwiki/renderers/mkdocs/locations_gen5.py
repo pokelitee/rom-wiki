@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +54,6 @@ def render_gen5_location_pages(
             ),
         },
     )
-    name_counts = Counter(record["name"] for record in records)
     fallback_links = []
     catalog_records = []
     page_count = 0
@@ -83,14 +81,16 @@ def render_gen5_location_pages(
                 ),
             )
             page_count += 1
-        label = record["name"]
-        if name_counts[label] > 1:
-            label = f"{label} (header {record['header_id']})"
+        route_id = filename.removesuffix(".md")
+        fallback_label = f"{record['name']} — {route_id}"
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "location", record["header_id"], label, record["header_id"]
+                    "location",
+                    record["header_id"],
+                    fallback_label,
+                    record["header_id"],
                 ),
                 "locations/index.md",
             )
@@ -98,8 +98,9 @@ def render_gen5_location_pages(
         catalog_records.append(
             {
                 "id": record["header_id"],
-                "label": label,
-                "url": filename.removesuffix(".md") + "/",
+                "route_id": route_id,
+                "label": record["name"],
+                "url": route_id + "/",
                 "features": [
                     *(["encounters"] if encounters else []),
                     *(["trainers"] if record["trainers"] else []),
@@ -109,7 +110,7 @@ def render_gen5_location_pages(
                     *(["items"] if record["items"] else []),
                     *(["shops"] if record.get("shops") else []),
                 ],
-                "search_text": record["name"].lower(),
+                "search_text": f"{record['name']} {route_id}".lower(),
             }
         )
     write_catalog(output_root, "locations", catalog_records)
