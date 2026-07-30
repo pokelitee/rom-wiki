@@ -22,6 +22,16 @@ html[data-romwiki-theme="portal"] {
      own color scheme (see the slate overrides below for the dark variants). */
   --rw-positive: #32855c;
   --rw-negative: #c94c45;
+  --rw-effectiveness-effective-bg: #e5f4ec;
+  --rw-effectiveness-effective-fg: #246b49;
+  --rw-effectiveness-effective-strong-bg: #ccebdc;
+  --rw-effectiveness-effective-strong-fg: #185c3b;
+  --rw-effectiveness-resisted-bg: #fff3d6;
+  --rw-effectiveness-resisted-fg: #735100;
+  --rw-effectiveness-resisted-strong-bg: #ffe4a3;
+  --rw-effectiveness-resisted-strong-fg: #644500;
+  --rw-effectiveness-immune-bg: #fbe9e7;
+  --rw-effectiveness-immune-fg: #963c37;
   --rw-gender-male: #3976c6;
   --rw-gender-female: #c9457c;
   --md-primary-fg-color: var(--rw-accent-strong);
@@ -42,6 +52,16 @@ body[data-md-color-scheme="slate"] {
   --rw-control-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
   --rw-positive: #3c9f6e;
   --rw-negative: #d36e69;
+  --rw-effectiveness-effective-bg: #173c2b;
+  --rw-effectiveness-effective-fg: #83dcb0;
+  --rw-effectiveness-effective-strong-bg: #245c40;
+  --rw-effectiveness-effective-strong-fg: #d1f5e1;
+  --rw-effectiveness-resisted-bg: #3b321b;
+  --rw-effectiveness-resisted-fg: #f0cf72;
+  --rw-effectiveness-resisted-strong-bg: #594815;
+  --rw-effectiveness-resisted-strong-fg: #ffe194;
+  --rw-effectiveness-immune-bg: #492625;
+  --rw-effectiveness-immune-fg: #f2aaa6;
   --rw-gender-male: #5d8fd0;
   --rw-gender-female: #d36995;
   --rw-scrollbar-thumb: rgba(var(--rw-accent-rgb), 0.44);

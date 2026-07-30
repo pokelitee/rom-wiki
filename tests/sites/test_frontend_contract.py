@@ -231,6 +231,81 @@ class FrontendContractTests(unittest.TestCase):
         )
         self.assertIn("var(--rw-surface)", css)
 
+    def test_type_chart_uses_material_horizontal_scroll_container(self) -> None:
+        records = (STYLES / "records.css").read_text(encoding="utf-8")
+        theme = (STYLES / "theme.css").read_text(encoding="utf-8")
+        wrapper = _rule_properties(records, ".rw-type-chart")
+        scroll_wrapper = _rule_properties(
+            records,
+            ".rw-type-chart > .md-typeset__scrollwrap",
+        )
+        table_wrapper = _rule_properties(
+            records,
+            ".rw-type-chart .md-typeset__table",
+        )
+        table = _rule_properties(
+            records,
+            ".md-typeset .rw-type-chart table:not([class])",
+        )
+        sticky_column = _rule_properties(
+            records,
+            ".md-typeset .rw-type-chart table:not([class]) th:first-child,\n"
+            ".md-typeset .rw-type-chart table:not([class]) td:first-child",
+        )
+
+        self.assertNotIn("overflow-x", wrapper)
+        self.assertEqual(wrapper["margin"], "1em 0")
+        self.assertEqual(scroll_wrapper["margin"], "0")
+        self.assertEqual(
+            scroll_wrapper["border"],
+            "1px solid var(--rw-border)",
+        )
+        self.assertEqual(scroll_wrapper["border-radius"], ".45rem")
+        self.assertEqual(
+            scroll_wrapper["background-color"],
+            "var(--md-default-bg-color)",
+        )
+        self.assertEqual(
+            scroll_wrapper["overscroll-behavior-inline"],
+            "contain",
+        )
+        self.assertEqual(table_wrapper["padding-inline"], "0")
+        self.assertEqual(table["border"], "0")
+        self.assertEqual(table["border-radius"], "0")
+        self.assertEqual(table["overflow"], "visible")
+        self.assertEqual(sticky_column["left"], "0")
+        self.assertEqual(
+            sticky_column["background"],
+            "var(--md-default-bg-color)",
+        )
+        self.assertNotIn("border-left", sticky_column)
+        self.assertIn(".md-typeset__scrollwrap", theme)
+
+    def test_type_chart_effectiveness_colors_meet_wcag_aa_contrast(self) -> None:
+        theme = (STYLES / "theme.css").read_text(encoding="utf-8")
+        light = _rule_properties(theme, ":root")
+        dark = {
+            **light,
+            **_rule_properties(theme, 'body[data-md-color-scheme="slate"]'),
+        }
+
+        for scheme, properties in (("light", light), ("dark", dark)):
+            for state in (
+                "effective",
+                "effective-strong",
+                "resisted",
+                "resisted-strong",
+                "immune",
+            ):
+                with self.subTest(scheme=scheme, state=state):
+                    self.assertGreaterEqual(
+                        _contrast(
+                            properties[f"--rw-effectiveness-{state}-fg"],
+                            properties[f"--rw-effectiveness-{state}-bg"],
+                        ),
+                        4.5,
+                    )
+
     def test_header_game_picker_uses_a_top_layer_menu(self) -> None:
         site = (
             ROOT

@@ -6,11 +6,11 @@ from pathlib import Path
 
 from romwiki.pipeline.type_charts import build_type_dataset
 from romwiki.profiles.loader import ProfileRepository
-from romwiki.renderers.mkdocs.types import render_type_chart
+from romwiki.renderers.mkdocs.types import _effectiveness_cell, render_type_chart
 
 
 class TypeChartRenderingTests(unittest.TestCase):
-    def test_renders_one_matrix_page_with_plain_type_labels(self) -> None:
+    def test_renders_one_semantic_matrix_page_with_type_badges(self) -> None:
         profile = next(
             profile
             for profile in ProfileRepository.load(Path("profiles")).profiles
@@ -24,14 +24,39 @@ class TypeChartRenderingTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertIn("# Type effectiveness", page)
-        self.assertIn("| Fairy |", page)
-        self.assertIn("| **Fairy** |", page)
+        self.assertIn("<table>", page)
+        self.assertIn(
+            '<caption class="rw-visually-hidden">'
+            "Type effectiveness by attacking and defending type"
+            "</caption>",
+            page,
+        )
+        self.assertIn('<th scope="col">', page)
+        self.assertIn('<th scope="row">', page)
+        self.assertEqual(page.count("rw-type--fairy"), 2)
+        self.assertIn(">Fairy</span>", page)
         self.assertNotIn("](#", page)
         self.assertNotIn('<span id="', page)
-        self.assertIn("**0×**", page)
+        self.assertNotIn("| Fairy |", page)
+        self.assertIn("rw-effectiveness--effective", page)
+        self.assertIn("rw-effectiveness--resisted", page)
+        self.assertIn("rw-effectiveness--neutral", page)
+        self.assertIn("rw-effectiveness--immune", page)
+        self.assertIn('aria-label="Super effective: 2×"', page)
+        self.assertIn('aria-label="Normal effectiveness: —"', page)
+        self.assertIn("<strong>0×</strong>", page)
+        self.assertIn('class="rw-type-chart__legend"', page)
         self.assertIn('class="rw-type-chart__axis"', page)
         self.assertIn('aria-label="Attacking by row, defending by column"', page)
         self.assertIn("Atk ↓ / Def →</span>", page)
+
+    def test_renders_compound_effectiveness_multipliers(self) -> None:
+        self.assertIn("rw-effectiveness--resisted", _effectiveness_cell("1/4"))
+        self.assertIn("rw-effectiveness--strong", _effectiveness_cell("1/4"))
+        self.assertIn("One-quarter effectiveness: ¼×", _effectiveness_cell("1/4"))
+        self.assertIn("rw-effectiveness--effective", _effectiveness_cell("4"))
+        self.assertIn("rw-effectiveness--strong", _effectiveness_cell("4"))
+        self.assertIn("Four-times effectiveness: 4×", _effectiveness_cell("4"))
 
 
 if __name__ == "__main__":

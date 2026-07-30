@@ -5,6 +5,7 @@ import unittest
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
+    effectiveness_value,
     evolution_condition,
     fact_grid,
     pokemon_table,
@@ -69,6 +70,22 @@ class ComponentEscapingTests(unittest.TestCase):
             "</span>",
         )
         self.assertNotIn("<a ", badges)
+
+    def test_effectiveness_values_share_semantic_states(self) -> None:
+        quarter = effectiveness_value("1/4")
+        half = effectiveness_value("1/2")
+        double = effectiveness_value("2")
+        quadruple = effectiveness_value("4")
+
+        self.assertIn("rw-effectiveness--resisted", quarter)
+        self.assertIn("rw-effectiveness--strong", quarter)
+        self.assertIn("One-quarter effectiveness: ¼×", quarter)
+        self.assertNotIn("rw-effectiveness--strong", half)
+        self.assertNotIn("rw-effectiveness--strong", double)
+        self.assertIn("rw-effectiveness--effective", quadruple)
+        self.assertIn("rw-effectiveness--strong", quadruple)
+        self.assertIn("Four-times effectiveness: 4×", quadruple)
+        self.assertIn("<strong>4×</strong>", quadruple)
 
     def test_escapes_text_and_attribute_values(self) -> None:
         hostile = 'fire" onmouseover="alert(1)&<script>'
@@ -152,7 +169,37 @@ class MoveReferenceSectionTests(unittest.TestCase):
 
 class ItemPartyEffectTests(unittest.TestCase):
     def test_includes_stat_ev_friendship_and_guard_effects(self) -> None:
-        effects = dict.fromkeys(("heal_sleep", "heal_poison", "heal_burn", "heal_freeze", "heal_paralysis", "heal_confusion", "heal_attract", "guard_spec", "revive", "revive_all", "level_up", "evolve", "pp_up", "pp_max", "pp_restore", "pp_restore_all", "hp_restore", "hp_ev", "attack_ev", "defense_ev", "speed_ev", "special_attack_ev", "special_defense_ev", "friendship_low", "friendship_medium", "friendship_high"), False)
+        effects = dict.fromkeys(
+            (
+                "heal_sleep",
+                "heal_poison",
+                "heal_burn",
+                "heal_freeze",
+                "heal_paralysis",
+                "heal_confusion",
+                "heal_attract",
+                "guard_spec",
+                "revive",
+                "revive_all",
+                "level_up",
+                "evolve",
+                "pp_up",
+                "pp_max",
+                "pp_restore",
+                "pp_restore_all",
+                "hp_restore",
+                "hp_ev",
+                "attack_ev",
+                "defense_ev",
+                "speed_ev",
+                "special_attack_ev",
+                "special_defense_ev",
+                "friendship_low",
+                "friendship_medium",
+                "friendship_high",
+            ),
+            False,
+        )
         effects.update(
             {
                 "guard_spec": True,

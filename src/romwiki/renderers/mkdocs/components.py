@@ -20,6 +20,15 @@ DISPLAY_NAMES = {
     "vs-seeker": "Vs. Seeker",
     "trainer-ai-item": "Trainer AI item",
 }
+EFFECTIVENESS_PRESENTATION = {
+    "0": ("0×", "immune", "No effect"),
+    "1/4": ("¼×", "resisted", "One-quarter effectiveness"),
+    "1/2": ("½×", "resisted", "Not very effective"),
+    "1": ("—", "neutral", "Normal effectiveness"),
+    "2": ("2×", "effective", "Super effective"),
+    "4": ("4×", "effective", "Four-times effectiveness"),
+}
+STRONG_EFFECTIVENESS_MULTIPLIERS = {"1/4", "4"}
 
 
 def empty_state(message: str) -> list[str]:
@@ -52,6 +61,34 @@ def type_badges(types: list[dict[str, Any]]) -> str:
         badge = f'<span class="rw-type rw-type--{escape(name)}">{escape(label)}</span>'
         badges.append(badge)
     return '<span class="rw-type-list">' + "".join(badges) + "</span>"
+
+
+def effectiveness_presentation(multiplier: str) -> tuple[str, str, str]:
+    try:
+        return EFFECTIVENESS_PRESENTATION[multiplier]
+    except KeyError:
+        display = f"{multiplier}×"
+        return display, "neutral", f"{display} effectiveness"
+
+
+def effectiveness_value(multiplier: str) -> str:
+    display, state, description = effectiveness_presentation(multiplier)
+    content = escape(display)
+    if state in {"effective", "immune"}:
+        content = f"<strong>{content}</strong>"
+    classes = effectiveness_classes(multiplier, state)
+    return (
+        f'<span class="rw-effectiveness__value {classes}" '
+        f'aria-label="{escape(description)}: {escape(display)}">'
+        f"{content}</span>"
+    )
+
+
+def effectiveness_classes(multiplier: str, state: str) -> str:
+    classes = [f"rw-effectiveness--{state}"]
+    if multiplier in STRONG_EFFECTIVENESS_MULTIPLIERS:
+        classes.append("rw-effectiveness--strong")
+    return " ".join(classes)
 
 
 def class_badge(damage_class: dict[str, Any]) -> str:

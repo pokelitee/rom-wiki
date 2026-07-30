@@ -374,16 +374,33 @@
 }
 .rw-type-chart {
   max-width: 100%;
-  overflow-x: auto;
+  margin: 1em 0;
+}
+.rw-type-chart > .md-typeset__scrollwrap {
+  margin: 0;
+  border: 1px solid var(--rw-border);
+  border-radius: .45rem;
+  background-color: var(--md-default-bg-color);
   overscroll-behavior-inline: contain;
 }
-.rw-type-chart table {
-  width: max-content;
-  min-width: 100%;
+.rw-type-chart .md-typeset__table {
+  padding-inline: 0;
+}
+.md-typeset .rw-type-chart table:not([class]) {
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
   white-space: nowrap;
 }
-.rw-type-chart th:first-child,
-.rw-type-chart td:first-child {
+.rw-type-chart thead th:not(:first-child),
+.rw-type-chart td {
+  text-align: center;
+}
+.md-typeset .rw-type-chart table:not([class]) tbody th {
+  border-top: .05rem solid var(--md-typeset-table-color);
+}
+.md-typeset .rw-type-chart table:not([class]) th:first-child,
+.md-typeset .rw-type-chart table:not([class]) td:first-child {
   position: sticky;
   left: 0;
   z-index: 1;
@@ -414,6 +431,58 @@
   display: inline-block;
   min-width: 5.25rem;
   white-space: nowrap;
+}
+.md-typeset .rw-type-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem 1rem;
+  margin: .8rem 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.md-typeset .rw-type-chart__legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin: 0;
+}
+.rw-effectiveness__value {
+  display: inline-block;
+  min-width: 2rem;
+  padding: .12rem .35rem;
+  border-radius: .25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: center;
+}
+.rw-effectiveness {
+  font-variant-numeric: tabular-nums;
+}
+.rw-effectiveness--effective {
+  color: var(--rw-effectiveness-effective-fg);
+  background: var(--rw-effectiveness-effective-bg);
+}
+.rw-effectiveness--resisted {
+  color: var(--rw-effectiveness-resisted-fg);
+  background: var(--rw-effectiveness-resisted-bg);
+}
+.rw-effectiveness--effective.rw-effectiveness--strong {
+  color: var(--rw-effectiveness-effective-strong-fg);
+  background: var(--rw-effectiveness-effective-strong-bg);
+}
+.rw-effectiveness--resisted.rw-effectiveness--strong {
+  color: var(--rw-effectiveness-resisted-strong-fg);
+  background: var(--rw-effectiveness-resisted-strong-bg);
+}
+.rw-effectiveness--strong {
+  font-weight: 800;
+}
+.rw-effectiveness--neutral {
+  color: var(--rw-text-muted);
+}
+.rw-effectiveness--immune {
+  color: var(--rw-effectiveness-immune-fg);
+  background: var(--rw-effectiveness-immune-bg);
 }
 
 @media (max-width: 44rem) {

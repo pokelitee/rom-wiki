@@ -26,6 +26,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
+    effectiveness_value,
     empty_state,
     escape_table_cell,
     evolution_condition,
@@ -215,9 +216,7 @@ def _catalog_availability(
     wild_encounters = relationships.pokemon_wild_encounters.get(pokemon_slug, ())
     acquisitions = relationships.pokemon_acquisition.get(pokemon_slug, ())
     encounter_locations = {
-        location
-        for encounter in wild_encounters
-        for location in encounter.locations
+        location for encounter in wild_encounters for location in encounter.locations
     }
     methods = {acquisition.kind for acquisition in acquisitions}
     if wild_encounters:
@@ -425,7 +424,7 @@ def _defensive_effectiveness_section(
         if not types:
             continue
         rows.append(
-            f"| {_effectiveness_label(multiplier)} | "
+            f"| {effectiveness_value(multiplier)} | "
             f"{type_badges([{'name': name} for name in types])} |"
         )
     return [
@@ -439,16 +438,6 @@ def _defensive_effectiveness_section(
         *rows,
         "",
     ]
-
-
-def _effectiveness_label(multiplier: str) -> str:
-    return {
-        "4": "4×",
-        "2": "2×",
-        "1/2": "½×",
-        "1/4": "¼×",
-        "0": "0×",
-    }[multiplier]
 
 
 def _item_sprite_cell(item: dict[str, Any], references: ReferenceIndex | None) -> str:

@@ -298,12 +298,47 @@ class PersonalEnrichmentTests(unittest.TestCase):
             page = (output / "bulbasaur.md").read_text(encoding="utf-8")
 
         self.assertIn("## Type effectiveness", page)
-        self.assertIn("| ¼× |", page)
+        self.assertIn(
+            'class="rw-effectiveness__value rw-effectiveness--resisted"',
+            page,
+        )
+        self.assertIn("One-quarter effectiveness: ¼×", page)
         self.assertNotIn('href="../../types/#', page)
-        self.assertNotIn("type effectiveness", page.split("## Type effectiveness", 1)[1])
+        self.assertNotIn(
+            "type effectiveness", page.split("## Type effectiveness", 1)[1]
+        )
         self.assertNotIn("| 1× |", page)
-        self.assertLess(page.index("## Base stats"), page.index("## Type effectiveness"))
+        self.assertLess(
+            page.index("## Base stats"), page.index("## Type effectiveness")
+        )
         self.assertLess(page.index("## Type effectiveness"), page.index("## Training"))
+
+    def test_renders_four_times_defensive_effectiveness(self) -> None:
+        record = _bulbasaur_record()
+        record["types"] = [
+            {"id": 11, "name": "water"},
+            {"id": 3, "name": "flying"},
+        ]
+        profile = next(
+            profile
+            for profile in ProfileRepository.load(Path("profiles")).profiles
+            if profile.id == "renegade-platinum"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages(
+                {"records": [record]},
+                output,
+                type_dataset=build_type_dataset(profile),
+            )
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'class="rw-effectiveness__value rw-effectiveness--effective"',
+            page,
+        )
+        self.assertIn("Four-times effectiveness: 4×", page)
+        self.assertIn("<strong>4×</strong>", page)
 
     def test_renders_battle_only_forms_section_when_present(self) -> None:
         record = _bulbasaur_record()
