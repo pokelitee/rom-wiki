@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 from urllib.parse import unquote, urlsplit
 
 from romwiki.sites.build import build_sites
@@ -45,6 +45,11 @@ _WATCHED_SUFFIXES = {
     ".toml",
     ".yaml",
     ".yml",
+}
+_IGNORED_WATCH_DIRECTORIES = {
+    "__pycache__",
+    "build",
+    "site",
 }
 
 
@@ -118,7 +123,7 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
-        self.wfile.write(content)
+        _write_response_body(self.wfile, content)
 
     def log_message(self, format: str, *args: Any) -> None:
         _LOG.debug("Development server: " + format, *args)
@@ -129,7 +134,7 @@ class DevelopmentRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
-        self.wfile.write(content)
+        _write_response_body(self.wfile, content)
 
     def _requested_html_path(self) -> Path | None:
         request_path = unquote(urlsplit(self.path).path).lstrip("/")
@@ -298,6 +303,13 @@ def _development_site_url(host: str, port: int) -> str:
     return f"http://{display_host}:{port}/"
 
 
+def _write_response_body(stream: BinaryIO, content: bytes) -> None:
+    try:
+        stream.write(content)
+    except ConnectionError:
+        _LOG.debug("Development client disconnected before response completed")
+
+
 def _start_source_observer(root: Path, changes: threading.Event) -> Any:
     try:
         from watchdog.events import FileSystemEventHandler
@@ -315,17 +327,33 @@ def _start_source_observer(root: Path, changes: threading.Event) -> Any:
             path = Path(
                 event.dest_path if event.event_type == "moved" else event.src_path
             )
-            if event.is_directory or (
-                path.suffix.lower() in _WATCHED_SUFFIXES
-                and "__pycache__" not in path.parts
+            if not _should_rebuild_for_event(
+                path,
+                event_type=event.event_type,
+                is_directory=event.is_directory,
             ):
-                changes.set()
+                return
+            _LOG.debug("Site source %s detected: %s", event.event_type, path)
+            changes.set()
 
     observer = Observer()
     for source in (root / "sites", root / "src" / "romwiki" / "sites"):
         if source.is_dir():
             observer.schedule(ChangeHandler(), str(source), recursive=True)
     return observer
+
+
+def _should_rebuild_for_event(
+    path: Path,
+    *,
+    event_type: str,
+    is_directory: bool,
+) -> bool:
+    if any(part in _IGNORED_WATCH_DIRECTORIES for part in path.parts):
+        return False
+    if is_directory:
+        return event_type in {"created", "deleted", "moved"}
+    return path.suffix.lower() in _WATCHED_SUFFIXES
 
 
 def _rebuild_worker(

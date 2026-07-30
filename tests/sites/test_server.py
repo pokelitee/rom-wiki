@@ -6,6 +6,7 @@ import unittest
 from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import Mock
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
@@ -15,13 +16,83 @@ from romwiki.sites.server import (
     ReloadState,
     _development_site_url,
     _prepare_output,
+    _should_rebuild_for_event,
     _validate_server_options,
+    _write_response_body,
     serve_sites,
 )
 from romwiki.util.errors import SiteError
 
 
 class DevelopmentServerTests(unittest.TestCase):
+    def test_response_writer_ignores_client_disconnects(self) -> None:
+        for error in (
+            BrokenPipeError(),
+            ConnectionAbortedError(),
+            ConnectionResetError(),
+        ):
+            with self.subTest(error=type(error).__name__):
+                stream = Mock()
+                stream.write.side_effect = error
+
+                _write_response_body(stream, b"response")
+
+    def test_response_writer_preserves_unexpected_write_errors(self) -> None:
+        stream = Mock()
+        stream.write.side_effect = OSError("disk failure")
+
+        with self.assertRaisesRegex(OSError, "disk failure"):
+            _write_response_body(stream, b"response")
+
+    def test_rebuild_filter_ignores_generated_and_cache_activity(self) -> None:
+        ignored_paths = (
+            Path("sites/games/platinum/build/index.html"),
+            Path("sites/games/platinum/site/index.html"),
+            Path("src/romwiki/sites/__pycache__/server.cpython-312.pyc"),
+        )
+
+        for path in ignored_paths:
+            with self.subTest(path=path):
+                self.assertFalse(
+                    _should_rebuild_for_event(
+                        path,
+                        event_type="modified",
+                        is_directory=False,
+                    )
+                )
+
+    def test_rebuild_filter_keeps_meaningful_source_events(self) -> None:
+        self.assertTrue(
+            _should_rebuild_for_event(
+                Path("sites/games/platinum/wiki/index.md"),
+                event_type="modified",
+                is_directory=False,
+            )
+        )
+        self.assertTrue(
+            _should_rebuild_for_event(
+                Path("sites/games/platinum/wiki/guide"),
+                event_type="created",
+                is_directory=True,
+            )
+        )
+
+    def test_rebuild_filter_ignores_directory_metadata_and_other_files(self) -> None:
+        self.assertFalse(
+            _should_rebuild_for_event(
+                Path("sites/games/platinum/wiki"),
+                event_type="modified",
+                is_directory=True,
+            )
+        )
+        self.assertFalse(
+            _should_rebuild_for_event(
+                Path("sites/games/platinum/wiki/.editor-swap"),
+                event_type="modified",
+                is_directory=False,
+            )
+        )
+
     def test_development_site_url_normalizes_local_bind_hosts(self) -> None:
         self.assertEqual(
             _development_site_url("127.0.0.1", 8000),
