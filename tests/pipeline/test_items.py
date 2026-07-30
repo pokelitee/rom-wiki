@@ -134,6 +134,40 @@ class ItemDatasetTests(unittest.TestCase):
             ],
         )
 
+    def test_duplicate_page_slugs_share_the_canonical_item_reference(self) -> None:
+        records = []
+        for item_id in (628, 629):
+            record = _item_record()
+            record.update(item_id=item_id, data_archive_member=item_id)
+            record["name"] = "DNA Splicers"
+            records.append(record)
+        raw = {"game": "test", "source": {}, "records": records}
+        pokemon = {"game": "test", "source": {}, "records": []}
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={1: "dna-splicers"},
+            items_reference={
+                "dna-splicers": {"sprite": "https://example.test/dna-splicers.png"}
+            },
+        )
+
+        dataset = build_item_dataset(raw, pokedb, pokemon, None, None)
+
+        self.assertEqual(
+            [record["slug"] for record in dataset["records"]],
+            ["dna-splicers-628", "dna-splicers-629"],
+        )
+        self.assertTrue(
+            all(
+                record["reference"]["sprite_url"]
+                == "https://example.test/dna-splicers.png"
+                for record in dataset["records"]
+            )
+        )
+
 
 class FossilRevivalTests(unittest.TestCase):
     def test_resolves_and_renders_fossil_revival(self) -> None:

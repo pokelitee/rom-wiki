@@ -185,6 +185,67 @@ class PokeDBSpriteTests(unittest.TestCase):
         self.assertEqual(pokedb.item_slug("BrightPowder"), "bright-powder")
         self.assertEqual(pokedb.item_slug("Odd Invitation"), "odd-invitation")
 
+    def test_matches_abbreviated_rom_item_names(self) -> None:
+        reference_names = (
+            "paralyze-heal",
+            "x-defense",
+            "x-defense-2",
+            "x-defense-3",
+            "x-defense-6",
+            "x-sp-atk",
+            "x-sp-atk-2",
+            "x-sp-atk-3",
+            "x-sp-atk-6",
+            "dowsing-machine",
+            "colress-machine",
+            "black-apricorn",
+            "blue-apricorn",
+            "green-apricorn",
+            "pink-apricorn",
+            "white-apricorn",
+            "yellow-apricorn",
+        )
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id=dict(enumerate(reference_names, start=1)),
+        )
+        expected = {
+            "Parlyz Heal": "paralyze-heal",
+            "X Defend": "x-defense",
+            "X Defend 2": "x-defense-2",
+            "X Defend 6": "x-defense-6",
+            "X Special": "x-sp-atk",
+            "X Special 3": "x-sp-atk-3",
+            "X Special 6": "x-sp-atk-6",
+            "Dowsing MCHN": "dowsing-machine",
+            "Colress MCHN": "colress-machine",
+            "Blk Apricorn": "black-apricorn",
+            "Blu Apricorn": "blue-apricorn",
+            "Ylw Apricorn": "yellow-apricorn",
+        }
+
+        for rom_name, reference_slug in expected.items():
+            with self.subTest(rom_name=rom_name):
+                self.assertEqual(pokedb.item_reference_slug(rom_name), reference_slug)
+
+        self.assertEqual(pokedb.item_slug("Parlyz Heal"), "parlyz-heal")
+
+    def test_only_uses_item_name_normalizations_that_exist_in_pokedb(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+
+        self.assertEqual(pokedb.item_reference_slug("Imaginary MCHN"), "imaginary-mchn")
+        self.assertEqual(pokedb.item_reference_slug("X Special 9"), "x-special-9")
+        self.assertEqual(pokedb.item_reference_slug("Blu Apricorn"), "blu-apricorn")
+
     def test_selects_descriptive_and_base_game_reference_data(self) -> None:
         reference = {
             "source_url": "https://pokeapi.co/api/v2/pokemon/1/",

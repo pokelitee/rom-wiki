@@ -445,14 +445,14 @@ def build_item_dataset(
             continue
         item_id = source["item_id"]
         relation = relationships.get(item_id, {})
-        slug = pokedb.item_slug(source["name"])
-        if slug_counts[slug] > 1:
-            slug = f"{slug}-{item_id}"
+        page_slug = pokedb.item_slug(source["name"])
+        reference_slug = pokedb.item_reference_slug(source["name"])
+        slug = f"{page_slug}-{item_id}" if slug_counts[page_slug] > 1 else page_slug
         records.append(
             {
                 **source,
                 "slug": slug,
-                "reference": pokedb.item_reference(slug, reference_version),
+                "reference": pokedb.item_reference(reference_slug, reference_version),
                 "wild_held_by": relation.get("wild_held_by", []),
                 "trainer_held_by": relation.get("trainer_held_by", []),
                 "trainer_battle_items": relation.get("trainer_battle_items", []),

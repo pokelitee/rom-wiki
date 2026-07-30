@@ -135,9 +135,11 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black_2.layout["encounters"], "a/1/2/7")
         self.assertEqual(black_2.parameters["pokemon_names_member"], 90)
         self.assertEqual(black_2.parameters["move_names_member"], 403)
+        self.assertEqual(black_2.sprite_version, "black-white")
         self.assertEqual(white_2.engine, "gen5_b2w2")
         self.assertEqual(white_2.game_codes, ("IRDO",))
         self.assertEqual(white_2.hashes[0].algorithm, "sha256")
+        self.assertEqual(white_2.sprite_version, "black-white")
 
     def test_loads_blaze_black_2_and_volt_white_2_profiles(self) -> None:
         profiles = {
@@ -151,9 +153,11 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(blaze.engine, "gen5_b2w2")
         self.assertEqual(blaze.base_game, "black-2")
         self.assertEqual(blaze.hashes[0].variant, "complete-v1.1")
+        self.assertEqual(blaze.sprite_version, "black-white")
         self.assertEqual(volt.engine, "gen5_b2w2")
         self.assertEqual(volt.base_game, "white-2")
         self.assertEqual(volt.hashes[0].variant, "complete-v1.1")
+        self.assertEqual(volt.sprite_version, "black-white")
 
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

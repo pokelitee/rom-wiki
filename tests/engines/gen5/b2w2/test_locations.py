@@ -21,10 +21,10 @@ def _map_header(*, name_index: int, wild_set: int) -> bytes:
 
 class Gen5B2W2LocationsTests(unittest.TestCase):
     def test_engine_uses_the_b2w2_location_decoder(self) -> None:
-        self.assertIs(
-            get_engine("gen5_b2w2").locations.parse_map_header_table,
-            parse_map_header_table,
-        )
+        locations = get_engine("gen5_b2w2").locations
+
+        self.assertIs(locations.parse_map_header_table, parse_map_header_table)
+        self.assertTrue(callable(locations.parse_english_message_archive))
 
     def test_extracts_the_encounter_index_from_the_low_twelve_bits(self) -> None:
         data = _map_header(name_index=0, wild_set=0x4052) + _map_header(

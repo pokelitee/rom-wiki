@@ -9,6 +9,9 @@ base_game = "black-2"
 game_codes = ["IREO"]
 rom_versions = [0]
 
+[reference]
+sprite_version = "black-white"
+
 [type_chart]
 chart = "gen5"
 

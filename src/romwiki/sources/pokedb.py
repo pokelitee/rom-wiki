@@ -9,6 +9,22 @@ from typing import Any
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import name_slug
 
+_ITEM_REFERENCE_SLUG_ALIASES = {
+    "parlyzheal": "paralyze-heal",
+}
+_APRICORN_COLOR_NAMES = {
+    "blk": "black",
+    "blu": "blue",
+    "grn": "green",
+    "pnk": "pink",
+    "wht": "white",
+    "ylw": "yellow",
+}
+_X_ITEM_NAMES = {
+    "defend": "x-defense",
+    "special": "x-sp-atk",
+}
+
 
 class PokeDBGeneration:
     def __init__(
@@ -135,6 +151,17 @@ class PokeDBGeneration:
     def item_slug(self, rom_name: str) -> str:
         key = _lookup_key(rom_name)
         return self.items_by_lookup.get(key, name_slug(rom_name))
+
+    def item_reference_slug(self, rom_name: str) -> str:
+        key = _lookup_key(rom_name)
+        direct = self.items_by_lookup.get(key)
+        if direct is not None:
+            return direct
+        for candidate in _item_reference_slug_candidates(rom_name):
+            reference = self.items_by_lookup.get(_lookup_key(candidate))
+            if reference is not None:
+                return reference
+        return self.item_slug(rom_name)
 
     def item_reference(self, slug: str, version: str | None) -> dict[str, Any] | None:
         """Return item effect text and icon, if PokéDB has it.
@@ -430,3 +457,34 @@ def _id_name_map(objects: list[dict[str, Any]], resource: str) -> dict[int, str]
 def _lookup_key(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]", "", normalized.casefold())
+
+
+def _item_reference_slug_candidates(rom_name: str) -> tuple[str, ...]:
+    candidates = []
+    key = _lookup_key(rom_name)
+    explicit = _ITEM_REFERENCE_SLUG_ALIASES.get(key)
+    if explicit is not None:
+        candidates.append(explicit)
+
+    x_item = re.fullmatch(
+        r"x\s+(defend|special)(?:\s+(\d+))?", rom_name.strip(), re.IGNORECASE
+    )
+    if x_item is not None:
+        stem, suffix = x_item.groups()
+        candidate = _X_ITEM_NAMES[stem.casefold()]
+        candidates.append(f"{candidate}-{suffix}" if suffix else candidate)
+
+    machine_name = re.sub(r"\bMCHN\b", "Machine", rom_name, flags=re.IGNORECASE)
+    if machine_name != rom_name:
+        candidates.append(name_slug(machine_name))
+
+    apricorn = re.fullmatch(
+        r"(blk|blu|grn|pnk|wht|ylw)\s+apricorn",
+        rom_name.strip(),
+        re.IGNORECASE,
+    )
+    if apricorn is not None:
+        color = _APRICORN_COLOR_NAMES[apricorn.group(1).casefold()]
+        candidates.append(f"{color}-apricorn")
+
+    return tuple(candidates)

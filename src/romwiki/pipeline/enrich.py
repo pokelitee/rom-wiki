@@ -727,10 +727,12 @@ def _with_item_sprite(
 def _item_sprite_url(
     item: dict[str, Any], pokedb: PokeDBGeneration, reference_version: str | None
 ) -> str | None:
-    slug = item.get("slug")
-    if not slug:
+    name = item.get("name")
+    if not name:
         return None
-    reference = pokedb.item_reference(slug, reference_version)
+    reference = pokedb.item_reference(
+        pokedb.item_reference_slug(name), reference_version
+    )
     return reference.get("sprite_url") if reference else None
 
 
@@ -1004,9 +1006,7 @@ def _enrich_record(
             [] if is_internal else _enrich_level_up_moves(learnset, pokedb, move_names)
         ),
         "learnset_provenance": (
-            None
-            if is_internal or learnset is None
-            else learnset["provenance"]
+            None if is_internal or learnset is None else learnset["provenance"]
         ),
         "egg_moves": (
             [] if is_internal else _enrich_egg_moves(egg_move_set, pokedb, move_names)
