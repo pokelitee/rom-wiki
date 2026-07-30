@@ -19,6 +19,7 @@ nav:
       - Items: items/index.md
       - Moves: moves/index.md
       - Type Chart: types/index.md
+  - World:
       - Wild Encounters: encounters/index.md
       - Trainers: trainers/index.md
       - Locations: locations/index.md

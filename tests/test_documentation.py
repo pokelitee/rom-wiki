@@ -47,6 +47,13 @@ class DocumentationTests(unittest.TestCase):
                     "Game Data:",
                 ):
                     self.assertIn(entry, navigation)
+                self.assertIn(
+                    "  - World:\n"
+                    "      - Wild Encounters: encounters/index.md\n"
+                    "      - Trainers: trainers/index.md\n"
+                    "      - Locations: locations/index.md\n",
+                    navigation,
+                )
 
     def test_documented_cli_commands_parse(self) -> None:
         parser = build_parser()
