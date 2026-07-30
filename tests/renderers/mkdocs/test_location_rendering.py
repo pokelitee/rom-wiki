@@ -84,8 +84,42 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Spring |", page)
         self.assertIn("| Black |", page)
         self.assertIn("Wild encounter table index | `3`", page)
-        self.assertIn("[Map 004](../encounters/map-004.md)", nonseasonal_page)
-        self.assertIn("| All |", nonseasonal_page)
+        self.assertIn(
+            "[View encounter table](../encounters/map-004.md)",
+            nonseasonal_page,
+        )
+        self.assertNotIn("| Season |", nonseasonal_page)
+
+    def test_omits_an_unresolved_gen5_encounter_reference(self) -> None:
+        record = {
+            "header_id": 6,
+            "name": "Route 1",
+            "encounter_map_index": 3,
+            "matrix_id": 0,
+            "provenance": {"archive": "a/0/1/2", "member": 6},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        dataset = {
+            "game": "test",
+            "engine": "gen5_bw",
+            "records": [record],
+        }
+        relationships = build_relationship_index({"locations": dataset})
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output, relationships=relationships)
+            page = (output / "header-006.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertNotIn("## Wild encounters", page)
+        self.assertNotIn("No rendered encounter-area variant", page)
+        self.assertNotIn("encounters", catalog["records"][0]["features"])
 
     def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
         record = {

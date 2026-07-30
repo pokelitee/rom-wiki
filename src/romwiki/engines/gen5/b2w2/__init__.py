@@ -14,6 +14,11 @@ from .constants import (
     TRAINER_COSMETIC_FORM_LABELS,
     TRAINER_FORM_SLUGS,
 )
+from .locations import (
+    parse_map_header_script_files,
+    parse_map_header_table,
+    parse_wild_map_names,
+)
 from .personal import parse_personal_record
 
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
@@ -43,4 +48,7 @@ __all__ = [
     "TRAINER_FORM_SLUGS",
     "TRANSFORMATION_MEMBERS",
     "parse_personal_record",
+    "parse_map_header_script_files",
+    "parse_map_header_table",
+    "parse_wild_map_names",
 ]

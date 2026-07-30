@@ -115,6 +115,7 @@ def build_relationship_index(
     location_encounters = _location_encounters(
         location_records,
         encounter_records,
+        require_matches="locations" in datasets and "encounters" in datasets,
     )
     return RelationshipIndex(
         pokemon_wild_encounters=_freeze_wild(wild),
@@ -622,6 +623,8 @@ def _move_learners(
 def _location_encounters(
     locations: list[dict[str, Any]],
     encounters: list[dict[str, Any]],
+    *,
+    require_matches: bool,
 ) -> dict[int, list[LocationEncounterReference]]:
     by_map_index: dict[int, list[tuple[tuple[str, ...], dict[str, Any]]]] = defaultdict(
         list
@@ -633,12 +636,17 @@ def _location_encounters(
                 by_map_index[map_index].append((versions, record))
 
     result: dict[int, list[LocationEncounterReference]] = defaultdict(list)
+    unmatched = []
     for location in locations:
         map_index = location.get("encounter_map_index")
         if not isinstance(map_index, int):
             continue
+        matching_encounters = by_map_index.get(map_index, [])
+        if require_matches and not matching_encounters:
+            unmatched.append((location["header_id"], map_index))
+            continue
         location_versions = _record_versions(location)
-        for encounter_versions, encounter in by_map_index.get(map_index, []):
+        for encounter_versions, encounter in matching_encounters:
             result[location["header_id"]].append(
                 LocationEncounterReference(
                     header_id=location["header_id"],
@@ -649,6 +657,16 @@ def _location_encounters(
                     versions=encounter_versions or location_versions,
                 )
             )
+    if unmatched:
+        examples = ", ".join(
+            f"header {header_id} -> map {map_index}"
+            for header_id, map_index in unmatched[:10]
+        )
+        suffix = f" (and {len(unmatched) - 10} more)" if len(unmatched) > 10 else ""
+        raise DataSourceError(
+            "Location wild-encounter references have no matching encounter "
+            f"records: {examples}{suffix}"
+        )
     return result
 
 

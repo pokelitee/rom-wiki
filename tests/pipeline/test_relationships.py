@@ -316,6 +316,23 @@ class RelationshipIndexTests(unittest.TestCase):
         self.assertEqual(index.pokemon_trainers, {})
         self.assertEqual(index.location_encounters, {})
 
+    def test_rejects_an_unmatched_location_encounter_reference(self) -> None:
+        with self.assertRaisesRegex(
+            DataSourceError,
+            r"header 6 -> map 3",
+        ):
+            build_relationship_index(
+                _datasets(
+                    locations=[
+                        {
+                            "header_id": 6,
+                            "name": "Route 1",
+                            "encounter_map_index": 3,
+                        }
+                    ]
+                )
+            )
+
     def test_indexes_detached_trades_without_inventing_a_location(self) -> None:
         datasets = _datasets(pokemon=[_pokemon(1, "bulbasaur")])
         datasets["trades"] = _dataset(

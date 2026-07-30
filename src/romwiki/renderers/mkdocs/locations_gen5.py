@@ -62,6 +62,11 @@ def render_gen5_location_pages(
     sorted_records = sorted(records, key=lambda item: (item["name"], item["header_id"]))
     for index, record in enumerate(sorted_records):
         filename = _filename(record["header_id"])
+        encounters = (
+            relationships.location_encounters.get(record["header_id"], ())
+            if relationships
+            else ()
+        )
         previous = sorted_records[index - 1] if index else None
         following = (
             sorted_records[index + 1] if index + 1 < len(sorted_records) else None
@@ -74,11 +79,7 @@ def render_gen5_location_pages(
                     previous,
                     following,
                     references,
-                    (
-                        relationships.location_encounters.get(record["header_id"], ())
-                        if relationships
-                        else ()
-                    ),
+                    encounters,
                 ),
             )
             page_count += 1
@@ -100,11 +101,7 @@ def render_gen5_location_pages(
                 "label": label,
                 "url": filename.removesuffix(".md") + "/",
                 "features": [
-                    *(
-                        ["encounters"]
-                        if record["encounter_map_index"] is not None
-                        else []
-                    ),
+                    *(["encounters"] if encounters else []),
                     *(["trainers"] if record["trainers"] else []),
                     *(["warps"] if record["warps"] else []),
                     *(["static-encounters"] if record["static_encounters"] else []),
@@ -138,7 +135,7 @@ def _render_gen5_location(
 ) -> str:
     source_file = f"locations/{_filename(record['header_id'])}"
     facts = [f"<div><dt>Header ID</dt><dd>{record['header_id']}</dd></div>"]
-    if record["encounter_map_index"] is not None:
+    if encounters:
         facts.append(
             "<div><dt>Wild encounters</dt><dd>"
             f"map index {record['encounter_map_index']}</dd></div>"
@@ -148,7 +145,7 @@ def _render_gen5_location(
         "",
         *summary_section("rw-location-summary", facts),
     ]
-    if record["encounter_map_index"] is not None:
+    if encounters:
         lines.extend(["## Wild encounters", ""])
         _append_encounter_variants(lines, encounters, source_file)
     _append_connections(lines, record["connections"], source_file)
@@ -210,11 +207,19 @@ def _append_encounter_variants(
     encounters: tuple[LocationEncounterReference, ...],
     source_file: str,
 ) -> None:
-    if not encounters:
+    if len(encounters) == 1 and encounters[0].season is None:
+        encounter = encounters[0]
         lines.extend(
             [
-                "No rendered encounter-area variant matches this location's "
-                "wild-encounter table index.",
+                ROUTES.markdown_link(
+                    entity_reference(
+                        "encounter_variant",
+                        encounter.area_id,
+                        "View encounter table",
+                        encounter.encounter_route_key,
+                    ),
+                    source_file,
+                ),
                 "",
             ]
         )

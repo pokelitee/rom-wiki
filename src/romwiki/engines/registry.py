@@ -120,7 +120,7 @@ _ENGINES: dict[str, EngineAdapter] = {
     ),
     GEN5_B2W2_ENGINE: EngineAdapter(
         personal=gen5_b2w2,
-        locations=gen5_bw,
+        locations=gen5_b2w2,
         trainers=gen5_bw,
         encounters=gen5_bw,
         evolutions=gen5_bw,
