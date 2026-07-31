@@ -1,0 +1,12 @@
+[profile]
+id = "sacred-gold"
+name = "Pokémon Sacred Gold"
+extends = "heartgold-us"
+
+[type_chart]
+chart = "gen4"
+
+[[hashes]]
+algorithm = "sha256"
+value = "49f29848878406990ea288f26872d4355c92c4a2677f56973750bbf2566c13c1"
+variant = "complete-v1.05"

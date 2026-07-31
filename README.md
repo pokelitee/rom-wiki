@@ -23,6 +23,8 @@ committed.
 | Pokémon Black 2 & White 2 | Data-driven sibling-version family |
 | Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
 | Pokémon Blaze Black 2 & Volt White 2 | Data-driven paired-hack comparison |
+| Pokémon HeartGold & SoulSilver | Unpublished Generation IV engine scaffold |
+| Pokémon Sacred Gold & Storm Silver | Unpublished paired-hack scaffold |
 
 The current Generation IV and V engines cover Pokémon, abilities, moves, items,
 learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,

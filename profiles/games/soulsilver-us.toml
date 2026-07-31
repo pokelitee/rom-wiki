@@ -1,0 +1,16 @@
+[profile]
+id = "soulsilver-us"
+name = "Pokémon SoulSilver (USA)"
+extends = "heartgold-us"
+base_game = "soulsilver"
+
+[header]
+game_codes = ["IPGE"]
+
+[type_chart]
+chart = "gen4"
+
+[[hashes]]
+algorithm = "sha256"
+value = "51d0f94a16af7d77c067b4cb7d821ba890a13203a2e2c76049623332c0582e20"
+variant = "usa-retail"

@@ -29,6 +29,29 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(profile.rom_versions, (0,))
         self.assertEqual(profile.parameters["egg_gifts"][0]["command_offset"], 0xE59)
 
+    def test_loads_hgss_baseline_and_hack_profiles(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+
+        heartgold = profiles["heartgold-us"]
+        soulsilver = profiles["soulsilver-us"]
+        sacred_gold = profiles["sacred-gold"]
+        storm_silver = profiles["storm-silver"]
+
+        self.assertEqual(heartgold.engine, "gen4_hgss")
+        self.assertEqual(heartgold.game_codes, ("IPKE",))
+        self.assertEqual(heartgold.layout["personal"], "a/0/0/2")
+        self.assertEqual(heartgold.layout["encounters"], "a/0/3/7")
+        self.assertEqual(heartgold.layout["trainer_data"], "a/0/5/5")
+        self.assertEqual(soulsilver.game_codes, ("IPGE",))
+        self.assertEqual(soulsilver.base_game, "soulsilver")
+        self.assertEqual(sacred_gold.hashes[0].variant, "complete-v1.05")
+        self.assertEqual(storm_silver.hashes[0].variant, "complete-v1.05")
+        self.assertEqual(sacred_gold.layout, heartgold.layout)
+        self.assertEqual(storm_silver.layout, soulsilver.layout)
+
     def test_loads_black_and_white_baseline_profiles(self) -> None:
         profiles = {
             value.id: value

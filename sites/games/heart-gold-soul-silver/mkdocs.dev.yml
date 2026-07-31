@@ -1,0 +1,7 @@
+INHERIT: mkdocs.yml
+
+site_name: Pokémon HeartGold & SoulSilver Wiki (Development)
+site_dir: ../../../build/mkdocs-dev/heart-gold-soul-silver
+
+extra:
+  romwiki_site_id: heart-gold-soul-silver

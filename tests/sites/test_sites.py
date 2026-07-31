@@ -36,6 +36,8 @@ class SiteCatalogTests(unittest.TestCase):
                 "blaze-black-2-volt-white-2",
                 "black-white",
                 "black-2-white-2",
+                "heart-gold-soul-silver",
+                "sacred-gold-storm-silver",
             ],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
@@ -56,6 +58,12 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertIsNotNone(black_2_white_2)
         assert black_2_white_2 is not None
         self.assertEqual(black_2_white_2.versions, ("black-2", "white-2"))
+        hgss = catalog.get("heart-gold-soul-silver")
+        self.assertFalse(hgss.published)
+        self.assertIsNotNone(hgss.game)
+        assert hgss.game is not None
+        self.assertFalse(hgss.game.data_driven)
+        self.assertEqual(hgss.game.profiles, ("heartgold-us", "soulsilver-us"))
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

@@ -7,6 +7,20 @@ patched_rom = "roms/Pokemon - Platinum Version (USA).nds"
 patched_rom = "roms/Pokemon - Renegade Platinum.nds"
 base_rom = "roms/Pokemon - Platinum Version (USA).nds"
 
+[games.heartgold-us]
+patched_rom = "roms/Pokemon - HeartGold Version (USA).nds"
+
+[games.soulsilver-us]
+patched_rom = "roms/Pokemon - SoulSilver Version (USA).nds"
+
+[games.sacred-gold]
+patched_rom = "roms/SacredGold105.nds"
+base_rom = "roms/Pokemon - HeartGold Version (USA).nds"
+
+[games.storm-silver]
+patched_rom = "roms/StormSilver105.nds"
+base_rom = "roms/Pokemon - SoulSilver Version (USA).nds"
+
 [games.black-us]
 patched_rom = "roms/Pokemon - Black Version (USA, Europe) (NDSi Enhanced).nds"
 
