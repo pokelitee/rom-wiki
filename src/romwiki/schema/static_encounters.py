@@ -7,7 +7,7 @@ from romwiki.schema.pokemon import RecordProvenance
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5StaticEncounter:
+class StaticEncounter:
     encounter_id: int
     species_id: int
     # None for gift-egg encounters (e.g. Larvesta), which have no stored

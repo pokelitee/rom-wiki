@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen4EggMoveSet
+from romwiki.schema import OverlayEggMoveSet
 from romwiki.util.errors import InvalidRomError
 
 EGG_MOVE_TABLE_TERMINATOR = 0xFFFF
@@ -13,7 +13,7 @@ GEN4_MAX_MOVE_ID = 467
 
 def parse_egg_move_table(
     data: bytes, *, table_offset: int = 0
-) -> tuple[Gen4EggMoveSet, ...]:
+) -> tuple[OverlayEggMoveSet, ...]:
     if table_offset < 0 or table_offset % 2 or table_offset + 2 > len(data):
         raise InvalidRomError("Gen IV egg move table has an invalid offset")
 
@@ -60,7 +60,7 @@ def parse_egg_move_table(
 
 
 def _append_record(
-    records: list[Gen4EggMoveSet],
+    records: list[OverlayEggMoveSet],
     species_id: int,
     move_ids: list[int],
     overlay_offset: int,
@@ -68,7 +68,7 @@ def _append_record(
     if not move_ids:
         raise InvalidRomError(f"Gen IV egg move species {species_id} has no moves")
     records.append(
-        Gen4EggMoveSet(
+        OverlayEggMoveSet(
             species_id=species_id,
             move_ids=tuple(move_ids),
             table_index=len(records),

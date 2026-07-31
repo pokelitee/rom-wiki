@@ -365,7 +365,9 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
     if not shops:
         return
     lines.extend(["## Shops", ""])
-    if "header_id" in shops[0]:
+    linked_shops = [shop for shop in shops if "header_id" in shop]
+    standalone_shops = [shop for shop in shops if "header_id" not in shop]
+    if linked_shops:
         lines.extend(
             [
                 "| Location | Shop | Price | Availability |",
@@ -378,13 +380,14 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
                         f"{shop_price(shop['price'], shop.get('currency', 'money'))} | "
                         f"{_shop_availability(shop)} |"
                     )
-                    for shop in shops
+                    for shop in linked_shops
                 ],
                 "",
             ]
         )
-        return
     # Standalone fallback for inventories without a verified location link.
+    if not standalone_shops:
+        return
     lines.extend(
         [
             "| Shop | Price | Availability |",
@@ -395,7 +398,7 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
                     f"| {shop_price(record['price'], 'money')} | "
                     f"{'Main game' if shop['is_main_game'] else 'Post-game'} |"
                 )
-                for shop in shops
+                for shop in standalone_shops
             ],
             "",
         ]
@@ -625,7 +628,7 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
         return []
     effects = record["party_effects"]
     # Gen5's party effects have no `evolve` concept at all (that Gen4 key is
-    # absent from Gen5ItemPartyEffects entirely, not just always-false), so
+    # absent from ItemPartyUseEffects entirely, not just always-false), so
     # its presence distinguishes which shape this record carries.
     if "evolve" not in effects:
         return _gen5_party_effects(effects)

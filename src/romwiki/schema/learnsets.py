@@ -13,7 +13,7 @@ class LevelUpMove:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4LevelUpLearnset:
+class LevelUpLearnset:
     species_id: int
     moves: tuple[LevelUpMove, ...]
     provenance: RecordProvenance

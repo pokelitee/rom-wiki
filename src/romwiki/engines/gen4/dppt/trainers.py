@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen4Trainer, RecordProvenance, TrainerPokemon
+from romwiki.schema import ClassGenderTrainer, RecordProvenance, TrainerPokemon
 from romwiki.util.errors import InvalidRomError
 
 TRAINER_RECORD_SIZE = 20
@@ -44,7 +44,7 @@ def parse_trainer_record(
     class_prize_multipliers: tuple[int, ...],
     trainer_archive: str,
     party_archive: str,
-) -> Gen4Trainer:
+) -> ClassGenderTrainer:
     if len(data) != TRAINER_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen IV trainer {trainer_id} has size {len(data)}; expected 20"
@@ -106,7 +106,7 @@ def parse_trainer_record(
             )
         )
 
-    return Gen4Trainer(
+    return ClassGenderTrainer(
         trainer_id=trainer_id,
         name=name,
         class_id=class_id,

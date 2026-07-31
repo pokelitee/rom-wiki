@@ -3,10 +3,10 @@ from __future__ import annotations
 import struct
 
 from romwiki.schema import (
-    Gen5EncounterArea,
-    Gen5EncounterMethod,
-    Gen5EncounterSlot,
     RecordProvenance,
+    SeasonalEncounterArea,
+    SeasonalEncounterMethod,
+    SeasonalEncounterSlot,
 )
 from romwiki.util.errors import InvalidRomError
 
@@ -54,7 +54,7 @@ METHOD_SLOT_CHANCES = (
 
 def parse_encounter_entry(
     data: bytes, *, map_index: int, archive_path: str
-) -> tuple[Gen5EncounterArea, ...]:
+) -> tuple[SeasonalEncounterArea, ...]:
     if len(data) == SEASON_BLOCK_SIZE:
         return (
             _parse_block(
@@ -89,7 +89,7 @@ def _parse_block(
     map_index: int,
     season: str | None,
     archive_path: str,
-) -> Gen5EncounterArea:
+) -> SeasonalEncounterArea:
     methods = {}
     cursor = offset + 8
     for index, (name, count) in enumerate(
@@ -108,16 +108,16 @@ def _parse_block(
                     f"species ID {species_id}"
                 )
             slots.append(
-                Gen5EncounterSlot(
+                SeasonalEncounterSlot(
                     species_id=species_id,
                     form_id=form_id,
                     minimum_level=data[base + 2],
                     maximum_level=data[base + 3],
                 )
             )
-        methods[name] = Gen5EncounterMethod(rate=rate, slots=tuple(slots))
+        methods[name] = SeasonalEncounterMethod(rate=rate, slots=tuple(slots))
         cursor += count * 4
-    return Gen5EncounterArea(
+    return SeasonalEncounterArea(
         area_id=map_index,
         map_index=map_index,
         season=season,

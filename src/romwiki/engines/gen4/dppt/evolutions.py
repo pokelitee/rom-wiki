@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import EvolutionEntry, Gen4EvolutionSet, RecordProvenance
+from romwiki.schema import EvolutionEntry, EvolutionSet, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 EVOLUTION_RECORD_SIZE = 44
@@ -15,7 +15,7 @@ def parse_evolution_record(
     *,
     species_id: int,
     archive_path: str,
-) -> Gen4EvolutionSet:
+) -> EvolutionSet:
     if len(data) != EVOLUTION_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen IV evolution record {species_id} has size {len(data)}, "
@@ -54,7 +54,7 @@ def parse_evolution_record(
             )
         )
 
-    return Gen4EvolutionSet(
+    return EvolutionSet(
         species_id=species_id,
         evolutions=tuple(evolutions),
         provenance=RecordProvenance(

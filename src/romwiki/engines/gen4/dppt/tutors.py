@@ -3,10 +3,10 @@ from __future__ import annotations
 import struct
 
 from romwiki.schema import (
-    Gen4SpecialTutorMove,
-    Gen4TutorCompatibility,
-    Gen4TutorMove,
     ShardCosts,
+    SpecialTutorMove,
+    TutorCompatibility,
+    TutorMove,
 )
 from romwiki.util.errors import InvalidRomError
 
@@ -22,7 +22,7 @@ SPECIAL_TUTOR_SPECIES_VAR = 0x8001
 
 def parse_tutor_move_table(
     data: bytes, *, tutor_count: int
-) -> tuple[Gen4TutorMove, ...]:
+) -> tuple[TutorMove, ...]:
     if tutor_count <= 0 or len(data) != tutor_count * TUTOR_RECORD_SIZE:
         raise InvalidRomError("Gen IV tutor move table has an invalid size")
     records = []
@@ -38,7 +38,7 @@ def parse_tutor_move_table(
         if padding != b"\0\0":
             raise InvalidRomError(f"Gen IV tutor {index + 1} has nonzero padding")
         records.append(
-            Gen4TutorMove(
+            TutorMove(
                 tutor_id=index + 1,
                 move_id=move_id,
                 shard_costs=ShardCosts(red, blue, yellow, green),
@@ -56,7 +56,7 @@ def parse_tutor_compatibility_table(
     base_species_count: int,
     form_member_start: int,
     form_count: int,
-) -> tuple[Gen4TutorCompatibility, ...]:
+) -> tuple[TutorCompatibility, ...]:
     record_count = base_species_count + form_count
     if tutor_count <= 0 or tutor_count > TUTOR_COMPATIBILITY_RECORD_SIZE * 8:
         raise InvalidRomError("Gen IV tutor compatibility configuration is invalid")
@@ -84,7 +84,7 @@ def parse_tutor_compatibility_table(
         if index >= base_species_count:
             personal_member = form_member_start + index - base_species_count
         records.append(
-            Gen4TutorCompatibility(
+            TutorCompatibility(
                 personal_member=personal_member,
                 tutor_ids=tuple(
                     tutor_id
@@ -108,7 +108,7 @@ def parse_special_tutor_move(
     eligibility_kind: str,
     eligibility_value: int | tuple[int, ...],
     minimum_friendship: int,
-) -> Gen4SpecialTutorMove:
+) -> SpecialTutorMove:
     if command_offset < 0 or command_offset + 8 > len(data):
         raise InvalidRomError("Gen IV special tutor command is outside its script")
     opcode, destination, move_id, next_opcode = struct.unpack_from(
@@ -134,7 +134,7 @@ def parse_special_tutor_move(
         raise InvalidRomError("Gen IV special tutor has an invalid species rule")
     if not 0 <= minimum_friendship <= 255:
         raise InvalidRomError("Gen IV special tutor has invalid friendship metadata")
-    return Gen4SpecialTutorMove(
+    return SpecialTutorMove(
         tutor_id=tutor_id,
         move_id=move_id,
         location_name=location_name,

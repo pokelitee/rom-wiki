@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5Location, RecordProvenance
+from romwiki.schema import EncounterMapLocation, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 # `MapTableFile` (Ajarmar/universal-pokemon-randomizer-zx's Gen5RomHandler.java
@@ -34,7 +34,7 @@ def parse_map_header_table(
     map_names: tuple[str, ...],
     archive_path: str,
     wild_set_mask: int,
-) -> tuple[Gen5Location, ...]:
+) -> tuple[EncounterMapLocation, ...]:
     if len(data) % MAP_HEADER_RECORD_SIZE:
         raise InvalidRomError("Gen V map header table has an invalid size")
     count = len(data) // MAP_HEADER_RECORD_SIZE
@@ -51,7 +51,7 @@ def parse_map_header_table(
                 f"Gen V map header {header_id} references missing map name {name_index}"
             )
         headers.append(
-            Gen5Location(
+            EncounterMapLocation(
                 header_id=header_id,
                 name=map_names[name_index],
                 encounter_map_index=(

@@ -3,8 +3,8 @@ from __future__ import annotations
 import struct
 
 from romwiki.schema import (
+    ConditionalEncounterArea,
     EncounterMethod,
-    Gen4EncounterArea,
     RecordProvenance,
     WalkingEncounterSlot,
     WaterEncounterSlot,
@@ -96,7 +96,7 @@ def parse_encounter_record(
     *,
     area_id: int,
     archive_path: str,
-) -> Gen4EncounterArea:
+) -> ConditionalEncounterArea:
     if len(data) not in ENCOUNTER_RECORD_SIZES:
         expected = " or ".join(str(size) for size in ENCOUNTER_RECORD_SIZES)
         raise InvalidRomError(
@@ -112,7 +112,7 @@ def parse_encounter_record(
         for index in range(12)
     )
     dual_slot_values = struct.unpack_from("<10I", data, 0xA4)
-    return Gen4EncounterArea(
+    return ConditionalEncounterArea(
         area_id=area_id,
         walking_rate=_uint32(data, 0),
         walking_slots=walking_slots,

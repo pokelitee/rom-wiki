@@ -885,9 +885,13 @@ def _append_warps(
                 source_file,
             )
             destination += f" (`{warp['destination_internal_name']}`)"
-            destination_warp = str(warp["destination_warp_id"])
-            if not warp["destination_warp_exists"]:
-                destination_warp += " (missing target record)"
+            destination_warp = (
+                "Coordinate-based"
+                if warp["destination_warp_id"] is None
+                else str(warp["destination_warp_id"])
+            )
+            if warp["destination_warp_exists"] is False:
+                destination_warp += " (one-way or special landing)"
         lines.append(
             f"| {warp['index']} | ({warp['x']}, {warp['z']}) | "
             f"{destination} | {destination_warp} |"

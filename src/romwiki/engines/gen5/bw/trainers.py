@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5Trainer, Gen5TrainerPokemon, RecordProvenance
+from romwiki.schema import (
+    AbilitySlotTrainerPokemon,
+    BattleModeTrainer,
+    RecordProvenance,
+)
 from romwiki.util.errors import InvalidRomError
 
 TRAINER_RECORD_SIZE = 20
@@ -17,7 +21,7 @@ def parse_trainer_record(
     class_names: tuple[str, ...],
     trainer_archive: str,
     party_archive: str,
-) -> Gen5Trainer:
+) -> BattleModeTrainer:
     if len(data) != TRAINER_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen V trainer {trainer_id} has size {len(data)}; expected "
@@ -65,7 +69,7 @@ def parse_trainer_record(
             move_ids = struct.unpack_from("<4H", party_data, offset)
             offset += 8
         party.append(
-            Gen5TrainerPokemon(
+            AbilitySlotTrainerPokemon(
                 difficulty=difficulty,
                 ability_slot=ability_and_flag >> 4,
                 forced_gender_flag=ability_and_flag & 0xF,
@@ -77,7 +81,7 @@ def parse_trainer_record(
             )
         )
 
-    return Gen5Trainer(
+    return BattleModeTrainer(
         trainer_id=trainer_id,
         name=name,
         class_id=class_id,

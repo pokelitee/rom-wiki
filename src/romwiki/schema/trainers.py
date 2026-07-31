@@ -70,7 +70,7 @@ class TrainerScriptReference:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5TrainerPokemon:
+class AbilitySlotTrainerPokemon:
     difficulty: int
     ability_slot: int
     forced_gender_flag: int
@@ -82,7 +82,7 @@ class Gen5TrainerPokemon:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5Trainer:
+class BattleModeTrainer:
     trainer_id: int
     name: str
     class_id: int
@@ -100,7 +100,7 @@ class Gen5Trainer:
     healer: bool
     victory_money_multiplier: int
     victory_item_id: int
-    party: tuple[Gen5TrainerPokemon, ...]
+    party: tuple[AbilitySlotTrainerPokemon, ...]
     provenance: RecordProvenance
     party_provenance: RecordProvenance
     locations: tuple[TrainerLocation, ...] = ()
@@ -111,7 +111,7 @@ class Gen5Trainer:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4Trainer:
+class ClassGenderTrainer:
     trainer_id: int
     name: str
     class_id: int

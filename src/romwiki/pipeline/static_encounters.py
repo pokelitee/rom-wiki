@@ -29,7 +29,12 @@ def extract_static_encounter_dataset(result: InspectionResult) -> dict[str, Any]
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).static_encounters
     filesystem = platform.filesystem_from_image(result.image)
-    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
+    archive_options = {}
+    if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
+        archive_options["allow_incorrect_data_block_size"] = True
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), **archive_options
+    )
 
     entries = [
         {

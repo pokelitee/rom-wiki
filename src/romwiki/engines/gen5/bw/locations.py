@@ -9,14 +9,14 @@ from romwiki.engines.gen5.locations import (
 from romwiki.engines.gen5.locations import (
     parse_wild_map_names as _parse_wild_map_names,
 )
-from romwiki.schema import Gen5Location
+from romwiki.schema import EncounterMapLocation
 
 _WILD_SET_MASK = 0xFFFF
 
 
 def parse_map_header_table(
     data: bytes, *, map_names: tuple[str, ...], archive_path: str
-) -> tuple[Gen5Location, ...]:
+) -> tuple[EncounterMapLocation, ...]:
     return _parse_map_header_table(
         data,
         map_names=map_names,

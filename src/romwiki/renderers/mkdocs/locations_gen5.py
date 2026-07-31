@@ -181,8 +181,9 @@ def _render_gen5_location(
                 f"`{record['provenance']['member']}`.",
                 "The display name, wild-encounter cross-reference, real "
                 "trainers (both sight-triggered and scripted), real warps, "
-                "real outdoor connections, real field items (visible and "
-                "hidden), and real static encounters are decoded. "
+                "real outdoor connections, and real field items (visible and "
+                "hidden) are decoded. Static encounters are listed when the "
+                "profile supplies verified script offsets. "
                 "Script-linked shops are decoded from their real local "
                 "dispatcher functions.",
             ]

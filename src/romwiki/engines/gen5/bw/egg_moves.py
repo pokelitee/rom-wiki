@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5EggMoveSet, RecordProvenance
+from romwiki.schema import ArchiveEggMoveSet, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 from .constants import MAX_MOVE_ID
@@ -13,11 +13,11 @@ def parse_egg_move_set(
     *,
     species_id: int,
     archive_path: str,
-) -> Gen5EggMoveSet:
+) -> ArchiveEggMoveSet:
     if not data:
         # Member 0 is an unused placeholder record (empty), the same as the
         # personal-data archive's own member 0.
-        return Gen5EggMoveSet(
+        return ArchiveEggMoveSet(
             species_id=species_id,
             move_ids=(),
             provenance=RecordProvenance(
@@ -42,7 +42,7 @@ def parse_egg_move_set(
             raise InvalidRomError(
                 f"Gen V egg move record {species_id} has invalid move ID {move_id}"
             )
-    return Gen5EggMoveSet(
+    return ArchiveEggMoveSet(
         species_id=species_id,
         move_ids=move_ids,
         provenance=RecordProvenance(

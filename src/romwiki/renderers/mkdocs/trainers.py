@@ -749,13 +749,22 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
         "<tbody>",
         *[
             f'<tr><th scope="row">{label}</th>'
-            + "".join(f"<td>{values[key]}</td>" for _, key in ordered)
+            + "".join(f"<td>{_stat_value(values[key])}</td>" for _, key in ordered)
             + "</tr>"
             for label, values in rows
         ],
         "</tbody>",
         "</table>",
     ]
+
+
+def _stat_value(value: Any) -> str:
+    if isinstance(value, dict) and {
+        "minimum",
+        "maximum",
+    }.issubset(value):
+        return f"{value['minimum']}-{value['maximum']}"
+    return str(value)
 
 
 def _append_locations(

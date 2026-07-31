@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5Item, Gen5ItemPartyEffects, RecordProvenance
+from romwiki.schema import Item, ItemPartyUseEffects, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 GEN5_ITEM_RECORD_SIZE = 36
@@ -96,7 +96,7 @@ GEN5_ITEM_FIELD_USE_NAMES = (
 #     (matching Gen4's own precedent).
 #   party_use: bool @ 12 -- true for anything that targets a specific party
 #     member when used.
-# party_effects (only when party_use is true) -- Gen5ItemPartyEffects:
+# party_effects (only when party_use is true) -- ItemPartyUseEffects:
 #   heal_sleep/heal_poison/heal_burn/heal_freeze/heal_paralysis/
 #     heal_confusion: bits 0-5 of the byte @ 16 (never infatuation -- no
 #     item cures that in any generation).
@@ -131,7 +131,7 @@ def parse_item_record(
     item_id: int,
     data_archive_member: int,
     archive_path: str,
-) -> Gen5Item:
+) -> Item:
     if len(data) != GEN5_ITEM_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen5 item record for item {item_id} must be "
@@ -140,11 +140,12 @@ def parse_item_record(
     price = struct.unpack_from("<H", data, 0)[0] * GEN5_ITEM_PRICE_SCALE
     flags = struct.unpack_from("<H", data, 8)[0]
     party_use = bool(data[12])
-    return Gen5Item(
+    return Item(
         item_id=item_id,
         data_archive_member=data_archive_member,
         price=price,
         hold_effect_id=data[2],
+        hold_effect_parameter=None,
         pluck_effect_id=data[4],
         fling_effect_id=data[5],
         fling_power=data[6],
@@ -164,13 +165,13 @@ def parse_item_record(
     )
 
 
-def _parse_party_effects(data: bytes) -> Gen5ItemPartyEffects:
+def _parse_party_effects(data: bytes) -> ItemPartyUseEffects:
     status_cures = data[16]
     special_effect = data[17]
     level_up = bool(special_effect & (1 << 2))
     ev_amounts = struct.unpack_from("<6b", data, 23)
     friendship = struct.unpack_from("<3b", data, 31)
-    return Gen5ItemPartyEffects(
+    return ItemPartyUseEffects(
         heal_sleep=bool(status_cures & (1 << 0)),
         heal_poison=bool(status_cures & (1 << 1)),
         heal_burn=bool(status_cures & (1 << 2)),

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema.pickup import Gen4PickupTables
+from romwiki.schema.pickup import SplitPickupTable
 from romwiki.util.errors import InvalidRomError
 
 
@@ -18,8 +18,8 @@ def parse_pickup_tables(
     rate_count: int,
     honey_rate_count: int,
     item_count: int,
-) -> Gen4PickupTables:
-    return Gen4PickupTables(
+) -> SplitPickupTable:
+    return SplitPickupTable(
         common_item_ids=_item_ids(
             data, common_offset, common_count, item_count, "Common Pickup"
         ),

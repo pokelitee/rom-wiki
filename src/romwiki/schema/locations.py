@@ -151,7 +151,7 @@ class LocationNpcTrade:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4Location:
+class EventMapLocation:
     header_id: int
     internal_name: str
     location_name_id: int
@@ -186,7 +186,7 @@ class Gen4Location:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5Location:
+class EncounterMapLocation:
     header_id: int
     name: str
     # The `WildPokemon` archive member (Wild Encounters' `map_index`) this

@@ -18,7 +18,7 @@ nav:
       - Overview: docs/index.md
       - Action Replay: docs/codes.md
       - Equipment: docs/equipment.md
-      - Patching Station: docs/patching.md
+      - Patching: docs/patching.md
       - Changelog: docs/changelog.md
   - Game Data:
       - Pokémon: pokemon/index.md

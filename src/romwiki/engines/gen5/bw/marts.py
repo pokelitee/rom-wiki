@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.schema import Gen5Shop, RecordProvenance
+from romwiki.schema import RecordProvenance, Shop
 
 from .disassembler import disassemble_function
 
@@ -124,7 +124,7 @@ def parse_shop_catalog(
     tm_shop_ids: frozenset[int],
     regular_shop_ids: frozenset[int],
     archive_path: str,
-) -> tuple[Gen5Shop, ...]:
+) -> tuple[Shop, ...]:
     """Decode every location-specific shop's persistent item stock.
 
     Plain Poké Marts are skipped because their stock is selected dynamically
@@ -139,7 +139,7 @@ def parse_shop_catalog(
             continue
         item_ids = struct.unpack_from(f"<{size}H", overlay_data, offset)
         shops.append(
-            Gen5Shop(
+            Shop(
                 shop_id=shop_id,
                 name=SHOP_NAMES[shop_id],
                 kind="tm" if shop_id in tm_shop_ids else "specialty",

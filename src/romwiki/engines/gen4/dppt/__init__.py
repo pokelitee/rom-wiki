@@ -149,7 +149,7 @@ from .personal import (
     TRAINER_FORM_SLUGS,
     parse_personal_record,
 )
-from .pickup import Gen4PickupTables, parse_pickup_tables
+from .pickup import SplitPickupTable, parse_pickup_tables
 from .scripts import (
     CHECK_WON_BATTLE,
     PLATINUM_ROAMING_SLOT_COUNT,
@@ -285,7 +285,7 @@ __all__ = [
     "GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID",
     "Gen4GameCornerPrize",
     "parse_game_corner_prizes",
-    "Gen4PickupTables",
+    "SplitPickupTable",
     "parse_pickup_tables",
     "Gen4FossilRevival",
     "parse_fossil_revival_table",

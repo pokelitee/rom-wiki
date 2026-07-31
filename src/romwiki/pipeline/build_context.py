@@ -160,7 +160,10 @@ class GameBuildContext:
         return self._raw("trades/raw", extract_npc_trade_dataset)
 
     def marts_raw(self) -> dict[str, Any] | None:
-        if "shop_item_overlay_id" not in self.profile.parameters:
+        if (
+            "shop_item_overlay_id" not in self.profile.parameters
+            and "shop_items" not in self.profile.layout
+        ):
             return None
         return self._raw("marts/raw", extract_mart_dataset)
 

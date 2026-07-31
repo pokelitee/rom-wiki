@@ -14,7 +14,7 @@ class EvolutionEntry:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4EvolutionSet:
+class EvolutionSet:
     species_id: int
     evolutions: tuple[EvolutionEntry, ...]
     provenance: RecordProvenance

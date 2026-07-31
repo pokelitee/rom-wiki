@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import Gen4PickupTables, parse_pickup_tables
+from romwiki.engines.gen4.dppt import SplitPickupTable, parse_pickup_tables
 from romwiki.util.errors import InvalidRomError
 
 
@@ -30,7 +30,7 @@ class Gen4PickupTests(unittest.TestCase):
 
         self.assertEqual(
             tables,
-            Gen4PickupTables(
+            SplitPickupTable(
                 common_item_ids=(17, 18),
                 rare_item_ids=(25, 92),
                 common_rate=(30, 40),

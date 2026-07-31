@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen4LevelUpLearnset, LevelUpMove, RecordProvenance
+from romwiki.schema import LevelUpLearnset, LevelUpMove, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 LEARNSET_TERMINATOR = 0xFFFF
@@ -15,7 +15,7 @@ def parse_level_up_learnset(
     *,
     species_id: int,
     archive_path: str,
-) -> Gen4LevelUpLearnset:
+) -> LevelUpLearnset:
     if len(data) < 2 or len(data) % 2:
         raise InvalidRomError(
             f"Gen IV learnset record {species_id} has invalid size {len(data)}"
@@ -39,7 +39,7 @@ def parse_level_up_learnset(
         LevelUpMove(level=value >> LEVEL_SHIFT, move_id=value & MOVE_ID_MASK)
         for value in values[:terminator_index]
     )
-    return Gen4LevelUpLearnset(
+    return LevelUpLearnset(
         species_id=species_id,
         moves=moves,
         provenance=RecordProvenance(

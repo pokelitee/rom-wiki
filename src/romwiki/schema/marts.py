@@ -7,7 +7,7 @@ from romwiki.schema.pokemon import RecordProvenance
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5Shop:
+class Shop:
     shop_id: int
     name: str
     kind: str

@@ -15,6 +15,8 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for mart extraction")
     profile = result.match.profile
+    if "shop_items" in profile.layout:
+        return _extract_archive_marts(result)
     try:
         messages_path = profile.layout["messages"]
         item_names_member = profile.parameters["item_names_member"]
@@ -79,3 +81,54 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
 
 def write_mart_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, dataset)
+
+
+def _extract_archive_marts(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        messages_path = profile.layout["messages"]
+        shop_path = profile.layout["shop_items"]
+        item_names_member = profile.parameters["item_names_member"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing archive mart metadata: {error.args[0]}"
+        ) from error
+    platform = get_platform(profile.platform)
+    filesystem = platform.filesystem_from_image(result.image)
+    shops = platform.archive_cls.from_bytes(filesystem.read(shop_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    items_engine = get_engine(profile.engine).items
+    item_names = items_engine.parse_english_message_archive(
+        messages.read(item_names_member)
+    )
+    engine = get_engine(profile.engine).marts
+    catalog = engine.parse_archive_shop_catalog(
+        tuple(shops.read(index) for index in range(len(shops.members))),
+        archive_path=shop_path,
+    )
+    records = [
+        {
+            **{
+                key: value for key, value in shop.to_dict().items() if key != "item_ids"
+            },
+            "items": [
+                {"item_id": item_id, "name": item_names[item_id]}
+                for item_id in shop.item_ids
+            ],
+        }
+        for shop in catalog
+    ]
+    return {
+        "schema_version": MARTS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "marts",
+        "record_count": len(records),
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "shop_items": {"archive": shop_path},
+            "item_names": {"archive": messages_path, "member": item_names_member},
+        },
+        "records": records,
+    }

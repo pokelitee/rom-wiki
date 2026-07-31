@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen4Machine
+from romwiki.schema import Machine
 from romwiki.util.errors import InvalidRomError
 
 GEN4_MACHINE_COUNT = 100
@@ -15,7 +15,7 @@ _GEN4_MACHINE_ITEM_ID_OFFSET = 327
 
 
 def machine_name(machine_id: int) -> str:
-    """Format a machine ID the way `Gen4Machine.name` would."""
+    """Format a machine ID the way `Machine.name` would."""
     if machine_id <= GEN4_TM_COUNT:
         return f"TM{machine_id:02}"
     if machine_id <= GEN4_MACHINE_COUNT:
@@ -28,7 +28,7 @@ def parse_machine_move_table(
     *,
     machine_count: int = GEN4_MACHINE_COUNT,
     tm_count: int = GEN4_TM_COUNT,
-) -> tuple[Gen4Machine, ...]:
+) -> tuple[Machine, ...]:
     if machine_count <= 0 or not 0 <= tm_count <= machine_count:
         raise InvalidRomError("Gen IV machine table configuration is invalid")
     expected_size = machine_count * 2
@@ -50,7 +50,7 @@ def parse_machine_move_table(
             kind = "hm"
             number = index - tm_count + 1
         machines.append(
-            Gen4Machine(
+            Machine(
                 machine_id=index + 1,
                 kind=kind,
                 number=number,

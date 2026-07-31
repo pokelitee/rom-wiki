@@ -1,26 +1,21 @@
-from romwiki.schema.egg_moves import Gen4EggMoveSet, Gen5EggMoveSet
+from romwiki.schema.egg_moves import ArchiveEggMoveSet, OverlayEggMoveSet
 from romwiki.schema.encounters import (
+    ConditionalEncounterArea,
     EncounterLocation,
     EncounterMethod,
-    Gen4EncounterArea,
-    Gen5EncounterArea,
-    Gen5EncounterMethod,
-    Gen5EncounterSlot,
+    SeasonalEncounterArea,
+    SeasonalEncounterMethod,
+    SeasonalEncounterSlot,
     WalkingEncounterSlot,
     WaterEncounterSlot,
 )
-from romwiki.schema.evolutions import EvolutionEntry, Gen4EvolutionSet
-from romwiki.schema.items import (
-    Gen4Item,
-    Gen5Item,
-    Gen5ItemPartyEffects,
-    ItemPartyEffects,
-)
-from romwiki.schema.learnsets import Gen4LevelUpLearnset, LevelUpMove
+from romwiki.schema.evolutions import EvolutionEntry, EvolutionSet
+from romwiki.schema.items import Item, ItemPartyEffects, ItemPartyUseEffects
+from romwiki.schema.learnsets import LevelUpLearnset, LevelUpMove
 from romwiki.schema.locations import (
     BonusEncounterSpecies,
-    Gen4Location,
-    Gen5Location,
+    EncounterMapLocation,
+    EventMapLocation,
     LocationConnection,
     LocationDailyEncounterPool,
     LocationGameCornerPrize,
@@ -35,31 +30,31 @@ from romwiki.schema.locations import (
     LocationTrainerReference,
     LocationWarp,
 )
-from romwiki.schema.machines import Gen4Machine
-from romwiki.schema.marts import Gen5Shop
-from romwiki.schema.moves import Gen4Move, Gen5Move
-from romwiki.schema.pickup import Gen4PickupTables, Gen5PickupTable
+from romwiki.schema.machines import Machine
+from romwiki.schema.marts import Shop
+from romwiki.schema.moves import Move
+from romwiki.schema.pickup import SlidingPickupTable, SplitPickupTable
 from romwiki.schema.pokemon import (
     PokemonPersonalData,
     RecordProvenance,
     StatBlock,
     WildHeldItems,
 )
-from romwiki.schema.static_encounters import Gen5StaticEncounter
-from romwiki.schema.trades import Gen5NpcTrade
+from romwiki.schema.static_encounters import StaticEncounter
+from romwiki.schema.trades import NpcTrade
 from romwiki.schema.trainers import (
-    Gen4Trainer,
-    Gen5Trainer,
-    Gen5TrainerPokemon,
+    AbilitySlotTrainerPokemon,
+    BattleModeTrainer,
+    ClassGenderTrainer,
     TrainerLocation,
     TrainerPokemon,
     TrainerScriptReference,
 )
 from romwiki.schema.tutors import (
-    Gen4SpecialTutorMove,
-    Gen4TutorCompatibility,
-    Gen4TutorMove,
     ShardCosts,
+    SpecialTutorMove,
+    TutorCompatibility,
+    TutorMove,
 )
 
 __all__ = [
@@ -69,20 +64,20 @@ __all__ = [
     "WildHeldItems",
     "EncounterMethod",
     "EncounterLocation",
-    "Gen4EncounterArea",
-    "Gen5EncounterArea",
-    "Gen5EncounterMethod",
-    "Gen5EncounterSlot",
+    "ConditionalEncounterArea",
+    "SeasonalEncounterArea",
+    "SeasonalEncounterMethod",
+    "SeasonalEncounterSlot",
     "WalkingEncounterSlot",
     "WaterEncounterSlot",
-    "Gen4Trainer",
-    "Gen5Trainer",
-    "Gen5TrainerPokemon",
+    "ClassGenderTrainer",
+    "BattleModeTrainer",
+    "AbilitySlotTrainerPokemon",
     "TrainerPokemon",
     "TrainerLocation",
     "TrainerScriptReference",
-    "Gen4Location",
-    "Gen5Location",
+    "EventMapLocation",
+    "EncounterMapLocation",
     "LocationConnection",
     "LocationItem",
     "LocationShop",
@@ -97,26 +92,24 @@ __all__ = [
     "LocationDailyEncounterPool",
     "BonusEncounterSpecies",
     "LocationGameCornerPrize",
-    "Gen4Move",
-    "Gen5Move",
-    "Gen4LevelUpLearnset",
+    "Move",
+    "LevelUpLearnset",
     "LevelUpMove",
-    "Gen4EggMoveSet",
-    "Gen5EggMoveSet",
-    "Gen4Item",
-    "Gen5Item",
-    "Gen5ItemPartyEffects",
+    "OverlayEggMoveSet",
+    "ArchiveEggMoveSet",
+    "Item",
+    "ItemPartyUseEffects",
     "ItemPartyEffects",
     "EvolutionEntry",
-    "Gen4EvolutionSet",
-    "Gen4Machine",
-    "Gen4PickupTables",
-    "Gen5PickupTable",
-    "Gen5StaticEncounter",
-    "Gen5Shop",
-    "Gen5NpcTrade",
-    "Gen4TutorCompatibility",
-    "Gen4TutorMove",
-    "Gen4SpecialTutorMove",
+    "EvolutionSet",
+    "Machine",
+    "SplitPickupTable",
+    "SlidingPickupTable",
+    "StaticEncounter",
+    "Shop",
+    "NpcTrade",
+    "TutorCompatibility",
+    "TutorMove",
+    "SpecialTutorMove",
     "ShardCosts",
 ]

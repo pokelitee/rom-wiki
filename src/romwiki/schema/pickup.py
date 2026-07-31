@@ -7,7 +7,7 @@ from romwiki.schema.pokemon import RecordProvenance
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4PickupTables:
+class SplitPickupTable:
     common_item_ids: tuple[int, ...]
     rare_item_ids: tuple[int, ...]
     common_rate: tuple[int, ...]
@@ -18,10 +18,9 @@ class Gen4PickupTables:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5PickupTable:
+class SlidingPickupTable:
     # The 29-word table found by byte-pattern search in the Battle overlay
-    # (`PickupOvlNumber`) -- unlike Generation IV's separate common/rare item
-    # lists, this generation packs every level range's items into one shared,
+    # (`PickupOvlNumber`). This format packs every level range's items into one shared,
     # sliding-window array (see `gen5/bw/pickup.py`).
     item_ids: tuple[int, ...]
     provenance: RecordProvenance

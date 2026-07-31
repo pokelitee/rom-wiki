@@ -16,6 +16,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for tutor extraction")
     profile = result.match.profile
+    if profile.engine == "gen5_b2w2":
+        return _extract_gen5_b2w2(result)
     required = (
         "tutor_overlay_id",
         "tutor_move_offset",
@@ -93,6 +95,63 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
 
 def write_tutor_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, dataset)
+
+
+def _extract_gen5_b2w2(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        overlay_id = profile.parameters["tutor_overlay_id"]
+        move_offset = profile.parameters["tutor_move_offset"]
+        personal_path = profile.layout["personal"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing B2W2 tutor metadata: {error.args[0]}"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).tutors
+    overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
+    filesystem = platform.filesystem_from_image(result.image)
+    personal = platform.archive_cls.from_bytes(filesystem.read(personal_path))
+    move_size = engine.TUTOR_COUNT * engine.TUTOR_RECORD_SIZE
+    move_data = _slice_overlay(overlay_data, move_offset, move_size, "move")
+    records = [
+        {**record.to_dict(), "kind": "shard"}
+        for record in engine.parse_tutor_move_table(move_data)
+    ]
+    compatibility = []
+    for member in (
+        *range(1, engine.BASE_SPECIES_COUNT + 1),
+        *sorted(engine.FORM_MEMBERS),
+    ):
+        compatibility.append(
+            engine.parse_tutor_compatibility_record(
+                personal.read(member), personal_member=member
+            ).to_dict()
+        )
+    return {
+        "schema_version": TUTORS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "dataset": "move_tutors",
+        "record_count": len(records),
+        "compatibility_record_count": len(compatibility),
+        "special_record_count": 0,
+        "special_compatibility_record_count": 0,
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "overlay_id": overlay.id,
+            "file_id": overlay.file_id,
+            "move_offset": move_offset,
+            "compatibility_archive": personal_path,
+            "compatibility_offset": engine.TUTOR_COMPATIBILITY_OFFSET,
+        },
+        "location_names": list(engine.TUTOR_LOCATION_NAMES),
+        "records": records,
+        "compatibility": compatibility,
+        "special_records": [],
+        "special_compatibility": [],
+    }
 
 
 def _slice_overlay(data: bytes, offset: int, size: int, label: str) -> bytes:

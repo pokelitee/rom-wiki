@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5PickupTable, RecordProvenance
+from romwiki.schema import RecordProvenance, SlidingPickupTable
 from romwiki.util.errors import InvalidRomError
 
 # `Gen5Constants.pickupTableLocator`/`numberOfPickupItems`
@@ -26,12 +26,12 @@ PICKUP_SLOT_CHANCES = (30, 10, 10, 10, 10, 10, 10, 4, 4, 1, 1)
 
 def parse_pickup_table(
     overlay_data: bytes, *, table_offset: int, archive_path: str
-) -> Gen5PickupTable:
+) -> SlidingPickupTable:
     size = PICKUP_ITEM_COUNT * 2
     if table_offset < 0 or table_offset + size > len(overlay_data):
         raise InvalidRomError("Gen V pickup item table is outside the overlay")
     item_ids = struct.unpack_from(f"<{PICKUP_ITEM_COUNT}H", overlay_data, table_offset)
-    return Gen5PickupTable(
+    return SlidingPickupTable(
         item_ids=item_ids,
         provenance=RecordProvenance(
             source="rom", archive=archive_path, member=table_offset

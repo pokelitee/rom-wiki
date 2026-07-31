@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from romwiki.schema import Gen5StaticEncounter, RecordProvenance
+from romwiki.schema import RecordProvenance, StaticEncounter
 
 
 def parse_static_encounters(
@@ -12,7 +12,7 @@ def parse_static_encounters(
     *,
     egg_indices: frozenset[int],
     archive_path: str,
-) -> tuple[Gen5StaticEncounter, ...]:
+) -> tuple[StaticEncounter, ...]:
     """Decode gift/single-Pokémon encounters placed by field scripts.
 
     Unlike the wild-encounter table (`gen5/bw/encounters.py`), these aren't a
@@ -34,7 +34,7 @@ def parse_static_encounters(
             level_file, level_offset = level_entry
             level = read_script_member(level_file)[level_offset]
         encounters.append(
-            Gen5StaticEncounter(
+            StaticEncounter(
                 encounter_id=encounter_id,
                 species_id=species_id,
                 level=level,

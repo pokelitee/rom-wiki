@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5NpcTrade, RecordProvenance
+from romwiki.schema import NpcTrade, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 # `InGameTrades` (Ajarmar/universal-pokemon-randomizer-zx's Gen5RomHandler.java
@@ -31,7 +31,7 @@ def parse_npc_trade_record(
     nickname: str,
     ot_name: str,
     archive_path: str,
-) -> Gen5NpcTrade:
+) -> NpcTrade:
     if len(data) != TRADE_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen V NPC trade {trade_id} has size {len(data)}, expected "
@@ -43,7 +43,7 @@ def parse_npc_trade_record(
     ot_id = struct.unpack_from("<H", data, _OT_ID_OFFSET)[0]
     held_item_id = struct.unpack_from("<I", data, _HELD_ITEM_OFFSET)[0]
     requested_species_id = struct.unpack_from("<I", data, _REQUESTED_SPECIES_OFFSET)[0]
-    return Gen5NpcTrade(
+    return NpcTrade(
         trade_id=trade_id,
         nickname=nickname,
         ot_name=ot_name,

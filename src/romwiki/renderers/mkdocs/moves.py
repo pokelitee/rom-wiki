@@ -431,7 +431,7 @@ def _optional_value(value: int) -> str:
 
 
 def _accuracy(value: int) -> str:
-    return f"{value}%" if value else "Always hits"
+    return "Always hits" if value in {0, 101} else f"{value}%"
 
 
 def _learned_by_section(

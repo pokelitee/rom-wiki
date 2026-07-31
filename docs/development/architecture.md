@@ -145,6 +145,14 @@ Normalized records use stable semantic fields such as `species_id`, `base_stats`
 or `held_item_id`; they do not expose where a value happened to live in one ROM.
 Engine-only details needed for auditing belong in provenance fields.
 
+Schema type names follow the same rule: they describe the concept or supported
+shape, not the generation that first supplied it. Engines that share a shape use
+one contract (`Move`, `Machine`, or `LevelUpLearnset`). When shapes genuinely
+differ, the variants are named for the distinction (`ConditionalEncounterArea`
+versus `SeasonalEncounterArea`, or `SplitPickupTable` versus
+`SlidingPickupTable`). Generation and game identity remain engine/profile and
+dataset metadata, not part of the normalized type name.
+
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract
 is defined in `schema/trainers.py`. Normalized members state their move source

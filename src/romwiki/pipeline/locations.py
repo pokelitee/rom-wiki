@@ -16,7 +16,7 @@ from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     BonusEncounterSpecies,
-    Gen4Location,
+    EventMapLocation,
     LocationConnection,
     LocationDailyEncounterPool,
     LocationGameCornerPrize,
@@ -501,7 +501,7 @@ def extract_location_dataset(
                 )
             )
         records.append(
-            Gen4Location(
+            EventMapLocation(
                 header_id=header.header_id,
                 internal_name=header.internal_name,
                 location_name_id=header.location_name_id,
@@ -707,9 +707,7 @@ def _extract_gen5_location_dataset(
     engine = get_engine(profile.engine).locations
     filesystem = platform.filesystem_from_image(result.image)
     field_archive_options = {}
-    if profile.parameters.get(
-        "field_archives_allow_incorrect_data_block_size", False
-    ):
+    if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
         field_archive_options["allow_incorrect_data_block_size"] = True
     messages_path = profile.layout["messages"]
     map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
@@ -744,8 +742,7 @@ def _extract_gen5_location_dataset(
         for record in (item_dataset or {}).get("records", ())
     }
     shops_by_id = {
-        record["shop_id"]: record
-        for record in (mart_dataset or {}).get("records", ())
+        record["shop_id"]: record for record in (mart_dataset or {}).get("records", ())
     }
     item_count = max(item_names_by_id, default=-1) + 1
     headers_by_id = {header.header_id: header for header in headers}
@@ -885,11 +882,17 @@ def _extract_gen5_location_dataset(
                         x=warp.x,
                         z=warp.z,
                         destination_header_id=destination.header_id,
-                        destination_warp_id=warp.destination_warp_id,
+                        destination_warp_id=(
+                            warp.destination_warp_id
+                            if getattr(engine, "WARP_DESTINATION_INDEXED", True)
+                            else None
+                        ),
                         destination_name=destination.name,
                         destination_internal_name=f"map_{destination.header_id}",
                         destination_warp_exists=(
                             0 <= warp.destination_warp_id < destination_warp_count
+                            if getattr(engine, "WARP_DESTINATION_INDEXED", True)
+                            else None
                         ),
                         dynamic=False,
                     )
@@ -1329,7 +1332,7 @@ def _extract_gen5_matrix_connections(
     grids are ragged rectangles, not fully packed). Mirrors Gen IV's own
     `_extract_gen4_matrix_connections` algorithm, adapted to Gen V's differently-
     shaped `Gen5MapMatrix` (no separate location-name-id indirection --
-    `Gen5Location.name` is already the display name).
+    `EncounterMapLocation.name` is already the display name).
     """
     headers_by_id = {header.header_id: header for header in headers}
     directions: dict[int, dict[int, set[str]]] = defaultdict(lambda: defaultdict(set))

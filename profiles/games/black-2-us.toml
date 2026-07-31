@@ -30,6 +30,8 @@ map_headers = "a/0/1/2"
 scripts = "a/0/5/6"
 overworld_objects = "a/1/2/6"
 map_matrices = "a/0/0/9"
+npc_trades = "a/1/6/3"
+shop_items = "a/2/8/2"
 
 [parameters]
 pokemon_names_member = 90
@@ -40,6 +42,57 @@ machine_move_prefix = "87038803"
 trainer_names_member = 382
 trainer_classes_member = 383
 map_names_member = 109
+npc_trade_names_member = 37
+npc_trades_unused = [25]
+pickup_overlay_id = 166
+pickup_table_locator = "19005C00DD00"
+tutor_overlay_id = 36
+tutor_move_offset = 0x51538
+# Gen V does not yet have Platinum's complete static-battle script decoder.
+# These are version-specific script addresses from gen5_offsets.ini, retained
+# as profile data and inherited by White 2, whose ROM uses the same layout.
+static_pokemon_egg_indices = [27]
+static_pokemon = [
+    { species = [662, 0x1DE], level = [740, 0x12E] }, # Cobalion
+    { species = [730, 0x13A], level = [730, 0x19D] }, # Virizion
+    { species = [948, 0x45D], level = [948, 0x48F] }, # Terrakion
+    { species = [426, 0x38A], level = [426, 0x39D] }, # Reshiram
+    { species = [426, 0x36B], level = [426, 0x37E] }, # Zekrom
+    { species = [1112, 0x133], level = [1208, 0xF50] }, # Kyurem
+    { species = [304, 0xCC], level = [304, 0x5D0] }, # Latias
+    { species = [304, 0xB5], level = [304, 0x5B1] }, # Latios
+    { species = [32, 0x247], level = [32, 0x2C3] }, # Uxie
+    { species = [684, 0x136], level = [684, 0x1D5] }, # Mesprit
+    { species = [950, 0xA1], level = [950, 0x11D] }, # Azelf
+    { species = [1222, 0x134], level = [1222, 0x147] }, # Regirock
+    { species = [1224, 0x134], level = [1224, 0x147] }, # Regice
+    { species = [1226, 0x134], level = [1226, 0x147] }, # Registeel
+    { species = [1018, 0x97], level = [1018, 0xAA] }, # Regigigas
+    { species = [526, 0x48D], level = [526, 0x525] }, # Cresselia
+    { species = [1068, 0x193], level = [1068, 0x1E9] }, # Heatran
+    { species = [652, 0x5C6], level = [652, 0x5EB] }, # Mandibuzz
+    { species = [1102, 0x592], level = [1102, 0x5B7] }, # Braviary
+    { species = [364, 0xE], level = [364, 0x21] }, # Volcarona
+    { species = [1030, 0x290], level = [1030, 0x2A3] }, # Crustle
+    { species = [480, 0xE1], level = [480, 0x10C] }, # Jellicent
+    { species = [1168, 0x2C], level = [1168, 0x51] }, # Shiny Haxorus
+    { species = [988, 0x382], level = [988, 0x386] }, # Eevee
+    { species = [664, 0x3B5], level = [664, 0x3B9] }, # Deerling
+    { species = [880, 0xAB4], level = [880, 0xAB8] }, # Shiny Gible
+    { species = [880, 0xAD3], level = [880, 0xAD7] }, # Shiny Dratini
+    { species = [54, 0xDD] }, # Happiny egg
+    { species = [526, 0x27E], level = [526, 0x282] }, # Magikarp
+    { species = [1253, 0x5E0], level = [1253, 0x3D6] }, # Cranidos
+    { species = [1253, 0x5FF], level = [1253, 0x3D6] }, # Shieldon
+    { species = [1253, 0x61E], level = [1253, 0x3D6] }, # Omanyte
+    { species = [1253, 0x63D], level = [1253, 0x3D6] }, # Kabuto
+    { species = [1253, 0x65C], level = [1253, 0x3D6] }, # Aerodactyl
+    { species = [1253, 0x67B], level = [1253, 0x3D6] }, # Anorith
+    { species = [1253, 0x69A], level = [1253, 0x3D6] }, # Lileep
+    { species = [1253, 0x6B9], level = [1253, 0x3D6] }, # Tirtouga
+    { species = [1253, 0x6D8], level = [1253, 0x3D6] }, # Archen
+    { species = [208, 0x5A6], level = [208, 0x5A8] }, # Zorua
+]
 
 [[hashes]]
 algorithm = "sha256"

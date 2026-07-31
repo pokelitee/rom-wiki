@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen4Item, ItemPartyEffects, RecordProvenance
+from romwiki.schema import Item, ItemPartyEffects, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 GEN4_ITEM_RECORD_SIZE = 34
@@ -48,7 +48,7 @@ GEN4_ITEM_FIELD_USE_NAMES = (
 
 def parse_item_record(
     data: bytes, *, item_id: int, data_archive_member: int, archive_path: str
-) -> Gen4Item:
+) -> Item:
     if len(data) != GEN4_ITEM_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen IV item record must be {GEN4_ITEM_RECORD_SIZE} bytes, got {len(data)}"
@@ -104,7 +104,7 @@ def parse_item_record(
         friendship_medium_amount=friendship[1],
         friendship_high_amount=friendship[2],
     )
-    return Gen4Item(
+    return Item(
         item_id=item_id,
         data_archive_member=data_archive_member,
         price=price,

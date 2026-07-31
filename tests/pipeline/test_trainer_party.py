@@ -125,6 +125,44 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
             },
         )
 
+    def test_derives_gen5_exact_hp_and_nature_dependent_ranges(self) -> None:
+        normalized = normalize_trainer_party_member(
+            "gen5_b2w2",
+            {
+                "difficulty": 255,
+                "ability_slot": 0,
+                "forced_gender_flag": 0,
+                "level": 50,
+                "species_id": 1,
+                "form_id": 0,
+                "held_item_id": None,
+                "move_ids": [],
+            },
+            has_custom_moves=False,
+        )
+
+        derived = derive_trainer_party_attributes(
+            "gen5_b2w2",
+            normalized,
+            trainer_id=1,
+            class_id=1,
+            class_gender=None,
+            gender_ratio=127,
+            base_stats={
+                "hp": 100,
+                "attack": 100,
+                "defense": 100,
+                "special_attack": 100,
+                "special_defense": 100,
+                "speed": 100,
+            },
+        )
+
+        stats = derived["calculated_stats"]
+        self.assertEqual(stats["values"]["hp"], 175)
+        self.assertEqual(stats["values"]["attack"], {"minimum": 108, "maximum": 132})
+        self.assertEqual(stats["limitation"], "nature-runtime-random")
+
     def test_rejects_unknown_engines(self) -> None:
         with self.assertRaisesRegex(DataSourceError, "unknown_engine"):
             normalize_trainer_party_member("unknown_engine", {}, has_custom_moves=False)

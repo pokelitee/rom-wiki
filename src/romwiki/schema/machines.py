@@ -5,7 +5,7 @@ from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4Machine:
+class Machine:
     machine_id: int
     kind: str
     number: int

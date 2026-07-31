@@ -346,12 +346,23 @@ def pokemon_summary(record: dict[str, Any]) -> list[str]:
             "Your browser does not support audio playback."
             "</audio>"
         )
-    ability_links = [
-        ability_link(value, f"pokemon/{record['slug']}/")
-        for value in record["abilities"]
-        if value["name"] is not None
-    ]
-    abilities = ", ".join(dict.fromkeys(ability_links)) or "None"
+    unique_abilities: dict[int | str, dict[str, Any]] = {}
+    for ability in record["abilities"]:
+        if ability["name"] is None:
+            continue
+        key = ability.get("id", ability["name"])
+        existing = unique_abilities.get(key)
+        if existing is None or (
+            existing.get("is_hidden") and not ability.get("is_hidden")
+        ):
+            unique_abilities[key] = ability
+    abilities = (
+        ", ".join(
+            ability_link(value, f"pokemon/{record['slug']}/")
+            for value in unique_abilities.values()
+        )
+        or "None"
+    )
     dex = record["national_dex_id"]
     dex_label = f"#{dex:03}" if dex is not None else "—"
     reference = record.get("reference") or {}

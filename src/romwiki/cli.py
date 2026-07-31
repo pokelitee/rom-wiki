@@ -265,16 +265,12 @@ def build_parser() -> argparse.ArgumentParser:
     family_parser.add_argument(
         "--site-id",
         required=True,
-        help=(
-            "merged site identifier used for data and wiki output"
-        ),
+        help=("merged site identifier used for data and wiki output"),
     )
     family_parser.add_argument(
         "--games-config", type=Path, default=Path(".local/games.toml")
     )
-    family_parser.add_argument(
-        "--profiles-dir", type=Path, default=Path("profiles")
-    )
+    family_parser.add_argument("--profiles-dir", type=Path, default=Path("profiles"))
     family_parser.add_argument(
         "--pokedb",
         type=Path,
@@ -322,9 +318,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("../pokedb/.output"),
         help="directory containing gen<N> PokéDB outputs",
     )
-    regenerate_parser.add_argument(
-        "--data-root", type=Path, default=Path("build/data")
-    )
+    regenerate_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
     regenerate_parser.add_argument(
         "--output", type=Path, default=Path("dist"), help="artifact output directory"
     )
@@ -660,11 +654,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                 Path("build/data") / dataset["game"] / "pickup" / "raw.json"
             )
             write_pickup_dataset(dataset, output)
-            tables = dataset["tables"]
-            print(
-                f"Wrote {len(tables['common_items'])} common and "
-                f"{len(tables['rare_items'])} rare Pickup items: {output}"
-            )
+            if "level_ranges" in dataset:
+                slot_count = sum(
+                    len(level_range["slots"]) for level_range in dataset["level_ranges"]
+                )
+                print(
+                    f"Wrote {len(dataset['level_ranges'])} Pickup level ranges "
+                    f"with {slot_count} slots: {output}"
+                )
+            else:
+                tables = dataset["tables"]
+                print(
+                    f"Wrote {len(tables['common_items'])} common and "
+                    f"{len(tables['rare_items'])} rare Pickup items: {output}"
+                )
         elif args.command in {
             "build-pokemon",
             "build-encounters",
@@ -1215,13 +1218,9 @@ def _run_regeneration(args: argparse.Namespace) -> None:
     data_sites = tuple(
         site
         for site in selected
-        if site.kind == "game"
-        and site.game is not None
-        and site.game.data_driven
+        if site.kind == "game" and site.game is not None and site.game.data_driven
     )
-    registry = (
-        LocalGameRegistry.load(args.games_config) if data_sites else None
-    )
+    registry = LocalGameRegistry.load(args.games_config) if data_sites else None
     profiles = (
         _regeneration_profiles(catalog, args.profiles_dir) if data_sites else None
     )
@@ -1471,9 +1470,7 @@ def _report_site_audit(report: SiteAuditReport) -> None:
         )
     largest = report.largest_page
     largest_text = (
-        f"; largest: {largest[0]} ({largest[1] / 1024:.1f} KiB)"
-        if largest
-        else ""
+        f"; largest: {largest[0]} ({largest[1] / 1024:.1f} KiB)" if largest else ""
     )
     _LOG.info(
         "Audited %s pages and %s links%s",

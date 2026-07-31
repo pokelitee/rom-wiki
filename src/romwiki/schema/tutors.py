@@ -13,7 +13,7 @@ class ShardCosts:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4TutorMove:
+class TutorMove:
     tutor_id: int
     move_id: int
     shard_costs: ShardCosts
@@ -25,7 +25,7 @@ class Gen4TutorMove:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4TutorCompatibility:
+class TutorCompatibility:
     personal_member: int
     tutor_ids: tuple[int, ...]
     table_index: int
@@ -35,7 +35,7 @@ class Gen4TutorCompatibility:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4SpecialTutorMove:
+class SpecialTutorMove:
     tutor_id: int
     move_id: int
     location_name: str

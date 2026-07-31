@@ -7,7 +7,7 @@ from romwiki.schema.pokemon import RecordProvenance
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4EggMoveSet:
+class OverlayEggMoveSet:
     species_id: int
     move_ids: tuple[int, ...]
     table_index: int
@@ -18,7 +18,7 @@ class Gen4EggMoveSet:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5EggMoveSet:
+class ArchiveEggMoveSet:
     species_id: int
     move_ids: tuple[int, ...]
     provenance: RecordProvenance

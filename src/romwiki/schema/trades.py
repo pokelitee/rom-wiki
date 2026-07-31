@@ -7,7 +7,7 @@ from romwiki.schema.pokemon import RecordProvenance
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5NpcTrade:
+class NpcTrade:
     trade_id: int
     nickname: str
     ot_name: str
@@ -22,9 +22,8 @@ class Gen5NpcTrade:
     offered_forme_id: int
     requested_species_id: int
     held_item_id: int | None
-    # Raw ROM storage order -- matches Generation IV's identical-shaped
-    # record (hp, atk, def, speed, spatk, spdef), but that specific per-stat
-    # mapping hasn't been independently re-verified for this generation, so
+    # Raw ROM storage order. The specific per-stat mapping has not been
+    # independently verified for every engine, so
     # it's kept as a plain tuple rather than labeled per stat.
     ivs: tuple[int, int, int, int, int, int]
     provenance: RecordProvenance

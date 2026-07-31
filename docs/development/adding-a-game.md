@@ -221,7 +221,10 @@ engine over a parser named after one hack.
 
 Add an adapter or pipeline that maps engine records into the schemas under
 `src/romwiki/schema/`. Reuse semantic fields and IDs already consumed by enrichment
-and rendering.
+and rendering. Do not add generation-numbered schema types. Extend an existing
+semantic contract when the data has the same meaning; when a real shape difference
+must remain, name the variant for that difference rather than the generation that
+introduced it. Generation-specific binary intermediates belong in the engine.
 
 Trainer party formats require an engine translator under
 `src/romwiki/engines/<generation>/<family>/trainer_party.py`. Register it in

@@ -84,9 +84,48 @@ def derive_trainer_party_attributes(
     gender_ratio: int | None,
     base_stats: Mapping[str, Any] | None,
 ) -> NormalizedTrainerPokemon:
-    # Ability and gender are already resolved in normalize_trainer_party_member
-    # (stored directly in the ROM, not RNG-derived); nature and calculated
-    # stats stay unavailable since this generation's runtime RNG for them
-    # isn't one this project reproduces. Nothing left to derive here --
-    # this function exists only to satisfy the shared enrichment contract.
+    if base_stats is not None:
+        member["calculated_stats"] = _calculated_stat_ranges(
+            species_id=member["species_id"],
+            level=member["level"],
+            base_stats=base_stats,
+            ivs=member["ivs"]["values"],
+            evs=member["evs"]["values"],
+        )
     return member
+
+
+def _calculated_stat_ranges(
+    *,
+    species_id: int,
+    level: int,
+    base_stats: Mapping[str, Any],
+    ivs: Mapping[str, int],
+    evs: Mapping[str, int],
+) -> dict[str, Any]:
+    if any(
+        not isinstance(base_stats.get(stat), int) or base_stats[stat] <= 0
+        for stat in _STATS
+    ):
+        raise DataSourceError("Gen V trainer Pokemon has invalid base stats")
+    if not isinstance(level, int) or not 1 <= level <= 100:
+        raise DataSourceError("Gen V trainer Pokemon level must be from 1 to 100")
+
+    hp = (
+        1
+        if species_id == 292
+        else ((2 * base_stats["hp"] + ivs["hp"] + evs["hp"] // 4) * level) // 100
+        + level
+        + 10
+    )
+    values: dict[str, Any] = {"hp": hp}
+    for stat in _STATS[1:]:
+        neutral = (
+            (2 * base_stats[stat] + ivs[stat] + evs[stat] // 4) * level
+        ) // 100 + 5
+        values[stat] = {"minimum": neutral * 90 // 100, "maximum": neutral * 110 // 100}
+    return {
+        "source": "derived",
+        "values": values,
+        "limitation": "nature-runtime-random",
+    }

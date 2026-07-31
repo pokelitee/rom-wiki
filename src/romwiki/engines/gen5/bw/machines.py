@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen4Machine
+from romwiki.schema import Machine
 from romwiki.util.errors import InvalidRomError
 
 from .constants import (
@@ -33,7 +33,7 @@ def machine_name(machine_id: int) -> str:
     return f"MACHINE{machine_id:03}"
 
 
-def parse_machine_move_table(data: bytes) -> tuple[Gen4Machine, ...]:
+def parse_machine_move_table(data: bytes) -> tuple[Machine, ...]:
     expected_size = GEN5_MACHINE_COUNT * 2
     if len(data) != expected_size:
         raise InvalidRomError(
@@ -62,7 +62,7 @@ def parse_machine_move_table(data: bytes) -> tuple[Gen4Machine, ...]:
                 number - (GEN5_TM_BLOCK_ONE_COUNT + 1)
             )
         machines.append(
-            Gen4Machine(
+            Machine(
                 machine_id=machine_id,
                 kind=kind,
                 number=number,

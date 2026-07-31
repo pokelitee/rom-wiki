@@ -79,7 +79,13 @@ class PokemonAvailabilityTests(unittest.TestCase):
 
         _append_availability(lines, (), (), "pokemon/bulbasaur.md")
 
-        self.assertEqual(lines, ["No acquisition source is available.", ""])
+        self.assertEqual(
+            lines,
+            [
+                "No direct ROM-derived encounter, gift, or trade source is currently linked.",
+                "",
+            ],
+        )
 
 
 class PokemonTrainerAppearanceTests(unittest.TestCase):

@@ -34,7 +34,7 @@ class EncounterLocation:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen4EncounterArea:
+class ConditionalEncounterArea:
     area_id: int
     walking_rate: int
     walking_slots: tuple[WalkingEncounterSlot, ...]
@@ -61,7 +61,7 @@ class Gen4EncounterArea:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5EncounterSlot:
+class SeasonalEncounterSlot:
     species_id: int
     form_id: int
     minimum_level: int
@@ -69,23 +69,23 @@ class Gen5EncounterSlot:
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5EncounterMethod:
+class SeasonalEncounterMethod:
     rate: int
-    slots: tuple[Gen5EncounterSlot, ...]
+    slots: tuple[SeasonalEncounterSlot, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class Gen5EncounterArea:
+class SeasonalEncounterArea:
     area_id: int
     map_index: int
     season: str | None
-    grass_cave: Gen5EncounterMethod
-    doubles_grass: Gen5EncounterMethod
-    shaking_spots: Gen5EncounterMethod
-    surfing: Gen5EncounterMethod
-    surfing_spots: Gen5EncounterMethod
-    fishing: Gen5EncounterMethod
-    fishing_spots: Gen5EncounterMethod
+    grass_cave: SeasonalEncounterMethod
+    doubles_grass: SeasonalEncounterMethod
+    shaking_spots: SeasonalEncounterMethod
+    surfing: SeasonalEncounterMethod
+    surfing_spots: SeasonalEncounterMethod
+    fishing: SeasonalEncounterMethod
+    fishing_spots: SeasonalEncounterMethod
     provenance: RecordProvenance
     location_names: tuple[str, ...] = ()
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.schema import Gen5Move, RecordProvenance
+from romwiki.schema import Move, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
 from .constants import MOVE_RECORD_SIZE
@@ -13,7 +13,7 @@ def parse_move_record(
     *,
     move_id: int,
     archive_path: str,
-) -> Gen5Move:
+) -> Move:
     if len(data) != MOVE_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen V move record {move_id} has size {len(data)}, "
@@ -23,7 +23,7 @@ def parse_move_record(
     effect_id = struct.unpack_from("<H", data, 16)[0]
     flags = struct.unpack_from("<I", data, 32)[0]
 
-    return Gen5Move(
+    return Move(
         move_id=move_id,
         effect_id=effect_id,
         damage_class_id=data[2],
