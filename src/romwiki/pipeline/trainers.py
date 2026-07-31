@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_ENGINES, get_engine
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
@@ -19,8 +19,8 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
-    if profile.engine in GEN5_ENGINES:
-        return _extract_gen5_trainer_dataset(result)
+    if get_engine(profile.engine).formats.trainers == "battle-mode":
+        return _extract_battle_mode_trainer_dataset(result)
     try:
         trainer_path = profile.layout["trainer_data"]
         party_path = profile.layout["trainer_parties"]
@@ -79,7 +79,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         locations_by_trainer,
         script_references_by_trainer,
         location_source,
-    ) = _extract_gen4_trainer_locations(
+    ) = _extract_class_gender_trainer_locations(
         engine,
         platform,
         result,
@@ -142,7 +142,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     }
 
 
-def _extract_gen5_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
+def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     # This generation's trainer/party record shape is close enough to Gen
     # IV's to reuse the same schema-level idea (header + party array with
     # optional held-item/custom-move blocks). Member 0 of both archives is an
@@ -193,7 +193,7 @@ def _extract_gen5_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         locations_by_trainer,
         script_references_by_trainer,
         location_source,
-    ) = _extract_gen5_trainer_locations(
+    ) = _extract_battle_mode_trainer_locations(
         engine, platform, result, filesystem, trainer_count=len(parsed_records) + 1
     )
     records = [
@@ -233,7 +233,7 @@ def _extract_gen5_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     }
 
 
-def _extract_gen5_trainer_locations(
+def _extract_battle_mode_trainer_locations(
     engine: Any,
     platform: Any,
     result: InspectionResult,
@@ -374,7 +374,7 @@ def _extract_gen5_trainer_locations(
     )
 
 
-def _extract_gen4_trainer_locations(
+def _extract_class_gender_trainer_locations(
     engine: Any,
     platform: Any,
     result: InspectionResult,

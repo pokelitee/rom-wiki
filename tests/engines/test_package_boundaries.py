@@ -7,6 +7,17 @@ from pathlib import Path
 SOURCE_ROOT = Path(__file__).resolve().parents[2] / "src" / "romwiki"
 ENGINE_ROOT = SOURCE_ROOT / "engines"
 REGISTRY_PATH = ENGINE_ROOT / "registry.py"
+SEMANTIC_DISPATCH_PATHS = (
+    SOURCE_ROOT / "pipeline" / "encounters.py",
+    SOURCE_ROOT / "pipeline" / "enrich.py",
+    SOURCE_ROOT / "pipeline" / "locations.py",
+    SOURCE_ROOT / "pipeline" / "pickup.py",
+    SOURCE_ROOT / "pipeline" / "trainers.py",
+    SOURCE_ROOT / "pipeline" / "trainer_rewards.py",
+    SOURCE_ROOT / "pipeline" / "tutors.py",
+    SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
+    SOURCE_ROOT / "renderers" / "mkdocs" / "locations.py",
+)
 
 
 class EnginePackageBoundaryTests(unittest.TestCase):
@@ -43,6 +54,17 @@ class EnginePackageBoundaryTests(unittest.TestCase):
                         f"{path.relative_to(SOURCE_ROOT)} imports another generation: "
                         f"{imported}"
                     )
+
+        self.assertEqual(violations, [])
+
+    def test_shared_dispatch_uses_semantic_formats_not_engine_ids(self) -> None:
+        forbidden = ("GEN4_DPPT_ENGINE", "GEN5_ENGINES", '== "gen', "in {\"gen")
+        violations = [
+            f"{path.relative_to(SOURCE_ROOT)} contains {token!r}"
+            for path in SEMANTIC_DISPATCH_PATHS
+            for token in forbidden
+            if token in path.read_text(encoding="utf-8")
+        ]
 
         self.assertEqual(violations, [])
 

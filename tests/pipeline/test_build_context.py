@@ -30,6 +30,10 @@ def _extractor(calls: list) -> callable:
         calls.append(result)
         return {
             "schema_version": MOVES_RAW_SCHEMA_VERSION,
+            "game": "test-profile",
+            "engine": "test-engine",
+            "dataset": "moves",
+            "record_count": 1,
             "source": {"rom_sha256": result.image.hashes.sha256},
             "value": len(calls),
         }

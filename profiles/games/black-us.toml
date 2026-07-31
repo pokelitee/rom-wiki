@@ -65,8 +65,8 @@ regular_shop_ids = [0, 16, 20, 23, 24, 25]
 pickup_overlay_id = 92
 pickup_table_locator = "19005C00DD00"
 # `StaticPokemon{}` facts (Ajarmar/universal-pokemon-randomizer-zx's
-# gen5_offsets.ini, `[Black (U)]`; identical for White, which copies this
-# list rather than redefining it). Each entry is a [file, offset] pair into
+# gen5_offsets.ini, `[Black (U)]`; identical for White, which inherits this
+# list). Each entry is a [file, offset] pair into
 # the `scripts` archive above; only the first Species/Level pair from each
 # multi-entry ini fact is kept (the rest are duplicate patch locations for
 # the same value, per Gen5RomHandler.java's own StaticPokemon.getPokemon()).

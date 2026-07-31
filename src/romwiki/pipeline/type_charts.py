@@ -49,9 +49,8 @@ class TypeChartFamily:
 
 @dataclass(frozen=True, slots=True)
 class RegisteredTypeChart:
-    engine: str
+    id: str
     family: TypeChartFamily
-    compatible_engines: frozenset[str] = frozenset()
 
     @property
     def types(self) -> tuple[str, ...]:
@@ -60,10 +59,6 @@ class RegisteredTypeChart:
     @property
     def matrix(self) -> Mapping[tuple[str, str], str]:
         return self.family.matrix
-
-    def supports(self, engine: str) -> bool:
-        return engine == self.engine or engine in self.compatible_engines
-
 
 def _canonical_matrix() -> dict[tuple[str, str], str]:
     matrix = {
@@ -136,12 +131,11 @@ TYPE_CHART_FAMILIES = {
     ),
 }
 TYPE_CHARTS = {
-    "gen4": RegisteredTypeChart("gen4_dppt", TYPE_CHART_FAMILIES["gen2-5"]),
-    "gen5": RegisteredTypeChart(
-        "gen5_bw",
-        TYPE_CHART_FAMILIES["gen2-5"],
-        compatible_engines=frozenset({"gen5_b2w2"}),
-    ),
+    "gen2-5": RegisteredTypeChart("gen2-5", TYPE_CHART_FAMILIES["gen2-5"]),
+    # Backward-compatible profile aliases. Chart selection describes battle
+    # mechanics, not which extraction engine happens to consume them.
+    "gen4": RegisteredTypeChart("gen4", TYPE_CHART_FAMILIES["gen2-5"]),
+    "gen5": RegisteredTypeChart("gen5", TYPE_CHART_FAMILIES["gen2-5"]),
 }
 
 
@@ -159,11 +153,6 @@ def build_type_dataset(
         raise ProfileError(
             f"Profile {profile.id} selects unknown type chart {config.chart!r}"
         ) from error
-    if not registered.supports(profile.engine):
-        raise ProfileError(
-            f"Type chart {config.chart!r} is for {registered.engine}, "
-            f"not {profile.engine}"
-        )
     validate_type_chart(registered)
     types = (*registered.types, *config.additional_types)
     if len(set(types)) != len(types):

@@ -10,12 +10,15 @@ import json
 import tempfile
 import types
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from romwiki.engines.gen4.dppt import parse_encounter_record
 from romwiki.engines.registry import (
     GEN5_B2W2_ENGINE,
     EngineAdapter,
+    EngineFormats,
+    get_engine,
     register_engine,
     unregister_engine,
 )
@@ -100,8 +103,15 @@ def _register_fake_engine(tables: types.SimpleNamespace) -> None:
         marts=tables,
         static_encounters=tables,
         pickup=tables,
+        formats=EngineFormats(
+            encounters="conditional",
+            locations="event-map",
+            pickup="split-table",
+            trainers="class-gender",
+            tutors="none",
+        ),
     )
-    register_engine(_FAKE_ENGINE_ID, adapter)
+    register_engine(_FAKE_ENGINE_ID, adapter, validate=False)
 
 
 def _fake_pokedb() -> PokeDBGeneration:
@@ -185,14 +195,20 @@ class EngineContractTests(unittest.TestCase):
         unregister_engine(_FAKE_ENGINE_ID)
 
     def test_b2w2_uses_its_personal_layout_with_shared_gen5_tables(self) -> None:
-        from romwiki.engines.registry import get_engine
-
         engine = get_engine(GEN5_B2W2_ENGINE)
 
         self.assertEqual(engine.generation, 5)
         self.assertEqual(engine.personal.PERSONAL_RECORD_COUNT, 709)
         self.assertEqual(engine.enrich.PERSONAL_RECORD_COUNT, 709)
         self.assertEqual(engine.enrich.MOVE_RECORD_COUNT, 560)
+
+    def test_registration_rejects_an_incomplete_concern(self) -> None:
+        adapter = replace(
+            get_engine(GEN5_B2W2_ENGINE), personal=types.SimpleNamespace()
+        )
+
+        with self.assertRaisesRegex(DataSourceError, "parse_personal_record"):
+            register_engine(_FAKE_ENGINE_ID, adapter)
 
     def test_personal_enrichment_uses_the_engines_shapes_not_gen4_constants(
         self,

@@ -15,11 +15,11 @@ reverse references needed by pages and catalogs from normalized datasets once pe
 build. Its encounter, acquisition, trainer, learner, and location references are
 presentation-only views of facts already present in public downloads.
 
-Every dataset envelope contains a dataset name, game identity, schema version,
-record count, source metadata, records, and a sorted `features` list. A feature
-means the exact engine/profile combination supports that mechanic. Record-level
-emptiness is separate: an empty list means the mechanic exists but this record
-has no entries.
+Every dataset envelope contains a dataset name, game and engine identity, schema
+version, top-level record count, source metadata, and its dataset-specific payload.
+Published enriched datasets also carry a sorted `features` list. A feature means
+the exact engine/profile combination supports that mechanic. Record-level emptiness
+is separate: an empty list means the mechanic exists but this record has no entries.
 
 ## Compatibility
 

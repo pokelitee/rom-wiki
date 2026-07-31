@@ -1,16 +1,10 @@
 [profile]
 id = "renegade-platinum"
 name = "Renegade Platinum"
-platform = "nintendo-ds"
-engine = "gen4_dppt"
-base_game = "platinum"
+extends = "platinum-us"
 
 [header]
-game_codes = ["CPUE"]
 rom_versions = [1]
-
-[reference]
-sprite_version = "platinum"
 
 [type_chart]
 chart = "gen4"
@@ -32,112 +26,6 @@ additional_types = ["fairy"]
 "ghost>steel" = "1"
 "dark>steel" = "1"
 
-[layout]
-personal = "poketool/personal/pl_personal.narc"
-encounters = "fielddata/encountdata/pl_enc_data.narc"
-map_names = "fielddata/maptable/mapname.bin"
-messages = "msgdata/pl_msg.narc"
-trainer_data = "poketool/trainer/trdata.narc"
-trainer_parties = "poketool/trainer/trpoke.narc"
-events = "fielddata/eventdata/zone_event.narc"
-scripts = "fielddata/script/scr_seq.narc"
-map_matrices = "fielddata/mapmatrix/map_matrix.narc"
-moves = "poketool/waza/pl_waza_tbl.narc"
-learnsets = "poketool/personal/wotbl.narc"
-evolutions = "poketool/personal/evo.narc"
-item_data = "itemtool/itemdata/pl_item_data.narc"
-npc_trades = "fielddata/pokemon_trade/fld_trade.narc"
-bonus_encounters = "arc/encdata_ex.narc"
-berry_data = "itemtool/itemdata/nuts_data.narc"
-
-[parameters]
-map_header_offset = 0xE601C
-map_header_count = 593
-location_names_member = 433
-item_names_member = 392
-pokemon_names_member = 412
-type_names_member = 624
-ability_names_member = 610
-move_names_member = 647
-npc_trade_names_member = 370
-decoration_names_member = 626
-decoration_name_count = 139
-seal_names_member = 12
-trainer_names_member = 618
-trainer_classes_member = 619
-trainer_class_gender_offset = 0xF0714
-trainer_class_prize_overlay_id = 16
-trainer_class_prize_offset = 0x359E0
-trainer_script_start = 3000
-trainer_script_end = 3999
-trainer_script_id_offset = 1
-machine_move_offset = 0xF4BFC
-egg_move_overlay_id = 5
-egg_move_offset = 0x29222
-tutor_overlay_id = 5
-tutor_move_offset = 0x2FF64
-tutor_count = 38
-tutor_compatibility_offset = 0x3012C
-tutor_location_names = ["Route 212", "Survival Area", "Snowpoint City"]
-common_mart_inventory_offset = 0xEBAFC
-specialty_mart_pointer_table_offset = 0x100AF0
-specialty_mart_inventory_count = 20
-decoration_mart_inventory_start = 2
-decoration_mart_inventory_count = 2
-decoration_price_table_offset = 0xEC5A8
-seal_mart_inventory_start = 4
-seal_mart_inventory_count = 7
-seal_price_table_offset = 0xF64D6
-frontier_mart_inventory_count = 2
-frontier_price_overlay_id = 7
-frontier_price_table_offset = 0x5A98
-frontier_price_record_count = 41
-game_corner_prize_table_offset = 0xEC018
-game_corner_prize_count = 19
-pickup_overlay_id = 16
-pickup_common_items_offset = 0x3352C
-pickup_rare_items_offset = 0x33450
-pickup_common_rate_offset = 0x33968
-pickup_honey_gather_rate_offset = 0x33974
-pickup_common_item_count = 18
-pickup_rare_item_count = 11
-pickup_common_rate_count = 9
-pickup_honey_gather_rate_count = 10
-fossil_revival_table_offset = 0xEBFFC
-fossil_revival_count = 7
-first_berry_item_id = 149
-
-[[parameters.special_tutors]]
-script_member = 450
-command_offset = 0x18F
-map_header_id = 364
-eligibility_kind = "type"
-eligibility_value = 16
-
-[[parameters.special_tutors]]
-script_member = 493
-command_offset = 0x112
-comparison_offset = 0x195
-species_count = 4
-map_header_id = 502
-eligibility_kind = "species"
-
-[[parameters.special_tutors]]
-script_member = 493
-command_offset = 0x132
-comparison_offset = 0x1C9
-species_count = 4
-map_header_id = 502
-eligibility_kind = "species"
-
-[[parameters.special_tutors]]
-script_member = 493
-command_offset = 0x152
-comparison_offset = 0x1FD
-species_count = 4
-map_header_id = 502
-eligibility_kind = "species"
-
 [[parameters.egg_gifts]]
 script_member = 71
 command_offset = 0xA7B
@@ -149,26 +37,6 @@ command_offset = 0x422
 [[parameters.egg_gifts]]
 script_member = 456
 command_offset = 0x153
-
-[[parameters.static_encounter_locations]]
-script_member = 401
-command_offset = 0xB1
-map_header_id = 210
-
-[[parameters.static_encounter_locations]]
-script_member = 401
-command_offset = 0x143
-map_header_id = 245
-
-[[parameters.static_encounter_locations]]
-script_member = 401
-command_offset = 0x21F
-map_header_id = 467
-
-[[parameters.static_encounter_locations]]
-script_member = 401
-command_offset = 0x30E
-map_header_id = 219
 
 [[hashes]]
 algorithm = "md5"

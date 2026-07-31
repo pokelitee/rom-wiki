@@ -16,12 +16,13 @@ def extract_pickup_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for pickup extraction")
     profile = result.match.profile
-    if "pickup_table_locator" in profile.parameters:
-        return _extract_gen5(result)
-    return _extract_gen4(result)
+    pickup_format = get_engine(profile.engine).formats.pickup
+    if pickup_format == "sliding-table":
+        return _extract_sliding_table(result)
+    return _extract_split_table(result)
 
 
-def _extract_gen4(result: InspectionResult) -> dict[str, Any]:
+def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
     profile = result.match.profile
     try:
         overlay_id = profile.parameters["pickup_overlay_id"]
@@ -41,7 +42,7 @@ def _extract_gen4(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).items
+    engine = get_engine(profile.engine).pickup
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
@@ -63,6 +64,7 @@ def _extract_gen4(result: InspectionResult) -> dict[str, Any]:
         "game": profile.id,
         "engine": profile.engine,
         "dataset": "pickup",
+        "record_count": 1,
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay_id,
@@ -82,7 +84,7 @@ def _extract_gen4(result: InspectionResult) -> dict[str, Any]:
     }
 
 
-def _extract_gen5(result: InspectionResult) -> dict[str, Any]:
+def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
     # Unlike Generation IV's fixed absolute overlay offsets, this
     # generation's pickup item table has no stable location: it's found by
     # byte-pattern search (see gen5/bw/pickup.py's own module comment), the
@@ -136,6 +138,7 @@ def _extract_gen5(result: InspectionResult) -> dict[str, Any]:
         "game": profile.id,
         "engine": profile.engine,
         "dataset": "pickup",
+        "record_count": 1,
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay_id,

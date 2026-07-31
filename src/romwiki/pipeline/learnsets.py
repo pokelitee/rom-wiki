@@ -43,6 +43,7 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": POKEMON_LEARNSETS_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "level_up_learnsets",
         "record_count": len(records),
         "source": {

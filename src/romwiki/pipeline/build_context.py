@@ -30,6 +30,7 @@ from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
 from romwiki.pipeline.trades import enrich_npc_trade_dataset, extract_npc_trade_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset
+from romwiki.schema.datasets import validate_dataset_envelope
 from romwiki.schema.versions import (
     CACHE_MANIFEST_SCHEMA_VERSION,
     RAW_SCHEMA_VERSION_BY_CACHE_KEY,
@@ -315,6 +316,7 @@ class GameBuildContext:
                 self._values[key] = cached
                 return cached
         value = extractor(self.result)
+        validate_dataset_envelope(value, context=key)
         self._values[key] = value
         if path is not None:
             write_json_atomic(path, value)
@@ -324,6 +326,7 @@ class GameBuildContext:
     def _memo(self, key: str, factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         if key not in self._values:
             self._values[key] = factory()
+            validate_dataset_envelope(self._values[key], context=key)
         return self._values[key]
 
     def _read_cache(self, key: str, path: Path) -> dict[str, Any] | None:
@@ -338,6 +341,7 @@ class GameBuildContext:
             return None
         if source.get("rom_sha256") != self.result.image.hashes.sha256:
             return None
+        validate_dataset_envelope(value, context=key)
         return value
 
     def _manifest_valid(self) -> bool:

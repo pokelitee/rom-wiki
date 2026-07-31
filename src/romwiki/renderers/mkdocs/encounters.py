@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_ENGINES
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -41,7 +41,7 @@ from romwiki.renderers.mkdocs.references import (
 
 # Generation V's own display labels for its seven encounter methods
 # (Gen5Constants.encounterTypeNames, Ajarmar/universal-pokemon-randomizer-zx).
-_GEN5_METHOD_LABELS = {
+_SEASONAL_METHOD_LABELS = {
     "grass_cave": "Grass/Cave",
     "doubles_grass": "Doubles Grass",
     "shaking_spots": "Shaking Spots",
@@ -60,8 +60,14 @@ def render_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    if dataset.get("engine") in GEN5_ENGINES:
-        return _render_gen5_encounter_pages(
+    engine_id = dataset.get("engine")
+    seasonal = (
+        get_engine(engine_id).formats.encounters == "seasonal"
+        if isinstance(engine_id, str)
+        else bool(dataset.get("records")) and "season" in dataset["records"][0]
+    )
+    if seasonal:
+        return _render_seasonal_encounter_pages(
             dataset,
             output_root,
             comparison,
@@ -628,7 +634,7 @@ def _level_range(minimum: int, maximum: int) -> str:
     return str(minimum) if minimum == maximum else f"{minimum}–{maximum}"
 
 
-def _render_gen5_encounter_pages(
+def _render_seasonal_encounter_pages(
     dataset: dict[str, Any],
     output_root: Path,
     comparison: dict[str, Any] | None,
@@ -648,7 +654,7 @@ def _render_gen5_encounter_pages(
             *(
                 f"{encounter_route_key(record)}.md"
                 for record in records
-                if _gen5_page_selected(record, only_pages)
+                if _seasonal_page_selected(record, only_pages)
             ),
         },
     )
@@ -660,10 +666,10 @@ def _render_gen5_encounter_pages(
         filename = f"{encounter_route_key(record)}.md"
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
-        if _gen5_page_selected(record, only_pages):
+        if _seasonal_page_selected(record, only_pages):
             write_text(
                 output_root / filename,
-                _render_gen5_area(
+                _render_seasonal_area(
                     record,
                     change,
                     comparison.get("baseline") if comparison else None,
@@ -686,7 +692,7 @@ def _render_gen5_encounter_pages(
             )
         )
         catalog_records.append(
-            _gen5_catalog_record(record, filename.removesuffix(".md") + "/", change)
+            _seasonal_catalog_record(record, filename.removesuffix(".md") + "/", change)
         )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
@@ -701,7 +707,7 @@ def _render_gen5_encounter_pages(
     return page_count
 
 
-def _gen5_page_selected(
+def _seasonal_page_selected(
     record: dict[str, Any],
     only_pages: frozenset[str] | None,
 ) -> bool:
@@ -712,7 +718,7 @@ def _gen5_page_selected(
     )
 
 
-def _gen5_catalog_record(
+def _seasonal_catalog_record(
     record: dict[str, Any],
     filename: str,
     change: dict[str, Any] | None = None,
@@ -725,7 +731,7 @@ def _gen5_catalog_record(
     variant_records = version_variant_records(record)
     source_records = [value for _, value in variant_records]
     for source_record in source_records:
-        for key, label in _GEN5_METHOD_LABELS.items():
+        for key, label in _SEASONAL_METHOD_LABELS.items():
             method = source_record[key]
             if not method["rate"]:
                 continue
@@ -774,7 +780,7 @@ def _gen5_catalog_record(
     )
 
 
-def _render_gen5_area(
+def _render_seasonal_area(
     record: dict[str, Any],
     change: dict[str, Any] | None,
     baseline_name: str | None,
@@ -786,7 +792,7 @@ def _render_gen5_area(
     lines = [
         f"# {record['name']}",
         "",
-        *_gen5_area_summary(record),
+        *_seasonal_area_summary(record),
     ]
     variant_records = version_variant_records(record)
     if variant_records[0][0] is not None:
@@ -800,8 +806,8 @@ def _render_gen5_area(
         for version, version_record in variant_records:
             assert version is not None
             lines.extend([f"## {display_name(version)}", ""])
-            for key, label in _GEN5_METHOD_LABELS.items():
-                _append_gen5_method(
+            for key, label in _SEASONAL_METHOD_LABELS.items():
+                _append_seasonal_method(
                     lines,
                     label,
                     version_record[key],
@@ -810,8 +816,8 @@ def _render_gen5_area(
                     heading_level=3,
                 )
     else:
-        for key, label in _GEN5_METHOD_LABELS.items():
-            _append_gen5_method(lines, label, record[key], source_file, references)
+        for key, label in _SEASONAL_METHOD_LABELS.items():
+            _append_seasonal_method(lines, label, record[key], source_file, references)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -829,13 +835,13 @@ def _render_gen5_area(
             ]
         )
     )
-    _append_gen5_record_navigation(lines, record, previous, following)
+    _append_seasonal_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
 
 
-def _gen5_area_summary(record: dict[str, Any]) -> list[str]:
+def _seasonal_area_summary(record: dict[str, Any]) -> list[str]:
     methods = [
-        label for key, label in _GEN5_METHOD_LABELS.items() if record[key]["rate"]
+        label for key, label in _SEASONAL_METHOD_LABELS.items() if record[key]["rate"]
     ]
     facts = [
         f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
@@ -851,7 +857,7 @@ def _gen5_area_summary(record: dict[str, Any]) -> list[str]:
     return summary_section("rw-encounter-summary", facts)
 
 
-def _append_gen5_method(
+def _append_seasonal_method(
     lines: list[str],
     heading: str,
     method: dict[str, Any],
@@ -890,7 +896,7 @@ def _append_gen5_method(
     )
 
 
-def _append_gen5_record_navigation(
+def _append_seasonal_record_navigation(
     lines: list[str],
     record: dict[str, Any],
     previous: dict[str, Any] | None,

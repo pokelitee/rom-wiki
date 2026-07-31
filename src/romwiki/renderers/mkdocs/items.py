@@ -631,7 +631,7 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
     # absent from ItemPartyUseEffects entirely, not just always-false), so
     # its presence distinguishes which shape this record carries.
     if "evolve" not in effects:
-        return _gen5_party_effects(effects)
+        return _party_use_effects(effects)
     labels = {
         "heal_sleep": "cures sleep",
         "heal_poison": "cures poison",
@@ -689,7 +689,7 @@ def _party_effects(record: dict[str, Any]) -> list[str]:
     return result
 
 
-def _gen5_party_effects(effects: dict[str, Any]) -> list[str]:
+def _party_use_effects(effects: dict[str, Any]) -> list[str]:
     labels = {
         "heal_sleep": "cures sleep",
         "heal_poison": "cures poison",

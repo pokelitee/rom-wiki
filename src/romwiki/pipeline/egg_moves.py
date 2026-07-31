@@ -37,6 +37,7 @@ def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "egg_moves",
         "record_count": len(records),
         "move_reference_count": sum(len(record.move_ids) for record in records),
@@ -68,6 +69,7 @@ def _extract_from_archive(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "egg_moves",
         "record_count": len(records),
         "move_reference_count": sum(len(record["move_ids"]) for record in records),

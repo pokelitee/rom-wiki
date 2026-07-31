@@ -59,17 +59,19 @@ def build_ability_dataset(
     # item lists plus a rate curve, so its raw dataset carries a
     # `level_ranges` field directly instead of Gen IV's `tables` shape; it
     # also has no Honey Gather / Honey Tree equivalent to attach.
-    is_gen5_pickup = pickup_dataset is not None and "level_ranges" in pickup_dataset
+    is_sliding_pickup = (
+        pickup_dataset is not None and "level_ranges" in pickup_dataset
+    )
     pickup_tables = (
         pickup_dataset["tables"]
-        if pickup_dataset is not None and not is_gen5_pickup
+        if pickup_dataset is not None and not is_sliding_pickup
         else None
     )
     records = []
     for ability_id in range(1, len(ability_names)):
         slug = pokedb.ability_name(ability_id)
         pickup = None
-        if is_gen5_pickup and slug == "pickup":
+        if is_sliding_pickup and slug == "pickup":
             pickup = {"level_ranges": pickup_dataset["level_ranges"]}
         elif pickup_tables is not None and slug == "pickup":
             pickup = {
@@ -92,6 +94,7 @@ def build_ability_dataset(
     return {
         "schema_version": ABILITIES_ENRICHED_SCHEMA_VERSION,
         "game": pokemon_dataset["game"],
+        "engine": pokemon_dataset["engine"],
         "dataset": "abilities",
         "record_count": len(records),
         "assigned_record_count": sum(bool(record["pokemon"]) for record in records),

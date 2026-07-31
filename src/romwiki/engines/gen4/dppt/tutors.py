@@ -10,6 +10,8 @@ from romwiki.schema import (
 )
 from romwiki.util.errors import InvalidRomError
 
+TUTOR_LOCATION_NAMES = ("Route 212", "Survival Area", "Snowpoint City")
+
 TUTOR_RECORD_SIZE = 12
 TUTOR_COMPATIBILITY_RECORD_SIZE = 5
 SET_VAR_FROM_VALUE = 0x0028

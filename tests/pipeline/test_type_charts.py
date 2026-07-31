@@ -47,10 +47,16 @@ class TypeChartTests(unittest.TestCase):
 
     def test_keeps_generation_charts_separately_registered(self) -> None:
         self.assertIsNot(TYPE_CHARTS["gen4"], TYPE_CHARTS["gen5"])
-        self.assertEqual(TYPE_CHARTS["gen4"].engine, "gen4_dppt")
-        self.assertEqual(TYPE_CHARTS["gen5"].engine, "gen5_bw")
+        self.assertEqual(TYPE_CHARTS["gen4"].id, "gen4")
+        self.assertEqual(TYPE_CHARTS["gen5"].id, "gen5")
         self.assertIs(TYPE_CHARTS["gen4"].family, TYPE_CHARTS["gen5"].family)
         self.assertEqual(TYPE_CHARTS["gen4"].family.id, "gen2-5")
+
+    def test_chart_selection_is_independent_of_extraction_engine(self) -> None:
+        dataset = build_type_dataset(_profile("future_engine", "gen2-5"))
+
+        self.assertEqual(dataset["engine"], "future_engine")
+        self.assertEqual(dataset["record_count"], 17)
 
     def test_records_canonical_chart_provenance(self) -> None:
         dataset = build_type_dataset(_profile("gen5_bw", "gen5"))
@@ -119,8 +125,6 @@ class TypeChartTests(unittest.TestCase):
     def test_rejects_invalid_profile_selection_and_overrides(self) -> None:
         with self.assertRaisesRegex(ProfileError, "unknown type chart"):
             build_type_dataset(_profile("gen4_dppt", "missing"))
-        with self.assertRaisesRegex(ProfileError, "is for gen4_dppt"):
-            build_type_dataset(_profile("gen5_bw", "gen4"))
         with self.assertRaisesRegex(ProfileError, "Unknown type"):
             build_type_dataset(
                 _profile(

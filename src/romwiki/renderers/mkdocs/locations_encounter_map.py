@@ -20,7 +20,7 @@ from romwiki.renderers.mkdocs.components import (
     record_navigation_for,
     summary_section,
 )
-from romwiki.renderers.mkdocs.locations import (
+from romwiki.renderers.mkdocs.locations_event_map import (
     _append_connections,
     _append_items,
     _append_shops,
@@ -32,7 +32,7 @@ from romwiki.renderers.mkdocs.locations import (
 from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
 
 
-def render_gen5_location_pages(
+def render_encounter_map_location_pages(
     dataset: dict[str, Any],
     output_root: Path,
     references: ReferenceIndex | None = None,
@@ -72,7 +72,7 @@ def render_gen5_location_pages(
         if only_pages is None or filename.removesuffix(".md") in only_pages:
             write_text(
                 output_root / filename,
-                _render_gen5_location(
+                _render_encounter_map_location(
                     record,
                     previous,
                     following,
@@ -127,7 +127,7 @@ def render_gen5_location_pages(
     return page_count
 
 
-def _render_gen5_location(
+def _render_encounter_map_location(
     record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,

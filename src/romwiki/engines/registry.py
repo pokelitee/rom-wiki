@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal, Protocol
 
 import romwiki.engines.gen4.dppt as gen4_dppt
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
@@ -17,7 +17,27 @@ from romwiki.util.errors import DataSourceError
 GEN4_DPPT_ENGINE = "gen4_dppt"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
-GEN5_ENGINES = frozenset({GEN5_BW_ENGINE, GEN5_B2W2_ENGINE})
+
+EncounterFormat = Literal["conditional", "seasonal"]
+LocationFormat = Literal["event-map", "encounter-map"]
+PickupFormat = Literal["split-table", "sliding-table"]
+TrainerFormat = Literal["class-gender", "battle-mode"]
+TutorFormat = Literal["none", "overlay-table", "personal-archive"]
+
+
+class EngineConcern(Protocol):
+    """Typed boundary for parser/constant namespaces owned by an engine."""
+
+    def __getattr__(self, name: str) -> Any: ...
+
+
+@dataclass(frozen=True, slots=True)
+class EngineFormats:
+    encounters: EncounterFormat
+    locations: LocationFormat
+    pickup: PickupFormat
+    trainers: TrainerFormat
+    tutors: TutorFormat
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,24 +64,25 @@ class EngineAdapter:
     importing a specific engine package directly.
     """
 
-    personal: Any
-    locations: Any
-    trainers: Any
-    encounters: Any
-    evolutions: Any
-    items: Any
-    machines: Any
-    moves: Any
-    tutors: Any
-    egg_moves: Any
-    learnsets: Any
-    reference_names: Any
-    enrich: Any
-    trainer_party: Any
-    trades: Any
-    marts: Any
-    static_encounters: Any
-    pickup: Any
+    personal: EngineConcern
+    locations: EngineConcern
+    trainers: EngineConcern
+    encounters: EngineConcern
+    evolutions: EngineConcern
+    items: EngineConcern
+    machines: EngineConcern
+    moves: EngineConcern
+    tutors: EngineConcern
+    egg_moves: EngineConcern
+    learnsets: EngineConcern
+    reference_names: EngineConcern
+    enrich: EngineConcern
+    trainer_party: EngineConcern
+    trades: EngineConcern
+    marts: EngineConcern
+    static_encounters: EngineConcern
+    pickup: EngineConcern
+    formats: EngineFormats
     generation: int | None = None
     presentation_features: frozenset[str] = frozenset()
     capabilities: frozenset[str] = frozenset()
@@ -87,6 +108,13 @@ _ENGINES: dict[str, EngineAdapter] = {
         marts=gen4_dppt,
         static_encounters=gen4_dppt,
         pickup=gen4_dppt,
+        formats=EngineFormats(
+            encounters="conditional",
+            locations="event-map",
+            pickup="split-table",
+            trainers="class-gender",
+            tutors="overlay-table",
+        ),
         generation=4,
         presentation_features=frozenset({"contests"}),
     ),
@@ -109,6 +137,13 @@ _ENGINES: dict[str, EngineAdapter] = {
         marts=gen5_bw,
         static_encounters=gen5_bw,
         pickup=gen5_bw,
+        formats=EngineFormats(
+            encounters="seasonal",
+            locations="encounter-map",
+            pickup="sliding-table",
+            trainers="battle-mode",
+            tutors="none",
+        ),
         generation=5,
         presentation_features=frozenset(
             {
@@ -137,6 +172,13 @@ _ENGINES: dict[str, EngineAdapter] = {
         marts=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
         static_encounters=gen5_bw,
         pickup=gen5_bw,
+        formats=EngineFormats(
+            encounters="seasonal",
+            locations="encounter-map",
+            pickup="sliding-table",
+            trainers="battle-mode",
+            tutors="personal-archive",
+        ),
         generation=5,
         presentation_features=frozenset(
             {
@@ -156,15 +198,58 @@ def get_engine(engine: str) -> EngineAdapter:
         raise DataSourceError(f"Unsupported engine: {engine!r}") from error
 
 
-def register_engine(engine: str, adapter: EngineAdapter) -> None:
+def register_engine(
+    engine: str, adapter: EngineAdapter, *, validate: bool = True
+) -> None:
     """Register an engine adapter under `engine`, replacing any existing entry.
 
     Intended for tests exercising the enrichment/rendering contract against a
     throwaway fake engine; real engines register themselves in `_ENGINES` above.
     """
+    if validate:
+        _validate_engine_adapter(engine, adapter)
     _ENGINES[engine] = adapter
 
 
 def unregister_engine(engine: str) -> None:
     """Remove a previously registered engine, e.g. in a test's tearDown."""
     _ENGINES.pop(engine, None)
+
+
+def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
+    required = {
+        "personal": ("parse_personal_record", "PERSONAL_RECORD_COUNT"),
+        "moves": ("parse_move_record",),
+        "items": ("parse_item_record",),
+        "learnsets": ("parse_level_up_learnset",),
+        "evolutions": ("parse_evolution_record",),
+        "machines": ("parse_machine_move_table",),
+        "trainer_party": ("normalize_trainer_party_member",),
+    }
+    format_required = {
+        ("encounters", "conditional"): ("parse_encounter_record",),
+        ("encounters", "seasonal"): ("parse_encounter_entry",),
+        ("locations", "event-map"): ("parse_map_headers",),
+        ("locations", "encounter-map"): ("parse_map_header_table",),
+        ("pickup", "split-table"): ("parse_pickup_tables",),
+        ("pickup", "sliding-table"): ("parse_pickup_table",),
+        ("trainers", "class-gender"): ("parse_trainer_record",),
+        ("trainers", "battle-mode"): ("parse_trainer_record",),
+        ("tutors", "overlay-table"): ("parse_tutor_move_table",),
+        ("tutors", "personal-archive"): ("parse_tutor_move_table",),
+    }
+    for (concern, format_name), members in format_required.items():
+        if getattr(adapter.formats, concern) == format_name:
+            required[concern] = members
+    for concern, members in required.items():
+        namespace = getattr(adapter, concern)
+        missing = [member for member in members if not hasattr(namespace, member)]
+        if missing:
+            names = ", ".join(missing)
+            raise DataSourceError(
+                f"Engine {engine!r} {concern} concern is missing: {names}"
+            )
+
+
+for _engine_id, _adapter in _ENGINES.items():
+    _validate_engine_adapter(_engine_id, _adapter)

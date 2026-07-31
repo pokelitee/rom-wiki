@@ -123,10 +123,13 @@ branches itself.
 ### Pipelines and normalized schemas
 
 `src/romwiki/pipeline/` joins decoded records into datasets. The dataclasses under
-`src/romwiki/schema/` define normalized concepts such as Pokémon personal data,
-moves, encounters, trainers, and locations. Datasets carry a `schema_version`, a
-game identifier, record counts, source metadata, and record-level provenance where
-appropriate.
+`src/romwiki/schema/` define canonical extraction contracts for both raw and
+enriched concepts such as Pokémon personal data, moves, encounters, trainers, and
+locations. Raw contracts may retain storage coordinates needed for auditing;
+enriched contracts expose the normalized values consumed by renderers. Every
+dataset uses the shared envelope validated by `schema/datasets.py`: a
+`schema_version`, game and engine identifiers, semantic dataset name, record count,
+source metadata, and record-level provenance where appropriate.
 
 Enriched datasets also carry a normalized `features` list derived from the engine
 adapter and exact profile configuration. Renderers use this contract to distinguish
@@ -152,6 +155,11 @@ differ, the variants are named for the distinction (`ConditionalEncounterArea`
 versus `SeasonalEncounterArea`, or `SplitPickupTable` versus
 `SlidingPickupTable`). Generation and game identity remain engine/profile and
 dataset metadata, not part of the normalized type name.
+
+Shared pipeline and renderer dispatch follows the adapter's semantic format
+metadata (`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and
+so on). Generation numbers and particular engine IDs must not select a shared code
+path.
 
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract

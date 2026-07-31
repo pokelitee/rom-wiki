@@ -53,6 +53,7 @@ def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": MACHINES_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "machines",
         "record_count": len(records),
         "source": {
@@ -89,6 +90,7 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": MACHINES_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "machines",
         "record_count": len(records),
         "source": {

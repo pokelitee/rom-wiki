@@ -210,7 +210,8 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": ITEMS_RAW_SCHEMA_VERSION,
         "game": profile.id,
-        "dataset": "items_raw",
+        "engine": profile.engine,
+        "dataset": "items",
         "record_count": len(records),
         "public_record_count": sum(record["public"] for record in records),
         "source": source,
@@ -472,6 +473,9 @@ def build_item_dataset(
     return {
         "schema_version": ITEMS_ENRICHED_SCHEMA_VERSION,
         "game": game,
+        "engine": item_dataset.get(
+            "engine", pokemon_dataset.get("engine", "unknown")
+        ),
         "dataset": "items",
         "record_count": len(records),
         "referenced_record_count": sum(

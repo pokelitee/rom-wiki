@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_ENGINES, get_engine
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import (
     code_load_address,
@@ -61,8 +61,8 @@ def extract_location_dataset(
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
-    if profile.engine in GEN5_ENGINES:
-        return _extract_gen5_location_dataset(
+    if get_engine(profile.engine).formats.locations == "encounter-map":
+        return _extract_encounter_map_location_dataset(
             result,
             trainer_dataset,
             static_encounter_dataset,
@@ -377,13 +377,13 @@ def extract_location_dataset(
             events_by_id[header.event_file_id] = engine.parse_map_events(
                 events.read(header.event_file_id), event_file_id=header.event_file_id
             )
-            items_by_event[header.event_file_id] = _extract_gen4_location_items(
+            items_by_event[header.event_file_id] = _extract_event_map_location_items(
                 events_by_id[header.event_file_id], item_names
             )
         raw_warps_by_header[header.header_id] = events_by_id[header.event_file_id].warps
         raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
 
-    connections = _extract_gen4_matrix_connections(
+    connections = _extract_event_map_connections(
         engine, headers, matrices, location_names, matrix_void_header_ids
     )
     trainers = _extract_trainer_references(result, trainer_dataset)
@@ -395,7 +395,7 @@ def extract_location_dataset(
                 f"{header.script_file_id}"
             )
         if header.script_file_id not in shops_by_script:
-            shops_by_script[header.script_file_id] = _extract_gen4_location_shops(
+            shops_by_script[header.script_file_id] = _extract_event_map_location_shops(
                 engine,
                 scripts.read(header.script_file_id),
                 script_file_id=header.script_file_id,
@@ -416,7 +416,7 @@ def extract_location_dataset(
             )
         if header.script_file_id not in gifts_by_script:
             gifts_by_script[header.script_file_id] = (
-                _extract_gen4_location_pokemon_gifts(
+                _extract_event_map_location_pokemon_gifts(
                     engine,
                     scripts.read(header.script_file_id),
                     script_file_id=header.script_file_id,
@@ -429,7 +429,7 @@ def extract_location_dataset(
             )
         if header.script_file_id not in npc_trades_by_script:
             npc_trades_by_script[header.script_file_id] = (
-                _extract_gen4_location_npc_trades(
+                _extract_event_map_location_npc_trades(
                     engine,
                     scripts.read(header.script_file_id),
                     script_file_id=header.script_file_id,
@@ -445,7 +445,7 @@ def extract_location_dataset(
         )
         if static_encounter_location_key not in static_encounters_by_location:
             static_encounters_by_location[static_encounter_location_key] = (
-                _extract_gen4_location_static_encounters(
+                _extract_event_map_location_static_encounters(
                     engine,
                     scripts.read(header.script_file_id),
                     script_file_id=header.script_file_id,
@@ -559,6 +559,7 @@ def extract_location_dataset(
     return {
         "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "locations",
         "record_count": len(records),
         "warp_count": sum(len(record["warps"]) for record in records),
@@ -680,7 +681,7 @@ def extract_location_dataset(
     }
 
 
-def _extract_gen5_location_dataset(
+def _extract_encounter_map_location_dataset(
     result: InspectionResult,
     trainer_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
@@ -720,7 +721,7 @@ def _extract_gen5_location_dataset(
     )
     script_file_ids = engine.parse_map_header_script_files(map_headers.read(0))
     trainers_by_header = _extract_trainer_references(result, trainer_dataset)
-    static_encounters_by_header = _extract_gen5_static_encounter_references(
+    static_encounters_by_header = _extract_static_encounter_references(
         engine, profile, messages, script_file_ids, static_encounter_dataset
     )
     overworld_objects = platform.archive_cls.from_bytes(
@@ -730,7 +731,7 @@ def _extract_gen5_location_dataset(
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path), **field_archive_options
     )
-    connections_by_header = _extract_gen5_matrix_connections(
+    connections_by_header = _extract_encounter_map_connections(
         engine, headers, map_matrices
     )
     item_names_by_id = {
@@ -943,7 +944,7 @@ def _extract_gen5_location_dataset(
     }
 
 
-def _extract_gen4_location_shops(
+def _extract_event_map_location_shops(
     engine: Any,
     script: bytes,
     *,
@@ -1055,7 +1056,7 @@ def _extract_gen4_location_shops(
     return tuple(shops)
 
 
-def _extract_gen4_location_pokemon_gifts(
+def _extract_event_map_location_pokemon_gifts(
     engine: Any,
     script: bytes,
     *,
@@ -1104,7 +1105,7 @@ def _extract_gen4_location_pokemon_gifts(
     return tuple(sorted(gifts, key=lambda gift: gift.command_offset))
 
 
-def _extract_gen4_location_static_encounters(
+def _extract_event_map_location_static_encounters(
     engine: Any,
     script: bytes,
     *,
@@ -1142,7 +1143,7 @@ def _extract_gen4_location_static_encounters(
     return tuple(encounters)
 
 
-def _extract_gen4_location_npc_trades(
+def _extract_event_map_location_npc_trades(
     engine: Any,
     script: bytes,
     *,
@@ -1186,7 +1187,7 @@ def _extract_gen4_location_npc_trades(
     return tuple(trades)
 
 
-def _extract_gen4_location_items(
+def _extract_event_map_location_items(
     events: Any, item_names: tuple[str, ...]
 ) -> tuple[LocationItem, ...]:
     items = []
@@ -1229,7 +1230,7 @@ def _extract_gen4_location_items(
     return tuple(items)
 
 
-def _extract_gen4_matrix_connections(
+def _extract_event_map_connections(
     engine: Any,
     headers: tuple[Any, ...],
     matrices: Any,
@@ -1318,7 +1319,7 @@ def _extract_trainer_references(
     return references
 
 
-def _extract_gen5_matrix_connections(
+def _extract_encounter_map_connections(
     engine: Any,
     headers: tuple[Any, ...],
     map_matrices: Any,
@@ -1330,7 +1331,7 @@ def _extract_gen5_matrix_connections(
     `layout.map_matrices`; adjacent grid cells are real, geographically
     adjacent maps. A cell value of -1 means "no map there" (verified: real
     grids are ragged rectangles, not fully packed). Mirrors Gen IV's own
-    `_extract_gen4_matrix_connections` algorithm, adapted to Gen V's differently-
+    `_extract_event_map_connections` algorithm, adapted to the differently-
     shaped `Gen5MapMatrix` (no separate location-name-id indirection --
     `EncounterMapLocation.name` is already the display name).
     """
@@ -1386,7 +1387,7 @@ def _extract_gen5_matrix_connections(
     return result
 
 
-def _extract_gen5_static_encounter_references(
+def _extract_static_encounter_references(
     engine: Any,
     profile: Any,
     messages: Any,

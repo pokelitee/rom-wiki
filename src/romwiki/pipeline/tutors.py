@@ -16,14 +16,14 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for tutor extraction")
     profile = result.match.profile
-    if profile.engine == "gen5_b2w2":
-        return _extract_gen5_b2w2(result)
+    tutor_format = get_engine(profile.engine).formats.tutors
+    if tutor_format == "personal-archive":
+        return _extract_personal_archive_tutors(result)
     required = (
         "tutor_overlay_id",
         "tutor_move_offset",
         "tutor_count",
         "tutor_compatibility_offset",
-        "tutor_location_names",
     )
     try:
         parameters = {name: profile.parameters[name] for name in required}
@@ -49,11 +49,7 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     tutors = engine.parse_tutor_move_table(
         move_data, tutor_count=parameters["tutor_count"]
     )
-    location_names = parameters["tutor_location_names"]
-    if not isinstance(location_names, list) or any(
-        not isinstance(name, str) or not name for name in location_names
-    ):
-        raise ProfileError("Tutor location names must be a list of nonempty strings")
+    location_names = list(engine.TUTOR_LOCATION_NAMES)
     if any(tutor.location_id >= len(location_names) for tutor in tutors):
         raise InvalidRomError("Gen IV tutor references an unknown location ID")
 
@@ -73,6 +69,7 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": TUTORS_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "move_tutors",
         "record_count": len(tutors),
         "compatibility_record_count": len(compatibility),
@@ -97,7 +94,7 @@ def write_tutor_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, dataset)
 
 
-def _extract_gen5_b2w2(result: InspectionResult) -> dict[str, Any]:
+def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]:
     assert result.match is not None
     profile = result.match.profile
     try:
@@ -133,6 +130,7 @@ def _extract_gen5_b2w2(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": TUTORS_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "move_tutors",
         "record_count": len(records),
         "compatibility_record_count": len(compatibility),

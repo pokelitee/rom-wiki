@@ -183,6 +183,7 @@ from .trainers import (
 )
 from .tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,
+    TUTOR_LOCATION_NAMES,
     TUTOR_RECORD_SIZE,
     parse_special_tutor_move,
     parse_special_tutor_species,
@@ -397,6 +398,7 @@ __all__ = [
     "TUTOR_RECORD_SIZE",
     "parse_tutor_compatibility_table",
     "parse_tutor_move_table",
+    "TUTOR_LOCATION_NAMES",
     "parse_special_tutor_move",
     "parse_special_tutor_species",
     "NPC_TRADE_RECORD_SIZE",

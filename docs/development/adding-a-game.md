@@ -133,8 +133,8 @@ names cannot be decoded from the image:
 Fallback names must be lowercase hyphenated values and must never replace a
 successfully decoded ROM name.
 
-Every data-driven profile must explicitly select a type chart registered by its
-engine:
+Every data-driven profile must explicitly select a registered battle-mechanics
+type chart. Chart compatibility is independent of the extraction engine:
 
 ```toml
 [type_chart]
@@ -262,6 +262,8 @@ At minimum, each dataset should include:
 
 - `schema_version`;
 - the stable game/profile identifier;
+- the source engine identifier;
+- a semantic dataset name and top-level `record_count`;
 - record and audit counts;
 - source metadata;
 - normalized records with provenance where practical.

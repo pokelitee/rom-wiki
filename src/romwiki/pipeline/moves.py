@@ -40,7 +40,7 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
         "schema_version": MOVES_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "engine": profile.engine,
-        "dataset": "moves_raw",
+        "dataset": "moves",
         "record_count": len(records),
         "source": {
             "rom_sha256": result.image.hashes.sha256,

@@ -11,7 +11,12 @@ import types
 import unittest
 from pathlib import Path
 
-from romwiki.engines.registry import EngineAdapter, register_engine, unregister_engine
+from romwiki.engines.registry import (
+    EngineAdapter,
+    EngineFormats,
+    register_engine,
+    unregister_engine,
+)
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.personal import extract_personal_dataset
 from romwiki.platforms.registry import (
@@ -110,7 +115,16 @@ class PlatformContractTests(unittest.TestCase):
         )
         engine_fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)
         engine_fields["generation"] = None
-        register_engine(_FAKE_ENGINE_ID, EngineAdapter(**engine_fields))
+        engine_fields["formats"] = EngineFormats(
+            encounters="conditional",
+            locations="event-map",
+            pickup="split-table",
+            trainers="class-gender",
+            tutors="none",
+        )
+        register_engine(
+            _FAKE_ENGINE_ID, EngineAdapter(**engine_fields), validate=False
+        )
         profile = _fake_profile()
         result = InspectionResult(
             image=_FakeImage(),

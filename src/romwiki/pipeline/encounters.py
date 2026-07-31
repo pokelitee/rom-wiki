@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import GEN5_ENGINES, get_engine
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
@@ -19,8 +19,8 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for encounter extraction")
     profile = result.match.profile
-    if profile.engine in GEN5_ENGINES:
-        return _extract_gen5_encounter_dataset(result)
+    if get_engine(profile.engine).formats.encounters == "seasonal":
+        return _extract_seasonal_encounter_dataset(result)
     try:
         archive_path = profile.layout["encounters"]
     except KeyError as error:
@@ -72,7 +72,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     }
 
 
-def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
+def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     # This generation's wild-encounter mechanics (seven encounter methods per
     # area, up to four seasonal variants per map) don't share Gen4's shape
     # (walking/surf/rod/swarm/day/night/radar/dual-slot/Unown), so this is a
@@ -104,7 +104,7 @@ def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
             archive_path=archive_path,
         )
     ]
-    wild_map_names, location_source = _extract_gen5_wild_map_names(
+    wild_map_names, location_source = _extract_seasonal_wild_map_names(
         result, engine, platform, filesystem
     )
     records = [
@@ -131,7 +131,7 @@ def _extract_gen5_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     }
 
 
-def _extract_gen5_wild_map_names(
+def _extract_seasonal_wild_map_names(
     result: InspectionResult, engine: Any, platform: Any, filesystem: Any
 ) -> tuple[dict[int, list[str]], dict[str, Any]]:
     # Optional: a profile that doesn't declare this yet (or a future

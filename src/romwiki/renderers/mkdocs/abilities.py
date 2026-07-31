@@ -214,7 +214,9 @@ def _pickup_section(
     if not pickup:
         return []
     if "level_ranges" in pickup:
-        return _gen5_pickup_section(pickup["level_ranges"], source_file, references)
+        return _sliding_pickup_section(
+            pickup["level_ranges"], source_file, references
+        )
     if "honey_gather_rate" in pickup:
         rates = pickup["honey_gather_rate"]
         lines = [
@@ -273,7 +275,7 @@ def _pickup_section(
     return lines
 
 
-def _gen5_pickup_section(
+def _sliding_pickup_section(
     level_ranges: list[dict[str, Any]],
     source_file: str,
     references: ReferenceIndex | None,

@@ -246,11 +246,11 @@ def _wild_encounters(
                     continue
                 for slot in method.get("slots", []):
                     _add_wild_reference(result, aliases, slot, label, None, common)
-            _add_gen4_special_encounters(result, aliases, record, common)
+            _add_conditional_special_encounters(result, aliases, record, common)
     return result
 
 
-def _add_gen4_special_encounters(
+def _add_conditional_special_encounters(
     result: dict[str, list[WildEncounterReference]],
     aliases: Mapping[int | str, str],
     record: Mapping[str, Any],

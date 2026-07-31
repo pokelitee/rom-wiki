@@ -433,7 +433,7 @@ def _trainer_provenance(record: dict[str, Any]) -> list[str]:
 # 0=single, 1=double, 2=triple, 3=rotation" -- unlike Generation IV, which
 # only ever has single/double battles, so `double_battle` alone would
 # misrepresent a triple or rotation battle as merely "double".
-_GEN5_BATTLE_MODE_LABELS = {
+_BATTLE_MODE_LABELS = {
     0: "Single battle",
     1: "Double battle",
     2: "Triple battle",
@@ -443,7 +443,7 @@ _GEN5_BATTLE_MODE_LABELS = {
 
 def _battle_format_label(record: dict[str, Any]) -> str:
     if "battle_mode" in record:
-        return _GEN5_BATTLE_MODE_LABELS.get(
+        return _BATTLE_MODE_LABELS.get(
             record["battle_mode"], f"Battle mode {record['battle_mode']}"
         )
     return "Double battle" if record["double_battle"] else "Single battle"

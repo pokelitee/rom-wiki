@@ -61,7 +61,6 @@ tutor_overlay_id = 5
 tutor_move_offset = 0x2FF64
 tutor_count = 38
 tutor_compatibility_offset = 0x3012C
-tutor_location_names = ["Route 212", "Survival Area", "Snowpoint City"]
 common_mart_inventory_offset = 0xEBAFC
 specialty_mart_pointer_table_offset = 0x100AF0
 specialty_mart_inventory_count = 20

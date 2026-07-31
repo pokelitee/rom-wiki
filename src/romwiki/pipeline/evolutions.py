@@ -46,6 +46,7 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
     return {
         "schema_version": POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION,
         "game": profile.id,
+        "engine": profile.engine,
         "dataset": "evolutions",
         "record_count": len(records),
         "source": {

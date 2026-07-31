@@ -15,6 +15,7 @@ _GAMES_CONFIG = Path(".local/games.toml")
 _POKEDB_ROOTS = {
     "gen4_dppt": Path("../pokedb/.output/gen4"),
     "gen5_bw": Path("../pokedb/.output/gen5"),
+    "gen5_b2w2": Path("../pokedb/.output/gen5"),
 }
 
 

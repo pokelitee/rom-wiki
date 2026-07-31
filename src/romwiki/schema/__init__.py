@@ -1,3 +1,4 @@
+from romwiki.schema.datasets import DatasetEnvelope, validate_dataset_envelope
 from romwiki.schema.egg_moves import ArchiveEggMoveSet, OverlayEggMoveSet
 from romwiki.schema.encounters import (
     ConditionalEncounterArea,
@@ -59,6 +60,8 @@ from romwiki.schema.tutors import (
 
 __all__ = [
     "PokemonPersonalData",
+    "DatasetEnvelope",
+    "validate_dataset_envelope",
     "RecordProvenance",
     "StatBlock",
     "WildHeldItems",

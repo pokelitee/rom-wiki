@@ -3,14 +3,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.engines.registry import GEN4_DPPT_ENGINE, GEN5_ENGINES
+from romwiki.engines.registry import get_engine
+from romwiki.util.errors import DataSourceError
 
 
 def calculate_base_prize_money(
     trainer: Mapping[str, Any], *, engine: str
 ) -> dict[str, Any] | None:
     """Return an exact, engine-neutral base payout when all inputs are known."""
-    if engine != GEN4_DPPT_ENGINE and engine not in GEN5_ENGINES:
+    try:
+        trainer_format = get_engine(engine).formats.trainers
+    except DataSourceError:
         return None
 
     party = trainer.get("party")
@@ -24,10 +27,10 @@ def calculate_base_prize_money(
 
     base_factor = 4
     battle_format_multiplier = (
-        2 if engine == GEN4_DPPT_ENGINE and trainer.get("double_battle") else 1
+        2 if trainer_format == "class-gender" and trainer.get("double_battle") else 1
     )
     multiplier_provenance = trainer.get("victory_money_multiplier_provenance")
-    if multiplier_provenance is None and engine in GEN5_ENGINES:
+    if multiplier_provenance is None and trainer_format == "battle-mode":
         record_provenance = trainer.get("provenance", {})
         if record_provenance.get("archive") is not None:
             multiplier_provenance = {
