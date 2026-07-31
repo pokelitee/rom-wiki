@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass
+
+from romwiki.util.errors import InvalidRomError
 
 # Gen V field-script opcodes needed to locate literal trainer-battle triggers.
 # Adopted from FrostFalcon/FrostsGen5Editor's `bw1CommandList` (a community,
@@ -92,8 +95,8 @@ def parse_trainer_battle_commands(
 # to this script, not investigated further since it isn't needed to find
 # this pattern) lands on real, readable code, including a `WorkGet` that
 # loads the handed-over item into the compared variable and a `PokePartyAdd`
-# that gives the resolved species at level 25, matching the level already
-# known from `static_pokemon`. Verified end-to-end against both real ROMs
+# that gives the resolved species at level 25. Verified end-to-end against
+# both real ROMs
 # (Black and White give byte-identical results): items 105/104/101/102/103/
 # 100/99/572/573 resolve to species 408/410/138/140/142/347/345/564/566 --
 # Skull->Cranidos, Armor->Shieldon, Helix->Omanyte, Dome->Kabuto, Old
@@ -102,6 +105,7 @@ def parse_trainer_battle_commands(
 # literal decoded ROM fact rather than external game knowledge.
 _FOSSIL_ITEM_VAR = 32802
 _FOSSIL_SPECIES_VAR = 32803
+FOSSIL_SPECIES_VARIABLE = _FOSSIL_SPECIES_VAR
 _STACK_PUSH = 0x9
 _STACK_PUSH_CONST = 0x8
 _STACK_CMP = 0x11
@@ -145,3 +149,29 @@ def parse_fossil_revival_table(data: bytes) -> tuple[Gen5FossilRevival, ...]:
         species_id = struct.unpack_from("<H", data, offset + 23)[0]
         revivals.append(Gen5FossilRevival(item_id=item_id, species_id=species_id))
     return tuple(revivals)
+
+
+def find_fossil_revival_script(
+    read_script_member: Callable[[int], bytes],
+    *,
+    member_count: int,
+    item_count: int,
+    species_count: int,
+) -> tuple[int, tuple[Gen5FossilRevival, ...]]:
+    """Locate the one script containing a complete, valid fossil mapping."""
+    candidates = []
+    for member in range(member_count):
+        revivals = parse_fossil_revival_table(read_script_member(member))
+        if len(revivals) < 2 or any(
+            not 0 < revival.item_id < item_count
+            or not 0 < revival.species_id < species_count
+            for revival in revivals
+        ):
+            continue
+        candidates.append((member, revivals))
+    if len(candidates) != 1:
+        raise InvalidRomError(
+            "Expected exactly one fossil revival script, "
+            f"found {len(candidates)}"
+        )
+    return candidates[0]

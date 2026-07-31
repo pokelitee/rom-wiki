@@ -5,6 +5,7 @@ import unittest
 
 from romwiki.engines.gen4.dppt import (
     parse_egg_gift_command,
+    parse_egg_gift_commands,
     parse_pokemon_gift_commands,
 )
 from romwiki.util.errors import InvalidRomError
@@ -40,6 +41,18 @@ class Gen4GiftTests(unittest.TestCase):
         script = make_script(struct.pack("<3H", 0x0097, 175, 11))
         gift = parse_egg_gift_command(script, offset=6, species_count=494)
         self.assertEqual((gift.species_id, gift.offset), (175, 6))
+
+    def test_discovers_egg_gift_from_validated_setup(self) -> None:
+        setup = struct.pack("<6H", 0x0486, 0x004F, 0x002C, 10, 0x002C, 16)
+        body = setup + struct.pack("<3H", 0x0097, 175, 11)
+
+        gifts = parse_egg_gift_commands(make_script(body), species_count=494)
+
+        self.assertEqual([(gift.species_id, gift.offset) for gift in gifts], [(175, 18)])
+
+    def test_ignores_unvalidated_egg_opcode_like_data(self) -> None:
+        body = struct.pack("<3H", 0x0097, 97, 2)
+        self.assertEqual(parse_egg_gift_commands(make_script(body), species_count=494), ())
 
     def test_rejects_wrong_anchored_egg_command(self) -> None:
         with self.assertRaises(InvalidRomError):

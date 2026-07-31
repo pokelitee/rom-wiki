@@ -397,14 +397,20 @@ def _extract_class_gender_trainer_locations(
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
-        script_start = profile.parameters["trainer_script_start"]
-        script_end = profile.parameters["trainer_script_end"]
-        trainer_id_offset = profile.parameters["trainer_script_id_offset"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing trainer location metadata: {error.args[0]}"
         ) from error
     null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)
+    script_start = profile.parameters.get(
+        "trainer_script_start", engine.TRAINER_OBJECT_SCRIPT_START
+    )
+    script_end = profile.parameters.get(
+        "trainer_script_end", engine.TRAINER_OBJECT_SCRIPT_END
+    )
+    trainer_id_offset = profile.parameters.get(
+        "trainer_script_id_offset", engine.TRAINER_OBJECT_ID_OFFSET
+    )
 
     headers, location_names = resolve_map_headers(
         engine,

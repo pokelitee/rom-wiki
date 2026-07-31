@@ -3,7 +3,11 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.scripts import parse_fossil_revival_table
+from romwiki.engines.gen5.bw.scripts import (
+    find_fossil_revival_script,
+    parse_fossil_revival_table,
+)
+from romwiki.util.errors import InvalidRomError
 
 
 def _fossil_check(*, item_id: int, species_id: int) -> bytes:
@@ -19,6 +23,37 @@ def _fossil_check(*, item_id: int, species_id: int) -> bytes:
 
 
 class Gen5FossilRevivalTests(unittest.TestCase):
+    def test_finds_the_only_complete_valid_fossil_script(self) -> None:
+        valid = _fossil_check(item_id=105, species_id=408) + _fossil_check(
+            item_id=104, species_id=410
+        )
+        members = (b"", _fossil_check(item_id=0, species_id=0), valid)
+
+        member, revivals = find_fossil_revival_script(
+            members.__getitem__,
+            member_count=len(members),
+            item_count=700,
+            species_count=650,
+        )
+
+        self.assertEqual(member, 2)
+        self.assertEqual(
+            [(r.item_id, r.species_id) for r in revivals],
+            [(105, 408), (104, 410)],
+        )
+
+    def test_rejects_ambiguous_fossil_scripts(self) -> None:
+        valid = _fossil_check(item_id=105, species_id=408) + _fossil_check(
+            item_id=104, species_id=410
+        )
+        with self.assertRaises(InvalidRomError):
+            find_fossil_revival_script(
+                (valid, valid).__getitem__,
+                member_count=2,
+                item_count=700,
+                species_count=650,
+            )
+
     def test_extracts_real_fossil_item_to_species_pairs(self) -> None:
         # Real Black/White ROM facts (script file 877, byte-identical between
         # versions): Skull->Cranidos, Armor->Shieldon, Helix->Omanyte,

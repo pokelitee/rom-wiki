@@ -13,6 +13,19 @@ INIT_NPC_TRADE = 0x0226
 START_NPC_TRADE = 0x0229
 FINISH_NPC_TRADE = 0x022A
 _NPC_TRADE_SEQUENCE_LIMIT = 64
+TRADE_LANGUAGE_NAMES = {
+    1: "Japanese",
+    2: "English",
+    3: "French",
+    4: "Italian",
+    5: "German",
+    7: "Spanish",
+    8: "Korean",
+}
+
+
+def trade_language_name(language_id: int) -> str:
+    return TRADE_LANGUAGE_NAMES.get(language_id, f"Language {language_id}")
 
 
 @dataclass(frozen=True, slots=True)

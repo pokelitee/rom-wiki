@@ -5,6 +5,11 @@ import struct
 from romwiki.schema.pickup import SplitPickupTable
 from romwiki.util.errors import InvalidRomError
 
+PICKUP_COMMON_ITEM_COUNT = 18
+PICKUP_RARE_ITEM_COUNT = 11
+PICKUP_COMMON_RATE_COUNT = 9
+PICKUP_HONEY_GATHER_RATE_COUNT = 10
+
 
 def parse_pickup_tables(
     data: bytes,
@@ -13,10 +18,10 @@ def parse_pickup_tables(
     rare_offset: int,
     common_rate_offset: int,
     honey_rate_offset: int,
-    common_count: int,
-    rare_count: int,
-    rate_count: int,
-    honey_rate_count: int,
+    common_count: int = PICKUP_COMMON_ITEM_COUNT,
+    rare_count: int = PICKUP_RARE_ITEM_COUNT,
+    rate_count: int = PICKUP_COMMON_RATE_COUNT,
+    honey_rate_count: int = PICKUP_HONEY_GATHER_RATE_COUNT,
     item_count: int,
 ) -> SplitPickupTable:
     return SplitPickupTable(

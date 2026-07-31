@@ -38,19 +38,17 @@ pokemon_names_member = 90
 ability_names_member = 374
 move_names_member = 403
 item_names_member = 64
-machine_move_prefix = "87038803"
 trainer_names_member = 382
 trainer_classes_member = 383
 map_names_member = 109
 npc_trade_names_member = 37
 npc_trades_unused = [25]
 pickup_overlay_id = 166
-pickup_table_locator = "19005C00DD00"
 tutor_overlay_id = 36
 tutor_move_offset = 0x51538
-# Gen V does not yet have Platinum's complete static-battle script decoder.
-# These are version-specific script addresses from gen5_offsets.ini, retained
-# as profile data and inherited by White 2, whose ROM uses the same layout.
+# B2W2 uses a different script opcode table from BW. Until that table is
+# verified, these exact script addresses remain profile data and are inherited
+# by White 2, whose ROM uses the same layout.
 static_pokemon_egg_indices = [27]
 static_pokemon = [
     { species = [662, 0x1DE], level = [740, 0x12E] }, # Cobalion

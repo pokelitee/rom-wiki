@@ -4,6 +4,7 @@ import struct
 from dataclasses import dataclass
 
 from romwiki.schema import RecordProvenance, Shop
+from romwiki.util.byte_search import find_unique_pattern
 
 from .disassembler import disassemble_function
 
@@ -15,6 +16,18 @@ from .disassembler import disassemble_function
 # overlay. See sites/games/black-white/wiki/data-sources.md for the source
 # and verification.
 SHOP_ITEM_WORD_SIZE = 2
+SHOP_CATALOG_LOCATOR = "00A00F0000000000260A010000000000"
+SHOP_RELATIVE_OFFSETS = (
+    0x0, 0x4, 0xE, 0x14, 0x2C, 0x58, 0xAC, 0xBA, 0xC8, 0xD8, 0xE8, 0xF8,
+    0x108, 0x118, 0x12A, 0x13C, 0x14E, 0x164, 0x17A, 0x190, 0x1C0, 0x1DC,
+    0x1FC, 0x23C, 0x25E, 0x282,
+)
+SHOP_ITEM_SIZES = (
+    2, 2, 3, 4, 4, 6, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 11, 11, 11, 11, 14,
+    16, 16, 17, 18, 19,
+)
+TM_SHOP_IDS = frozenset({1, 2, 4, 7})
+REGULAR_SHOP_IDS = frozenset({0, 16, 20, 23, 24, 25})
 
 # `bw1ShopNames`/`bw1MainGameShops` (Gen5Constants.java): fixed internal shop
 # labels and which are part of the main game (as opposed to post-game-only),
@@ -119,11 +132,11 @@ def parse_shop_dispatch(
 def parse_shop_catalog(
     overlay_data: bytes,
     *,
-    shop_item_offsets: tuple[int, ...],
-    shop_item_sizes: tuple[int, ...],
-    tm_shop_ids: frozenset[int],
-    regular_shop_ids: frozenset[int],
     archive_path: str,
+    shop_item_offsets: tuple[int, ...] | None = None,
+    shop_item_sizes: tuple[int, ...] = SHOP_ITEM_SIZES,
+    tm_shop_ids: frozenset[int] = TM_SHOP_IDS,
+    regular_shop_ids: frozenset[int] = REGULAR_SHOP_IDS,
 ) -> tuple[Shop, ...]:
     """Decode every location-specific shop's persistent item stock.
 
@@ -131,6 +144,15 @@ def parse_shop_catalog(
     by badge count. TM shops use the same overlay tables as specialty shops
     and are retained.
     """
+    if shop_item_offsets is None:
+        locator = bytes.fromhex(SHOP_CATALOG_LOCATOR)
+        base_offset = find_unique_pattern(
+            overlay_data, locator, label="the BW shop catalog"
+        ) + len(locator)
+        shop_item_offsets = tuple(
+            base_offset + relative_offset
+            for relative_offset in SHOP_RELATIVE_OFFSETS
+        )
     shops = []
     for shop_id, (offset, size) in enumerate(
         zip(shop_item_offsets, shop_item_sizes, strict=True)

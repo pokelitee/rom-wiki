@@ -9,6 +9,9 @@ from .scripts import parse_script_table
 
 GIVE_POKEMON_COMMAND = 0x0096
 GIVE_EGG_COMMAND = 0x0097
+_CHECK_PARTY_CAPACITY = struct.pack("<H", 0x0486)
+_STORE_PARTY_CAPACITY_RESULT = struct.pack("<H", 0x004F)
+_EGG_GIFT_SETUP_WINDOW = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,3 +67,23 @@ def parse_egg_gift_command(
     if not 0 < species_id < species_count:
         raise InvalidRomError(f"Egg gift references invalid species {species_id}")
     return Gen4EggGiftCommand(offset=offset, species_id=species_id)
+
+
+def parse_egg_gift_commands(
+    data: bytes, *, species_count: int
+) -> tuple[Gen4EggGiftCommand, ...]:
+    """Find literal egg gifts with Platinum's party-capacity setup sequence."""
+    code_offset = parse_script_table(data)
+    commands = []
+    for offset in range(code_offset, len(data) - 5):
+        opcode, species_id, _unused = struct.unpack_from("<3H", data, offset)
+        if opcode != GIVE_EGG_COMMAND or not 0 < species_id < species_count:
+            continue
+        setup = data[max(code_offset, offset - _EGG_GIFT_SETUP_WINDOW) : offset]
+        if (
+            _CHECK_PARTY_CAPACITY not in setup
+            or _STORE_PARTY_CAPACITY_RESULT not in setup
+        ):
+            continue
+        commands.append(Gen4EggGiftCommand(offset=offset, species_id=species_id))
+    return tuple(commands)

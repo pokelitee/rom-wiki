@@ -121,6 +121,8 @@ class PlatformContractTests(unittest.TestCase):
             pickup="split-table",
             trainers="class-gender",
             tutors="none",
+            fossils="none",
+            static_encounters="none",
         )
         register_engine(
             _FAKE_ENGINE_ID, EngineAdapter(**engine_fields), validate=False

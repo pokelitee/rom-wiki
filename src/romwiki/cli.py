@@ -574,13 +574,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ),
                 static_encounter_dataset=(
                     extract_static_encounter_dataset(result)
-                    if "static_pokemon" in profile.parameters
+                    if get_engine(profile.engine).formats.static_encounters != "none"
                     else None
                 ),
                 item_dataset=extract_item_dataset(result),
                 mart_dataset=(
                     extract_mart_dataset(result)
                     if "shop_item_overlay_id" in profile.parameters
+                    or "shop_items" in profile.layout
                     else None
                 ),
             )

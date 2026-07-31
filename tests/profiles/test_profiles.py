@@ -27,7 +27,9 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(profile.engine, "gen4_dppt")
         self.assertEqual(profile.base_game, "platinum")
         self.assertEqual(profile.rom_versions, (0,))
-        self.assertEqual(profile.parameters["egg_gifts"][0]["command_offset"], 0xE59)
+        self.assertNotIn("egg_gifts", profile.parameters)
+        self.assertNotIn("pickup_common_item_count", profile.parameters)
+        self.assertNotIn("trainer_script_start", profile.parameters)
 
     def test_loads_hgss_baseline_and_hack_profiles(self) -> None:
         profiles = {
@@ -83,7 +85,8 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black.parameters["ability_names_member"], 182)
         self.assertEqual(black.parameters["move_names_member"], 203)
         self.assertEqual(black.parameters["item_names_member"], 54)
-        self.assertEqual(black.parameters["machine_move_prefix"], "87038803")
+        self.assertNotIn("machine_move_prefix", black.parameters)
+        self.assertNotIn("pickup_table_locator", black.parameters)
         self.assertEqual(black.parameters["trainer_names_member"], 190)
         self.assertEqual(black.parameters["trainer_classes_member"], 191)
         self.assertEqual(black.parameters["map_names_member"], 89)
@@ -91,12 +94,8 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(
             black.parameters["npc_trades_unused"], [1, 3, 7, 8, 9, 10, 11, 12]
         )
-        self.assertEqual(black.parameters["static_pokemon_egg_indices"], [5])
-        self.assertEqual(len(black.parameters["static_pokemon"]), 31)
-        self.assertEqual(
-            black.parameters["static_pokemon"][0],
-            {"species": [304, 0x121], "level": [304, 0x29D]},
-        )
+        self.assertNotIn("static_pokemon", black.parameters)
+        self.assertNotIn("static_pokemon_egg_indices", black.parameters)
         self.assertEqual(black.sprite_version, "black-white")
 
         self.assertEqual(white.engine, "gen5_bw")
@@ -113,9 +112,7 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(
             white.parameters["npc_trades_unused"], [0, 2, 7, 8, 9, 10, 11, 12]
         )
-        self.assertEqual(
-            white.parameters["static_pokemon"], black.parameters["static_pokemon"]
-        )
+        self.assertNotIn("static_pokemon", white.parameters)
 
     def test_loads_blaze_black_and_volt_white_profiles(self) -> None:
         profiles = {

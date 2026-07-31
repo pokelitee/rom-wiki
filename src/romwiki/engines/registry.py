@@ -23,6 +23,8 @@ LocationFormat = Literal["event-map", "encounter-map"]
 PickupFormat = Literal["split-table", "sliding-table"]
 TrainerFormat = Literal["class-gender", "battle-mode"]
 TutorFormat = Literal["none", "overlay-table", "personal-archive"]
+FossilFormat = Literal["none", "arm9-table", "script-pattern"]
+StaticEncounterFormat = Literal["none", "address-list", "script-commands"]
 
 
 class EngineConcern(Protocol):
@@ -38,6 +40,8 @@ class EngineFormats:
     pickup: PickupFormat
     trainers: TrainerFormat
     tutors: TutorFormat
+    fossils: FossilFormat
+    static_encounters: StaticEncounterFormat
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +118,8 @@ _ENGINES: dict[str, EngineAdapter] = {
             pickup="split-table",
             trainers="class-gender",
             tutors="overlay-table",
+            fossils="arm9-table",
+            static_encounters="none",
         ),
         generation=4,
         presentation_features=frozenset({"contests"}),
@@ -143,6 +149,8 @@ _ENGINES: dict[str, EngineAdapter] = {
             pickup="sliding-table",
             trainers="battle-mode",
             tutors="none",
+            fossils="script-pattern",
+            static_encounters="script-commands",
         ),
         generation=5,
         presentation_features=frozenset(
@@ -178,6 +186,8 @@ _ENGINES: dict[str, EngineAdapter] = {
             pickup="sliding-table",
             trainers="battle-mode",
             tutors="personal-archive",
+            fossils="none",
+            static_encounters="address-list",
         ),
         generation=5,
         presentation_features=frozenset(
@@ -241,6 +251,8 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
     for (concern, format_name), members in format_required.items():
         if getattr(adapter.formats, concern) == format_name:
             required[concern] = members
+    if adapter.formats.fossils == "script-pattern":
+        required["items"] = (*required["items"], "find_fossil_revival_script")
     for concern, members in required.items():
         namespace = getattr(adapter, concern)
         missing = [member for member in members if not hasattr(namespace, member)]

@@ -21,15 +21,10 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
         messages_path = profile.layout["messages"]
         item_names_member = profile.parameters["item_names_member"]
         shop_item_overlay_id = profile.parameters["shop_item_overlay_id"]
-        shop_item_offsets = tuple(profile.parameters["shop_item_offsets"])
-        shop_item_sizes = tuple(profile.parameters["shop_item_sizes"])
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing mart metadata: {error.args[0]}"
         ) from error
-    tm_shop_ids = frozenset(profile.parameters.get("tm_shop_ids", ()))
-    regular_shop_ids = frozenset(profile.parameters.get("regular_shop_ids", ()))
-
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).marts
     items_engine = get_engine(profile.engine).items
@@ -43,10 +38,6 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
     )
     shops = engine.parse_shop_catalog(
         overlay_data,
-        shop_item_offsets=shop_item_offsets,
-        shop_item_sizes=shop_item_sizes,
-        tm_shop_ids=tm_shop_ids,
-        regular_shop_ids=regular_shop_ids,
         archive_path=f"overlay{shop_item_overlay_id}",
     )
     records = [

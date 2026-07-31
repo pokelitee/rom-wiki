@@ -5,6 +5,11 @@ from dataclasses import dataclass
 
 from romwiki.util.errors import InvalidRomError
 
+ITEM_BALL_GRAPHICS_ID = 87
+VISIBLE_ITEM_SCRIPT_BASE = 7000
+HIDDEN_ITEM_EVENT_TYPE = 2
+HIDDEN_ITEM_SCRIPT_BASE = 8000
+
 
 @dataclass(frozen=True, slots=True)
 class Gen4BackgroundEvent:
@@ -141,6 +146,22 @@ def parse_object_events(
 
 def parse_warp_events(data: bytes, *, event_file_id: int) -> tuple[Gen4WarpEvent, ...]:
     return parse_map_events(data, event_file_id=event_file_id).warps
+
+
+def resolve_visible_item_id(event: Gen4ObjectEvent, *, item_count: int) -> int | None:
+    item_id = event.script_id - VISIBLE_ITEM_SCRIPT_BASE
+    if event.graphics_id != ITEM_BALL_GRAPHICS_ID or not 0 < item_id < item_count:
+        return None
+    return item_id
+
+
+def resolve_hidden_item_id(
+    event: Gen4BackgroundEvent, *, item_count: int
+) -> int | None:
+    item_id = event.script_id - HIDDEN_ITEM_SCRIPT_BASE
+    if event.event_type != HIDDEN_ITEM_EVENT_TYPE or not 0 < item_id < item_count:
+        return None
+    return item_id
 
 
 def _read_count(data: bytes, position: int, event_file_id: int) -> tuple[int, int]:

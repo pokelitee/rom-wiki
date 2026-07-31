@@ -26,18 +26,6 @@ additional_types = ["fairy"]
 "ghost>steel" = "1"
 "dark>steel" = "1"
 
-[[parameters.egg_gifts]]
-script_member = 71
-command_offset = 0xA7B
-
-[[parameters.egg_gifts]]
-script_member = 329
-command_offset = 0x422
-
-[[parameters.egg_gifts]]
-script_member = 456
-command_offset = 0x153
-
 [[hashes]]
 algorithm = "md5"
 value = "4cbf654b4735760f8efd64a8a41415ca"

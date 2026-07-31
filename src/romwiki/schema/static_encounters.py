@@ -15,6 +15,8 @@ class StaticEncounter:
     level: int | None
     is_egg: bool
     provenance: RecordProvenance
+    command_offset: int | None = None
+    command: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

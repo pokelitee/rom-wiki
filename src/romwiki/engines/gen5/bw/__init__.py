@@ -68,14 +68,16 @@ from .pickup import (
     PICKUP_LEVEL_RANGE_COUNT,
     PICKUP_LEVEL_RANGE_SIZE,
     PICKUP_SLOT_CHANCES,
+    PICKUP_TABLE_LOCATOR,
     parse_pickup_table,
     pickup_level_range_item_ids,
 )
 from .scripts import (
+    find_fossil_revival_script,
     parse_fossil_revival_table,
     parse_trainer_battle_commands,
 )
-from .static_encounters import parse_static_encounters
+from .static_encounters import discover_static_encounters, parse_static_encounters
 from .trades import parse_npc_trade_record
 from .trainer_party import (
     derive_trainer_party_attributes,
@@ -114,11 +116,10 @@ from .trainers import parse_trainer_record
 # arithmetic (see overworld.py's module docstring). Both are literal-ID-only;
 # battles whose trainer can't be resolved to a real record are left unlinked
 # rather than guessed at.
-# Static (gift/single-Pokémon) encounters, unlike the above, don't need that
-# opcode research at all: static_encounters.py reads literal species/level
-# byte offsets straight out of `Scripts` (`a/0/5/7`) script files, the same
-# "adopt-and-verify a literal per-ROM fact" pattern as Marts/NPC trades
-# (facts from Ajarmar/universal-pokemon-randomizer-zx's `gen5_offsets.ini`).
+# Static (gift/single-Pokémon) encounters are discovered from reachable
+# `CallWildBattle`/`PokePartyAdd` instructions. Fossil choices use the same
+# validated comparison pattern as item enrichment, so BW profiles need no
+# per-encounter script addresses.
 # Roaming Pokémon (Thundurus/Tornadus) were investigated the same way and
 # found to be a genuine exception: the unmodified retail ROM stores an ARM
 # instruction, not a data word, at the "species" offset the randomizer's own
@@ -136,6 +137,7 @@ INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 TRANSFORMATION_MEMBERS = PERSONAL_TRANSFORMATION_MEMBERS
 MACHINE_COUNT = GEN5_MACHINE_COUNT
+MACHINE_TABLE_LOCATOR = GEN5_MACHINE_TABLE_PREFIX
 # Consumed generically by pipeline/items.py (keyed off attribute name, not
 # per-engine branching), matching Gen4's own `ITEM_POCKET_NAMES`/
 # `ITEM_FIELD_USE_NAMES` precedent.
@@ -161,6 +163,7 @@ __all__ = [
     "ITEM_NAME_COUNT",
     "ITEM_POCKET_NAMES",
     "MACHINE_COUNT",
+    "MACHINE_TABLE_LOCATOR",
     "NATURAL_GIFT_TYPE_NONE",
     "MAX_MOVE_ID",
     "MOVE_NAME_COUNT",
@@ -176,6 +179,8 @@ __all__ = [
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "derive_trainer_party_attributes",
+    "discover_static_encounters",
+    "find_fossil_revival_script",
     "machine_name",
     "normalize_trainer_party_member",
     "parse_egg_move_set",
@@ -210,6 +215,7 @@ __all__ = [
     "PICKUP_LEVEL_RANGE_COUNT",
     "PICKUP_LEVEL_RANGE_SIZE",
     "PICKUP_SLOT_CHANCES",
+    "PICKUP_TABLE_LOCATOR",
     "parse_wild_map_names",
     "resolve_common_script_trainer_id",
 ]

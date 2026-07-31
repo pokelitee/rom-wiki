@@ -38,16 +38,6 @@ from romwiki.renderers.mkdocs.references import (
     escape_markdown,
 )
 
-_SEAL_MART_DAYS = (
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-)
-
 
 def render_event_map_location_pages(
     dataset: dict[str, Any],
@@ -395,8 +385,8 @@ def _append_shops(
                 ]
             )
             continue
-        if shop["kind"] == "seal" and shop["inventory_id"] < len(_SEAL_MART_DAYS):
-            label += f" — {_SEAL_MART_DAYS[shop['inventory_id']]}"
+        if shop.get("schedule"):
+            label += f" — {shop['schedule']}"
         elif not shop.get("name") and kind_counts[shop["kind"]] > 1:
             label += f" {kind_indices[shop['kind']]}"
         lines.extend(

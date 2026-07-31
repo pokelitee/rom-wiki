@@ -36,20 +36,6 @@ from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
-_ITEM_BALL_GRAPHICS_ID = 87
-_VISIBLE_ITEM_SCRIPT_BASE = 7000
-_HIDDEN_ITEM_EVENT_TYPE = 2
-_HIDDEN_ITEM_SCRIPT_BASE = 8000
-_TRADE_LANGUAGES = {
-    1: "Japanese",
-    2: "English",
-    3: "French",
-    4: "Italian",
-    5: "German",
-    7: "Spanish",
-    8: "Korean",
-}
-
 
 def extract_location_dataset(
     result: InspectionResult,
@@ -92,7 +78,6 @@ def extract_location_dataset(
         specialty_mart_inventory_count = profile.parameters[
             "specialty_mart_inventory_count"
         ]
-        egg_gift_metadata = profile.parameters["egg_gifts"]
         static_encounter_location_metadata = profile.parameters.get(
             "static_encounter_locations", []
         )
@@ -355,10 +340,6 @@ def extract_location_dataset(
         static_encounter_location_metadata
     ):
         raise ProfileError("Static encounter location metadata contains duplicates")
-    egg_gifts_by_script: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for metadata in egg_gift_metadata:
-        egg_gifts_by_script[metadata["script_member"]].append(metadata)
-
     events_by_id: dict[int, Any] = {}
     items_by_event: dict[int, tuple[LocationItem, ...]] = {}
     raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
@@ -378,7 +359,7 @@ def extract_location_dataset(
                 events.read(header.event_file_id), event_file_id=header.event_file_id
             )
             items_by_event[header.event_file_id] = _extract_event_map_location_items(
-                events_by_id[header.event_file_id], item_names
+                engine, events_by_id[header.event_file_id], item_names
             )
         raw_warps_by_header[header.header_id] = events_by_id[header.event_file_id].warps
         raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
@@ -422,9 +403,6 @@ def extract_location_dataset(
                     script_file_id=header.script_file_id,
                     pokemon_names=pokemon_names,
                     item_names=item_names,
-                    egg_gift_metadata=egg_gifts_by_script.get(
-                        header.script_file_id, []
-                    ),
                 )
             )
         if header.script_file_id not in npc_trades_by_script:
@@ -613,7 +591,7 @@ def extract_location_dataset(
             },
             "pokemon_gifts": {
                 "scripts_archive": scripts_path,
-                "egg_commands": egg_gift_metadata,
+                "egg_command_discovery": "party-capacity-signature",
             },
             "npc_trades": {
                 "archive": npc_trades_path,
@@ -1051,6 +1029,9 @@ def _extract_event_map_location_shops(
                 script_file_id=script_file_id,
                 command_offset=command.offset,
                 items=items,
+                schedule=engine.shop_schedule_label(
+                    command.kind, command.inventory_id
+                ),
             )
         )
     return tuple(shops)
@@ -1063,7 +1044,6 @@ def _extract_event_map_location_pokemon_gifts(
     script_file_id: int,
     pokemon_names: tuple[str, ...],
     item_names: tuple[str, ...],
-    egg_gift_metadata: list[dict[str, Any]],
 ) -> tuple[LocationPokemonGift, ...]:
     gifts = []
     for command in engine.parse_pokemon_gift_commands(
@@ -1084,12 +1064,9 @@ def _extract_event_map_location_pokemon_gifts(
                 command_offset=command.offset,
             )
         )
-    for metadata in egg_gift_metadata:
-        command = engine.parse_egg_gift_command(
-            script,
-            offset=metadata["command_offset"],
-            species_count=len(pokemon_names),
-        )
+    for command in engine.parse_egg_gift_commands(
+        script, species_count=len(pokemon_names)
+    ):
         gifts.append(
             LocationPokemonGift(
                 kind="egg",
@@ -1175,9 +1152,7 @@ def _extract_event_map_location_npc_trades(
                 ot_name=trade_names[trade_count + command.trade_id],
                 ot_id=trade.ot_id,
                 ot_gender="Female" if trade.ot_gender else "Male",
-                language=_TRADE_LANGUAGES.get(
-                    trade.language_id, f"Language {trade.language_id}"
-                ),
+                language=engine.trade_language_name(trade.language_id),
                 personality=trade.personality,
                 unknown_values=trade.unknown_values,
                 script_file_id=script_file_id,
@@ -1188,14 +1163,12 @@ def _extract_event_map_location_npc_trades(
 
 
 def _extract_event_map_location_items(
-    events: Any, item_names: tuple[str, ...]
+    engine: Any, events: Any, item_names: tuple[str, ...]
 ) -> tuple[LocationItem, ...]:
     items = []
     for event in events.objects:
-        item_id = event.script_id - _VISIBLE_ITEM_SCRIPT_BASE
-        if event.graphics_id != _ITEM_BALL_GRAPHICS_ID or not 1 <= item_id < len(
-            item_names
-        ):
+        item_id = engine.resolve_visible_item_id(event, item_count=len(item_names))
+        if item_id is None:
             continue
         items.append(
             LocationItem(
@@ -1210,10 +1183,8 @@ def _extract_event_map_location_items(
             )
         )
     for event in events.backgrounds:
-        item_id = event.script_id - _HIDDEN_ITEM_SCRIPT_BASE
-        if event.event_type != _HIDDEN_ITEM_EVENT_TYPE or not 1 <= item_id < len(
-            item_names
-        ):
+        item_id = engine.resolve_hidden_item_id(event, item_count=len(item_names))
+        if item_id is None:
             continue
         items.append(
             LocationItem(
@@ -1410,7 +1381,6 @@ def _extract_static_encounter_references(
     """
     if static_encounter_dataset is None:
         return {}
-    raw_entries = profile.parameters.get("static_pokemon", ())
     pokemon_names_member = profile.parameters.get("pokemon_names_member")
     if pokemon_names_member is None:
         return {}
@@ -1422,10 +1392,12 @@ def _extract_static_encounter_references(
         header_by_script_file.setdefault(script_file_id, header_id)
 
     references: dict[int, list[LocationStaticEncounter]] = defaultdict(list)
-    for record, entry in zip(
-        static_encounter_dataset["records"], raw_entries, strict=True
-    ):
-        species_file, species_offset = entry["species"]
+    for record in static_encounter_dataset["records"]:
+        provenance = record.get("provenance", {})
+        species_file = provenance.get("member")
+        species_offset = record.get("command_offset")
+        if not isinstance(species_file, int) or not isinstance(species_offset, int):
+            continue
         header_id = header_by_script_file.get(species_file)
         if header_id is None:
             continue
@@ -1436,7 +1408,7 @@ def _extract_static_encounter_references(
                 species_id=record["species_id"],
                 name=pokemon_names[record["species_id"]],
                 level=record["level"],
-                command="StaticPokemon",
+                command=record.get("command") or "StaticPokemon",
                 script_file_id=species_file,
                 command_offset=species_offset,
             )

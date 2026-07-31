@@ -16,7 +16,11 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for machine extraction")
     profile = result.match.profile
-    if "machine_move_prefix" in profile.parameters:
+    engine = get_engine(profile.engine).machines
+    if (
+        "machine_move_prefix" in profile.parameters
+        or hasattr(engine, "MACHINE_TABLE_LOCATOR")
+    ):
         return _extract_from_arm9_prefix(result)
     return _extract_from_offset(result)
 
@@ -72,9 +76,11 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
     # binary (see platforms/nds/blz.py and Gen5RomHandler.java's
     # `getTMMoves`/tmDataPrefix).
     profile = result.match.profile
-    prefix_hex = profile.parameters["machine_move_prefix"]
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).machines
+    prefix_hex = profile.parameters.get(
+        "machine_move_prefix", engine.MACHINE_TABLE_LOCATOR
+    )
     arm9 = platform.read_decompressed_code_binary(result.image)
     prefix = bytes.fromhex(prefix_hex)
     offset = find_unique_pattern(

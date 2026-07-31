@@ -63,6 +63,7 @@ class LocationShop:
     script_file_id: int
     command_offset: int
     items: tuple[LocationShopItem, ...]
+    schedule: str | None = None
     name: str | None = None
     is_main_game: bool | None = None
     selector_id: int | None = None

@@ -30,10 +30,6 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
         rare_offset = profile.parameters["pickup_rare_items_offset"]
         common_rate_offset = profile.parameters["pickup_common_rate_offset"]
         honey_rate_offset = profile.parameters["pickup_honey_gather_rate_offset"]
-        common_count = profile.parameters["pickup_common_item_count"]
-        rare_count = profile.parameters["pickup_rare_item_count"]
-        rate_count = profile.parameters["pickup_common_rate_count"]
-        honey_rate_count = profile.parameters["pickup_honey_gather_rate_count"]
         item_names_member = profile.parameters["item_names_member"]
         messages_path = profile.layout["messages"]
     except KeyError as error:
@@ -43,6 +39,18 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).pickup
+    common_count = profile.parameters.get(
+        "pickup_common_item_count", engine.PICKUP_COMMON_ITEM_COUNT
+    )
+    rare_count = profile.parameters.get(
+        "pickup_rare_item_count", engine.PICKUP_RARE_ITEM_COUNT
+    )
+    rate_count = profile.parameters.get(
+        "pickup_common_rate_count", engine.PICKUP_COMMON_RATE_COUNT
+    )
+    honey_rate_count = profile.parameters.get(
+        "pickup_honey_gather_rate_count", engine.PICKUP_HONEY_GATHER_RATE_COUNT
+    )
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
@@ -92,7 +100,6 @@ def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
     profile = result.match.profile
     try:
         overlay_id = profile.parameters["pickup_overlay_id"]
-        locator_hex = profile.parameters["pickup_table_locator"]
         item_names_member = profile.parameters["item_names_member"]
         messages_path = profile.layout["messages"]
     except KeyError as error:
@@ -103,6 +110,9 @@ def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
     platform = get_platform(profile.platform)
     items_engine = get_engine(profile.engine).items
     pickup_engine = get_engine(profile.engine).pickup
+    locator_hex = profile.parameters.get(
+        "pickup_table_locator", pickup_engine.PICKUP_TABLE_LOCATOR
+    )
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     item_names = items_engine.parse_english_message_archive(

@@ -34,11 +34,11 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     type_names_member = profile.parameters.get("type_names_member")
     fossil_revival_table_offset = profile.parameters.get("fossil_revival_table_offset")
     fossil_revival_count = profile.parameters.get("fossil_revival_count")
-    fossil_revival_script_file = profile.parameters.get("fossil_revival_script_file")
     first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).items
+    fossil_format = get_engine(profile.engine).formats.fossils
     filesystem = platform.filesystem_from_image(result.image)
     item_archive = platform.archive_cls.from_bytes(filesystem.read(item_archive_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(message_archive_path))
@@ -110,7 +110,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
             "offset": fossil_revival_table_offset,
             "record_count": len(fossil_revivals),
         }
-    elif fossil_revival_script_file is not None:
+    elif fossil_format == "script-pattern":
         # Gen V has no fixed ARM9 table like Gen IV's -- the fossil
         # scientist's own script (`layout.scripts`) picks a species by
         # literally comparing the handed-over item against each real fossil
@@ -118,8 +118,13 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         # disassembly and cross-check against both real ROMs).
         scripts_path = profile.layout["scripts"]
         scripts_archive = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
-        fossil_revivals = engine.parse_fossil_revival_table(
-            scripts_archive.read(fossil_revival_script_file)
+        fossil_revival_script_file, fossil_revivals = (
+            engine.find_fossil_revival_script(
+                scripts_archive.read,
+                member_count=len(scripts_archive.members),
+                item_count=len(item_names),
+                species_count=engine.POKEMON_NAME_COUNT,
+            )
         )
         revives_into_by_item = {
             revival.item_id: revival.species_id for revival in fossil_revivals

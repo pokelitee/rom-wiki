@@ -109,6 +109,8 @@ def _register_fake_engine(tables: types.SimpleNamespace) -> None:
             pickup="split-table",
             trainers="class-gender",
             tutors="none",
+            fossils="none",
+            static_encounters="none",
         ),
     )
     register_engine(_FAKE_ENGINE_ID, adapter, validate=False)

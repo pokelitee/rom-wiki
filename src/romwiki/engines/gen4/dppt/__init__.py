@@ -70,6 +70,8 @@ from .events import (
     parse_map_events,
     parse_object_events,
     parse_warp_events,
+    resolve_hidden_item_id,
+    resolve_visible_item_id,
 )
 from .evolutions import (
     EVOLUTION_RECORD_SIZE,
@@ -91,6 +93,7 @@ from .gifts import (
     Gen4EggGiftCommand,
     Gen4PokemonGiftCommand,
     parse_egg_gift_command,
+    parse_egg_gift_commands,
     parse_pokemon_gift_commands,
 )
 from .items import (
@@ -137,6 +140,7 @@ from .marts import (
     parse_mart_commands,
     parse_seal_price_table,
     parse_specialty_mart_inventories,
+    shop_schedule_label,
 )
 from .messages import parse_english_message_archive
 from .moves import MOVE_RECORD_SIZE, parse_move_record
@@ -149,11 +153,21 @@ from .personal import (
     TRAINER_FORM_SLUGS,
     parse_personal_record,
 )
-from .pickup import SplitPickupTable, parse_pickup_tables
+from .pickup import (
+    PICKUP_COMMON_ITEM_COUNT,
+    PICKUP_COMMON_RATE_COUNT,
+    PICKUP_HONEY_GATHER_RATE_COUNT,
+    PICKUP_RARE_ITEM_COUNT,
+    SplitPickupTable,
+    parse_pickup_tables,
+)
 from .scripts import (
     CHECK_WON_BATTLE,
     PLATINUM_ROAMING_SLOT_COUNT,
     START_TRAINER_BATTLE,
+    TRAINER_OBJECT_ID_OFFSET,
+    TRAINER_OBJECT_SCRIPT_END,
+    TRAINER_OBJECT_SCRIPT_START,
     Gen4RoamingActivationCommand,
     Gen4StaticEncounterCommand,
     Gen4TrainerBattleCommand,
@@ -168,6 +182,7 @@ from .trades import (
     Gen4NpcTradeCommand,
     parse_npc_trade_commands,
     parse_npc_trade_record,
+    trade_language_name,
 )
 from .trainer_party import (
     derive_trainer_party_attributes,
@@ -254,9 +269,16 @@ __all__ = [
     "MOVE_RECORD_COUNT",
     "NATURAL_GIFT_TYPE_NONE",
     "PERSONAL_RECORD_COUNT",
+    "PICKUP_COMMON_ITEM_COUNT",
+    "PICKUP_COMMON_RATE_COUNT",
+    "PICKUP_HONEY_GATHER_RATE_COUNT",
+    "PICKUP_RARE_ITEM_COUNT",
     "POKEMON_NAME_COUNT",
     "ROAMING_SLOT_COUNT",
     "START_TRAINER_BATTLE",
+    "TRAINER_OBJECT_ID_OFFSET",
+    "TRAINER_OBJECT_SCRIPT_END",
+    "TRAINER_OBJECT_SCRIPT_START",
     "TRAINER_COSMETIC_FORM_LABELS",
     "TRAINER_FORM_SLUGS",
     "TYPE_NAME_COUNT",
@@ -347,6 +369,8 @@ __all__ = [
     "parse_map_events",
     "parse_object_events",
     "parse_warp_events",
+    "resolve_hidden_item_id",
+    "resolve_visible_item_id",
     "Gen4TrainerBattleCommand",
     "Gen4RoamingActivationCommand",
     "Gen4StaticEncounterCommand",
@@ -373,6 +397,7 @@ __all__ = [
     "Gen4EggGiftCommand",
     "Gen4PokemonGiftCommand",
     "parse_egg_gift_command",
+    "parse_egg_gift_commands",
     "parse_pokemon_gift_commands",
     "GEN4_MACHINE_COUNT",
     "GEN4_TM_COUNT",
@@ -394,6 +419,7 @@ __all__ = [
     "parse_mart_commands",
     "parse_seal_price_table",
     "parse_specialty_mart_inventories",
+    "shop_schedule_label",
     "TUTOR_COMPATIBILITY_RECORD_SIZE",
     "TUTOR_RECORD_SIZE",
     "parse_tutor_compatibility_table",
@@ -406,6 +432,7 @@ __all__ = [
     "Gen4NpcTradeCommand",
     "parse_npc_trade_commands",
     "parse_npc_trade_record",
+    "trade_language_name",
     "derive_trainer_party_attributes",
     "normalize_trainer_party_member",
 ]

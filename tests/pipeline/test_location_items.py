@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from types import SimpleNamespace
 
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.locations import _extract_event_map_location_items
 
 
@@ -42,7 +43,9 @@ class LocationItemTests(unittest.TestCase):
             ),
         )
 
-        items = _extract_event_map_location_items(events, tuple(names))
+        items = _extract_event_map_location_items(
+            get_engine("gen4_dppt").locations, events, tuple(names)
+        )
 
         self.assertEqual(
             [(item.kind, item.item_id) for item in items],

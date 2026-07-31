@@ -25,6 +25,21 @@ _MART_KINDS = {
     SEAL_MART_COMMAND: "seal",
     FRONTIER_MART_COMMAND: "frontier",
 }
+SEAL_MART_SCHEDULE = (
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+)
+
+
+def shop_schedule_label(kind: str, inventory_id: int) -> str | None:
+    if kind == "seal" and 0 <= inventory_id < len(SEAL_MART_SCHEDULE):
+        return SEAL_MART_SCHEDULE[inventory_id]
+    return None
 
 
 @dataclass(frozen=True, slots=True)

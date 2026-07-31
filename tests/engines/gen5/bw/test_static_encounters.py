@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen5.bw.static_encounters import parse_static_encounters
+from romwiki.engines.gen5.bw.disassembler import Gen5Instruction
+from romwiki.engines.gen5.bw.static_encounters import (
+    _static_fact,
+    parse_static_encounters,
+)
 
 
 def _word(value: int) -> bytes:
@@ -43,7 +47,17 @@ class Gen5StaticEncounterTests(unittest.TestCase):
         self.assertIsNone(larvesta.level)
         self.assertTrue(larvesta.is_egg)
         self.assertEqual(pansage.provenance.archive, "a/0/5/7")
-        self.assertEqual(pansage.provenance.member, 0)
+        self.assertEqual(pansage.provenance.member, 304)
+        self.assertEqual(pansage.command_offset, 0x121)
+
+    def test_normalizes_literal_script_commands(self) -> None:
+        battle = Gen5Instruction(12, 0x178, "CallWildBattle", (637, 70, 0x8000), 20)
+        egg = Gen5Instruction(20, 0x10F, "PokePartyAddEgg", (0x8010, 636, 0), 28)
+
+        self.assertEqual(
+            _static_fact(battle, species_count=650), (637, 70, False)
+        )
+        self.assertEqual(_static_fact(egg, species_count=650), (636, None, True))
 
     def test_egg_indices_apply_only_to_the_named_encounter(self) -> None:
         files = {1: _padded(4, {0: _word(1)})}
