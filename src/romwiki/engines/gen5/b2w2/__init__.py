@@ -22,6 +22,7 @@ from .locations import (
 )
 from .marts import SHOP_SELECTOR_TO_INVENTORY_ID, parse_archive_shop_catalog
 from .personal import parse_personal_record
+from .static_encounters import discover_static_encounters
 from .tutors import (
     TUTOR_COMPATIBILITY_OFFSET,
     TUTOR_COUNT,
@@ -63,6 +64,7 @@ __all__ = [
     "TRAINER_FORM_SLUGS",
     "TRANSFORMATION_MEMBERS",
     "WARP_DESTINATION_INDEXED",
+    "discover_static_encounters",
     "parse_personal_record",
     "parse_map_header_script_files",
     "parse_map_header_table",
