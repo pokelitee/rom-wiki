@@ -77,7 +77,7 @@ from .scripts import (
     parse_fossil_revival_table,
     parse_trainer_battle_commands,
 )
-from .static_encounters import discover_static_encounters, parse_static_encounters
+from .static_encounters import discover_static_encounters
 from .trades import parse_npc_trade_record
 from .trainer_party import (
     derive_trainer_party_attributes,
@@ -204,7 +204,6 @@ __all__ = [
     "parse_pickup_table",
     "parse_shop_catalog",
     "parse_shop_dispatch",
-    "parse_static_encounters",
     "parse_trainer_battle_commands",
     "parse_trainer_record",
     "pickup_level_range_item_ids",

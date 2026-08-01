@@ -24,7 +24,7 @@ PickupFormat = Literal["split-table", "sliding-table"]
 TrainerFormat = Literal["class-gender", "battle-mode"]
 TutorFormat = Literal["none", "overlay-table", "personal-archive"]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
-StaticEncounterFormat = Literal["none", "address-list", "script-commands"]
+StaticEncounterFormat = Literal["none", "script-commands"]
 
 
 class EngineConcern(Protocol):
@@ -178,7 +178,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         trainer_party=gen5_bw,
         trades=gen5_bw,
         marts=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        static_encounters=gen5_bw,
+        static_encounters=gen5_b2w2,
         pickup=gen5_bw,
         formats=EngineFormats(
             encounters="seasonal",
@@ -187,7 +187,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             trainers="battle-mode",
             tutors="personal-archive",
             fossils="none",
-            static_encounters="address-list",
+            static_encounters="script-commands",
         ),
         generation=5,
         presentation_features=frozenset(
@@ -253,6 +253,8 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
             required[concern] = members
     if adapter.formats.fossils == "script-pattern":
         required["items"] = (*required["items"], "find_fossil_revival_script")
+    if adapter.formats.static_encounters == "script-commands":
+        required["static_encounters"] = ("discover_static_encounters",)
     for concern, members in required.items():
         namespace = getattr(adapter, concern)
         missing = [member for member in members if not hasattr(namespace, member)]

@@ -4,6 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from romwiki.engines.gen5.b2w2.static_encounters import (
+    discover_static_encounters as discover_b2w2_static_encounters,
+)
+from romwiki.engines.registry import get_engine
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
 from romwiki.profiles.loader import ProfileRepository
@@ -155,10 +159,21 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black_2.layout["encounters"], "a/1/2/7")
         self.assertEqual(black_2.parameters["pokemon_names_member"], 90)
         self.assertEqual(black_2.parameters["move_names_member"], 403)
+        self.assertNotIn("static_pokemon", black_2.parameters)
+        self.assertNotIn("static_pokemon_egg_indices", black_2.parameters)
+        self.assertEqual(
+            get_engine(black_2.engine).formats.static_encounters, "script-commands"
+        )
+        self.assertIs(
+            get_engine(black_2.engine).static_encounters.discover_static_encounters,
+            discover_b2w2_static_encounters,
+        )
         self.assertEqual(black_2.sprite_version, "black-white")
         self.assertEqual(white_2.engine, "gen5_b2w2")
         self.assertEqual(white_2.game_codes, ("IRDO",))
         self.assertEqual(white_2.hashes[0].algorithm, "sha256")
+        self.assertNotIn("static_pokemon", white_2.parameters)
+        self.assertNotIn("static_pokemon_egg_indices", white_2.parameters)
         self.assertEqual(white_2.sprite_version, "black-white")
 
     def test_loads_blaze_black_2_and_volt_white_2_profiles(self) -> None:
@@ -174,10 +189,14 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(blaze.base_game, "black-2")
         self.assertEqual(blaze.hashes[0].variant, "complete-v1.1")
         self.assertEqual(blaze.sprite_version, "black-white")
+        self.assertNotIn("static_pokemon", blaze.parameters)
+        self.assertNotIn("static_pokemon_egg_indices", blaze.parameters)
         self.assertEqual(volt.engine, "gen5_b2w2")
         self.assertEqual(volt.base_game, "white-2")
         self.assertEqual(volt.hashes[0].variant, "complete-v1.1")
         self.assertEqual(volt.sprite_version, "black-white")
+        self.assertNotIn("static_pokemon", volt.parameters)
+        self.assertNotIn("static_pokemon_egg_indices", volt.parameters)
 
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

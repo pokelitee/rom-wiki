@@ -34,41 +34,17 @@ def extract_static_encounter_dataset(result: InspectionResult) -> dict[str, Any]
         filesystem.read(scripts_path), **archive_options
     )
 
-    if adapter.formats.static_encounters == "script-commands":
-        encounters = engine.discover_static_encounters(
-            scripts.read,
-            member_count=len(scripts.members),
-            archive_path=scripts_path,
-            species_count=engine.POKEMON_NAME_COUNT,
-            item_count=engine.ITEM_NAME_COUNT,
+    if adapter.formats.static_encounters != "script-commands":
+        raise ProfileError(
+            f"Engine {profile.engine!r} does not support static encounter extraction"
         )
-    else:
-        try:
-            raw_entries = profile.parameters["static_pokemon"]
-        except KeyError as error:
-            raise ProfileError(
-                f"Profile {profile.id} is missing static encounter addresses"
-            ) from error
-        egg_indices = frozenset(
-            profile.parameters.get("static_pokemon_egg_indices", ())
-        )
-        entries = [
-            {
-                "species": tuple(entry["species"]),
-                "level": (
-                    tuple(entry["level"])
-                    if entry.get("level") is not None
-                    else None
-                ),
-            }
-            for entry in raw_entries
-        ]
-        encounters = engine.parse_static_encounters(
-            scripts.read,
-            entries,
-            egg_indices=egg_indices,
-            archive_path=scripts_path,
-        )
+    encounters = engine.discover_static_encounters(
+        scripts.read,
+        member_count=len(scripts.members),
+        archive_path=scripts_path,
+        species_count=engine.POKEMON_NAME_COUNT,
+        item_count=engine.ITEM_NAME_COUNT,
+    )
     records = [encounter.to_dict() for encounter in encounters]
     return {
         "schema_version": STATIC_ENCOUNTERS_RAW_SCHEMA_VERSION,
