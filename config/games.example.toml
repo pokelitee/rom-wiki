@@ -34,3 +34,17 @@ base_rom = "roms/Pokemon - Black Version (USA, Europe) (NDSi Enhanced).nds"
 [games.volt-white]
 patched_rom = "roms/PokemonVoltWhiteFull.nds"
 base_rom = "roms/Pokemon - White Version (USA, Europe) (NDSi Enhanced).nds"
+
+[games.black-2-us]
+patched_rom = "roms/Pokemon - Black Version 2 (USA, Europe) (NDSi Enhanced).nds"
+
+[games.white-2-us]
+patched_rom = "roms/Pokemon - White Version 2 (USA, Europe) (NDSi Enhanced).nds"
+
+[games.blaze-black-2]
+patched_rom = "roms/PokemonBlazeBlack2Complete.nds"
+base_rom = "roms/Pokemon - Black Version 2 (USA, Europe) (NDSi Enhanced).nds"
+
+[games.volt-white-2]
+patched_rom = "roms/PokemonVoltWhite2Complete.nds"
+base_rom = "roms/Pokemon - White Version 2 (USA, Europe) (NDSi Enhanced).nds"
