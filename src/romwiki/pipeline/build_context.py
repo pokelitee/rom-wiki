@@ -140,6 +140,7 @@ class GameBuildContext:
                 static_encounter_dataset=self.static_encounters_raw(),
                 item_dataset=self.items_raw(),
                 mart_dataset=self.marts_raw(),
+                trade_dataset=self.trades_raw(),
             ),
         )
 
@@ -179,7 +180,9 @@ class GameBuildContext:
             return None
         return self._memo(
             "trades/enriched",
-            lambda: enrich_npc_trade_dataset(dataset, self.pokemon()),
+            lambda: enrich_npc_trade_dataset(
+                dataset, self.pokemon(), self.locations_raw()
+            ),
         )
 
     def pokemon(self) -> dict[str, Any]:

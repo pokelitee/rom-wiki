@@ -6,6 +6,7 @@ import unittest
 from romwiki.engines.gen5.bw.locations import (
     parse_map_header_script_files,
     parse_map_header_table,
+    parse_map_header_text_files,
     parse_wild_map_names,
 )
 from romwiki.util.errors import InvalidRomError
@@ -14,12 +15,14 @@ _MAP_NAMES = ("Route 1", "Route 2", "Accumula Town")
 
 
 def _map_header(
-    *, name_index: int, wild_set: int, script_file: int = 0, matrix_id: int = 0
+    *, name_index: int, wild_set: int, script_file: int = 0,
+    text_file: int = 0, matrix_id: int = 0
 ) -> bytes:
     record = bytearray(48)
     record[26] = name_index
     struct.pack_into("<H", record, 20, wild_set)
     struct.pack_into("<H", record, 6, script_file)
+    struct.pack_into("<H", record, 10, text_file)
     struct.pack_into("<H", record, 4, matrix_id)
     return bytes(record)
 
@@ -88,6 +91,13 @@ class Gen5LocationsTests(unittest.TestCase):
         )
 
         self.assertEqual(parse_map_header_script_files(data), (14, 310))
+
+    def test_parses_each_header_s_own_text_file_index(self) -> None:
+        data = _map_header(name_index=0, wild_set=5, text_file=529) + _map_header(
+            name_index=1, wild_set=6, text_file=555
+        )
+
+        self.assertEqual(parse_map_header_text_files(data), (529, 555))
 
     def test_parses_each_header_s_own_matrix_id(self) -> None:
         # Real Black ROM fact: header 317 (Route 1), 319 (Route 2), and 389

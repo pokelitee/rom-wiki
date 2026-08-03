@@ -4,8 +4,10 @@ import struct
 import unittest
 
 from romwiki.engines.gen5.b2w2.locations import (
+    NPC_TRADE_TEXT_MEMBER_BY_ID,
     parse_map_header_table,
     parse_wild_map_names,
+    resolve_common_script_member,
 )
 from romwiki.engines.registry import get_engine
 
@@ -20,6 +22,11 @@ def _map_header(*, name_index: int, wild_set: int) -> bytes:
 
 
 class Gen5B2W2LocationsTests(unittest.TestCase):
+    def test_resolves_common_fossil_script_and_fixed_trade_text_members(self) -> None:
+        self.assertEqual(resolve_common_script_member(10445, member_count=1300), 1253)
+        self.assertEqual(NPC_TRADE_TEXT_MEMBER_BY_ID[24], 529)
+        self.assertEqual(NPC_TRADE_TEXT_MEMBER_BY_ID[30], 628)
+
     def test_engine_uses_the_b2w2_location_decoder(self) -> None:
         locations = get_engine("gen5_b2w2").locations
 

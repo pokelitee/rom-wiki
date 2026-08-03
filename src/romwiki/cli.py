@@ -51,6 +51,7 @@ from romwiki.pipeline.sections import (
     enabled_dataset_kinds,
 )
 from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
+from romwiki.pipeline.trades import extract_npc_trade_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
 from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
 from romwiki.pipeline.type_charts import build_type_dataset
@@ -587,6 +588,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     extract_mart_dataset(result)
                     if "shop_item_overlay_id" in profile.parameters
                     or "shop_items" in profile.layout
+                    else None
+                ),
+                trade_dataset=(
+                    extract_npc_trade_dataset(result)
+                    if "npc_trades" in profile.layout
                     else None
                 ),
             )

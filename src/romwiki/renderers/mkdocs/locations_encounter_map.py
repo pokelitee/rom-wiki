@@ -23,6 +23,7 @@ from romwiki.renderers.mkdocs.components import (
 from romwiki.renderers.mkdocs.locations_event_map import (
     _append_connections,
     _append_items,
+    _append_npc_trades,
     _append_shops,
     _append_static_encounters,
     _append_trainers,
@@ -109,6 +110,7 @@ def render_encounter_map_location_pages(
                     *(["connections"] if record["connections"] else []),
                     *(["items"] if record["items"] else []),
                     *(["shops"] if record.get("shops") else []),
+                    *(["trades"] if record.get("npc_trades") else []),
                 ],
                 "search_text": f"{record['name']} {route_id}".lower(),
             }
@@ -154,6 +156,9 @@ def _render_encounter_map_location(
     _append_warps(lines, record["warps"], source_file)
     _append_items(lines, record["items"], source_file, references)
     _append_shops(lines, record.get("shops", []), source_file, references)
+    _append_npc_trades(
+        lines, record.get("npc_trades", []), source_file, references
+    )
     _append_static_encounters(
         lines, record["static_encounters"], source_file, references
     )

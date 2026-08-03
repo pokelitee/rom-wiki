@@ -91,6 +91,7 @@ _FIELDS = {
         "trades",
         "evolutions",
         "revives_into",
+        "revives_at",
         "berry",
     ),
     "wild_encounters": (
@@ -176,6 +177,7 @@ _UNORDERED = {
         "gifts",
         "trades",
         "evolutions",
+        "revives_at",
     },
     "trainers": {"locations", "script_references"},
     "locations": {

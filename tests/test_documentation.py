@@ -73,11 +73,11 @@ class DocumentationTests(unittest.TestCase):
             self.assertIn(supported_scope, shared_bw_notes)
         for limitation in (
             "**Roaming Pokémon:**",
-            "**NPC trade locations:**",
-            "**Black City and Gear Station vendors:**",
-            "**Fossil-revival location:**",
+            "**B2W2 phone trades:**",
         ):
             self.assertIn(limitation, shared_bw_notes)
+        self.assertIn("complete 30-item catalog", shared_bw_notes)
+        self.assertNotIn("**Black City market stock:**", shared_bw_notes)
 
         for site_id in ("black-2-white-2", "blaze-black-2-volt-white-2"):
             notes = (
@@ -89,8 +89,10 @@ class DocumentationTests(unittest.TestCase):
                 )
                 self.assertIn("shop selectors `0` through `25`", notes)
                 self.assertIn("## Known coverage limitations", notes)
-                self.assertIn("detached trade archive", notes)
-                self.assertIn("shared revival script", notes)
+                self.assertIn("selectors `253` and `254`", notes)
+                self.assertIn("Black City's four market stores", notes)
+                self.assertIn("Curtis/Yancy phone trades", notes)
+                self.assertIn("ARM executable analysis", notes)
 
     def test_documented_cli_commands_parse(self) -> None:
         parser = build_parser()

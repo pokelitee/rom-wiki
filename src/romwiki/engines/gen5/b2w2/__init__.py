@@ -14,15 +14,25 @@ from .constants import (
     TRAINER_COSMETIC_FORM_LABELS,
     TRAINER_FORM_SLUGS,
 )
+from .disassembler import disassemble_function, parse_function_offsets
 from .locations import (
+    COMMON_SCRIPT_MEMBER_BASE,
+    NPC_TRADE_TEXT_MEMBER_BY_ID,
     WARP_DESTINATION_INDEXED,
     parse_map_header_script_files,
     parse_map_header_table,
+    parse_map_header_text_files,
     parse_wild_map_names,
+    resolve_common_script_member,
 )
-from .marts import SHOP_SELECTOR_TO_INVENTORY_ID, parse_archive_shop_catalog
+from .marts import (
+    SHOP_SELECTOR_TO_INVENTORY_ID,
+    parse_archive_shop_catalog,
+    resolve_location_special_vendors,
+    resolve_special_vendor,
+)
 from .personal import parse_personal_record
-from .static_encounters import discover_static_encounters
+from .static_encounters import discover_static_encounters, find_fossil_revival_script
 from .tutors import (
     TUTOR_COMPATIBILITY_OFFSET,
     TUTOR_COUNT,
@@ -41,6 +51,7 @@ ITEM_FIELD_USE_NAMES = GEN5_ITEM_FIELD_USE_NAMES
 
 __all__ = [
     "BASE_SPECIES_COUNT",
+    "COMMON_SCRIPT_MEMBER_BASE",
     "FORM_MEMBERS",
     "GEN5_BASE_SPECIES_COUNT",
     "GEN5_ITEM_FIELD_USE_NAMES",
@@ -49,6 +60,7 @@ __all__ = [
     "ITEM_FIELD_USE_NAMES",
     "ITEM_NAME_COUNT",
     "MACHINE_COUNT",
+    "NPC_TRADE_TEXT_MEMBER_BY_ID",
     "PERSONAL_FORM_MEMBERS",
     "PERSONAL_INTERNAL_MEMBERS",
     "PERSONAL_RECORD_COUNT",
@@ -65,11 +77,18 @@ __all__ = [
     "TRANSFORMATION_MEMBERS",
     "WARP_DESTINATION_INDEXED",
     "discover_static_encounters",
+    "find_fossil_revival_script",
+    "disassemble_function",
     "parse_personal_record",
     "parse_map_header_script_files",
+    "parse_map_header_text_files",
     "parse_map_header_table",
+    "parse_function_offsets",
     "parse_archive_shop_catalog",
     "parse_tutor_compatibility_record",
     "parse_tutor_move_table",
     "parse_wild_map_names",
+    "resolve_common_script_member",
+    "resolve_location_special_vendors",
+    "resolve_special_vendor",
 ]

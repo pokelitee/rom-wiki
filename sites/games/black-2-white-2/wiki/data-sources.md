@@ -39,13 +39,16 @@ The shared Generation V location pipeline links wild encounter variants in
 both directions with their map headers and attaches trainers, warps, outdoor
 connections, field items, static encounters, and script-dispatched shops to
 location pages. B2W2 shop selectors `0` through `25` resolve to the sequel's
-location-specific archive inventories; selector `255` identifies the standard
-badge-progression Poké Mart.
+location-specific archive inventories; selectors `253` and `254` resolve BP
+exchanges at Gear Station and the PWT, and selector `255` identifies the
+standard badge-progression Poké Mart. Fixed NPC trades and the shared fossil
+revival are linked through map-owned text/common-script relationships.
+Black City's four market stores are also linked directly to the city. Each
+store lists its Black Tower unlock requirement, one-item-per-day limit, and
+separate weekday and weekend inventory rather than being treated as an
+ordinary Poké Mart.
 
 ## Known coverage limitations
 
-- NPC trades are decoded from the detached trade archive, but their field
-  scripts are not yet mapped back to location headers.
-- Fossil item-to-species mappings are decoded, but the shared revival script is
-  not assigned a map location because it is invoked by another field script
-  rather than registered as a map header's dedicated script.
+- Curtis/Yancy phone trades have no single fixed map and remain locationless.
+- Roaming Thundurus and Tornadus require separate ARM executable analysis.

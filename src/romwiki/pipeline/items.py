@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -115,9 +116,16 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         # scientist's own script (`layout.scripts`) picks a species by
         # literally comparing the handed-over item against each real fossil
         # item ID (see gen5/bw/scripts.py's module docstring for the full
-        # disassembly and cross-check against both real ROMs).
+        # disassembly and generation-specific validation).
         scripts_path = profile.layout["scripts"]
-        scripts_archive = platform.archive_cls.from_bytes(filesystem.read(scripts_path))
+        archive_options = {}
+        if profile.parameters.get(
+            "field_archives_allow_incorrect_data_block_size", False
+        ):
+            archive_options["allow_incorrect_data_block_size"] = True
+        scripts_archive = platform.archive_cls.from_bytes(
+            filesystem.read(scripts_path), **archive_options
+        )
         fossil_revival_script_file, fossil_revivals = (
             engine.find_fossil_revival_script(
                 scripts_archive.read,
@@ -319,6 +327,12 @@ def build_item_dataset(
             add(victory_item["id"], "trainer_rewards", trainer_reference)
 
     linked_shop_ids = set()
+    linked_trade_ids = set()
+    fossil_locations_by_species: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    fossil_source = item_dataset.get("source", {}).get("fossil_revival_table")
+    fossil_member = (
+        fossil_source.get("member") if isinstance(fossil_source, dict) else None
+    )
     for location in (location_dataset or {}).get("records", []):
         # Gen5 has no distinct internal debug-map name, so use its display
         # name for the shared relationship shape.
@@ -339,7 +353,7 @@ def build_item_dataset(
                 },
             )
         for shop in location.get("shops", []):
-            if not shop.get("dynamic"):
+            if not shop.get("dynamic") and shop.get("inventory_id") is not None:
                 linked_shop_ids.add(shop["inventory_id"])
             for item in shop["items"]:
                 add(
@@ -352,8 +366,14 @@ def build_item_dataset(
                         "price": item["price"],
                         "required_badges": item["required_badges"],
                         "shop_id": shop["inventory_id"],
+                        "selector_id": shop.get("selector_id"),
+                        "selector_ids": shop.get("selector_ids", []),
+                        "vendor_id": shop.get("vendor_id"),
                         "shop_name": shop.get("name"),
                         "is_main_game": shop.get("is_main_game"),
+                        "availability": (
+                            item.get("availability") or shop.get("availability")
+                        ),
                     },
                 )
         for gift in location.get("pokemon_gifts", []):
@@ -367,6 +387,7 @@ def build_item_dataset(
                     },
                 )
         for trade in location.get("npc_trades", []):
+            linked_trade_ids.add(trade["trade_id"])
             if trade.get("held_item_id"):
                 add(
                     trade["held_item_id"],
@@ -380,12 +401,24 @@ def build_item_dataset(
                         },
                     },
                 )
+        if isinstance(fossil_member, int):
+            for encounter in location.get("static_encounters", []):
+                if encounter.get("script_file_id") != fossil_member:
+                    continue
+                reference = {
+                    "header_id": location["header_id"],
+                    "name": location["name"],
+                    "internal_name": location.get("internal_name", location["name"]),
+                }
+                locations = fossil_locations_by_species[encounter["species_id"]]
+                if reference not in locations:
+                    locations.append(reference)
 
-    # Unlike Gen4's script-linked NPC trades above, Gen5's aren't attached to
-    # a specific map header (see gen5/bw/__init__.py's module docstring), so
-    # this is a flat pass over a standalone trade dataset instead of nested
-    # inside the location loop.
+    # Preserve detached trades that genuinely have no fixed map (notably the
+    # B2W2 Curtis/Yancy phone trades). Fixed trades were already linked above.
     for trade in (trade_dataset or {}).get("records", []):
+        if trade["trade_id"] in linked_trade_ids:
+            continue
         held_item_id = trade.get("held_item_id")
         if not held_item_id:
             continue
@@ -469,6 +502,9 @@ def build_item_dataset(
                 "evolutions": relation.get("evolutions", []),
                 "revives_into": pokemon_by_species.get(
                     source.get("revives_into_species_id")
+                ),
+                "revives_at": fossil_locations_by_species.get(
+                    source.get("revives_into_species_id"), []
                 ),
             }
         )

@@ -53,13 +53,14 @@ class LocationShopItem:
     name: str
     price: int | None
     required_badges: int | None
+    availability: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class LocationShop:
     kind: str
     currency: str
-    inventory_id: int
+    inventory_id: int | None
     script_file_id: int
     command_offset: int
     items: tuple[LocationShopItem, ...]
@@ -69,6 +70,10 @@ class LocationShop:
     selector_id: int | None = None
     mode: int | None = None
     dynamic: bool = False
+    inventory_source: str = "catalog"
+    availability: str | None = None
+    vendor_id: str | None = None
+    selector_ids: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +211,7 @@ class EncounterMapLocation:
     connections: tuple[LocationConnection, ...] = ()
     items: tuple[LocationItem, ...] = ()
     shops: tuple[LocationShop, ...] = ()
+    npc_trades: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

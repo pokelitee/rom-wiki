@@ -18,6 +18,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     badge_requirement,
+    display_name,
     escape_table_cell,
     pokemon_table,
     provenance_fact_table,
@@ -379,7 +380,8 @@ def _append_shops(
                 [
                     f"### {label}",
                     "",
-                    "Stock changes with badge progression and is selected "
+                    shop.get("availability")
+                    or "Stock changes with badge progression and is selected "
                     "dynamically by the game.",
                     "",
                 ]
@@ -393,8 +395,14 @@ def _append_shops(
             [
                 f"### {label}",
                 "",
-                "| Item | Item ID | Price | Available after |",
-                "| ---- | ------: | ----: | --------------- |",
+            ]
+        )
+        if shop.get("availability"):
+            lines.extend([f"Availability: {shop['availability']}", ""])
+        lines.extend(
+            [
+                "| Item | Item ID | Price | Availability |",
+                "| ---- | ------: | ----: | ------------ |",
             ]
         )
         currency = shop.get("currency", "money")
@@ -403,7 +411,9 @@ def _append_shops(
                 "item", item["item_id"], item["name"], source_file, references
             )
             price = shop_price(item["price"], currency)
-            if shop.get("is_main_game") is not None:
+            if item.get("availability"):
+                availability = item["availability"]
+            elif shop.get("is_main_game") is not None:
                 availability = "Main game" if shop["is_main_game"] else "Post-game"
             else:
                 availability = badge_requirement(item["required_badges"])
@@ -752,14 +762,22 @@ def _append_npc_trades(
 ) -> None:
     if not trades:
         return
+    show_nature = any(trade.get("nature") for trade in trades)
+    show_versions = any(trade.get("versions") for trade in trades)
+    headers = ["Give", "Receive", "Nickname"]
+    if show_versions:
+        headers.append("Versions")
+    if show_nature:
+        headers.append("Nature")
+    headers.extend(["Held item", "IVs", "OT"])
     lines.extend(
         [
             "## In-game trades",
             "",
             "The received Pokémon keeps the level of the Pokémon you trade away.",
             "",
-            "| Give | Receive | Nickname | Nature | Held item | IVs | OT |",
-            "| ---- | ------- | -------- | ------ | --------- | --- | -- |",
+            "| " + " | ".join(headers) + " |",
+            "| " + " | ".join("----" for _ in headers) + " |",
         ]
     )
     stat_names = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
@@ -793,10 +811,12 @@ def _append_npc_trades(
             if trade["held_item_id"] is not None and trade["held_item_name"]
             else "—"
         )
-        ot = (
-            f"{escape_table_cell(trade['ot_name'])} (ID {trade['ot_id']:05}), "
-            f"{trade['ot_gender'].lower()}, {trade['language']}"
-        )
+        ot_details = [f"ID {trade['ot_id']:05}"]
+        if trade.get("ot_gender"):
+            ot_details.append(trade["ot_gender"].lower())
+        if trade.get("language"):
+            ot_details.append(trade["language"])
+        ot = f"{escape_table_cell(trade['ot_name'])} ({', '.join(ot_details)})"
         requested_sprite = _entity_sprite(
             "pokemon",
             trade["requested_species_id"],
@@ -817,12 +837,19 @@ def _append_npc_trades(
             if trade["held_item_id"] is not None and trade["held_item_name"]
             else "—"
         )
-        lines.append(
-            f"| {sprite_with_link(requested_sprite, requested)} "
-            f"| {sprite_with_link(offered_sprite, offered)} | "
-            f"{escape_table_cell(trade['nickname'])} | "
-            f"{trade['nature']} | {held_item_cell} | {ivs} | {ot} |"
-        )
+        cells = [
+            sprite_with_link(requested_sprite, requested),
+            sprite_with_link(offered_sprite, offered),
+            escape_table_cell(trade["nickname"]),
+        ]
+        if show_versions:
+            cells.append(
+                " / ".join(display_name(version) for version in trade["versions"])
+            )
+        if show_nature:
+            cells.append(trade.get("nature") or "—")
+        cells.extend([held_item_cell, ivs, ot])
+        lines.append("| " + " | ".join(cells) + " |")
     lines.append("")
 
 

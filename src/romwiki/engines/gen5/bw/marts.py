@@ -3,6 +3,11 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
+from romwiki.engines.gen5.vendors import (
+    Gen5SpecialVendor,
+    Gen5SpecialVendorItem,
+    fixed_vendor_items,
+)
 from romwiki.schema import RecordProvenance, Shop
 from romwiki.util.byte_search import find_unique_pattern
 
@@ -97,6 +102,113 @@ class Gen5ShopDispatch:
     selector_id: int
     mode: int
     command_offset: int
+
+
+_BW_BP_TM_ITEMS = (
+    (350, 36),
+    (375, 36),
+    (414, 36),
+    (415, 36),
+    (361, 48),
+    (378, 48),
+    (386, 48),
+    (387, 48),
+    (391, 48),
+    (404, 48),
+)
+_BW_BP_ITEM_ITEMS = (
+    *((item_id, 1) for item_id in (46, 49, 47, 52, 48, 45)),
+    *((item_id, 16) for item_id in (289, 290, 291, 292, 293, 294, 272, 273)),
+    *((item_id, 32) for item_id in (214, 271, 545, 546, 542, 547)),
+    *((item_id, 48) for item_id in (
+        267,
+        297,
+        232,
+        276,
+        265,
+        266,
+        230,
+        220,
+        287,
+        275,
+        326,
+        327,
+        213,
+        270,
+        278,
+        541,
+        544,
+        50,
+    )),
+)
+
+_BLACK_CITY_MARKET_ITEMS = (
+    Gen5SpecialVendorItem(30, 1000, "Current resident: Robbie"),
+    Gen5SpecialVendorItem(43, 1500, "Current resident: Shane"),
+    Gen5SpecialVendorItem(74, 3000, "Current resident: Collin"),
+    Gen5SpecialVendorItem(75, 3000, "Current resident: Marie"),
+    Gen5SpecialVendorItem(73, 3000, "Current resident: Eliza"),
+    Gen5SpecialVendorItem(72, 3000, "Current resident: Doug"),
+    Gen5SpecialVendorItem(86, 3000, "Current resident: Dave"),
+    Gen5SpecialVendorItem(77, 5000, "Current resident: Miki"),
+    Gen5SpecialVendorItem(88, 6000, "Current resident: Silvia"),
+    Gen5SpecialVendorItem(109, 10000, "Current resident: Grace"),
+    Gen5SpecialVendorItem(80, 10000, "Current resident: Lena"),
+    Gen5SpecialVendorItem(107, 10000, "Current resident: Molly"),
+    Gen5SpecialVendorItem(85, 10000, "Current resident: Karenna"),
+    Gen5SpecialVendorItem(84, 10000, "Current resident: Ralph"),
+    Gen5SpecialVendorItem(82, 10000, "Current resident: Vincent"),
+    Gen5SpecialVendorItem(110, 10000, "Current resident: Carlos"),
+    Gen5SpecialVendorItem(83, 10000, "Current resident: Ken"),
+    Gen5SpecialVendorItem(108, 10000, "Current resident: Herman"),
+    Gen5SpecialVendorItem(81, 10000, "Current resident: Rosa"),
+    Gen5SpecialVendorItem(4, 10000, "Current resident: Pierce"),
+    Gen5SpecialVendorItem(90, 10000, "Current resident: Leo"),
+    Gen5SpecialVendorItem(93, 10000, "Current resident: Lynette"),
+    Gen5SpecialVendorItem(64, 15000, "Current resident: Emi"),
+    Gen5SpecialVendorItem(63, 18000, "Current resident: Jacques"),
+    Gen5SpecialVendorItem(87, 20000, "Current resident: Gene"),
+    Gen5SpecialVendorItem(106, 30000, "Current resident: Britney"),
+    Gen5SpecialVendorItem(89, 38000, "Current resident: Miho"),
+    Gen5SpecialVendorItem(91, 48000, "Current resident: Piper"),
+    Gen5SpecialVendorItem(92, 50000, "Current resident: Ryder"),
+    Gen5SpecialVendorItem(11, 50000, "Current resident: Frederic"),
+)
+
+
+def resolve_special_vendor(selector_id: int) -> Gen5SpecialVendor | None:
+    """Resolve dispatcher selectors whose semantics are not ordinary marts."""
+    if 247 <= selector_id <= 251:
+        return Gen5SpecialVendor(
+            selector_id=selector_id,
+            name="Black City resident market",
+            kind="market",
+            currency="money",
+            items=_BLACK_CITY_MARKET_ITEMS,
+            availability="Post-game; the market appears with at least 4 residents.",
+            is_main_game=False,
+            vendor_id="black-city-resident-market",
+            selector_ids=tuple(range(247, 252)),
+        )
+    if selector_id == 253:
+        return Gen5SpecialVendor(
+            selector_id=selector_id,
+            name="Battle Point TM exchange",
+            kind="exchange",
+            currency="bp",
+            items=fixed_vendor_items(_BW_BP_TM_ITEMS),
+            is_main_game=True,
+        )
+    if selector_id == 254:
+        return Gen5SpecialVendor(
+            selector_id=selector_id,
+            name="Battle Point item exchange",
+            kind="exchange",
+            currency="bp",
+            items=fixed_vendor_items(_BW_BP_ITEM_ITEMS),
+            is_main_game=True,
+        )
+    return None
 
 
 def parse_shop_dispatch(

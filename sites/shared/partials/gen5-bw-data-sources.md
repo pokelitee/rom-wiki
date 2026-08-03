@@ -71,9 +71,8 @@ real, correct, level-appropriate facts. Each affected Pokémon's page shows a
 "Static encounters" section listing its level (or "Egg"). The location
 pipeline also matches each dedicated script file to its map header, so the
 resolved encounters appear on their location pages with location links on the
-Pokémon pages. The shared fossil-revival script is the one exception because
-it is invoked by a map script rather than assigned directly to a map header;
-its item-to-species facts remain visible without a guessed location.
+Pokémon pages. Overworld common-script references also resolve the shared
+fossil-revival script to the Nacrene Museum without guessing from its name.
 Roaming Pokémon (Thundurus/Tornadus) were investigated the same way and found
 to be a genuine exception: the *unmodified* retail ROM stores an ARM
 instruction, not a data word, at the species offset the same tooling
@@ -174,13 +173,13 @@ Elixir in the common pool; Nugget/King's Rock/Iron Ball/Prism Scale/
 Leftovers in the rare tier).
 
 NPC (in-game) trades are decoded from the `a/1/6/5` archive (108-byte fixed
-records) and shown on the traded-for item's page (the same "Gifts and
-trades" table Generation IV's locations use, since the underlying concept is
-the same even though Generation V's trades aren't linked to a map header).
+records), linked to their invoking maps, and shown on location, item, and
+Pokémon pages.
 Unlike most of the gaps above, this one wasn't blocked on a missing
 disassembly -- the record layout is fully documented by the ROM-hacking
 community's own tooling and needs no script-engine work for the trade data
-itself (only for the field location it triggers at, which isn't attempted).
+itself. BW's local trade calls resolve through dedicated scripts; B2W2's six
+fixed trades resolve through map-owned text-member references.
 Verified against 5 real, active Black ROM trades: "Lillil" the Petilil for a
 Cottonee, "Redeye" the red-striped Basculin for a Minccino, "Minipete" the
 Emolga for a Boldore, "Gorge" the Munchlax for a Cinccino (holding
@@ -216,9 +215,12 @@ shop dispatcher. Selectors `0` through `19` link those persistent inventories
 to their map pages, while selector `255` marks a standard Poké Mart whose
 stock changes with badge progression. Item pages consequently link shop stock
 back to map locations instead of relying only on internal shop names. Black
-City and Gear Station selectors `247` through `254` use separate vendor and
-currency logic; they are counted explicitly as unsupported rather than being
-assigned guessed stock.
+City selectors `247` through `251` identify one resident-dependent market. Its
+complete 30-item catalog is published with the exact resident condition and
+price on every row; a save can have at most ten of those residents at once,
+and the market itself appears with at least four. Selectors `253` and `254` are
+Battle Subway BP exchanges. Their currency and availability use normalized
+vendor fields outside the ordinary mart catalog.
 
 ## Moves
 
@@ -391,17 +393,10 @@ item's huge raw `x` value against its own map's NPCs' coordinates (dividing
 by 65536 landed in the exact same magnitude range, across five unrelated
 real maps).
 
-Static (gift/single) Pokémon encounters are now cross-referenced to their
-real map location too, reusing the same map-header-to-script-file lookup
-warps and trainer battles use: each encounter's already-known
-`[script-file, byte-offset]` fact is matched against the map header whose
-own dedicated script file is that same file. Verified against 18 of 19 real
-static encounters -- every one resolves to its real, well-known location
-with zero mismatches (Volcarona → Relic Castle, Victini → Liberty Garden,
-Reshiram/Zekrom → Dragonspiral Tower, and so on). The one exception (the
-shared fossil-revival script) doesn't resolve because that script is a
-secondary/common script invoked from the museum's own primary script, not a
-map's own dedicated one -- a real, understood limitation, not a bug.
+Static (gift/single) Pokémon encounters are cross-referenced to their real map
+locations through both dedicated map scripts and overworld common-script
+references. The latter resolves the shared fossil-revival script to the
+Nacrene Museum while preserving every proven caller of reused scripts.
 
 Outdoor connections are now decoded too: each map header's `matrix` field
 (byte offset 4 of the 48-byte record) indexes into a separate `MapMatrix`
@@ -425,10 +420,12 @@ tables in overlay 21; selector `255` identifies the standard Poké Mart whose
 stock changes with badge progression. The same dispatcher shape and selector
 mapping were verified in Black, White, Blaze Black, and Volt White.
 
-Selectors `247` through `254` are retained as an explicit unsupported count
-in the raw location dataset. They belong to Black City and Gear Station
-vendors whose inventory/currency mechanism is separate from the overlay-21
-Poké Mart catalog, so no stock is guessed for them.
+Black City selectors `247` through `251` are consolidated into one conditional
+market catalog: all 30 resident/item/price outcomes are retained, while each
+row states which current resident makes that item available. Gear Station
+selectors `253` and `254` are represented as BP exchanges with
+generation-appropriate stock and prices. Selector `252` is not emitted because
+supported ROM scripts do not invoke it.
 
 ## Text and names
 
@@ -454,12 +451,5 @@ ever hit this in one *unused* map-name table entry, not a real page name).
   retail ROM stores executable code, not a data word, at the published species
   offset for at least one of them, so the species is not treated as a literal
   fact without a randomizer-style ASM patch.
-- **NPC trade locations:** trade records, species, forms, held items, trainers,
-  and nicknames are decoded from the detached trade archive, but their field
-  scripts are not yet mapped back to location headers.
-- **Black City and Gear Station vendors:** shop selectors `247` through `254`
-  use vendor and currency systems outside the ordinary Poké Mart catalog. The
-  extraction reports these selectors as unsupported and does not guess stock.
-- **Fossil-revival location:** the item-to-species mapping is decoded, but the
-  shared revival script is secondary to the museum's map script and therefore
-  cannot yet be assigned to a location by the dedicated-script cross-reference.
+- **B2W2 phone trades:** Curtis/Yancy repeat trades have no single fixed map
+  location and remain locationless rather than receiving an invented link.

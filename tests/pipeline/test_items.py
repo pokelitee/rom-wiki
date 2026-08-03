@@ -173,7 +173,10 @@ class FossilRevivalTests(unittest.TestCase):
     def test_resolves_and_renders_fossil_revival(self) -> None:
         raw = {
             "game": "test",
-            "source": {"archive": "items.narc"},
+            "source": {
+                "archive": "items.narc",
+                "fossil_revival_table": {"member": 877},
+            },
             "records": [{**_item_record(), "revives_into_species_id": 138}],
         }
         pokemon = {
@@ -192,7 +195,18 @@ class FossilRevivalTests(unittest.TestCase):
             ],
         }
         trainers = {"game": "test", "source": {}, "records": []}
-        locations = {"game": "test", "source": {}, "records": []}
+        locations = {
+            "game": "test",
+            "source": {},
+            "records": [{
+                "header_id": 21,
+                "name": "Nacrene City",
+                "static_encounters": [{
+                    "species_id": 138,
+                    "script_file_id": 877,
+                }],
+            }],
+        }
         pokedb = PokeDBGeneration(
             pokemon_by_id={},
             pokemon_by_name={},
@@ -204,6 +218,7 @@ class FossilRevivalTests(unittest.TestCase):
         dataset = build_item_dataset(raw, pokedb, pokemon, trainers, locations)
         record = dataset["records"][0]
         self.assertEqual(record["revives_into"]["name"], "Omanyte")
+        self.assertEqual(record["revives_at"][0]["header_id"], 21)
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -212,6 +227,49 @@ class FossilRevivalTests(unittest.TestCase):
 
         self.assertIn("## Fossil revival", page)
         self.assertIn("[Omanyte](../pokemon/omanyte.md)", page)
+        self.assertIn("[Nacrene City](../locations/header-021.md)", page)
+
+    def test_attaches_special_vendor_stock_without_a_mart_inventory_id(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {},
+            "records": [_gen5_item_record()],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        locations = {
+            "game": "test",
+            "source": {},
+            "records": [{
+                "header_id": 67,
+                "name": "Gear Station",
+                "shops": [{
+                    "inventory_id": None,
+                    "selector_id": 254,
+                    "kind": "exchange",
+                    "currency": "bp",
+                    "name": "Battle Point item exchange",
+                    "is_main_game": True,
+                    "dynamic": False,
+                    "items": [{
+                        "item_id": 234,
+                        "price": 48,
+                        "required_badges": None,
+                        "availability": "Weekends",
+                    }],
+                }],
+            }],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={}, pokemon_by_name={}, pokemon_by_species={},
+            abilities_by_id={}, items_by_id={234: "leftovers"},
+        )
+
+        record = build_item_dataset(raw, pokedb, pokemon, None, locations)["records"][0]
+
+        self.assertEqual(record["shops"][0]["header_id"], 67)
+        self.assertEqual(record["shops"][0]["currency"], "bp")
+        self.assertEqual(record["shops"][0]["selector_id"], 254)
+        self.assertEqual(record["shops"][0]["availability"], "Weekends")
 
 
 class BerryMechanicsTests(unittest.TestCase):

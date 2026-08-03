@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from romwiki.schema import RecordProvenance, StaticEncounter
 from romwiki.util.errors import InvalidRomError
@@ -9,6 +10,40 @@ from .disassembler import Gen5Instruction, disassemble_function, parse_function_
 
 _FOSSIL_ITEM_VARIABLE = 32802
 _FOSSIL_SPECIES_VARIABLE = 32803
+
+
+@dataclass(frozen=True, slots=True)
+class Gen5FossilRevival:
+    item_id: int
+    species_id: int
+
+
+def find_fossil_revival_script(
+    read_script_member: Callable[[int], bytes],
+    *,
+    member_count: int,
+    species_count: int,
+    item_count: int,
+) -> tuple[int, tuple[Gen5FossilRevival, ...]]:
+    instructions_by_member = {
+        member: _script_instructions(read_script_member(member))
+        for member in range(member_count)
+    }
+    candidates = _fossil_candidates(
+        instructions_by_member,
+        species_count=species_count,
+        item_count=item_count,
+    )
+    if len(candidates) != 1:
+        raise InvalidRomError(
+            "Expected exactly one B2W2 fossil revival script, "
+            f"found {len(candidates)}"
+        )
+    member, _party_add, mappings = candidates[0]
+    return member, tuple(
+        Gen5FossilRevival(item_id=item_id, species_id=species_id)
+        for item_id, species_id in mappings
+    )
 
 
 def discover_static_encounters(
@@ -160,6 +195,29 @@ def _discover_fossils(
     species_count: int,
     item_count: int,
 ) -> list[tuple[tuple[int, int, bool], int, Gen5Instruction]]:
+    candidates = _fossil_candidates(
+        instructions_by_member,
+        species_count=species_count,
+        item_count=item_count,
+    )
+    if len(candidates) != 1:
+        raise InvalidRomError(
+            "Expected exactly one B2W2 fossil revival script, "
+            f"found {len(candidates)}"
+        )
+    member, party_add, mappings = candidates[0]
+    return [
+        ((species_id, party_add.params[3], False), member, party_add)
+        for _item_id, species_id in mappings
+    ]
+
+
+def _fossil_candidates(
+    instructions_by_member: dict[int, tuple[Gen5Instruction, ...]],
+    *,
+    species_count: int,
+    item_count: int,
+) -> list[tuple[int, Gen5Instruction, list[tuple[int, int]]]]:
     candidates = []
     for member, instructions in instructions_by_member.items():
         party_adds = [
@@ -172,16 +230,7 @@ def _discover_fossils(
         mappings = _fossil_mappings(instructions, species_count, item_count)
         if len(mappings) >= 2 and len(party_adds) == 1:
             candidates.append((member, party_adds[0], mappings))
-    if len(candidates) != 1:
-        raise InvalidRomError(
-            "Expected exactly one B2W2 fossil revival script, "
-            f"found {len(candidates)}"
-        )
-    member, party_add, mappings = candidates[0]
-    return [
-        ((species_id, party_add.params[3], False), member, party_add)
-        for _item_id, species_id in mappings
-    ]
+    return candidates
 
 
 def _fossil_mappings(
@@ -212,4 +261,4 @@ def _fossil_mappings(
     return mappings
 
 
-__all__ = ["discover_static_encounters"]
+__all__ = ["discover_static_encounters", "find_fossil_revival_script"]

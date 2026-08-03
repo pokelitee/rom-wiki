@@ -218,6 +218,78 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("Stock changes with badge progression", page)
         self.assertIn("shops", catalog["records"][0]["features"])
 
+    def test_renders_special_vendor_currency_and_runtime_availability(self) -> None:
+        record = {
+            "header_id": 67,
+            "name": "Gear Station",
+            "encounter_map_index": None,
+            "matrix_id": 0,
+            "provenance": {"archive": "a/0/1/2", "member": 67},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "npc_trades": [{
+                "trade_id": 0,
+                "requested_species_id": 546,
+                "requested_species_name": "Cottonee",
+                "offered_species_id": 548,
+                "offered_species_name": "Petilil",
+                "nickname": "Lillil",
+                "held_item_id": None,
+                "held_item_name": None,
+                "ivs": [20, 20, 20, 20, 20, 20],
+                "ot_id": 39922,
+                "ot_name": "Lina",
+                "versions": ["black"],
+            }],
+            "shops": [
+                {
+                    "kind": "exchange",
+                    "currency": "bp",
+                    "inventory_id": None,
+                    "items": [{
+                        "item_id": 350,
+                        "name": "TM23",
+                        "price": 36,
+                        "required_badges": None,
+                    }],
+                    "name": "Battle Point TM exchange",
+                    "is_main_game": True,
+                    "dynamic": False,
+                },
+                {
+                    "kind": "market",
+                    "currency": "money",
+                    "inventory_id": None,
+                    "items": [{
+                        "item_id": 80,
+                        "name": "Sun Stone",
+                        "price": 10000,
+                        "required_badges": None,
+                        "availability": "Current resident: Lena",
+                    }],
+                    "name": "Black City resident market",
+                    "is_main_game": False,
+                    "dynamic": False,
+                    "availability": "Post-game; the market appears with 4 residents.",
+                },
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages({"engine": "gen5_bw", "records": [record]}, output)
+            page = (output / "header-067.md").read_text(encoding="utf-8")
+
+        self.assertIn("### Battle Point TM exchange", page)
+        self.assertIn("| 350 | 36 BP | Main game |", page)
+        self.assertIn("the market appears with 4 residents", page)
+        self.assertIn("| 80 | ₽10,000 | Current resident: Lena |", page)
+        self.assertIn("## In-game trades", page)
+        self.assertIn("| Black |", page)
+
     def test_renders_navigation_encounters_and_trainers(self) -> None:
         record = {
             "header_id": 45,

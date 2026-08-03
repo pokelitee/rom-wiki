@@ -47,6 +47,30 @@ class VersionMergeTests(unittest.TestCase):
         with self.assertRaisesRegex(DataSourceError, "does not support"):
             merge_version_datasets(black, "black", white, "white")
 
+    def test_merges_version_specific_trades_on_an_otherwise_shared_location(
+        self,
+    ) -> None:
+        black = _dataset(
+            "locations", "black-us",
+            [{"header_id": 23, "name": "Nacrene City", "npc_trades": [
+                {"trade_id": 0, "nickname": "Lillil"}
+            ]}],
+        )
+        white = _dataset(
+            "locations", "white-us",
+            [{"header_id": 23, "name": "Nacrene City", "npc_trades": [
+                {"trade_id": 1, "nickname": "Mondo"}
+            ]}],
+        )
+
+        record = merge_version_datasets(black, "black", white, "white")["records"][0]
+
+        self.assertNotIn("version_variants", record)
+        self.assertEqual(
+            [(trade["trade_id"], trade["versions"]) for trade in record["npc_trades"]],
+            [(0, ["black"]), (1, ["white"])],
+        )
+
     def test_merges_renderable_variants_for_three_versions(self) -> None:
         datasets = {
             "red": _dataset("items", "red", [_item(1, 100)]),

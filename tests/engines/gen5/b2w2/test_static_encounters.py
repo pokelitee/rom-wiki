@@ -3,10 +3,36 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.b2w2.static_encounters import discover_static_encounters
+from romwiki.engines.gen5.b2w2.static_encounters import (
+    discover_static_encounters,
+    find_fossil_revival_script,
+)
 
 
 class B2W2StaticEncounterTests(unittest.TestCase):
+    def test_finds_item_to_species_fossil_mapping(self) -> None:
+        files = {
+            0: _script(_party_add(25, 25)),
+            1: _script(
+                _fossil_mapping(105, 408)
+                + _fossil_mapping(104, 410)
+                + _party_add(32803, 25)
+            ),
+        }
+
+        member, revivals = find_fossil_revival_script(
+            files.__getitem__,
+            member_count=2,
+            species_count=650,
+            item_count=639,
+        )
+
+        self.assertEqual(member, 1)
+        self.assertEqual(
+            [(value.item_id, value.species_id) for value in revivals],
+            [(105, 408), (104, 410)],
+        )
+
     def test_discovers_reachable_battles_gifts_egg_and_fossils(self) -> None:
         files = {
             0: _script(_fossil_mapping(105, 408) + _fossil_mapping(104, 410) + _party_add(32803, 25)),

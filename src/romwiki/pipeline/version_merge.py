@@ -67,7 +67,15 @@ def merge_version_family_datasets(
         }
         record = dict(next(iter(variants.values())))
         record["versions"] = list(variants)
-        if not _all_semantically_equal(kind, variants.values()):
+        locations_with_versioned_trades = (
+            _merge_location_trade_variants(variants)
+            if kind == "locations"
+            else None
+        )
+        if locations_with_versioned_trades is not None:
+            record = locations_with_versioned_trades
+            record["versions"] = list(variants)
+        elif not _all_semantically_equal(kind, variants.values()):
             if kind not in VERSION_VARIANT_DATASETS:
                 raise DataSourceError(
                     f"{kind} record {key!r} differs across versions, but its "
@@ -85,6 +93,44 @@ def merge_version_family_datasets(
         "record_count": len(merged_records),
         "records": merged_records,
     }
+
+
+def _merge_location_trade_variants(
+    variants: Mapping[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Merge version-specific nested trades on an otherwise shared map."""
+    without_trades = []
+    for value in variants.values():
+        candidate = dict(value)
+        candidate["npc_trades"] = []
+        without_trades.append(candidate)
+    if not _all_semantically_equal("locations", without_trades):
+        return None
+
+    merged = dict(next(iter(variants.values())))
+    trades: list[dict[str, Any]] = []
+    for version, value in variants.items():
+        for trade in value.get("npc_trades", []):
+            existing = next(
+                (
+                    candidate
+                    for candidate in trades
+                    if {
+                        key: item
+                        for key, item in candidate.items()
+                        if key != "versions"
+                    }
+                    == trade
+                ),
+                None,
+            )
+            if existing is None:
+                trades.append({**trade, "versions": [version]})
+            else:
+                existing["versions"].append(version)
+    trades.sort(key=lambda trade: (trade["trade_id"], trade["versions"]))
+    merged["npc_trades"] = trades
+    return merged
 
 
 def merge_version_comparisons(

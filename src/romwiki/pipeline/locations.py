@@ -33,7 +33,7 @@ from romwiki.schema import (
     RecordProvenance,
 )
 from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
-from romwiki.util.errors import InvalidRomError, ProfileError
+from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 
@@ -43,6 +43,7 @@ def extract_location_dataset(
     static_encounter_dataset: dict[str, Any] | None = None,
     item_dataset: dict[str, Any] | None = None,
     mart_dataset: dict[str, Any] | None = None,
+    trade_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
@@ -54,6 +55,7 @@ def extract_location_dataset(
             static_encounter_dataset,
             item_dataset,
             mart_dataset,
+            trade_dataset,
         )
     try:
         events_path = profile.layout["events"]
@@ -659,12 +661,61 @@ def extract_location_dataset(
     }
 
 
+def _build_gen5_special_vendor_shop(
+    vendor: Any,
+    item_names_by_id: dict[int, str],
+    *,
+    script_file_id: int,
+    command_offset: int,
+    selector_id: int | None = None,
+    mode: int | None = None,
+) -> LocationShop:
+    missing_item_ids = [
+        item.item_id for item in vendor.items if item.item_id not in item_names_by_id
+    ]
+    if missing_item_ids:
+        source = f"selector {selector_id}" if selector_id is not None else vendor.name
+        raise DataSourceError(
+            f"Special vendor {source} references unknown items: {missing_item_ids}"
+        )
+    selector_ids = vendor.selector_ids
+    if not selector_ids and selector_id is not None:
+        selector_ids = (selector_id,)
+    return LocationShop(
+        kind=vendor.kind,
+        currency=vendor.currency,
+        inventory_id=None,
+        script_file_id=script_file_id,
+        command_offset=command_offset,
+        items=tuple(
+            LocationShopItem(
+                item_id=item.item_id,
+                name=item_names_by_id[item.item_id],
+                price=item.price,
+                required_badges=None,
+                availability=item.availability,
+            )
+            for item in vendor.items
+        ),
+        name=vendor.name,
+        is_main_game=vendor.is_main_game,
+        selector_id=selector_id,
+        mode=mode,
+        dynamic=vendor.dynamic,
+        inventory_source="runtime" if vendor.dynamic else "engine-rule",
+        availability=vendor.availability,
+        vendor_id=vendor.vendor_id,
+        selector_ids=selector_ids,
+    )
+
+
 def _extract_encounter_map_location_dataset(
     result: InspectionResult,
     trainer_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
     item_dataset: dict[str, Any] | None = None,
     mart_dataset: dict[str, Any] | None = None,
+    trade_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     # Each map header's display name, its wild-encounter-table cross-
     # reference, its real trainers, its real warps, its real static
@@ -699,15 +750,32 @@ def _extract_encounter_map_location_dataset(
     )
     script_file_ids = engine.parse_map_header_script_files(map_headers.read(0))
     trainers_by_header = _extract_trainer_references(result, trainer_dataset)
-    static_encounters_by_header = _extract_static_encounter_references(
-        engine, profile, messages, script_file_ids, static_encounter_dataset
-    )
     overworld_objects = platform.archive_cls.from_bytes(
         filesystem.read(overworld_objects_path), **field_archive_options
     )
     map_matrices = platform.archive_cls.from_bytes(filesystem.read(map_matrices_path))
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path), **field_archive_options
+    )
+    script_headers = _resolve_gen5_script_locations(
+        engine,
+        headers,
+        script_file_ids,
+        scripts,
+        overworld_objects,
+    )
+    static_encounters_by_header = _extract_static_encounter_references(
+        engine, profile, messages, script_headers, static_encounter_dataset
+    )
+    npc_trades_by_header = _extract_gen5_npc_trade_references(
+        engine,
+        profile,
+        messages,
+        map_headers.read(0),
+        scripts,
+        script_headers,
+        trade_dataset,
+        item_dataset,
     )
     connections_by_header = _extract_encounter_map_connections(
         engine, headers, map_matrices
@@ -730,6 +798,8 @@ def _extract_encounter_map_location_dataset(
     for header in headers:
         items = []
         shops = []
+        seen_vendor_ids: set[str] = set()
+        script_file_id = script_file_ids[header.header_id]
         if header.header_id < len(overworld_objects.members):
             overworld_data = overworld_objects.read(header.header_id)
             npcs = engine.parse_overworld_npcs(overworld_data)
@@ -749,7 +819,6 @@ def _extract_encounter_map_location_dataset(
                         hidden_flag=None,
                     )
                 )
-            script_file_id = script_file_ids[header.header_id]
             if script_file_id < len(scripts.members):
                 script = scripts.read(script_file_id)
                 function_offsets = engine.parse_function_offsets(script)
@@ -766,6 +835,27 @@ def _extract_encounter_map_location_dataset(
                         dispatch.selector_id
                     )
                     if inventory_id is None:
+                        special_vendor = engine.resolve_special_vendor(
+                            dispatch.selector_id
+                        )
+                        if special_vendor is not None:
+                            if (
+                                special_vendor.vendor_id is None
+                                or special_vendor.vendor_id not in seen_vendor_ids
+                            ):
+                                shops.append(
+                                    _build_gen5_special_vendor_shop(
+                                        special_vendor,
+                                        item_names_by_id,
+                                        script_file_id=script_file_id,
+                                        command_offset=dispatch.command_offset,
+                                        selector_id=dispatch.selector_id,
+                                        mode=dispatch.mode,
+                                    )
+                                )
+                                if special_vendor.vendor_id is not None:
+                                    seen_vendor_ids.add(special_vendor.vendor_id)
+                            continue
                         if dispatch.selector_id != engine.STANDARD_SHOP_SELECTOR:
                             unsupported_shop_selectors.append(dispatch.selector_id)
                             continue
@@ -782,6 +872,10 @@ def _extract_encounter_map_location_dataset(
                                 selector_id=dispatch.selector_id,
                                 mode=dispatch.mode,
                                 dynamic=True,
+                                inventory_source="runtime",
+                                availability=(
+                                    "Stock changes with badge progression."
+                                ),
                             )
                         )
                         continue
@@ -808,6 +902,7 @@ def _extract_encounter_map_location_dataset(
                             is_main_game=catalog_shop["is_main_game"],
                             selector_id=dispatch.selector_id,
                             mode=dispatch.mode,
+                            inventory_source="rom-catalog",
                         )
                     )
             for furniture in engine.parse_overworld_furniture(overworld_data):
@@ -828,6 +923,26 @@ def _extract_encounter_map_location_dataset(
                         hidden_flag=None,
                     )
                 )
+        resolve_location_vendors = getattr(
+            engine, "resolve_location_special_vendors", None
+        )
+        if resolve_location_vendors is not None:
+            for special_vendor in resolve_location_vendors(header.header_id):
+                if (
+                    special_vendor.vendor_id is not None
+                    and special_vendor.vendor_id in seen_vendor_ids
+                ):
+                    continue
+                shops.append(
+                    _build_gen5_special_vendor_shop(
+                        special_vendor,
+                        item_names_by_id,
+                        script_file_id=script_file_id,
+                        command_offset=-1,
+                    )
+                )
+                if special_vendor.vendor_id is not None:
+                    seen_vendor_ids.add(special_vendor.vendor_id)
         warps = []
         if header.header_id < len(overworld_objects.members):
             raw_warps = engine.parse_overworld_warps(
@@ -887,6 +1002,7 @@ def _extract_encounter_map_location_dataset(
                 connections=tuple(connections_by_header.get(header.header_id, ())),
                 items=tuple(items),
                 shops=tuple(shops),
+                npc_trades=tuple(npc_trades_by_header.get(header.header_id, ())),
             ).to_dict()
         )
     return {
@@ -902,6 +1018,9 @@ def _extract_encounter_map_location_dataset(
         "warp_reference_count": sum(len(record["warps"]) for record in records),
         "item_reference_count": sum(len(record["items"]) for record in records),
         "shop_reference_count": sum(len(record["shops"]) for record in records),
+        "npc_trade_reference_count": sum(
+            len(record["npc_trades"]) for record in records
+        ),
         "unsupported_shop_dispatch_count": len(unsupported_shop_selectors),
         "unsupported_shop_selector_ids": sorted(set(unsupported_shop_selectors)),
         "static_encounter_reference_count": sum(
@@ -1358,11 +1477,137 @@ def _extract_encounter_map_connections(
     return result
 
 
+def _resolve_gen5_script_locations(
+    engine: Any,
+    headers: tuple[Any, ...],
+    script_file_ids: tuple[int, ...],
+    scripts: Any,
+    overworld_objects: Any,
+) -> dict[int, tuple[int, ...]]:
+    """Map dedicated and common script members to every proven map caller."""
+    member_count = len(scripts.members)
+    owners: dict[int, set[int]] = defaultdict(set)
+    for header in headers:
+        owners[script_file_ids[header.header_id]].add(header.header_id)
+        if header.header_id >= len(overworld_objects.members):
+            continue
+        overworld = overworld_objects.read(header.header_id)
+        references = [
+            npc.script_used for npc in engine.parse_overworld_npcs(overworld)
+        ]
+        references.extend(
+            furniture.script_used
+            for furniture in engine.parse_overworld_furniture(overworld)
+        )
+        for reference in references:
+            member = engine.resolve_common_script_member(
+                reference, member_count=member_count
+            )
+            if member is not None:
+                owners[member].add(header.header_id)
+
+    return {
+        member: tuple(sorted(header_ids))
+        for member, header_ids in owners.items()
+        if header_ids
+    }
+
+
+def _extract_gen5_npc_trade_references(
+    engine: Any,
+    profile: Any,
+    messages: Any,
+    map_header_data: bytes,
+    scripts: Any,
+    script_headers: dict[int, tuple[int, ...]],
+    trade_dataset: dict[str, Any] | None,
+    item_dataset: dict[str, Any] | None,
+) -> dict[int, list[dict[str, Any]]]:
+    if trade_dataset is None:
+        return {}
+    records_by_id = {
+        record["trade_id"]: record for record in trade_dataset.get("records", ())
+    }
+    if not records_by_id:
+        return {}
+    pokemon_names = engine.parse_english_message_archive(
+        messages.read(profile.parameters["pokemon_names_member"])
+    )
+    item_names = {
+        record["item_id"]: record["name"]
+        for record in (item_dataset or {}).get("records", ())
+    }
+    references: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    seen: set[tuple[int, int]] = set()
+
+    def add(trade_id: int, header_id: int, member: int, offset: int) -> None:
+        record = records_by_id.get(trade_id)
+        identity = (trade_id, header_id)
+        if record is None or identity in seen:
+            return
+        seen.add(identity)
+        held_item_id = record.get("held_item_id")
+        references[header_id].append(
+            {
+                **record,
+                "requested_species_name": pokemon_names[
+                    record["requested_species_id"]
+                ],
+                "offered_species_name": pokemon_names[
+                    record["offered_species_id"]
+                ],
+                "held_item_name": item_names.get(held_item_id),
+                "script_file_id": member,
+                "command_offset": offset,
+            }
+        )
+
+    trade_count = max(records_by_id) + 1
+    for member, header_ids in script_headers.items():
+        script = scripts.read(member)
+        for function_offset in engine.parse_function_offsets(script):
+            instructions = tuple(
+                engine.disassemble_function(script, function_offset).values()
+            )
+            assignments: dict[int, set[int]] = defaultdict(set)
+            for instruction in instructions:
+                if instruction.name in {"WorkSet", "WorkSetConst"}:
+                    assignments[instruction.params[0]].add(instruction.params[1])
+            for instruction in instructions:
+                if instruction.name != "FieldTradeStart":
+                    continue
+                operand = instruction.params[0]
+                candidates = (
+                    {operand}
+                    if 0 <= operand < trade_count
+                    else assignments.get(operand, set())
+                )
+                for trade_id in candidates:
+                    if trade_id not in records_by_id:
+                        continue
+                    for header_id in header_ids:
+                        add(trade_id, header_id, member, instruction.offset)
+
+    text_mapping = getattr(engine, "NPC_TRADE_TEXT_MEMBER_BY_ID", {})
+    if text_mapping:
+        text_file_ids = engine.parse_map_header_text_files(map_header_data)
+        headers_by_text: dict[int, list[int]] = defaultdict(list)
+        for header_id, text_file_id in enumerate(text_file_ids):
+            headers_by_text[text_file_id].append(header_id)
+        for trade_id, text_file_id in text_mapping.items():
+            for header_id in headers_by_text.get(text_file_id, ()):
+                add(trade_id, header_id, -1, -1)
+
+    for values in references.values():
+        values.sort(key=lambda value: value["trade_id"])
+    return references
+
+
 def _extract_static_encounter_references(
     engine: Any,
     profile: Any,
     messages: Any,
-    script_file_ids: tuple[int, ...],
+    script_headers: dict[int, tuple[int, ...]],
     static_encounter_dataset: dict[str, Any] | None,
 ) -> dict[int, list[LocationStaticEncounter]]:
     """Resolve static (gift/single) Pokémon encounters to a real map header.
@@ -1371,13 +1616,9 @@ def _extract_static_encounter_references(
     (see `pipeline/static_encounters.py`); this cross-references the same
     script file against each map header's own dedicated script file (the
     same field §4's trainer-battle-trigger work decoded) rather than
-    guessing. Verified against 18 of 19 real Black ROM static encounters:
-    every one resolves to its real, well-known in-game location (e.g.
-    Volcarona -> Relic Castle, Victini -> Liberty Garden, Reshiram/Zekrom ->
-    Dragonspiral Tower) with zero mismatches. The one exception (the shared
-    fossil-revival script) doesn't resolve because that script is a
-    secondary/common script invoked from the museum's own primary script,
-    not a map's own dedicated one -- left unresolved rather than guessed at.
+    guessing. Dedicated scripts resolve through map headers; secondary/common
+    scripts resolve through proven overworld references. The latter includes
+    the museum's shared fossil-revival script.
     """
     if static_encounter_dataset is None:
         return {}
@@ -1387,10 +1628,6 @@ def _extract_static_encounter_references(
     pokemon_names = engine.parse_english_message_archive(
         messages.read(pokemon_names_member)
     )
-    header_by_script_file: dict[int, int] = {}
-    for header_id, script_file_id in enumerate(script_file_ids):
-        header_by_script_file.setdefault(script_file_id, header_id)
-
     references: dict[int, list[LocationStaticEncounter]] = defaultdict(list)
     for record in static_encounter_dataset["records"]:
         provenance = record.get("provenance", {})
@@ -1398,21 +1635,22 @@ def _extract_static_encounter_references(
         species_offset = record.get("command_offset")
         if not isinstance(species_file, int) or not isinstance(species_offset, int):
             continue
-        header_id = header_by_script_file.get(species_file)
-        if header_id is None:
+        header_ids = script_headers.get(species_file, ())
+        if not header_ids:
             continue
         if record["level"] is None:
             continue
-        references[header_id].append(
-            LocationStaticEncounter(
-                species_id=record["species_id"],
-                name=pokemon_names[record["species_id"]],
-                level=record["level"],
-                command=record.get("command") or "StaticPokemon",
-                script_file_id=species_file,
-                command_offset=species_offset,
+        for header_id in header_ids:
+            references[header_id].append(
+                LocationStaticEncounter(
+                    species_id=record["species_id"],
+                    name=pokemon_names[record["species_id"]],
+                    level=record["level"],
+                    command=record.get("command") or "StaticPokemon",
+                    script_file_id=species_file,
+                    command_offset=species_offset,
+                )
             )
-        )
     for values in references.values():
         values.sort(key=lambda item: (item.name, item.level))
     return references

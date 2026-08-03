@@ -113,9 +113,8 @@ def render_item_pages(
         category = (record.get("reference") or {}).get("category")
         locations = list(
             dict.fromkeys(
-                # Gen5's shop references have no map-header cross-reference
-                # (see gen5/bw/__init__.py's module docstring) and use
-                # "shop_name" instead of "name" -- fall back to it here.
+                # Detached catalog shops use "shop_name" instead of "name";
+                # location-linked shops provide both.
                 reference.get("name", reference.get("shop_name"))
                 for source_record in source_records
                 for field in ("locations", "shops", "gifts", "trades")
@@ -133,9 +132,8 @@ def render_item_pages(
                 for source_record in source_records
                 for field in ("locations", "shops", "gifts", "trades")
                 for reference in source_record[field]
-                # Gen5's NPC trades have no map-header cross-reference (see
-                # gen5/bw/__init__.py's module docstring), so they're excluded
-                # from this location-entity list rather than linked wrong.
+                # Some trades genuinely have no single map, so only resolved
+                # references become location links.
                 if reference.get("header_id") is not None
             ]
         )
@@ -253,7 +251,13 @@ def _render_record(
     _append_trainers(lines, record, source_file)
     _append_gifts_and_trades(lines, record, source_file, references)
     _append_evolutions(lines, record["evolutions"], source_file, references)
-    _append_fossil_revival(lines, record["revives_into"], source_file, references)
+    _append_fossil_revival(
+        lines,
+        record["revives_into"],
+        record.get("revives_at", []),
+        source_file,
+        references,
+    )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -406,6 +410,8 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
 
 
 def _shop_availability(shop: dict[str, Any]) -> str:
+    if shop.get("availability"):
+        return shop["availability"]
     if shop.get("is_main_game") is not None:
         return "Main game" if shop["is_main_game"] else "Post-game"
     return badge_requirement(shop["required_badges"])
@@ -534,10 +540,7 @@ def _append_gift_trade_table(
 
 
 def _location_or_trade_cell(value: dict[str, Any], source_file: str) -> str:
-    # Gen5's NPC trades aren't linked to a specific map header (no
-    # script-engine location resolution -- see gen5/bw/__init__.py's module
-    # docstring), so they show the trade NPC's name/nickname as plain text
-    # instead of a location link.
+    # Locationless trades show the NPC identity instead of an invented link.
     if "header_id" in value:
         return _location_link(value, source_file)
     return f"{value['ot_name']} (nicknamed {value['nickname']})"
@@ -606,6 +609,7 @@ def _append_berry_mechanics(lines: list[str], berry: dict[str, Any] | None) -> N
 def _append_fossil_revival(
     lines: list[str],
     revives_into: dict[str, Any] | None,
+    locations: list[dict[str, Any]],
     source_file: str,
     references: ReferenceIndex | None,
 ) -> None:
@@ -621,6 +625,14 @@ def _append_fossil_revival(
             "",
         ]
     )
+    if locations:
+        lines.extend(
+            [
+                "Revival location: "
+                + ", ".join(_location_link(location, source_file) for location in locations),
+                "",
+            ]
+        )
 
 
 def _party_effects(record: dict[str, Any]) -> list[str]:

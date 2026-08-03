@@ -451,7 +451,16 @@ def _acquisition_references(
                 "level": None,
                 "detail": f"Trade for {trade.get('requested_species_name', 'Pokémon')}",
             }
-            _add_acquisition(result, aliases, offered, "trade", common)
+            _add_acquisition(
+                result,
+                aliases,
+                offered,
+                "trade",
+                {
+                    **common,
+                    "versions": tuple(trade.get("versions", versions)),
+                },
+            )
         honey_tree = location.get("honey_tree")
         if isinstance(honey_tree, dict):
             for rarity in ("common", "uncommon", "rare"):
@@ -485,45 +494,57 @@ def _acquisition_references(
     for item in item_records:
         pokemon = item.get("revives_into")
         if isinstance(pokemon, dict):
-            _add_acquisition(
-                result,
-                aliases,
-                pokemon,
-                "fossil-revival",
-                {
-                    "location_id": None,
-                    "location_name": None,
-                    "detail": item.get("name"),
-                    "source_item_id": item.get("item_id"),
-                    "source_item_slug": item.get("slug"),
-                    "versions": _record_versions(item),
-                },
-            )
+            locations = item.get("revives_at") or [None]
+            for location in locations:
+                _add_acquisition(
+                    result,
+                    aliases,
+                    pokemon,
+                    "fossil-revival",
+                    {
+                        "location_id": (
+                            location.get("header_id") if location else None
+                        ),
+                        "location_name": location.get("name") if location else None,
+                        "detail": item.get("name"),
+                        "source_item_id": item.get("item_id"),
+                        "source_item_slug": item.get("slug"),
+                        "versions": _record_versions(item),
+                    },
+                )
 
     for trade in trade_records:
         offered = trade.get("offered_pokemon")
         requested = trade.get("requested_pokemon") or {}
         if not isinstance(offered, dict):
             continue
-        _add_acquisition(
-            result,
-            aliases,
-            {
-                "pokemon": offered,
-                "species_id": offered.get("species_id"),
-                "detail": (
-                    f"Trade for {requested.get('name')}"
-                    if requested.get("name")
-                    else "In-game trade"
-                ),
-            },
-            "trade",
-            {
-                "location_id": None,
-                "location_name": None,
-                "versions": _record_versions(trade),
-            },
-        )
+        if trade.get("locations"):
+            # Fixed trades were already emitted from the location records,
+            # which preserve nested sibling-version ownership precisely.
+            continue
+        locations = [None]
+        for location in locations:
+            _add_acquisition(
+                result,
+                aliases,
+                {
+                    "pokemon": offered,
+                    "species_id": offered.get("species_id"),
+                    "detail": (
+                        f"Trade for {requested.get('name')}"
+                        if requested.get("name")
+                        else "In-game trade"
+                    ),
+                },
+                "trade",
+                {
+                    "location_id": (
+                        location.get("header_id") if location else None
+                    ),
+                    "location_name": location.get("name") if location else None,
+                    "versions": _record_versions(trade),
+                },
+            )
 
     # Preserve static encounters that have no resolved location record.
     for pokemon in pokemon_records:

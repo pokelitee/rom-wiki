@@ -38,6 +38,38 @@ class TradeEnrichmentTests(unittest.TestCase):
         )
         self.assertEqual(record["requested_pokemon"]["slug"], "bulbasaur")
 
+    def test_attaches_only_proven_location_references(self) -> None:
+        trades = {
+            "game": "white-us",
+            "engine": "gen5_bw",
+            "records": [{
+                "trade_id": 1,
+                "offered_species_id": 550,
+                "requested_species_id": 1,
+            }],
+        }
+        pokemon = {
+            "game": "white-us",
+            "records": [
+                _pokemon(1, 1, "bulbasaur", None),
+                _pokemon(550, 550, "basculin-red-striped", None),
+            ],
+        }
+        locations = {
+            "records": [{
+                "header_id": 23,
+                "name": "Nacrene City",
+                "npc_trades": [{"trade_id": 1}],
+            }]
+        }
+
+        record = enrich_npc_trade_dataset(trades, pokemon, locations)["records"][0]
+
+        self.assertEqual(
+            record["locations"],
+            [{"header_id": 23, "name": "Nacrene City"}],
+        )
+
     def test_rejects_a_mismatched_pokemon_dataset(self) -> None:
         with self.assertRaisesRegex(DataSourceError, "same game"):
             enrich_npc_trade_dataset(

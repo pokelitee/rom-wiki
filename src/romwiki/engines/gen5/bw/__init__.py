@@ -23,7 +23,7 @@ from .constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
-from .disassembler import parse_function_offsets
+from .disassembler import disassemble_function, parse_function_offsets
 from .egg_moves import parse_egg_move_set
 from .encounters import (
     METHOD_NAMES as ENCOUNTER_METHOD_NAMES,
@@ -43,6 +43,7 @@ from .learnsets import parse_level_up_learnset
 from .locations import (
     parse_map_header_script_files,
     parse_map_header_table,
+    parse_map_header_text_files,
     parse_wild_map_names,
 )
 from .machines import machine_name, parse_machine_move_table
@@ -50,8 +51,10 @@ from .map_matrices import parse_map_matrix
 from .marts import (
     SHOP_SELECTOR_TO_INVENTORY_ID,
     STANDARD_SHOP_SELECTOR,
+    Gen5SpecialVendor,
     parse_shop_catalog,
     parse_shop_dispatch,
+    resolve_special_vendor,
 )
 from .messages import parse_english_message_archive
 from .moves import parse_move_record
@@ -59,6 +62,7 @@ from .overworld import (
     parse_overworld_furniture,
     parse_overworld_npcs,
     parse_overworld_warps,
+    resolve_common_script_member,
     resolve_common_script_trainer_id,
     resolve_hidden_item_id,
     resolve_visible_item_id,
@@ -179,6 +183,7 @@ __all__ = [
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "derive_trainer_party_attributes",
+    "disassemble_function",
     "discover_static_encounters",
     "find_fossil_revival_script",
     "machine_name",
@@ -193,6 +198,7 @@ __all__ = [
     "parse_level_up_learnset",
     "parse_machine_move_table",
     "parse_map_header_script_files",
+    "parse_map_header_text_files",
     "parse_map_header_table",
     "parse_map_matrix",
     "parse_move_record",
@@ -204,6 +210,7 @@ __all__ = [
     "parse_pickup_table",
     "parse_shop_catalog",
     "parse_shop_dispatch",
+    "resolve_special_vendor",
     "parse_trainer_battle_commands",
     "parse_trainer_record",
     "pickup_level_range_item_ids",
@@ -211,10 +218,12 @@ __all__ = [
     "resolve_visible_item_id",
     "SHOP_SELECTOR_TO_INVENTORY_ID",
     "STANDARD_SHOP_SELECTOR",
+    "Gen5SpecialVendor",
     "PICKUP_LEVEL_RANGE_COUNT",
     "PICKUP_LEVEL_RANGE_SIZE",
     "PICKUP_SLOT_CHANCES",
     "PICKUP_TABLE_LOCATOR",
     "parse_wild_map_names",
     "resolve_common_script_trainer_id",
+    "resolve_common_script_member",
 ]

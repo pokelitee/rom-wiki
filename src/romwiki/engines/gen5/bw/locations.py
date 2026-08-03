@@ -7,6 +7,9 @@ from romwiki.engines.gen5.locations import (
     parse_map_header_table as _parse_map_header_table,
 )
 from romwiki.engines.gen5.locations import (
+    parse_map_header_text_files as parse_map_header_text_files,
+)
+from romwiki.engines.gen5.locations import (
     parse_wild_map_names as _parse_wild_map_names,
 )
 from romwiki.schema import EncounterMapLocation

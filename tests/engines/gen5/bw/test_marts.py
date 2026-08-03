@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.marts import parse_shop_catalog
+from romwiki.engines.gen5.bw.marts import parse_shop_catalog, resolve_special_vendor
 
 
 def _overlay_with_shop(offset: int, item_ids: tuple[int, ...]) -> bytes:
@@ -13,6 +13,28 @@ def _overlay_with_shop(offset: int, item_ids: tuple[int, ...]) -> bytes:
 
 
 class Gen5ShopCatalogTests(unittest.TestCase):
+    def test_resolves_exchange_and_conditional_market_vendors(self) -> None:
+        exchange = resolve_special_vendor(253)
+        market = resolve_special_vendor(247)
+
+        self.assertEqual(
+            (exchange.currency, exchange.items[0].item_id, exchange.items[0].price),
+            ("bp", 350, 36),
+        )
+        self.assertEqual(exchange.kind, "exchange")
+        self.assertFalse(market.dynamic)
+        self.assertEqual(market.currency, "money")
+        self.assertEqual(len(market.items), 30)
+        self.assertIn(
+            (80, 10000, "Current resident: Lena"),
+            {
+                (item.item_id, item.price, item.availability)
+                for item in market.items
+            },
+        )
+        self.assertEqual(market.selector_ids, tuple(range(247, 252)))
+        self.assertIsNone(resolve_special_vendor(252))
+
     def test_decodes_a_real_specialty_shop(self) -> None:
         # Real Black ROM shop 3, "Driftveil Herb Salesman": Heal Powder (36),
         # EnergyPowder (34), Energy Root (35), Revival Herb (37). Shop IDs 0-2

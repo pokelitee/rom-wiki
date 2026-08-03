@@ -7,6 +7,7 @@ from romwiki.engines.gen5.bw.overworld import (
     parse_overworld_furniture,
     parse_overworld_npcs,
     parse_overworld_warps,
+    resolve_common_script_member,
     resolve_common_script_trainer_id,
     resolve_hidden_item_id,
     resolve_visible_item_id,
@@ -44,6 +45,11 @@ def _npc_record(
 
 
 class Gen5OverworldTests(unittest.TestCase):
+    def test_resolves_overworld_common_script_members(self) -> None:
+        self.assertEqual(resolve_common_script_member(10435, member_count=899), 877)
+        self.assertIsNone(resolve_common_script_member(435, member_count=899))
+        self.assertIsNone(resolve_common_script_member(10457, member_count=899))
+
     def test_parses_npc_records_after_the_furniture_section(self) -> None:
         furniture = struct.pack("<hhhihii", 0, 0, 0, 0, 0, 0, 0)  # 20 bytes, unused
         header = bytes((0, 0, 0, 0, 1, 2, 0, 0))  # 1 furniture, 2 NPCs

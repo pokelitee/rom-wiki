@@ -205,7 +205,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             pickup="sliding-table",
             trainers="battle-mode",
             tutors="personal-archive",
-            fossils="none",
+            fossils="script-pattern",
             static_encounters="script-commands",
         ),
         generation=5,

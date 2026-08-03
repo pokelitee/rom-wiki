@@ -11,6 +11,7 @@ from romwiki.util.errors import InvalidRomError
 MAP_HEADER_RECORD_SIZE = 48
 _MATRIX_ID_OFFSET = 4
 _SCRIPT_FILE_OFFSET = 6
+_TEXT_FILE_OFFSET = 10
 _WILD_SET_OFFSET = 20
 _NAME_INDEX_OFFSET = 26
 _NULL_WILD_SET = 0xFFFF
@@ -23,6 +24,18 @@ def parse_map_header_script_files(data: bytes) -> tuple[int, ...]:
     return tuple(
         struct.unpack_from(
             "<H", data, header_id * MAP_HEADER_RECORD_SIZE + _SCRIPT_FILE_OFFSET
+        )[0]
+        for header_id in range(count)
+    )
+
+
+def parse_map_header_text_files(data: bytes) -> tuple[int, ...]:
+    if len(data) % MAP_HEADER_RECORD_SIZE:
+        raise InvalidRomError("Gen V map header table has an invalid size")
+    count = len(data) // MAP_HEADER_RECORD_SIZE
+    return tuple(
+        struct.unpack_from(
+            "<H", data, header_id * MAP_HEADER_RECORD_SIZE + _TEXT_FILE_OFFSET
         )[0]
         for header_id in range(count)
     )
