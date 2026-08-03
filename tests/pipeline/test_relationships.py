@@ -200,6 +200,14 @@ class RelationshipIndexTests(unittest.TestCase):
             [entry.encounter_route_key for entry in variants],
             ["map-003-spring", "map-003-summer"],
         )
+        spring_locations = index.encounter_locations["map-003-spring"]
+        self.assertEqual(
+            [
+                (entry.header_id, entry.location_name, entry.versions)
+                for entry in spring_locations
+            ],
+            [(6, "Route 1", ())],
+        )
         self.assertEqual(wild[0].encounter_route_key, "map-003-spring")
 
     def test_preserves_version_variants_and_deduplicates_equal_slots(self) -> None:
@@ -301,6 +309,10 @@ class RelationshipIndexTests(unittest.TestCase):
         self.assertEqual(len(references), 1)
         self.assertEqual(references[0].encounter_route_key, "map-000-spring")
         self.assertEqual(references[0].versions, ("black", "white"))
+        reverse = index.encounter_locations["map-000-spring"]
+        self.assertEqual(len(reverse), 1)
+        self.assertEqual(reverse[0].header_id, 6)
+        self.assertEqual(reverse[0].versions, ("black", "white"))
 
     def test_omits_absent_optional_datasets(self) -> None:
         index = build_relationship_index(
@@ -315,6 +327,7 @@ class RelationshipIndexTests(unittest.TestCase):
         self.assertEqual(index.pokemon_wild_encounters, {})
         self.assertEqual(index.pokemon_trainers, {})
         self.assertEqual(index.location_encounters, {})
+        self.assertEqual(index.encounter_locations, {})
 
     def test_rejects_an_unmatched_location_encounter_reference(self) -> None:
         with self.assertRaisesRegex(

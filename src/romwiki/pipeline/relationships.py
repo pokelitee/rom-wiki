@@ -80,6 +80,14 @@ class LocationEncounterReference:
 
 
 @dataclass(frozen=True, slots=True)
+class EncounterLocationReference:
+    encounter_route_key: int | str
+    header_id: int
+    location_name: str
+    versions: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class RelationshipIndex:
     pokemon_wild_encounters: Mapping[str, tuple[WildEncounterReference, ...]]
     pokemon_trainers: Mapping[str, tuple[TrainerAppearance, ...]]
@@ -87,6 +95,9 @@ class RelationshipIndex:
     move_level_up_learners: Mapping[int, tuple[MoveLearnerReference, ...]]
     move_machine_learners: Mapping[int, tuple[MoveLearnerReference, ...]]
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]]
+    encounter_locations: Mapping[
+        int | str, tuple[EncounterLocationReference, ...]
+    ]
 
 
 def build_relationship_index(
@@ -112,10 +123,16 @@ def build_relationship_index(
         aliases,
     )
     level_up, machines = _move_learners(pokemon_records)
-    location_encounters = _location_encounters(
+    location_encounters = _freeze_location_encounters(
+        _location_encounters(
+            location_records,
+            encounter_records,
+            require_matches="locations" in datasets and "encounters" in datasets,
+        )
+    )
+    encounter_locations = _freeze_encounter_locations(
         location_records,
-        encounter_records,
-        require_matches="locations" in datasets and "encounters" in datasets,
+        location_encounters,
     )
     return RelationshipIndex(
         pokemon_wild_encounters=_freeze_wild(wild),
@@ -123,7 +140,8 @@ def build_relationship_index(
         pokemon_acquisition=_freeze(acquisition, _acquisition_sort_key),
         move_level_up_learners=_freeze(level_up, _learner_sort_key),
         move_machine_learners=_freeze(machines, _learner_sort_key),
-        location_encounters=_freeze_location_encounters(location_encounters),
+        location_encounters=location_encounters,
+        encounter_locations=encounter_locations,
     )
 
 
@@ -758,6 +776,46 @@ def _freeze_location_encounters(
                     ), versions in grouped.items()
                 ),
                 key=_location_sort_key,
+            )
+        )
+    return result
+
+
+def _freeze_encounter_locations(
+    locations: list[dict[str, Any]],
+    location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]],
+) -> dict[int | str, tuple[EncounterLocationReference, ...]]:
+    location_names = {
+        location["header_id"]: location["name"]
+        for location in locations
+    }
+    values: dict[int | str, list[EncounterLocationReference]] = defaultdict(list)
+    for header_id, encounters in location_encounters.items():
+        location_name = location_names[header_id]
+        for encounter in encounters:
+            values[encounter.encounter_route_key].append(
+                EncounterLocationReference(
+                    encounter_route_key=encounter.encounter_route_key,
+                    header_id=header_id,
+                    location_name=location_name,
+                    versions=encounter.versions,
+                )
+            )
+
+    result = {}
+    for route_key, entries in sorted(values.items(), key=lambda item: str(item[0])):
+        grouped: dict[tuple[int, str], set[str]] = defaultdict(set)
+        for entry in entries:
+            grouped[(entry.header_id, entry.location_name)].update(entry.versions)
+        result[route_key] = tuple(
+            EncounterLocationReference(
+                encounter_route_key=route_key,
+                header_id=header_id,
+                location_name=location_name,
+                versions=tuple(sorted(versions)),
+            )
+            for (header_id, location_name), versions in sorted(
+                grouped.items(), key=lambda item: (item[0][1], item[0][0])
             )
         )
     return result

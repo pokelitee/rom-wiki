@@ -338,11 +338,13 @@ cross-reference to table index 0; every one of the 427 headers has a valid
 name index, and exactly 112 distinct wild-encounter cross-references are
 used, matching the Wild Encounters archive's own 112 members exactly.
 
-Each location page shows its cross-referenced Wild Encounters table index as
-plain text rather than a direct link to a specific encounter-area page: a
-single table index can expand into up to 4 seasonal encounter areas (see
-Wild Encounters above), and resolving that mapping precisely is left to a
-future pass rather than guessed at here.
+Each location page links to every rendered Wild Encounters variant selected by
+its table index. A single index can expand into up to 4 seasonal encounter areas
+(see Wild Encounters above), so the shared relationship index preserves each
+variant's stable route key and version applicability. Encounter pages use the
+same relationship index in reverse to link back to every matching map header;
+an unresolved relationship remains unlinked rather than being guessed from a
+display name.
 
 Trainer cross-references are now attached to each location (see Trainers
 above for the mechanism): every map page lists its real trainers, both

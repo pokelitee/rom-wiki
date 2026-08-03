@@ -81,6 +81,7 @@ def _relationships(
         move_level_up_learners={},
         move_machine_learners={},
         location_encounters={},
+        encounter_locations={},
     )
 
 

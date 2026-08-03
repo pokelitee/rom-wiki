@@ -19,6 +19,7 @@ from romwiki.cli import (
     _resolve_input_rom,
     _resolve_pokedb_path,
     _run_regeneration,
+    _run_section_build,
     _site_wiki_root,
     _version_family_inputs,
     _version_family_uses_baselines,
@@ -332,6 +333,66 @@ class WikiOutputPathTests(unittest.TestCase):
             REPOSITORY_ROOT / "sites/games/black-white/wiki",
         )
 
+
+class FocusedSectionBuildTests(unittest.TestCase):
+    def test_encounter_build_includes_location_relationships(self) -> None:
+        encounters = {
+            "game": "test",
+            "records": [
+                {
+                    "area_id": 8,
+                    "map_index": 3,
+                    "season": "spring",
+                    "name": "Route 1",
+                }
+            ],
+        }
+        locations = {
+            "game": "test",
+            "records": [
+                {
+                    "header_id": 6,
+                    "name": "Route 1",
+                    "encounter_map_index": 3,
+                }
+            ],
+        }
+        pokemon = {"game": "test", "records": []}
+        current = SimpleNamespace(
+            profile=SimpleNamespace(id="test"),
+            encounters=lambda: encounters,
+            locations=lambda: locations,
+            pokemon=lambda: pokemon,
+        )
+        workflow = SimpleNamespace(
+            current=current,
+            build=lambda kind: SimpleNamespace(
+                current=encounters,
+                comparison=None,
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = SimpleNamespace(
+                command="build-encounters",
+                dev=False,
+                wiki_output=root / "wiki" / "encounters",
+                data_output=root / "data" / "encounters" / "enriched.json",
+            )
+            with (
+                patch("romwiki.cli._create_build_workflow", return_value=workflow),
+                patch("romwiki.cli._write_dataset_build") as write_build,
+                patch("romwiki.cli.render_changes_pages"),
+            ):
+                _run_section_build(args, SimpleNamespace())
+
+        relationships = write_build.call_args.kwargs["relationship_index"]
+        self.assertEqual(
+            relationships.encounter_locations["map-003-spring"][0].header_id,
+            6,
+        )
+        self.assertIsNotNone(write_build.call_args.kwargs["reference_index"])
 
 class RelationshipDatasetTests(unittest.TestCase):
     def test_collects_companions_and_omits_unsupported_datasets(self) -> None:

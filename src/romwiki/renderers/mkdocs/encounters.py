@@ -7,6 +7,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.encounter_identity import encounter_route_key
+from romwiki.pipeline.relationships import (
+    EncounterLocationReference,
+    RelationshipIndex,
+)
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -57,6 +61,7 @@ def render_encounter_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -72,6 +77,7 @@ def render_encounter_pages(
             output_root,
             comparison,
             references,
+            relationships,
             only_pages=only_pages,
         )
     records = [record for record in dataset["records"] if record["active"]]
@@ -639,6 +645,7 @@ def _render_seasonal_encounter_pages(
     output_root: Path,
     comparison: dict[str, Any] | None,
     references: ReferenceIndex | None,
+    relationships: RelationshipIndex | None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -664,6 +671,11 @@ def _render_seasonal_encounter_pages(
     for index, record in enumerate(records):
         change = record_comparison(comparison, record["area_id"])
         filename = f"{encounter_route_key(record)}.md"
+        locations = (
+            relationships.encounter_locations.get(encounter_route_key(record), ())
+            if relationships
+            else ()
+        )
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
         if _seasonal_page_selected(record, only_pages):
@@ -674,6 +686,7 @@ def _render_seasonal_encounter_pages(
                     change,
                     comparison.get("baseline") if comparison else None,
                     references,
+                    locations,
                     previous,
                     following,
                 ),
@@ -785,6 +798,7 @@ def _render_seasonal_area(
     change: dict[str, Any] | None,
     baseline_name: str | None,
     references: ReferenceIndex | None,
+    locations: tuple[EncounterLocationReference, ...],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
 ) -> str:
@@ -792,8 +806,9 @@ def _render_seasonal_area(
     lines = [
         f"# {record['name']}",
         "",
-        *_seasonal_area_summary(record),
+        *_seasonal_area_summary(record, locations),
     ]
+    _append_seasonal_locations(lines, locations, source_file)
     variant_records = version_variant_records(record)
     if variant_records[0][0] is not None:
         lines.extend(
@@ -829,9 +844,18 @@ def _render_seasonal_area(
                 "only each slot's species and level(s) are ROM data — they are "
                 "fixed, publicly documented Generation III+ engine weights applied "
                 "by slot position.",
-                "Location names come from the ROM's own map header table and are "
-                "cross-referenced to location pages by the shared wild-encounter "
-                "table index.",
+                *(
+                    [
+                        "Location names and links come from the ROM's own map "
+                        "header table, cross-referenced through the shared wild-"
+                        "encounter table index."
+                    ]
+                    if locations
+                    else [
+                        "No location header was resolved for this encounter table; "
+                        "no location link is guessed."
+                    ]
+                ),
             ]
         )
     )
@@ -839,7 +863,10 @@ def _render_seasonal_area(
     return "\n".join(lines)
 
 
-def _seasonal_area_summary(record: dict[str, Any]) -> list[str]:
+def _seasonal_area_summary(
+    record: dict[str, Any],
+    locations: tuple[EncounterLocationReference, ...],
+) -> list[str]:
     methods = [
         label for key, label in _SEASONAL_METHOD_LABELS.items() if record[key]["rate"]
     ]
@@ -854,7 +881,45 @@ def _seasonal_area_summary(record: dict[str, Any]) -> list[str]:
         facts.insert(
             2, f"<div><dt>Season</dt><dd>{record['season'].title()}</dd></div>"
         )
+    if locations:
+        facts.append(
+            "<div><dt>Map headers</dt><dd>"
+            f"{summary_section_link(len(locations), 'map-headers')}</dd></div>"
+        )
     return summary_section("rw-encounter-summary", facts)
+
+
+def _append_seasonal_locations(
+    lines: list[str],
+    locations: tuple[EncounterLocationReference, ...],
+    source_file: str,
+) -> None:
+    if not locations:
+        return
+    lines.extend(
+        [
+            "## Map headers",
+            "",
+            "| Location | Header | Version |",
+            "| -------- | -----: | ------- |",
+        ]
+    )
+    for location in locations:
+        link = ROUTES.markdown_link(
+            entity_reference(
+                "location",
+                location.header_id,
+                location.location_name,
+                location.header_id,
+            ),
+            source_file,
+        )
+        versions = (
+            " / ".join(display_name(version) for version in location.versions)
+            or "â€”"
+        )
+        lines.append(f"| {link} | {location.header_id} | {versions} |")
+    lines.append("")
 
 
 def _append_seasonal_method(
