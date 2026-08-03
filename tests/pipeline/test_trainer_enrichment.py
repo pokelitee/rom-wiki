@@ -150,6 +150,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
                 ],
             },
         )
+        enriched["features"] = []
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -181,6 +182,8 @@ class TrainerEnrichmentTests(unittest.TestCase):
             "(181, 818) | `329:0` |",
             page,
         )
+        self.assertNotIn("<dt>After victory</dt>", page)
+        self.assertNotIn("<dt>Victory item</dt>", page)
         self.assertEqual(catalog["kind"], "trainers")
         self.assertEqual(catalog["records"][0]["route_id"], "trainer-0000")
         self.assertEqual(catalog["records"][0]["min_level"], 5)
@@ -408,6 +411,7 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
             },
             pokedb,
         )
+        enriched["features"] = ["post-battle-healing", "victory-items"]
 
         party_member = enriched["records"][0]["party"][0]
         # A forced-female gender flag is stored data, unlike nature/calculated
@@ -444,6 +448,15 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("Emolga", page)
         self.assertIn("Battle mode", page)
         self.assertNotIn("Battle type", page)
+        self.assertIn(
+            '<dt>After victory</dt><dd><span class="rw-summary__empty">'
+            "No healing</span></dd>",
+            page,
+        )
+        self.assertIn(
+            '<dt>Victory item</dt><dd><span class="rw-summary__empty">None</span></dd>',
+            page,
+        )
 
 
 if __name__ == "__main__":

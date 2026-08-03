@@ -18,6 +18,7 @@ class DatasetFeatureTests(unittest.TestCase):
     def test_generation_capabilities_are_profile_aware(self) -> None:
         platinum = set(effective_features(self.profiles["platinum-us"]))
         black = set(effective_features(self.profiles["black-us"]))
+        b2w2 = set(effective_features(self.profiles["black-2-us"]))
 
         self.assertIn("contests", platinum)
         self.assertIn("move-tutors", platinum)
@@ -25,6 +26,9 @@ class DatasetFeatureTests(unittest.TestCase):
         self.assertIn("post-battle-healing", black)
         self.assertIn("victory-items", black)
         self.assertNotIn("move-tutors", black)
+        self.assertIn("egg-moves", black)
+        self.assertIn("egg-moves", b2w2)
+        self.assertIn("move-tutors", b2w2)
 
 
 if __name__ == "__main__":

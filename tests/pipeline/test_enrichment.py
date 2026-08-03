@@ -262,6 +262,51 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["egg_groups"], ["monster", "grass"])
         self.assertEqual(catalog["records"][0]["url"], "bulbasaur/")
 
+    def test_pokemon_learnset_sections_follow_explicit_features(self) -> None:
+        black_record = _bulbasaur_record()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages(
+                {"records": [black_record], "features": ["egg-moves"]},
+                output,
+            )
+            black_page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("### Move tutors", black_page)
+        self.assertNotIn("[Seed Bomb]", black_page)
+        self.assertIn("### Egg moves", black_page)
+        self.assertIn("[Skull Bash]", black_page)
+
+        b2w2_record = _bulbasaur_record()
+        b2w2_record["tutor_moves"] = []
+        b2w2_record["egg_moves"] = []
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages(
+                {
+                    "records": [b2w2_record],
+                    "features": ["egg-moves", "move-tutors"],
+                },
+                output,
+            )
+            b2w2_page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertIn("### Move tutors", b2w2_page)
+        self.assertIn("No compatible tutor moves.", b2w2_page)
+        self.assertIn("### Egg moves", b2w2_page)
+        self.assertIn("No egg moves.", b2w2_page)
+
+    def test_unsupported_egg_moves_omit_section_and_provenance(self) -> None:
+        record = _bulbasaur_record()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_pokemon_pages({"records": [record], "features": []}, output)
+            page = (output / "bulbasaur.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("### Egg moves", page)
+        self.assertNotIn("Egg move source", page)
+        self.assertNotIn("`0x29222`", page)
+
     def test_renders_classification_badges_for_legendary_and_baby_species(self) -> None:
         record = _bulbasaur_record()
         record["reference"]["is_legendary"] = True

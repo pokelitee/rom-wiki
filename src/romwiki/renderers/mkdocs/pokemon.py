@@ -4,6 +4,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.features import EGG_MOVES, MOVE_TUTORS
 from romwiki.pipeline.relationships import (
     AcquisitionReference,
     RelationshipIndex,
@@ -69,6 +70,7 @@ _CATALOG_AVAILABILITY_METHOD_ORDER = (
 )
 _CATALOG_AVAILABILITY_METHODS = frozenset(_CATALOG_AVAILABILITY_METHOD_ORDER)
 _NO_KNOWN_DIRECT_SOURCE = "no-known-direct-source"
+_DEFAULT_LEARNSET_FEATURES = frozenset({MOVE_TUTORS, EGG_MOVES})
 
 
 def render_pokemon_pages(
@@ -83,6 +85,7 @@ def render_pokemon_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     public_records = [record for record in dataset["records"] if record["public"]]
+    dataset_features = frozenset(dataset.get("features", _DEFAULT_LEARNSET_FEATURES))
     preevolutions = _index_preevolutions(public_records)
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -129,6 +132,7 @@ def render_pokemon_pages(
                     references,
                     relationships,
                     type_dataset,
+                    dataset_features,
                 ),
             )
             page_count += 1
@@ -246,6 +250,7 @@ def _render_record(
     references: ReferenceIndex | None = None,
     relationships: RelationshipIndex | None = None,
     type_dataset: dict[str, Any] | None = None,
+    features: frozenset[str] = _DEFAULT_LEARNSET_FEATURES,
 ) -> str:
     source_file = f"pokemon/{record['slug']}.md"
     stats = record["base_stats"]
@@ -349,10 +354,12 @@ def _render_record(
     _append_level_up_moves(lines, level_up_moves, source_file, move_lookup)
     lines.extend(["### Machines", ""])
     _append_machines(lines, machines, source_file, move_lookup, references)
-    lines.extend(["### Move tutors", ""])
-    _append_tutor_moves(lines, tutor_moves, source_file, move_lookup)
-    lines.extend(["### Egg moves", ""])
-    _append_egg_moves(lines, egg_moves, source_file, move_lookup)
+    if MOVE_TUTORS in features:
+        lines.extend(["### Move tutors", ""])
+        _append_tutor_moves(lines, tutor_moves, source_file, move_lookup)
+    if EGG_MOVES in features:
+        lines.extend(["### Egg moves", ""])
+        _append_egg_moves(lines, egg_moves, source_file, move_lookup)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -377,7 +384,7 @@ def _render_record(
                     if type_name_source is not None
                     else []
                 ),
-                *_egg_move_source(record),
+                *(_egg_move_source(record) if EGG_MOVES in features else []),
                 *(
                     [
                         rom_record_source(

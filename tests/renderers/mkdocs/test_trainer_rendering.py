@@ -176,6 +176,35 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("<dt>Victory item</dt>", page)
         self.assertIn("../../items/full-restore/", page)
 
+    def test_omits_unsupported_gen5_summary_fields(self) -> None:
+        record = {
+            "trainer_id": 5,
+            "class_name": "leader",
+            "locations": [],
+            "script_references": [],
+            "double_battle": False,
+            "party": [_party_member([])],
+            "ai_battle_items": [],
+            "healer": True,
+            "victory_item": {
+                "id": 23,
+                "name": "Full Restore",
+                "slug": "full-restore",
+            },
+        }
+
+        page = "\n".join(
+            _trainer_summary(
+                record,
+                [],
+                "trainers/trainer-0005/",
+                features=frozenset(),
+            )
+        )
+
+        self.assertNotIn("<dt>After victory</dt>", page)
+        self.assertNotIn("<dt>Victory item</dt>", page)
+
     def test_summarizes_exact_base_prize_money(self) -> None:
         record = {
             "trainer_id": 5,

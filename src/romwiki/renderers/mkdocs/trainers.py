@@ -4,6 +4,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.features import POST_BATTLE_HEALING, VICTORY_ITEMS
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -36,6 +37,7 @@ from romwiki.renderers.mkdocs.references import (
 )
 
 _SAME_NAME_COLLAPSE_THRESHOLD = 5
+_DEFAULT_TRAINER_FEATURES = frozenset({POST_BATTLE_HEALING, VICTORY_ITEMS})
 
 
 def render_trainer_pages(
@@ -47,6 +49,7 @@ def render_trainer_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     records = [record for record in dataset["records"] if record["party"]]
+    dataset_features = frozenset(dataset.get("features", _DEFAULT_TRAINER_FEATURES))
     same_name_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in records:
         key = (record["class_name"], record["name"])
@@ -102,6 +105,7 @@ def render_trainer_pages(
                     previous,
                     following,
                     same_name_groups[(record["class_name"], record["name"])],
+                    dataset_features,
                 ),
             )
             page_count += 1
@@ -144,6 +148,7 @@ def render_trainer_pages(
                     previous,
                     following,
                     same_name_groups[(record["class_name"], record["name"])],
+                    dataset_features,
                 ),
             )
             page_count += 1
@@ -257,6 +262,7 @@ def _render_trainer(
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
     same_name_records: list[dict[str, Any]] | None = None,
+    features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
 ) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
@@ -265,7 +271,7 @@ def _render_trainer(
     lines = [
         f"# {label}",
         "",
-        *_trainer_summary(record, grouped_ai_items, source_url),
+        *_trainer_summary(record, grouped_ai_items, source_url, features=features),
         "## Party",
         "",
         *_party_cards(record["party"], source_url),
@@ -490,6 +496,8 @@ def _trainer_summary(
     record: dict[str, Any],
     grouped_ai_items: list[dict[str, Any]],
     source_url: str,
+    *,
+    features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
 ) -> list[str]:
     location_names = _location_names(record)
     level_range = _trainer_level_range(record)
@@ -497,7 +505,7 @@ def _trainer_summary(
         ", ".join(_ai_item_link(grouped, source_url) for grouped in grouped_ai_items)
         or '<span class="rw-summary__empty">None</span>'
     )
-    victory_item = record.get("victory_item")
+    victory_item = record.get("victory_item") if VICTORY_ITEMS in features else None
     victory_item_link = (
         ROUTES.html_link(
             entity_reference(
@@ -510,6 +518,14 @@ def _trainer_summary(
         )
         if victory_item
         else None
+    )
+    post_battle_result = (
+        "Heals the player's party"
+        if record.get("healer")
+        else '<span class="rw-summary__empty">No healing</span>'
+    )
+    victory_item_result = (
+        victory_item_link or '<span class="rw-summary__empty">None</span>'
     )
     base_prize_money = record.get("base_prize_money")
     return summary_section(
@@ -539,13 +555,13 @@ def _trainer_summary(
             ),
             f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>",
             *(
-                ["<div><dt>After victory</dt><dd>Heals the player's party</dd></div>"]
-                if record.get("healer")
+                [f"<div><dt>After victory</dt><dd>{post_battle_result}</dd></div>"]
+                if POST_BATTLE_HEALING in features
                 else []
             ),
             *(
-                [f"<div><dt>Victory item</dt><dd>{victory_item_link}</dd></div>"]
-                if victory_item_link
+                [f"<div><dt>Victory item</dt><dd>{victory_item_result}</dd></div>"]
+                if VICTORY_ITEMS in features
                 else []
             ),
         ],
