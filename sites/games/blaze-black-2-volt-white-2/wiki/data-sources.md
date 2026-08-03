@@ -47,3 +47,18 @@ Three edited personal records contain an invalid secondary egg-group byte.
 The hack profiles repair that byte from the valid primary egg group during
 normalization. Pokéstar Studios records remain internal, while B2W2 alternate
 and battle-only forms retain their sequel-specific identities.
+
+The shared Generation V location pipeline links wild encounter variants in
+both directions with their map headers and attaches trainers, warps, outdoor
+connections, field items, static encounters, and script-dispatched shops to
+location pages. B2W2 shop selectors `0` through `25` resolve to the sequel's
+location-specific archive inventories; selector `255` identifies the standard
+badge-progression Poké Mart.
+
+## Known coverage limitations
+
+- NPC trades are decoded from the detached trade archive, but their field
+  scripts are not yet mapped back to location headers.
+- Fossil item-to-species mappings are decoded, but the shared revival script is
+  not assigned a map location because it is invoked by another field script
+  rather than registered as a map header's dedicated script.

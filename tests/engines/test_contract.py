@@ -212,6 +212,61 @@ class EngineContractTests(unittest.TestCase):
         with self.assertRaisesRegex(DataSourceError, "parse_personal_record"):
             register_engine(_FAKE_ENGINE_ID, adapter)
 
+    def test_partial_engine_validates_only_its_declared_dataset_sections(self) -> None:
+        source = get_engine(GEN5_B2W2_ENGINE)
+        minimal = replace(
+            source,
+            moves=types.SimpleNamespace(),
+            items=types.SimpleNamespace(),
+            encounters=types.SimpleNamespace(),
+            trainers=types.SimpleNamespace(),
+            locations=types.SimpleNamespace(),
+            trainer_party=types.SimpleNamespace(),
+            pickup=types.SimpleNamespace(),
+            tutors=types.SimpleNamespace(),
+            static_encounters=types.SimpleNamespace(),
+            formats=replace(
+                source.formats,
+                pickup="none",
+                tutors="none",
+                fossils="none",
+                static_encounters="none",
+            ),
+            dataset_kinds=frozenset({"pokemon", "abilities"}),
+            required_dataset_kinds=frozenset({"pokemon"}),
+        )
+
+        register_engine(_FAKE_ENGINE_ID, minimal)
+
+        self.assertEqual(
+            get_engine(_FAKE_ENGINE_ID).dataset_kinds,
+            frozenset({"pokemon", "abilities"}),
+        )
+
+    def test_registration_rejects_required_dataset_the_engine_does_not_support(
+        self,
+    ) -> None:
+        adapter = replace(
+            get_engine(GEN5_B2W2_ENGINE),
+            dataset_kinds=frozenset({"pokemon"}),
+            required_dataset_kinds=frozenset({"pokemon", "moves"}),
+        )
+
+        with self.assertRaisesRegex(DataSourceError, "requires unsupported.*moves"):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
+    def test_registration_rejects_unsupported_dataset_dependencies(self) -> None:
+        adapter = replace(
+            get_engine(GEN5_B2W2_ENGINE),
+            dataset_kinds=frozenset({"pokemon", "trainers"}),
+            required_dataset_kinds=frozenset({"pokemon"}),
+        )
+
+        with self.assertRaisesRegex(
+            DataSourceError, "dataset 'trainers'.*requires supported datasets: moves"
+        ):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
     def test_personal_enrichment_uses_the_engines_shapes_not_gen4_constants(
         self,
     ) -> None:

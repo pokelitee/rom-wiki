@@ -60,8 +60,7 @@ Static (gift/single-Pokémon) encounters -- starter-choice monkeys, event
 legendaries, fossil revivals, and similar -- are decoded from 31 literal
 `[script-file, byte-offset]` facts published by
 Ajarmar/universal-pokemon-randomizer-zx's own tooling, read directly out of
-the `Scripts` archive (`a/0/5/7`). Unlike Trainers' and Locations' remaining
-gaps below, this needed no script-engine research at all -- each fact is a
+the `Scripts` archive (`a/0/5/7`). Each fact is a
 plain species ID (and, unless it's a gift egg, a level byte) patched into one
 specific script file, the same "adopt-and-verify a literal fact" pattern as
 NPC trades and specialty shops. Verified against 12 real Black ROM facts:
@@ -69,9 +68,12 @@ starter-choice monkeys (level 10), the free tutorial Magikarp (level 5), the
 Dreamyard Munna/Zorua events, the Larvesta gift egg, the post-game legendary
 trio and Landorus/Kyurem, Reshiram/Zekrom, and two fossil revivals -- all
 real, correct, level-appropriate facts. Each affected Pokémon's page shows a
-"Static encounters" section listing its level (or "Egg"); there's no map
-location to link these to yet (see Locations below), so unlike Generation
-IV's static encounters they aren't shown from a location's own page.
+"Static encounters" section listing its level (or "Egg"). The location
+pipeline also matches each dedicated script file to its map header, so the
+resolved encounters appear on their location pages with location links on the
+Pokémon pages. The shared fossil-revival script is the one exception because
+it is invoked by a map script rather than assigned directly to a map header;
+its item-to-species facts remain visible without a guessed location.
 Roaming Pokémon (Thundurus/Tornadus) were investigated the same way and found
 to be a genuine exception: the *unmodified* retail ROM stores an ARM
 instruction, not a data word, at the species offset the same tooling
@@ -198,23 +200,25 @@ When paired versions attach different trades to the same item, the merged
 item page and catalog include both version-specific records rather than
 silently displaying only the primary version.
 
-Specialty shop inventories (Herb Salesman, Incense Salesman, vitamin shops,
-the various city Mail counters, and similar) are decoded from a fixed word
-array per shop in ARM9 overlay 21 -- itself BLZ-compressed, unlike
-Generation IV's overlays, decompressed the same way Generation V's ARM9
-itself was. Like NPC trades, this wasn't blocked on a missing disassembly:
-the ROM-hacking community's own tooling documents the exact byte offsets and
-sizes for every specialty shop in this specific ROM revision. "TM shops" and
-plain Poké Marts are deliberately excluded -- their stock isn't ROM data at
-all, just a fixed, generation-wide item list every mainline Generation V+
-game sells, so there's nothing to decode. Verified against all 16 real
-specialty shops in the Black ROM: the Driftveil Herb Salesman decodes to
-exactly Heal Powder/EnergyPowder/Energy Root/Revival Herb, the Driftveil
-Incense Salesman to exactly the real Incense lineup, and so on for every
-other shop -- all real, coherent, correct shop contents. Unlike Gen4's
-shops, these aren't linked to a specific map location (the same underlying
-gap noted for Locations/Trainers below), so each shop shows on the item
-page by its own internal name rather than a location link.
+Persistent specialty and TM shop inventories (Herb Salesman, Incense
+Salesman, vitamin shops, city Mail counters, and similar) are decoded from a
+fixed word array per shop in ARM9 overlay 21 -- itself BLZ-compressed, unlike
+Generation IV's overlays, and decompressed the same way Generation V's ARM9
+itself was. The ROM-hacking community's own tooling documents the exact byte
+offsets and sizes for every location-specific shop in this ROM revision.
+Verified against the real Black ROM, the Driftveil Herb Salesman decodes to
+Heal Powder/EnergyPowder/Energy Root/Revival Herb, the Driftveil Incense
+Salesman to the real Incense lineup, and the TM counters to their actual TM
+item IDs.
+
+The location pipeline separately decodes each map script's call to the global
+shop dispatcher. Selectors `0` through `19` link those persistent inventories
+to their map pages, while selector `255` marks a standard Poké Mart whose
+stock changes with badge progression. Item pages consequently link shop stock
+back to map locations instead of relying only on internal shop names. Black
+City and Gear Station selectors `247` through `254` use separate vendor and
+currency logic; they are counted explicitly as unsupported rather than being
+assigned guessed stock.
 
 ## Moves
 
@@ -259,6 +263,12 @@ more than one real name, e.g. several sub-areas of the same city); confirmed
 against real Black ROM data (e.g. area 3 correctly resolves to "Icirrus
 City"). Decoding that map-name text table required fixing a real bug in this
 project's message decoder first -- see Text and names below.
+
+These relationships are published in both directions. Each location page links
+the encounter variant used by that map header, including the applicable season
+and game version, while each encounter page links back to every matching map
+header. Distinct headers remain distinct even when they share the same display
+name, and unresolved encounter tables remain visible without invented links.
 
 ## Trainers
 
@@ -438,24 +448,18 @@ runtime-substituted value isn't reproduced, since that requires knowing what
 each variable ID means (undocumented, and this project's tables so far only
 ever hit this in one *unused* map-name table entry, not a real page name).
 
-## Not yet available
+## Known coverage limitations
 
-Roaming Pokémon (Thundurus/Tornadus) aren't built for this release: see
-Pokémon species data above for why -- the unmodified retail ROM stores
-executable code, not a data word, at the species offset for at least one of
-the two, so the real species isn't a literal fact without a randomizer-style
-ASM patch applied first, unlike every other static encounter.
-
-Trainers' field map locations/script triggers, Locations' warps/outdoor
-connections/field items/static encounters, and the fossil revival
-item-to-species mapping -- all previously listed here as blocked on this
-generation's script-engine opcode table -- are now resolved (see
-Trainers/Locations/Items above); that opcode table turned out to be
-adoptable from an actively maintained community tool
-(FrostFalcon/FrostsGen5Editor) the same way Marts/NPC trades/Pickup were
-adopted from Ajarmar/universal-pokemon-randomizer-zx, rather than requiring
-an original ARM disassembly from scratch. Outdoor connections specifically
-turned out not to need the opcode table at all -- the same tool's
-documentation of the map header record's `matrix` field and a separate
-`MapMatrix` archive (the same underlying design as this project's own
-Generation IV `map_matrices` support) was enough.
+- **Roaming Pokémon:** Thundurus and Tornadus are not decoded. The unmodified
+  retail ROM stores executable code, not a data word, at the published species
+  offset for at least one of them, so the species is not treated as a literal
+  fact without a randomizer-style ASM patch.
+- **NPC trade locations:** trade records, species, forms, held items, trainers,
+  and nicknames are decoded from the detached trade archive, but their field
+  scripts are not yet mapped back to location headers.
+- **Black City and Gear Station vendors:** shop selectors `247` through `254`
+  use vendor and currency systems outside the ordinary Poké Mart catalog. The
+  extraction reports these selectors as unsupported and does not guess stock.
+- **Fossil-revival location:** the item-to-species mapping is decoded, but the
+  shared revival script is secondary to the museum's map script and therefore
+  cannot yet be assigned to a location by the dedicated-script cross-reference.

@@ -9,6 +9,7 @@ from __future__ import annotations
 import tempfile
 import types
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from romwiki.engines.registry import (
@@ -25,6 +26,7 @@ from romwiki.platforms.registry import (
     unregister_platform,
 )
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
+from romwiki.util.errors import DataSourceError
 
 _FAKE_PLATFORM_ID = "fake-test-platform"
 _FAKE_ENGINE_ID = "fake_platform_test_engine"
@@ -115,6 +117,8 @@ class PlatformContractTests(unittest.TestCase):
         )
         engine_fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)
         engine_fields["generation"] = None
+        engine_fields["dataset_kinds"] = frozenset({"pokemon"})
+        engine_fields["required_dataset_kinds"] = frozenset({"pokemon"})
         engine_fields["formats"] = EngineFormats(
             encounters="conditional",
             locations="event-map",
@@ -124,9 +128,7 @@ class PlatformContractTests(unittest.TestCase):
             fossils="none",
             static_encounters="none",
         )
-        register_engine(
-            _FAKE_ENGINE_ID, EngineAdapter(**engine_fields), validate=False
-        )
+        register_engine(_FAKE_ENGINE_ID, EngineAdapter(**engine_fields), validate=False)
         profile = _fake_profile()
         result = InspectionResult(
             image=_FakeImage(),
@@ -152,6 +154,12 @@ class PlatformContractTests(unittest.TestCase):
         # it, and no real profile matches the fake image.
         self.assertIsInstance(result.image, _FakeImage)
         self.assertIsNone(result.match)
+
+    def test_registration_rejects_an_incomplete_platform_adapter(self) -> None:
+        adapter = replace(_fake_platform({}), archive_cls=object)
+
+        with self.assertRaisesRegex(DataSourceError, "archive_cls.from_bytes"):
+            register_platform(_FAKE_PLATFORM_ID, adapter)
 
 
 if __name__ == "__main__":

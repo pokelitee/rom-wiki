@@ -326,7 +326,19 @@ Adding a second platform or engine is additive at the registry boundary: a new
 `platforms/<platform>/` or `engines/<generation>/<family>/` package, one new
 entry in the relevant registry dict, and a profile that declares the matching
 `platform`/`engine` keys. No pipeline module needs to change to *dispatch* to
-it. But a pipeline
+it. Platform and engine registration validate their callable/parser surfaces
+before an adapter becomes selectable, so incomplete integrations fail at the
+boundary instead of during an unrelated build step.
+
+Each engine also owns its public section contract. `dataset_kinds` lists the
+normalized sections the engine can emit, while `required_dataset_kinds` identifies
+the subset every profile for that engine must configure. This preserves strict
+coverage for mature engines while allowing a new platform or generation to land a
+truthful Pokémon-first vertical slice without dummy move, item, or encounter
+parsers. Profile layout still decides which supported optional sections are
+enabled; it cannot enable a section the engine has not declared.
+
+But a pipeline
 module that has only ever run against one engine can still carry that engine's
 unstated assumptions, invisible until a second real engine exercises the same
 code path. Implementing `gen5_bw` (alongside `gen4_dppt`) found two:

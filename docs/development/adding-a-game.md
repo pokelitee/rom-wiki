@@ -53,6 +53,9 @@ Examples:
 - A Diamond or Pearl hack can reuse the NDS platform and some Generation IV parsers,
   but Platinum-specific tables and scripts must be audited.
 - FireRed Omega needs a GBA platform reader and a Generation III engine decoder.
+- An Omega Ruby hack needs a legal user-supplied 3DS input strategy and a
+  Generation VI engine decoder. Hacks that preserve Omega Ruby's formats should
+  then share that engine through separate exact-release profiles.
 - A Generation I or II hack needs a GB/GBC platform reader and generation-specific
   decoders.
 - Sinking Sapphire needs a Generation VI/3DS input strategy and engine decoder. The
@@ -64,8 +67,7 @@ Examples:
 Create `profiles/<category>/<game-id>.toml` with:
 
 - a stable profile ID and display name;
-- engine and base-game identity (plus platform identity once multi-platform
-  dispatch is introduced);
+- platform, engine, and base-game identity;
 - header identifiers and exact hashes;
 - internal paths, offsets, counts, and other layout parameters;
 - explicit annotations only when the relationship cannot be derived exactly.
@@ -193,6 +195,25 @@ an engine package directly, so this registration is what makes an existing
 pipeline module's extraction and enrichment logic *dispatch* to the new engine.
 Extend `tests/engines/test_contract.py`'s fake-engine coverage if the new engine
 exercises a shared code path the fake engine doesn't yet cover.
+
+Declare the public sections the engine actually supports through
+`EngineAdapter.dataset_kinds`, and separately declare which of those sections a
+complete build must contain through `required_dataset_kinds`. Existing complete
+engines require Pokémon, moves, items, and encounters. A new engine's first
+verified vertical slice may intentionally start smaller, for example:
+
+```python
+dataset_kinds=frozenset({"pokemon", "abilities"}),
+required_dataset_kinds=frozenset({"pokemon"}),
+```
+
+The shared workflow renders only declared sections. Adding a section is an
+explicit engine-contract change plus the corresponding profile layout, parser,
+normalized-contract, and renderer tests; an unrelated layout key cannot silently
+enable a section the engine does not claim. Registry validation also requires
+every required section to be supported by that engine and rejects impossible
+dependencies such as trainers without Pokémon and moves, or locations without
+items.
 
 Start each distinct game family as its own leaf package. If real fixtures for two
 families prove a parser is identical, move that parser into their parent
@@ -334,8 +355,8 @@ The game MkDocs configuration inherits `sites/shared/mkdocs.base.yml`, points
 MkDocs hook. Copy the relative-path pattern from the existing game site.
 Its development configuration inherits the game configuration and loads
 `dev-pages.toml`. Keep a non-empty representative selection for every generated
-detail section: Pokémon, abilities, moves, items, encounters, trainers, and
-locations.
+detail section enabled by the engine and profile. Do not add empty navigation or
+development-page entries for sections the engine does not yet support.
 
 Documentation-only sites may set `data_driven = false` in `[game]` and omit
 `profile`/`profiles`. They remain first-class catalog and deployment entries but
@@ -437,5 +458,8 @@ first slice because it exercises IDs, external name resolution, schema mapping, 
 rendering without requiring map-script control-flow analysis.
 
 After that slice proves the adapter boundary, add moves, learnsets and evolutions,
-encounters, trainers, and locations incrementally. A game can publish partial
-coverage as long as the site states that coverage precisely.
+encounters, trainers, and locations incrementally. Expand `dataset_kinds` only as
+each public section becomes real, and expand `required_dataset_kinds` when omitting
+that section would indicate a broken profile rather than intentional partial
+coverage. A game can publish partial coverage as long as the site states that
+coverage precisely.

@@ -77,15 +77,55 @@ def registered_platforms() -> dict[str, PlatformAdapter]:
     return dict(_PLATFORMS)
 
 
-def register_platform(platform: str, adapter: PlatformAdapter) -> None:
+def register_platform(
+    platform: str, adapter: PlatformAdapter, *, validate: bool = True
+) -> None:
     """Register a platform adapter under `platform`, replacing any existing entry.
 
     Intended for tests exercising the extraction contract against a throwaway
     fake platform; real platforms register themselves in `_PLATFORMS` above.
     """
+    if validate:
+        _validate_platform_adapter(platform, adapter)
     _PLATFORMS[platform] = adapter
 
 
 def unregister_platform(platform: str) -> None:
     """Remove a previously registered platform, e.g. in a test's tearDown."""
     _PLATFORMS.pop(platform, None)
+
+
+def _validate_platform_adapter(platform: str, adapter: PlatformAdapter) -> None:
+    if not platform or any(character.isspace() for character in platform):
+        raise DataSourceError(f"Invalid platform identifier: {platform!r}")
+    required_callables = {
+        "inspect": adapter.inspect,
+        "filesystem_from_image": adapter.filesystem_from_image,
+        "matches_header": adapter.matches_header,
+    }
+    missing = [
+        name for name, member in required_callables.items() if not callable(member)
+    ]
+    if not hasattr(adapter.archive_cls, "from_bytes"):
+        missing.append("archive_cls.from_bytes")
+    optional_callables = {
+        "read_overlay": adapter.read_overlay,
+        "read_overlay_decompressed": adapter.read_overlay_decompressed,
+        "read_code_binary": adapter.read_code_binary,
+        "read_decompressed_code_binary": adapter.read_decompressed_code_binary,
+        "code_load_address": adapter.code_load_address,
+    }
+    invalid_optional = [
+        name
+        for name, member in optional_callables.items()
+        if member is not None and not callable(member)
+    ]
+    if missing or invalid_optional:
+        names = ", ".join((*missing, *invalid_optional))
+        raise DataSourceError(
+            f"Platform {platform!r} adapter has invalid members: {names}"
+        )
+
+
+for _platform_id, _adapter in _PLATFORMS.items():
+    _validate_platform_adapter(_platform_id, _adapter)

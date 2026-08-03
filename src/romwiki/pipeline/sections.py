@@ -2,24 +2,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from romwiki.engines.registry import (
+    DATASET_KINDS,
+    DEFAULT_REQUIRED_DATASET_KINDS,
+    get_engine,
+)
 from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import ProfileError
 
-DATASET_KINDS = (
-    "pokemon",
-    "abilities",
-    "moves",
-    "items",
-    "encounters",
-    "trainers",
-    "locations",
-)
-
-REQUIRED_DATASET_KINDS = frozenset({"pokemon", "moves", "items", "encounters"})
-
 _SECTION_LAYOUT_REQUIREMENTS: dict[str, tuple[tuple[str, ...], ...]] = {
     "pokemon": (("personal",),),
-    "abilities": (("messages",),),
+    "abilities": (("personal",),),
     "moves": (("moves",),),
     "items": (("item_data", "messages"),),
     "encounters": (("encounters",),),
@@ -30,10 +23,11 @@ _SECTION_LAYOUT_REQUIREMENTS: dict[str, tuple[tuple[str, ...], ...]] = {
 
 def enabled_dataset_kinds(profile: GameProfile) -> tuple[str, ...]:
     """Return the complete dataset sections enabled for one profile."""
+    supported, required = _engine_dataset_contract(profile)
     missing_required = [
         kind
         for kind in DATASET_KINDS
-        if kind in REQUIRED_DATASET_KINDS and not dataset_enabled(profile, kind)
+        if kind in required and not dataset_enabled(profile, kind)
     ]
     if missing_required:
         details = "; ".join(
@@ -46,7 +40,7 @@ def enabled_dataset_kinds(profile: GameProfile) -> tuple[str, ...]:
     return tuple(
         kind
         for kind in DATASET_KINDS
-        if kind in REQUIRED_DATASET_KINDS or dataset_enabled(profile, kind)
+        if kind in supported and (kind in required or dataset_enabled(profile, kind))
     )
 
 
@@ -58,7 +52,22 @@ def dataset_enabled(profile: GameProfile, kind: str) -> bool:
         raise ProfileError(
             f"Unknown dataset section {kind!r}; choose from {choices}"
         ) from error
-    return any(_contains_all(profile.layout, keys) for keys in alternatives)
+    supported, _required = _engine_dataset_contract(profile)
+    return kind in supported and any(
+        _contains_all(profile.layout, keys) for keys in alternatives
+    )
+
+
+def _engine_dataset_contract(
+    profile: GameProfile,
+) -> tuple[frozenset[str], frozenset[str]]:
+    engine_id = getattr(profile, "engine", None)
+    if not isinstance(engine_id, str):
+        # Lightweight test doubles written before engine-owned section contracts
+        # retain the current complete-engine policy.
+        return frozenset(DATASET_KINDS), DEFAULT_REQUIRED_DATASET_KINDS
+    engine = get_engine(engine_id)
+    return engine.dataset_kinds, engine.required_dataset_kinds
 
 
 def describe_section_mismatch(

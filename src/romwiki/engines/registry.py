@@ -20,11 +20,28 @@ GEN5_B2W2_ENGINE = "gen5_b2w2"
 
 EncounterFormat = Literal["conditional", "seasonal"]
 LocationFormat = Literal["event-map", "encounter-map"]
-PickupFormat = Literal["split-table", "sliding-table"]
+PickupFormat = Literal["none", "split-table", "sliding-table"]
 TrainerFormat = Literal["class-gender", "battle-mode"]
 TutorFormat = Literal["none", "overlay-table", "personal-archive"]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
+
+DATASET_KINDS = (
+    "pokemon",
+    "abilities",
+    "moves",
+    "items",
+    "encounters",
+    "trainers",
+    "locations",
+)
+DEFAULT_REQUIRED_DATASET_KINDS = frozenset({"pokemon", "moves", "items", "encounters"})
+_DATASET_DEPENDENCIES = {
+    "abilities": frozenset({"pokemon"}),
+    "items": frozenset({"pokemon"}),
+    "trainers": frozenset({"pokemon", "moves"}),
+    "locations": frozenset({"items"}),
+}
 
 
 class EngineConcern(Protocol):
@@ -90,6 +107,8 @@ class EngineAdapter:
     generation: int | None = None
     presentation_features: frozenset[str] = frozenset()
     capabilities: frozenset[str] = frozenset()
+    dataset_kinds: frozenset[str] = frozenset(DATASET_KINDS)
+    required_dataset_kinds: frozenset[str] = DEFAULT_REQUIRED_DATASET_KINDS
 
 
 _ENGINES: dict[str, EngineAdapter] = {
@@ -227,15 +246,40 @@ def unregister_engine(engine: str) -> None:
 
 
 def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
-    required = {
-        "personal": ("parse_personal_record", "PERSONAL_RECORD_COUNT"),
-        "moves": ("parse_move_record",),
-        "items": ("parse_item_record",),
-        "learnsets": ("parse_level_up_learnset",),
-        "evolutions": ("parse_evolution_record",),
-        "machines": ("parse_machine_move_table",),
-        "trainer_party": ("normalize_trainer_party_member",),
-    }
+    unknown = adapter.dataset_kinds - set(DATASET_KINDS)
+    if unknown:
+        raise DataSourceError(
+            f"Engine {engine!r} declares unknown datasets: {', '.join(sorted(unknown))}"
+        )
+    unavailable_required = adapter.required_dataset_kinds - adapter.dataset_kinds
+    if unavailable_required:
+        raise DataSourceError(
+            f"Engine {engine!r} requires unsupported datasets: "
+            f"{', '.join(sorted(unavailable_required))}"
+        )
+    if "pokemon" not in adapter.dataset_kinds:
+        raise DataSourceError(f"Engine {engine!r} must support the pokemon dataset")
+    if "pokemon" not in adapter.required_dataset_kinds:
+        raise DataSourceError(f"Engine {engine!r} must require the pokemon dataset")
+    for dataset, dependencies in _DATASET_DEPENDENCIES.items():
+        if dataset not in adapter.dataset_kinds:
+            continue
+        missing_dependencies = dependencies - adapter.dataset_kinds
+        if missing_dependencies:
+            raise DataSourceError(
+                f"Engine {engine!r} dataset {dataset!r} requires supported "
+                f"datasets: {', '.join(sorted(missing_dependencies))}"
+            )
+
+    required: dict[str, tuple[str, ...]] = {}
+    if "pokemon" in adapter.dataset_kinds:
+        required["personal"] = ("parse_personal_record", "PERSONAL_RECORD_COUNT")
+    if "moves" in adapter.dataset_kinds:
+        required["moves"] = ("parse_move_record",)
+    if "items" in adapter.dataset_kinds:
+        required["items"] = ("parse_item_record",)
+    if "trainers" in adapter.dataset_kinds:
+        required["trainer_party"] = ("normalize_trainer_party_member",)
     format_required = {
         ("encounters", "conditional"): ("parse_encounter_record",),
         ("encounters", "seasonal"): ("parse_encounter_entry",),
@@ -249,11 +293,23 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
         ("tutors", "personal-archive"): ("parse_tutor_move_table",),
     }
     for (concern, format_name), members in format_required.items():
-        if getattr(adapter.formats, concern) == format_name:
+        dataset_kind = {
+            "encounters": "encounters",
+            "locations": "locations",
+            "pickup": None,
+            "trainers": "trainers",
+            "tutors": None,
+        }[concern]
+        if (dataset_kind is None or dataset_kind in adapter.dataset_kinds) and getattr(
+            adapter.formats, concern
+        ) == format_name:
             required[concern] = members
-    if adapter.formats.fossils == "script-pattern":
+    if "items" in adapter.dataset_kinds and adapter.formats.fossils == "script-pattern":
         required["items"] = (*required["items"], "find_fossil_revival_script")
-    if adapter.formats.static_encounters == "script-commands":
+    if (
+        "pokemon" in adapter.dataset_kinds
+        and adapter.formats.static_encounters == "script-commands"
+    ):
         required["static_encounters"] = ("discover_static_encounters",)
     for concern, members in required.items():
         namespace = getattr(adapter, concern)

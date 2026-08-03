@@ -55,6 +55,43 @@ class DocumentationTests(unittest.TestCase):
                     navigation,
                 )
 
+    def test_generation_five_coverage_notes_match_supported_links(self) -> None:
+        shared_bw_notes = (
+            REPOSITORY_ROOT / "sites/shared/partials/gen5-bw-data-sources.md"
+        ).read_text(encoding="utf-8")
+
+        for stale_claim in (
+            "there's no map location to link these to yet",
+            "these aren't linked to a specific map location",
+        ):
+            self.assertNotIn(stale_claim, shared_bw_notes)
+        for supported_scope in (
+            "These relationships are published in both directions.",
+            "Selectors `0` through `19` link those persistent inventories",
+            "selector `255` marks a standard Poké Mart",
+        ):
+            self.assertIn(supported_scope, shared_bw_notes)
+        for limitation in (
+            "**Roaming Pokémon:**",
+            "**NPC trade locations:**",
+            "**Black City and Gear Station vendors:**",
+            "**Fossil-revival location:**",
+        ):
+            self.assertIn(limitation, shared_bw_notes)
+
+        for site_id in ("black-2-white-2", "blaze-black-2-volt-white-2"):
+            notes = (
+                REPOSITORY_ROOT / f"sites/games/{site_id}/wiki/data-sources.md"
+            ).read_text(encoding="utf-8")
+            with self.subTest(site=site_id):
+                self.assertIn(
+                    "links wild encounter variants in\nboth directions", notes
+                )
+                self.assertIn("shop selectors `0` through `25`", notes)
+                self.assertIn("## Known coverage limitations", notes)
+                self.assertIn("detached trade archive", notes)
+                self.assertIn("shared revival script", notes)
+
     def test_documented_cli_commands_parse(self) -> None:
         parser = build_parser()
         paths = [
