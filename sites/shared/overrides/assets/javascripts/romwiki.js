@@ -1,5 +1,6 @@
 import { initializeCatalogs } from "./catalog/catalog.js";
 import { initializeControls } from "./controls.js";
+import { initializeLearnerTables } from "./learner-tables.js";
 import { initializeSite } from "./site.js";
 
 const COLOR_SCHEME_STORAGE_KEY = "romwiki.color-scheme";
@@ -33,5 +34,6 @@ document$.subscribe(() => {
   initializeSite();
   initializeColorSchemePreference();
   document.documentElement.classList.add("rw-js", "rw-js-ready");
+  initializeLearnerTables();
   initializeCatalogs();
 });

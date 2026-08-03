@@ -62,6 +62,29 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("if (config.sorts.length > 1)", catalog)
         self.assertIn('singleSort ? "Order" : "Direction"', catalog)
 
+    def test_learner_tables_are_progressively_enhanced_and_accessible(self) -> None:
+        entrypoint = (OVERRIDES / "assets" / "javascripts" / "romwiki.js").read_text(
+            encoding="utf-8"
+        )
+        learner_tables = (
+            OVERRIDES / "assets" / "javascripts" / "learner-tables.js"
+        ).read_text(encoding="utf-8")
+        records = (STYLES / "records.css").read_text(encoding="utf-8")
+
+        self.assertIn('from "./learner-tables.js"', entrypoint)
+        self.assertIn("initializeLearnerTables();", entrypoint)
+        self.assertIn('querySelectorAll("[data-rw-learner-table]")', learner_tables)
+        self.assertIn("value.schema_version", learner_tables)
+        self.assertIn('setAttribute("aria-live", "polite")', learner_tables)
+        self.assertIn('setAttribute("aria-label"', learner_tables)
+        self.assertIn("body.replaceChildren", learner_tables)
+        self.assertIn("window.history.replaceState", learner_tables)
+        self.assertIn("fallback.hidden = false", learner_tables)
+        self.assertNotIn("innerHTML", learner_tables)
+        self.assertIn(".rw-learner-table__table-wrap", records)
+        self.assertIn(".rw-learner-table__page-button:focus-visible", records)
+        self.assertIn(".rw-learner-table--ready .rw-learner-table__fallback", records)
+
     def test_shared_theme_supports_light_dark_and_high_contrast(self) -> None:
         config = (ROOT / "sites" / "shared" / "mkdocs.base.yml").read_text(
             encoding="utf-8"

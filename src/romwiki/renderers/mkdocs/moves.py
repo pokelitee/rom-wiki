@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -45,7 +46,12 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     escape_markdown,
     pokemon_record_link,
+    resolved_reference,
 )
+
+_LEARNER_TABLE_SCHEMA_VERSION = 1
+_LEARNER_TABLE_PAGE_SIZE = 50
+_LEARNER_TABLE_PAGINATION_THRESHOLD = 50
 
 
 def render_move_pages(
@@ -503,7 +509,9 @@ def _relationship_learner_table(
             else "No machine-compatible Pokémon."
         )
     detail_heading = "Level" if detail == "level" else "Machine"
-    rows = []
+    show_sprites = len(learners) <= _LEARNER_TABLE_PAGINATION_THRESHOLD
+    fallback_rows = []
+    payload_rows = []
     for learner in learners:
         pokemon = {
             "member": learner.pokemon_id,
@@ -515,27 +523,45 @@ def _relationship_learner_table(
             if detail == "level" and learner.level is not None
             else learner.machine_name or "—"
         )
-        rows.append(
+        fallback_rows.append(
             "| "
-            f"{_pokemon_table_link(pokemon, source_file, references, True)} | "
+            f"{_pokemon_table_link(pokemon, source_file, references, show_sprites)} | "
             f"{escape_table_cell(display_name(learner.pokemon_form)) if learner.pokemon_form else '—'} | "
             f"{escape_table_cell(detail_value)} | "
             f"{_learner_versions(learner.versions)} |"
         )
-    return pokemon_table(
-        [
-            f"| Pokémon | Form | {detail_heading} | Version |",
-            "| ------- | ---- | ------- | ------- |",
-        ],
-        rows,
+        payload_rows.append(
+            [
+                _learner_pokemon_cell(pokemon, source_file, references),
+                _learner_text_cell(
+                    display_name(learner.pokemon_form) if learner.pokemon_form else "—"
+                ),
+                _learner_text_cell(detail_value),
+                _learner_text_cell(_learner_version_text(learner.versions)),
+            ]
+        )
+    header = [
+        f"| Pokémon | Form | {detail_heading} | Version |",
+        "| ------- | ---- | ------- | ------- |",
+    ]
+    fallback = pokemon_table(header, fallback_rows)
+    if show_sprites:
+        return fallback
+    return _paginated_learner_table(
+        columns=["Pokémon", "Form", detail_heading, "Version"],
+        rows=payload_rows,
+        fallback=fallback,
+        table_key=detail,
+        label=f"{detail_heading} learners",
     )
 
 
 def _learner_versions(versions: tuple[str, ...]) -> str:
-    return (
-        " / ".join(escape_table_cell(display_name(version)) for version in versions)
-        or "—"
-    )
+    return escape_table_cell(_learner_version_text(versions))
+
+
+def _learner_version_text(versions: tuple[str, ...]) -> str:
+    return " / ".join(display_name(version) for version in versions) or "—"
 
 
 def _learner_summary(
@@ -579,7 +605,7 @@ def _tutor_compatibility(
     record: dict[str, Any], source_file: str, references: ReferenceIndex | None
 ) -> list[str]:
     lines = []
-    for tutor in record["tutors"]:
+    for tutor_index, tutor in enumerate(record["tutors"], start=1):
         costs = tutor_requirement(tutor)
         location = _tutor_location_link(tutor["location"], source_file)
         lines.extend([f"**{location} — {costs}:**", ""])
@@ -589,6 +615,8 @@ def _tutor_compatibility(
                 source_file,
                 references,
                 "No compatible Pokémon.",
+                table_key=f"tutor_{tutor_index}",
+                table_label=f"{tutor['location']['name']} compatible Pokémon",
             )
         )
     return lines
@@ -616,7 +644,12 @@ def _egg_move_learners(
     record: dict[str, Any], source_file: str, references: ReferenceIndex | None
 ) -> list[str]:
     return _pokemon_sprite_table(
-        record["egg_move_pokemon"], source_file, references, "No egg move learners."
+        record["egg_move_pokemon"],
+        source_file,
+        references,
+        "No egg move learners.",
+        table_key="egg",
+        table_label="Egg move learners",
     )
 
 
@@ -625,19 +658,121 @@ def _pokemon_sprite_table(
     source_file: str,
     references: ReferenceIndex | None,
     empty_message: str,
+    *,
+    table_key: str = "learners",
+    table_label: str = "Move learners",
 ) -> list[str]:
     if not pokemon:
         return empty_state(empty_message)
-    return pokemon_table(
+    show_sprites = len(pokemon) <= _LEARNER_TABLE_PAGINATION_THRESHOLD
+    fallback = pokemon_table(
         ["| Pokémon | Type |", "| ------- | ---- |"],
         [
             (
-                f"| {_pokemon_table_link(value, source_file, references, True)} | "
+                f"| {_pokemon_table_link(value, source_file, references, show_sprites)} | "
                 f"{reference_type_cell('pokemon', value.get('member'), references)} |"
             )
             for value in pokemon
         ],
     )
+    if show_sprites:
+        return fallback
+    return _paginated_learner_table(
+        columns=["Pokémon", "Type"],
+        rows=[
+            [
+                _learner_pokemon_cell(value, source_file, references),
+                _learner_type_cell(value, references),
+            ]
+            for value in pokemon
+        ],
+        fallback=fallback,
+        table_key=table_key,
+        label=table_label,
+    )
+
+
+def _paginated_learner_table(
+    *,
+    columns: list[str],
+    rows: list[list[dict[str, Any]]],
+    fallback: list[str],
+    table_key: str,
+    label: str,
+) -> list[str]:
+    payload = json.dumps(
+        {
+            "schema_version": _LEARNER_TABLE_SCHEMA_VERSION,
+            "label": label,
+            "page_param": f"{table_key}_page",
+            "page_size": _LEARNER_TABLE_PAGE_SIZE,
+            "columns": columns,
+            "rows": rows,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    payload = (
+        payload.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    )
+    return [
+        '<div class="rw-learner-table" data-rw-learner-table markdown="1">',
+        '<div class="rw-learner-table__interactive" '
+        "data-rw-learner-interactive hidden></div>",
+        '<script type="application/json" data-rw-learner-data>',
+        payload,
+        "</script>",
+        '<div class="rw-learner-table__fallback" '
+        'data-rw-learner-fallback markdown="1">',
+        "",
+        *fallback,
+        "</div>",
+        "</div>",
+        "",
+    ]
+
+
+def _learner_pokemon_cell(
+    value: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> dict[str, Any]:
+    identifier = value.get("member", value.get("id", value.get("slug", value["name"])))
+    reference = resolved_reference(
+        "pokemon",
+        identifier,
+        value["name"],
+        value.get("slug"),
+        index=references,
+    )
+    return {
+        "kind": "pokemon",
+        "label": value["name"],
+        "url": ROUTES.published_href(reference, source_file.removesuffix(".md") + "/"),
+        "sprite_url": reference.sprite_url,
+    }
+
+
+def _learner_type_cell(
+    value: dict[str, Any], references: ReferenceIndex | None
+) -> dict[str, Any]:
+    identifier = value.get("member", value.get("id"))
+    types = (
+        references.types("pokemon", identifier)
+        if references is not None and identifier is not None
+        else None
+    )
+    return {
+        "kind": "types",
+        "values": [
+            {"name": str(type_["name"]), "label": display_name(str(type_["name"]))}
+            for type_ in types or ()
+        ],
+    }
+
+
+def _learner_text_cell(value: str) -> dict[str, str]:
+    return {"kind": "text", "value": value}
 
 
 def _pokemon_table_link(

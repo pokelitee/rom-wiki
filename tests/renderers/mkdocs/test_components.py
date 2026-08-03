@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
 import unittest
 
+import markdown
+
+from romwiki.pipeline.relationships import MoveLearnerReference
 from romwiki.renderers.mkdocs.components import (
     class_badge,
     display_name,
@@ -16,10 +20,14 @@ from romwiki.renderers.mkdocs.components import (
 )
 from romwiki.renderers.mkdocs.items import _party_effects
 from romwiki.renderers.mkdocs.moves import (
+    _egg_move_learners,
     _pokemon_sprite_table,
     _pokemon_table_link,
     _reference_effects_section,
+    _relationship_learner_table,
+    _tutor_compatibility,
 )
+from romwiki.renderers.mkdocs.references import EntityReference, ReferenceIndex
 
 
 class DisplayNameTests(unittest.TestCase):
@@ -156,26 +164,142 @@ class MoveReferenceSectionTests(unittest.TestCase):
         self.assertEqual(link, "[Bulbasaur](../pokemon/bulbasaur.md)")
 
     def test_small_learner_tables_show_sprites_uncollapsed(self) -> None:
-        pokemon = [{"id": 1, "name": "Bulbasaur", "slug": "bulbasaur"}]
-
-        lines = _pokemon_sprite_table(pokemon, "moves/test.md", None, "None.")
-
-        rendered = "\n".join(lines)
-        self.assertIn("rw-table-sprite", rendered)
-        self.assertNotIn("<details", rendered)
-
-    def test_large_learner_tables_render_in_full_without_collapsing(self) -> None:
         pokemon = [
             {"id": i, "name": f"Species {i}", "slug": f"species-{i}"}
-            for i in range(1, 52)
+            for i in range(1, 51)
         ]
 
         lines = _pokemon_sprite_table(pokemon, "moves/test.md", None, "None.")
 
         rendered = "\n".join(lines)
-        self.assertNotIn("<details", rendered)
         self.assertIn("rw-table-sprite", rendered)
+        self.assertNotIn("data-rw-learner-table", rendered)
+        self.assertNotIn("<details", rendered)
+
+    def test_large_learner_tables_paginate_with_complete_sprite_free_fallback(
+        self,
+    ) -> None:
+        pokemon = [
+            {"member": i, "name": f"Species {i}", "slug": f"species-{i}"}
+            for i in range(1, 52)
+        ]
+        references = ReferenceIndex(
+            EntityReference(
+                "pokemon",
+                i,
+                f"Species {i}",
+                f"species-{i}",
+                f"https://example.test/sprites/{i}.png",
+                ({"name": "grass"},),
+            )
+            for i in range(1, 52)
+        )
+
+        lines = _pokemon_sprite_table(pokemon, "moves/test.md", references, "None.")
+
+        rendered = "\n".join(lines)
+        self.assertNotIn("<details", rendered)
+        self.assertIn("data-rw-learner-table", rendered)
+        self.assertNotIn("rw-table-sprite", rendered)
         self.assertIn("Species 51", rendered)
+        payload = json.loads(
+            rendered.split(
+                '<script type="application/json" data-rw-learner-data>\n', 1
+            )[1].split("\n</script>", 1)[0]
+        )
+        self.assertEqual(payload["schema_version"], 1)
+        self.assertEqual(payload["page_size"], 50)
+        self.assertEqual(len(payload["rows"]), 51)
+        self.assertEqual(payload["rows"][0][0]["url"], "../../pokemon/species-1/")
+        self.assertEqual(
+            payload["rows"][0][0]["sprite_url"],
+            "https://example.test/sprites/1.png",
+        )
+        fallback = rendered.split("data-rw-learner-fallback", 1)[1]
+        self.assertIn("[Species 51](../pokemon/species-51.md)", fallback)
+        self.assertNotIn("<img", fallback)
+        html = markdown.markdown(rendered, extensions=["md_in_html", "tables"])
+        self.assertIn("<table>", html)
+        self.assertIn("Species 51", html)
+        self.assertNotIn("<img", html)
+
+    def test_large_relationship_learner_tables_use_distinct_page_state(self) -> None:
+        for detail, expected_param in (
+            ("level", "level_page"),
+            ("machine", "machine_page"),
+        ):
+            learners = tuple(
+                MoveLearnerReference(
+                    move_id=1,
+                    pokemon_id=i,
+                    pokemon_name=f"Species {i}",
+                    pokemon_slug=f"species-{i}",
+                    pokemon_form=None,
+                    method="level-up" if detail == "level" else "machine",
+                    level=i if detail == "level" else None,
+                    machine_id=None if detail == "level" else 1,
+                    machine_name=None if detail == "level" else "TM01",
+                    machine_kind=None if detail == "level" else "tm",
+                    versions=("black",),
+                )
+                for i in range(1, 52)
+            )
+
+            rendered = "\n".join(
+                _relationship_learner_table(
+                    learners, "moves/test.md", None, detail=detail
+                )
+            )
+
+            with self.subTest(detail=detail):
+                self.assertIn(f'"page_param":"{expected_param}"', rendered)
+                self.assertIn("Species 51", rendered)
+                self.assertNotIn("rw-table-sprite", rendered)
+
+    def test_tutor_and_egg_tables_use_distinct_page_state(self) -> None:
+        pokemon = [
+            {"id": i, "name": f"Species {i}", "slug": f"species-{i}"}
+            for i in range(1, 52)
+        ]
+        record = {
+            "tutors": [
+                {
+                    "kind": "special",
+                    "minimum_friendship": 255,
+                    "location": {"name": "Test Lab"},
+                    "compatible_pokemon": pokemon,
+                }
+            ],
+            "egg_move_pokemon": pokemon,
+        }
+
+        tutor = "\n".join(_tutor_compatibility(record, "moves/test.md", None))
+        egg = "\n".join(_egg_move_learners(record, "moves/test.md", None))
+
+        self.assertIn('"page_param":"tutor_1_page"', tutor)
+        self.assertIn('"page_param":"egg_page"', egg)
+        self.assertNotIn("rw-table-sprite", tutor)
+        self.assertNotIn("rw-table-sprite", egg)
+
+    def test_learner_payload_cannot_close_its_script_element(self) -> None:
+        pokemon = [
+            {
+                "id": i,
+                "name": f"Species </script><script>{i}",
+                "slug": f"species-{i}",
+            }
+            for i in range(1, 52)
+        ]
+
+        rendered = "\n".join(
+            _pokemon_sprite_table(pokemon, "moves/test.md", None, "None.")
+        )
+
+        payload = rendered.split(
+            '<script type="application/json" data-rw-learner-data>\n', 1
+        )[1].split("\n</script>", 1)[0]
+        self.assertNotIn("</script>", payload)
+        self.assertIn(r"\u003c/script\u003e", payload)
 
 
 class ItemPartyEffectTests(unittest.TestCase):

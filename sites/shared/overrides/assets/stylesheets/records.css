@@ -372,6 +372,91 @@
   align-items: center;
   gap: .4rem;
 }
+.rw-learner-table {
+  margin: 1em 0;
+}
+.rw-learner-table--ready .rw-learner-table__fallback {
+  display: none;
+}
+.rw-learner-table__summary {
+  margin: 0 0 .55rem;
+  color: var(--rw-text-muted);
+  font-size: .68rem;
+  font-weight: 700;
+}
+.rw-learner-table__table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--rw-border);
+  border-radius: .5rem;
+  background: var(--rw-surface);
+  overscroll-behavior-inline: contain;
+}
+.md-typeset .rw-learner-table__table {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+.md-typeset .rw-learner-table__table th,
+.md-typeset .rw-learner-table__table td {
+  padding: .55rem .7rem;
+  border-bottom: .05rem solid var(--md-typeset-table-color);
+  text-align: left;
+  vertical-align: middle;
+}
+.md-typeset .rw-learner-table__table th {
+  background: var(--rw-surface-muted);
+  font-size: .59rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.md-typeset .rw-learner-table__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.md-typeset .rw-learner-table__table tbody tr:hover {
+  background: rgba(var(--rw-accent-rgb), .045);
+}
+.rw-learner-table__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .6rem;
+  margin-top: .7rem;
+}
+.rw-learner-table__page-status {
+  min-width: 5rem;
+  color: var(--rw-text-muted);
+  font-size: .68rem;
+  font-weight: 700;
+  text-align: center;
+}
+.rw-learner-table__page-button {
+  min-height: 2.1rem;
+  padding: .3rem .7rem;
+  border: 1px solid var(--rw-border);
+  border-radius: .5rem;
+  color: var(--md-typeset-color);
+  background: var(--rw-surface);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color .16s, background-color .16s, border-color .16s, box-shadow .16s;
+}
+.rw-learner-table__page-button:hover:not(:disabled) {
+  border-color: var(--rw-accent);
+  color: var(--rw-accent);
+}
+.rw-learner-table__page-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--rw-accent-rgb), .2);
+}
+.rw-learner-table__page-button:disabled {
+  color: var(--rw-text-muted);
+  cursor: not-allowed;
+  opacity: .5;
+}
 .rw-type-chart {
   max-width: 100%;
   margin: 1em 0;
@@ -494,5 +579,8 @@
   }
   .rw-stat {
     grid-template-columns: 4.8rem 2rem 2rem 1fr;
+  }
+  .rw-learner-table__pagination {
+    justify-content: space-between;
   }
 }
