@@ -33,6 +33,21 @@ def write_public_dataset(
     _write_manifest(data_root, str(dataset["game"]))
 
 
+def prune_public_datasets(
+    wiki_root: Path,
+    enabled_kinds: set[str] | frozenset[str],
+    game: str,
+) -> None:
+    """Remove exports for sections disabled by a complete game build."""
+    data_root = wiki_root / PUBLIC_DATA_DIRECTORY
+    if data_root.is_dir():
+        for path in data_root.rglob("*.json.gz"):
+            kind = path.name.removesuffix(".json.gz")
+            if kind not in enabled_kinds:
+                path.unlink()
+    _write_manifest(data_root, game)
+
+
 def _write_gzip_json(path: Path, value: dict[str, Any]) -> None:
     source = json.dumps(
         value,

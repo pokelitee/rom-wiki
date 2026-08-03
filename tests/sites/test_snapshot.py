@@ -41,6 +41,29 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
             self.assertEqual(generated_file.read_text(encoding="utf-8"), "# Pokémon")
 
+    def test_snapshot_honors_declared_partial_generated_sections(self) -> None:
+        sections = (
+            "pokemon",
+            "abilities",
+            "moves",
+            "items",
+            "encounters",
+            "types",
+            "data",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root, sections=sections)
+            archive_path = root / "partial.tar.gz"
+
+            count = create_generated_wiki_snapshot(root, archive_path)
+            with tarfile.open(archive_path, "r:gz") as archive:
+                names = {member.name for member in archive}
+
+        self.assertEqual(count, len(sections) + 2)
+        self.assertFalse(any("/trainers/" in name for name in names))
+        self.assertFalse(any("/locations/" in name for name in names))
+
     def test_restore_rejects_paths_outside_generated_sections(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -161,7 +184,11 @@ theme = "platinum"
             self.assertEqual(archive.read_bytes(), original_archive)
 
 
-def _make_site(root: Path) -> Path:
+def _make_site(
+    root: Path,
+    *,
+    sections: tuple[str, ...] = REQUIRED_WIKI_SECTIONS,
+) -> Path:
     portal = root / "sites" / "portal"
     game = root / "sites" / "games" / "test-game"
     portal.mkdir(parents=True)
@@ -200,13 +227,16 @@ base_game = "test-game"
 platform = "nintendo-ds"
 platform_name = "Nintendo DS"
 creator = "Tester"
+generated_sections = [{generated_sections}]
 [appearance]
 theme = "platinum"
-""".strip(),
+""".format(
+            generated_sections=", ".join(f'"{section}"' for section in sections)
+        ).strip(),
         encoding="utf-8",
     )
     first = None
-    for section in REQUIRED_WIKI_SECTIONS:
+    for section in sections:
         index = game / "wiki" / section / "index.md"
         index.parent.mkdir(parents=True)
         value = "# Pokémon" if first is None else f"# {section.title()}"

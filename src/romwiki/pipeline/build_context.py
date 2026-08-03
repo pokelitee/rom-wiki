@@ -26,6 +26,7 @@ from romwiki.pipeline.marts import extract_mart_dataset
 from romwiki.pipeline.moves import extract_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset
 from romwiki.pipeline.pickup import extract_pickup_dataset
+from romwiki.pipeline.sections import dataset_enabled, enabled_dataset_kinds
 from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
 from romwiki.pipeline.trades import enrich_npc_trade_dataset, extract_npc_trade_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset
@@ -124,15 +125,12 @@ class GameBuildContext:
         return self._raw("encounters/raw", extract_encounter_dataset)
 
     def trainers_raw(self) -> dict[str, Any] | None:
-        if "trainer_data" not in self.profile.layout:
+        if not dataset_enabled(self.profile, "trainers"):
             return None
         return self._raw("trainers/raw", extract_trainer_dataset)
 
     def locations_raw(self) -> dict[str, Any] | None:
-        if (
-            "map_matrices" not in self.profile.layout
-            and "map_headers" not in self.profile.layout
-        ):
+        if not dataset_enabled(self.profile, "locations"):
             return None
         return self._raw(
             "locations/raw",
@@ -295,13 +293,7 @@ class GameBuildContext:
 
     def all_datasets(self) -> dict[str, dict[str, Any]]:
         return {
-            "pokemon": self.pokemon(),
-            "abilities": self.abilities(),
-            "moves": self.moves(),
-            "items": self.items(),
-            "encounters": self.encounters(),
-            "trainers": self.trainers(),
-            "locations": self.locations(),
+            kind: getattr(self, kind)() for kind in enabled_dataset_kinds(self.profile)
         }
 
     def _raw(

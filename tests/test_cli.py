@@ -18,8 +18,10 @@ from romwiki.cli import (
     _resolve_build_baseline,
     _resolve_input_rom,
     _resolve_pokedb_path,
+    _run_full_game_build,
     _run_regeneration,
     _run_section_build,
+    _run_version_family_build,
     _site_wiki_root,
     _version_family_inputs,
     _version_family_uses_baselines,
@@ -268,9 +270,7 @@ class VersionFamilyInputTests(unittest.TestCase):
     def test_explicit_pokedb_path_overrides_profile_generation(self) -> None:
         repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
         profile = next(
-            profile
-            for profile in repository.profiles
-            if profile.id == "black-us"
+            profile for profile in repository.profiles if profile.id == "black-us"
         )
 
         self.assertEqual(
@@ -394,6 +394,7 @@ class FocusedSectionBuildTests(unittest.TestCase):
         )
         self.assertIsNotNone(write_build.call_args.kwargs["reference_index"])
 
+
 class RelationshipDatasetTests(unittest.TestCase):
     def test_collects_companions_and_omits_unsupported_datasets(self) -> None:
         datasets = {
@@ -410,6 +411,65 @@ class RelationshipDatasetTests(unittest.TestCase):
         )
 
         self.assertEqual(_current_relationship_datasets(context), datasets)
+
+
+class OptionalSectionBuildTests(unittest.TestCase):
+    def test_full_game_build_writes_only_enabled_datasets(self) -> None:
+        kinds = ("pokemon", "abilities", "moves", "items", "encounters")
+        builds = {
+            kind: SimpleNamespace(
+                current=_build_dataset(kind, "partial"),
+                comparison=None,
+            )
+            for kind in kinds
+        }
+        current = SimpleNamespace(
+            profile=SimpleNamespace(id="partial"),
+            trades=lambda: None,
+        )
+        workflow = SimpleNamespace(current=current, build_all=lambda: builds)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = SimpleNamespace(
+                data_root=root / "data",
+                wiki_root=root / "wiki",
+                dev=False,
+            )
+            with (
+                patch(
+                    "romwiki.cli.build_type_dataset",
+                    return_value=_build_dataset("types", "partial"),
+                ),
+                patch("romwiki.cli._write_type_build"),
+                patch("romwiki.cli._write_dataset_build") as write_dataset,
+                patch("romwiki.cli.render_changes_pages", return_value=0),
+            ):
+                _run_full_game_build(args, SimpleNamespace(), workflow=workflow)
+
+        self.assertEqual(
+            [call.args[0] for call in write_dataset.call_args_list],
+            list(kinds),
+        )
+
+    def test_version_family_rejects_mismatched_optional_sections(self) -> None:
+        partial = _section_profile("partial")
+        complete = _section_profile("complete", optional=True)
+        workflows = {
+            "one": SimpleNamespace(current=SimpleNamespace(profile=partial)),
+            "two": SimpleNamespace(current=SimpleNamespace(profile=complete)),
+        }
+        args = SimpleNamespace(
+            site_id="test-family",
+            games=["partial", "complete"],
+            versions=["one", "two"],
+        )
+
+        with self.assertRaisesRegex(
+            LocalConfigError,
+            "different dataset sections.*one omits locations, trainers",
+        ):
+            _run_version_family_build(args, workflows=workflows)
 
 
 class ComparisonWorkflowKindTests(unittest.TestCase):
@@ -766,6 +826,38 @@ patched_rom = "roms/white-us.nds"
         self.assertIn("css-unused=1", output)
         self.assertIn("image-count=2", output)
         self.assertNotIn("one.html", output)
+
+
+def _build_dataset(kind: str, game: str) -> dict:
+    return {
+        "schema_version": 1,
+        "dataset": "wild_encounters" if kind == "encounters" else kind,
+        "game": game,
+        "source": {"rom_sha256": game},
+        "records": [],
+    }
+
+
+def _section_profile(profile_id: str, *, optional: bool = False) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=profile_id,
+        layout={
+            "personal": "personal",
+            "messages": "messages",
+            "moves": "moves",
+            "item_data": "items",
+            "encounters": "encounters",
+            **(
+                {
+                    "trainer_data": "trainers",
+                    "trainer_parties": "parties",
+                    "map_headers": "headers",
+                }
+                if optional
+                else {}
+            ),
+        },
+    )
 
 
 def _game(

@@ -27,7 +27,7 @@ from romwiki.pipeline.evolutions import (
     extract_evolution_dataset,
     write_evolution_dataset,
 )
-from romwiki.pipeline.game_build import DATASET_KINDS, GameBuildWorkflow
+from romwiki.pipeline.game_build import GameBuildWorkflow
 from romwiki.pipeline.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.items import (
     extract_item_dataset,
@@ -44,6 +44,11 @@ from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
 from romwiki.pipeline.relationships import (
     RelationshipIndex,
     build_relationship_index,
+)
+from romwiki.pipeline.sections import (
+    DATASET_KINDS,
+    describe_section_mismatch,
+    enabled_dataset_kinds,
 )
 from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
 from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
@@ -77,7 +82,7 @@ from romwiki.sites import (
     restore_generated_wiki_snapshot,
     serve_sites,
 )
-from romwiki.sites.data_exports import write_public_dataset
+from romwiki.sites.data_exports import prune_public_datasets, write_public_dataset
 from romwiki.sites.dev_pages import DevPages
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import (
@@ -1022,6 +1027,7 @@ def _run_full_game_build(
     reference_index = ReferenceIndex.from_datasets(current_datasets)
     relationship_index = build_relationship_index(current_datasets)
     type_dataset = build_type_dataset(workflow.current.profile)
+    prune_public_datasets(wiki_root, {*builds, "types"}, game)
     _write_type_build(type_dataset, data_root, wiki_root)
     comparisons = {}
     for kind, build in builds.items():
@@ -1050,27 +1056,6 @@ def _run_full_game_build(
         page_count,
         wiki_root / "changes",
     )
-
-
-# Sections a version-family site can build, keyed to the profile layout entry
-# that gates them (an empty key set means always attempted, like
-# GameBuildContext.pokemon() and .items()). A section is only built when all
-# sibling profiles configure
-# every required layout entry, matching the declarative-gate convention
-# GameBuildContext's optional-input accessors already use.
-# Each kind maps to one or more alternative required-key sets (a kind
-# qualifies if any one set's keys are all present) -- Locations' two very
-# different implementations (Gen IV's full map-matrix-based one vs. Gen V's
-# bare-minimum map-header one) both use this same gating dict.
-_VERSION_FAMILY_SECTION_LAYOUT_KEYS: dict[str, tuple[tuple[str, ...], ...]] = {
-    "pokemon": ((),),
-    "abilities": (("messages",),),
-    "items": (("item_data", "messages"),),
-    "moves": (("moves",),),
-    "encounters": (("encounters",),),
-    "trainers": (("trainer_data", "trainer_parties"),),
-    "locations": (("map_matrices",), ("map_headers",)),
-}
 
 
 def _run_version_family_build(
@@ -1132,15 +1117,17 @@ def _run_version_family_build(
             "Prepared version-family workflows do not match configured versions"
         )
 
-    layouts = [workflows[version].current.profile.layout for version in versions]
-    kinds = [
-        kind
-        for kind, alternatives in _VERSION_FAMILY_SECTION_LAYOUT_KEYS.items()
-        if any(
-            all(all(key in layout for key in required_keys) for layout in layouts)
-            for required_keys in alternatives
+    enabled_by_version = {
+        version: enabled_dataset_kinds(workflows[version].current.profile)
+        for version in versions
+    }
+    enabled_sets = set(enabled_by_version.values())
+    if len(enabled_sets) != 1:
+        raise LocalConfigError(
+            "Version-family profiles enable different dataset sections: "
+            f"{describe_section_mismatch(enabled_by_version)}"
         )
-    ]
+    kinds = next(iter(enabled_sets))
 
     merged_datasets: dict[str, dict] = {}
     merged_comparisons: dict[str, dict] = {}
@@ -1189,6 +1176,7 @@ def _run_version_family_build(
             "Version-family profiles must declare matching type charts"
         )
     type_dataset = type_datasets[0]
+    prune_public_datasets(wiki_root, {*merged_datasets, "types"}, site_id)
     _write_type_build(type_dataset, data_root, wiki_root)
     for kind, dataset in merged_datasets.items():
         comparison = merged_comparisons.get(kind)

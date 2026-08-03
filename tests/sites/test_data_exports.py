@@ -7,7 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from romwiki.sites.data_exports import validate_public_data, write_public_dataset
+from romwiki.sites.data_exports import (
+    prune_public_datasets,
+    validate_public_data,
+    write_public_dataset,
+)
 from romwiki.util.errors import SiteError
 
 
@@ -67,6 +71,37 @@ class PublicDataExportTests(unittest.TestCase):
             write_public_dataset(root, "moves", dataset, None)
 
             self.assertFalse(comparison_path.exists())
+
+    def test_complete_build_prunes_disabled_dataset_exports(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for kind in ("pokemon", "trainers", "locations"):
+                write_public_dataset(
+                    root,
+                    kind,
+                    {
+                        "schema_version": 1,
+                        "game": "test-game",
+                        "dataset": kind,
+                        "record_count": 0,
+                        "records": [],
+                    },
+                    None,
+                )
+
+            prune_public_datasets(
+                root,
+                {"pokemon"},
+                "test-game",
+            )
+            manifest = json.loads(
+                (root / "data/manifest.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(
+            [entry["path"] for entry in manifest["files"]],
+            ["pokemon.json.gz"],
+        )
 
     def test_validation_rejects_a_modified_archive(self) -> None:
         dataset = {

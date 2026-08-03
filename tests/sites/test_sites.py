@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from romwiki.sites import SiteCatalog, build_sites
-from romwiki.sites.build import _run_command
+from romwiki.sites.build import _run_command, _validate_generated_content
 from romwiki.sites.catalog import _validate_profile_references
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
 from romwiki.util.errors import SiteError
@@ -161,6 +161,63 @@ class SiteCatalogTests(unittest.TestCase):
                 (mismatched,),
                 catalog.profile_repository,
             )
+
+    def test_generated_sections_must_match_profile_capabilities(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        site = catalog.get("platinum")
+        self.assertIsNotNone(site.game)
+        assert site.game is not None
+        self.assertIsNotNone(catalog.profile_repository)
+        incomplete = replace(
+            site,
+            game=replace(
+                site.game,
+                generated_sections=tuple(
+                    section
+                    for section in site.game.generated_sections
+                    if section != "trainers"
+                ),
+            ),
+        )
+
+        with self.assertRaisesRegex(
+            SiteError,
+            "generated_sections do not match",
+        ):
+            _validate_profile_references(
+                (incomplete,),
+                catalog.profile_repository,
+            )
+
+    def test_generated_content_validation_honors_declared_sections(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        site = catalog.get("platinum")
+        self.assertIsNotNone(site.game)
+        assert site.game is not None
+        sections = (
+            "pokemon",
+            "abilities",
+            "moves",
+            "items",
+            "encounters",
+            "types",
+            "data",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "mkdocs.yml"
+            config.write_text("site_name: Partial\n", encoding="utf-8")
+            partial = replace(
+                site,
+                config_path=config,
+                game=replace(site.game, generated_sections=sections),
+            )
+            for section in sections:
+                index = root / "wiki" / section / "index.md"
+                index.parent.mkdir(parents=True)
+                index.write_text(f"# {section}\n", encoding="utf-8")
+
+            _validate_generated_content(partial)
 
     def test_build_requires_an_explicit_selection(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

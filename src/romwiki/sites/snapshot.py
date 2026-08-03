@@ -11,7 +11,11 @@ import tarfile
 import tempfile
 from pathlib import Path, PurePosixPath
 
-from romwiki.sites.catalog import SiteCatalog, SiteDefinition
+from romwiki.sites.catalog import (
+    DEFAULT_GENERATED_SECTIONS,
+    SiteCatalog,
+    SiteDefinition,
+)
 from romwiki.sites.data_exports import validate_public_data
 from romwiki.util.errors import SiteError
 
@@ -34,9 +38,7 @@ GENERATED_WIKI_SECTIONS = (
     "changes",
     "data",
 )
-REQUIRED_WIKI_SECTIONS = tuple(
-    section for section in GENERATED_WIKI_SECTIONS if section != "changes"
-)
+REQUIRED_WIKI_SECTIONS = DEFAULT_GENERATED_SECTIONS
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
 SNAPSHOT_SCHEMA_VERSION = 2
 _NON_GENERATION_SOURCES = {
@@ -72,12 +74,15 @@ def create_generated_wiki_snapshot(
             delete=False,
         ) as raw_stream:
             temporary_path = Path(raw_stream.name)
-            with gzip.GzipFile(
-                filename="",
-                mode="wb",
-                fileobj=raw_stream,
-                mtime=0,
-            ) as gzip_stream, tarfile.open(fileobj=gzip_stream, mode="w") as archive:
+            with (
+                gzip.GzipFile(
+                    filename="",
+                    mode="wb",
+                    fileobj=raw_stream,
+                    mtime=0,
+                ) as gzip_stream,
+                tarfile.open(fileobj=gzip_stream, mode="w") as archive,
+            ):
                 manifest = json.dumps(
                     {
                         "schema_version": SNAPSHOT_SCHEMA_VERSION,
@@ -205,14 +210,15 @@ def _generated_files(catalog: SiteCatalog) -> list[Path]:
         if not _is_published_data_site(site):
             continue
         wiki_root = site.config_path.parent / "wiki"
-        for section in REQUIRED_WIKI_SECTIONS:
+        assert site.game is not None
+        for section in site.game.generated_sections:
             index = wiki_root / section / "index.md"
             if not index.is_file():
                 raise SiteError(
                     f"Generated wiki section is missing for {site.id}: {section}"
                 )
         validate_public_data(wiki_root)
-        for section in GENERATED_WIKI_SECTIONS:
+        for section in (*site.game.generated_sections, "changes"):
             section_root = wiki_root / section
             if section_root.is_dir():
                 files.extend(
@@ -229,7 +235,8 @@ def _allowed_prefixes(catalog: SiteCatalog) -> tuple[PurePosixPath, ...]:
         if not _is_published_data_site(site):
             continue
         site_root = site.config_path.parent.relative_to(catalog.root)
-        for section in GENERATED_WIKI_SECTIONS:
+        assert site.game is not None
+        for section in (*site.game.generated_sections, "changes"):
             prefixes.append(PurePosixPath(site_root.as_posix()) / "wiki" / section)
     return tuple(prefixes)
 

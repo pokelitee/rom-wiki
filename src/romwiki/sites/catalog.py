@@ -8,12 +8,19 @@ from pathlib import Path
 from typing import Any, Literal
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.sections import DATASET_KINDS, enabled_dataset_kinds
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.util.errors import SiteError
 
 SiteKind = Literal["portal", "game"]
 _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SUPPORTED_THEMES = frozenset({"black-white", "platinum", "portal"})
+DEFAULT_GENERATED_SECTIONS = (
+    *DATASET_KINDS,
+    "types",
+    "data",
+)
+_GENERATED_SECTION_SET = frozenset(DEFAULT_GENERATED_SECTIONS)
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +33,7 @@ class GameMetadata:
     platform: str
     platform_name: str
     creator: str
+    generated_sections: tuple[str, ...] = DEFAULT_GENERATED_SECTIONS
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,6 +212,25 @@ def _load_game_metadata(
         platform_name = game["platform_name"]
         if not isinstance(platform_name, str) or not platform_name.strip():
             raise SiteError(f"Invalid platform name in {path.relative_to(root)}")
+        raw_sections = game.get("generated_sections", DEFAULT_GENERATED_SECTIONS)
+        generated_sections = (
+            tuple(raw_sections) if isinstance(raw_sections, (list, tuple)) else ()
+        )
+        if (
+            not generated_sections
+            or len(generated_sections) != len(set(generated_sections))
+            or not all(
+                isinstance(section, str) and section in _GENERATED_SECTION_SET
+                for section in generated_sections
+            )
+        ):
+            raise SiteError(f"Invalid generated_sections in {path.relative_to(root)}")
+        for required in ("pokemon", "moves", "items", "encounters", "types", "data"):
+            if data_driven and required not in generated_sections:
+                raise SiteError(
+                    f"Data-driven game in {path.relative_to(root)} must require "
+                    f"generated section {required!r}"
+                )
         return GameMetadata(
             profiles=profiles,
             versions=versions,
@@ -213,6 +240,7 @@ def _load_game_metadata(
             platform=slug_fields["platform"],
             platform_name=platform_name.strip(),
             creator=creator.strip(),
+            generated_sections=generated_sections,
         )
     except (KeyError, TypeError) as error:
         raise SiteError(f"Invalid game metadata {path}: {error}") from error
@@ -273,4 +301,23 @@ def _validate_profile_references(
         if engine.generation != site.game.generation:
             raise SiteError(
                 f"Game site {site.id} generation does not match its profiles"
+            )
+        enabled_by_profile = {
+            profile.id: enabled_dataset_kinds(profile) for profile in selected
+        }
+        enabled_sets = set(enabled_by_profile.values())
+        if len(enabled_sets) != 1:
+            raise SiteError(
+                f"Game site {site.id} profiles enable different dataset sections"
+            )
+        declared = frozenset(
+            section
+            for section in site.game.generated_sections
+            if section in DATASET_KINDS
+        )
+        expected = frozenset(next(iter(enabled_sets)))
+        if declared != expected:
+            raise SiteError(
+                f"Game site {site.id} generated_sections do not match its "
+                f"profile sections: expected {', '.join(sorted(expected))}"
             )

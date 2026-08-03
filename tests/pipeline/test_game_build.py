@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from romwiki.pipeline.game_build import GameBuildWorkflow
+from romwiki.util.errors import DataSourceError, ProfileError
 
 
 class GameBuildWorkflowTests(unittest.TestCase):
@@ -14,6 +15,8 @@ class GameBuildWorkflowTests(unittest.TestCase):
         calls = []
         current_context = Mock()
         baseline_context = Mock()
+        current_context.profile = _profile("hack")
+        baseline_context.profile = _profile("base")
         current_context.moves.side_effect = lambda: (
             calls.append("current") or _moves("hack", 60)
         )
@@ -35,6 +38,7 @@ class GameBuildWorkflowTests(unittest.TestCase):
         self, context_type: Mock
     ) -> None:
         context = Mock()
+        context.profile = _profile("hack")
         context.moves.return_value = _moves("hack", 60)
         context_type.return_value = context
         workflow = GameBuildWorkflow(_inspection("hack"), Mock())
@@ -51,6 +55,8 @@ class GameBuildWorkflowTests(unittest.TestCase):
         calls = []
         current_context = Mock()
         baseline_context = Mock()
+        current_context.profile = _profile("hack", optional=True)
+        baseline_context.profile = _profile("base", optional=True)
         for kind in (
             "pokemon",
             "abilities",
@@ -76,11 +82,114 @@ class GameBuildWorkflowTests(unittest.TestCase):
         self.assertTrue(all(call.startswith("baseline:") for call in calls[:7]))
         self.assertTrue(all(call.startswith("current:") for call in calls[7:]))
 
+    @patch("romwiki.pipeline.game_build.GameBuildContext")
+    def test_full_build_omits_disabled_optional_sections(
+        self, context_type: Mock
+    ) -> None:
+        context = Mock()
+        context.profile = _profile("partial")
+        for kind in ("pokemon", "abilities", "moves", "items", "encounters"):
+            getattr(context, kind).return_value = _empty_dataset(kind, "partial")
+        context_type.return_value = context
+        workflow = GameBuildWorkflow(_inspection("partial"), Mock())
+
+        builds = workflow.build_all()
+
+        self.assertEqual(
+            tuple(builds),
+            ("pokemon", "abilities", "moves", "items", "encounters"),
+        )
+        context.trainers.assert_not_called()
+        context.locations.assert_not_called()
+
+    @patch("romwiki.pipeline.game_build.GameBuildContext")
+    def test_missing_required_section_has_profile_focused_error(
+        self, context_type: Mock
+    ) -> None:
+        context = Mock()
+        context.profile = _profile("partial")
+        del context.profile.layout["encounters"]
+        context_type.return_value = context
+        workflow = GameBuildWorkflow(_inspection("partial"), Mock())
+
+        with self.assertRaisesRegex(
+            ProfileError,
+            "Profile 'partial'.*encounters requires encounters",
+        ):
+            workflow.build_all()
+
+    @patch("romwiki.pipeline.game_build.GameBuildContext")
+    def test_enabled_section_cannot_return_none(self, context_type: Mock) -> None:
+        context = Mock()
+        context.profile = _profile("complete", optional=True)
+        context.locations.return_value = None
+        context_type.return_value = context
+        workflow = GameBuildWorkflow(_inspection("complete"), Mock())
+
+        with self.assertRaisesRegex(
+            ProfileError,
+            "enables 'locations'.*returned no dataset",
+        ):
+            workflow.build("locations")
+
+    @patch("romwiki.pipeline.game_build.GameBuildContext")
+    def test_explicit_build_rejects_disabled_optional_section(
+        self, context_type: Mock
+    ) -> None:
+        context = Mock()
+        context.profile = _profile("partial")
+        context_type.return_value = context
+        workflow = GameBuildWorkflow(_inspection("partial"), Mock())
+
+        with self.assertRaisesRegex(DataSourceError, "does not enable.*trainers"):
+            workflow.build("trainers")
+
+    @patch("romwiki.pipeline.game_build.GameBuildContext")
+    def test_comparative_build_rejects_mismatched_optional_sections(
+        self, context_type: Mock
+    ) -> None:
+        current_context = Mock()
+        baseline_context = Mock()
+        current_context.profile = _profile("hack", optional=True)
+        baseline_context.profile = _profile("base")
+        context_type.side_effect = [current_context, baseline_context]
+        workflow = GameBuildWorkflow(
+            _inspection("hack"), Mock(), baseline=_inspection("base")
+        )
+
+        with self.assertRaisesRegex(
+            ProfileError,
+            "different dataset sections.*base omits locations, trainers",
+        ):
+            workflow.build_all()
+
 
 def _inspection(profile_id: str) -> Mock:
     result = Mock()
     result.match.profile.id = profile_id
     return result
+
+
+def _profile(profile_id: str, *, optional: bool = False) -> Mock:
+    profile = Mock()
+    profile.id = profile_id
+    profile.layout = {
+        "personal": "personal",
+        "messages": "messages",
+        "moves": "moves",
+        "item_data": "items",
+        "encounters": "encounters",
+        **(
+            {
+                "trainer_data": "trainers",
+                "trainer_parties": "parties",
+                "map_matrices": "maps",
+            }
+            if optional
+            else {}
+        ),
+    }
+    return profile
 
 
 def _moves(game: str, power: int) -> dict:

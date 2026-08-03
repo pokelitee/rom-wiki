@@ -8,7 +8,6 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
-from romwiki.sites.snapshot import REQUIRED_WIKI_SECTIONS
 from romwiki.util.errors import SiteError
 from romwiki.util.logging import timed_operation
 
@@ -69,10 +68,11 @@ def _site_config_path(site: SiteDefinition, *, dev: bool) -> Path:
 def _validate_generated_content(site: SiteDefinition) -> None:
     if site.kind != "game" or (site.game is not None and not site.game.data_driven):
         return
+    assert site.game is not None
     wiki_root = site.config_path.parent / "wiki"
     missing = [
         section
-        for section in REQUIRED_WIKI_SECTIONS
+        for section in site.game.generated_sections
         if not (wiki_root / section / "index.md").is_file()
     ]
     if missing:

@@ -7,18 +7,13 @@ from typing import Any
 from romwiki.pipeline.build_context import GameBuildContext
 from romwiki.pipeline.comparisons import compare_datasets
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.sections import (
+    DATASET_KINDS,
+    describe_section_mismatch,
+    enabled_dataset_kinds,
+)
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError, ProfileError
-
-DATASET_KINDS = (
-    "pokemon",
-    "abilities",
-    "moves",
-    "items",
-    "encounters",
-    "trainers",
-    "locations",
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,18 +64,29 @@ class GameBuildWorkflow:
             raise DataSourceError(
                 f"Unsupported build dataset {kind!r}; choose from {choices}"
             )
+        current_kinds = enabled_dataset_kinds(self.current.profile)
+        if kind not in current_kinds:
+            raise DataSourceError(
+                f"Profile {self.current.profile.id!r} does not enable the "
+                f"optional {kind!r} dataset section"
+            )
+        if self.baseline is not None:
+            self._validate_matching_sections(current_kinds)
         baseline = self._dataset(self.baseline, kind) if self.baseline else None
         current = self._dataset(self.current, kind)
         comparison = compare_datasets(current, baseline) if baseline else None
         return DatasetBuild(current, baseline, comparison)
 
     def build_all(self) -> dict[str, DatasetBuild]:
+        kinds = enabled_dataset_kinds(self.current.profile)
+        if self.baseline is not None:
+            self._validate_matching_sections(kinds)
         baselines = (
-            {kind: self._dataset(self.baseline, kind) for kind in DATASET_KINDS}
+            {kind: self._dataset(self.baseline, kind) for kind in kinds}
             if self.baseline
             else {}
         )
-        currents = {kind: self._dataset(self.current, kind) for kind in DATASET_KINDS}
+        currents = {kind: self._dataset(self.current, kind) for kind in kinds}
         return {
             kind: DatasetBuild(
                 currents[kind],
@@ -91,12 +97,33 @@ class GameBuildWorkflow:
                     else None
                 ),
             )
-            for kind in DATASET_KINDS
+            for kind in kinds
         }
+
+    def _validate_matching_sections(self, current_kinds: tuple[str, ...]) -> None:
+        if self.baseline is None:
+            return
+        baseline_kinds = enabled_dataset_kinds(self.baseline.profile)
+        if baseline_kinds == current_kinds:
+            return
+        enabled = {
+            self.current.profile.id: current_kinds,
+            self.baseline.profile.id: baseline_kinds,
+        }
+        raise ProfileError(
+            "Current and baseline profiles enable different dataset sections: "
+            f"{describe_section_mismatch(enabled)}"
+        )
 
     @staticmethod
     def _dataset(context: GameBuildContext | None, kind: str) -> dict[str, Any]:
         if context is None:
             raise DataSourceError("Dataset context is required")
         factory = getattr(context, kind)
-        return factory()
+        dataset = factory()
+        if dataset is None:
+            raise ProfileError(
+                f"Profile {context.profile.id!r} enables {kind!r}, but its "
+                "builder returned no dataset"
+            )
+        return dataset
