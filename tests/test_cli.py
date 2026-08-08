@@ -740,6 +740,7 @@ patched_rom = "roms/white-us.nds"
                 max_page_kb=512,
                 max_images=150,
                 base_url=None,
+                jobs=None,
             )
 
             def inspection(

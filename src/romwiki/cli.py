@@ -346,6 +346,7 @@ def build_parser() -> argparse.ArgumentParser:
     regenerate_parser.add_argument("--max-page-kb", type=int, default=512)
     regenerate_parser.add_argument("--max-images", type=int, default=150)
     regenerate_parser.add_argument("--base-url")
+    _add_jobs_argument(regenerate_parser)
     _add_site_root_argument(regenerate_parser)
 
     baseline_parser = subparsers.add_parser(
@@ -407,6 +408,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_site_parser.add_argument(
         "--output", type=Path, default=Path("dist"), help="artifact output directory"
     )
+    _add_jobs_argument(build_site_parser)
     _add_site_root_argument(build_site_parser)
     serve_site_parser = site_subparsers.add_parser(
         "serve",
@@ -462,6 +464,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--base-url",
         help="deployment base URL used to resolve absolute project-site links",
     )
+    _add_jobs_argument(audit_site_parser)
     snapshot_parser = site_subparsers.add_parser(
         "snapshot", help="archive generated, ROM-free wiki Markdown"
     )
@@ -705,6 +708,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         max_html_bytes=args.max_page_kb * 1024,
                         max_images_per_page=args.max_images,
                         base_url=args.base_url,
+                        jobs=args.jobs,
                     )
                 _report_site_audit(report)
             elif args.site_command == "list":
@@ -722,6 +726,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         args.output,
                         site_ids=args.site_ids,
                         build_all=args.build_all,
+                        jobs=args.jobs,
                     )
                 for site in built:
                     _LOG.info(
@@ -1368,6 +1373,7 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             args.output,
             site_ids=args.site_ids,
             build_all=args.regenerate_all,
+            jobs=args.jobs,
         )
     for site in built:
         _LOG.info("Built %s: %s", site.id, site.output_path(args.output.resolve()))
@@ -1378,6 +1384,7 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             max_html_bytes=args.max_page_kb * 1024,
             max_images_per_page=args.max_images,
             base_url=args.base_url,
+            jobs=args.jobs,
         )
     _report_site_audit(report)
 
@@ -1727,6 +1734,17 @@ def _add_site_root_argument(parser: argparse.ArgumentParser) -> None:
         type=Path,
         default=Path.cwd(),
         help="repository root containing portal and games",
+    )
+
+
+def _add_jobs_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        help=(
+            "parallel MkDocs builds and audit page-parse workers "
+            "(default: one per CPU; 1 disables parallelism)"
+        ),
     )
 
 

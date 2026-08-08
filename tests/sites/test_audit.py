@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from romwiki.sites.audit import audit_site
+from romwiki.sites.audit import _PARALLEL_PAGE_THRESHOLD, audit_site
+from romwiki.util.errors import SiteError
 
 
 class SiteAuditTests(unittest.TestCase):
@@ -207,6 +208,41 @@ class SiteAuditTests(unittest.TestCase):
             report = audit_site(root)
 
         self.assertTrue(report.ok, [issue.format() for issue in report.errors])
+
+    def test_parallel_and_serial_parsing_agree(self) -> None:
+        # Enough pages to cross the threshold where audit_site parses in
+        # worker processes, so both code paths are exercised on one artifact.
+        page_count = _PARALLEL_PAGE_THRESHOLD + 10
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", '<a href="page-0/">First</a>')
+            for index in range(page_count):
+                _write_page(
+                    root / f"page-{index}" / "index.html",
+                    f'<a href="../missing-{index}/">Broken</a>',
+                )
+
+            parallel = audit_site(root, jobs=4)
+            serial = audit_site(root, jobs=1)
+
+        self.assertEqual(parallel.page_count, page_count + 1)
+        self.assertEqual(parallel.page_count, serial.page_count)
+        self.assertEqual(parallel.link_count, serial.link_count)
+        self.assertEqual(parallel.total_html_bytes, serial.total_html_bytes)
+        self.assertEqual(parallel.largest_page, serial.largest_page)
+        self.assertEqual(
+            sorted(issue.format() for issue in parallel.errors),
+            sorted(issue.format() for issue in serial.errors),
+        )
+        self.assertEqual(len(parallel.errors), page_count)
+
+    def test_rejects_a_job_count_below_one(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", "<p>Only page</p>")
+
+            with self.assertRaises(SiteError):
+                audit_site(root, jobs=0)
 
 
 def _write_page(path: Path, content: str) -> None:

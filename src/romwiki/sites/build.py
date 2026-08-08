@@ -5,11 +5,12 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from time import perf_counter
 
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.util.errors import SiteError
-from romwiki.util.logging import timed_operation
 
 CommandRunner = Callable[[Sequence[str]], None]
 _LOG = logging.getLogger("romwiki")
@@ -23,6 +24,7 @@ def build_sites(
     build_all: bool = False,
     dev: bool = False,
     site_url: str | None = None,
+    jobs: int | None = None,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
     selected = catalog.select(site_ids, all_published=build_all)
@@ -35,23 +37,86 @@ def build_sites(
     )
     for site in ordered:
         _validate_generated_content(site)
-        destination = site.output_path(resolved_output)
-        config_path = _site_config_path(site, dev=dev)
-        with timed_operation(_LOG, f"MkDocs build for {site.id}"):
-            command_runner(
-                (
-                    sys.executable,
-                    "-m",
-                    "mkdocs",
-                    "build",
-                    "--clean",
-                    "--config-file",
-                    str(config_path),
-                    "--site-dir",
-                    str(destination),
-                )
-            )
+
+    # MkDocs `--clean` empties the site directory it is given, so a site that
+    # renders into the artifact root (the portal) would delete the game
+    # directories nested inside it. Those roots run first and alone; everything
+    # else writes to a private subdirectory and can run concurrently.
+    root_plans: list[tuple[SiteDefinition, tuple[str, ...]]] = []
+    nested_plans: list[tuple[SiteDefinition, tuple[str, ...]]] = []
+    for site in ordered:
+        plan = (site, _build_command(site, resolved_output, dev=dev))
+        writes_to_root = site.output_path(resolved_output) == resolved_output
+        (root_plans if writes_to_root else nested_plans).append(plan)
+
+    for site, command in root_plans:
+        _run_site_build(site, command, command_runner)
+
+    worker_count = _worker_count(jobs, len(nested_plans))
+    if worker_count <= 1:
+        for site, command in nested_plans:
+            _run_site_build(site, command, command_runner)
+    else:
+        _LOG.info(
+            "Building %s sites with %s parallel MkDocs jobs",
+            len(nested_plans),
+            worker_count,
+        )
+        with ThreadPoolExecutor(max_workers=worker_count) as pool:
+            futures = [
+                pool.submit(_run_site_build, site, command, command_runner)
+                for site, command in nested_plans
+            ]
+            # Surface the first failure only after every build has settled, so
+            # a broken site cannot leave sibling MkDocs processes orphaned.
+            errors = [future.exception() for future in futures]
+        for error in errors:
+            if error is not None:
+                raise error
     return ordered
+
+
+def _worker_count(jobs: int | None, task_count: int) -> int:
+    if jobs is not None and jobs < 1:
+        raise SiteError(f"Parallel job count must be at least 1: {jobs}")
+    if task_count <= 1:
+        return 1
+    if jobs is not None:
+        return min(jobs, task_count)
+    return min(task_count, os.cpu_count() or 1)
+
+
+def _build_command(
+    site: SiteDefinition, resolved_output: Path, *, dev: bool
+) -> tuple[str, ...]:
+    return (
+        sys.executable,
+        "-m",
+        "mkdocs",
+        "build",
+        "--clean",
+        "--config-file",
+        str(_site_config_path(site, dev=dev)),
+        "--site-dir",
+        str(site.output_path(resolved_output)),
+    )
+
+
+def _run_site_build(
+    site: SiteDefinition, command: Sequence[str], command_runner: CommandRunner
+) -> None:
+    started = perf_counter()
+    _LOG.info("MkDocs build for %s started", site.id)
+    try:
+        command_runner(command)
+    except Exception:
+        _LOG.info(
+            "MkDocs build for %s failed after %.1fs", site.id, perf_counter() - started
+        )
+        raise
+    _LOG.info(
+        "MkDocs build for %s completed in %.1fs", site.id, perf_counter() - started
+    )
 
 
 def _site_config_path(site: SiteDefinition, *, dev: bool) -> Path:
@@ -87,9 +152,20 @@ def _run_command(command: Sequence[str], *, site_url: str | None = None) -> None
     if site_url is not None:
         environment = os.environ.copy()
         environment["ROMWIKI_SITE_URL"] = site_url
-    try:
-        subprocess.run(command, check=True, env=environment)
-    except subprocess.CalledProcessError as error:
+    # Concurrent builds would interleave their MkDocs output line by line, so
+    # it is captured and replayed only when a build actually fails.
+    completed = subprocess.run(
+        command,
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if completed.returncode != 0:
+        output = (completed.stdout or "").strip()
+        detail = f"\n{output}" if output else ""
         raise SiteError(
-            f"MkDocs build failed with exit code {error.returncode}"
-        ) from error
+            f"MkDocs build failed with exit code {completed.returncode}{detail}"
+        )

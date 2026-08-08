@@ -5,6 +5,8 @@ import os
 import posixpath
 import re
 from bisect import bisect_right
+from collections.abc import Iterator, Sequence
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -13,6 +15,9 @@ from romwiki.util.errors import SiteError
 
 _LOG = logging.getLogger("romwiki")
 _PAGE_PROGRESS_INTERVAL = 1_000
+# Below this page count, process startup costs more than the parse it saves.
+_PARALLEL_PAGE_THRESHOLD = 500
+_PARSE_CHUNK_SIZE = 64
 
 # minify_html drops attribute-value quotes whenever a value has no
 # whitespace/quote/`=`/angle-bracket characters (e.g. `href=../..` instead of
@@ -204,12 +209,49 @@ def _audit_container_tags(
                 )
 
 
+def _read_and_parse(task: tuple[str, str]) -> tuple[str, int, _ParsedPage]:
+    """Read one artifact page and parse it. Runs in a worker process."""
+    root, relative = task
+    page = Path(root) / relative
+    return (
+        relative,
+        page.stat().st_size,
+        _parse_page(page.read_text(encoding="utf-8"), relative),
+    )
+
+
+def _parse_worker_count(jobs: int | None, page_count: int) -> int:
+    if jobs is not None and jobs < 1:
+        raise SiteError(f"Parallel job count must be at least 1: {jobs}")
+    if page_count < _PARALLEL_PAGE_THRESHOLD:
+        return 1
+    if jobs is not None:
+        return min(jobs, page_count)
+    return min(page_count, os.cpu_count() or 1)
+
+
+def _parsed_pages(
+    tasks: Sequence[tuple[str, str]], *, jobs: int | None
+) -> Iterator[tuple[str, int, _ParsedPage]]:
+    """Yield (relative path, byte size, parse result) in `tasks` order."""
+    worker_count = _parse_worker_count(jobs, len(tasks))
+    if worker_count <= 1:
+        yield from map(_read_and_parse, tasks)
+        return
+    _LOG.info("Parsing pages with %s parallel workers", worker_count)
+    # Page parsing is pure regex over independent files, so it scales across
+    # processes; the GIL keeps threads from helping here.
+    with ProcessPoolExecutor(max_workers=worker_count) as pool:
+        yield from pool.map(_read_and_parse, tasks, chunksize=_PARSE_CHUNK_SIZE)
+
+
 def audit_site(
     root: Path,
     *,
     max_html_bytes: int = 512 * 1024,
     max_images_per_page: int = 150,
     base_url: str | None = None,
+    jobs: int | None = None,
 ) -> SiteAuditReport:
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
@@ -235,9 +277,13 @@ def audit_site(
     warnings: list[SiteAuditIssue] = []
     total_bytes = 0
     largest_page: tuple[str, int] | None = None
-    for page_number, page in enumerate(html_files, start=1):
-        relative = page.relative_to(resolved_root).as_posix()
-        size = page.stat().st_size
+    tasks = [
+        (str(resolved_root), page.relative_to(resolved_root).as_posix())
+        for page in html_files
+    ]
+    for page_number, (relative, size, result) in enumerate(
+        _parsed_pages(tasks, jobs=jobs), start=1
+    ):
         total_bytes += size
         if largest_page is None or size > largest_page[1]:
             largest_page = (relative, size)
@@ -249,7 +295,6 @@ def audit_site(
                     f"HTML is {size:,} bytes; limit is {max_html_bytes:,}",
                 )
             )
-        result = _parse_page(page.read_text(encoding="utf-8"), relative)
         parsed[relative] = result
         errors.extend(result.issues)
         if result.image_count > max_images_per_page:

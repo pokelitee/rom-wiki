@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import tempfile
+import threading
+import time
 import unittest
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from romwiki.sites import SiteCatalog, build_sites
@@ -18,6 +22,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 class SiteCatalogTests(unittest.TestCase):
     def test_build_command_can_set_the_combined_site_url(self) -> None:
         with patch("romwiki.sites.build.subprocess.run") as run:
+            run.return_value = SimpleNamespace(returncode=0, stdout="")
             _run_command(("python", "-m", "mkdocs"), site_url="http://localhost:8000/")
 
         environment = run.call_args.kwargs["env"]
@@ -68,6 +73,12 @@ class SiteCatalogTests(unittest.TestCase):
     def test_build_all_targets_one_combined_artifact(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         commands: list[tuple[str, ...]] = []
+        lock = threading.Lock()
+
+        def record(command: Sequence[str]) -> None:
+            with lock:
+                commands.append(tuple(command))
+
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "dist"
 
@@ -79,7 +90,7 @@ class SiteCatalogTests(unittest.TestCase):
                     catalog,
                     output,
                     build_all=True,
-                    runner=lambda command: commands.append(tuple(command)),
+                    runner=record,
                 )
 
             self.assertEqual(
@@ -94,27 +105,34 @@ class SiteCatalogTests(unittest.TestCase):
                     "black-2-white-2",
                 ],
             )
+            # Game builds run concurrently, so only their destinations are
+            # guaranteed -- not the order the commands were issued in.
+            self.assertEqual(
+                {Path(command[-1]) for command in commands},
+                {
+                    output.resolve(),
+                    output.resolve() / "platinum",
+                    output.resolve() / "renegade-platinum",
+                    output.resolve() / "blaze-black-volt-white",
+                    output.resolve() / "blaze-black-2-volt-white-2",
+                    output.resolve() / "black-white",
+                    output.resolve() / "black-2-white-2",
+                },
+            )
+            # The portal renders into the artifact root, and MkDocs `--clean`
+            # empties that directory, so it must finish before any game build
+            # writes a subdirectory into it.
             self.assertEqual(Path(commands[0][-1]), output.resolve())
-            self.assertEqual(Path(commands[1][-1]), output.resolve() / "platinum")
-            self.assertEqual(
-                Path(commands[2][-1]), output.resolve() / "renegade-platinum"
-            )
-            self.assertEqual(
-                Path(commands[3][-1]),
-                output.resolve() / "blaze-black-volt-white",
-            )
-            self.assertEqual(
-                Path(commands[4][-1]),
-                output.resolve() / "blaze-black-2-volt-white-2",
-            )
-            self.assertEqual(Path(commands[5][-1]), output.resolve() / "black-white")
-            self.assertEqual(
-                Path(commands[6][-1]), output.resolve() / "black-2-white-2"
-            )
 
     def test_dev_build_uses_game_dev_configs_and_the_portal_config(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         commands: list[tuple[str, ...]] = []
+        lock = threading.Lock()
+
+        def record(command: Sequence[str]) -> None:
+            with lock:
+                commands.append(tuple(command))
+
         with (
             tempfile.TemporaryDirectory() as directory,
             patch("romwiki.sites.build._validate_generated_content"),
@@ -124,12 +142,19 @@ class SiteCatalogTests(unittest.TestCase):
                 Path(directory),
                 build_all=True,
                 dev=True,
-                runner=lambda command: commands.append(tuple(command)),
+                runner=record,
             )
 
+        # Concurrent game builds record commands out of order, so each command
+        # is matched back to its site by the destination it renders into.
+        destinations = {
+            site.output_path(Path(directory).resolve()): site.id for site in built
+        }
         configs = {
-            site.id: Path(command[command.index("--config-file") + 1])
-            for site, command in zip(built, commands, strict=True)
+            destinations[Path(command[-1])]: Path(
+                command[command.index("--config-file") + 1]
+            )
+            for command in commands
         }
         self.assertEqual(configs["portal"].name, "mkdocs.yml")
         for site in built:
@@ -218,6 +243,84 @@ class SiteCatalogTests(unittest.TestCase):
                 index.write_text(f"# {section}\n", encoding="utf-8")
 
             _validate_generated_content(partial)
+
+    def test_root_site_finishes_before_any_nested_build_starts(self) -> None:
+        # MkDocs `--clean` empties the artifact root, so the portal must not
+        # overlap the game builds that write subdirectories into it.
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        lock = threading.Lock()
+        running = 0
+        overlapped_with_root = False
+        root_finished = False
+
+        def record(command: Sequence[str]) -> None:
+            nonlocal running, overlapped_with_root, root_finished
+            is_root = Path(command[-1]) == Path("dist").resolve()
+            with lock:
+                if is_root and running > 0:
+                    overlapped_with_root = True
+                if not is_root and not root_finished:
+                    overlapped_with_root = True
+                running += 1
+            time.sleep(0.05)
+            with lock:
+                running -= 1
+                if is_root:
+                    root_finished = True
+
+        with patch("romwiki.sites.build._validate_generated_content"):
+            build_sites(catalog, Path("dist"), build_all=True, runner=record)
+
+        self.assertTrue(root_finished)
+        self.assertFalse(overlapped_with_root)
+
+    def test_a_failing_site_build_propagates_and_awaits_siblings(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+        lock = threading.Lock()
+        finished: list[str] = []
+
+        def record(command: Sequence[str]) -> None:
+            destination = Path(command[-1]).name
+            if destination == "platinum":
+                raise SiteError("MkDocs build failed with exit code 1")
+            time.sleep(0.05)
+            with lock:
+                finished.append(destination)
+
+        with (
+            patch("romwiki.sites.build._validate_generated_content"),
+            self.assertRaises(SiteError),
+        ):
+            build_sites(catalog, Path("dist"), build_all=True, runner=record)
+
+        # Every sibling still ran to completion rather than being abandoned
+        # mid-flight when one build raised.
+        self.assertEqual(
+            set(finished),
+            {
+                "dist",
+                "renegade-platinum",
+                "blaze-black-volt-white",
+                "blaze-black-2-volt-white-2",
+                "black-white",
+                "black-2-white-2",
+            },
+        )
+
+    def test_rejects_a_job_count_below_one(self) -> None:
+        catalog = SiteCatalog.load(REPOSITORY_ROOT)
+
+        with (
+            patch("romwiki.sites.build._validate_generated_content"),
+            self.assertRaises(SiteError),
+        ):
+            build_sites(
+                catalog,
+                Path("dist"),
+                build_all=True,
+                jobs=0,
+                runner=lambda command: None,
+            )
 
     def test_build_requires_an_explicit_selection(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
