@@ -139,6 +139,22 @@ def disassemble_function(
     return instructions
 
 
+def disassemble_script(
+    data: bytes,
+    *,
+    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+) -> tuple[Gen5Instruction, ...]:
+    """Return every instruction reachable from a script's function table."""
+    instructions = {
+        offset: instruction
+        for function_offset in parse_function_offsets(data)
+        for offset, instruction in disassemble_function(
+            data, function_offset, opcode_table=opcode_table
+        ).items()
+    }
+    return tuple(sorted(instructions.values(), key=lambda value: value.offset))
+
+
 def find_calls(data: bytes, start: int, opcode: int) -> tuple[Gen5Instruction, ...]:
     """Find every statically-reachable call to a specific opcode."""
     instructions = disassemble_function(data, start)

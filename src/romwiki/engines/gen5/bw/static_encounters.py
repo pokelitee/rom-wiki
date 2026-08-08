@@ -5,7 +5,7 @@ from collections.abc import Callable
 from romwiki.schema import RecordProvenance, StaticEncounter
 from romwiki.util.errors import InvalidRomError
 
-from .disassembler import Gen5Instruction, disassemble_function, parse_function_offsets
+from .disassembler import Gen5Instruction, disassemble_script
 from .scripts import FOSSIL_SPECIES_VARIABLE, find_fossil_revival_script
 
 
@@ -23,7 +23,7 @@ def discover_static_encounters(
     ] = []
     first_member_by_fact: dict[tuple[int, int | None, bool], int] = {}
     for member in range(member_count):
-        for instruction in _script_instructions(read_script_member(member)):
+        for instruction in disassemble_script(read_script_member(member)):
             fact = _static_fact(instruction, species_count=species_count)
             if fact is None:
                 continue
@@ -39,7 +39,7 @@ def discover_static_encounters(
     )
     fossil_commands = [
         instruction
-        for instruction in _script_instructions(read_script_member(fossil_member))
+        for instruction in disassemble_script(read_script_member(fossil_member))
         if instruction.name == "PokePartyAdd"
         and instruction.params[1] == FOSSIL_SPECIES_VARIABLE
         and 0 < instruction.params[3] <= 100
@@ -77,17 +77,6 @@ def discover_static_encounters(
             instruction,
         ) in enumerate(discovered)
     )
-
-
-def _script_instructions(data: bytes) -> tuple[Gen5Instruction, ...]:
-    instructions = {
-        offset: instruction
-        for function_offset in parse_function_offsets(data)
-        for offset, instruction in disassemble_function(data, function_offset).items()
-    }
-    return tuple(sorted(instructions.values(), key=lambda value: value.offset))
-
-
 def _static_fact(
     instruction: Gen5Instruction, *, species_count: int
 ) -> tuple[int, int | None, bool] | None:

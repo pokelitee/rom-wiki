@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.schema.versions import ABILITIES_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
-from romwiki.util.json_io import write_json_atomic
 
 
 def build_ability_dataset(
@@ -102,7 +100,3 @@ def build_ability_dataset(
         "name_source": pokemon_dataset.get("name_sources", {}).get("ability_names"),
         "records": records,
     }
-
-
-def write_ability_dataset(dataset: dict[str, Any], output_path: Path) -> None:
-    write_json_atomic(output_path, dataset)

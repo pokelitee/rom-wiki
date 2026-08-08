@@ -11,6 +11,58 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_engine_data_source_partials_have_explicit_consumers(self) -> None:
+        consumers = {
+            "gen4-dppt-data-sources.md": {
+                "platinum",
+                "renegade-platinum",
+            },
+            "gen5-bw-data-sources.md": {
+                "black-white",
+                "blaze-black-volt-white",
+            },
+            "gen5-b2w2-data-sources.md": {
+                "black-2-white-2",
+                "blaze-black-2-volt-white-2",
+            },
+        }
+        game_pages = {
+            path.parent.parent.name: path.read_text(encoding="utf-8")
+            for path in (REPOSITORY_ROOT / "sites/games").glob(
+                "*/wiki/data-sources.md"
+            )
+        }
+
+        for partial_name, expected_consumers in consumers.items():
+            partial = REPOSITORY_ROOT / "sites/shared/partials" / partial_name
+            self.assertTrue(partial.is_file())
+            partial_text = partial.read_text(encoding="utf-8")
+            for heading in (
+                "## Pokémon species data",
+                "## Items",
+                "## Moves",
+                "## Wild encounters",
+                "## Trainers",
+                "## Locations",
+                "## Text and names",
+            ):
+                self.assertIn(heading, partial_text)
+            directive = f'--8<-- "{partial_name}"'
+            actual_consumers = {
+                site_id
+                for site_id, page in game_pages.items()
+                if directive in page
+            }
+            with self.subTest(partial=partial_name):
+                self.assertEqual(actual_consumers, expected_consumers)
+
+        self.assertFalse(
+            (
+                REPOSITORY_ROOT
+                / "sites/shared/partials/gen4-data-sources.md"
+            ).exists()
+        )
+
     def test_published_game_overviews_follow_the_documentation_contract(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         for site in catalog.published():
@@ -59,6 +111,9 @@ class DocumentationTests(unittest.TestCase):
         shared_bw_notes = (
             REPOSITORY_ROOT / "sites/shared/partials/gen5-bw-data-sources.md"
         ).read_text(encoding="utf-8")
+        shared_b2w2_notes = (
+            REPOSITORY_ROOT / "sites/shared/partials/gen5-b2w2-data-sources.md"
+        ).read_text(encoding="utf-8")
 
         for stale_claim in (
             "there's no map location to link these to yet",
@@ -77,7 +132,7 @@ class DocumentationTests(unittest.TestCase):
         ):
             self.assertNotIn(limitation, shared_bw_notes)
         self.assertIn("**Black/White roaming Pokémon:**", shared_bw_notes)
-        self.assertIn("fully decoded and published as\nXtransceiver", shared_bw_notes)
+        self.assertNotIn("Curtis/Yancy", shared_bw_notes)
         self.assertIn("complete 30-item catalog", shared_bw_notes)
         self.assertNotIn("**Black City market stock:**", shared_bw_notes)
 
@@ -86,15 +141,21 @@ class DocumentationTests(unittest.TestCase):
                 REPOSITORY_ROOT / f"sites/games/{site_id}/wiki/data-sources.md"
             ).read_text(encoding="utf-8")
             with self.subTest(site=site_id):
-                self.assertIn(
-                    "links wild encounter variants in\nboth directions", notes
-                )
-                self.assertIn("shop selectors `0` through `25`", notes)
+                self.assertIn('--8<-- "gen5-b2w2-data-sources.md"', notes)
                 self.assertNotIn("## Known coverage limitations", notes)
-                self.assertIn("selectors `253` and `254`", notes)
-                self.assertIn("Black City's four market stores", notes)
-                self.assertIn("Curtis/Yancy repeat trades", notes)
-                self.assertIn("not roaming\nencounters", notes)
+                self.assertNotIn("Curtis/Yancy repeat trades", notes)
+
+        for supported_scope in (
+            "first 709 archive members",
+            "60-entry tutor table",
+            "`0` through `25`",
+            "selectors `253` and `254`",
+            "Black City's four conditional market stores",
+            "Curtis/Yancy trades",
+            "published as Xtransceiver",
+            "not roaming encounters",
+        ):
+            self.assertIn(supported_scope, shared_b2w2_notes)
 
     def test_documented_cli_commands_parse(self) -> None:
         parser = build_parser()

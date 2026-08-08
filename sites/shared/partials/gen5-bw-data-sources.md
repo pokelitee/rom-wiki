@@ -451,7 +451,3 @@ ever hit this in one *unused* map-name table entry, not a real page name).
   retail ROM stores executable code, not a data word, at the published species
   offset for at least one of them, so the species is not treated as a literal
   fact without a randomizer-style ASM patch.
-
-B2W2's Curtis/Yancy repeat trades are fully decoded and published as
-Xtransceiver interactions. They correctly omit a map link because the trade is
-mobile and has no single fixed location.

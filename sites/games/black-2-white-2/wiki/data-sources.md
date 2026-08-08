@@ -35,21 +35,7 @@ value. The profiles select PokéDB's `black-white` sprite set because that is th
 available Generation V reference set; unavailable version-specific images still
 fall back through the normal generic-sprite policy.
 
-The shared Generation V location pipeline links wild encounter variants in
-both directions with their map headers and attaches trainers, warps, outdoor
-connections, field items, static encounters, and script-dispatched shops to
-location pages. B2W2 shop selectors `0` through `25` resolve to the sequel's
-location-specific archive inventories; selectors `253` and `254` resolve BP
-exchanges at Gear Station and the PWT, and selector `255` identifies the
-standard badge-progression Poké Mart. Fixed NPC trades and the shared fossil
-revival are linked through map-owned text/common-script relationships.
-Black City's four market stores are also linked directly to the city. Each
-store lists its Black Tower unlock requirement, one-item-per-day limit, and
-separate weekday and weekend inventory rather than being treated as an
-ordinary Poké Mart.
+The sections below describe the shared Generation V Black 2/White 2 engine
+record formats and decoding techniques.
 
-Curtis/Yancy repeat trades are fully decoded and published as Xtransceiver
-interactions. They intentionally omit a map link because the trade is mobile
-and has no single fixed location. Tornadus and Thundurus are not roaming
-encounters in Black 2 or White 2; the ARM-backed roaming limitation applies
-only to the original Black and White games.
+--8<-- "gen5-b2w2-data-sources.md"

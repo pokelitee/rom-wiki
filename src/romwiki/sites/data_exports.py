@@ -8,7 +8,11 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from romwiki.util.errors import SiteError
-from romwiki.util.json_io import write_json_atomic, write_text_atomic
+from romwiki.util.json_io import (
+    write_bytes_atomic,
+    write_json_atomic,
+    write_text_atomic,
+)
 
 PUBLIC_DATA_MANIFEST_SCHEMA_VERSION = 1
 PUBLIC_DATA_DIRECTORY = "data"
@@ -59,12 +63,7 @@ def _write_gzip_json(path: Path, value: dict[str, Any]) -> None:
     with gzip.GzipFile(filename="", mode="wb", fileobj=stream, mtime=0) as archive:
         archive.write(source)
     content = stream.getvalue()
-    if path.is_file() and path.read_bytes() == content:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(f"{path.suffix}.tmp")
-    temporary.write_bytes(content)
-    temporary.replace(path)
+    write_bytes_atomic(path, content)
 
 
 def _write_manifest(data_root: Path, game: str) -> None:

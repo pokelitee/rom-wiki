@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import get_engine
@@ -8,7 +7,6 @@ from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import NPC_TRADES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
-from romwiki.util.json_io import write_json_atomic
 
 
 def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -67,12 +65,6 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
         },
         "records": records,
     }
-
-
-def write_npc_trade_dataset(dataset: dict[str, Any], output_path: Path) -> None:
-    write_json_atomic(output_path, dataset)
-
-
 def enrich_npc_trade_dataset(
     dataset: dict[str, Any],
     pokemon_dataset: dict[str, Any],

@@ -24,6 +24,16 @@ def write_text_atomic(path: Path, content: str) -> None:
     temporary_path.replace(path)
 
 
+def write_bytes_atomic(path: Path, content: bytes) -> None:
+    """Atomically write bytes unless ``path`` already has identical content."""
+    if path.is_file() and path.read_bytes() == content:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    temporary_path.write_bytes(content)
+    temporary_path.replace(path)
+
+
 def write_json_atomic(path: Path, value: Any) -> None:
     """Write ``value`` to ``path`` as pretty-printed, sorted JSON."""
     write_text_atomic(path, json.dumps(value, indent=2, sort_keys=True) + "\n")

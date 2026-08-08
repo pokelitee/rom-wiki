@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from romwiki.schema import RecordProvenance, StaticEncounter
 from romwiki.util.errors import InvalidRomError
 
-from .disassembler import Gen5Instruction, disassemble_function, parse_function_offsets
+from .disassembler import Gen5Instruction, disassemble_script
 
 _FOSSIL_ITEM_VARIABLE = 32802
 _FOSSIL_SPECIES_VARIABLE = 32803
@@ -26,7 +26,7 @@ def find_fossil_revival_script(
     item_count: int,
 ) -> tuple[int, tuple[Gen5FossilRevival, ...]]:
     instructions_by_member = {
-        member: _script_instructions(read_script_member(member))
+        member: disassemble_script(read_script_member(member))
         for member in range(member_count)
     }
     candidates = _fossil_candidates(
@@ -66,7 +66,7 @@ def discover_static_encounters(
         member: read_script_member(member) for member in range(member_count)
     }
     instructions_by_member = {
-        member: _script_instructions(data) for member, data in data_by_member.items()
+        member: disassemble_script(data) for member, data in data_by_member.items()
     }
 
     wild: list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]] = []
@@ -147,17 +147,6 @@ def _deduplicate_exact_paths(
             seen_member_facts.add(member_fact)
             seen_command_paths.add(command_path)
     return kept
-
-
-def _script_instructions(data: bytes) -> tuple[Gen5Instruction, ...]:
-    instructions = {
-        offset: instruction
-        for function_offset in parse_function_offsets(data)
-        for offset, instruction in disassemble_function(data, function_offset).items()
-    }
-    return tuple(sorted(instructions.values(), key=lambda value: value.offset))
-
-
 def _static_fact(
     instruction: Gen5Instruction, *, species_count: int
 ) -> tuple[int, int | None, bool] | None:
