@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from romwiki.sites import SiteCatalog, build_sites
 from romwiki.sites.build import _run_command, _validate_generated_content
-from romwiki.sites.catalog import _validate_profile_references
+from romwiki.sites.catalog import _load_game_metadata, _validate_profile_references
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
 from romwiki.util.errors import SiteError
 
@@ -20,6 +20,32 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class SiteCatalogTests(unittest.TestCase):
+    def test_data_driven_site_can_declare_a_truthful_vertical_slice(self) -> None:
+        metadata = _load_game_metadata(
+            Path("sites/games/future/game.toml"),
+            Path("."),
+            {
+                "profile": "future-game",
+                "generation": 6,
+                "base_game": "future-game",
+                "platform": "future-platform",
+                "platform_name": "Future Platform",
+                "creator": "Game Studio",
+                "generated_sections": [
+                    "pokemon",
+                    "abilities",
+                    "types",
+                    "data",
+                ],
+            },
+        )
+
+        self.assertTrue(metadata.data_driven)
+        self.assertEqual(
+            metadata.generated_sections,
+            ("pokemon", "abilities", "types", "data"),
+        )
+
     def test_build_command_can_set_the_combined_site_url(self) -> None:
         with patch("romwiki.sites.build.subprocess.run") as run:
             run.return_value = SimpleNamespace(returncode=0, stdout="")

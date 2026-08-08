@@ -48,7 +48,8 @@ def extract_location_dataset(
     if result.match is None:
         raise ProfileError("A known game profile is required for location extraction")
     profile = result.match.profile
-    if get_engine(profile.engine).formats.locations == "encounter-map":
+    extraction_format = get_engine(profile.engine).formats.location_extraction
+    if extraction_format == "archive-encounter-map":
         return _extract_encounter_map_location_dataset(
             result,
             trainer_dataset,
@@ -57,6 +58,30 @@ def extract_location_dataset(
             mart_dataset,
             trade_dataset,
         )
+    if extraction_format == "arm9-event-map":
+        return _extract_arm9_event_map_location_dataset(
+            result,
+            trainer_dataset,
+            static_encounter_dataset,
+            item_dataset,
+            mart_dataset,
+            trade_dataset,
+        )
+    raise DataSourceError(
+        f"Unsupported location extraction format: {extraction_format!r}"
+    )
+
+
+def _extract_arm9_event_map_location_dataset(
+    result: InspectionResult,
+    trainer_dataset: dict[str, Any] | None = None,
+    static_encounter_dataset: dict[str, Any] | None = None,
+    item_dataset: dict[str, Any] | None = None,
+    mart_dataset: dict[str, Any] | None = None,
+    trade_dataset: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
     try:
         events_path = profile.layout["events"]
         matrices_path = profile.layout["map_matrices"]

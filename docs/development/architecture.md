@@ -47,7 +47,8 @@ including its ROM version, hash, and egg-gift script offsets. Selecting
 identification then assigns extracted datasets to `platinum-us`. Generated baseline
 raw data remains under ignored `build/data/baselines/platinum-us/` paths. Cache
 manifests bind those files to the base profile, exact ROM SHA-256, schema version,
-and an explicit cache revision.
+resolved profile values, extraction-source fingerprint, and an explicit cache
+revision.
 
 `GameBuildWorkflow` is the dependency-aware orchestration boundary. A complete
 build materializes every baseline dataset before any patched dataset, then compares
@@ -88,6 +89,11 @@ store the same record in the same format at different paths or offsets, they can
 normally share an engine decoder and use different profiles. If a hack changes the
 record format or script behavior, the engine needs a parser variant or an explicit
 capability for that difference.
+
+Mature engine adapters also declare the layout and parameter keys they accept.
+The profile contract rejects missing and misspelled keys before extraction starts;
+an engine's first partial vertical slice may declare a deliberately smaller
+contract and expand it alongside its supported datasets.
 
 Platform readers own values encoded by the container itself, and engine decoders
 own stable format defaults such as sentinels and standard record counts. A profile
@@ -140,9 +146,10 @@ at the pipeline boundary instead of producing an internally inconsistent site.
 Schema versions for independently emitted contracts are declared centrally in
 `schema/versions.py`. Raw and enriched forms have separate constants even when
 both are currently version 1. Raw-cache validation selects the expected version
-by cache key, so changing one dataset contract does not invalidate unrelated raw
-datasets. Independently evolving nested contracts, such as trainer parties, keep
-their own schema version alongside the containing dataset's version.
+by cache key, while extraction-source changes conservatively invalidate the
+profile's raw-cache context. Independently evolving nested contracts, such as
+trainer parties, keep their own schema version alongside the containing dataset's
+version.
 
 Normalized records use stable semantic fields such as `species_id`, `base_stats`,
 or `held_item_id`; they do not expose where a value happened to live in one ROM.
@@ -160,6 +167,12 @@ Shared pipeline and renderer dispatch follows the adapter's semantic format
 metadata (`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and
 so on). Generation numbers and particular engine IDs must not select a shared code
 path.
+
+Location output shape and storage strategy are separate contracts. Renderers select
+the normalized `event-map` or `encounter-map` shape, while extraction selects the
+corresponding ARM9-table or archive-backed strategy. A new family can therefore
+reuse an existing renderer without pretending its map data uses another game's
+storage layout.
 
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract
@@ -319,8 +332,7 @@ Pipeline modules resolve
 `get_platform(profile.platform)` and `get_engine(profile.engine)` instead of
 importing `platforms.nds` or `engines.gen4.dppt` directly; only the registries
 themselves, and each engine/platform's own package, are allowed to name a specific
-implementation. `pipeline/trainer_party.py` predates the shared registries and uses
-the same dict-dispatch shape locally, scoped to the one contract it translates.
+implementation. Trainer-party normalization follows this same adapter boundary.
 
 Adding a second platform or engine is additive at the registry boundary: a new
 `platforms/<platform>/` or `engines/<generation>/<family>/` package, one new
@@ -337,6 +349,11 @@ coverage for mature engines while allowing a new platform or generation to land 
 truthful Pokémon-first vertical slice without dummy move, item, or encounter
 parsers. Profile layout still decides which supported optional sections are
 enabled; it cannot enable a section the engine has not declared.
+
+Data-driven sites may publish a truthful partial vertical slice. The site always
+includes Pokémon, the type chart, and public data downloads; its remaining
+generated sections must exactly match the datasets enabled by the engine and
+profile contracts.
 
 But a pipeline
 module that has only ever run against one engine can still carry that engine's

@@ -67,6 +67,7 @@ def _engine_dataset_contract(
         # retain the current complete-engine policy.
         return frozenset(DATASET_KINDS), DEFAULT_REQUIRED_DATASET_KINDS
     engine = get_engine(engine_id)
+    engine.profile_contract.validate(profile)
     return engine.dataset_kinds, engine.required_dataset_kinds
 
 

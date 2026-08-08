@@ -122,6 +122,7 @@ class PlatformContractTests(unittest.TestCase):
         engine_fields["formats"] = EngineFormats(
             encounters="conditional",
             locations="event-map",
+            location_extraction="arm9-event-map",
             pickup="split-table",
             trainers="class-gender",
             tutors="none",

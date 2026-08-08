@@ -7,6 +7,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.abilities import build_ability_dataset
+from romwiki.pipeline.cache_fingerprint import (
+    extraction_source_fingerprint,
+    profile_fingerprint,
+)
 from romwiki.pipeline.egg_moves import extract_egg_move_dataset
 from romwiki.pipeline.encounters import extract_encounter_dataset
 from romwiki.pipeline.enrich import (
@@ -51,6 +55,7 @@ class GameBuildContext:
         *,
         cache_root: Path | None = None,
         refresh: bool = False,
+        source_fingerprint: str | None = None,
     ) -> None:
         if result.match is None:
             raise ProfileError("A matched profile is required for a game build")
@@ -59,6 +64,7 @@ class GameBuildContext:
         self.pokedb = pokedb
         self.cache_root = cache_root
         self.refresh = refresh
+        self.source_fingerprint = source_fingerprint or extraction_source_fingerprint()
         self._values: dict[str, dict[str, Any]] = {}
         self._initial_cache_valid = self._manifest_valid()
 
@@ -360,5 +366,7 @@ class GameBuildContext:
             "schema_version": CACHE_MANIFEST_SCHEMA_VERSION,
             "cache_revision": CACHE_REVISION,
             "profile": self.profile.id,
+            "profile_fingerprint": profile_fingerprint(self.profile),
             "rom_sha256": self.result.image.hashes.sha256,
+            "source_fingerprint": self.source_fingerprint,
         }

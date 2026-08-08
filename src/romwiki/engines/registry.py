@@ -1,25 +1,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, get_args
 
 import romwiki.engines.gen4.dppt as gen4_dppt
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
+from romwiki.engines.profile_contracts import (
+    GEN4_DPPT_PROFILE_CONTRACT,
+    GEN5_B2W2_PROFILE_CONTRACT,
+    GEN5_BW_PROFILE_CONTRACT,
+    EngineProfileContract,
+)
 from romwiki.util.errors import DataSourceError
 
-# Canonical engine-name strings, for the handful of pipeline/renderer call
-# sites that must dispatch on which engine they're given a dataset for
-# (encounters/locations/trainers have genuinely different record shapes per
-# engine, unlike everything else, which dispatches generically through
-# EngineAdapter). Referencing these constants instead of repeating string
-# literals keeps that dispatch centralized on one source of truth.
+# Canonical engine identifiers used by registration and contract tests.
 GEN4_DPPT_ENGINE = "gen4_dppt"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
 
 EncounterFormat = Literal["conditional", "seasonal"]
 LocationFormat = Literal["event-map", "encounter-map"]
+LocationExtractionFormat = Literal["arm9-event-map", "archive-encounter-map"]
 PickupFormat = Literal["none", "split-table", "sliding-table"]
 TrainerFormat = Literal["class-gender", "battle-mode"]
 TutorFormat = Literal["none", "overlay-table", "personal-archive"]
@@ -54,6 +56,7 @@ class EngineConcern(Protocol):
 class EngineFormats:
     encounters: EncounterFormat
     locations: LocationFormat
+    location_extraction: LocationExtractionFormat
     pickup: PickupFormat
     trainers: TrainerFormat
     tutors: TutorFormat
@@ -109,6 +112,7 @@ class EngineAdapter:
     capabilities: frozenset[str] = frozenset()
     dataset_kinds: frozenset[str] = frozenset(DATASET_KINDS)
     required_dataset_kinds: frozenset[str] = DEFAULT_REQUIRED_DATASET_KINDS
+    profile_contract: EngineProfileContract = EngineProfileContract()
 
 
 _ENGINES: dict[str, EngineAdapter] = {
@@ -134,6 +138,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         formats=EngineFormats(
             encounters="conditional",
             locations="event-map",
+            location_extraction="arm9-event-map",
             pickup="split-table",
             trainers="class-gender",
             tutors="overlay-table",
@@ -142,6 +147,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         ),
         generation=4,
         presentation_features=frozenset({"contests"}),
+        profile_contract=GEN4_DPPT_PROFILE_CONTRACT,
     ),
     GEN5_BW_ENGINE: EngineAdapter(
         personal=gen5_bw,
@@ -165,6 +171,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         formats=EngineFormats(
             encounters="seasonal",
             locations="encounter-map",
+            location_extraction="archive-encounter-map",
             pickup="sliding-table",
             trainers="battle-mode",
             tutors="none",
@@ -179,6 +186,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             }
         ),
         capabilities=frozenset({"detached-npc-trades"}),
+        profile_contract=GEN5_BW_PROFILE_CONTRACT,
     ),
     GEN5_B2W2_ENGINE: EngineAdapter(
         personal=gen5_b2w2,
@@ -202,6 +210,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         formats=EngineFormats(
             encounters="seasonal",
             locations="encounter-map",
+            location_extraction="archive-encounter-map",
             pickup="sliding-table",
             trainers="battle-mode",
             tutors="personal-archive",
@@ -216,6 +225,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             }
         ),
         capabilities=frozenset({"detached-npc-trades"}),
+        profile_contract=GEN5_B2W2_PROFILE_CONTRACT,
     ),
 }
 
@@ -246,6 +256,41 @@ def unregister_engine(engine: str) -> None:
 
 
 def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
+    format_types = {
+        "encounters": EncounterFormat,
+        "locations": LocationFormat,
+        "location_extraction": LocationExtractionFormat,
+        "pickup": PickupFormat,
+        "trainers": TrainerFormat,
+        "tutors": TutorFormat,
+        "fossils": FossilFormat,
+        "static_encounters": StaticEncounterFormat,
+    }
+    invalid_formats = [
+        f"{name}={getattr(adapter.formats, name)!r}"
+        for name, format_type in format_types.items()
+        if getattr(adapter.formats, name) not in get_args(format_type)
+    ]
+    if invalid_formats:
+        raise DataSourceError(
+            f"Engine {engine!r} declares invalid formats: {', '.join(invalid_formats)}"
+        )
+    expected_location_shape = {
+        "arm9-event-map": "event-map",
+        "archive-encounter-map": "encounter-map",
+    }[adapter.formats.location_extraction]
+    if adapter.formats.locations != expected_location_shape:
+        raise DataSourceError(
+            f"Engine {engine!r} location extraction "
+            f"{adapter.formats.location_extraction!r} requires normalized "
+            f"shape {expected_location_shape!r}"
+        )
+    if adapter.generation is not None and (
+        not isinstance(adapter.generation, int) or adapter.generation < 1
+    ):
+        raise DataSourceError(
+            f"Engine {engine!r} declares invalid generation: {adapter.generation!r}"
+        )
     unknown = adapter.dataset_kinds - set(DATASET_KINDS)
     if unknown:
         raise DataSourceError(

@@ -11,7 +11,7 @@ from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.encounters import EncounterLocation
 from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
-from romwiki.util.errors import InvalidRomError, ProfileError
+from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 
@@ -19,8 +19,11 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for encounter extraction")
     profile = result.match.profile
-    if get_engine(profile.engine).formats.encounters == "seasonal":
+    encounter_format = get_engine(profile.engine).formats.encounters
+    if encounter_format == "seasonal":
         return _extract_seasonal_encounter_dataset(result)
+    if encounter_format != "conditional":
+        raise DataSourceError(f"Unsupported encounter format: {encounter_format!r}")
     try:
         archive_path = profile.layout["encounters"]
     except KeyError as error:

@@ -225,7 +225,7 @@ def _load_game_metadata(
             )
         ):
             raise SiteError(f"Invalid generated_sections in {path.relative_to(root)}")
-        for required in ("pokemon", "moves", "items", "encounters", "types", "data"):
+        for required in ("pokemon", "types", "data"):
             if data_driven and required not in generated_sections:
                 raise SiteError(
                     f"Data-driven game in {path.relative_to(root)} must require "

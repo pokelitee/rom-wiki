@@ -840,7 +840,7 @@ def _add_cache_argument(parser: argparse.ArgumentParser) -> None:
         help=(
             "ignore and replace cached raw extraction data for the current "
             "ROM; normally unnecessary since the cache already invalidates "
-            "itself whenever the ROM's hash changes"
+            "itself when the ROM, resolved profile, or extraction source changes"
         ),
     )
 

@@ -207,6 +207,12 @@ dataset_kinds=frozenset({"pokemon", "abilities"}),
 required_dataset_kinds=frozenset({"pokemon"}),
 ```
 
+Declare the profile keys understood by the adapter through its
+`EngineProfileContract` at the same time. Keep the initial contract as small as the
+verified slice, then add required or optional keys only when their extractor is
+implemented. Unknown keys are rejected so a misspelled locator cannot be silently
+ignored.
+
 The shared workflow renders only declared sections. Adding a section is an
 explicit engine-contract change plus the corresponding profile layout, parser,
 normalized-contract, and renderer tests; an unrelated layout key cannot silently

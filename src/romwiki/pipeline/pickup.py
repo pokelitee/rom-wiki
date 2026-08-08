@@ -8,7 +8,7 @@ from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import PICKUP_RAW_SCHEMA_VERSION
 from romwiki.util.byte_search import find_unique_pattern
-from romwiki.util.errors import ProfileError
+from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 
@@ -19,7 +19,11 @@ def extract_pickup_dataset(result: InspectionResult) -> dict[str, Any]:
     pickup_format = get_engine(profile.engine).formats.pickup
     if pickup_format == "sliding-table":
         return _extract_sliding_table(result)
-    return _extract_split_table(result)
+    if pickup_format == "split-table":
+        return _extract_split_table(result)
+    raise DataSourceError(
+        f"Engine {profile.engine!r} does not provide pickup extraction"
+    )
 
 
 def _extract_split_table(result: InspectionResult) -> dict[str, Any]:

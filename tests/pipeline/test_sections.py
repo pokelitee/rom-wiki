@@ -4,6 +4,7 @@ import types
 import unittest
 from dataclasses import replace
 
+from romwiki.engines.profile_contracts import EngineProfileContract
 from romwiki.engines.registry import (
     GEN5_B2W2_ENGINE,
     get_engine,
@@ -35,6 +36,11 @@ class DatasetSectionTests(unittest.TestCase):
                 ),
                 dataset_kinds=frozenset({"pokemon", "abilities"}),
                 required_dataset_kinds=frozenset({"pokemon"}),
+                profile_contract=EngineProfileContract(
+                    required_layout=frozenset({"personal"}),
+                    optional_layout=frozenset({"moves", "encounters"}),
+                    reject_unknown=True,
+                ),
             ),
         )
 
@@ -65,8 +71,19 @@ class DatasetSectionTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ProfileError, "future-game.*pokemon requires personal"
+            ProfileError, "future-game.*missing required layout: personal"
         ):
+            enabled_dataset_kinds(profile)
+
+    def test_profile_contract_rejects_unknown_engine_keys(self) -> None:
+        profile = types.SimpleNamespace(
+            id="future-game",
+            engine=_PARTIAL_ENGINE,
+            layout={"personal": "personal.bin", "personl": "typo.bin"},
+            parameters={},
+        )
+
+        with self.assertRaisesRegex(ProfileError, "unsupported layout: personl"):
             enabled_dataset_kinds(profile)
 
 

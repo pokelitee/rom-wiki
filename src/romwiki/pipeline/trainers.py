@@ -11,7 +11,7 @@ from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
 from romwiki.schema.versions import TRAINERS_RAW_SCHEMA_VERSION
-from romwiki.util.errors import InvalidRomError, ProfileError
+from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 
@@ -19,8 +19,11 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
-    if get_engine(profile.engine).formats.trainers == "battle-mode":
+    trainer_format = get_engine(profile.engine).formats.trainers
+    if trainer_format == "battle-mode":
         return _extract_battle_mode_trainer_dataset(result)
+    if trainer_format != "class-gender":
+        raise DataSourceError(f"Unsupported trainer format: {trainer_format!r}")
     try:
         trainer_path = profile.layout["trainer_data"]
         party_path = profile.layout["trainer_parties"]

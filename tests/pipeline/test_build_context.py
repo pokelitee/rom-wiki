@@ -18,10 +18,18 @@ def _result(rom_sha256: str) -> Mock:
 
 
 def _context(
-    cache_root: Path, rom_sha256: str = "hash-a", *, refresh: bool = False
+    cache_root: Path,
+    rom_sha256: str = "hash-a",
+    *,
+    refresh: bool = False,
+    source_fingerprint: str = "source-a",
 ) -> GameBuildContext:
     return GameBuildContext(
-        _result(rom_sha256), Mock(), cache_root=cache_root, refresh=refresh
+        _result(rom_sha256),
+        Mock(),
+        cache_root=cache_root,
+        refresh=refresh,
+        source_fingerprint=source_fingerprint,
     )
 
 
@@ -76,6 +84,21 @@ class GameBuildContextCacheTests(unittest.TestCase):
 
             _context(cache_root)._raw("moves/raw", extractor)
             _context(cache_root, refresh=True)._raw("moves/raw", extractor)
+
+        self.assertEqual(len(calls), 2)
+
+    def test_changed_extraction_source_invalidates_the_cache(self) -> None:
+        calls: list = []
+        extractor = _extractor(calls)
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+
+            _context(cache_root, source_fingerprint="source-a")._raw(
+                "moves/raw", extractor
+            )
+            _context(cache_root, source_fingerprint="source-b")._raw(
+                "moves/raw", extractor
+            )
 
         self.assertEqual(len(calls), 2)
 

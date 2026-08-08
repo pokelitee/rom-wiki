@@ -8,7 +8,7 @@ from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import parse_map_header_table, read_code_binary
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
-from romwiki.util.errors import InvalidRomError, ProfileError
+from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 
@@ -19,6 +19,10 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     tutor_format = get_engine(profile.engine).formats.tutors
     if tutor_format == "personal-archive":
         return _extract_personal_archive_tutors(result)
+    if tutor_format != "overlay-table":
+        raise DataSourceError(
+            f"Engine {profile.engine!r} does not provide tutor extraction"
+        )
     required = (
         "tutor_overlay_id",
         "tutor_move_offset",

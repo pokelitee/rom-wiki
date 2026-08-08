@@ -142,11 +142,17 @@ def _deduplicate_exact_paths(
         fact, member, instruction = candidate
         member_fact = fact, member
         command_path = fact, instruction.offset, instruction.name, instruction.params
-        if member_fact not in seen_member_facts and command_path not in seen_command_paths:
+        if (
+            member_fact not in seen_member_facts
+            and command_path not in seen_command_paths
+        ):
             kept.append(candidate)
             seen_member_facts.add(member_fact)
             seen_command_paths.add(command_path)
     return kept
+
+
+
 def _static_fact(
     instruction: Gen5Instruction, *, species_count: int
 ) -> tuple[int, int | None, bool] | None:

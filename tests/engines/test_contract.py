@@ -14,6 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from romwiki.engines.gen4.dppt import parse_encounter_record
+from romwiki.engines.profile_contracts import EngineProfileContract
 from romwiki.engines.registry import (
     GEN5_B2W2_ENGINE,
     EngineAdapter,
@@ -106,6 +107,7 @@ def _register_fake_engine(tables: types.SimpleNamespace) -> None:
         formats=EngineFormats(
             encounters="conditional",
             locations="event-map",
+            location_extraction="arm9-event-map",
             pickup="split-table",
             trainers="class-gender",
             tutors="none",
@@ -212,6 +214,28 @@ class EngineContractTests(unittest.TestCase):
         with self.assertRaisesRegex(DataSourceError, "parse_personal_record"):
             register_engine(_FAKE_ENGINE_ID, adapter)
 
+    def test_registration_rejects_an_unknown_semantic_format(self) -> None:
+        source = get_engine(GEN5_B2W2_ENGINE)
+        adapter = replace(
+            source,
+            formats=replace(source.formats, encounters="seasonel"),
+        )
+
+        with self.assertRaisesRegex(DataSourceError, "invalid formats.*seasonel"):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
+    def test_registration_rejects_mismatched_location_contracts(self) -> None:
+        source = get_engine(GEN5_B2W2_ENGINE)
+        adapter = replace(
+            source,
+            formats=replace(source.formats, location_extraction="arm9-event-map"),
+        )
+
+        with self.assertRaisesRegex(
+            DataSourceError, "arm9-event-map.*requires normalized shape 'event-map'"
+        ):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
     def test_partial_engine_validates_only_its_declared_dataset_sections(self) -> None:
         source = get_engine(GEN5_B2W2_ENGINE)
         minimal = replace(
@@ -234,6 +258,11 @@ class EngineContractTests(unittest.TestCase):
             ),
             dataset_kinds=frozenset({"pokemon", "abilities"}),
             required_dataset_kinds=frozenset({"pokemon"}),
+            profile_contract=EngineProfileContract(
+                required_layout=frozenset({"personal"}),
+                optional_layout=frozenset({"moves", "encounters"}),
+                reject_unknown=True,
+            ),
         )
 
         register_engine(_FAKE_ENGINE_ID, minimal)
