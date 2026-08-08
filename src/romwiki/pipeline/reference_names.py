@@ -38,7 +38,12 @@ def extract_reference_names(
         ) from error
     archive_cls = get_platform(profile.platform).archive_cls
     parse_english_message_archive = engine.parse_english_message_archive
-    archive = message_archive or archive_cls.from_bytes(filesystem.read(archive_path))
+    archive_options = {}
+    if profile.parameters.get("messages_allow_truncated", False):
+        archive_options["allow_truncated"] = True
+    archive = message_archive or archive_cls.from_bytes(
+        filesystem.read(archive_path), **archive_options
+    )
     result: dict[str, Any] = {"name_sources": {}}
     for field, (parameter, expected_count) in configured.items():
         member = profile.parameters[parameter]

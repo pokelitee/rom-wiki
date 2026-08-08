@@ -6,6 +6,9 @@ extends = "soulsilver-us"
 [type_chart]
 chart = "gen4"
 
+[parameters]
+messages_allow_truncated = true
+
 [[hashes]]
 algorithm = "sha256"
 value = "6c1de979abbe1228c6e7d61a770a8e4a761e359e47c1326de7b70a6b18bc3001"

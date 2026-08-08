@@ -107,15 +107,15 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 then by engine family. The current `gen4/dppt`, `gen4/hgss`, `gen5/bw`, and
 `gen5/b2w2` leaf packages decode their independently verified formats. Their
 stable profile-facing engine IDs are `gen4_dppt`, `gen4_hgss`, `gen5_bw`, and
-`gen5_b2w2`. HGSS is intentionally a Pokémon-personal-only partial adapter.
+`gen5_b2w2`. HGSS is intentionally a Pokémon-and-abilities partial adapter.
 
 A generation package is a namespace, not a selectable engine. Each family begins
 with a separate leaf adapter. Promote a parser into the parent generation package
 only after real ROM fixtures prove that its format and behavior are shared by at
-least two families. The shared Generation IV personal parser follows this rule:
-retail Platinum, HeartGold, and SoulSilver fixtures prove its 44-byte shape. Leaf
-packages may depend on their generation's shared modules, but must not depend on
-sibling leaves.
+least two families. The shared Generation IV personal and English-message parsers
+follow this rule: retail Platinum, HeartGold, and SoulSilver fixtures prove their
+formats. Leaf packages may depend on their generation's shared modules, but must
+not depend on sibling leaves.
 
 Engine decoders should return typed facts, validate bounds and identifiers, and
 avoid page-layout decisions. Exact ROM-derived values take priority over external
@@ -389,9 +389,9 @@ uses for the engine boundary above.
 The `gen4_dppt` and `gen5_bw` engines exercise the complete normalized pipeline
 and shared renderer system against two real generations, including retail games,
 single-version hacks, and sibling-version hack families. The partial `gen4_hgss`
-adapter independently exercises the same Pokémon pipeline and renderer against
-HeartGold and SoulSilver while explicitly declaring encounters, locations, and
-trainers unsupported. Generation-specific binary decoding stays in each engine
+adapter independently exercises the same Pokémon and ability pipelines and
+renderers against HeartGold and SoulSilver while explicitly declaring encounters,
+locations, and trainers unsupported. Generation-specific binary decoding stays in each engine
 package; optional presentation behavior is advertised through dataset
 capabilities. A second physical platform remains proven only by
 `tests/platforms/test_contract.py`'s fake adapter. A real platform addition should

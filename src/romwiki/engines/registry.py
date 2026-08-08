@@ -184,7 +184,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             static_encounters="none",
         ),
         generation=4,
-        dataset_kinds=frozenset({"pokemon"}),
+        dataset_kinds=frozenset({"pokemon", "abilities"}),
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN4_HGSS_PROFILE_CONTRACT,
     ),

@@ -7,4 +7,9 @@ pokemon = [
     "ho-oh",
     "deoxys-attack",
 ]
-
+abilities = [
+    "overgrow",
+    "levitate",
+    "pickup",
+    "pressure",
+]

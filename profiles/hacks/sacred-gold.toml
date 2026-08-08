@@ -6,6 +6,9 @@ extends = "heartgold-us"
 [type_chart]
 chart = "gen4"
 
+[parameters]
+messages_allow_truncated = true
+
 [[hashes]]
 algorithm = "sha256"
 value = "49f29848878406990ea288f26872d4355c92c4a2677f56973750bbf2566c13c1"

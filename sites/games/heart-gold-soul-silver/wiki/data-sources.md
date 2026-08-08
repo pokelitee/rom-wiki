@@ -15,26 +15,33 @@ are merged by stable identity.
 
 ## Coverage and provenance
 
-The executable profile contract currently exposes only the personal-data archive
-at `a/0/0/2`. Both retail ROMs contain 508 records of 44 bytes, and the archives
-are byte-identical. The normalized Pokémon dataset publishes 505 public species
-and battle-form records while retaining three non-public internal records for
-audit completeness.
+The executable profile contract exposes the personal-data archive at `a/0/0/2`
+and message archive at `a/0/2/7`. Both retail ROMs contain 508 personal records of
+44 bytes, and the archives are byte-identical. The normalized Pokémon dataset
+publishes 505 public species and battle-form records while retaining three
+non-public internal records for audit completeness.
+
+Message member 720 is byte-identical between the retail versions and contains
+exactly 124 ability names, including the internal ID-zero entry. The public
+ability dataset emits IDs 1 through 123 and derives Pokémon backlinks solely from
+the ROM ability slots in personal records. All 123 abilities have at least one
+assignment.
 
 PokéDB supplies names, links, descriptive metadata, and media fallbacks. The ROM
 remains authoritative for stats, types, held-item IDs, growth data, abilities,
 and TM/HM compatibility flags.
 
-Archive identities are known for moves, items, scripts, messages, learnsets,
+Archive identities are known for moves, items, scripts, learnsets,
 evolutions, encounters, map matrices, trainers, egg moves, and NPC trades, but
 they are intentionally absent from the executable layout contract. Their HGSS
 formats and normalization paths have not yet been verified end to end.
 
 ## Engine notes
 
-The distinct `gen4_hgss` leaf adapter supports only the Pokémon dataset. Real
-HeartGold, SoulSilver, and Platinum fixtures prove that their personal records
-share one Generation IV parser, which lives in shared generation code. HGSS does
-not reuse the Platinum adapter: encounter records, map data, scripts, trainers,
-items, moves, and ancillary Pokémon data remain unsupported until independently
-verified. Unsupported semantic formats are declared explicitly by the adapter.
+The distinct `gen4_hgss` leaf adapter supports Pokémon and abilities. Real
+HeartGold, SoulSilver, and Platinum fixtures prove that their personal records and
+English messages share Generation IV parsers, which live in shared generation
+code. HGSS does not reuse the Platinum adapter: encounter records, map data,
+scripts, trainers, items, moves, and ancillary Pokémon data remain unsupported
+until independently verified. Unsupported semantic formats are declared
+explicitly by the adapter.

@@ -18,16 +18,19 @@ ROM will be parsed independently and compared with its matching USA retail base:
 ## Coverage and provenance
 
 The profiles identify the exact patched images and inherit the verified HGSS
-personal-data locator. Both patched ROMs pass the same 508-record personal parser
-as their retail bases, with 286 changed personal records in each corresponding
-pair. No extracted datasets or comparisons are published on this site yet.
+personal and ability-name locators. Both patched ROMs pass the same 508-record
+personal parser as their retail bases, with 286 changed personal records in each
+corresponding pair. Their message archives are exactly 788 bytes shorter than the
+declared NARC size, so the profiles explicitly allow truncation; ability-name
+member 720 is intact and produces all 123 public abilities. No extracted datasets
+or comparisons are published on this site yet.
 PokéDB will provide optional reference metadata only, never the clean mechanics
 baseline; comparisons will come from the separately parsed retail ROMs.
 
 ## Engine notes
 
 Both hacks retain their retail game codes. The `gen4_hgss` leaf engine can build
-their verified Pokémon personal slice and the matching clean datasets, but moves,
-items, encounters, trainers, locations, and comparative publication still require
-fixture-led validation. The paired-hack site therefore remains non-data-driven
-and unpublished.
+their verified Pokémon and ability slices and the matching clean datasets, but
+moves, items, encounters, trainers, locations, and comparative publication still
+require fixture-led validation. The paired-hack site therefore remains
+non-data-driven and unpublished.

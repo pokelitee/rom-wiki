@@ -61,6 +61,48 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(overgrow["pokemon"][0]["slots"], [1, 2])
         self.assertEqual(dataset["records"][0]["pokemon"], [])
 
+    def test_builds_hgss_abilities_from_rom_names_and_assignments(self) -> None:
+        names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]
+        names[14] = "Compoundeyes"
+        dataset = build_ability_dataset(
+            {
+                "game": "heartgold-us",
+                "engine": "gen4_hgss",
+                "dataset": "pokemon",
+                "source": {"archive": "a/0/0/2"},
+                "name_sources": {
+                    "ability_names": {"archive": "a/0/2/7", "member": 720}
+                },
+                "ability_names": names,
+                "records": [
+                    {
+                        "member": 12,
+                        "national_dex_id": 12,
+                        "slug": "butterfree",
+                        "name": "Butterfree",
+                        "public": True,
+                        "abilities": [
+                            {
+                                "id": 14,
+                                "slug": "compound-eyes",
+                                "name": "Compoundeyes",
+                                "is_hidden": False,
+                            }
+                        ],
+                    }
+                ],
+            },
+            _pokedb(),
+        )
+
+        compound_eyes = dataset["records"][13]
+        self.assertEqual(compound_eyes["name"], "Compoundeyes")
+        self.assertEqual(compound_eyes["slug"], "compound-eyes")
+        self.assertEqual(compound_eyes["pokemon"][0]["slug"], "butterfree")
+        self.assertEqual(
+            dataset["name_source"], {"archive": "a/0/2/7", "member": 720}
+        )
+
     def test_carries_the_hidden_ability_flag_through_to_pokemon_entries(self) -> None:
         names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]
         names[65] = "Overgrow"
@@ -352,6 +394,7 @@ def _pokedb() -> PokeDBGeneration:
         ability_id: f"ability-{ability_id}" for ability_id in range(1, 124)
     }
     ability_names[1] = "stench"
+    ability_names[14] = "compound-eyes"
     ability_names[65] = "overgrow"
     ability_names[53] = "pickup"
     ability_names[118] = "honey-gather"

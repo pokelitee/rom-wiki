@@ -12,6 +12,7 @@ from romwiki.engines.gen4.constants import (
     TYPE_NAMES,
 )
 from romwiki.engines.gen4.machines import GEN4_MACHINE_COUNT, machine_name
+from romwiki.engines.gen4.messages import parse_english_message_archive
 from romwiki.engines.gen4.personal import (
     GEN4_BASE_SPECIES_COUNT,
     PERSONAL_FORM_MEMBERS,
@@ -47,5 +48,5 @@ __all__ = [
     "TYPE_NAMES",
     "machine_name",
     "parse_personal_record",
+    "parse_english_message_archive",
 ]
-

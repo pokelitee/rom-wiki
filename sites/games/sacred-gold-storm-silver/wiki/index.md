@@ -11,5 +11,5 @@ are kept distinct.
 The hacks will be published as one paired reference with Sacred Gold compared
 against HeartGold and Storm Silver compared against SoulSilver. The site is
 currently unpublished and does not yet publish extracted game data. Its verified
-Pokémon personal slice is retained as engine coverage until the paired comparison
-workflow and additional datasets are ready for publication.
+Pokémon and ability slices are retained as engine coverage until the paired
+comparison workflow and additional datasets are ready for publication.

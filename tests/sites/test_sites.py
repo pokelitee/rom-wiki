@@ -96,7 +96,8 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertTrue(hgss.game.data_driven)
         self.assertEqual(hgss.game.profiles, ("heartgold-us", "soulsilver-us"))
         self.assertEqual(
-            hgss.game.generated_sections, ("pokemon", "types", "data")
+            hgss.game.generated_sections,
+            ("pokemon", "abilities", "types", "data"),
         )
 
     def test_build_all_targets_one_combined_artifact(self) -> None:

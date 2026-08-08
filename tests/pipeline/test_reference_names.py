@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from romwiki.pipeline.reference_names import extract_reference_names
@@ -41,6 +42,34 @@ class ReferenceNameTests(unittest.TestCase):
             return_value=("Normal",),
         ), self.assertRaisesRegex(DataSourceError, "exactly 18 names"):
             extract_reference_names(profile, Mock(), archive)
+
+    def test_allows_an_explicitly_truncated_message_archive(self) -> None:
+        profile = _profile()
+        profile.parameters.clear()
+        profile.parameters.update(
+            {"ability_names_member": 610, "messages_allow_truncated": True}
+        )
+        filesystem = Mock()
+        filesystem.read.return_value = b"archive"
+        archive = Mock()
+        archive.read.return_value = b"abilities"
+        archive_cls = Mock()
+        archive_cls.from_bytes.return_value = archive
+        names = tuple(f"Ability {index}" for index in range(124))
+
+        with patch(
+            "romwiki.pipeline.reference_names.get_platform",
+            return_value=SimpleNamespace(archive_cls=archive_cls),
+        ), patch(
+            "romwiki.engines.gen4.dppt.parse_english_message_archive",
+            return_value=names,
+        ):
+            result = extract_reference_names(profile, filesystem)
+
+        archive_cls.from_bytes.assert_called_once_with(
+            b"archive", allow_truncated=True
+        )
+        self.assertEqual(result["ability_names"], list(names))
 
 
 def _profile() -> GameProfile:

@@ -49,17 +49,23 @@ class ProfileRepositoryTests(unittest.TestCase):
 
         self.assertEqual(heartgold.engine, "gen4_hgss")
         self.assertEqual(heartgold.game_codes, ("IPKE",))
-        self.assertEqual(heartgold.layout, {"personal": "a/0/0/2"})
-        self.assertEqual(enabled_dataset_kinds(heartgold), ("pokemon",))
+        self.assertEqual(
+            heartgold.layout,
+            {"personal": "a/0/0/2", "messages": "a/0/2/7"},
+        )
+        self.assertEqual(heartgold.parameters, {"ability_names_member": 720})
+        self.assertEqual(enabled_dataset_kinds(heartgold), ("pokemon", "abilities"))
         self.assertEqual(soulsilver.game_codes, ("IPGE",))
         self.assertEqual(soulsilver.base_game, "soulsilver")
         self.assertEqual(sacred_gold.hashes[0].variant, "complete-v1.05")
         self.assertEqual(storm_silver.hashes[0].variant, "complete-v1.05")
         self.assertEqual(sacred_gold.layout, heartgold.layout)
         self.assertEqual(storm_silver.layout, soulsilver.layout)
+        self.assertTrue(sacred_gold.parameters["messages_allow_truncated"])
+        self.assertTrue(storm_silver.parameters["messages_allow_truncated"])
 
         engine = get_engine(heartgold.engine)
-        self.assertEqual(engine.dataset_kinds, frozenset({"pokemon"}))
+        self.assertEqual(engine.dataset_kinds, frozenset({"pokemon", "abilities"}))
         self.assertEqual(engine.required_dataset_kinds, frozenset({"pokemon"}))
         self.assertEqual(engine.formats.encounters, "unsupported")
         self.assertEqual(engine.formats.locations, "unsupported")

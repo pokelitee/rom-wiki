@@ -16,6 +16,10 @@ chart = "gen4"
 # known archive identities remain documented until their formats are supported.
 [layout]
 personal = "a/0/0/2"
+messages = "a/0/2/7"
+
+[parameters]
+ability_names_member = 720
 
 [[hashes]]
 algorithm = "sha256"

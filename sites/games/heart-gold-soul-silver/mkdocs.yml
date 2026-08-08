@@ -15,4 +15,5 @@ nav:
   - Data Downloads: data/index.md
   - Game Data:
       - Pokémon: pokemon/index.md
+      - Abilities: abilities/index.md
       - Type Chart: types/index.md
