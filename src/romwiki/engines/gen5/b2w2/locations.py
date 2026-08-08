@@ -24,6 +24,7 @@ COMMON_SCRIPT_MEMBER_BASE = 808
 # The sequels' fixed NPC trades are invoked by shared trade code, while the
 # caller's map owns the person text. The first 24 records are Curtis/Yancy
 # phone trades and deliberately have no single map.
+NPC_TRADE_INTERACTION_BY_ID = dict.fromkeys(range(24), "xtransceiver")
 NPC_TRADE_TEXT_MEMBER_BY_ID = {
     24: 529,
     25: 529,

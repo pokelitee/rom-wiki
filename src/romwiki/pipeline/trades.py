@@ -27,6 +27,7 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).trades
+    interaction_by_id = getattr(engine, "NPC_TRADE_INTERACTION_BY_ID", {})
     filesystem = platform.filesystem_from_image(result.image)
     trades = platform.archive_cls.from_bytes(filesystem.read(trades_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
@@ -42,15 +43,17 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
     for member in trades.members:
         if member.index in unused_trade_ids:
             continue
-        records.append(
-            engine.parse_npc_trade_record(
-                trades.read(member.index),
-                trade_id=member.index,
-                nickname=trade_strings[member.index * 2],
-                ot_name=trade_strings[member.index * 2 + 1],
-                archive_path=trades_path,
-            ).to_dict()
+        record = engine.parse_npc_trade_record(
+            trades.read(member.index),
+            trade_id=member.index,
+            nickname=trade_strings[member.index * 2],
+            ot_name=trade_strings[member.index * 2 + 1],
+            archive_path=trades_path,
+        ).to_dict()
+        record["interaction"] = interaction_by_id.get(
+            member.index, record["interaction"]
         )
+        records.append(record)
     return {
         "schema_version": NPC_TRADES_RAW_SCHEMA_VERSION,
         "game": profile.id,

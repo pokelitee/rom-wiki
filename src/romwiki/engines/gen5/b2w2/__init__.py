@@ -17,6 +17,7 @@ from .constants import (
 from .disassembler import disassemble_function, parse_function_offsets
 from .locations import (
     COMMON_SCRIPT_MEMBER_BASE,
+    NPC_TRADE_INTERACTION_BY_ID,
     NPC_TRADE_TEXT_MEMBER_BY_ID,
     WARP_DESTINATION_INDEXED,
     parse_map_header_script_files,
@@ -60,6 +61,7 @@ __all__ = [
     "ITEM_FIELD_USE_NAMES",
     "ITEM_NAME_COUNT",
     "MACHINE_COUNT",
+    "NPC_TRADE_INTERACTION_BY_ID",
     "NPC_TRADE_TEXT_MEMBER_BY_ID",
     "PERSONAL_FORM_MEMBERS",
     "PERSONAL_INTERNAL_MEMBERS",

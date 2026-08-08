@@ -75,7 +75,9 @@ class DocumentationTests(unittest.TestCase):
             "**Roaming Pokémon:**",
             "**B2W2 phone trades:**",
         ):
-            self.assertIn(limitation, shared_bw_notes)
+            self.assertNotIn(limitation, shared_bw_notes)
+        self.assertIn("**Black/White roaming Pokémon:**", shared_bw_notes)
+        self.assertIn("fully decoded and published as\nXtransceiver", shared_bw_notes)
         self.assertIn("complete 30-item catalog", shared_bw_notes)
         self.assertNotIn("**Black City market stock:**", shared_bw_notes)
 
@@ -88,11 +90,11 @@ class DocumentationTests(unittest.TestCase):
                     "links wild encounter variants in\nboth directions", notes
                 )
                 self.assertIn("shop selectors `0` through `25`", notes)
-                self.assertIn("## Known coverage limitations", notes)
+                self.assertNotIn("## Known coverage limitations", notes)
                 self.assertIn("selectors `253` and `254`", notes)
                 self.assertIn("Black City's four market stores", notes)
-                self.assertIn("Curtis/Yancy phone trades", notes)
-                self.assertIn("ARM executable analysis", notes)
+                self.assertIn("Curtis/Yancy repeat trades", notes)
+                self.assertIn("not roaming\nencounters", notes)
 
     def test_documented_cli_commands_parse(self) -> None:
         parser = build_parser()

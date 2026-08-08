@@ -27,6 +27,7 @@ class NpcTrade:
     # it's kept as a plain tuple rather than labeled per stat.
     ivs: tuple[int, int, int, int, int, int]
     provenance: RecordProvenance
+    interaction: str = "fixed-location"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

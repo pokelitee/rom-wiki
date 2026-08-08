@@ -543,7 +543,10 @@ def _location_or_trade_cell(value: dict[str, Any], source_file: str) -> str:
     # Locationless trades show the NPC identity instead of an invented link.
     if "header_id" in value:
         return _location_link(value, source_file)
-    return f"{value['ot_name']} (nicknamed {value['nickname']})"
+    trade = f"{value['ot_name']} (nicknamed {value['nickname']})"
+    if value.get("interaction") == "xtransceiver":
+        return f"Xtransceiver — {trade}"
+    return trade
 
 
 def _append_evolutions(

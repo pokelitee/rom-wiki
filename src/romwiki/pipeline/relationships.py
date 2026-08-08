@@ -522,29 +522,21 @@ def _acquisition_references(
             # Fixed trades were already emitted from the location records,
             # which preserve nested sibling-version ownership precisely.
             continue
-        locations = [None]
-        for location in locations:
-            _add_acquisition(
-                result,
-                aliases,
-                {
-                    "pokemon": offered,
-                    "species_id": offered.get("species_id"),
-                    "detail": (
-                        f"Trade for {requested.get('name')}"
-                        if requested.get("name")
-                        else "In-game trade"
-                    ),
-                },
-                "trade",
-                {
-                    "location_id": (
-                        location.get("header_id") if location else None
-                    ),
-                    "location_name": location.get("name") if location else None,
-                    "versions": _record_versions(trade),
-                },
-            )
+        _add_acquisition(
+            result,
+            aliases,
+            {
+                "pokemon": offered,
+                "species_id": offered.get("species_id"),
+                "detail": _detached_trade_detail(trade, requested),
+            },
+            "trade",
+            {
+                "location_id": None,
+                "location_name": None,
+                "versions": _record_versions(trade),
+            },
+        )
 
     # Preserve static encounters that have no resolved location record.
     for pokemon in pokemon_records:
@@ -568,6 +560,22 @@ def _acquisition_references(
                 )
             )
     return result
+
+
+def _detached_trade_detail(
+    trade: dict[str, Any], requested: dict[str, Any]
+) -> str:
+    requested_name = requested.get("name")
+    if trade.get("interaction") == "xtransceiver":
+        ot_name = trade.get("ot_name")
+        label = (
+            f"Xtransceiver trade with {ot_name}"
+            if ot_name
+            else "Xtransceiver trade"
+        )
+    else:
+        label = "Trade"
+    return f"{label} for {requested_name}" if requested_name else label
 
 
 def _add_acquisition(

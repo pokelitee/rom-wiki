@@ -48,7 +48,8 @@ store lists its Black Tower unlock requirement, one-item-per-day limit, and
 separate weekday and weekend inventory rather than being treated as an
 ordinary Poké Mart.
 
-## Known coverage limitations
-
-- Curtis/Yancy phone trades have no single fixed map and remain locationless.
-- Roaming Thundurus and Tornadus require separate ARM executable analysis.
+Curtis/Yancy repeat trades are fully decoded and published as Xtransceiver
+interactions. They intentionally omit a map link because the trade is mobile
+and has no single fixed location. Tornadus and Thundurus are not roaming
+encounters in Black 2 or White 2; the ARM-backed roaming limitation applies
+only to the original Black and White games.

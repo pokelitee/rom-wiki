@@ -447,9 +447,11 @@ ever hit this in one *unused* map-name table entry, not a real page name).
 
 ## Known coverage limitations
 
-- **Roaming Pokémon:** Thundurus and Tornadus are not decoded. The unmodified
+- **Black/White roaming Pokémon:** Thundurus and Tornadus are not decoded. The unmodified
   retail ROM stores executable code, not a data word, at the published species
   offset for at least one of them, so the species is not treated as a literal
   fact without a randomizer-style ASM patch.
-- **B2W2 phone trades:** Curtis/Yancy repeat trades have no single fixed map
-  location and remain locationless rather than receiving an invented link.
+
+B2W2's Curtis/Yancy repeat trades are fully decoded and published as
+Xtransceiver interactions. They correctly omit a map link because the trade is
+mobile and has no single fixed location.

@@ -446,6 +446,7 @@ def build_item_dataset(
                 "name": trade["ot_name"],
                 "nickname": trade["nickname"],
                 "ot_name": trade["ot_name"],
+                "interaction": trade.get("interaction", "fixed-location"),
                 "pokemon": pokemon_reference,
             },
         )
