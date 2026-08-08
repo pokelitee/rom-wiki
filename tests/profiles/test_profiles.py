@@ -51,10 +51,19 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(heartgold.game_codes, ("IPKE",))
         self.assertEqual(
             heartgold.layout,
-            {"personal": "a/0/0/2", "messages": "a/0/2/7"},
+            {
+                "personal": "a/0/0/2",
+                "messages": "a/0/2/7",
+                "moves": "a/0/1/1",
+            },
         )
-        self.assertEqual(heartgold.parameters, {"ability_names_member": 720})
-        self.assertEqual(enabled_dataset_kinds(heartgold), ("pokemon", "abilities"))
+        self.assertEqual(
+            heartgold.parameters,
+            {"ability_names_member": 720, "move_names_member": 750},
+        )
+        self.assertEqual(
+            enabled_dataset_kinds(heartgold), ("pokemon", "abilities", "moves")
+        )
         self.assertEqual(soulsilver.game_codes, ("IPGE",))
         self.assertEqual(soulsilver.base_game, "soulsilver")
         self.assertEqual(sacred_gold.hashes[0].variant, "complete-v1.05")
@@ -65,7 +74,9 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertTrue(storm_silver.parameters["messages_allow_truncated"])
 
         engine = get_engine(heartgold.engine)
-        self.assertEqual(engine.dataset_kinds, frozenset({"pokemon", "abilities"}))
+        self.assertEqual(
+            engine.dataset_kinds, frozenset({"pokemon", "abilities", "moves"})
+        )
         self.assertEqual(engine.required_dataset_kinds, frozenset({"pokemon"}))
         self.assertEqual(engine.formats.encounters, "unsupported")
         self.assertEqual(engine.formats.locations, "unsupported")

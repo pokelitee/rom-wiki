@@ -1,6 +1,7 @@
 from romwiki.engines.gen4.constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
+    DAMAGE_CLASS_NAMES,
     EGG_GROUP_NAMES,
     GEN4_ARCHIVE_MEMBER_NONE,
     GEN4_MAX_FRIENDSHIP,
@@ -38,7 +39,6 @@ from .bonus_encounters import (
     parse_species_list,
 )
 from .constants import (
-    DAMAGE_CLASS_NAMES,
     EVOLUTION_METHOD_NAMES,
     EVOLUTION_PARAMETER_KINDS,
     PLATINUM_DYNAMIC_WARP_HEADER_ID,

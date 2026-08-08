@@ -15,7 +15,7 @@ class MoveEnrichmentTests(unittest.TestCase):
     def test_names_public_moves_and_preserves_internal_records(self) -> None:
         dataset = {
             "game": "test",
-            "engine": "gen4_dppt",
+            "engine": "gen4_hgss",
             "source": {"archive": "moves.narc"},
             "records": [_source_record(move_id) for move_id in range(471)],
         }

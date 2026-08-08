@@ -17,9 +17,11 @@ chart = "gen4"
 [layout]
 personal = "a/0/0/2"
 messages = "a/0/2/7"
+moves = "a/0/1/1"
 
 [parameters]
 ability_names_member = 720
+move_names_member = 750
 
 [[hashes]]
 algorithm = "sha256"

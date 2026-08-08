@@ -29,8 +29,10 @@ baseline; comparisons will come from the separately parsed retail ROMs.
 
 ## Engine notes
 
-Both hacks retain their retail game codes. The `gen4_hgss` leaf engine can build
-their verified Pokémon and ability slices and the matching clean datasets, but
-moves, items, encounters, trainers, locations, and comparative publication still
-require fixture-led validation. The paired-hack site therefore remains
-non-data-driven and unpublished.
+Both hacks retain their retail game codes. Their move archives use the verified
+471-record format and share the retail 468-name table while changing 37 mechanics
+records in each corresponding pair. The `gen4_hgss` leaf engine can therefore
+build their verified Pokémon, ability, and move slices and the matching clean
+datasets. Items, encounters, trainers, locations, learner relationships, and
+comparative publication still require fixture-led validation. The paired-hack
+site therefore remains non-data-driven and unpublished.

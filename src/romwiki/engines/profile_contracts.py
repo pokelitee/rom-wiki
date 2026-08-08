@@ -212,8 +212,10 @@ GEN4_DPPT_PROFILE_CONTRACT = EngineProfileContract(
 )
 
 GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
-    required_layout=frozenset({"messages", "personal"}),
-    required_parameters=frozenset({"ability_names_member"}),
+    required_layout=frozenset({"messages", "moves", "personal"}),
+    required_parameters=frozenset(
+        {"ability_names_member", "move_names_member"}
+    ),
     optional_parameters=frozenset({"messages_allow_truncated"}),
     reject_unknown=True,
 )

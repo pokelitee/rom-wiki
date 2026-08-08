@@ -10,6 +10,7 @@ ITEM_NAME_COUNT = 468
 MOVE_NAME_COUNT = 468
 POKEMON_NAME_COUNT = 496
 NATURAL_GIFT_TYPE_NONE = 31
+DAMAGE_CLASS_NAMES = ("physical", "special", "status")
 
 TYPE_NAMES = (
     "normal",
@@ -70,4 +71,3 @@ COLOR_NAMES = (
     "pink",
     "internal",
 )
-

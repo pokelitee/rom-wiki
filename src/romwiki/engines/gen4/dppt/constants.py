@@ -79,7 +79,6 @@ NATURE_NAMES = (
 
 # Engine ID-to-name tables live in the shared Generation IV package. Retail
 # D/P/Pt and HGSS ROM fixtures prove the personal-record shape and these IDs.
-DAMAGE_CLASS_NAMES = ("physical", "special", "status")
 EVOLUTION_METHOD_NAMES = (
     "none",
     "friendship",

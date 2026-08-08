@@ -27,21 +27,32 @@ ability dataset emits IDs 1 through 123 and derives Pokémon backlinks solely fr
 the ROM ability slots in personal records. All 123 abilities have at least one
 assignment.
 
+The move archive at `a/0/1/1` contains 471 records of exactly 16 bytes. Both
+retail versions are byte-identical, and message member 750 supplies all 468 names
+needed for move IDs 0 through 467. The public dataset exposes the 467 playable
+moves and retains four non-public internal records for auditing. Move mechanics
+include power, type, damage class, accuracy, PP, effect, target, priority, flags,
+and contest fields directly decoded from the ROM.
+
+Learnsets, TM/HM move mappings, tutors, and egg moves are not part of this slice.
+Move pages therefore publish mechanics but do not claim complete learner or
+acquisition relationships.
+
 PokéDB supplies names, links, descriptive metadata, and media fallbacks. The ROM
 remains authoritative for stats, types, held-item IDs, growth data, abilities,
 and TM/HM compatibility flags.
 
-Archive identities are known for moves, items, scripts, learnsets,
+Archive identities are known for items, scripts, learnsets,
 evolutions, encounters, map matrices, trainers, egg moves, and NPC trades, but
 they are intentionally absent from the executable layout contract. Their HGSS
 formats and normalization paths have not yet been verified end to end.
 
 ## Engine notes
 
-The distinct `gen4_hgss` leaf adapter supports Pokémon and abilities. Real
-HeartGold, SoulSilver, and Platinum fixtures prove that their personal records and
-English messages share Generation IV parsers, which live in shared generation
-code. HGSS does not reuse the Platinum adapter: encounter records, map data,
-scripts, trainers, items, moves, and ancillary Pokémon data remain unsupported
-until independently verified. Unsupported semantic formats are declared
-explicitly by the adapter.
+The distinct `gen4_hgss` leaf adapter supports Pokémon, abilities, and moves.
+Real HeartGold, SoulSilver, and Platinum fixtures prove that their personal,
+English-message, and move-record formats share Generation IV parsers, which live
+in shared generation code. HGSS does not reuse the Platinum adapter: encounter
+records, map data, scripts, trainers, items, and ancillary Pokémon data remain
+unsupported until independently verified. Unsupported semantic formats are
+declared explicitly by the adapter.
