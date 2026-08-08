@@ -4,9 +4,11 @@ title: Pokémon HeartGold & SoulSilver
 ---
 
 This wiki covers the USA retail releases of Pokémon HeartGold and SoulSilver.
-The initial architecture records exact ROM identities and verified core archive
-locations. ROM provenance and PokéDB reference content are kept distinct.
+The first data-driven slice publishes ROM-derived Pokémon personal data and the
+Generation IV type chart. ROM provenance and PokéDB reference content are kept
+distinct.
 
-HeartGold and SoulSilver will be published as one paired retail reference once
-the Generation IV HGSS engine adapter is complete. The site is currently an
-unpublished scaffold and does not yet publish extracted game data.
+HeartGold and SoulSilver are modeled as one paired retail reference and parsed
+independently before records are merged by stable identity. The site remains
+unpublished while moves, items, encounters, trainers, and locations await their
+own ROM-verified slices.

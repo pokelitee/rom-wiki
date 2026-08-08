@@ -89,6 +89,18 @@ class PersonalEnrichmentTests(unittest.TestCase):
             pokedb,
             type_names={9: "fairy"},
         )
+        hgss_enriched = enrich_personal_dataset(
+            {
+                "game": "test",
+                "engine": "gen4_hgss",
+                "source": {"archive": "a/0/0/2"},
+                "ability_names": ability_names,
+                "pokemon_names": pokemon_names,
+                "records": records,
+            },
+            pokedb,
+            type_names={9: "fairy"},
+        )
 
         self.assertEqual(enriched["public_record_count"], 505)
         self.assertFalse(enriched["records"][494]["public"])
@@ -104,6 +116,8 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["records"][1]["name"], "Mr. Mime")
         self.assertEqual(enriched["records"][2]["name"], "Rom-2")
         self.assertEqual(enriched["records"][496]["name"], "Deoxys Attack")
+        self.assertEqual(hgss_enriched["public_record_count"], 505)
+        self.assertEqual(hgss_enriched["records"][496]["slug"], "deoxys-attack")
 
     def test_resolves_gen5_alternate_formes_and_battle_only_transformations(
         self,
@@ -201,7 +215,9 @@ class PersonalEnrichmentTests(unittest.TestCase):
         record = _bulbasaur_record()
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            count = render_pokemon_pages({"records": [record]}, output)
+            count = render_pokemon_pages(
+                {"engine": "gen4_hgss", "records": [record]}, output
+            )
             page = (output / "bulbasaur.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 

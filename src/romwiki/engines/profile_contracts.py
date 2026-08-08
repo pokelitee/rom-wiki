@@ -210,3 +210,8 @@ GEN4_DPPT_PROFILE_CONTRACT = EngineProfileContract(
     ),
     reject_unknown=True,
 )
+
+GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
+    required_layout=frozenset({"personal"}),
+    reject_unknown=True,
+)

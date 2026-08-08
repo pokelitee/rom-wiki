@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from typing import Any, Literal, Protocol, get_args
 
 import romwiki.engines.gen4.dppt as gen4_dppt
+import romwiki.engines.gen4.hgss as gen4_hgss
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.engines.profile_contracts import (
     GEN4_DPPT_PROFILE_CONTRACT,
+    GEN4_HGSS_PROFILE_CONTRACT,
     GEN5_B2W2_PROFILE_CONTRACT,
     GEN5_BW_PROFILE_CONTRACT,
     EngineProfileContract,
@@ -16,14 +18,17 @@ from romwiki.util.errors import DataSourceError
 
 # Canonical engine identifiers used by registration and contract tests.
 GEN4_DPPT_ENGINE = "gen4_dppt"
+GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
 
-EncounterFormat = Literal["conditional", "seasonal"]
-LocationFormat = Literal["event-map", "encounter-map"]
-LocationExtractionFormat = Literal["arm9-event-map", "archive-encounter-map"]
+EncounterFormat = Literal["unsupported", "conditional", "seasonal"]
+LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
+LocationExtractionFormat = Literal[
+    "unsupported", "arm9-event-map", "archive-encounter-map"
+]
 PickupFormat = Literal["none", "split-table", "sliding-table"]
-TrainerFormat = Literal["class-gender", "battle-mode"]
+TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
 TutorFormat = Literal["none", "overlay-table", "personal-archive"]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
@@ -148,6 +153,40 @@ _ENGINES: dict[str, EngineAdapter] = {
         generation=4,
         presentation_features=frozenset({"contests"}),
         profile_contract=GEN4_DPPT_PROFILE_CONTRACT,
+    ),
+    GEN4_HGSS_ENGINE: EngineAdapter(
+        personal=gen4_hgss,
+        locations=gen4_hgss,
+        trainers=gen4_hgss,
+        encounters=gen4_hgss,
+        evolutions=gen4_hgss,
+        items=gen4_hgss,
+        machines=gen4_hgss,
+        moves=gen4_hgss,
+        tutors=gen4_hgss,
+        egg_moves=gen4_hgss,
+        learnsets=gen4_hgss,
+        reference_names=gen4_hgss,
+        enrich=gen4_hgss,
+        trainer_party=gen4_hgss,
+        trades=gen4_hgss,
+        marts=gen4_hgss,
+        static_encounters=gen4_hgss,
+        pickup=gen4_hgss,
+        formats=EngineFormats(
+            encounters="unsupported",
+            locations="unsupported",
+            location_extraction="unsupported",
+            pickup="none",
+            trainers="unsupported",
+            tutors="none",
+            fossils="none",
+            static_encounters="none",
+        ),
+        generation=4,
+        dataset_kinds=frozenset({"pokemon"}),
+        required_dataset_kinds=frozenset({"pokemon"}),
+        profile_contract=GEN4_HGSS_PROFILE_CONTRACT,
     ),
     GEN5_BW_ENGINE: EngineAdapter(
         personal=gen5_bw,
@@ -276,6 +315,7 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
             f"Engine {engine!r} declares invalid formats: {', '.join(invalid_formats)}"
         )
     expected_location_shape = {
+        "unsupported": "unsupported",
         "arm9-event-map": "event-map",
         "archive-encounter-map": "encounter-map",
     }[adapter.formats.location_extraction]

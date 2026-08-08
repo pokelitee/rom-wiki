@@ -104,16 +104,18 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 ### Engine decoders
 
 `src/romwiki/engines/` groups binary and script parsers first by generation and
-then by engine family. The current `gen4/dppt`, `gen5/bw`, and `gen5/b2w2` leaf
-packages decode the D/P/Pt, Black/White, and Black 2/White 2 formats. Their stable
-profile-facing engine IDs are `gen4_dppt`, `gen5_bw`, and `gen5_b2w2`.
+then by engine family. The current `gen4/dppt`, `gen4/hgss`, `gen5/bw`, and
+`gen5/b2w2` leaf packages decode their independently verified formats. Their
+stable profile-facing engine IDs are `gen4_dppt`, `gen4_hgss`, `gen5_bw`, and
+`gen5_b2w2`. HGSS is intentionally a Pokémon-personal-only partial adapter.
 
-A generation package is a namespace, not a selectable engine. When a second
-family is implemented, such as `gen4/hgss`, begin with a separate
-leaf adapter. Promote a parser into the parent generation package only after real
-ROM fixtures prove that its format and behavior are shared by at least two
-families. Leaf packages may depend on their generation's shared modules, but
-must not depend on sibling leaves.
+A generation package is a namespace, not a selectable engine. Each family begins
+with a separate leaf adapter. Promote a parser into the parent generation package
+only after real ROM fixtures prove that its format and behavior are shared by at
+least two families. The shared Generation IV personal parser follows this rule:
+retail Platinum, HeartGold, and SoulSilver fixtures prove its 44-byte shape. Leaf
+packages may depend on their generation's shared modules, but must not depend on
+sibling leaves.
 
 Engine decoders should return typed facts, validate bounds and identifiers, and
 avoid page-layout decisions. Exact ROM-derived values take priority over external
@@ -384,12 +386,14 @@ Nintendo DS. `tests/platforms/test_contract.py` proves this against a
 throwaway fake platform, the same pattern `tests/engines/test_contract.py`
 uses for the engine boundary above.
 
-The `gen4_dppt` and `gen5_bw` engines now exercise the same normalized pipeline
+The `gen4_dppt` and `gen5_bw` engines exercise the complete normalized pipeline
 and shared renderer system against two real generations, including retail games,
-single-version hacks, and sibling-version hack families. Generation-specific
-binary decoding stays in each engine package; optional presentation behavior is
-advertised through dataset capabilities. This validates the engine boundary
-against real data, while a second physical platform remains proven only by
+single-version hacks, and sibling-version hack families. The partial `gen4_hgss`
+adapter independently exercises the same Pokémon pipeline and renderer against
+HeartGold and SoulSilver while explicitly declaring encounters, locations, and
+trainers unsupported. Generation-specific binary decoding stays in each engine
+package; optional presentation behavior is advertised through dataset
+capabilities. A second physical platform remains proven only by
 `tests/platforms/test_contract.py`'s fake adapter. A real platform addition should
 still add profile-identification, parser, and normalized-output fixtures following
 [Adding a game](adding-a-game.md).

@@ -1,0 +1,10 @@
+# Representative pages for the verified Pokémon-only development slice.
+[pages]
+pokemon = [
+    "bulbasaur",
+    "pikachu",
+    "lugia",
+    "ho-oh",
+    "deoxys-attack",
+]
+

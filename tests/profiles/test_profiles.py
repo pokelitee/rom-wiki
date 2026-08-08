@@ -8,6 +8,7 @@ from romwiki.engines.gen5.b2w2.static_encounters import (
     discover_static_encounters as discover_b2w2_static_encounters,
 )
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.sections import enabled_dataset_kinds
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
 from romwiki.profiles.loader import ProfileRepository
@@ -48,15 +49,75 @@ class ProfileRepositoryTests(unittest.TestCase):
 
         self.assertEqual(heartgold.engine, "gen4_hgss")
         self.assertEqual(heartgold.game_codes, ("IPKE",))
-        self.assertEqual(heartgold.layout["personal"], "a/0/0/2")
-        self.assertEqual(heartgold.layout["encounters"], "a/0/3/7")
-        self.assertEqual(heartgold.layout["trainer_data"], "a/0/5/5")
+        self.assertEqual(heartgold.layout, {"personal": "a/0/0/2"})
+        self.assertEqual(enabled_dataset_kinds(heartgold), ("pokemon",))
         self.assertEqual(soulsilver.game_codes, ("IPGE",))
         self.assertEqual(soulsilver.base_game, "soulsilver")
         self.assertEqual(sacred_gold.hashes[0].variant, "complete-v1.05")
         self.assertEqual(storm_silver.hashes[0].variant, "complete-v1.05")
         self.assertEqual(sacred_gold.layout, heartgold.layout)
         self.assertEqual(storm_silver.layout, soulsilver.layout)
+
+        engine = get_engine(heartgold.engine)
+        self.assertEqual(engine.dataset_kinds, frozenset({"pokemon"}))
+        self.assertEqual(engine.required_dataset_kinds, frozenset({"pokemon"}))
+        self.assertEqual(engine.formats.encounters, "unsupported")
+        self.assertEqual(engine.formats.locations, "unsupported")
+        self.assertEqual(engine.formats.trainers, "unsupported")
+
+    def test_identifies_exact_hgss_hashes_and_rejects_near_matches(self) -> None:
+        repository = ProfileRepository.load(Path("profiles"))
+        cases = (
+            (
+                "IPKE",
+                "65f02a56842b75aa92d775d56d657a56fe3fa993550b04dc20704ab82d760105",
+                "heartgold-us",
+            ),
+            (
+                "IPGE",
+                "51d0f94a16af7d77c067b4cb7d821ba890a13203a2e2c76049623332c0582e20",
+                "soulsilver-us",
+            ),
+        )
+        for game_code, sha256, profile_id in cases:
+            with self.subTest(profile=profile_id):
+                header_data = bytearray(make_header())
+                header_data[0x0C:0x10] = game_code.encode("ascii")
+                header_data[0x1E] = 0
+                image = NintendoDSImage(
+                    path=Path("test.nds"),
+                    size=0x8000,
+                    header=NintendoDSHeader.from_bytes(bytes(header_data)),
+                    hashes=RomHashes(md5="", sha1="", sha256=sha256),
+                )
+
+                match = repository.identify(image)
+                self.assertIsNotNone(match)
+                assert match is not None
+                self.assertEqual(match.profile.id, profile_id)
+
+                near_match = NintendoDSImage(
+                    path=image.path,
+                    size=image.size,
+                    header=image.header,
+                    hashes=RomHashes(
+                        md5="",
+                        sha1="",
+                        sha256=f"{sha256[:-1]}{'1' if sha256[-1] != '1' else '0'}",
+                    ),
+                )
+                self.assertIsNone(repository.identify(near_match))
+
+    def test_hgss_profile_contract_rejects_unverified_layout(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+        heartgold = profiles["heartgold-us"]
+        heartgold.layout["encounters"] = "a/0/3/7"
+
+        with self.assertRaisesRegex(ProfileError, "unsupported layout: encounters"):
+            enabled_dataset_kinds(heartgold)
 
     def test_loads_black_and_white_baseline_profiles(self) -> None:
         profiles = {

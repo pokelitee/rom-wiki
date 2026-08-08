@@ -93,8 +93,11 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertFalse(hgss.published)
         self.assertIsNotNone(hgss.game)
         assert hgss.game is not None
-        self.assertFalse(hgss.game.data_driven)
+        self.assertTrue(hgss.game.data_driven)
         self.assertEqual(hgss.game.profiles, ("heartgold-us", "soulsilver-us"))
+        self.assertEqual(
+            hgss.game.generated_sections, ("pokemon", "types", "data")
+        )
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

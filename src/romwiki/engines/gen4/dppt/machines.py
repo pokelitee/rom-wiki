@@ -2,25 +2,15 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen4.machines import GEN4_MACHINE_COUNT, GEN4_TM_COUNT
 from romwiki.schema import Machine
 from romwiki.util.errors import InvalidRomError
 
-GEN4_MACHINE_COUNT = 100
-GEN4_TM_COUNT = 92
 # TM01-TM92 and HM01-HM08 occupy a fixed, contiguous block of item IDs
 # (328-427) in every Gen IV game, in the same order as `machine_id`. This
 # layout is engine data, not ROM-hack-mutable, so it's derived rather than
 # read per-ROM.
 _GEN4_MACHINE_ITEM_ID_OFFSET = 327
-
-
-def machine_name(machine_id: int) -> str:
-    """Format a machine ID the way `Machine.name` would."""
-    if machine_id <= GEN4_TM_COUNT:
-        return f"TM{machine_id:02}"
-    if machine_id <= GEN4_MACHINE_COUNT:
-        return f"HM{machine_id - GEN4_TM_COUNT:02}"
-    return f"MACHINE{machine_id:03}"
 
 
 def parse_machine_move_table(

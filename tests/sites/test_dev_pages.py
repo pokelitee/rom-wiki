@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from romwiki.sites import SiteCatalog
 from romwiki.sites.dev_pages import DevPages
 from romwiki.util.errors import SiteError
 
@@ -40,14 +41,18 @@ class DevPagesTests(unittest.TestCase):
         )
         self.assertEqual(pages.pages_for("generation-specific"), frozenset())
 
-    def test_all_game_manifests_cover_every_detail_section(self) -> None:
+    def test_all_game_manifests_cover_their_generated_detail_sections(self) -> None:
         manifests = sorted(_GAME_SITES.glob("*/dev-pages.toml"))
+        catalog = SiteCatalog.load(_REPOSITORY_ROOT)
 
         self.assertTrue(manifests)
         for manifest in manifests:
             with self.subTest(manifest=manifest):
                 pages = DevPages.load(manifest)
-                self.assertEqual(set(pages.sections), _DETAIL_SECTIONS)
+                site = catalog.get(manifest.parent.name)
+                assert site.game is not None
+                expected = set(site.game.generated_sections) & _DETAIL_SECTIONS
+                self.assertEqual(set(pages.sections), expected)
                 self.assertTrue(all(pages.sections.values()))
 
     def test_filters_only_configured_section_detail_pages(self) -> None:

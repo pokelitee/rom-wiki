@@ -1,3 +1,26 @@
+from romwiki.engines.gen4.constants import (
+    ABILITY_NAME_COUNT,
+    COLOR_NAMES,
+    EGG_GROUP_NAMES,
+    GEN4_ARCHIVE_MEMBER_NONE,
+    GEN4_MAX_FRIENDSHIP,
+    GROWTH_RATE_NAMES,
+    ITEM_NAME_COUNT,
+    MAX_MOVE_ID,
+    MOVE_NAME_COUNT,
+    MOVE_RECORD_COUNT,
+    NATURAL_GIFT_TYPE_NONE,
+    PERSONAL_RECORD_COUNT,
+    POKEMON_NAME_COUNT,
+    TYPE_NAME_COUNT,
+    TYPE_NAMES,
+)
+from romwiki.engines.gen4.machines import (
+    GEN4_MACHINE_COUNT,
+    GEN4_TM_COUNT,
+    machine_name,
+)
+
 from .berries import (
     GEN4_BERRY_FIRMNESS_NAMES,
     Gen4BerryData,
@@ -15,21 +38,9 @@ from .bonus_encounters import (
     parse_species_list,
 )
 from .constants import (
-    ABILITY_NAME_COUNT,
-    COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
-    EGG_GROUP_NAMES,
     EVOLUTION_METHOD_NAMES,
     EVOLUTION_PARAMETER_KINDS,
-    GEN4_ARCHIVE_MEMBER_NONE,
-    GEN4_MAX_FRIENDSHIP,
-    GROWTH_RATE_NAMES,
-    ITEM_NAME_COUNT,
-    MAX_MOVE_ID,
-    MOVE_NAME_COUNT,
-    MOVE_RECORD_COUNT,
-    NATURAL_GIFT_TYPE_NONE,
-    PERSONAL_RECORD_COUNT,
     PLATINUM_DYNAMIC_WARP_HEADER_ID,
     PLATINUM_DYNAMIC_WARP_ID,
     PLATINUM_GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID,
@@ -38,9 +49,6 @@ from .constants import (
     PLATINUM_MATRIX_VOID_HEADER_IDS,
     PLATINUM_ROAMING_SLOT_SPECIES_IDS,
     PLATINUM_TROPHY_GARDEN_HEADER_ID,
-    POKEMON_NAME_COUNT,
-    TYPE_NAME_COUNT,
-    TYPE_NAMES,
 )
 from .egg_moves import (
     EGG_MOVE_SPECIES_MARKER_BASE,
@@ -111,9 +119,6 @@ from .learnsets import (
     parse_level_up_learnset,
 )
 from .machines import (
-    GEN4_MACHINE_COUNT,
-    GEN4_TM_COUNT,
-    machine_name,
     parse_machine_move_table,
 )
 from .map_headers import (

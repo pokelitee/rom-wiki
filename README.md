@@ -23,14 +23,15 @@ committed.
 | Pokémon Black 2 & White 2 | Data-driven sibling-version family |
 | Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
 | Pokémon Blaze Black 2 & Volt White 2 | Data-driven paired-hack comparison |
-| Pokémon HeartGold & SoulSilver | Unpublished Generation IV engine scaffold |
+| Pokémon HeartGold & SoulSilver | Unpublished data-driven Pokémon-first slice |
 | Pokémon Sacred Gold & Storm Silver | Unpublished paired-hack scaffold |
 
-The current Generation IV and V engines cover Pokémon, abilities, moves, items,
+The mature Generation IV and V engines cover Pokémon, abilities, moves, items,
 learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,
 trades, static encounters, and other engine-specific mechanics where exact
-extraction is supported. Each site's data-sources page records its exact input
-versions, provenance, and known limitations.
+extraction is supported. The partial HGSS engine currently covers only Pokémon
+personal data. Each site's data-sources page records its exact input versions,
+provenance, and known limitations.
 
 “Data-driven” means a site is generated from normalized ROM datasets; it does
 not imply exhaustive extraction of every mechanic. Exact coverage belongs in
