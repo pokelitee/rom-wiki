@@ -1,0 +1,35 @@
+# Representative pages for the verified Sacred Gold and Storm Silver slices.
+[pages]
+pokemon = [
+    "bulbasaur",
+    "pikachu",
+    "lugia",
+    "ho-oh",
+    "deoxys-attack",
+]
+abilities = [
+    "overgrow",
+    "levitate",
+    "pickup",
+    "pressure",
+]
+moves = [
+    "pound",
+    "thunderbolt",
+    "struggle",
+    "shadow-force",
+]
+items = [
+    "master-ball",
+    "apricorn-box",
+]
+encounters = [
+    "area-000",
+]
+trainers = [
+    "trainer-0001",
+    "trainer-0229",
+]
+locations = [
+    "header-000",
+]

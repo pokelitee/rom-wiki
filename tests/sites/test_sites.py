@@ -90,7 +90,7 @@ class SiteCatalogTests(unittest.TestCase):
         assert black_2_white_2 is not None
         self.assertEqual(black_2_white_2.versions, ("black-2", "white-2"))
         hgss = catalog.get("heart-gold-soul-silver")
-        self.assertFalse(hgss.published)
+        self.assertTrue(hgss.published)
         self.assertIsNotNone(hgss.game)
         assert hgss.game is not None
         self.assertTrue(hgss.game.data_driven)
@@ -108,6 +108,19 @@ class SiteCatalogTests(unittest.TestCase):
                 "types",
                 "data",
             ),
+        )
+        sacred_gold_storm_silver = catalog.get("sacred-gold-storm-silver")
+        self.assertTrue(sacred_gold_storm_silver.published)
+        self.assertIsNotNone(sacred_gold_storm_silver.game)
+        assert sacred_gold_storm_silver.game is not None
+        self.assertTrue(sacred_gold_storm_silver.game.data_driven)
+        self.assertEqual(
+            sacred_gold_storm_silver.game.profiles,
+            ("sacred-gold", "storm-silver"),
+        )
+        self.assertEqual(
+            sacred_gold_storm_silver.game.generated_sections,
+            hgss.game.generated_sections,
         )
 
     def test_build_all_targets_one_combined_artifact(self) -> None:
@@ -143,6 +156,8 @@ class SiteCatalogTests(unittest.TestCase):
                     "blaze-black-2-volt-white-2",
                     "black-white",
                     "black-2-white-2",
+                    "heart-gold-soul-silver",
+                    "sacred-gold-storm-silver",
                 ],
             )
             # Game builds run concurrently, so only their destinations are
@@ -157,6 +172,8 @@ class SiteCatalogTests(unittest.TestCase):
                     output.resolve() / "blaze-black-2-volt-white-2",
                     output.resolve() / "black-white",
                     output.resolve() / "black-2-white-2",
+                    output.resolve() / "heart-gold-soul-silver",
+                    output.resolve() / "sacred-gold-storm-silver",
                 },
             )
             # The portal renders into the artifact root, and MkDocs `--clean`
@@ -344,6 +361,8 @@ class SiteCatalogTests(unittest.TestCase):
                 "blaze-black-2-volt-white-2",
                 "black-white",
                 "black-2-white-2",
+                "heart-gold-soul-silver",
+                "sacred-gold-storm-silver",
             },
         )
 

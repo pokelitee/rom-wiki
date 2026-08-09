@@ -30,7 +30,12 @@ from romwiki.renderers.mkdocs.locations_event_map import (
     _append_warps,
     _filename,
 )
-from romwiki.renderers.mkdocs.references import ROUTES, ReferenceIndex, entity_reference
+from romwiki.renderers.mkdocs.references import (
+    ROUTES,
+    ReferenceIndex,
+    encounter_route_kind,
+    entity_reference,
+)
 
 
 def render_encounter_map_location_pages(
@@ -220,7 +225,7 @@ def _append_encounter_variants(
             [
                 ROUTES.markdown_link(
                     entity_reference(
-                        "encounter_variant",
+                        encounter_route_kind(encounter.encounter_route_key),
                         encounter.area_id,
                         "View encounter table",
                         encounter.encounter_route_key,
@@ -243,7 +248,7 @@ def _append_encounter_variants(
         )
         link = ROUTES.markdown_link(
             entity_reference(
-                "encounter_variant",
+                encounter_route_kind(encounter.encounter_route_key),
                 encounter.area_id,
                 label,
                 encounter.encounter_route_key,

@@ -65,6 +65,8 @@ class EncounterRenderingTests(unittest.TestCase):
 
         self.assertIn("## Walking (Morning)", page)
         self.assertIn("## Walking (Night)", page)
+        self.assertIn('href="#walking-morning"', page)
+        self.assertNotIn('href="#walking"', page)
         self.assertIn("## Rock Smash", page)
         self.assertIn("**Hoenn Sound radio:**", page)
         self.assertNotIn("Unown table ID", page)

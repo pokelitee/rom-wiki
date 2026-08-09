@@ -203,6 +203,8 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "blaze-black-2-volt-white-2",
                 "black-white",
                 "black-2-white-2",
+                "heart-gold-soul-silver",
+                "sacred-gold-storm-silver",
             ],
         )
         self.assertFalse(sites[0]["data_driven"])

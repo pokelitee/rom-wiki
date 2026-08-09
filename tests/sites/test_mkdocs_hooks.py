@@ -80,6 +80,8 @@ class MkDocsHooksTests(unittest.TestCase):
                 "blaze-black-2-volt-white-2",
                 "black-white",
                 "black-2-white-2",
+                "heart-gold-soul-silver",
+                "sacred-gold-storm-silver",
             ],
         )
 
@@ -167,6 +169,8 @@ class MkDocsHooksTests(unittest.TestCase):
                 "blaze-black-2-volt-white-2",
                 "black-white",
                 "black-2-white-2",
+                "heart-gold-soul-silver",
+                "sacred-gold-storm-silver",
             ],
         )
         self.assertTrue(context["romwiki"]["games"][0]["url"].endswith("/"))

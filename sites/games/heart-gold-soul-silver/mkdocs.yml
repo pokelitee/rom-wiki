@@ -1,7 +1,7 @@
 INHERIT: ../../shared/mkdocs.base.yml
 
 site_name: Pokémon HeartGold & SoulSilver Wiki
-site_description: An emerging ROM-derived reference for Pokémon HeartGold and SoulSilver
+site_description: An exact, data-driven reference for Pokémon HeartGold and SoulSilver
 docs_dir: wiki
 hooks:
   - ../../../src/romwiki/sites/mkdocs_hooks.py
@@ -16,5 +16,10 @@ nav:
   - Game Data:
       - Pokémon: pokemon/index.md
       - Abilities: abilities/index.md
+      - Items: items/index.md
       - Moves: moves/index.md
       - Type Chart: types/index.md
+  - World:
+      - Wild Encounters: encounters/index.md
+      - Trainers: trainers/index.md
+      - Locations: locations/index.md

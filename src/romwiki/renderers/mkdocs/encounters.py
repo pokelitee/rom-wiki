@@ -426,7 +426,14 @@ def _area_summary(record: dict[str, Any]) -> list[str]:
             "<div><dt>Methods</dt><dd>"
             + (
                 ", ".join(
-                    summary_section_link(label, label.lower().replace(" ", "-"))
+                    summary_section_link(
+                        label,
+                        (
+                            "walking-morning"
+                            if label == "Walking" and record.get("walking_variants")
+                            else label.lower().replace(" ", "-")
+                        ),
+                    )
                     for label in methods
                 )
                 if methods

@@ -11,6 +11,45 @@ from romwiki.renderers.mkdocs.references import ReferenceIndex
 
 
 class LocationRenderingTests(unittest.TestCase):
+    def test_links_hgss_location_to_nonseasonal_encounter_area(self) -> None:
+        record = {
+            "header_id": 7,
+            "name": "Route 29",
+            "encounter_map_index": 28,
+            "matrix_id": 0,
+            "provenance": {"archive": "arm9", "member": 7},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        dataset = {
+            "game": "heartgold-us",
+            "engine": "gen4_hgss",
+            "records": [record],
+        }
+        relationships = build_relationship_index(
+            {
+                "locations": dataset,
+                "encounters": {
+                    "game": "heartgold-us",
+                    "records": [{"area_id": 28, "name": "Route 29"}],
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output, relationships=relationships)
+            page = (output / "header-007.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "[View encounter table](../encounters/area-028.md)",
+            page,
+        )
+
     def test_links_gen5_location_to_all_seasonal_encounter_variants(self) -> None:
         record = {
             "header_id": 6,

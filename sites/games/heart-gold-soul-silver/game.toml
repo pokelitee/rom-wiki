@@ -3,10 +3,10 @@ id = "heart-gold-soul-silver"
 name = "Pokémon HeartGold & SoulSilver"
 kind = "game"
 slug = "heart-gold-soul-silver"
-published = false
+published = true
 order = 25
 mkdocs_config = "mkdocs.yml"
-description = "An emerging ROM-derived reference for Pokémon HeartGold and SoulSilver (USA)"
+description = "An exact, data-driven reference for Pokémon HeartGold and SoulSilver (USA)"
 
 [game]
 profiles = ["heartgold-us", "soulsilver-us"]
