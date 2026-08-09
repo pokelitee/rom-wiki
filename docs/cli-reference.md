@@ -169,6 +169,7 @@ define one so comparisons can be merged consistently.
 ```console
 romwiki regenerate platinum renegade-platinum
 romwiki regenerate --all
+romwiki regenerate heart-gold-soul-silver --incremental
 ```
 
 It:
@@ -186,6 +187,18 @@ audited generated content:
 ```console
 romwiki regenerate --all --refresh --snapshot
 ```
+
+`--incremental` retains the selected site's existing artifact and asks MkDocs to
+process only added or changed source files. ROM extraction caches and deterministic
+rendering still run normally; unchanged generated files retain their modification
+times, so MkDocs can skip them. A content-addressed state file under
+`.romwiki/build-state/` binds reuse to the output path, production/development
+mode, site URL, MkDocs versions, site configuration, shared templates and hooks,
+and the complete source-file set. Missing output, changed build inputs, or deleted
+or renamed sources automatically select a clean site build.
+
+Snapshot creation rejects `--incremental`. Publication snapshots must always come
+from the complete clean `--all` workflow.
 
 ## Baseline caches
 
@@ -211,6 +224,7 @@ Build one or every published site:
 
 ```console
 romwiki site build renegade-platinum --output dist
+romwiki site build renegade-platinum --output dist --incremental
 romwiki site build --all --output dist
 ```
 

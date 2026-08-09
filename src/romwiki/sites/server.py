@@ -187,6 +187,7 @@ def serve_sites(
         build_all=serve_all,
         dev=dev,
         site_url=site_url,
+        incremental=True,
     )
 
     reload_state = ReloadState()
@@ -385,6 +386,7 @@ def _rebuild_worker(
                 build_all=serve_all,
                 dev=dev,
                 site_url=site_url,
+                incremental=True,
             )
         except SiteError as error:
             _LOG.error("Development rebuild failed: %s", error)

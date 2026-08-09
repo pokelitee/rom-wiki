@@ -6,9 +6,17 @@ import subprocess
 import sys
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
+from romwiki.sites.build_state import (
+    artifact_files,
+    can_reuse_site_output,
+    current_site_build_state,
+    read_site_build_state,
+    write_site_build_state,
+)
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.util.errors import SiteError
 
@@ -25,6 +33,8 @@ def build_sites(
     dev: bool = False,
     site_url: str | None = None,
     jobs: int | None = None,
+    incremental: bool = False,
+    state_root: Path | None = None,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
     selected = catalog.select(site_ids, all_published=build_all)
@@ -38,34 +48,63 @@ def build_sites(
     for site in ordered:
         _validate_generated_content(site)
 
+    resolved_state_root = (state_root or catalog.root / ".romwiki" / "build-state")
+
     # MkDocs `--clean` empties the site directory it is given, so a site that
     # renders into the artifact root (the portal) would delete the game
     # directories nested inside it. Those roots run first and alone; everything
     # else writes to a private subdirectory and can run concurrently.
-    root_plans: list[tuple[SiteDefinition, tuple[str, ...]]] = []
-    nested_plans: list[tuple[SiteDefinition, tuple[str, ...]]] = []
+    root_sites: list[SiteDefinition] = []
+    nested_sites: list[SiteDefinition] = []
     for site in ordered:
-        plan = (site, _build_command(site, resolved_output, dev=dev))
         writes_to_root = site.output_path(resolved_output) == resolved_output
-        (root_plans if writes_to_root else nested_plans).append(plan)
+        (root_sites if writes_to_root else nested_sites).append(site)
 
-    for site, command in root_plans:
-        _run_site_build(site, command, command_runner)
+    for site in root_sites:
+        _build_site(
+            catalog,
+            site,
+            resolved_output,
+            command_runner,
+            dev=dev,
+            site_url=site_url,
+            incremental=incremental,
+            state_root=resolved_state_root,
+        )
 
-    worker_count = _worker_count(jobs, len(nested_plans))
+    worker_count = _worker_count(jobs, len(nested_sites))
     if worker_count <= 1:
-        for site, command in nested_plans:
-            _run_site_build(site, command, command_runner)
+        for site in nested_sites:
+            _build_site(
+                catalog,
+                site,
+                resolved_output,
+                command_runner,
+                dev=dev,
+                site_url=site_url,
+                incremental=incremental,
+                state_root=resolved_state_root,
+            )
     else:
         _LOG.info(
             "Building %s sites with %s parallel MkDocs jobs",
-            len(nested_plans),
+            len(nested_sites),
             worker_count,
         )
         with ThreadPoolExecutor(max_workers=worker_count) as pool:
             futures = [
-                pool.submit(_run_site_build, site, command, command_runner)
-                for site, command in nested_plans
+                pool.submit(
+                    _build_site,
+                    catalog,
+                    site,
+                    resolved_output,
+                    command_runner,
+                    dev=dev,
+                    site_url=site_url,
+                    incremental=incremental,
+                    state_root=resolved_state_root,
+                )
+                for site in nested_sites
             ]
             # Surface the first failure only after every build has settled, so
             # a broken site cannot leave sibling MkDocs processes orphaned.
@@ -87,19 +126,68 @@ def _worker_count(jobs: int | None, task_count: int) -> int:
 
 
 def _build_command(
-    site: SiteDefinition, resolved_output: Path, *, dev: bool
+    site: SiteDefinition, resolved_output: Path, *, dev: bool, clean: bool = True
 ) -> tuple[str, ...]:
     return (
         sys.executable,
         "-m",
         "mkdocs",
         "build",
-        "--clean",
+        "--clean" if clean else "--dirty",
         "--config-file",
         str(_site_config_path(site, dev=dev)),
         "--site-dir",
         str(site.output_path(resolved_output)),
     )
+
+
+def _build_site(
+    catalog: SiteCatalog,
+    site: SiteDefinition,
+    resolved_output: Path,
+    command_runner: CommandRunner,
+    *,
+    dev: bool,
+    site_url: str | None,
+    incremental: bool,
+    state_root: Path,
+) -> None:
+    clean = True
+    state = None
+    state_path = state_root / f"{site.id}.json"
+    output_path = site.output_path(resolved_output)
+    if incremental:
+        state = current_site_build_state(
+            catalog, site, resolved_output, dev=dev, site_url=site_url
+        )
+        previous = read_site_build_state(state_path)
+        reusable = can_reuse_site_output(previous, state, output_path)
+        if reusable and previous is not None and (
+            previous.source_files == state.source_files
+        ):
+            _LOG.info("MkDocs build for %s skipped; inputs are unchanged", site.id)
+            return
+        clean = not reusable
+        _LOG.info(
+            "%s build selected for %s",
+            "Clean" if clean else "Incremental",
+            site.id,
+        )
+    command = _build_command(site, resolved_output, dev=dev, clean=clean)
+    _run_site_build(site, command, command_runner)
+    if incremental and state is not None:
+        excluded = (
+            frozenset(candidate.slug for candidate in catalog.sites if candidate.slug)
+            if site.output_path(resolved_output) == resolved_output
+            else frozenset()
+        )
+        completed_state = replace(
+            state,
+            output_files=artifact_files(output_path, excluded_top_level=excluded),
+        )
+        if not completed_state.output_files:
+            raise SiteError(f"MkDocs build produced no files for {site.id}: {output_path}")
+        write_site_build_state(state_path, completed_state)
 
 
 def _run_site_build(

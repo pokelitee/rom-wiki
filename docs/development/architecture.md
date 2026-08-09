@@ -305,6 +305,28 @@ and SHA-256 checksums. These archives are the complete data interface; Markdown 
 the curated human interface and catalog JSON remains a small presentation index.
 Snapshot creation and restoration validate the manifest and every archive.
 
+### Incremental site builds
+
+Incremental publication is a site-rendering concern, separate from extraction and
+normalized dataset contracts. Renderers always receive complete normalized inputs
+and continue to prune stale Markdown. Content-aware atomic writes preserve the
+modification time of unchanged output, allowing an explicit `--incremental` site
+build to use MkDocs dirty mode for only added or changed files.
+
+Reuse is conservative. `.romwiki/build-state/` records the complete wiki source
+set and fingerprints every non-content input that can affect HTML: the selected
+site configuration, all site descriptors, shared templates and assets, MkDocs
+hooks, relevant package versions, build mode, site URL, and output root. A missing
+artifact, incompatible fingerprint, source deletion, or source rename falls back
+to `mkdocs build --clean`. Additions and edits use `--dirty`; renderers are
+responsible for updating all transitively affected pages such as catalogs,
+backlinks, and navigation neighbors before MkDocs runs.
+
+This state is an ignored local optimization, not a publication artifact or data
+cache. Complete snapshot builds remain clean and cannot use incremental mode. The
+combined artifact audit also remains complete, so incremental development does not
+weaken the release correctness boundary.
+
 ## Reuse boundaries
 
 There are three common extension cases:

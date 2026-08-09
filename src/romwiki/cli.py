@@ -334,6 +334,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="replace current-ROM and clean-baseline extraction caches",
     )
     regenerate_parser.add_argument(
+        "--incremental",
+        action="store_true",
+        help="reuse a compatible artifact and rebuild only changed MkDocs inputs",
+    )
+    regenerate_parser.add_argument(
         "--snapshot",
         action="store_true",
         help="update the generated-wiki snapshot after a successful audit",
@@ -407,6 +412,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_site_parser.add_argument(
         "--output", type=Path, default=Path("dist"), help="artifact output directory"
+    )
+    build_site_parser.add_argument(
+        "--incremental",
+        action="store_true",
+        help="reuse a compatible artifact and rebuild only changed MkDocs inputs",
     )
     _add_jobs_argument(build_site_parser)
     _add_site_root_argument(build_site_parser)
@@ -727,6 +737,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         site_ids=args.site_ids,
                         build_all=args.build_all,
                         jobs=args.jobs,
+                        incremental=args.incremental,
                     )
                 for site in built:
                     _LOG.info(
@@ -1217,6 +1228,8 @@ def _run_regeneration(args: argparse.Namespace) -> None:
     _LOG.info("Complete regeneration started")
     if args.snapshot and not args.regenerate_all:
         raise SiteError("--snapshot requires --all")
+    if args.snapshot and getattr(args, "incremental", False):
+        raise SiteError("--snapshot cannot be combined with --incremental")
 
     catalog = SiteCatalog.load(args.root)
     selected = catalog.select(
@@ -1374,6 +1387,7 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             site_ids=args.site_ids,
             build_all=args.regenerate_all,
             jobs=args.jobs,
+            incremental=getattr(args, "incremental", False),
         )
     for site in built:
         _LOG.info("Built %s: %s", site.id, site.output_path(args.output.resolve()))

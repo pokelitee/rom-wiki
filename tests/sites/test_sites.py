@@ -10,7 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from romwiki.sites import SiteCatalog, build_sites
+from romwiki.sites import GameMetadata, SiteCatalog, SiteDefinition, build_sites
 from romwiki.sites.build import _run_command, _validate_generated_content
 from romwiki.sites.catalog import _load_game_metadata, _validate_profile_references
 from romwiki.sites.mkdocs_hooks import _deployment_site_url
@@ -217,6 +217,103 @@ class SiteCatalogTests(unittest.TestCase):
         for site in built:
             if site.kind == "game":
                 self.assertEqual(configs[site.id].name, "mkdocs.dev.yml")
+
+    def test_incremental_build_reuses_output_and_cleans_after_a_deletion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site_root = root / "sites" / "games" / "example"
+            wiki_root = site_root / "wiki"
+            wiki_root.mkdir(parents=True)
+            config = site_root / "mkdocs.yml"
+            config.write_text("site_name: Example\n", encoding="utf-8")
+            index = wiki_root / "index.md"
+            index.write_text("# Example\n", encoding="utf-8")
+            site = SiteDefinition(
+                id="example",
+                name="Example",
+                kind="game",
+                slug="example",
+                published=True,
+                order=1,
+                config_path=config,
+                description="Example",
+                theme="platinum",
+                game=GameMetadata(
+                    profiles=(),
+                    versions=(),
+                    data_driven=False,
+                    generation=4,
+                    base_game="platinum",
+                    platform="nintendo-ds",
+                    platform_name="Nintendo DS",
+                    creator="Tester",
+                ),
+            )
+            catalog = SiteCatalog(root, (site,))
+            output = root / "dist"
+            state_root = root / "state"
+            commands: list[tuple[str, ...]] = []
+
+            def build(command: Sequence[str]) -> None:
+                commands.append(tuple(command))
+                destination = Path(command[-1])
+                destination.mkdir(parents=True, exist_ok=True)
+                (destination / "index.html").write_text("ok", encoding="utf-8")
+
+            for _ in range(2):
+                build_sites(
+                    catalog,
+                    output,
+                    site_ids=(site.id,),
+                    incremental=True,
+                    state_root=state_root,
+                    runner=build,
+                )
+
+            (output / site.slug / "index.html").unlink()
+            build_sites(
+                catalog,
+                output,
+                site_ids=(site.id,),
+                incremental=True,
+                state_root=state_root,
+                runner=build,
+            )
+            config.write_text("site_name: Renamed Example\n", encoding="utf-8")
+            build_sites(
+                catalog,
+                output,
+                site_ids=(site.id,),
+                incremental=True,
+                state_root=state_root,
+                runner=build,
+            )
+            added = wiki_root / "added.md"
+            added.write_text("# Added\n", encoding="utf-8")
+            build_sites(
+                catalog,
+                output,
+                site_ids=(site.id,),
+                incremental=True,
+                state_root=state_root,
+                runner=build,
+            )
+            added.unlink()
+            build_sites(
+                catalog,
+                output,
+                site_ids=(site.id,),
+                incremental=True,
+                state_root=state_root,
+                runner=build,
+            )
+
+        self.assertEqual(len(commands), 5)
+        self.assertIn("--clean", commands[0])
+        self.assertIn("--clean", commands[1])
+        self.assertIn("--clean", commands[2])
+        self.assertIn("--dirty", commands[3])
+        self.assertIn("--clean", commands[4])
 
     def test_b2w2_site_uses_paired_hack_profiles(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)

@@ -211,6 +211,9 @@ exercise the site's distinct rendering states, and update the manifest whenever 
 new detail component needs a stable review fixture. The manifest changes only
 which detail Markdown is rendered; catalogs and shared pages remain complete.
 
+The development server starts from a clean preview artifact, then uses guarded
+incremental MkDocs builds for watched edits. Source deletions, configuration
+changes, and other incompatible inputs automatically fall back to a clean build.
 Always use the production configuration or the multi-site build before deployment.
 The deploy workflow runs the unit suite, builds each published site concurrently,
 merges their artifacts, and audits the combined result. Run the same artifact

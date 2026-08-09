@@ -178,6 +178,11 @@ class MainErrorHandlingTests(unittest.TestCase):
         self.assertTrue(args.refresh)
         self.assertTrue(args.snapshot)
 
+        incremental = build_parser().parse_args(
+            ["regenerate", "heart-gold-soul-silver", "--incremental"]
+        )
+        self.assertTrue(incremental.incremental)
+
     def test_parser_exposes_global_logging_options(self) -> None:
         verbose = build_parser().parse_args(["--verbose", "regenerate", "--all"])
         quiet = build_parser().parse_args(["--quiet", "regenerate", "--all"])
@@ -805,6 +810,16 @@ patched_rom = "roms/white-us.nds"
         )
 
         with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
+            _run_regeneration(args)
+
+    def test_snapshot_rejects_incremental_builds(self) -> None:
+        args = SimpleNamespace(
+            snapshot=True,
+            regenerate_all=True,
+            incremental=True,
+        )
+
+        with self.assertRaisesRegex(SiteError, "cannot be combined"):
             _run_regeneration(args)
 
     def test_site_audit_warnings_are_summarized_by_default(self) -> None:
