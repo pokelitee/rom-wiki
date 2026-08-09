@@ -70,6 +70,27 @@ from .encounters import (
     parse_encounter_record,
 )
 from .map_headers import MAP_HEADER_SIZE, parse_map_headers
+from .marts import parse_shop_catalog
+from .pickup import (
+    PICKUP_COMMON_ITEM_COUNT,
+    PICKUP_COMMON_TABLE_LOCATOR,
+    PICKUP_LEVEL_RANGE_COUNT,
+    PICKUP_LEVEL_RANGE_SIZE,
+    PICKUP_RARE_ITEM_COUNT,
+    PICKUP_RARE_TABLE_LOCATOR,
+    PICKUP_SLOT_CHANCES,
+    parse_pickup_item_table,
+    pickup_level_range_item_ids,
+)
+from .trades import NPC_TRADE_RECORD_SIZE, parse_npc_trade_record
+from .tutors import (
+    TUTOR_COMPATIBILITY_RECORD_SIZE,
+    TUTOR_COUNT,
+    TUTOR_LOCATION_NAMES,
+    TUTOR_RECORD_SIZE,
+    parse_tutor_compatibility_table,
+    parse_tutor_move_table,
+)
 
 parse_map_header_table = parse_map_headers
 
@@ -92,12 +113,18 @@ CODE_BINARY_DECOMPRESSED = True
 ARCHIVE_MEMBER_NONE = 0
 ENCOUNTER_MEMBER_NONE = 0xFF
 MATRIX_VOID_HEADER_IDS = frozenset((0, 0xFFFF))
+DYNAMIC_WARP_HEADER_ID = 0xFFF
+DYNAMIC_WARP_ID = 0x100
 WALKING_SLOT_CHANCES = HGSS_WALKING_SLOT_CHANCES
 WATER_SLOT_CHANCES = HGSS_WATER_SLOT_CHANCES
 FISHING_SLOT_CHANCES = HGSS_FISHING_SLOT_CHANCES
 ROCK_SMASH_SLOT_CHANCES = HGSS_ROCK_SMASH_SLOT_CHANCES
 FIRST_TRAINER_ID = 1
-TRAINER_LOCATION_EXTRACTION = False
+TRAINER_LOCATION_EXTRACTION = True
+TRAINER_SCRIPT_REFERENCE_EXTRACTION = False
+TRAINER_OBJECT_SCRIPT_START = 3000
+TRAINER_OBJECT_SCRIPT_END = 3999
+TRAINER_OBJECT_ID_OFFSET = 1
 ALLOW_DUPLICATE_EGG_MOVES = True
 # Sacred Gold and Storm Silver v1.05 both store form bits 1 on trainer 229's
 # Pinsir. Pinsir has no Generation IV form, so retain the raw form ID while
@@ -121,13 +148,25 @@ __all__ = [
     "MOVE_RECORD_COUNT",
     "MOVE_RECORD_SIZE",
     "NATURAL_GIFT_TYPE_NONE",
+    "NPC_TRADE_RECORD_SIZE",
     "PERSONAL_FORM_MEMBERS",
     "PERSONAL_INTERNAL_MEMBERS",
     "PERSONAL_RECORD_COUNT",
     "PERSONAL_RECORD_SIZE",
+    "PICKUP_COMMON_ITEM_COUNT",
+    "PICKUP_COMMON_TABLE_LOCATOR",
+    "PICKUP_LEVEL_RANGE_COUNT",
+    "PICKUP_LEVEL_RANGE_SIZE",
+    "PICKUP_RARE_ITEM_COUNT",
+    "PICKUP_RARE_TABLE_LOCATOR",
+    "PICKUP_SLOT_CHANCES",
     "POKEMON_NAME_COUNT",
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
+    "TUTOR_COMPATIBILITY_RECORD_SIZE",
+    "TUTOR_COUNT",
+    "TUTOR_LOCATION_NAMES",
+    "TUTOR_RECORD_SIZE",
     "TRAINER_COSMETIC_FORM_LABELS",
     "TRAINER_FORM_SLUGS",
     "EVOLUTION_METHOD_NAMES",
@@ -147,6 +186,7 @@ __all__ = [
     "parse_map_headers",
     "parse_map_header_table",
     "parse_map_matrix",
+    "parse_shop_catalog",
     "parse_map_events",
     "parse_object_events",
     "parse_warp_events",
@@ -155,10 +195,15 @@ __all__ = [
     "parse_trainer_class_genders",
     "parse_trainer_class_prize_multipliers",
     "parse_trainer_record",
+    "parse_npc_trade_record",
+    "parse_tutor_compatibility_table",
+    "parse_tutor_move_table",
     "derive_trainer_party_attributes",
     "normalize_trainer_party_member",
     "machine_name",
     "parse_personal_record",
+    "parse_pickup_item_table",
+    "pickup_level_range_item_ids",
     "parse_english_message_archive",
     "parse_move_record",
 ]

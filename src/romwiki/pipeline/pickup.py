@@ -17,6 +17,8 @@ def extract_pickup_dataset(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError("A known game profile is required for pickup extraction")
     profile = result.match.profile
     pickup_format = get_engine(profile.engine).formats.pickup
+    if pickup_format == "locator-tables":
+        return _extract_locator_tables(result)
     if pickup_format == "sliding-table":
         return _extract_sliding_table(result)
     if pickup_format == "split-table":
@@ -93,6 +95,88 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
             "common_rate": tables.common_rate,
             "honey_gather_rate": tables.honey_gather_rate,
         },
+    }
+
+
+def _extract_locator_tables(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        overlay_id = profile.parameters["pickup_overlay_id"]
+        item_names_member = profile.parameters["item_names_member"]
+        messages_path = profile.layout["messages"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing pickup metadata: {error.args[0]}"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).pickup
+    filesystem = platform.filesystem_from_image(result.image)
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(messages_path),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
+    item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
+    common_offset = find_unique_pattern(
+        overlay_data,
+        bytes.fromhex(engine.PICKUP_COMMON_TABLE_LOCATOR),
+        label="the common Pickup item table",
+    )
+    rare_offset = find_unique_pattern(
+        overlay_data,
+        bytes.fromhex(engine.PICKUP_RARE_TABLE_LOCATOR),
+        label="the rare Pickup item table",
+    )
+    common_items = engine.parse_pickup_item_table(
+        overlay_data,
+        offset=common_offset,
+        count=engine.PICKUP_COMMON_ITEM_COUNT,
+        item_count=len(item_names),
+    )
+    rare_items = engine.parse_pickup_item_table(
+        overlay_data,
+        offset=rare_offset,
+        count=engine.PICKUP_RARE_ITEM_COUNT,
+        item_count=len(item_names),
+    )
+    level_ranges = []
+    for level_range in range(engine.PICKUP_LEVEL_RANGE_COUNT):
+        item_ids = engine.pickup_level_range_item_ids(
+            common_items, rare_items, level_range
+        )
+        level_ranges.append(
+            {
+                "minimum_level": level_range * engine.PICKUP_LEVEL_RANGE_SIZE + 1,
+                "maximum_level": (level_range + 1)
+                * engine.PICKUP_LEVEL_RANGE_SIZE,
+                "slots": [
+                    {
+                        "item_id": item_id,
+                        "name": item_names[item_id],
+                        "chance": chance,
+                    }
+                    for item_id, chance in zip(
+                        item_ids, engine.PICKUP_SLOT_CHANCES, strict=True
+                    )
+                ],
+            }
+        )
+    return {
+        "schema_version": PICKUP_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "pickup",
+        "record_count": 1,
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "overlay_id": overlay.id,
+            "file_id": overlay.file_id,
+            "common_offset": common_offset,
+            "rare_offset": rare_offset,
+        },
+        "level_ranges": level_ranges,
     }
 
 

@@ -16,6 +16,7 @@ from romwiki.renderers.mkdocs.components import (
     pokemon_table,
     record_nav_link,
     summary_section_link,
+    tutor_requirement,
     type_badges,
 )
 from romwiki.renderers.mkdocs.items import _party_effects
@@ -46,6 +47,20 @@ class DisplayNameTests(unittest.TestCase):
 
     def test_title_cases_regular_slug(self) -> None:
         self.assertEqual(display_name("evolution-stone"), "Evolution Stone")
+
+
+class TutorRequirementTests(unittest.TestCase):
+    def test_formats_battle_point_costs(self) -> None:
+        self.assertEqual(
+            tutor_requirement(
+                {"kind": "battle-points", "battle_point_cost": 40}
+            ),
+            "40 BP",
+        )
+        self.assertEqual(
+            tutor_requirement({"kind": "battle-points", "battle_point_cost": 0}),
+            "Free",
+        )
 
 
 class EvolutionConditionTests(unittest.TestCase):

@@ -19,6 +19,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
     tutor_format = get_engine(profile.engine).formats.tutors
     if tutor_format == "personal-archive":
         return _extract_personal_archive_tutors(result)
+    if tutor_format == "overlay-archive":
+        return _extract_overlay_archive_tutors(result)
     if tutor_format != "overlay-table":
         raise DataSourceError(
             f"Engine {profile.engine!r} does not provide tutor extraction"
@@ -96,6 +98,60 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
 
 def write_tutor_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, dataset)
+
+
+def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        overlay_id = profile.parameters["tutor_overlay_id"]
+        move_offset = profile.parameters["tutor_move_offset"]
+        compatibility_path = profile.layout["tutor_compatibility"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing HGSS tutor metadata: {error.args[0]}"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).tutors
+    overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
+    move_size = engine.TUTOR_COUNT * engine.TUTOR_RECORD_SIZE
+    move_data = _slice_overlay(overlay_data, move_offset, move_size, "move")
+    tutors = engine.parse_tutor_move_table(move_data)
+
+    filesystem = platform.filesystem_from_image(result.image)
+    compatibility_data = filesystem.read(compatibility_path)
+    form_members = tuple(sorted(engine.FORM_MEMBERS))
+    compatibility = engine.parse_tutor_compatibility_table(
+        compatibility_data,
+        base_species_count=engine.BASE_SPECIES_COUNT,
+        form_member_start=form_members[0],
+        form_count=len(form_members),
+    )
+    return {
+        "schema_version": TUTORS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "move_tutors",
+        "record_count": len(tutors),
+        "compatibility_record_count": len(compatibility),
+        "special_record_count": 0,
+        "special_compatibility_record_count": 0,
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "overlay_id": overlay.id,
+            "file_id": overlay.file_id,
+            "move_offset": move_offset,
+            "compatibility_archive": compatibility_path,
+        },
+        "location_names": list(engine.TUTOR_LOCATION_NAMES),
+        "records": [
+            {**record.to_dict(), "kind": "battle-points"} for record in tutors
+        ],
+        "compatibility": [record.to_dict() for record in compatibility],
+        "special_records": [],
+        "special_compatibility": [],
+    }
 
 
 def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]:

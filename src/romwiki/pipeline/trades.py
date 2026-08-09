@@ -28,7 +28,10 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
     interaction_by_id = getattr(engine, "NPC_TRADE_INTERACTION_BY_ID", {})
     filesystem = platform.filesystem_from_image(result.image)
     trades = platform.archive_cls.from_bytes(filesystem.read(trades_path))
-    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(messages_path),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
     trade_strings = engine.parse_english_message_archive(
         messages.read(trade_names_member)
     )

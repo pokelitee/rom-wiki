@@ -25,6 +25,18 @@ class TutorMove:
 
 
 @dataclass(frozen=True, slots=True)
+class BattlePointTutorMove:
+    tutor_id: int
+    move_id: int
+    battle_point_cost: int
+    location_id: int
+    table_index: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class TutorCompatibility:
     personal_member: int
     tutor_ids: tuple[int, ...]

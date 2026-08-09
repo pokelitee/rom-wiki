@@ -22,7 +22,9 @@ archive and executable locators. Both patched ROMs produce 508 Pokémon records,
 123 public abilities, 471 move records, 513 public items, 142 wild-encounter
 areas, 737 trainers, and 540 packed map-header locations. Each dataset is parsed
 independently before the sibling versions are merged and compared with their
-matching retail bases.
+matching retail bases. The detailed location slice adds 1,317 warps, 158
+directional connections, 390 trainer-object links, 271 visible items, and 241
+hidden items per hack.
 
 Both hacks contain profile-scoped malformed NARC size declarations. The parser
 accepts them only through explicit flags on these exact hash-matched profiles.
@@ -36,6 +38,12 @@ the rendered reference resolves to base Pinsir without inventing a new form.
 PokéDB will provide optional reference metadata only, never the clean mechanics
 baseline; comparisons will come from the separately parsed retail ROMs.
 
+Each patched ROM independently verifies the same 52-record BP move-tutor table,
+505 compatibility rows, 11 true NPC trades, 27 supported specialty shops with
+141 item entries, and ten Pickup level bands as its matching retail version.
+Trade names and species still come from each hack's own patched message and
+trade archives; they are not copied from retail.
+
 ## Engine notes
 
 Both hacks retain their retail game codes. Formats proven identical to retail
@@ -44,8 +52,9 @@ the distinct encounter and packed map-header formats. Learnsets, evolutions,
 TM/HM mappings, egg moves, and normalized relationships feed the Pokémon, move,
 item, encounter, and trainer pages.
 
-Trainer-class payout multipliers and trainer-to-map script/object links are not
-published because their exact HGSS locators remain unverified. Locations expose
-verified names, encounter members, and matrix IDs, but not detailed map events,
-connections, field items, shops, gifts, trades, headbutt trees, or Safari Zone
-configuration.
+Trainer-class payout multipliers, script-only/shared trainer battles, and
+trade/shop locations are not published because their exact HGSS executable or
+script semantics remain unverified. Static encounters, gifts and eggs,
+Headbutt tree slots, and Safari Zone block configuration likewise remain
+explicit blockers: retail offset inventories are not treated as proof of the
+patched scripts, and no placeholder hack data is emitted.

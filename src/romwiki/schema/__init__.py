@@ -52,6 +52,7 @@ from romwiki.schema.trainers import (
     TrainerScriptReference,
 )
 from romwiki.schema.tutors import (
+    BattlePointTutorMove,
     ShardCosts,
     SpecialTutorMove,
     TutorCompatibility,
@@ -113,6 +114,7 @@ __all__ = [
     "NpcTrade",
     "TutorCompatibility",
     "TutorMove",
+    "BattlePointTutorMove",
     "SpecialTutorMove",
     "ShardCosts",
 ]

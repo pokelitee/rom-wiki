@@ -170,6 +170,7 @@ class GameBuildContext:
     def marts_raw(self) -> dict[str, Any] | None:
         if (
             "shop_item_overlay_id" not in self.profile.parameters
+            and "shop_catalog_locator" not in self.profile.parameters
             and "shop_items" not in self.profile.layout
         ):
             return None

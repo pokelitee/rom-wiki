@@ -60,9 +60,14 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "evolutions": "a/0/3/4",
                 "egg_moves": "a/2/2/9",
                 "encounters": "a/0/3/7",
+                "events": "a/0/3/2",
+                "map_matrices": "a/0/4/1",
                 "map_names": "fielddata/maptable/mapname.bin",
+                "npc_trades": "a/1/1/2",
+                "scripts": "a/0/1/2",
                 "trainer_data": "a/0/5/5",
                 "trainer_parties": "a/0/5/6",
+                "tutor_compatibility": "fielddata/wazaoshie/waza_oshie.bin",
             },
         )
         self.assertEqual(
@@ -79,6 +84,12 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "trainer_names_member": 729,
                 "trainer_classes_member": 730,
                 "trainer_class_gender_offset": 0xFFB90,
+                "npc_trade_names_member": 200,
+                "npc_trades_unused": [6, 7],
+                "pickup_overlay_id": 12,
+                "shop_catalog_locator": "298E0402618E0402998E0402B98E0402",
+                "tutor_overlay_id": 1,
+                "tutor_move_offset": 0x23AE0,
             },
         )
         self.assertEqual(
@@ -101,6 +112,9 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(storm_silver.layout, soulsilver.layout)
         self.assertTrue(sacred_gold.parameters["learnsets_allow_truncated"])
         self.assertTrue(storm_silver.parameters["encounters_allow_truncated"])
+        self.assertTrue(
+            sacred_gold.parameters["events_allow_incorrect_data_block_size"]
+        )
 
         engine = get_engine(heartgold.engine)
         self.assertEqual(
@@ -121,6 +135,9 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(engine.formats.encounters, "conditional")
         self.assertEqual(engine.formats.locations, "encounter-map")
         self.assertEqual(engine.formats.trainers, "class-gender")
+        self.assertEqual(engine.formats.pickup, "locator-tables")
+        self.assertEqual(engine.formats.tutors, "overlay-archive")
+        self.assertIn("detached-npc-trades", engine.capabilities)
 
     def test_identifies_exact_hgss_hashes_and_rejects_near_matches(self) -> None:
         repository = ProfileRepository.load(Path("profiles"))

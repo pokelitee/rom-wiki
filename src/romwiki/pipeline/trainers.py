@@ -450,9 +450,21 @@ def _extract_class_gender_trainer_locations(
         count=count,
         location_names_member=location_names_member,
     )
-    events = platform.archive_cls.from_bytes(filesystem.read(events_path))
-    scripts = platform.archive_cls.from_bytes(
-        filesystem.read(scripts_path), allow_truncated=True
+    event_options = {}
+    if profile.parameters.get("events_allow_incorrect_data_block_size", False):
+        event_options["allow_incorrect_data_block_size"] = True
+    events = platform.archive_cls.from_bytes(
+        filesystem.read(events_path), **event_options
+    )
+    extract_script_references = getattr(
+        engine, "TRAINER_SCRIPT_REFERENCE_EXTRACTION", True
+    )
+    scripts = (
+        platform.archive_cls.from_bytes(
+            filesystem.read(scripts_path), allow_truncated=True
+        )
+        if extract_script_references
+        else None
     )
     object_cache: dict[int, tuple[Any, ...]] = {}
     script_cache: dict[int, tuple[Any, ...]] = {}
@@ -500,6 +512,9 @@ def _extract_class_gender_trainer_locations(
                     z=object_event.z,
                 )
             )
+        if not extract_script_references:
+            continue
+        assert scripts is not None
         if header.script_file_id >= len(scripts.members):
             raise InvalidRomError(
                 f"Map header {header.header_id} references missing script file "
@@ -539,7 +554,9 @@ def _extract_class_gender_trainer_locations(
                 "start_trainer_battle_opcode": engine.START_TRAINER_BATTLE,
                 "check_won_battle_opcode": engine.CHECK_WON_BATTLE,
                 "literal_ids_only": True,
-            },
+            }
+            if extract_script_references
+            else "unsupported",
         },
     )
 

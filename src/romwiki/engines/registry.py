@@ -27,9 +27,13 @@ LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 LocationExtractionFormat = Literal[
     "unsupported", "arm9-event-map", "arm9-encounter-map", "archive-encounter-map"
 ]
-PickupFormat = Literal["none", "split-table", "sliding-table"]
+PickupFormat = Literal[
+    "none", "locator-tables", "split-table", "sliding-table"
+]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
-TutorFormat = Literal["none", "overlay-table", "personal-archive"]
+TutorFormat = Literal[
+    "none", "overlay-table", "overlay-archive", "personal-archive"
+]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
 
@@ -177,9 +181,9 @@ _ENGINES: dict[str, EngineAdapter] = {
             encounters="conditional",
             locations="encounter-map",
             location_extraction="arm9-encounter-map",
-            pickup="none",
+            pickup="locator-tables",
             trainers="class-gender",
-            tutors="none",
+            tutors="overlay-archive",
             fossils="none",
             static_encounters="none",
         ),
@@ -196,6 +200,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             }
         ),
         required_dataset_kinds=frozenset({"pokemon"}),
+        capabilities=frozenset({"detached-npc-trades"}),
         profile_contract=GEN4_HGSS_PROFILE_CONTRACT,
     ),
     GEN5_BW_ENGINE: EngineAdapter(

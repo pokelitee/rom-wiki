@@ -735,4 +735,7 @@ def shard_cost(costs: dict[str, int]) -> str:
 def tutor_requirement(tutor: dict[str, Any]) -> str:
     if tutor.get("kind") == "special":
         return f"Friendship {tutor['minimum_friendship']}"
+    if tutor.get("kind") == "battle-points":
+        cost = tutor["battle_point_cost"]
+        return f"{cost} BP" if cost else "Free"
     return shard_cost(tutor["shard_costs"])

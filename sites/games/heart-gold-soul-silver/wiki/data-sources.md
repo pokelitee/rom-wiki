@@ -37,7 +37,11 @@ and contest fields directly decoded from the ROM.
 Level-up learnsets (`a/0/3/3`), evolutions (`a/0/3/4`), the combined egg-move
 table (`a/2/2/9` member 0), and all 92 TM plus 8 HM move mappings are decoded.
 The machine table is located by its verified code signature rather than a
-build-specific assumed offset. Move tutors remain outside this slice.
+build-specific assumed offset. The 52 regular move-tutor records come from
+decompressed overlay 1 at `0x23AE0`; their packed fields provide BP costs and
+tutor groups, including the free Headbutt tutor in Ilex Forest. The separate
+`fielddata/wazaoshie/waza_oshie.bin` file provides 505 eight-byte compatibility
+rows.
 
 The item archive at `a/0/1/7` contains 514 records of 34 bytes. Message member
 222 contains 537 item names; the executable's item-to-archive map resolves the
@@ -54,8 +58,28 @@ selection routines. Both retail ROMs resolve these areas through 540 packed
 Trainer data (`a/0/5/5`) and parties (`a/0/5/6`) contain 738 members; member 0
 is unused, so 737 trainers are published. Names, classes, class genders, flags,
 items, AI settings, battle type, party species/forms, levels, held items, and
-custom moves are ROM-derived. Trainer-class payout multipliers and trainer-to-map
-links are omitted because their exact HGSS locators have not been verified.
+custom moves are ROM-derived. Event objects link 390 trainer IDs to map headers
+through HGSS's verified `script_id - 3000 + 1` convention. Script-only and
+shared/tag battle links remain unavailable because HGSS battle commands are not
+yet decoded. Trainer-class payout multipliers also remain unavailable: the
+Platinum locator does not occur in HGSS and no unique HGSS table reference has
+been established.
+
+The event archive at `a/0/3/2` has 491 members and the matrix archive at
+`a/0/4/1` has 288. Together they publish 1,317 warps, 158 directional
+connections, and nine explicitly dynamic warps across 540 maps. Retail events
+resolve 256 visible and 240 hidden item references. Destination bounds and
+destination-warp existence are validated before publication.
+
+The in-game trade archive at `a/1/1/2` and message member 200 publish 11 true
+NPC trades. Shuckie and Kenya are excluded because their records are gift-like
+static Pokémon, not exchanges. A unique ARM9 catalog signature publishes 27
+supported specialty shops containing 141 item entries. Their map placement is
+not claimed because the corresponding HGSS script commands remain undecoded.
+
+Pickup uses two uniquely located tables in decompressed battle overlay 12: 18
+common and 11 rare items expand into ten level bands, each with exact slot
+probabilities totaling 100%. Both retail versions produce the same tables.
 
 PokéDB supplies names, links, descriptive metadata, and media fallbacks. The ROM
 remains authoritative for stats, types, held-item IDs, growth data, abilities,
@@ -73,4 +97,7 @@ Real HeartGold, SoulSilver, and Platinum fixtures prove that personal, messages,
 moves, items, learnsets, evolutions, machines, egg moves, trainer records, and
 party records genuinely share Generation IV parsers, which live in shared code.
 HGSS does not reuse the Platinum adapter or its Sinnoh-specific scripts and
-location semantics.
+location semantics. Static encounters, gifts and eggs, Headbutt tree tables,
+and Safari Zone block configuration remain explicit blockers: their files or
+retail offsets are known, but their complete HGSS semantics and hack-safe
+associations are not decoded into the normalized contracts.
