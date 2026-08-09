@@ -58,6 +58,22 @@ def _extract_from_archive(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).egg_moves
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    if hasattr(engine, "parse_egg_move_table") and len(archive.members) == 1:
+        records = engine.parse_egg_move_table(archive.read(0), table_offset=0)
+        return {
+            "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
+            "game": profile.id,
+            "engine": profile.engine,
+            "dataset": "egg_moves",
+            "record_count": len(records),
+            "move_reference_count": sum(len(record.move_ids) for record in records),
+            "source": {
+                "rom_sha256": result.image.hashes.sha256,
+                "archive": archive_path,
+                "member": 0,
+            },
+            "records": [record.to_dict() for record in records],
+        }
     records = [
         engine.parse_egg_move_set(
             archive.read(member.index),

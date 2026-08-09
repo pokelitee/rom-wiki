@@ -16,6 +16,7 @@ from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     BonusEncounterSpecies,
+    EncounterMapLocation,
     EventMapLocation,
     LocationConnection,
     LocationDailyEncounterPool,
@@ -58,6 +59,8 @@ def extract_location_dataset(
             mart_dataset,
             trade_dataset,
         )
+    if extraction_format == "arm9-encounter-map":
+        return _extract_arm9_encounter_map_location_dataset(result)
     if extraction_format == "arm9-event-map":
         return _extract_arm9_event_map_location_dataset(
             result,
@@ -70,6 +73,89 @@ def extract_location_dataset(
     raise DataSourceError(
         f"Unsupported location extraction format: {extraction_format!r}"
     )
+
+
+def _extract_arm9_encounter_map_location_dataset(
+    result: InspectionResult,
+) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        map_names_path = profile.layout["map_names"]
+        messages_path = profile.layout["messages"]
+        encounters_path = profile.layout["encounters"]
+        count = profile.parameters["map_header_count"]
+        table_offset = profile.parameters["map_header_offset"]
+        location_names_member = profile.parameters["location_names_member"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} is missing location metadata: {error.args[0]}"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).locations
+    filesystem = platform.filesystem_from_image(result.image)
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(messages_path),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
+    encounters = platform.archive_cls.from_bytes(
+        filesystem.read(encounters_path),
+        allow_truncated=profile.parameters.get("encounters_allow_truncated", False),
+    )
+    arm9_data = read_code_binary(platform, result.image, engine)
+    headers, location_names = resolve_map_headers(
+        engine,
+        arm9_data,
+        filesystem,
+        messages,
+        map_names_path=map_names_path,
+        table_offset=table_offset,
+        count=count,
+        location_names_member=location_names_member,
+    )
+    null_encounter_id = profile.parameters.get(
+        "null_encounter_id", engine.ENCOUNTER_MEMBER_NONE
+    )
+    records = []
+    for header in headers:
+        encounter_id = header.encounter_id
+        encounter_map_index = None if encounter_id == null_encounter_id else encounter_id
+        if encounter_map_index is not None and encounter_map_index >= len(
+            encounters.members
+        ):
+            raise InvalidRomError(
+                f"Map header {header.header_id} references missing encounter "
+                f"member {encounter_map_index}"
+            )
+        records.append(
+            EncounterMapLocation(
+                header_id=header.header_id,
+                name=location_names[header.location_name_id],
+                encounter_map_index=encounter_map_index,
+                matrix_id=header.matrix_id,
+                provenance=RecordProvenance(
+                    source="rom", archive="arm9", member=header.header_id
+                ),
+            ).to_dict()
+        )
+    return {
+        "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "locations",
+        "record_count": len(records),
+        "source": {
+            "rom_sha256": result.image.hashes.sha256,
+            "map_headers": {"arm9_offset": table_offset, "count": count},
+            "internal_names": map_names_path,
+            "location_names": {
+                "archive": messages_path,
+                "member": location_names_member,
+            },
+        },
+        "records": records,
+    }
 
 
 def _extract_arm9_event_map_location_dataset(

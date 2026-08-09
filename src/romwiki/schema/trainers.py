@@ -117,7 +117,7 @@ class ClassGenderTrainer:
     class_id: int
     class_name: str
     class_gender: Literal["male", "female"]
-    victory_money_multiplier: int
+    victory_money_multiplier: int | None
     has_custom_moves: bool
     has_held_items: bool
     unknown_byte: int
@@ -135,5 +135,7 @@ class ClassGenderTrainer:
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
+        if self.victory_money_multiplier is None:
+            result.pop("victory_money_multiplier")
         result["trailing_party_data"] = self.trailing_party_data.hex()
         return result

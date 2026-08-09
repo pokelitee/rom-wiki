@@ -59,6 +59,25 @@ class NarcArchiveTests(unittest.TestCase):
         )
         self.assertEqual(archive.read(1), b"de")
 
+    def test_requires_both_flags_for_truncated_archive_with_short_data_block(
+        self,
+    ) -> None:
+        data = bytearray(make_narc())
+        struct.pack_into("<I", data, 8, len(data) + 8)
+
+        with self.assertRaisesRegex(InvalidRomError, "blocks do not fill"):
+            NarcArchive.from_bytes(data, allow_truncated=True)
+        with self.assertRaisesRegex(InvalidRomError, "size does not match"):
+            NarcArchive.from_bytes(data, allow_incorrect_data_block_size=True)
+
+        archive = NarcArchive.from_bytes(
+            data,
+            allow_truncated=True,
+            allow_incorrect_data_block_size=True,
+        )
+        self.assertEqual(archive.read(0), b"abc")
+        self.assertEqual(archive.read(1), b"de")
+
 
 if __name__ == "__main__":
     unittest.main()

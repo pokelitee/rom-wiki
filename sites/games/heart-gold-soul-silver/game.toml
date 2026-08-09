@@ -11,7 +11,7 @@ description = "An emerging ROM-derived reference for Pokémon HeartGold and Soul
 [game]
 profiles = ["heartgold-us", "soulsilver-us"]
 versions = ["heart-gold", "soul-silver"]
-generated_sections = ["pokemon", "abilities", "moves", "types", "data"]
+generated_sections = ["pokemon", "abilities", "moves", "items", "encounters", "trainers", "locations", "types", "data"]
 generation = 4
 base_game = "heart-gold-soul-silver"
 platform = "nintendo-ds"

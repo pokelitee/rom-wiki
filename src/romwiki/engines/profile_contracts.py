@@ -212,10 +212,46 @@ GEN4_DPPT_PROFILE_CONTRACT = EngineProfileContract(
 )
 
 GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
-    required_layout=frozenset({"messages", "moves", "personal"}),
-    required_parameters=frozenset(
-        {"ability_names_member", "move_names_member"}
+    required_layout=frozenset(
+        {
+            "egg_moves",
+            "encounters",
+            "evolutions",
+            "item_data",
+            "learnsets",
+            "map_names",
+            "messages",
+            "moves",
+            "personal",
+            "trainer_data",
+            "trainer_parties",
+        }
     ),
-    optional_parameters=frozenset({"messages_allow_truncated"}),
+    required_parameters=frozenset(
+        {
+            "ability_names_member",
+            "item_names_member",
+            "location_names_member",
+            "map_header_count",
+            "map_header_offset",
+            "move_names_member",
+            "null_encounter_id",
+            "pokemon_names_member",
+            "trainer_class_gender_offset",
+            "trainer_classes_member",
+            "trainer_names_member",
+        }
+    ),
+    optional_parameters=frozenset(
+        {
+            "encounters_allow_truncated",
+            "evolutions_allow_truncated",
+            "items_allow_truncated",
+            "learnsets_allow_incorrect_data_block_size",
+            "learnsets_allow_truncated",
+            "messages_allow_truncated",
+            "trainer_archives_allow_truncated",
+        }
+    ),
     reject_unknown=True,
 )

@@ -31,10 +31,6 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         names_member = profile.parameters["trainer_names_member"]
         classes_member = profile.parameters["trainer_classes_member"]
         class_gender_offset = profile.parameters["trainer_class_gender_offset"]
-        class_prize_overlay_id = profile.parameters[
-            "trainer_class_prize_overlay_id"
-        ]
-        class_prize_offset = profile.parameters["trainer_class_prize_offset"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing trainer metadata: {error.args[0]}"
@@ -43,27 +39,44 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).trainers
     filesystem = platform.filesystem_from_image(result.image)
-    trainers = platform.archive_cls.from_bytes(filesystem.read(trainer_path))
-    parties = platform.archive_cls.from_bytes(filesystem.read(party_path))
-    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    trainer_archive_options = {
+        "allow_truncated": profile.parameters.get(
+            "trainer_archives_allow_truncated", False
+        )
+    }
+    trainers = platform.archive_cls.from_bytes(
+        filesystem.read(trainer_path), **trainer_archive_options
+    )
+    parties = platform.archive_cls.from_bytes(
+        filesystem.read(party_path), **trainer_archive_options
+    )
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(messages_path),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
     reference_names = extract_reference_names(profile, filesystem, messages)
     if len(trainers.members) != len(parties.members):
         raise InvalidRomError("Trainer data and party archives have different counts")
     names = engine.parse_english_message_archive(messages.read(names_member))
     classes = engine.parse_english_message_archive(messages.read(classes_member))
-    arm9_data = read_code_binary(platform, result.image)
+    arm9_data = read_code_binary(platform, result.image, engine)
     class_genders = engine.parse_trainer_class_genders(
         arm9_data[class_gender_offset : class_gender_offset + len(classes)],
         count=len(classes),
     )
-    _, prize_overlay = platform.read_overlay(result.image, class_prize_overlay_id)
-    class_prize_multipliers = engine.parse_trainer_class_prize_multipliers(
-        prize_overlay[class_prize_offset : class_prize_offset + len(classes)],
-        count=len(classes),
-    )
+    class_prize_overlay_id = profile.parameters.get("trainer_class_prize_overlay_id")
+    class_prize_offset = profile.parameters.get("trainer_class_prize_offset")
+    class_prize_multipliers = None
+    if class_prize_overlay_id is not None and class_prize_offset is not None:
+        _, prize_overlay = platform.read_overlay(result.image, class_prize_overlay_id)
+        class_prize_multipliers = engine.parse_trainer_class_prize_multipliers(
+            prize_overlay[class_prize_offset : class_prize_offset + len(classes)],
+            count=len(classes),
+        )
     if len(names) < len(trainers.members):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
 
+    first_trainer_id = getattr(engine, "FIRST_TRAINER_ID", 0)
     parsed_records = [
         engine.parse_trainer_record(
             trainers.read(member.index),
@@ -76,7 +89,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
             trainer_archive=trainer_path,
             party_archive=party_path,
         )
-        for member in trainers.members
+        for member in trainers.members[first_trainer_id:]
     ]
     (
         locations_by_trainer,
@@ -89,7 +102,7 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         filesystem,
         messages,
         arm9_data,
-        trainer_count=len(parsed_records),
+        trainer_count=len(trainers.members),
     )
     records = [
         {
@@ -100,12 +113,18 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
                     script_references_by_trainer.get(record.trainer_id, ())
                 ),
             ).to_dict(),
-            "victory_money_multiplier_provenance": {
-                "source": "rom",
-                "overlay_id": class_prize_overlay_id,
-                "offset": class_prize_offset + record.class_id,
-                "class_id": record.class_id,
-            },
+            **(
+                {
+                    "victory_money_multiplier_provenance": {
+                        "source": "rom",
+                        "overlay_id": class_prize_overlay_id,
+                        "offset": class_prize_offset + record.class_id,
+                        "class_id": record.class_id,
+                    }
+                }
+                if class_prize_offset is not None
+                else {}
+            ),
         }
         for record in parsed_records
     ]
@@ -133,11 +152,15 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
                 "arm9_offset": class_gender_offset,
                 "count": len(class_genders),
             },
-            "trainer_class_prize_multipliers": {
-                "overlay_id": class_prize_overlay_id,
-                "offset": class_prize_offset,
-                "count": len(class_prize_multipliers),
-            },
+            "trainer_class_prize_multipliers": (
+                {
+                    "overlay_id": class_prize_overlay_id,
+                    "offset": class_prize_offset,
+                    "count": len(class_prize_multipliers),
+                }
+                if class_prize_multipliers is not None
+                else None
+            ),
             **location_source,
         },
         **reference_names,
@@ -393,6 +416,8 @@ def _extract_class_gender_trainer_locations(
 ]:
     assert result.match is not None
     profile = result.match.profile
+    if not getattr(engine, "TRAINER_LOCATION_EXTRACTION", True):
+        return {}, {}, {"trainer_locations": "unsupported"}
     try:
         events_path = profile.layout["events"]
         scripts_path = profile.layout["scripts"]

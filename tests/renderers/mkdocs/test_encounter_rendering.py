@@ -9,6 +9,66 @@ from romwiki.renderers.mkdocs import render_encounter_pages
 
 
 class EncounterRenderingTests(unittest.TestCase):
+    def test_renders_hgss_periods_rock_smash_and_special_groups(self) -> None:
+        pokemon = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
+        walking_slot = {
+            "level": 5,
+            "species_id": 25,
+            "chance": 100,
+            "pokemon": pokemon,
+        }
+        water_slot = {
+            "minimum_level": 5,
+            "maximum_level": 7,
+            "species_id": 25,
+            "chance": 100,
+            "pokemon": pokemon,
+        }
+        empty = {"rate": 0, "slots": []}
+        record = {
+            "area_id": 0,
+            "name": "Route 29",
+            "locations": [],
+            "active": True,
+            "walking": {"rate": 20, "slots": [walking_slot]},
+            "walking_variants": {
+                period: {"rate": 20, "slots": [walking_slot]}
+                for period in ("morning", "day", "night")
+            },
+            "surf": empty,
+            "rock_smash": {"rate": 5, "slots": [water_slot]},
+            "old_rod": empty,
+            "good_rod": empty,
+            "super_rod": empty,
+            "special": {
+                "format": "hgss",
+                "land_swarm": pokemon,
+                "surf_swarm": None,
+                "hoenn_radio": [pokemon],
+                "sinnoh_radio": [],
+                "night_fishing": None,
+                "fishing_swarm": None,
+            },
+            "provenance": {"archive": "a/0/3/7", "member": 0},
+        }
+        dataset = {
+            "game": "heartgold-us",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [record],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            page = (output / "area-000.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Walking (Morning)", page)
+        self.assertIn("## Walking (Night)", page)
+        self.assertIn("## Rock Smash", page)
+        self.assertIn("**Hoenn Sound radio:**", page)
+        self.assertNotIn("Unown table ID", page)
+
     def test_links_seasonal_and_nonseasonal_gen5_encounters_to_locations(self) -> None:
         seasonal = _encounter_record(8, 3, "spring", "Route 1")
         seasonal["versions"] = ["black"]

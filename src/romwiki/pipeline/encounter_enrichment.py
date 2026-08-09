@@ -14,6 +14,10 @@ def enrich_conditional_encounter_area(
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
 ) -> dict[str, Any]:
+    if "walking_variants" in source:
+        return _enrich_hgss_encounter_area(
+            engine, source, pokedb, sprite_version, pokemon_names
+        )
     walking = {
         "rate": source["walking_rate"],
         "slots": [
@@ -124,6 +128,97 @@ def enrich_conditional_encounter_area(
     }
 
 
+def _enrich_hgss_encounter_area(
+    engine: Any,
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None,
+    pokemon_names: list[str] | None,
+) -> dict[str, Any]:
+    walking_variants = {
+        period: {
+            "rate": source["walking_rate"],
+            "slots": [
+                {
+                    **slot,
+                    "chance": engine.WALKING_SLOT_CHANCES[index],
+                    "pokemon": _encounter_pokemon(
+                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                    ),
+                }
+                for index, slot in enumerate(slots)
+            ],
+        }
+        for period, slots in source["walking_variants"].items()
+    }
+    methods = {
+        name: {
+            "rate": source[name]["rate"],
+            "slots": [
+                {
+                    **slot,
+                    "chance": chances[index],
+                    "pokemon": _encounter_pokemon(
+                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                    ),
+                }
+                for index, slot in enumerate(source[name]["slots"])
+            ],
+        }
+        for name, chances in (
+            ("surf", engine.WATER_SLOT_CHANCES),
+            ("rock_smash", engine.ROCK_SMASH_SLOT_CHANCES),
+            ("old_rod", engine.FISHING_SLOT_CHANCES),
+            ("good_rod", engine.FISHING_SLOT_CHANCES),
+            ("super_rod", engine.FISHING_SLOT_CHANCES),
+        )
+    }
+    special = {
+        "format": "hgss",
+        "land_swarm": _encounter_pokemon(
+            source["swarm_species_ids"][0], pokedb, sprite_version, pokemon_names
+        ),
+        "surf_swarm": _encounter_pokemon(
+            source["swarm_species_ids"][1], pokedb, sprite_version, pokemon_names
+        ),
+        "hoenn_radio": _encounter_pokemon_list(
+            source["radio_species_ids"][:2], pokedb, sprite_version, pokemon_names
+        ),
+        "sinnoh_radio": _encounter_pokemon_list(
+            source["radio_species_ids"][2:], pokedb, sprite_version, pokemon_names
+        ),
+        "night_fishing": _encounter_pokemon(
+            source["night_fishing_species_id"],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+        ),
+        "fishing_swarm": _encounter_pokemon(
+            source["fishing_swarm_species_id"],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+        ),
+    }
+    locations = source.get("locations", [])
+    names = list(dict.fromkeys(location["name"] for location in locations))
+    return {
+        "area_id": source["area_id"],
+        "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
+        "locations": locations,
+        "active": bool(
+            source["walking_rate"]
+            or any(method["rate"] for method in methods.values())
+            or any(value for key, value in special.items() if key != "format")
+        ),
+        "walking": walking_variants["day"],
+        "walking_variants": walking_variants,
+        **methods,
+        "special": special,
+        "provenance": source["provenance"],
+    }
+
+
 def enrich_seasonal_encounter_area(
     engine: Any,
     source: dict[str, Any],
@@ -190,12 +285,12 @@ def _encounter_pokemon_list(
 
 
 def _encounter_pokemon(
-    species_id: int,
+    species_id: int | None,
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
 ) -> dict[str, Any] | None:
-    if species_id == 0:
+    if species_id in {None, 0}:
         return None
     reference = pokedb.pokemon_for_id(species_id)
     return {

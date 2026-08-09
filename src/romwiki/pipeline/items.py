@@ -41,8 +41,14 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).items
     fossil_format = get_engine(profile.engine).formats.fossils
     filesystem = platform.filesystem_from_image(result.image)
-    item_archive = platform.archive_cls.from_bytes(filesystem.read(item_archive_path))
-    messages = platform.archive_cls.from_bytes(filesystem.read(message_archive_path))
+    item_archive = platform.archive_cls.from_bytes(
+        filesystem.read(item_archive_path),
+        allow_truncated=profile.parameters.get("items_allow_truncated", False),
+    )
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(message_archive_path),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
 
     type_names: tuple[str, ...] = ()
@@ -67,7 +73,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     }
 
     if hasattr(engine, "find_item_archive_members"):
-        arm9_data = read_code_binary(platform, result.image)
+        arm9_data = read_code_binary(platform, result.image, engine)
         map_offset, data_members = engine.find_item_archive_members(
             arm9_data,
             item_count=len(item_names),
@@ -95,7 +101,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     revives_into_by_item: dict[int, int] = {}
     if fossil_revival_table_offset is not None:
         if arm9_data is None:
-            arm9_data = read_code_binary(platform, result.image)
+            arm9_data = read_code_binary(platform, result.image, engine)
         fossil_revivals = engine.parse_fossil_revival_table(
             arm9_data,
             offset=fossil_revival_table_offset,

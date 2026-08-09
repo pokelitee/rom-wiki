@@ -201,12 +201,13 @@ def _catalog_record(
     for label, key in (
         ("walking", "walking"),
         ("surf", "surf"),
+        ("rock smash", "rock_smash"),
         ("old rod", "old_rod"),
         ("good rod", "good_rod"),
         ("super rod", "super_rod"),
     ):
-        method = record[key]
-        if not method["rate"]:
+        method = record.get(key)
+        if not method or not method["rate"]:
             continue
         methods.append(label)
         method_species = []
@@ -225,17 +226,18 @@ def _catalog_record(
     special_species = [pokemon["name"] for pokemon in special_pokemon]
     pokemon_refs.extend(_pokemon_reference(pokemon) for pokemon in special_pokemon)
     species.extend(special_species)
-    levels.extend(
-        entry["level"]
-        for group in (
-            record["special"]["swarm"],
-            record["special"]["day"],
-            record["special"]["night"],
-            *record["special"]["dual_slot"].values(),
+    if record["special"].get("format") != "hgss":
+        levels.extend(
+            entry["level"]
+            for group in (
+                record["special"]["swarm"],
+                record["special"]["day"],
+                record["special"]["night"],
+                *record["special"]["dual_slot"].values(),
+            )
+            for entry in group
+            if entry["pokemon"]
         )
-        for entry in group
-        if entry["pokemon"]
-    )
     if special_species and "walking" in method_pokemon:
         method_pokemon["walking"] = list(
             dict.fromkeys((*method_pokemon["walking"], *special_species))
@@ -268,6 +270,12 @@ def _catalog_record(
 
 
 def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
+    if special.get("format") == "hgss":
+        pokemon = [special["land_swarm"], special["surf_swarm"]]
+        pokemon.extend(special["hoenn_radio"])
+        pokemon.extend(special["sinnoh_radio"])
+        pokemon.extend((special["night_fishing"], special["fishing_swarm"]))
+        return _unique_pokemon(value for value in pokemon if value is not None)
     slotted_groups = (
         special["swarm"],
         special["day"],
@@ -323,16 +331,47 @@ def _render_area(
         *_area_summary(record),
     ]
     _append_locations(lines, record.get("locations", []), source_file)
-    _append_walking(lines, record["walking"], source_file, references)
+    walking_variants = record.get("walking_variants")
+    if walking_variants:
+        for period in ("morning", "day", "night"):
+            _append_walking(
+                lines,
+                walking_variants[period],
+                source_file,
+                references,
+                heading=f"Walking ({period.title()})",
+            )
+    else:
+        _append_walking(lines, record["walking"], source_file, references)
     for heading, key in (
         ("Surf", "surf"),
+        ("Rock Smash", "rock_smash"),
         ("Old Rod", "old_rod"),
         ("Good Rod", "good_rod"),
         ("Super Rod", "super_rod"),
     ):
-        _append_water(lines, heading, record[key], source_file, references)
+        if key in record:
+            _append_water(lines, heading, record[key], source_file, references)
     _append_special(lines, record["special"], source_file, references)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
+    if walking_variants:
+        lines.extend(
+            provenance_section(
+                [
+                    rom_record_source(
+                        record["provenance"]["archive"],
+                        record["provenance"]["member"],
+                    ),
+                    "Chance percentages are fixed engine weights applied by slot "
+                    "position; the ROM encounter records store rates, species, "
+                    "and levels.",
+                    "Morning, day, and night walking lists and the radio, swarm, "
+                    "and fishing replacement species are distinct HGSS fields.",
+                ]
+            )
+        )
+        _append_record_navigation(lines, record, previous, following)
+        return "\n".join(lines)
     lines.extend(
         provenance_section(
             [
@@ -373,11 +412,12 @@ def _area_summary(record: dict[str, Any]) -> list[str]:
         for label, key in (
             ("Walking", "walking"),
             ("Surf", "surf"),
+            ("Rock Smash", "rock_smash"),
             ("Old Rod", "old_rod"),
             ("Good Rod", "good_rod"),
             ("Super Rod", "super_rod"),
         )
-        if record[key]["rate"]
+        if record.get(key, {}).get("rate")
     ]
     locations = record.get("locations", [])
     facts = [
@@ -484,11 +524,12 @@ def _append_walking(
     method: dict[str, Any],
     source_file: str,
     references: ReferenceIndex | None,
+    heading: str = "Walking",
 ) -> None:
     if not method["rate"]:
         return
     slots = _merge_slots(method["slots"], ("level",))
-    lines.extend(["## Walking", "", f"Encounter rate: {method['rate']}", ""])
+    lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         pokemon_table(
             [
@@ -543,6 +584,36 @@ def _append_special(
     source_file: str,
     references: ReferenceIndex | None,
 ) -> None:
+    if special.get("format") == "hgss":
+        groups = [
+            ("Land swarm", [special["land_swarm"]]),
+            ("Surf swarm", [special["surf_swarm"]]),
+            ("Hoenn Sound radio", special["hoenn_radio"]),
+            ("Sinnoh Sound radio", special["sinnoh_radio"]),
+            ("Night fishing", [special["night_fishing"]]),
+            ("Fishing swarm", [special["fishing_swarm"]]),
+        ]
+        groups = [
+            (label, _unique_pokemon(value for value in values if value))
+            for label, values in groups
+        ]
+        groups = [(label, values) for label, values in groups if values]
+        if not groups:
+            return
+        lines.extend(["## Special encounters", ""])
+        for label, values in groups:
+            lines.extend([f"**{label}:**", ""])
+            lines.extend(
+                pokemon_table(
+                    ["| Pokémon | Type |", "| ------- | ---- |"],
+                    [
+                        f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file))} | "
+                        f"{_slot_type_cell(value, references)} |"
+                        for value in values
+                    ],
+                )
+            )
+        return
     slotted_groups = [
         ("Swarm", special["swarm"]),
         ("Day replacements", special["day"]),

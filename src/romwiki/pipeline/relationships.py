@@ -228,6 +228,7 @@ def _record_variants(
 _ENCOUNTER_METHODS = (
     ("walking", "Walking"),
     ("surf", "Surf"),
+    ("rock_smash", "Rock Smash"),
     ("old_rod", "Old Rod"),
     ("good_rod", "Good Rod"),
     ("super_rod", "Super Rod"),
@@ -259,6 +260,8 @@ def _wild_encounters(
                 "versions": versions,
             }
             for key, label in _ENCOUNTER_METHODS:
+                if key == "walking" and record.get("walking_variants"):
+                    continue
                 method = record.get(key)
                 if not isinstance(method, dict) or not method.get("rate"):
                     continue
@@ -276,6 +279,37 @@ def _add_conditional_special_encounters(
 ) -> None:
     special = record.get("special")
     if not isinstance(special, dict):
+        return
+    for period, method in record.get("walking_variants", {}).items():
+        for slot in method.get("slots", []):
+            _add_wild_reference(result, aliases, slot, "Walking", period, common)
+    if special.get("format") == "hgss":
+        for key, condition in (
+            ("land_swarm", "land swarm"),
+            ("surf_swarm", "surf swarm"),
+            ("hoenn_radio", "Hoenn Sound radio"),
+            ("sinnoh_radio", "Sinnoh Sound radio"),
+            ("night_fishing", "night fishing"),
+            ("fishing_swarm", "fishing swarm"),
+        ):
+            values = special.get(key, [])
+            if isinstance(values, dict) or values is None:
+                values = [values]
+            for pokemon in values:
+                _add_wild_reference(
+                    result,
+                    aliases,
+                    {"pokemon": pokemon, "species_id": (pokemon or {}).get("id")},
+                    (
+                        "Fishing"
+                        if "fishing" in condition
+                        else "Surf"
+                        if condition == "surf swarm"
+                        else "Walking"
+                    ),
+                    condition,
+                    common,
+                )
         return
     for key, label in (
         ("swarm", "Walking"),
@@ -678,7 +712,7 @@ def _location_encounters(
     )
     for merged_record in encounters:
         for versions, record in _record_variants(merged_record):
-            map_index = record.get("map_index")
+            map_index = record.get("map_index", record.get("area_id"))
             if isinstance(map_index, int):
                 by_map_index[map_index].append((versions, record))
 

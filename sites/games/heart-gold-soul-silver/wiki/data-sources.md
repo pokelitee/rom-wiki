@@ -34,25 +34,43 @@ moves and retains four non-public internal records for auditing. Move mechanics
 include power, type, damage class, accuracy, PP, effect, target, priority, flags,
 and contest fields directly decoded from the ROM.
 
-Learnsets, TM/HM move mappings, tutors, and egg moves are not part of this slice.
-Move pages therefore publish mechanics but do not claim complete learner or
-acquisition relationships.
+Level-up learnsets (`a/0/3/3`), evolutions (`a/0/3/4`), the combined egg-move
+table (`a/2/2/9` member 0), and all 92 TM plus 8 HM move mappings are decoded.
+The machine table is located by its verified code signature rather than a
+build-specific assumed offset. Move tutors remain outside this slice.
+
+The item archive at `a/0/1/7` contains 514 records of 34 bytes. Message member
+222 contains 537 item names; the executable's item-to-archive map resolves the
+extra named IDs without inventing records. The public dataset exposes 513
+nonzero item IDs and their ROM mechanics.
+
+Wild archive `a/0/3/7` contains 142 retail records of 196 bytes. HGSS-specific
+decoding preserves morning, day, and night walking lists; surf, Rock Smash, and
+three rod tables; Hoenn/Sinnoh radio species; land and surf swarms; and night
+fishing/fishing-swarm replacements. Slot weights come from the game engine's
+selection routines. Both retail ROMs resolve these areas through 540 packed
+24-byte ARM9 map headers and the 16-byte internal map-name table.
+
+Trainer data (`a/0/5/5`) and parties (`a/0/5/6`) contain 738 members; member 0
+is unused, so 737 trainers are published. Names, classes, class genders, flags,
+items, AI settings, battle type, party species/forms, levels, held items, and
+custom moves are ROM-derived. Trainer-class payout multipliers and trainer-to-map
+links are omitted because their exact HGSS locators have not been verified.
 
 PokéDB supplies names, links, descriptive metadata, and media fallbacks. The ROM
 remains authoritative for stats, types, held-item IDs, growth data, abilities,
 and TM/HM compatibility flags.
 
-Archive identities are known for items, scripts, learnsets,
-evolutions, encounters, map matrices, trainers, egg moves, and NPC trades, but
-they are intentionally absent from the executable layout contract. Their HGSS
-formats and normalization paths have not yet been verified end to end.
+Sacred Gold and Storm Silver inherit the same verified extraction contract.
+Their patched NARCs carry exact, profile-scoped size inconsistencies, and their
+wild records are 192 bytes rather than 196; the absent final night-fishing and
+fishing-swarm fields remain unavailable instead of receiving placeholder values.
 
 ## Engine notes
 
-The distinct `gen4_hgss` leaf adapter supports Pokémon, abilities, and moves.
-Real HeartGold, SoulSilver, and Platinum fixtures prove that their personal,
-English-message, and move-record formats share Generation IV parsers, which live
-in shared generation code. HGSS does not reuse the Platinum adapter: encounter
-records, map data, scripts, trainers, items, and ancillary Pokémon data remain
-unsupported until independently verified. Unsupported semantic formats are
-declared explicitly by the adapter.
+The distinct `gen4_hgss` leaf adapter owns HGSS encounter and map-header formats.
+Real HeartGold, SoulSilver, and Platinum fixtures prove that personal, messages,
+moves, items, learnsets, evolutions, machines, egg moves, trainer records, and
+party records genuinely share Generation IV parsers, which live in shared code.
+HGSS does not reuse the Platinum adapter or its Sinnoh-specific scripts and
+location semantics.

@@ -8,6 +8,11 @@ chart = "gen4"
 
 [parameters]
 messages_allow_truncated = true
+items_allow_truncated = true
+learnsets_allow_truncated = true
+learnsets_allow_incorrect_data_block_size = true
+evolutions_allow_truncated = true
+encounters_allow_truncated = true
 
 [[hashes]]
 algorithm = "sha256"

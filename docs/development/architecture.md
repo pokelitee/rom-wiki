@@ -107,8 +107,8 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 then by engine family. The current `gen4/dppt`, `gen4/hgss`, `gen5/bw`, and
 `gen5/b2w2` leaf packages decode their independently verified formats. Their
 stable profile-facing engine IDs are `gen4_dppt`, `gen4_hgss`, `gen5_bw`, and
-`gen5_b2w2`. HGSS is intentionally a Pokémon, abilities, and moves partial
-adapter.
+`gen5_b2w2`. HGSS has its own adapter for its encounter and map-header formats
+while reusing ROM-verified shared Generation IV record parsers.
 
 A generation package is a namespace, not a selectable engine. Each family begins
 with a separate leaf adapter. Promote a parser into the parent generation package
@@ -389,10 +389,11 @@ uses for the engine boundary above.
 
 The `gen4_dppt` and `gen5_bw` engines exercise the complete normalized pipeline
 and shared renderer system against two real generations, including retail games,
-single-version hacks, and sibling-version hack families. The partial `gen4_hgss`
-adapter independently exercises the same Pokémon, ability, and move pipelines and
-renderers against HeartGold and SoulSilver while explicitly declaring encounters,
-locations, and trainers unsupported. Generation-specific binary decoding stays in each engine
+single-version hacks, and sibling-version hack families. The `gen4_hgss` adapter
+independently exercises Pokémon, ability, move, item, encounter, trainer, and
+location pipelines and renderers against HeartGold and SoulSilver. Trainer-to-map
+references and trainer-class payout multipliers remain explicitly unavailable
+pending exact ROM locators. Generation-specific binary decoding stays in each engine
 package; optional presentation behavior is advertised through dataset
 capabilities. A second physical platform remains proven only by
 `tests/platforms/test_contract.py`'s fake adapter. A real platform addition should

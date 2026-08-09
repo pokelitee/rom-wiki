@@ -55,14 +55,43 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "personal": "a/0/0/2",
                 "messages": "a/0/2/7",
                 "moves": "a/0/1/1",
+                "item_data": "a/0/1/7",
+                "learnsets": "a/0/3/3",
+                "evolutions": "a/0/3/4",
+                "egg_moves": "a/2/2/9",
+                "encounters": "a/0/3/7",
+                "map_names": "fielddata/maptable/mapname.bin",
+                "trainer_data": "a/0/5/5",
+                "trainer_parties": "a/0/5/6",
             },
         )
         self.assertEqual(
             heartgold.parameters,
-            {"ability_names_member": 720, "move_names_member": 750},
+            {
+                "ability_names_member": 720,
+                "move_names_member": 750,
+                "item_names_member": 222,
+                "pokemon_names_member": 237,
+                "location_names_member": 279,
+                "map_header_offset": 0xF6BE0,
+                "map_header_count": 540,
+                "null_encounter_id": 255,
+                "trainer_names_member": 729,
+                "trainer_classes_member": 730,
+                "trainer_class_gender_offset": 0xFFB90,
+            },
         )
         self.assertEqual(
-            enabled_dataset_kinds(heartgold), ("pokemon", "abilities", "moves")
+            enabled_dataset_kinds(heartgold),
+            (
+                "pokemon",
+                "abilities",
+                "moves",
+                "items",
+                "encounters",
+                "trainers",
+                "locations",
+            ),
         )
         self.assertEqual(soulsilver.game_codes, ("IPGE",))
         self.assertEqual(soulsilver.base_game, "soulsilver")
@@ -70,17 +99,28 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(storm_silver.hashes[0].variant, "complete-v1.05")
         self.assertEqual(sacred_gold.layout, heartgold.layout)
         self.assertEqual(storm_silver.layout, soulsilver.layout)
-        self.assertTrue(sacred_gold.parameters["messages_allow_truncated"])
-        self.assertTrue(storm_silver.parameters["messages_allow_truncated"])
+        self.assertTrue(sacred_gold.parameters["learnsets_allow_truncated"])
+        self.assertTrue(storm_silver.parameters["encounters_allow_truncated"])
 
         engine = get_engine(heartgold.engine)
         self.assertEqual(
-            engine.dataset_kinds, frozenset({"pokemon", "abilities", "moves"})
+            engine.dataset_kinds,
+            frozenset(
+                {
+                    "pokemon",
+                    "abilities",
+                    "moves",
+                    "items",
+                    "encounters",
+                    "trainers",
+                    "locations",
+                }
+            ),
         )
         self.assertEqual(engine.required_dataset_kinds, frozenset({"pokemon"}))
-        self.assertEqual(engine.formats.encounters, "unsupported")
-        self.assertEqual(engine.formats.locations, "unsupported")
-        self.assertEqual(engine.formats.trainers, "unsupported")
+        self.assertEqual(engine.formats.encounters, "conditional")
+        self.assertEqual(engine.formats.locations, "encounter-map")
+        self.assertEqual(engine.formats.trainers, "class-gender")
 
     def test_identifies_exact_hgss_hashes_and_rejects_near_matches(self) -> None:
         repository = ProfileRepository.load(Path("profiles"))
@@ -131,9 +171,9 @@ class ProfileRepositoryTests(unittest.TestCase):
             for value in ProfileRepository.load(Path("profiles")).profiles
         }
         heartgold = profiles["heartgold-us"]
-        heartgold.layout["encounters"] = "a/0/3/7"
+        heartgold.layout["unknown"] = "a/0/3/7"
 
-        with self.assertRaisesRegex(ProfileError, "unsupported layout: encounters"):
+        with self.assertRaisesRegex(ProfileError, "unsupported layout: unknown"):
             enabled_dataset_kinds(heartgold)
 
     def test_loads_black_and_white_baseline_profiles(self) -> None:

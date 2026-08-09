@@ -71,3 +71,32 @@ COLOR_NAMES = (
     "pink",
     "internal",
 )
+
+NATURE_NAMES = (
+    "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
+    "Bold", "Docile", "Relaxed", "Impish", "Lax",
+    "Timid", "Hasty", "Serious", "Jolly", "Naive",
+    "Modest", "Mild", "Quiet", "Bashful", "Rash",
+    "Calm", "Gentle", "Sassy", "Careful", "Quirky",
+)
+
+EVOLUTION_METHOD_NAMES = (
+    "none", "friendship", "friendship-day", "friendship-night", "level",
+    "trade", "trade-held-item", "use-item", "level-attack-greater",
+    "level-attack-equal", "level-defense-greater", "level-personality-low",
+    "level-personality-high", "level-ninjask", "level-shedinja", "beauty",
+    "use-item-male", "use-item-female", "level-held-item-day",
+    "level-held-item-night", "level-knowing-move", "level-with-party-species",
+    "level-male", "level-female", "level-magnetic-field", "level-moss-rock",
+    "level-ice-rock",
+)
+
+EVOLUTION_PARAMETER_KINDS = {
+    **dict.fromkeys((4, 8, 9, 10, 13, 14, 22, 23), "level"),
+    **dict.fromkeys((6, 7, 16, 17, 18, 19), "item"),
+    11: "personality",
+    12: "personality",
+    15: "beauty",
+    20: "move",
+    21: "pokemon",
+}

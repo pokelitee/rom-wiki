@@ -28,6 +28,7 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(
         filesystem.read(archive_path),
+        allow_truncated=profile.parameters.get("learnsets_allow_truncated", False),
         allow_incorrect_data_block_size=profile.parameters.get(
             "learnsets_allow_incorrect_data_block_size", False
         ),

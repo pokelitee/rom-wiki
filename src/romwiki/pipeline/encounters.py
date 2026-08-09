@@ -36,6 +36,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(
         filesystem.read(archive_path),
+        allow_truncated=profile.parameters.get("encounters_allow_truncated", False),
         allow_trailing_data=profile.parameters.get(
             "encounters_allow_trailing_data", False
         ),
@@ -191,8 +192,11 @@ def _extract_encounter_locations(
     count = parameters["map_header_count"]
     table_offset = parameters["map_header_offset"]
     member = parameters["location_names_member"]
-    arm9_data = read_code_binary(platform, result.image)
-    messages = platform.archive_cls.from_bytes(filesystem.read(layout["messages"]))
+    arm9_data = read_code_binary(platform, result.image, engine)
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(layout["messages"]),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
     headers, location_names = resolve_map_headers(
         engine,
         arm9_data,

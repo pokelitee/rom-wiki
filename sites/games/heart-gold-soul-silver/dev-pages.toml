@@ -19,3 +19,16 @@ moves = [
     "struggle",
     "shadow-force",
 ]
+items = [
+    "master-ball",
+    "apricorn-box",
+]
+encounters = [
+    "area-000",
+]
+trainers = [
+    "trainer-0001",
+]
+locations = [
+    "header-000",
+]

@@ -68,7 +68,7 @@ class NarcArchive:
         if data_block_offset + data_block_size != file_size:
             if (
                 not allow_incorrect_data_block_size
-                or file_size != len(data)
+                or (file_size != len(data) and not allow_truncated)
                 or data_block_offset + data_block_size > file_size
             ):
                 raise InvalidRomError("NARC blocks do not fill the declared archive")

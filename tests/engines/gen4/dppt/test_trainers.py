@@ -60,6 +60,24 @@ class Gen4TrainerTests(unittest.TestCase):
                 party_archive="trpoke.narc",
             )
 
+    def test_omits_unavailable_prize_multiplier(self) -> None:
+        trainer = bytearray(20)
+
+        result = parse_trainer_record(
+            bytes(trainer),
+            b"",
+            trainer_id=1,
+            name="Silver",
+            class_names=("Rival",),
+            class_genders=("male",),
+            class_prize_multipliers=None,
+            trainer_archive="trdata.narc",
+            party_archive="trpoke.narc",
+        )
+
+        self.assertIsNone(result.victory_money_multiplier)
+        self.assertNotIn("victory_money_multiplier", result.to_dict())
+
     def test_decodes_trainer_class_gender_table(self) -> None:
         self.assertEqual(
             parse_trainer_class_genders(b"\x00\x01\x02", count=3),

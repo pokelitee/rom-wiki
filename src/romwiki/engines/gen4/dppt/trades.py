@@ -3,9 +3,9 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
+from romwiki.engines.gen4.constants import NATURE_NAMES
 from romwiki.util.errors import InvalidRomError
 
-from .constants import NATURE_NAMES
 from .scripts import parse_script_table
 
 NPC_TRADE_RECORD_SIZE = 80

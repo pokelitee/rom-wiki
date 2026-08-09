@@ -28,9 +28,13 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
     adapter = get_engine(profile.engine)
     engine = adapter.evolutions
     filesystem = platform.filesystem_from_image(result.image)
-    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    archive = platform.archive_cls.from_bytes(
+        filesystem.read(archive_path),
+        allow_truncated=profile.parameters.get("evolutions_allow_truncated", False),
+    )
     message_archive = platform.archive_cls.from_bytes(
-        filesystem.read(message_archive_path)
+        filesystem.read(message_archive_path),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
     )
     item_names = engine.parse_english_message_archive(
         message_archive.read(item_names_member)

@@ -25,7 +25,7 @@ GEN5_B2W2_ENGINE = "gen5_b2w2"
 EncounterFormat = Literal["unsupported", "conditional", "seasonal"]
 LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 LocationExtractionFormat = Literal[
-    "unsupported", "arm9-event-map", "archive-encounter-map"
+    "unsupported", "arm9-event-map", "arm9-encounter-map", "archive-encounter-map"
 ]
 PickupFormat = Literal["none", "split-table", "sliding-table"]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
@@ -174,17 +174,27 @@ _ENGINES: dict[str, EngineAdapter] = {
         static_encounters=gen4_hgss,
         pickup=gen4_hgss,
         formats=EngineFormats(
-            encounters="unsupported",
-            locations="unsupported",
-            location_extraction="unsupported",
+            encounters="conditional",
+            locations="encounter-map",
+            location_extraction="arm9-encounter-map",
             pickup="none",
-            trainers="unsupported",
+            trainers="class-gender",
             tutors="none",
             fossils="none",
             static_encounters="none",
         ),
         generation=4,
-        dataset_kinds=frozenset({"pokemon", "abilities", "moves"}),
+        dataset_kinds=frozenset(
+            {
+                "pokemon",
+                "abilities",
+                "moves",
+                "items",
+                "encounters",
+                "trainers",
+                "locations",
+            }
+        ),
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN4_HGSS_PROFILE_CONTRACT,
     ),
@@ -317,6 +327,7 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
     expected_location_shape = {
         "unsupported": "unsupported",
         "arm9-event-map": "event-map",
+        "arm9-encounter-map": "encounter-map",
         "archive-encounter-map": "encounter-map",
     }[adapter.formats.location_extraction]
     if adapter.formats.locations != expected_location_shape:

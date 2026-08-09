@@ -927,7 +927,10 @@ def _validate_sparse_egg_moves(
             )
         ):
             raise DataSourceError("Egg move record contains invalid move IDs")
-        if len(move_ids) != len(set(move_ids)):
+        if (
+            len(move_ids) != len(set(move_ids))
+            and not getattr(engine, "ALLOW_DUPLICATE_EGG_MOVES", False)
+        ):
             raise DataSourceError("Egg move record contains duplicate move IDs")
         result[species_id] = record
         previous_species = species_id

@@ -17,7 +17,7 @@ _SECTION_LAYOUT_REQUIREMENTS: dict[str, tuple[tuple[str, ...], ...]] = {
     "items": (("item_data", "messages"),),
     "encounters": (("encounters",),),
     "trainers": (("trainer_data", "trainer_parties"),),
-    "locations": (("map_matrices",), ("map_headers",)),
+    "locations": (("map_matrices",), ("map_headers",), ("map_names",)),
 }
 
 
