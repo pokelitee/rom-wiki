@@ -446,8 +446,11 @@ references.
 - Run `romwiki site snapshot` after validating the complete generated output,
   then test `romwiki site restore-snapshot` from a clean checkout.
 - Run `romwiki regenerate --all` to verify the descriptor-driven complete workflow.
-- Run `romwiki build game --game <id>` twice and confirm the second run reuses the
-  baseline cache.
+- During development, run `romwiki regenerate <site-id> --incremental`; unrelated
+  games are not extracted or rendered. Reserve `--all` for integrated validation.
+- Run `romwiki build game --game <id>` twice and confirm the second run reuses both
+  current and baseline extraction caches. Change one extractor and confirm only
+  its dependent raw datasets rebuild.
 - Test catalogs with missing optional values, duplicate labels, and enough records
   to exercise progressive rendering.
 - Review representative pages at desktop and narrow mobile widths in light and dark

@@ -104,6 +104,16 @@ and baseline extraction caches. After reviewing a complete build, add
 romwiki regenerate --all --refresh --snapshot
 ```
 
+For normal development, select one site and optionally reuse unchanged rendered
+pages; valid raw caches are reused per dataset and engine:
+
+```console
+romwiki regenerate renegade-platinum --incremental
+```
+
+Adding another engine does not invalidate existing engines' extraction caches.
+Use the complete `--all` workflow only for integrated release validation.
+
 Global diagnostic options precede the command:
 
 ```console

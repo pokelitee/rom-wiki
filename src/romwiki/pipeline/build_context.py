@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +44,7 @@ from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
 
-CACHE_REVISION = 4
+CACHE_REVISION = 5
 
 
 class GameBuildContext:
@@ -55,7 +55,7 @@ class GameBuildContext:
         *,
         cache_root: Path | None = None,
         refresh: bool = False,
-        source_fingerprint: str | None = None,
+        source_fingerprint: str | Mapping[str, str] | None = None,
     ) -> None:
         if result.match is None:
             raise ProfileError("A matched profile is required for a game build")
@@ -64,9 +64,16 @@ class GameBuildContext:
         self.pokedb = pokedb
         self.cache_root = cache_root
         self.refresh = refresh
-        self.source_fingerprint = source_fingerprint or extraction_source_fingerprint()
+        self._source_fingerprint_override = source_fingerprint
         self._values: dict[str, dict[str, Any]] = {}
-        self._initial_cache_valid = self._manifest_valid()
+        self._cache_manifest = self._read_manifest()
+        self._initial_cache_valid = self._manifest_valid(self._cache_manifest)
+        fingerprints = self._cache_manifest.get("source_fingerprints", {})
+        self._cached_source_fingerprints = (
+            dict(fingerprints)
+            if self._initial_cache_valid and isinstance(fingerprints, dict)
+            else {}
+        )
 
     def personal_raw(self) -> dict[str, Any]:
         return self._raw("pokemon/personal", extract_personal_dataset)
@@ -148,6 +155,7 @@ class GameBuildContext:
                 mart_dataset=self.marts_raw(),
                 trade_dataset=self.trades_raw(),
             ),
+            source=extract_location_dataset,
         )
 
     # Also mandatory (see the comment above moves_raw/encounters_raw) --
@@ -310,21 +318,27 @@ class GameBuildContext:
         self,
         key: str,
         extractor: Callable[[InspectionResult], dict[str, Any]],
+        *,
+        source: Callable[..., Any] | None = None,
     ) -> dict[str, Any]:
         if key in self._values:
             return self._values[key]
         path = self.cache_root / f"{key}.json" if self.cache_root else None
-        if path is not None and not self.refresh:
-            cached = self._read_cache(key, path)
-            if cached is not None:
-                self._values[key] = cached
-                return cached
+        source_fingerprint = None
+        if path is not None:
+            source_fingerprint = self._source_fingerprint(key, source or extractor)
+            if not self.refresh:
+                cached = self._read_cache(key, path, source_fingerprint)
+                if cached is not None:
+                    self._values[key] = cached
+                    return cached
         value = extractor(self.result)
         validate_dataset_envelope(value, context=key)
         self._values[key] = value
         if path is not None:
             write_json_atomic(path, value)
-            self._write_manifest()
+            assert source_fingerprint is not None
+            self._write_manifest(key, source_fingerprint)
         return value
 
     def _memo(self, key: str, factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:
@@ -333,8 +347,12 @@ class GameBuildContext:
             validate_dataset_envelope(self._values[key], context=key)
         return self._values[key]
 
-    def _read_cache(self, key: str, path: Path) -> dict[str, Any] | None:
+    def _read_cache(
+        self, key: str, path: Path, source_fingerprint: str
+    ) -> dict[str, Any] | None:
         if not self._initial_cache_valid or not path.is_file():
+            return None
+        if self._cached_source_fingerprints.get(key) != source_fingerprint:
             return None
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
@@ -348,26 +366,52 @@ class GameBuildContext:
         validate_dataset_envelope(value, context=key)
         return value
 
-    def _manifest_valid(self) -> bool:
+    def _read_manifest(self) -> dict[str, Any]:
         if self.cache_root is None:
-            return False
+            return {}
         path = self.cache_root / "manifest.json"
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            return False
-        return value == self._manifest()
+            return {}
+        return value if isinstance(value, dict) else {}
 
-    def _write_manifest(self) -> None:
+    def _manifest_valid(self, value: dict[str, Any]) -> bool:
+        if not value:
+            return False
+        return all(
+            value.get(key) == expected
+            for key, expected in self._manifest_header().items()
+        )
+
+    def _write_manifest(self, key: str, source_fingerprint: str) -> None:
         if self.cache_root is not None:
+            self._cached_source_fingerprints[key] = source_fingerprint
             write_json_atomic(self.cache_root / "manifest.json", self._manifest())
 
     def _manifest(self) -> dict[str, Any]:
+        return {
+            **self._manifest_header(),
+            "source_fingerprints": dict(sorted(self._cached_source_fingerprints.items())),
+        }
+
+    def _manifest_header(self) -> dict[str, Any]:
         return {
             "schema_version": CACHE_MANIFEST_SCHEMA_VERSION,
             "cache_revision": CACHE_REVISION,
             "profile": self.profile.id,
             "profile_fingerprint": profile_fingerprint(self.profile),
             "rom_sha256": self.result.image.hashes.sha256,
-            "source_fingerprint": self.source_fingerprint,
         }
+
+    def _source_fingerprint(self, key: str, source: Callable[..., Any]) -> str:
+        override = self._source_fingerprint_override
+        if isinstance(override, str):
+            return override
+        if override is not None:
+            return override[key]
+        return extraction_source_fingerprint(
+            self.profile.engine,
+            source.__module__,
+            key,
+        )

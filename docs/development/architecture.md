@@ -47,8 +47,12 @@ including its ROM version, hash, and egg-gift script offsets. Selecting
 identification then assigns extracted datasets to `platinum-us`. Generated baseline
 raw data remains under ignored `build/data/baselines/platinum-us/` paths. Cache
 manifests bind those files to the base profile, exact ROM SHA-256, schema version,
-resolved profile values, extraction-source fingerprint, and an explicit cache
-revision.
+resolved profile values, and an explicit cache revision. Each raw dataset also has
+its own extraction-source fingerprint, scoped to its pipeline dependencies and
+selected engine. Changing one extractor invalidates that dataset without discarding
+unrelated raw data; engine changes invalidate only games using that engine, and
+adding another engine does not invalidate existing games. ROM or resolved-profile
+changes remain whole-profile invalidations for safety.
 
 `GameBuildWorkflow` is the dependency-aware orchestration boundary. A complete
 build materializes every baseline dataset before any patched dataset, then compares
@@ -326,6 +330,12 @@ This state is an ignored local optimization, not a publication artifact or data
 cache. Complete snapshot builds remain clean and cannot use incremental mode. The
 combined artifact audit also remains complete, so incremental development does not
 weaken the release correctness boundary.
+
+Extraction and publication reuse are intentionally independent. A selected-site
+regeneration can reuse valid raw datasets without rebuilding other sites; adding
+`--incremental` additionally reuses unchanged HTML for that selected site. The
+complete `--all` workflow remains the release boundary rather than a prerequisite
+for ordinary game or engine development.
 
 ## Reuse boundaries
 

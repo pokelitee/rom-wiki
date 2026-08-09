@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
 from unittest.mock import Mock
 
 from romwiki.pipeline.build_context import GameBuildContext
-from romwiki.schema.versions import MOVES_RAW_SCHEMA_VERSION
+from romwiki.schema.versions import ITEMS_RAW_SCHEMA_VERSION, MOVES_RAW_SCHEMA_VERSION
 
 
 def _result(rom_sha256: str) -> Mock:
@@ -22,7 +23,7 @@ def _context(
     rom_sha256: str = "hash-a",
     *,
     refresh: bool = False,
-    source_fingerprint: str = "source-a",
+    source_fingerprint: str | Mapping[str, str] = "source-a",
 ) -> GameBuildContext:
     return GameBuildContext(
         _result(rom_sha256),
@@ -33,11 +34,11 @@ def _context(
     )
 
 
-def _extractor(calls: list) -> callable:
+def _extractor(calls: list, schema_version: int = MOVES_RAW_SCHEMA_VERSION) -> callable:
     def extract(result) -> dict:
         calls.append(result)
         return {
-            "schema_version": MOVES_RAW_SCHEMA_VERSION,
+            "schema_version": schema_version,
             "game": "test-profile",
             "engine": "test-engine",
             "dataset": "moves",
@@ -101,6 +102,28 @@ class GameBuildContextCacheTests(unittest.TestCase):
             )
 
         self.assertEqual(len(calls), 2)
+
+    def test_changed_extraction_source_invalidates_only_its_dataset(self) -> None:
+        calls: list = []
+        moves_extractor = _extractor(calls)
+        items_extractor = _extractor(calls, ITEMS_RAW_SCHEMA_VERSION)
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+            first = _context(
+                cache_root,
+                source_fingerprint={"moves/raw": "moves-a", "items/raw": "items-a"},
+            )
+            first._raw("moves/raw", moves_extractor)
+            first._raw("items/raw", items_extractor)
+
+            second = _context(
+                cache_root,
+                source_fingerprint={"moves/raw": "moves-b", "items/raw": "items-a"},
+            )
+            second._raw("moves/raw", moves_extractor)
+            second._raw("items/raw", items_extractor)
+
+        self.assertEqual(len(calls), 3)
 
     def test_invalid_manifest_rebuilds_every_entry_in_the_context(self) -> None:
         calls: list = []

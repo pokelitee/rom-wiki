@@ -122,6 +122,10 @@ romwiki build moves --rom "D:\Games\hack.nds" --hack-only
 Current-ROM extraction is cached below `build/data/cache/<profile>/`; clean
 baselines are cached below `build/data/baselines/<base-profile>/`.
 `--refresh-cache` and `--refresh-baseline` replace those caches.
+Cache validation is dataset- and engine-scoped: changing a pipeline extractor
+rebuilds its affected raw dataset, while engine changes leave other engines'
+caches intact. A ROM or resolved-profile change invalidates the profile's complete
+cache. Cache manifest schema upgrades also cause a one-time complete rebuild.
 
 ### One section
 
@@ -196,6 +200,11 @@ times, so MkDocs can skip them. A content-addressed state file under
 mode, site URL, MkDocs versions, site configuration, shared templates and hooks,
 and the complete source-file set. Missing output, changed build inputs, or deleted
 or renamed sources automatically select a clean site build.
+
+Use a site ID without `--all` while developing a new game or generation. This
+extracts and renders only that selection, reuses valid per-dataset caches, and
+leaves unrelated games untouched. Reserve `regenerate --all` for final integrated
+validation and snapshot publication.
 
 Snapshot creation rejects `--incremental`. Publication snapshots must always come
 from the complete clean `--all` workflow.
