@@ -32,6 +32,5 @@ def fixed_vendor_items(
     items: tuple[tuple[int, int], ...],
 ) -> tuple[Gen5SpecialVendorItem, ...]:
     return tuple(
-        Gen5SpecialVendorItem(item_id=item_id, price=price)
-        for item_id, price in items
+        Gen5SpecialVendorItem(item_id=item_id, price=price) for item_id, price in items
     )

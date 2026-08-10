@@ -62,9 +62,11 @@ def build_sites(
             candidate.slug for candidate in catalog.sites if candidate.slug
         )
         for site in ordered:
-            relative_output = site.output_path(resolved_output).relative_to(
-                resolved_output
-            ).as_posix()
+            relative_output = (
+                site.output_path(resolved_output)
+                .relative_to(resolved_output)
+                .as_posix()
+            )
             if relative_output == ".":
                 output_inventories[site.id] = {
                     path: value
@@ -79,7 +81,7 @@ def build_sites(
                     if path.startswith(prefix)
                 }
 
-    resolved_state_root = (state_root or catalog.root / ".romwiki" / "build-state")
+    resolved_state_root = state_root or catalog.root / ".romwiki" / "build-state"
 
     # MkDocs `--clean` empties the site directory it is given, so a site that
     # renders into the artifact root (the portal) would delete the game
@@ -241,8 +243,10 @@ def _build_site(
             excluded_top_level=excluded,
             output_files=known_output_files,
         )
-        if reusable and previous is not None and (
-            previous.source_files == state.source_files
+        if (
+            reusable
+            and previous is not None
+            and (previous.source_files == state.source_files)
         ):
             reused_state = replace(
                 state,

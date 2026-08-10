@@ -68,9 +68,7 @@ def merge_version_family_datasets(
         record = dict(next(iter(variants.values())))
         record["versions"] = list(variants)
         locations_with_versioned_trades = (
-            _merge_location_trade_variants(variants)
-            if kind == "locations"
-            else None
+            _merge_location_trade_variants(variants) if kind == "locations" else None
         )
         if locations_with_versioned_trades is not None:
             record = locations_with_versioned_trades

@@ -106,4 +106,3 @@ def _unpack_compressed_characters(
     if allow_outer_terminator and (bit_count == 0 or terminator_prefix):
         return characters
     raise InvalidRomError("Compressed Gen IV message has no terminator")
-

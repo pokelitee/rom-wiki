@@ -632,7 +632,9 @@ def _append_fossil_revival(
         lines.extend(
             [
                 "Revival location: "
-                + ", ".join(_location_link(location, source_file) for location in locations),
+                + ", ".join(
+                    _location_link(location, source_file) for location in locations
+                ),
                 "",
             ]
         )

@@ -35,7 +35,11 @@ class B2W2StaticEncounterTests(unittest.TestCase):
 
     def test_discovers_reachable_battles_gifts_egg_and_fossils(self) -> None:
         files = {
-            0: _script(_fossil_mapping(105, 408) + _fossil_mapping(104, 410) + _party_add(32803, 25)),
+            0: _script(
+                _fossil_mapping(105, 408)
+                + _fossil_mapping(104, 410)
+                + _party_add(32803, 25)
+            ),
             1: _script(
                 _wild_battle(638, 65)
                 + _wild_battle(638, 45)
@@ -72,7 +76,9 @@ class B2W2StaticEncounterTests(unittest.TestCase):
         self.assertEqual(len(encounters), 8)
         self.assertEqual(sum(value.is_egg for value in encounters), 1)
         self.assertEqual(sum(value.species_id == 585 for value in encounters), 2)
-        self.assertTrue(all(value.provenance.archive == "a/0/5/6" for value in encounters))
+        self.assertTrue(
+            all(value.provenance.archive == "a/0/5/6" for value in encounters)
+        )
 
 
 def _script(code: bytes) -> bytes:
@@ -92,9 +98,7 @@ def _party_add(species: int, level: int) -> bytes:
 
 
 def _party_add_ex(species: int, level: int) -> bytes:
-    return struct.pack(
-        "<H9H", 0x10E, 0x8010, species, 0, level, 3, 0, 0, 0, 4
-    )
+    return struct.pack("<H9H", 0x10E, 0x8010, species, 0, level, 3, 0, 0, 0, 4)
 
 
 def _party_add_n(species: int, level: int) -> bytes:

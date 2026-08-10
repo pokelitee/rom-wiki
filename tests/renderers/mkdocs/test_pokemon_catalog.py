@@ -29,9 +29,7 @@ class PokemonCatalogAvailabilityTests(unittest.TestCase):
                     versions=(),
                 ),
             ),
-            acquisitions=(
-                _acquisition("bulbasaur", "gift", level=10),
-            ),
+            acquisitions=(_acquisition("bulbasaur", "gift", level=10),),
         )
 
         self.assertEqual(

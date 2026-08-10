@@ -31,7 +31,10 @@ class HGSSEventTests(unittest.TestCase):
             resolve_hidden_item_id(events.backgrounds[0], item_count=537), 125
         )
         self.assertEqual(
-            (events.warps[0].destination_header_id, events.warps[0].destination_warp_id),
+            (
+                events.warps[0].destination_header_id,
+                events.warps[0].destination_warp_id,
+            ),
             (216, 1),
         )
 

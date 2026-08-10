@@ -232,9 +232,7 @@ def resolve_common_script_trainer_id(
     return trainer_id
 
 
-def resolve_common_script_member(
-    script_used: int, *, member_count: int
-) -> int | None:
+def resolve_common_script_member(script_used: int, *, member_count: int) -> int | None:
     """Resolve a 10xxx overworld script reference to its archive member."""
     if script_used < _COMMON_SCRIPT_REFERENCE_BASE:
         return None

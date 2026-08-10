@@ -29,9 +29,7 @@ class SiteAuditTests(unittest.TestCase):
             _write_page(root / "index.html", "<p>Index</p>")
             (root / "extra.txt").write_text("extra", encoding="utf-8")
 
-            report = audit_site(
-                root, expected_files={"index.html", "missing.txt"}
-            )
+            report = audit_site(root, expected_files={"index.html", "missing.txt"})
 
         self.assertEqual(
             {issue.code for issue in report.errors},
@@ -216,9 +214,7 @@ class SiteAuditTests(unittest.TestCase):
                 '<a href="/rom-wiki/game/">Game</a>',
             )
 
-            report = audit_site(
-                root, base_url="https://example.test/rom-wiki/"
-            )
+            report = audit_site(root, base_url="https://example.test/rom-wiki/")
 
         self.assertTrue(report.ok, [issue.format() for issue in report.errors])
 

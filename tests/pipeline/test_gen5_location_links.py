@@ -22,8 +22,7 @@ class Gen5ScriptLocationTests(unittest.TestCase):
         references = {0: (10435, 999), 1: (10435,)}
         engine = SimpleNamespace(
             parse_overworld_npcs=lambda data: tuple(
-                SimpleNamespace(script_used=value)
-                for value in references[data[0]]
+                SimpleNamespace(script_used=value) for value in references[data[0]]
             ),
             parse_overworld_furniture=lambda _data: (),
             resolve_common_script_member=resolve_common_script_member,
@@ -51,25 +50,31 @@ class Gen5ScriptLocationTests(unittest.TestCase):
             {
                 "pokemon": {
                     "game": "black-white",
-                    "records": [{
-                        "member": 548,
-                        "national_dex_id": 548,
-                        "name": "Petilil",
-                        "slug": "petilil",
-                        "public": True,
-                    }],
+                    "records": [
+                        {
+                            "member": 548,
+                            "national_dex_id": 548,
+                            "name": "Petilil",
+                            "slug": "petilil",
+                            "public": True,
+                        }
+                    ],
                 },
                 "locations": {
                     "game": "black-white",
-                    "records": [{
-                        "header_id": 23,
-                        "name": "Nacrene City",
-                        "npc_trades": [{
-                            "offered_species_id": 548,
-                            "requested_species_name": "Cottonee",
-                            "versions": ["black"],
-                        }],
-                    }],
+                    "records": [
+                        {
+                            "header_id": 23,
+                            "name": "Nacrene City",
+                            "npc_trades": [
+                                {
+                                    "offered_species_id": 548,
+                                    "requested_species_name": "Cottonee",
+                                    "versions": ["black"],
+                                }
+                            ],
+                        }
+                    ],
                 },
             }
         )

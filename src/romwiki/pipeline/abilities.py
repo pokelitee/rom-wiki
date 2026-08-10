@@ -57,9 +57,7 @@ def build_ability_dataset(
     # item lists plus a rate curve, so its raw dataset carries a
     # `level_ranges` field directly instead of Gen IV's `tables` shape; it
     # also has no Honey Gather / Honey Tree equivalent to attach.
-    is_sliding_pickup = (
-        pickup_dataset is not None and "level_ranges" in pickup_dataset
-    )
+    is_sliding_pickup = pickup_dataset is not None and "level_ranges" in pickup_dataset
     pickup_tables = (
         pickup_dataset["tables"]
         if pickup_dataset is not None and not is_sliding_pickup

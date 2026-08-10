@@ -27,13 +27,9 @@ LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 LocationExtractionFormat = Literal[
     "unsupported", "arm9-event-map", "arm9-encounter-map", "archive-encounter-map"
 ]
-PickupFormat = Literal[
-    "none", "locator-tables", "split-table", "sliding-table"
-]
+PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
-TutorFormat = Literal[
-    "none", "overlay-table", "overlay-archive", "personal-archive"
-]
+TutorFormat = Literal["none", "overlay-table", "overlay-archive", "personal-archive"]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
 

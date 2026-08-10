@@ -47,4 +47,3 @@ def parse_move_record(
             member=move_id,
         ),
     )
-

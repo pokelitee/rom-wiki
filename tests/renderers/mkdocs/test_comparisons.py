@@ -323,9 +323,7 @@ class ComparisonRenderingTests(unittest.TestCase):
 
                 render_changes_pages({"encounters": comparison}, root)
 
-                overview = (root / "changes" / "index.md").read_text(
-                    encoding="utf-8"
-                )
+                overview = (root / "changes" / "index.md").read_text(encoding="utf-8")
                 self.assertIn(expected_href, overview)
 
 

@@ -17,9 +17,8 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError("A known game profile is required for machine extraction")
     profile = result.match.profile
     engine = get_engine(profile.engine).machines
-    if (
-        "machine_move_prefix" in profile.parameters
-        or hasattr(engine, "MACHINE_TABLE_LOCATOR")
+    if "machine_move_prefix" in profile.parameters or hasattr(
+        engine, "MACHINE_TABLE_LOCATOR"
     ):
         return _extract_from_arm9_prefix(result)
     return _extract_from_offset(result)

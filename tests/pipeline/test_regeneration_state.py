@@ -20,9 +20,18 @@ class RegenerationStateTests(unittest.TestCase):
             generated.parent.mkdir(parents=True)
             generated.write_text("# Pokemon\n", encoding="utf-8")
             site = SiteDefinition(
-                "game", "Game", "game", "game", True, 1,
-                site_root / "mkdocs.yml", "", "platinum",
-                GameMetadata(("game",), (), True, 4, "base", "nds", "NDS", "Test", ("pokemon",)),
+                "game",
+                "Game",
+                "game",
+                "game",
+                True,
+                1,
+                site_root / "mkdocs.yml",
+                "",
+                "platinum",
+                GameMetadata(
+                    ("game",), (), True, 4, "base", "nds", "NDS", "Test", ("pokemon",)
+                ),
             )
             state = root / "state.json"
             write_regeneration_state(state, "input", site)

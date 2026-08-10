@@ -28,9 +28,7 @@ class DocumentationTests(unittest.TestCase):
         }
         game_pages = {
             path.parent.parent.name: path.read_text(encoding="utf-8")
-            for path in (REPOSITORY_ROOT / "sites/games").glob(
-                "*/wiki/data-sources.md"
-            )
+            for path in (REPOSITORY_ROOT / "sites/games").glob("*/wiki/data-sources.md")
         }
 
         for partial_name, expected_consumers in consumers.items():
@@ -49,18 +47,13 @@ class DocumentationTests(unittest.TestCase):
                 self.assertIn(heading, partial_text)
             directive = f'--8<-- "{partial_name}"'
             actual_consumers = {
-                site_id
-                for site_id, page in game_pages.items()
-                if directive in page
+                site_id for site_id, page in game_pages.items() if directive in page
             }
             with self.subTest(partial=partial_name):
                 self.assertEqual(actual_consumers, expected_consumers)
 
         self.assertFalse(
-            (
-                REPOSITORY_ROOT
-                / "sites/shared/partials/gen4-data-sources.md"
-            ).exists()
+            (REPOSITORY_ROOT / "sites/shared/partials/gen4-data-sources.md").exists()
         )
 
     def test_published_game_overviews_follow_the_documentation_contract(self) -> None:

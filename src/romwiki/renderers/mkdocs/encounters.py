@@ -993,8 +993,7 @@ def _append_seasonal_locations(
             source_file,
         )
         versions = (
-            " / ".join(display_name(version) for version in location.versions)
-            or "â€”"
+            " / ".join(display_name(version) for version in location.versions) or "â€”"
         )
         lines.append(f"| {link} | {location.header_id} | {versions} |")
     lines.append("")

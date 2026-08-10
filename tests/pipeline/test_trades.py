@@ -11,13 +11,15 @@ class TradeEnrichmentTests(unittest.TestCase):
         trades = {
             "game": "black-2-us",
             "engine": "gen5_b2w2",
-            "records": [{
-                "trade_id": 0,
-                "offered_species_id": 1,
-                "requested_species_id": 4,
-                "offered_forme_id": 0,
-                "interaction": "xtransceiver",
-            }],
+            "records": [
+                {
+                    "trade_id": 0,
+                    "offered_species_id": 1,
+                    "requested_species_id": 4,
+                    "offered_forme_id": 0,
+                    "interaction": "xtransceiver",
+                }
+            ],
         }
         pokemon = {
             "game": "black-2-us",
@@ -57,20 +59,20 @@ class TradeEnrichmentTests(unittest.TestCase):
 
         record = enrich_npc_trade_dataset(trades, pokemon)["records"][0]
 
-        self.assertEqual(
-            record["offered_pokemon"]["slug"], "basculin-blue-striped"
-        )
+        self.assertEqual(record["offered_pokemon"]["slug"], "basculin-blue-striped")
         self.assertEqual(record["requested_pokemon"]["slug"], "bulbasaur")
 
     def test_attaches_only_proven_location_references(self) -> None:
         trades = {
             "game": "white-us",
             "engine": "gen5_bw",
-            "records": [{
-                "trade_id": 1,
-                "offered_species_id": 550,
-                "requested_species_id": 1,
-            }],
+            "records": [
+                {
+                    "trade_id": 1,
+                    "offered_species_id": 550,
+                    "requested_species_id": 1,
+                }
+            ],
         }
         pokemon = {
             "game": "white-us",
@@ -80,11 +82,13 @@ class TradeEnrichmentTests(unittest.TestCase):
             ],
         }
         locations = {
-            "records": [{
-                "header_id": 23,
-                "name": "Nacrene City",
-                "npc_trades": [{"trade_id": 1}],
-            }]
+            "records": [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [{"trade_id": 1}],
+                }
+            ]
         }
 
         record = enrich_npc_trade_dataset(trades, pokemon, locations)["records"][0]

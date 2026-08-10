@@ -317,9 +317,7 @@ def _extract_battle_mode_trainer_locations(
     script_file_ids = engine.parse_map_header_script_files(map_headers_data)
 
     field_archive_options = {}
-    if profile.parameters.get(
-        "field_archives_allow_incorrect_data_block_size", False
-    ):
+    if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
         field_archive_options["allow_incorrect_data_block_size"] = True
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path),

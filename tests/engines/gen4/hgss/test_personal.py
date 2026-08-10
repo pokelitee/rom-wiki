@@ -13,9 +13,7 @@ class HgssPersonalDataTests(unittest.TestCase):
             "081e10022024669202000000"
         )
 
-        record = parse_personal_record(
-            data, species_id=1, archive_path="a/0/0/2"
-        )
+        record = parse_personal_record(data, species_id=1, archive_path="a/0/0/2")
 
         self.assertEqual(
             (
@@ -35,9 +33,7 @@ class HgssPersonalDataTests(unittest.TestCase):
 
     def test_rejects_an_unexpected_record_size(self) -> None:
         with self.assertRaisesRegex(InvalidRomError, "expected 44"):
-            parse_personal_record(
-                b"short", species_id=1, archive_path="a/0/0/2"
-            )
+            parse_personal_record(b"short", species_id=1, archive_path="a/0/0/2")
 
 
 if __name__ == "__main__":

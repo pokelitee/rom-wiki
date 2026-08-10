@@ -95,9 +95,7 @@ class RelationshipIndex:
     move_level_up_learners: Mapping[int, tuple[MoveLearnerReference, ...]]
     move_machine_learners: Mapping[int, tuple[MoveLearnerReference, ...]]
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]]
-    encounter_locations: Mapping[
-        int | str, tuple[EncounterLocationReference, ...]
-    ]
+    encounter_locations: Mapping[int | str, tuple[EncounterLocationReference, ...]]
 
 
 def build_relationship_index(
@@ -596,16 +594,12 @@ def _acquisition_references(
     return result
 
 
-def _detached_trade_detail(
-    trade: dict[str, Any], requested: dict[str, Any]
-) -> str:
+def _detached_trade_detail(trade: dict[str, Any], requested: dict[str, Any]) -> str:
     requested_name = requested.get("name")
     if trade.get("interaction") == "xtransceiver":
         ot_name = trade.get("ot_name")
         label = (
-            f"Xtransceiver trade with {ot_name}"
-            if ot_name
-            else "Xtransceiver trade"
+            f"Xtransceiver trade with {ot_name}" if ot_name else "Xtransceiver trade"
         )
     else:
         label = "Trade"
@@ -848,10 +842,7 @@ def _freeze_encounter_locations(
     locations: list[dict[str, Any]],
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]],
 ) -> dict[int | str, tuple[EncounterLocationReference, ...]]:
-    location_names = {
-        location["header_id"]: location["name"]
-        for location in locations
-    }
+    location_names = {location["header_id"]: location["name"] for location in locations}
     values: dict[int | str, list[EncounterLocationReference]] = defaultdict(list)
     for header_id, encounters in location_encounters.items():
         location_name = location_names[header_id]

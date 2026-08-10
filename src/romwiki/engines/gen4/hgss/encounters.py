@@ -93,9 +93,7 @@ def parse_encounter_record(
             if len(data) == HGSS_ENCOUNTER_RECORD_SIZE
             else None
         ),
-        provenance=RecordProvenance(
-            source="rom", archive=archive_path, member=area_id
-        ),
+        provenance=RecordProvenance(source="rom", archive=archive_path, member=area_id),
     )
 
 

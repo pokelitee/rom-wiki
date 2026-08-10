@@ -18,9 +18,7 @@ class DatasetEnvelopeTests(unittest.TestCase):
             "records": [],
         }
 
-        self.assertIs(
-            validate_dataset_envelope(dataset, context="test"), dataset
-        )
+        self.assertIs(validate_dataset_envelope(dataset, context="test"), dataset)
 
     def test_rejects_an_incomplete_dataset_envelope(self) -> None:
         with self.assertRaisesRegex(DataSourceError, "engine, record_count"):

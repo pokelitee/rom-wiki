@@ -60,8 +60,7 @@ def parse_trainer_record(
         )
     if class_prize_multipliers is not None and class_id >= len(class_prize_multipliers):
         raise InvalidRomError(
-            f"Trainer {trainer_id} references missing class prize multiplier "
-            f"{class_id}"
+            f"Trainer {trainer_id} references missing class prize multiplier {class_id}"
         )
     reward_items = struct.unpack_from("<4H", data, 4)
     ai_flags, battle_type = struct.unpack_from("<II", data, 12)

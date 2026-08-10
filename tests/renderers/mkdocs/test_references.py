@@ -13,9 +13,7 @@ from romwiki.renderers.mkdocs.references import (
 class RouteResolverTests(unittest.TestCase):
     def test_selects_encounter_route_family_from_normalized_identity(self) -> None:
         self.assertEqual(encounter_route_kind(7), "encounter")
-        self.assertEqual(
-            encounter_route_kind("map-007-spring"), "encounter_variant"
-        )
+        self.assertEqual(encounter_route_kind("map-007-spring"), "encounter_variant")
 
     def test_resolves_markdown_and_published_routes_from_page_depth(self) -> None:
         ability = entity_reference("ability", 65, "Overgrow", "overgrow")

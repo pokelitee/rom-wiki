@@ -149,8 +149,7 @@ def _extract_locator_tables(result: InspectionResult) -> dict[str, Any]:
         level_ranges.append(
             {
                 "minimum_level": level_range * engine.PICKUP_LEVEL_RANGE_SIZE + 1,
-                "maximum_level": (level_range + 1)
-                * engine.PICKUP_LEVEL_RANGE_SIZE,
+                "maximum_level": (level_range + 1) * engine.PICKUP_LEVEL_RANGE_SIZE,
                 "slots": [
                     {
                         "item_id": item_id,

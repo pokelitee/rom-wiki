@@ -353,8 +353,6 @@ def write_enriched_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, dataset)
 
 
-
-
 def _enrich_trainer(
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
@@ -578,8 +576,6 @@ def _item_sprite_url(
     return reference.get("sprite_url") if reference else None
 
 
-
-
 def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
     """Attach each battle-only transformation record's stats/types to its
     base species' record as `battle_forms`, e.g. Castform's page gains its
@@ -607,8 +603,6 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
         forms = by_base_slug.get(record["slug"])
         if forms:
             record["battle_forms"] = forms
-
-
 
 
 def _enrich_record(
@@ -927,9 +921,8 @@ def _validate_sparse_egg_moves(
             )
         ):
             raise DataSourceError("Egg move record contains invalid move IDs")
-        if (
-            len(move_ids) != len(set(move_ids))
-            and not getattr(engine, "ALLOW_DUPLICATE_EGG_MOVES", False)
+        if len(move_ids) != len(set(move_ids)) and not getattr(
+            engine, "ALLOW_DUPLICATE_EGG_MOVES", False
         ):
             raise DataSourceError("Egg move record contains duplicate move IDs")
         result[species_id] = record

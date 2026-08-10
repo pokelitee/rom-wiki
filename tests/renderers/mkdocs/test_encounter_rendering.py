@@ -108,9 +108,7 @@ class EncounterRenderingTests(unittest.TestCase):
                 output,
                 relationships=relationships,
             )
-            seasonal_page = (output / "map-003-spring.md").read_text(
-                encoding="utf-8"
-            )
+            seasonal_page = (output / "map-003-spring.md").read_text(encoding="utf-8")
             nonseasonal_page = (output / "map-004.md").read_text(encoding="utf-8")
 
         self.assertIn("## Map headers", seasonal_page)
@@ -169,9 +167,7 @@ def _encounter_record(
         "area_id": area_id,
         "map_index": map_index,
         "season": season,
-        "slug": (
-            f"map-{map_index:03}-{season}" if season else f"map-{map_index:03}"
-        ),
+        "slug": (f"map-{map_index:03}-{season}" if season else f"map-{map_index:03}"),
         "name": name,
         "location_names": [name],
         "active": True,

@@ -372,9 +372,7 @@ class RelationshipIndexTests(unittest.TestCase):
         trade = build_relationship_index(datasets).pokemon_acquisition["bulbasaur"][0]
 
         self.assertEqual(trade.kind, "trade")
-        self.assertEqual(
-            trade.detail, "Xtransceiver trade with Curtis for Charmander"
-        )
+        self.assertEqual(trade.detail, "Xtransceiver trade with Curtis for Charmander")
         self.assertIsNone(trade.location_id)
         self.assertIsNone(trade.location_name)
 

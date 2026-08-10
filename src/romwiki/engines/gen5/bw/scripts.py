@@ -171,7 +171,6 @@ def find_fossil_revival_script(
         candidates.append((member, revivals))
     if len(candidates) != 1:
         raise InvalidRomError(
-            "Expected exactly one fossil revival script, "
-            f"found {len(candidates)}"
+            f"Expected exactly one fossil revival script, found {len(candidates)}"
         )
     return candidates[0]

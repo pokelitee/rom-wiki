@@ -55,9 +55,7 @@ class Gen5B2W2PersonalDataTests(unittest.TestCase):
 
     def test_rejects_a_bw_sized_record(self) -> None:
         with self.assertRaisesRegex(InvalidRomError, "expected 76"):
-            parse_personal_record(
-                bytes(60), species_id=1, archive_path="a/0/1/6"
-            )
+            parse_personal_record(bytes(60), species_id=1, archive_path="a/0/1/6")
 
     def test_can_repair_a_profile_declared_secondary_egg_group_editor_bug(
         self,

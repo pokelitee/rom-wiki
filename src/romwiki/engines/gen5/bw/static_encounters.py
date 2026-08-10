@@ -18,9 +18,7 @@ def discover_static_encounters(
     item_count: int,
 ) -> tuple[StaticEncounter, ...]:
     """Discover literal BW gifts and scripted battles from reachable bytecode."""
-    discovered: list[
-        tuple[tuple[int, int | None, bool], int, Gen5Instruction]
-    ] = []
+    discovered: list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]] = []
     first_member_by_fact: dict[tuple[int, int | None, bool], int] = {}
     for member in range(member_count):
         for instruction in disassemble_script(read_script_member(member)):
@@ -77,6 +75,8 @@ def discover_static_encounters(
             instruction,
         ) in enumerate(discovered)
     )
+
+
 def _static_fact(
     instruction: Gen5Instruction, *, species_count: int
 ) -> tuple[int, int | None, bool] | None:

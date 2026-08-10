@@ -60,6 +60,7 @@ class RegisteredTypeChart:
     def matrix(self) -> Mapping[tuple[str, str], str]:
         return self.family.matrix
 
+
 def _canonical_matrix() -> dict[tuple[str, str], str]:
     matrix = {
         (attacking, defending): "1"

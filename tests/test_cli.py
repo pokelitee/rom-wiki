@@ -775,22 +775,22 @@ patched_rom = "roms/white-us.nds"
                     side_effect=inspection,
                 ) as inspect,
                 patch("romwiki.cli._run_full_game_build") as build_game,
-                    patch("romwiki.cli._run_version_family_build") as build_family,
-                    patch(
-                        "romwiki.cli.regeneration_fingerprint",
-                        return_value="fingerprint",
-                    ),
-                    patch("romwiki.cli.can_reuse_generation", return_value=False),
-                    patch("romwiki.cli.write_regeneration_state"),
-                    patch(
-                        "romwiki.cli.build_sites",
-                        return_value=catalog.published(),
-                    ),
-                    patch(
-                        "romwiki.cli.combined_artifact_files",
-                        return_value={"index.html"},
-                    ),
-                    patch("romwiki.cli.audit_site", return_value=report),
+                patch("romwiki.cli._run_version_family_build") as build_family,
+                patch(
+                    "romwiki.cli.regeneration_fingerprint",
+                    return_value="fingerprint",
+                ),
+                patch("romwiki.cli.can_reuse_generation", return_value=False),
+                patch("romwiki.cli.write_regeneration_state"),
+                patch(
+                    "romwiki.cli.build_sites",
+                    return_value=catalog.published(),
+                ),
+                patch(
+                    "romwiki.cli.combined_artifact_files",
+                    return_value={"index.html"},
+                ),
+                patch("romwiki.cli.audit_site", return_value=report),
             ):
                 _run_regeneration(args)
 

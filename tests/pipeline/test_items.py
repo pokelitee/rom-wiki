@@ -198,14 +198,18 @@ class FossilRevivalTests(unittest.TestCase):
         locations = {
             "game": "test",
             "source": {},
-            "records": [{
-                "header_id": 21,
-                "name": "Nacrene City",
-                "static_encounters": [{
-                    "species_id": 138,
-                    "script_file_id": 877,
-                }],
-            }],
+            "records": [
+                {
+                    "header_id": 21,
+                    "name": "Nacrene City",
+                    "static_encounters": [
+                        {
+                            "species_id": 138,
+                            "script_file_id": 877,
+                        }
+                    ],
+                }
+            ],
         }
         pokedb = PokeDBGeneration(
             pokemon_by_id={},
@@ -239,29 +243,38 @@ class FossilRevivalTests(unittest.TestCase):
         locations = {
             "game": "test",
             "source": {},
-            "records": [{
-                "header_id": 67,
-                "name": "Gear Station",
-                "shops": [{
-                    "inventory_id": None,
-                    "selector_id": 254,
-                    "kind": "exchange",
-                    "currency": "bp",
-                    "name": "Battle Point item exchange",
-                    "is_main_game": True,
-                    "dynamic": False,
-                    "items": [{
-                        "item_id": 234,
-                        "price": 48,
-                        "required_badges": None,
-                        "availability": "Weekends",
-                    }],
-                }],
-            }],
+            "records": [
+                {
+                    "header_id": 67,
+                    "name": "Gear Station",
+                    "shops": [
+                        {
+                            "inventory_id": None,
+                            "selector_id": 254,
+                            "kind": "exchange",
+                            "currency": "bp",
+                            "name": "Battle Point item exchange",
+                            "is_main_game": True,
+                            "dynamic": False,
+                            "items": [
+                                {
+                                    "item_id": 234,
+                                    "price": 48,
+                                    "required_badges": None,
+                                    "availability": "Weekends",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
         }
         pokedb = PokeDBGeneration(
-            pokemon_by_id={}, pokemon_by_name={}, pokemon_by_species={},
-            abilities_by_id={}, items_by_id={234: "leftovers"},
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
         )
 
         record = build_item_dataset(raw, pokedb, pokemon, None, locations)["records"][0]

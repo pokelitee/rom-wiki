@@ -161,9 +161,7 @@ def _render_encounter_map_location(
     _append_warps(lines, record["warps"], source_file)
     _append_items(lines, record["items"], source_file, references)
     _append_shops(lines, record.get("shops", []), source_file, references)
-    _append_npc_trades(
-        lines, record.get("npc_trades", []), source_file, references
-    )
+    _append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
     _append_static_encounters(
         lines, record["static_encounters"], source_file, references
     )

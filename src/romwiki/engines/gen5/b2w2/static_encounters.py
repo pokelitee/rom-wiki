@@ -36,8 +36,7 @@ def find_fossil_revival_script(
     )
     if len(candidates) != 1:
         raise InvalidRomError(
-            "Expected exactly one B2W2 fossil revival script, "
-            f"found {len(candidates)}"
+            f"Expected exactly one B2W2 fossil revival script, found {len(candidates)}"
         )
     member, _party_add, mappings = candidates[0]
     return member, tuple(
@@ -152,7 +151,6 @@ def _deduplicate_exact_paths(
     return kept
 
 
-
 def _static_fact(
     instruction: Gen5Instruction, *, species_count: int
 ) -> tuple[int, int | None, bool] | None:
@@ -197,8 +195,7 @@ def _discover_fossils(
     )
     if len(candidates) != 1:
         raise InvalidRomError(
-            "Expected exactly one B2W2 fossil revival script, "
-            f"found {len(candidates)}"
+            f"Expected exactly one B2W2 fossil revival script, found {len(candidates)}"
         )
     member, party_add, mappings = candidates[0]
     return [
@@ -233,7 +230,9 @@ def _fossil_mappings(
 ) -> list[tuple[int, int]]:
     mappings = []
     for index in range(len(instructions) - 4):
-        push_item_var, push_item, compare, jump, set_species = instructions[index : index + 5]
+        push_item_var, push_item, compare, jump, set_species = instructions[
+            index : index + 5
+        ]
         if not (
             push_item_var.name == "StackPush"
             and push_item_var.params == (_FOSSIL_ITEM_VARIABLE,)

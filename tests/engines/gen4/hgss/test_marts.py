@@ -10,7 +10,9 @@ from romwiki.util.errors import InvalidRomError
 class HgssMartTests(unittest.TestCase):
     def test_decodes_terminated_shop_catalog(self) -> None:
         locator = b"catalog"
-        inventories = [struct.pack("<2H", shop_id + 1, 0xFFFF) for shop_id in range(SHOP_COUNT)]
+        inventories = [
+            struct.pack("<2H", shop_id + 1, 0xFFFF) for shop_id in range(SHOP_COUNT)
+        ]
         shops = parse_shop_catalog(
             locator + b"".join(inventories),
             locator=locator,

@@ -145,9 +145,7 @@ def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
             "compatibility_archive": compatibility_path,
         },
         "location_names": list(engine.TUTOR_LOCATION_NAMES),
-        "records": [
-            {**record.to_dict(), "kind": "battle-points"} for record in tutors
-        ],
+        "records": [{**record.to_dict(), "kind": "battle-points"} for record in tutors],
         "compatibility": [record.to_dict() for record in compatibility],
         "special_records": [],
         "special_compatibility": [],

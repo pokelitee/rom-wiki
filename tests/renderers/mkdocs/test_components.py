@@ -52,9 +52,7 @@ class DisplayNameTests(unittest.TestCase):
 class TutorRequirementTests(unittest.TestCase):
     def test_formats_battle_point_costs(self) -> None:
         self.assertEqual(
-            tutor_requirement(
-                {"kind": "battle-points", "battle_point_cost": 40}
-            ),
+            tutor_requirement({"kind": "battle-points", "battle_point_cost": 40}),
             "40 BP",
         )
         self.assertEqual(

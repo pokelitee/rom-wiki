@@ -58,7 +58,7 @@ class EnginePackageBoundaryTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
     def test_shared_dispatch_uses_semantic_formats_not_engine_ids(self) -> None:
-        forbidden = ("GEN4_DPPT_ENGINE", "GEN5_ENGINES", '== "gen', "in {\"gen")
+        forbidden = ("GEN4_DPPT_ENGINE", "GEN5_ENGINES", '== "gen', 'in {"gen')
         violations = [
             f"{path.relative_to(SOURCE_ROOT)} contains {token!r}"
             for path in SEMANTIC_DISPATCH_PATHS
@@ -82,11 +82,7 @@ def _engine_leaves() -> tuple[str, ...]:
 def _containing_leaf(path: Path, leaves: tuple[str, ...]) -> str | None:
     module = _module_name(path)
     return next(
-        (
-            leaf
-            for leaf in leaves
-            if module == leaf or module.startswith(f"{leaf}.")
-        ),
+        (leaf for leaf in leaves if module == leaf or module.startswith(f"{leaf}.")),
         None,
     )
 

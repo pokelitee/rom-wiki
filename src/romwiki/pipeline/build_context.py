@@ -392,7 +392,9 @@ class GameBuildContext:
     def _manifest(self) -> dict[str, Any]:
         return {
             **self._manifest_header(),
-            "source_fingerprints": dict(sorted(self._cached_source_fingerprints.items())),
+            "source_fingerprints": dict(
+                sorted(self._cached_source_fingerprints.items())
+            ),
         }
 
     def _manifest_header(self) -> dict[str, Any]:

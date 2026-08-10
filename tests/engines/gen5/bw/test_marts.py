@@ -27,10 +27,7 @@ class Gen5ShopCatalogTests(unittest.TestCase):
         self.assertEqual(len(market.items), 30)
         self.assertIn(
             (80, 10000, "Current resident: Lena"),
-            {
-                (item.item_id, item.price, item.availability)
-                for item in market.items
-            },
+            {(item.item_id, item.price, item.availability) for item in market.items},
         )
         self.assertEqual(market.selector_ids, tuple(range(247, 252)))
         self.assertIsNone(resolve_special_vendor(252))

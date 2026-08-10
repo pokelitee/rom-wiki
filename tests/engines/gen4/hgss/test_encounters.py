@@ -13,7 +13,9 @@ class HGSSEncounterTests(unittest.TestCase):
         data[:6] = bytes((30, 10, 5, 20, 25, 30))
         data[8:20] = bytes(range(5, 17))
         for offset, first_species in ((20, 1), (44, 101), (68, 201)):
-            struct.pack_into("<12H", data, offset, *range(first_species, first_species + 12))
+            struct.pack_into(
+                "<12H", data, offset, *range(first_species, first_species + 12)
+            )
         struct.pack_into("<4H", data, 92, 252, 253, 254, 255)
         _write_method(data, 100, 5, species=60)
         _write_method(data, 120, 2, species=70)

@@ -15,8 +15,12 @@ _MAP_NAMES = ("Route 1", "Route 2", "Accumula Town")
 
 
 def _map_header(
-    *, name_index: int, wild_set: int, script_file: int = 0,
-    text_file: int = 0, matrix_id: int = 0
+    *,
+    name_index: int,
+    wild_set: int,
+    script_file: int = 0,
+    text_file: int = 0,
+    matrix_id: int = 0,
 ) -> bytes:
     record = bytearray(48)
     record[26] = name_index

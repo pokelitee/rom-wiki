@@ -36,9 +36,7 @@ NPC_TRADE_TEXT_MEMBER_BY_ID = {
 }
 
 
-def resolve_common_script_member(
-    script_used: int, *, member_count: int
-) -> int | None:
+def resolve_common_script_member(script_used: int, *, member_count: int) -> int | None:
     if script_used < 10000:
         return None
     member = COMMON_SCRIPT_MEMBER_BASE + script_used - 10000

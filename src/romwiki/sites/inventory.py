@@ -50,14 +50,11 @@ def file_path_inventory(
     for directory, child_directories, names in os.walk(root):
         if Path(directory) == root:
             child_directories[:] = [
-                name
-                for name in child_directories
-                if name not in excluded_top_level
+                name for name in child_directories if name not in excluded_top_level
             ]
             names = [name for name in names if name not in excluded_top_level]
         paths.extend(
-            (Path(directory) / name).relative_to(root).as_posix()
-            for name in names
+            (Path(directory) / name).relative_to(root).as_posix() for name in names
         )
     return dict.fromkeys(sorted(paths), "present")
 

@@ -18,8 +18,12 @@ class B2W2MartTests(unittest.TestCase):
         self.assertEqual(
             (tm_exchange.items[0].item_id, tm_exchange.items[0].price), (344, 6)
         )
-        self.assertIn((82, 3), {(item.item_id, item.price) for item in item_exchange.items})
-        self.assertIn((50, 24), {(item.item_id, item.price) for item in item_exchange.items})
+        self.assertIn(
+            (82, 3), {(item.item_id, item.price) for item in item_exchange.items}
+        )
+        self.assertIn(
+            (50, 24), {(item.item_id, item.price) for item in item_exchange.items}
+        )
         self.assertIsNone(resolve_special_vendor(247))
 
     def test_resolves_all_black_city_market_states(self) -> None:

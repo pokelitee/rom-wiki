@@ -51,16 +51,26 @@ class VersionMergeTests(unittest.TestCase):
         self,
     ) -> None:
         black = _dataset(
-            "locations", "black-us",
-            [{"header_id": 23, "name": "Nacrene City", "npc_trades": [
-                {"trade_id": 0, "nickname": "Lillil"}
-            ]}],
+            "locations",
+            "black-us",
+            [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [{"trade_id": 0, "nickname": "Lillil"}],
+                }
+            ],
         )
         white = _dataset(
-            "locations", "white-us",
-            [{"header_id": 23, "name": "Nacrene City", "npc_trades": [
-                {"trade_id": 1, "nickname": "Mondo"}
-            ]}],
+            "locations",
+            "white-us",
+            [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [{"trade_id": 1, "nickname": "Mondo"}],
+                }
+            ],
         )
 
         record = merge_version_datasets(black, "black", white, "white")["records"][0]

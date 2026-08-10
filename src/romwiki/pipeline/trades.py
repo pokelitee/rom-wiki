@@ -68,6 +68,8 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
         },
         "records": records,
     }
+
+
 def enrich_npc_trade_dataset(
     dataset: dict[str, Any],
     pokemon_dataset: dict[str, Any],

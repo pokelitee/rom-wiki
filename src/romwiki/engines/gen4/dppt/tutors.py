@@ -22,9 +22,7 @@ SPECIAL_TUTOR_MOVE_VAR = 0x8003
 SPECIAL_TUTOR_SPECIES_VAR = 0x8001
 
 
-def parse_tutor_move_table(
-    data: bytes, *, tutor_count: int
-) -> tuple[TutorMove, ...]:
+def parse_tutor_move_table(data: bytes, *, tutor_count: int) -> tuple[TutorMove, ...]:
     if tutor_count <= 0 or len(data) != tutor_count * TUTOR_RECORD_SIZE:
         raise InvalidRomError("Gen IV tutor move table has an invalid size")
     records = []

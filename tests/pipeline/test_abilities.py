@@ -99,9 +99,7 @@ class AbilityDatasetTests(unittest.TestCase):
         self.assertEqual(compound_eyes["name"], "Compoundeyes")
         self.assertEqual(compound_eyes["slug"], "compound-eyes")
         self.assertEqual(compound_eyes["pokemon"][0]["slug"], "butterfree")
-        self.assertEqual(
-            dataset["name_source"], {"archive": "a/0/2/7", "member": 720}
-        )
+        self.assertEqual(dataset["name_source"], {"archive": "a/0/2/7", "member": 720})
 
     def test_carries_the_hidden_ability_flag_through_to_pokemon_entries(self) -> None:
         names = [" -", *(f"Ability {ability_id}" for ability_id in range(1, 124))]

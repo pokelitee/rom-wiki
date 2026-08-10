@@ -308,19 +308,22 @@ def _cached_parsed_pages(
             database.execute(
                 "CREATE TABLE IF NOT EXISTS pages (path TEXT PRIMARY KEY, digest TEXT NOT NULL, parser TEXT NOT NULL, payload TEXT NOT NULL)"
             )
-            cached = {} if refresh else {
-                path: (digest, parser, payload)
-                for path, digest, parser, payload in database.execute(
-                    "SELECT path, digest, parser, payload FROM pages"
-                )
-            }
+            cached = (
+                {}
+                if refresh
+                else {
+                    path: (digest, parser, payload)
+                    for path, digest, parser, payload in database.execute(
+                        "SELECT path, digest, parser, payload FROM pages"
+                    )
+                }
+            )
             worker_count = _parse_worker_count(jobs, len(tasks))
             if len(cached) < len(tasks) // 2:
                 fresh = _read_and_parse_tasks(tasks, worker_count)
                 fingerprints = {relative: digest for relative, _, digest, _ in fresh}
                 parsed_misses = {
-                    relative: (size, parsed)
-                    for relative, size, _, parsed in fresh
+                    relative: (size, parsed) for relative, size, _, parsed in fresh
                 }
             else:
                 if worker_count <= 1:
@@ -335,15 +338,15 @@ def _cached_parsed_pages(
                             )
                         )
                 misses = [
-                    task for task in tasks
+                    task
+                    for task in tasks
                     if task[1] not in cached
                     or cached[task[1]][0] != fingerprints[task[1]]
                     or cached[task[1]][1] != parser_fingerprint
                 ]
                 fresh = _read_and_parse_tasks(misses, worker_count)
                 parsed_misses = {
-                    relative: (size, parsed)
-                    for relative, size, _, parsed in fresh
+                    relative: (size, parsed) for relative, size, _, parsed in fresh
                 }
             for relative, (size, parsed) in parsed_misses.items():
                 payload = json.dumps(
@@ -363,7 +366,9 @@ def _cached_parsed_pages(
                 if relative in parsed_misses:
                     size, parsed = parsed_misses[relative]
                 else:
-                    size, parsed = _parsed_page_from_dict(json.loads(cached[relative][2]))
+                    size, parsed = _parsed_page_from_dict(
+                        json.loads(cached[relative][2])
+                    )
                 yield relative, size, parsed
     except (sqlite3.DatabaseError, json.JSONDecodeError, OSError, KeyError, TypeError):
         _LOG.warning("Audit cache is invalid; parsing all pages without reuse")
@@ -447,7 +452,8 @@ def audit_site(
     for page_number, (relative, size, result) in enumerate(
         _parsed_pages(
             tasks, jobs=jobs, cache_path=cache_path, refresh_cache=refresh_cache
-        ), start=1
+        ),
+        start=1,
     ):
         total_bytes += size
         if largest_page is None or size > largest_page[1]:
@@ -500,9 +506,7 @@ def audit_site(
         defined_classes.update(
             _CUSTOM_CSS_CLASS.findall(stylesheet.read_text(encoding="utf-8"))
         )
-    unused_classes = (
-        defined_classes - used_classes - _CONDITIONALLY_RENDERED_CLASSES
-    )
+    unused_classes = defined_classes - used_classes - _CONDITIONALLY_RENDERED_CLASSES
     for class_name in sorted(unused_classes):
         warnings.append(
             SiteAuditIssue(

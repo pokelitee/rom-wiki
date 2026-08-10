@@ -99,7 +99,9 @@ def can_reuse_generation(path: Path, fingerprint: str, site: SiteDefinition) -> 
     )
 
 
-def write_regeneration_state(path: Path, fingerprint: str, site: SiteDefinition) -> None:
+def write_regeneration_state(
+    path: Path, fingerprint: str, site: SiteDefinition
+) -> None:
     write_json_atomic(
         path,
         {

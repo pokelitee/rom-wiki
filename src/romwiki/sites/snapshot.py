@@ -210,7 +210,9 @@ def _create_snapshot_directory(
     previous = {}
     manifest_path = output / "manifest.json"
     with suppress(OSError, json.JSONDecodeError, AttributeError):
-        previous = json.loads(manifest_path.read_text(encoding="utf-8")).get("sites", {})
+        previous = json.loads(manifest_path.read_text(encoding="utf-8")).get(
+            "sites", {}
+        )
     entries: dict[str, dict[str, object]] = {}
     total = 0
     for site in catalog.published():
@@ -240,8 +242,7 @@ def _create_snapshot_directory(
         if not reusable:
             content_fingerprint = _content_fingerprint(catalog.root, files)
             reusable = (
-                compatible
-                and old.get("content_fingerprint") == content_fingerprint
+                compatible and old.get("content_fingerprint") == content_fingerprint
             )
         if not reusable:
             _write_site_archive(
@@ -453,7 +454,9 @@ def _restore_site_archive(
                 or ".." in relative.parts
                 or not any(relative.is_relative_to(prefix) for prefix in allowed)
             ):
-                raise SiteError(f"Generated snapshot contains invalid path: {member.name}")
+                raise SiteError(
+                    f"Generated snapshot contains invalid path: {member.name}"
+                )
             if relative in targets:
                 raise SiteError(
                     f"Generated snapshot contains duplicate path: {member.name}"
@@ -463,15 +466,19 @@ def _restore_site_archive(
             section_root = catalog.root.joinpath(*prefix.parts)
             if section_root.is_dir():
                 for existing in section_root.rglob("*"):
-                    if existing.is_file() and PurePosixPath(
-                        existing.relative_to(catalog.root).as_posix()
-                    ) not in targets:
+                    if (
+                        existing.is_file()
+                        and PurePosixPath(existing.relative_to(catalog.root).as_posix())
+                        not in targets
+                    ):
                         existing.unlink()
         for member in members:
             relative = PurePosixPath(member.name)
             source = archive.extractfile(member)
             if source is None:
-                raise SiteError(f"Could not read generated snapshot entry: {member.name}")
+                raise SiteError(
+                    f"Could not read generated snapshot entry: {member.name}"
+                )
             destination = catalog.root.joinpath(*relative.parts)
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(source.read())
@@ -490,9 +497,10 @@ def _validate_site_archive_manifest(
     expected_source_fingerprint: str,
 ) -> None:
     try:
-        if sum(
-            member.name == SNAPSHOT_MANIFEST for member in archive.getmembers()
-        ) != 1:
+        if (
+            sum(member.name == SNAPSHOT_MANIFEST for member in archive.getmembers())
+            != 1
+        ):
             raise KeyError(SNAPSHOT_MANIFEST)
         member = archive.getmember(SNAPSHOT_MANIFEST)
         source = archive.extractfile(member)
@@ -523,7 +531,9 @@ def _generated_files_for_site(site: SiteDefinition) -> list[Path]:
     for section in (*site.game.generated_sections, "changes"):
         section_root = wiki_root / section
         if section != "changes" and not (section_root / "index.md").is_file():
-            raise SiteError(f"Generated wiki section is missing for {site.id}: {section}")
+            raise SiteError(
+                f"Generated wiki section is missing for {site.id}: {section}"
+            )
         if section_root.is_dir():
             files.extend(
                 Path(directory) / name

@@ -67,11 +67,7 @@ def parse_shop_catalog(
             cursor += 2
             if item_id == 0xFFFF:
                 break
-            if (
-                shop_id not in SKIPPED_SHOP_IDS
-                and item_id
-                and item_id >= item_count
-            ):
+            if shop_id not in SKIPPED_SHOP_IDS and item_id and item_id >= item_count:
                 raise InvalidRomError(
                     f"HGSS shop {shop_id} references invalid item {item_id}"
                 )

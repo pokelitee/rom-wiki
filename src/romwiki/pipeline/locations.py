@@ -174,7 +174,9 @@ def _extract_arm9_encounter_map_location_dataset(
     records = []
     for header in headers:
         encounter_id = header.encounter_id
-        encounter_map_index = None if encounter_id == null_encounter_id else encounter_id
+        encounter_map_index = (
+            None if encounter_id == null_encounter_id else encounter_id
+        )
         if encounter_map_index is not None and encounter_map_index >= len(
             encounters.members
         ):
@@ -253,14 +255,10 @@ def _extract_arm9_encounter_map_location_dataset(
         "warp_count": sum(len(record["warps"]) for record in records),
         "connection_count": sum(len(record["connections"]) for record in records),
         "visible_item_count": sum(
-            item["kind"] == "visible"
-            for record in records
-            for item in record["items"]
+            item["kind"] == "visible" for record in records for item in record["items"]
         ),
         "hidden_item_count": sum(
-            item["kind"] == "hidden"
-            for record in records
-            for item in record["items"]
+            item["kind"] == "hidden" for record in records for item in record["items"]
         ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
@@ -1107,9 +1105,7 @@ def _extract_encounter_map_location_dataset(
                                 mode=dispatch.mode,
                                 dynamic=True,
                                 inventory_source="runtime",
-                                availability=(
-                                    "Stock changes with badge progression."
-                                ),
+                                availability=("Stock changes with badge progression."),
                             )
                         )
                         continue
@@ -1382,9 +1378,7 @@ def _extract_event_map_location_shops(
                 script_file_id=script_file_id,
                 command_offset=command.offset,
                 items=items,
-                schedule=engine.shop_schedule_label(
-                    command.kind, command.inventory_id
-                ),
+                schedule=engine.shop_schedule_label(command.kind, command.inventory_id),
             )
         )
     return tuple(shops)
@@ -1726,9 +1720,7 @@ def _resolve_gen5_script_locations(
         if header.header_id >= len(overworld_objects.members):
             continue
         overworld = overworld_objects.read(header.header_id)
-        references = [
-            npc.script_used for npc in engine.parse_overworld_npcs(overworld)
-        ]
+        references = [npc.script_used for npc in engine.parse_overworld_npcs(overworld)]
         references.extend(
             furniture.script_used
             for furniture in engine.parse_overworld_furniture(overworld)
@@ -1784,12 +1776,8 @@ def _extract_gen5_npc_trade_references(
         references[header_id].append(
             {
                 **record,
-                "requested_species_name": pokemon_names[
-                    record["requested_species_id"]
-                ],
-                "offered_species_name": pokemon_names[
-                    record["offered_species_id"]
-                ],
+                "requested_species_name": pokemon_names[record["requested_species_id"]],
+                "offered_species_name": pokemon_names[record["offered_species_id"]],
                 "held_item_name": item_names.get(held_item_id),
                 "script_file_id": member,
                 "command_offset": offset,

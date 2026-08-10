@@ -66,12 +66,13 @@ def current_site_build_state(
             excluded_top_level=frozenset((*site.game.generated_sections, "changes")),
         )
         source_files.update(
-            {f"wiki/{path}": metadata for path, metadata in generated_source_files.items()}
+            {
+                f"wiki/{path}": metadata
+                for path, metadata in generated_source_files.items()
+            }
         )
     else:
-        source_files = _fingerprinted_files(
-            site_root / "wiki", relative_to=site_root
-        )
+        source_files = _fingerprinted_files(site_root / "wiki", relative_to=site_root)
     return SiteBuildState(
         configuration_fingerprint=_configuration_fingerprint(
             catalog, site, dev=dev, site_url=site_url
@@ -177,9 +178,9 @@ def combined_artifact_files(
         state = read_site_build_state(state_root / f"{site.id}.json")
         if state is None or state.output_root != str(resolved_output):
             raise SiteError(f"Missing current build state for {site.id}")
-        relative_output = site.output_path(resolved_output).relative_to(
-            resolved_output
-        ).as_posix()
+        relative_output = (
+            site.output_path(resolved_output).relative_to(resolved_output).as_posix()
+        )
         prefix = "" if relative_output == "." else f"{relative_output}/"
         expected.update(f"{prefix}{path}" for path in state.output_files)
     return expected

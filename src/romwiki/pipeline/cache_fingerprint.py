@@ -74,9 +74,7 @@ def extraction_source_files(engine_id: str, extractor_module: str) -> tuple[str,
         for dependency in _local_imports(path, module_name):
             pending.append(dependency)
 
-    return tuple(
-        sorted(path.relative_to(_PACKAGE_ROOT).as_posix() for path in paths)
-    )
+    return tuple(sorted(path.relative_to(_PACKAGE_ROOT).as_posix() for path in paths))
 
 
 def profile_fingerprint(profile: Any) -> str:
@@ -157,7 +155,9 @@ def _module_path(module_name: str) -> Path | None:
 def _local_imports(path: Path, module_name: str) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     dependencies: set[str] = set()
-    package = module_name if path.name == "__init__.py" else module_name.rpartition(".")[0]
+    package = (
+        module_name if path.name == "__init__.py" else module_name.rpartition(".")[0]
+    )
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

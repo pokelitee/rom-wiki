@@ -54,9 +54,7 @@ class NarcArchiveTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidRomError, "blocks do not fill"):
             NarcArchive.from_bytes(data)
 
-        archive = NarcArchive.from_bytes(
-            data, allow_incorrect_data_block_size=True
-        )
+        archive = NarcArchive.from_bytes(data, allow_incorrect_data_block_size=True)
         self.assertEqual(archive.read(1), b"de")
 
     def test_requires_both_flags_for_truncated_archive_with_short_data_block(

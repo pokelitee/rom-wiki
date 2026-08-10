@@ -269,31 +269,35 @@ class LocationRenderingTests(unittest.TestCase):
             "static_encounters": [],
             "connections": [],
             "items": [],
-            "npc_trades": [{
-                "trade_id": 0,
-                "requested_species_id": 546,
-                "requested_species_name": "Cottonee",
-                "offered_species_id": 548,
-                "offered_species_name": "Petilil",
-                "nickname": "Lillil",
-                "held_item_id": None,
-                "held_item_name": None,
-                "ivs": [20, 20, 20, 20, 20, 20],
-                "ot_id": 39922,
-                "ot_name": "Lina",
-                "versions": ["black"],
-            }],
+            "npc_trades": [
+                {
+                    "trade_id": 0,
+                    "requested_species_id": 546,
+                    "requested_species_name": "Cottonee",
+                    "offered_species_id": 548,
+                    "offered_species_name": "Petilil",
+                    "nickname": "Lillil",
+                    "held_item_id": None,
+                    "held_item_name": None,
+                    "ivs": [20, 20, 20, 20, 20, 20],
+                    "ot_id": 39922,
+                    "ot_name": "Lina",
+                    "versions": ["black"],
+                }
+            ],
             "shops": [
                 {
                     "kind": "exchange",
                     "currency": "bp",
                     "inventory_id": None,
-                    "items": [{
-                        "item_id": 350,
-                        "name": "TM23",
-                        "price": 36,
-                        "required_badges": None,
-                    }],
+                    "items": [
+                        {
+                            "item_id": 350,
+                            "name": "TM23",
+                            "price": 36,
+                            "required_badges": None,
+                        }
+                    ],
                     "name": "Battle Point TM exchange",
                     "is_main_game": True,
                     "dynamic": False,
@@ -302,13 +306,15 @@ class LocationRenderingTests(unittest.TestCase):
                     "kind": "market",
                     "currency": "money",
                     "inventory_id": None,
-                    "items": [{
-                        "item_id": 80,
-                        "name": "Sun Stone",
-                        "price": 10000,
-                        "required_badges": None,
-                        "availability": "Current resident: Lena",
-                    }],
+                    "items": [
+                        {
+                            "item_id": 80,
+                            "name": "Sun Stone",
+                            "price": 10000,
+                            "required_badges": None,
+                            "availability": "Current resident: Lena",
+                        }
+                    ],
                     "name": "Black City resident market",
                     "is_main_game": False,
                     "dynamic": False,

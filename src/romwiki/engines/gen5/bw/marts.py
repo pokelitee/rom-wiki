@@ -23,13 +23,60 @@ from .disassembler import disassemble_function
 SHOP_ITEM_WORD_SIZE = 2
 SHOP_CATALOG_LOCATOR = "00A00F0000000000260A010000000000"
 SHOP_RELATIVE_OFFSETS = (
-    0x0, 0x4, 0xE, 0x14, 0x2C, 0x58, 0xAC, 0xBA, 0xC8, 0xD8, 0xE8, 0xF8,
-    0x108, 0x118, 0x12A, 0x13C, 0x14E, 0x164, 0x17A, 0x190, 0x1C0, 0x1DC,
-    0x1FC, 0x23C, 0x25E, 0x282,
+    0x0,
+    0x4,
+    0xE,
+    0x14,
+    0x2C,
+    0x58,
+    0xAC,
+    0xBA,
+    0xC8,
+    0xD8,
+    0xE8,
+    0xF8,
+    0x108,
+    0x118,
+    0x12A,
+    0x13C,
+    0x14E,
+    0x164,
+    0x17A,
+    0x190,
+    0x1C0,
+    0x1DC,
+    0x1FC,
+    0x23C,
+    0x25E,
+    0x282,
 )
 SHOP_ITEM_SIZES = (
-    2, 2, 3, 4, 4, 6, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 11, 11, 11, 11, 14,
-    16, 16, 17, 18, 19,
+    2,
+    2,
+    3,
+    4,
+    4,
+    6,
+    7,
+    7,
+    8,
+    8,
+    8,
+    8,
+    8,
+    9,
+    9,
+    9,
+    11,
+    11,
+    11,
+    11,
+    14,
+    16,
+    16,
+    17,
+    18,
+    19,
 )
 TM_SHOP_IDS = frozenset({1, 2, 4, 7})
 REGULAR_SHOP_IDS = frozenset({0, 16, 20, 23, 24, 25})
@@ -120,26 +167,29 @@ _BW_BP_ITEM_ITEMS = (
     *((item_id, 1) for item_id in (46, 49, 47, 52, 48, 45)),
     *((item_id, 16) for item_id in (289, 290, 291, 292, 293, 294, 272, 273)),
     *((item_id, 32) for item_id in (214, 271, 545, 546, 542, 547)),
-    *((item_id, 48) for item_id in (
-        267,
-        297,
-        232,
-        276,
-        265,
-        266,
-        230,
-        220,
-        287,
-        275,
-        326,
-        327,
-        213,
-        270,
-        278,
-        541,
-        544,
-        50,
-    )),
+    *(
+        (item_id, 48)
+        for item_id in (
+            267,
+            297,
+            232,
+            276,
+            265,
+            266,
+            230,
+            220,
+            287,
+            275,
+            326,
+            327,
+            213,
+            270,
+            278,
+            541,
+            544,
+            50,
+        )
+    ),
 )
 
 _BLACK_CITY_MARKET_ITEMS = (
@@ -211,9 +261,7 @@ def resolve_special_vendor(selector_id: int) -> Gen5SpecialVendor | None:
     return None
 
 
-def parse_shop_dispatch(
-    script: bytes, function_offset: int
-) -> Gen5ShopDispatch | None:
+def parse_shop_dispatch(script: bytes, function_offset: int) -> Gen5ShopDispatch | None:
     """Decode a local function that invokes BW1's global shop dispatcher."""
     selector_id = None
     mode = None
@@ -262,8 +310,7 @@ def parse_shop_catalog(
             overlay_data, locator, label="the BW shop catalog"
         ) + len(locator)
         shop_item_offsets = tuple(
-            base_offset + relative_offset
-            for relative_offset in SHOP_RELATIVE_OFFSETS
+            base_offset + relative_offset for relative_offset in SHOP_RELATIVE_OFFSETS
         )
     shops = []
     for shop_id, (offset, size) in enumerate(

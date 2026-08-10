@@ -88,9 +88,7 @@ def _extract_arm9_marts(result: InspectionResult) -> dict[str, Any]:
         filesystem.read(messages_path),
         allow_truncated=profile.parameters.get("messages_allow_truncated", False),
     )
-    item_names = engine.parse_english_message_archive(
-        messages.read(item_names_member)
-    )
+    item_names = engine.parse_english_message_archive(messages.read(item_names_member))
     arm9_data = read_code_binary(platform, result.image, engine)
     shops = engine.parse_shop_catalog(
         arm9_data,

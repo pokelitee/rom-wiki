@@ -132,13 +132,11 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         scripts_archive = platform.archive_cls.from_bytes(
             filesystem.read(scripts_path), **archive_options
         )
-        fossil_revival_script_file, fossil_revivals = (
-            engine.find_fossil_revival_script(
-                scripts_archive.read,
-                member_count=len(scripts_archive.members),
-                item_count=len(item_names),
-                species_count=engine.POKEMON_NAME_COUNT,
-            )
+        fossil_revival_script_file, fossil_revivals = engine.find_fossil_revival_script(
+            scripts_archive.read,
+            member_count=len(scripts_archive.members),
+            item_count=len(item_names),
+            species_count=engine.POKEMON_NAME_COUNT,
         )
         revives_into_by_item = {
             revival.item_id: revival.species_id for revival in fossil_revivals
@@ -521,9 +519,7 @@ def build_item_dataset(
     return {
         "schema_version": ITEMS_ENRICHED_SCHEMA_VERSION,
         "game": game,
-        "engine": item_dataset.get(
-            "engine", pokemon_dataset.get("engine", "unknown")
-        ),
+        "engine": item_dataset.get("engine", pokemon_dataset.get("engine", "unknown")),
         "dataset": "items",
         "record_count": len(records),
         "referenced_record_count": sum(

@@ -35,6 +35,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+cache_dir = ".romwiki/pytest-cache"
 
 [tool.ruff.lint]
 select = ["F", "I", "UP", "B", "C4", "SIM"]
+
+[tool.ruff.format]
+line-ending = "lf"

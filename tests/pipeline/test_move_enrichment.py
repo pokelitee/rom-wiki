@@ -182,9 +182,7 @@ class MoveEnrichmentTests(unittest.TestCase):
                 relationships=build_relationship_index({}),
             )
             page = (output / "pound.md").read_text(encoding="utf-8")
-            catalog = json.loads(
-                (output / "catalog.json").read_text(encoding="utf-8")
-            )
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertIn("## Learned by", page)
         self.assertIn("### Move tutors", page)
@@ -192,9 +190,7 @@ class MoveEnrichmentTests(unittest.TestCase):
         self.assertIn("### Egg moves", page)
         self.assertIn("No egg move learners.", page)
         self.assertNotIn("## Additional battle properties", page)
-        self.assertEqual(
-            catalog["records"][0]["access_methods"], ["no known learners"]
-        )
+        self.assertEqual(catalog["records"][0]["access_methods"], ["no known learners"])
 
 
 def _source_record(move_id: int) -> dict:

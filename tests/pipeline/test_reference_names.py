@@ -37,10 +37,13 @@ class ReferenceNameTests(unittest.TestCase):
     def test_rejects_an_unexpected_name_count(self) -> None:
         profile = _profile()
         archive = Mock()
-        with patch(
-            "romwiki.engines.gen4.dppt.parse_english_message_archive",
-            return_value=("Normal",),
-        ), self.assertRaisesRegex(DataSourceError, "exactly 18 names"):
+        with (
+            patch(
+                "romwiki.engines.gen4.dppt.parse_english_message_archive",
+                return_value=("Normal",),
+            ),
+            self.assertRaisesRegex(DataSourceError, "exactly 18 names"),
+        ):
             extract_reference_names(profile, Mock(), archive)
 
     def test_allows_an_explicitly_truncated_message_archive(self) -> None:
@@ -57,18 +60,19 @@ class ReferenceNameTests(unittest.TestCase):
         archive_cls.from_bytes.return_value = archive
         names = tuple(f"Ability {index}" for index in range(124))
 
-        with patch(
-            "romwiki.pipeline.reference_names.get_platform",
-            return_value=SimpleNamespace(archive_cls=archive_cls),
-        ), patch(
-            "romwiki.engines.gen4.dppt.parse_english_message_archive",
-            return_value=names,
+        with (
+            patch(
+                "romwiki.pipeline.reference_names.get_platform",
+                return_value=SimpleNamespace(archive_cls=archive_cls),
+            ),
+            patch(
+                "romwiki.engines.gen4.dppt.parse_english_message_archive",
+                return_value=names,
+            ),
         ):
             result = extract_reference_names(profile, filesystem)
 
-        archive_cls.from_bytes.assert_called_once_with(
-            b"archive", allow_truncated=True
-        )
+        archive_cls.from_bytes.assert_called_once_with(b"archive", allow_truncated=True)
         self.assertEqual(result["ability_names"], list(names))
 
 

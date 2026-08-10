@@ -40,10 +40,7 @@ def calculate_base_prize_money(
                 "offset": 17,
             }
     return {
-        "amount": final_level
-        * multiplier
-        * base_factor
-        * battle_format_multiplier,
+        "amount": final_level * multiplier * base_factor * battle_format_multiplier,
         "final_party_level": final_level,
         "multiplier": multiplier,
         "base_factor": base_factor,
