@@ -59,7 +59,6 @@ def current_site_build_state(
     generated_source_files: dict[str, str] | None = None,
 ) -> SiteBuildState:
     site_root = site.config_path.parent
-    source_files = _fingerprinted_files(site_root / "wiki", relative_to=site_root)
     if generated_source_files is not None and site.game is not None:
         source_files = _fingerprinted_files(
             site_root / "wiki",
@@ -68,6 +67,10 @@ def current_site_build_state(
         )
         source_files.update(
             {f"wiki/{path}": metadata for path, metadata in generated_source_files.items()}
+        )
+    else:
+        source_files = _fingerprinted_files(
+            site_root / "wiki", relative_to=site_root
         )
     return SiteBuildState(
         configuration_fingerprint=_configuration_fingerprint(
@@ -106,10 +109,10 @@ def read_site_build_state(path: Path) -> SiteBuildState | None:
             return None
         if not isinstance(output_files, dict) or not all(
             isinstance(path, str)
-            and isinstance(digest, str)
+            and isinstance(value, str)
             and not Path(path).is_absolute()
             and ".." not in Path(path).parts
-            for path, digest in output_files.items()
+            for path, value in output_files.items()
         ):
             return None
         configuration_fingerprint = value["configuration_fingerprint"]
@@ -162,9 +165,7 @@ def can_reuse_site_output(
 def artifact_files(
     output_path: Path, *, excluded_top_level: frozenset[str] = frozenset()
 ) -> dict[str, str]:
-    return file_path_inventory(
-        output_path, excluded_top_level=excluded_top_level
-    )
+    return file_path_inventory(output_path, excluded_top_level=excluded_top_level)
 
 
 def combined_artifact_files(
@@ -200,14 +201,10 @@ def _configuration_fingerprint(
         root / "src" / "romwiki" / "sites" / "mkdocs_hooks.py",
         root / "pyproject.toml",
         root / "requirements.txt",
-        *(
-            sorted((root / "sites" / "games").glob("*/game.toml"))
-            if site.kind == "portal"
-            else (site_root / "game.toml",)
-        ),
-        *( (root / "sites" / "portal" / "site.toml",) if site.kind == "portal" else () ),
-        *(path for path in site_root.iterdir() if path.is_file()),
     ]
+    if site.kind == "portal":
+        paths.extend(sorted((root / "sites" / "games").glob("*/game.toml")))
+    paths.extend(path for path in site_root.iterdir() if path.is_file())
     digest = hashlib.sha256()
     _update(digest, "mode", "dev" if dev else "production")
     _update(digest, "site_url", site_url or "")

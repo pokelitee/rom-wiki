@@ -437,7 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_site_parser.add_argument(
         "--reuse-unchanged",
         action="store_true",
-        help="skip byte-verified unchanged sites and clean-build changed sites",
+        help="skip verified unchanged sites and clean-build changed sites",
     )
     _add_jobs_argument(build_site_parser)
     _add_site_root_argument(build_site_parser)
@@ -1451,6 +1451,7 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             perf_counter() - site_started,
         )
 
+    # Release extraction graphs before spawning the memory-heavy MkDocs workers.
     prepared.clear()
     pokedb_generations.clear()
     inspections.clear()

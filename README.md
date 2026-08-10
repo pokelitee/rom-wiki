@@ -113,8 +113,9 @@ romwiki regenerate renegade-platinum --incremental
 
 Adding another engine does not invalidate existing engines' extraction caches.
 Use the complete `--all` workflow only for integrated release validation.
-Verified unchanged generation, site builds, audits, and per-site snapshots are
-reused automatically. Use `--clean` to rebuild publication output, and combine
+Verified unchanged generation, site builds, audit parsing, and per-site snapshots
+are reused automatically. The audit still hashes every HTML file and validates
+the complete link graph. Use `--clean` to rebuild publication output, and combine
 `--clean --refresh` for an occasional from-scratch release check.
 
 Global diagnostic options precede the command:

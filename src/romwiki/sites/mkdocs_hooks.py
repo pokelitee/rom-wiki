@@ -111,6 +111,11 @@ def on_page_context(
         return context
     depth = len([part for part in page.url.split("/") if part])
     artifact_root = "../" * (depth + (1 if _current_site.kind == "game" else 0))
+    visible_sites = (
+        tuple(site for site in _catalog.published() if site.kind == "game")
+        if _current_site.kind == "portal"
+        else (_current_site,)
+    )
     context["romwiki"] = {
         "current": {
             **_site_context(_current_site),
@@ -122,8 +127,7 @@ def on_page_context(
                 **_site_context(site),
                 "url": f"{artifact_root}{site.slug}/",
             }
-            for site in _catalog.published()
-            if site.kind == "game"
+            for site in visible_sites
         ],
     }
     return context

@@ -40,6 +40,7 @@ class MkDocsHooksTests(unittest.TestCase):
 
         self.assertEqual(catalog["schema_version"], 1)
         self.assertIn("renegade-platinum", {game["id"] for game in catalog["games"]})
+
     def test_rewrites_links_to_pages_filtered_from_dev_build(self) -> None:
         html = (
             '<a href="../pokemon/buneary.md">Buneary</a>'
@@ -167,16 +168,7 @@ class MkDocsHooksTests(unittest.TestCase):
         self.assertEqual(context["romwiki"]["current"]["id"], "renegade-platinum")
         self.assertEqual(
             [game["id"] for game in context["romwiki"]["games"]],
-            [
-                "platinum",
-                "renegade-platinum",
-                "blaze-black-volt-white",
-                "blaze-black-2-volt-white-2",
-                "black-white",
-                "black-2-white-2",
-                "heart-gold-soul-silver",
-                "sacred-gold-storm-silver",
-            ],
+            ["renegade-platinum"],
         )
         self.assertTrue(context["romwiki"]["games"][0]["url"].endswith("/"))
 

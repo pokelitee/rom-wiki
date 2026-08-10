@@ -9,10 +9,12 @@ from pathlib import Path
 
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.snapshot import (
+    DIRECTORY_SNAPSHOT_SCHEMA_VERSION,
     REQUIRED_WIKI_SECTIONS,
     SNAPSHOT_MANIFEST,
     SNAPSHOT_SCHEMA_VERSION,
     _source_fingerprint,
+    _validate_site_archive_manifest,
     create_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
 )
@@ -20,6 +22,57 @@ from romwiki.util.errors import SiteError
 
 
 class GeneratedWikiSnapshotTests(unittest.TestCase):
+    def test_directory_restore_rejects_an_unsafe_archive_name(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            snapshot = root / "snapshot"
+            snapshot.mkdir()
+            (snapshot / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": DIRECTORY_SNAPSHOT_SCHEMA_VERSION,
+                        "sites": {
+                            "test-game": {
+                                "archive": "../unsafe.tar.gz",
+                                "file_count": 1,
+                                "archive_sha256": "digest",
+                                "content_fingerprint": "content",
+                                "metadata_fingerprint": "metadata",
+                                "source_fingerprint": "source",
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(SiteError, "unsupported manifest"):
+                restore_generated_wiki_snapshot(root, snapshot)
+
+    def test_site_archive_manifest_must_match_the_outer_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            snapshot = root / "snapshot"
+            create_generated_wiki_snapshot(root, snapshot)
+            manifest = json.loads(
+                (snapshot / "manifest.json").read_text(encoding="utf-8")
+            )["sites"]["test-game"]
+            archive_path = snapshot / manifest["archive"]
+
+            with (
+                tarfile.open(archive_path, "r:gz") as archive,
+                self.assertRaisesRegex(SiteError, "unsupported manifest"),
+            ):
+                _validate_site_archive_manifest(
+                    archive,
+                    archive_path,
+                    "another-game",
+                    manifest["file_count"],
+                    manifest["source_fingerprint"],
+                )
+
     def test_directory_snapshot_reuses_unchanged_site_archive(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -46,6 +99,7 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
         self.assertEqual(reused, original)
         self.assertEqual(reused_mtime, original_mtime)
         self.assertFalse(stale_exists)
+
     def test_type_chart_is_required_generated_content(self) -> None:
         self.assertIn("types", REQUIRED_WIKI_SECTIONS)
 

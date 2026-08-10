@@ -193,10 +193,11 @@ romwiki regenerate --all --refresh --snapshot
 ```
 
 Complete regeneration safely reuses metadata-verified generation and build source
-state by default, while the build gate verifies the exact output path set. The
-following audit still hashes every HTML file. `--clean`
-bypasses publication reuse and reparses the audit while
-repopulating its cache; `--refresh` separately replaces ROM extraction caches.
+state by default. The complete workflow verifies the exact output path set, hashes
+every HTML file, and validates the full link graph. `--clean` bypasses publication
+reuse and reparses the audit while repopulating its cache; `--refresh` separately
+replaces ROM extraction caches. Use `site audit --no-cache` to bypass only the
+audit parse cache.
 
 `--incremental` retains the selected site's existing artifact and asks MkDocs to
 process only added or changed source files. ROM extraction caches and deterministic
@@ -270,7 +271,8 @@ The tracked snapshot is a manifest plus deterministic per-site archives under
 `sites/generated-wiki/`. Metadata inventories avoid rereading unchanged generated
 content; content hashes remain the fallback when metadata changes. Unchanged
 archives are not rewritten. Restore continues to accept the former monolithic
-archive during migration.
+archive during migration. For compatibility, an explicit `.tar.gz` output keeps
+`site snapshot` in the monolithic format.
 
 Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
 because it guarantees generation, site building, and auditing succeeded before

@@ -14,7 +14,9 @@ export function initializeSite() {
       return;
     }
     fetch(catalogUrl)
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("catalog")))
+      .then((response) => response.ok
+        ? response.json()
+        : Promise.reject(new Error(`Game catalog request failed: ${response.status}`)))
       .then((catalog) => {
         catalog.games.forEach((game) => {
           if (game.id === picker.dataset.rwCurrentGame) return;
@@ -24,7 +26,7 @@ export function initializeSite() {
           picker.append(option);
         });
       })
-      .catch(() => {})
+      .catch((error) => console.warn("Could not load the game catalog", error))
       .finally(initialize);
   });
 

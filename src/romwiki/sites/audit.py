@@ -252,9 +252,30 @@ def _read_digest_and_parse(
     )
 
 
+def _read_and_parse_tasks(
+    tasks: Sequence[tuple[str, str]], worker_count: int
+) -> list[tuple[str, int, str, _ParsedPage]]:
+    if not tasks:
+        return []
+    workers = min(worker_count, len(tasks))
+    if workers <= 1:
+        return list(map(_read_digest_and_parse, tasks))
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        return list(
+            pool.map(
+                _read_digest_and_parse,
+                tasks,
+                chunksize=_PARSE_CHUNK_SIZE,
+            )
+        )
+
+
 def _parsed_pages(
-    tasks: Sequence[tuple[str, str]], *, jobs: int | None,
-    cache_path: Path | None = None, refresh_cache: bool = False,
+    tasks: Sequence[tuple[str, str]],
+    *,
+    jobs: int | None,
+    cache_path: Path | None = None,
+    refresh_cache: bool = False,
 ) -> Iterator[tuple[str, int, _ParsedPage]]:
     """Yield (relative path, byte size, parse result) in `tasks` order."""
     if cache_path is not None:
@@ -274,7 +295,10 @@ def _parsed_pages(
 
 
 def _cached_parsed_pages(
-    tasks: Sequence[tuple[str, str]], *, jobs: int | None, cache_path: Path,
+    tasks: Sequence[tuple[str, str]],
+    *,
+    jobs: int | None,
+    cache_path: Path,
     refresh: bool,
 ) -> Iterator[tuple[str, int, _ParsedPage]]:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -292,13 +316,7 @@ def _cached_parsed_pages(
             }
             worker_count = _parse_worker_count(jobs, len(tasks))
             if len(cached) < len(tasks) // 2:
-                if worker_count <= 1:
-                    fresh = list(map(_read_digest_and_parse, tasks))
-                else:
-                    with ProcessPoolExecutor(max_workers=worker_count) as pool:
-                        fresh = list(pool.map(
-                            _read_digest_and_parse, tasks, chunksize=_PARSE_CHUNK_SIZE
-                        ))
+                fresh = _read_and_parse_tasks(tasks, worker_count)
                 fingerprints = {relative: digest for relative, _, digest, _ in fresh}
                 parsed_misses = {
                     relative: (size, parsed)
@@ -309,21 +327,28 @@ def _cached_parsed_pages(
                     fingerprints = dict(map(_read_digest, tasks))
                 else:
                     with ProcessPoolExecutor(max_workers=worker_count) as pool:
-                        fingerprints = dict(pool.map(
-                            _read_digest, tasks, chunksize=_PARSE_CHUNK_SIZE
-                        ))
+                        fingerprints = dict(
+                            pool.map(
+                                _read_digest,
+                                tasks,
+                                chunksize=_PARSE_CHUNK_SIZE,
+                            )
+                        )
                 misses = [
                     task for task in tasks
                     if task[1] not in cached
                     or cached[task[1]][0] != fingerprints[task[1]]
                     or cached[task[1]][1] != parser_fingerprint
                 ]
+                fresh = _read_and_parse_tasks(misses, worker_count)
                 parsed_misses = {
                     relative: (size, parsed)
-                    for relative, size, _, parsed in map(_read_digest_and_parse, misses)
+                    for relative, size, _, parsed in fresh
                 }
             for relative, (size, parsed) in parsed_misses.items():
-                payload = json.dumps(_parsed_page_to_dict(size, parsed), separators=(",", ":"))
+                payload = json.dumps(
+                    _parsed_page_to_dict(size, parsed), separators=(",", ":")
+                )
                 database.execute(
                     "INSERT OR REPLACE INTO pages VALUES (?, ?, ?, ?)",
                     (relative, fingerprints[relative], parser_fingerprint, payload),
@@ -347,17 +372,22 @@ def _cached_parsed_pages(
 
 def _parsed_page_to_dict(size: int, page: _ParsedPage) -> dict[str, object]:
     return {
-        "size": size, "ids": sorted(page.ids), "links": page.links,
-        "classes": sorted(page.custom_classes), "images": page.image_count,
+        "size": size,
+        "ids": sorted(page.ids),
+        "links": page.links,
+        "classes": sorted(page.custom_classes),
+        "images": page.image_count,
         "issues": [issue.__dict__ for issue in page.issues],
     }
 
 
 def _parsed_page_from_dict(value: dict[str, object]) -> tuple[int, _ParsedPage]:
     return int(value["size"]), _ParsedPage(
-        set(value["ids"]), [tuple(link) for link in value["links"]],
+        set(value["ids"]),
+        [tuple(link) for link in value["links"]],
         set(value["classes"]),
-        [SiteAuditIssue(**issue) for issue in value["issues"]], int(value["images"]),
+        [SiteAuditIssue(**issue) for issue in value["issues"]],
+        int(value["images"]),
     )
 
 

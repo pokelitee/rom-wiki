@@ -31,18 +31,6 @@ def read_inventory_state(path: Path, *, schema_version: int) -> dict[str, str] |
     return files
 
 
-def file_inventory(
-    root: Path, *, excluded_top_level: frozenset[str] = frozenset()
-) -> dict[str, str]:
-    if not root.is_dir():
-        return {}
-    with _INVENTORY_LOCK:
-        return {
-            relative: hashlib.sha256(path.read_bytes()).hexdigest()
-            for relative, path, _ in _walk_files(root, excluded_top_level)
-        }
-
-
 def inventory_fingerprint(inventory: dict[str, str]) -> str:
     digest = hashlib.sha256()
     for path, value in sorted(inventory.items()):

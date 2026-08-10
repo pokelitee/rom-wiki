@@ -58,7 +58,9 @@ def build_sites(
     output_inventories: dict[str, dict[str, str]] = {}
     if reuse_unchanged and not defer_output_validation and resolved_output.is_dir():
         combined = file_path_inventory(resolved_output)
-        slugs = frozenset(candidate.slug for candidate in catalog.sites if candidate.slug)
+        slugs = frozenset(
+            candidate.slug for candidate in catalog.sites if candidate.slug
+        )
         for site in ordered:
             relative_output = site.output_path(resolved_output).relative_to(
                 resolved_output
@@ -229,6 +231,8 @@ def _build_site(
         )
         previous = read_site_build_state(state_path)
         if defer_output_validation and previous is not None:
+            # Complete regeneration compares the combined path set during the
+            # audit's existing artifact discovery pass.
             known_output_files = previous.output_files
         reusable = can_reuse_site_output(
             previous,
@@ -240,7 +244,7 @@ def _build_site(
         if reusable and previous is not None and (
             previous.source_files == state.source_files
         ):
-            metadata_state = replace(
+            reused_state = replace(
                 state,
                 output_files=(
                     known_output_files
@@ -248,8 +252,8 @@ def _build_site(
                     else artifact_files(output_path, excluded_top_level=excluded)
                 ),
             )
-            if previous.output_files != metadata_state.output_files:
-                write_site_build_state(state_path, metadata_state)
+            if previous.output_files != reused_state.output_files:
+                write_site_build_state(state_path, reused_state)
             _LOG.info("MkDocs build for %s skipped; inputs are unchanged", site.id)
             return
         clean = not reusable or not incremental
@@ -276,7 +280,10 @@ def _build_site(
                 key=lambda item: len(item.parts),
                 reverse=True,
             ):
-                if path != output_path and not any(path.is_relative_to(output_path / slug) for slug in excluded):
+                inside_nested_site = any(
+                    path.is_relative_to(output_path / slug) for slug in excluded
+                )
+                if path != output_path and not inside_nested_site:
                     with suppress(OSError):
                         path.rmdir()
             for source in staging.iterdir():

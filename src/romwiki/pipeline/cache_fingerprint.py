@@ -12,6 +12,23 @@ from typing import Any
 _FINGERPRINT_FORMAT_VERSION = 1
 _PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 _SOURCE_ROOT = _PACKAGE_ROOT.parent
+GENERATION_EXTRACTOR_MODULES = (
+    "personal",
+    "learnsets",
+    "egg_moves",
+    "evolutions",
+    "machines",
+    "tutors",
+    "pickup",
+    "moves",
+    "encounters",
+    "trainers",
+    "locations",
+    "items",
+    "trades",
+    "marts",
+    "static_encounters",
+)
 
 
 @cache

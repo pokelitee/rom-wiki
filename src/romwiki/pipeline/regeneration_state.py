@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.pipeline.cache_fingerprint import (
+    GENERATION_EXTRACTOR_MODULES,
     extraction_source_files,
     profile_fingerprint,
 )
@@ -17,11 +18,6 @@ from romwiki.util.json_io import write_json_atomic
 
 REGENERATION_STATE_SCHEMA_VERSION = 2
 _FINGERPRINT_SCHEMA_VERSION = b"2"
-_EXTRACTOR_MODULES = (
-    "personal", "learnsets", "egg_moves", "evolutions", "machines", "tutors",
-    "pickup", "moves", "encounters", "trainers", "locations", "items", "trades",
-    "marts", "static_encounters",
-)
 
 
 def regeneration_fingerprint(
@@ -42,14 +38,18 @@ def regeneration_fingerprint(
     digest.update(json.dumps(values, sort_keys=True).encode())
     paths: set[Path] = {site.config_path.parent / "game.toml"}
     package_root = root / "src" / "romwiki"
-    for directory in (package_root / "pipeline", package_root / "renderers", package_root / "schema"):
+    for directory in (
+        package_root / "pipeline",
+        package_root / "renderers",
+        package_root / "schema",
+    ):
         paths.update(
             path
             for path in directory.rglob("*.py")
             if path.resolve() != Path(__file__).resolve()
         )
     for engine in engines:
-        for module in _EXTRACTOR_MODULES:
+        for module in GENERATION_EXTRACTOR_MODULES:
             paths.update(
                 package_root / relative
                 for relative in extraction_source_files(
@@ -59,7 +59,12 @@ def regeneration_fingerprint(
     paths.update(pokedb_root.rglob("*.json"))
     for path in sorted(paths):
         if path.is_file():
-            digest.update(path.relative_to(root).as_posix().encode() if path.is_relative_to(root) else str(path).encode())
+            label = (
+                path.relative_to(root).as_posix()
+                if path.is_relative_to(root)
+                else str(path)
+            )
+            digest.update(label.encode())
             digest.update(b"\0")
             digest.update(_file_digest(path))
             digest.update(b"\0")
@@ -95,13 +100,21 @@ def can_reuse_generation(path: Path, fingerprint: str, site: SiteDefinition) -> 
 
 
 def write_regeneration_state(path: Path, fingerprint: str, site: SiteDefinition) -> None:
-    write_json_atomic(path, {
-        "schema_version": REGENERATION_STATE_SCHEMA_VERSION,
-        "input_fingerprint": fingerprint,
-        "files": generated_inventory(site),
-    })
+    write_json_atomic(
+        path,
+        {
+            "schema_version": REGENERATION_STATE_SCHEMA_VERSION,
+            "input_fingerprint": fingerprint,
+            "files": generated_inventory(site),
+        },
+    )
+
+
+def _file_digest(path: Path) -> bytes:
+    metadata = path.stat()
+    return _cached_file_digest(path, metadata.st_size, metadata.st_mtime_ns)
 
 
 @cache
-def _file_digest(path: Path) -> bytes:
+def _cached_file_digest(path: Path, _size: int, _mtime_ns: int) -> bytes:
     return hashlib.sha256(path.read_bytes()).digest()

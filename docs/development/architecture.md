@@ -464,11 +464,11 @@ complete `--all` runs. This orchestration layer does not reimplement extraction,
 merging, rendering, site building, auditing, or snapshot behavior.
 
 Schema-versioned state under `.romwiki/` binds each site to its ROMs, resolved
-profiles, selected engine, PokéDB input, generation sources, and exact generated
-files. Unchanged sites skip generation; changed sites are clean-built for release
-output. Audit parsing is cached by HTML content hash, but every run still validates
-the complete file set and every local, fragment, and cross-site link. `--clean`
-bypasses reuse without weakening normal validation.
+profiles, selected engine, PokéDB input, generation sources, and generated-file
+metadata. Unchanged sites skip generation; changed sites are clean-built for
+release output. Audit parsing is cached by HTML content hash, but every run still
+validates the complete file set and every local, fragment, and cross-site link.
+`--clean` bypasses reuse without weakening normal validation.
 
 The game picker loads its catalog from the portal's validated `games.json`; game
 pages retain current-game and portal fallbacks without JavaScript. Adding a catalog
