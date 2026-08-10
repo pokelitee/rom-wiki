@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -26,6 +28,18 @@ def _load_and_configure(config_path: Path):
 
 
 class MkDocsHooksTests(unittest.TestCase):
+    def test_portal_build_writes_shared_game_catalog(self) -> None:
+        portal_config = REPOSITORY_ROOT / "sites/portal/mkdocs.yml"
+        config = _load_and_configure(portal_config)
+        with tempfile.TemporaryDirectory() as directory:
+            config.site_dir = directory
+            mkdocs_hooks.on_post_build(config)
+            catalog = json.loads(
+                (Path(directory) / "games.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(catalog["schema_version"], 1)
+        self.assertIn("renegade-platinum", {game["id"] for game in catalog["games"]})
     def test_rewrites_links_to_pages_filtered_from_dev_build(self) -> None:
         html = (
             '<a href="../pokemon/buneary.md">Buneary</a>'
@@ -63,7 +77,7 @@ class MkDocsHooksTests(unittest.TestCase):
 
         self.assertEqual(rendered, html)
 
-    def test_on_config_registers_current_site_and_published_games(self) -> None:
+    def test_on_config_registers_only_the_current_game_for_fallback(self) -> None:
         config = _load_and_configure(GAME_CONFIG)
 
         site = config.extra["romwiki_site"]
@@ -73,16 +87,7 @@ class MkDocsHooksTests(unittest.TestCase):
         games = config.extra["romwiki_games"]
         self.assertEqual(
             [game["id"] for game in games],
-            [
-                "platinum",
-                "renegade-platinum",
-                "blaze-black-volt-white",
-                "blaze-black-2-volt-white-2",
-                "black-white",
-                "black-2-white-2",
-                "heart-gold-soul-silver",
-                "sacred-gold-storm-silver",
-            ],
+            ["renegade-platinum"],
         )
 
     def test_on_config_loads_dev_pages_from_configured_manifest(self) -> None:

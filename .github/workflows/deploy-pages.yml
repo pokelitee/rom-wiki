@@ -68,10 +68,24 @@ jobs:
 
       - name: Restore generated wiki pages
         if: matrix.site.data_driven
-        run: romwiki site restore-snapshot
+        run: romwiki site restore-snapshot --site "${{ matrix.site.id }}"
+
+      - name: Resolve site build fingerprint
+        id: fingerprint
+        run: echo "value=$(romwiki site fingerprint '${{ matrix.site.id }}' --output dist)" >> "$GITHUB_OUTPUT"
+        env:
+          ROMWIKI_SITE_URL: ${{ needs.prepare.outputs.base_url }}
+
+      - name: Restore reusable site artifact
+        uses: actions/cache@v5
+        with:
+          path: |
+            dist
+            .romwiki/build-state
+          key: site-${{ runner.os }}-${{ matrix.site.id }}-${{ steps.fingerprint.outputs.value }}
 
       - name: Build site
-        run: romwiki site build "${{ matrix.site.id }}" --output dist
+        run: romwiki site build "${{ matrix.site.id }}" --output dist --reuse-unchanged
         env:
           ROMWIKI_SITE_URL: ${{ needs.prepare.outputs.base_url }}
 
@@ -107,6 +121,13 @@ jobs:
           pattern: site-*
           path: dist
           merge-multiple: true
+
+      - name: Restore audit parse cache
+        uses: actions/cache@v5
+        with:
+          path: .romwiki/audit-cache.sqlite3
+          key: audit-v1-${{ github.sha }}
+          restore-keys: audit-v1-
 
       - name: Audit rendered sites
         run: romwiki site audit dist --base-url "${{ needs.prepare.outputs.base_url }}"

@@ -407,23 +407,26 @@ class SiteCatalogTests(unittest.TestCase):
         overlapped_with_root = False
         root_finished = False
 
-        def record(command: Sequence[str]) -> None:
-            nonlocal running, overlapped_with_root, root_finished
-            is_root = Path(command[-1]) == Path("dist").resolve()
-            with lock:
-                if is_root and running > 0:
-                    overlapped_with_root = True
-                if not is_root and not root_finished:
-                    overlapped_with_root = True
-                running += 1
-            time.sleep(0.05)
-            with lock:
-                running -= 1
-                if is_root:
-                    root_finished = True
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "dist"
 
-        with patch("romwiki.sites.build._validate_generated_content"):
-            build_sites(catalog, Path("dist"), build_all=True, runner=record)
+            def record(command: Sequence[str]) -> None:
+                nonlocal running, overlapped_with_root, root_finished
+                is_root = Path(command[-1]) == output.resolve()
+                with lock:
+                    if is_root and running > 0:
+                        overlapped_with_root = True
+                    if not is_root and not root_finished:
+                        overlapped_with_root = True
+                    running += 1
+                time.sleep(0.05)
+                with lock:
+                    running -= 1
+                    if is_root:
+                        root_finished = True
+
+            with patch("romwiki.sites.build._validate_generated_content"):
+                build_sites(catalog, output, build_all=True, runner=record)
 
         self.assertTrue(root_finished)
         self.assertFalse(overlapped_with_root)
@@ -442,13 +445,14 @@ class SiteCatalogTests(unittest.TestCase):
                 finished.append(destination)
 
         with (
+            tempfile.TemporaryDirectory() as directory,
             patch("romwiki.sites.build._validate_generated_content"),
             self.assertRaises(SiteError),
         ):
-            build_sites(catalog, Path("dist"), build_all=True, runner=record)
+            build_sites(
+                catalog, Path(directory) / "dist", build_all=True, runner=record
+            )
 
-        # Every sibling still ran to completion rather than being abandoned
-        # mid-flight when one build raised.
         self.assertEqual(
             set(finished),
             {

@@ -4,8 +4,10 @@ import logging
 import os
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
@@ -18,6 +20,7 @@ from romwiki.sites.build_state import (
     write_site_build_state,
 )
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
+from romwiki.sites.inventory import file_path_inventory, read_inventory_state
 from romwiki.util.errors import SiteError
 
 CommandRunner = Callable[[Sequence[str]], None]
@@ -34,6 +37,9 @@ def build_sites(
     site_url: str | None = None,
     jobs: int | None = None,
     incremental: bool = False,
+    reuse_unchanged: bool = False,
+    reuse_generation_state: bool = False,
+    defer_output_validation: bool = False,
     state_root: Path | None = None,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
@@ -45,8 +51,31 @@ def build_sites(
     command_runner = runner or (
         lambda command: _run_command(command, site_url=site_url)
     )
+    verify_output = runner is None
     for site in ordered:
         _validate_generated_content(site)
+
+    output_inventories: dict[str, dict[str, str]] = {}
+    if reuse_unchanged and not defer_output_validation and resolved_output.is_dir():
+        combined = file_path_inventory(resolved_output)
+        slugs = frozenset(candidate.slug for candidate in catalog.sites if candidate.slug)
+        for site in ordered:
+            relative_output = site.output_path(resolved_output).relative_to(
+                resolved_output
+            ).as_posix()
+            if relative_output == ".":
+                output_inventories[site.id] = {
+                    path: value
+                    for path, value in combined.items()
+                    if path.split("/", 1)[0] not in slugs
+                }
+            else:
+                prefix = f"{relative_output}/"
+                output_inventories[site.id] = {
+                    path.removeprefix(prefix): value
+                    for path, value in combined.items()
+                    if path.startswith(prefix)
+                }
 
     resolved_state_root = (state_root or catalog.root / ".romwiki" / "build-state")
 
@@ -69,7 +98,12 @@ def build_sites(
             dev=dev,
             site_url=site_url,
             incremental=incremental,
+            reuse_unchanged=reuse_unchanged,
             state_root=resolved_state_root,
+            verify_output=verify_output,
+            reuse_generation_state=reuse_generation_state,
+            known_output_files=output_inventories.get(site.id),
+            defer_output_validation=defer_output_validation,
         )
 
     worker_count = _worker_count(jobs, len(nested_sites))
@@ -83,7 +117,12 @@ def build_sites(
                 dev=dev,
                 site_url=site_url,
                 incremental=incremental,
+                reuse_unchanged=reuse_unchanged,
                 state_root=resolved_state_root,
+                verify_output=verify_output,
+                reuse_generation_state=reuse_generation_state,
+                known_output_files=output_inventories.get(site.id),
+                defer_output_validation=defer_output_validation,
             )
     else:
         _LOG.info(
@@ -102,7 +141,12 @@ def build_sites(
                     dev=dev,
                     site_url=site_url,
                     incremental=incremental,
+                    reuse_unchanged=reuse_unchanged,
                     state_root=resolved_state_root,
+                    verify_output=verify_output,
+                    reuse_generation_state=reuse_generation_state,
+                    known_output_files=output_inventories.get(site.id),
+                    defer_output_validation=defer_output_validation,
                 )
                 for site in nested_sites
             ]
@@ -150,44 +194,114 @@ def _build_site(
     dev: bool,
     site_url: str | None,
     incremental: bool,
+    reuse_unchanged: bool,
     state_root: Path,
+    verify_output: bool,
+    reuse_generation_state: bool,
+    known_output_files: dict[str, str] | None,
+    defer_output_validation: bool,
 ) -> None:
     clean = True
     state = None
     state_path = state_root / f"{site.id}.json"
     output_path = site.output_path(resolved_output)
-    if incremental:
+    excluded = (
+        frozenset(candidate.slug for candidate in catalog.sites if candidate.slug)
+        if output_path == resolved_output
+        else frozenset()
+    )
+    generated_source_files = (
+        read_inventory_state(
+            catalog.root / ".romwiki" / "generation-state" / f"{site.id}.json",
+            schema_version=2,
+        )
+        if reuse_generation_state and site.game is not None
+        else None
+    )
+    if incremental or reuse_unchanged:
         state = current_site_build_state(
-            catalog, site, resolved_output, dev=dev, site_url=site_url
+            catalog,
+            site,
+            resolved_output,
+            dev=dev,
+            site_url=site_url,
+            generated_source_files=generated_source_files,
         )
         previous = read_site_build_state(state_path)
-        reusable = can_reuse_site_output(previous, state, output_path)
+        if defer_output_validation and previous is not None:
+            known_output_files = previous.output_files
+        reusable = can_reuse_site_output(
+            previous,
+            state,
+            output_path,
+            excluded_top_level=excluded,
+            output_files=known_output_files,
+        )
         if reusable and previous is not None and (
             previous.source_files == state.source_files
         ):
+            metadata_state = replace(
+                state,
+                output_files=(
+                    known_output_files
+                    if known_output_files is not None
+                    else artifact_files(output_path, excluded_top_level=excluded)
+                ),
+            )
+            if previous.output_files != metadata_state.output_files:
+                write_site_build_state(state_path, metadata_state)
             _LOG.info("MkDocs build for %s skipped; inputs are unchanged", site.id)
             return
-        clean = not reusable
+        clean = not reusable or not incremental
         _LOG.info(
             "%s build selected for %s",
             "Clean" if clean else "Incremental",
             site.id,
         )
-    command = _build_command(site, resolved_output, dev=dev, clean=clean)
-    _run_site_build(site, command, command_runner)
-    if incremental and state is not None:
-        excluded = (
-            frozenset(candidate.slug for candidate in catalog.sites if candidate.slug)
-            if site.output_path(resolved_output) == resolved_output
-            else frozenset()
+    if (
+        clean
+        and output_path == resolved_output
+        and any((output_path / slug).exists() for slug in excluded)
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            staging = Path(directory)
+            command = _build_command(site, staging, dev=dev, clean=True)
+            _run_site_build(site, command, command_runner)
+            for relative in file_path_inventory(
+                output_path, excluded_top_level=excluded
+            ):
+                (output_path / relative).unlink()
+            for path in sorted(
+                (item for item in output_path.rglob("*") if item.is_dir()),
+                key=lambda item: len(item.parts),
+                reverse=True,
+            ):
+                if path != output_path and not any(path.is_relative_to(output_path / slug) for slug in excluded):
+                    with suppress(OSError):
+                        path.rmdir()
+            for source in staging.iterdir():
+                source.replace(output_path / source.name)
+    else:
+        command = _build_command(site, resolved_output, dev=dev, clean=clean)
+        _run_site_build(site, command, command_runner)
+    output_files = artifact_files(output_path, excluded_top_level=excluded)
+    if not output_files:
+        if verify_output:
+            raise SiteError(
+                f"MkDocs build produced no files for {site.id}: {output_path}"
+            )
+        return
+    if state is None:
+        state = current_site_build_state(
+            catalog,
+            site,
+            resolved_output,
+            dev=dev,
+            site_url=site_url,
+            generated_source_files=generated_source_files,
         )
-        completed_state = replace(
-            state,
-            output_files=artifact_files(output_path, excluded_top_level=excluded),
-        )
-        if not completed_state.output_files:
-            raise SiteError(f"MkDocs build produced no files for {site.id}: {output_path}")
-        write_site_build_state(state_path, completed_state)
+    completed_state = replace(state, output_files=output_files)
+    write_site_build_state(state_path, completed_state)
 
 
 def _run_site_build(

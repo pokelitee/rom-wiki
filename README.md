@@ -113,6 +113,9 @@ romwiki regenerate renegade-platinum --incremental
 
 Adding another engine does not invalidate existing engines' extraction caches.
 Use the complete `--all` workflow only for integrated release validation.
+Verified unchanged generation, site builds, audits, and per-site snapshots are
+reused automatically. Use `--clean` to rebuild publication output, and combine
+`--clean --refresh` for an occasional from-scratch release check.
 
 Global diagnostic options precede the command:
 
@@ -158,7 +161,7 @@ romwiki site build --all --output dist
 romwiki site audit dist
 ```
 
-Generated game pages are archived in `sites/generated-wiki.tar.gz` rather than
+Generated game pages are archived per site under `sites/generated-wiki/` rather than
 tracked individually. A clean checkout restores them with:
 
 ```console

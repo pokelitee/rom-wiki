@@ -319,17 +319,19 @@ build to use MkDocs dirty mode for only added or changed files.
 
 Reuse is conservative. `.romwiki/build-state/` records the complete wiki source
 set and fingerprints every non-content input that can affect HTML: the selected
-site configuration, all site descriptors, shared templates and assets, MkDocs
+site configuration and descriptor, shared templates and assets, MkDocs
 hooks, relevant package versions, build mode, site URL, and output root. A missing
-artifact, incompatible fingerprint, source deletion, or source rename falls back
-to `mkdocs build --clean`. Additions and edits use `--dirty`; renderers are
+artifact path, incompatible fingerprint, source deletion, or source rename falls
+back to `mkdocs build --clean`. Complete regeneration defers the combined output
+path-set comparison to the audit's existing artifact discovery pass, which then
+hashes the output content. Additions and edits use `--dirty`; renderers are
 responsible for updating all transitively affected pages such as catalogs,
 backlinks, and navigation neighbors before MkDocs runs.
 
 This state is an ignored local optimization, not a publication artifact or data
-cache. Complete snapshot builds remain clean and cannot use incremental mode. The
-combined artifact audit also remains complete, so incremental development does not
-weaken the release correctness boundary.
+cache. Complete snapshot builds use verified reuse and cannot use dirty incremental
+mode. The combined artifact audit also remains complete, so incremental development
+does not weaken the release correctness boundary.
 
 Extraction and publication reuse are intentionally independent. A selected-site
 regeneration can reuse valid raw datasets without rebuilding other sites; adding
@@ -443,9 +445,11 @@ The existing boundary remains the intended long-term design.
 ROM-derived Markdown remains ignored as individual files, but deployment must be
 reproducible without distributing ROM inputs. `romwiki site snapshot` packs all
 generated game sections and public data archives into the deterministic, tracked
-`sites/generated-wiki.tar.gz` archive. The Pages workflow restores that archive
-before invoking MkDocs. Its manifest fingerprints the parser, pipeline,
-renderer, and profile sources, so a stale snapshot is rejected; publishing-only
+`sites/generated-wiki/` manifest and deterministic per-site archives. Each Pages
+job restores only its site's archive before invoking MkDocs. Their manifests use
+file metadata as a fast unchanged check and content hashes as the fallback, and
+fingerprint the parser, pipeline, renderer, and profile sources. A stale snapshot
+is therefore rejected; publishing-only
 build, audit, and MkDocs hook changes do not invalidate generated content.
 Required Pokémon, ability, item, move, encounter, trainer, location, type-chart,
 and public-data sections are validated before a site build, preventing an absent
@@ -458,3 +462,14 @@ their existing build workflows, builds the selected MkDocs sites, and audits the
 combined artifact. Snapshot creation is an optional final step restricted to
 complete `--all` runs. This orchestration layer does not reimplement extraction,
 merging, rendering, site building, auditing, or snapshot behavior.
+
+Schema-versioned state under `.romwiki/` binds each site to its ROMs, resolved
+profiles, selected engine, PokéDB input, generation sources, and exact generated
+files. Unchanged sites skip generation; changed sites are clean-built for release
+output. Audit parsing is cached by HTML content hash, but every run still validates
+the complete file set and every local, fragment, and cross-site link. `--clean`
+bypasses reuse without weakening normal validation.
+
+The game picker loads its catalog from the portal's validated `games.json`; game
+pages retain current-game and portal fallbacks without JavaScript. Adding a catalog
+entry therefore changes the portal and new game rather than all existing HTML.

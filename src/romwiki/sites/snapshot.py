@@ -9,15 +9,22 @@ import os
 import re
 import tarfile
 import tempfile
+from contextlib import suppress
 from pathlib import Path, PurePosixPath
 
+from romwiki.pipeline.cache_fingerprint import (
+    extraction_source_files,
+    profile_fingerprint,
+)
 from romwiki.sites.catalog import (
     DEFAULT_GENERATED_SECTIONS,
     SiteCatalog,
     SiteDefinition,
 )
 from romwiki.sites.data_exports import validate_public_data
+from romwiki.sites.inventory import inventory_fingerprint
 from romwiki.util.errors import SiteError
+from romwiki.util.json_io import write_json_atomic
 
 _LOG = logging.getLogger("romwiki")
 _SNAPSHOT_PROGRESS_INTERVAL = 2_000
@@ -41,10 +48,18 @@ GENERATED_WIKI_SECTIONS = (
 REQUIRED_WIKI_SECTIONS = DEFAULT_GENERATED_SECTIONS
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
 SNAPSHOT_SCHEMA_VERSION = 2
+DIRECTORY_SNAPSHOT_SCHEMA_VERSION = 3
 _NON_GENERATION_SOURCES = {
+    "cli.py",
+    "pipeline/regeneration_state.py",
     "sites/audit.py",
     "sites/build.py",
+    "sites/build_state.py",
+    "sites/catalog.py",
+    "sites/inventory.py",
     "sites/mkdocs_hooks.py",
+    "sites/server.py",
+    "sites/snapshot.py",
 }
 
 
@@ -55,6 +70,8 @@ def create_generated_wiki_snapshot(
     catalog: SiteCatalog | None = None,
 ) -> int:
     """Create a deterministic, ROM-free archive of generated Markdown pages."""
+    if output.suffix.lower() not in {".gz", ".tgz"}:
+        return _create_snapshot_directory(root, output, catalog=catalog)
     if catalog is None:
         catalog = SiteCatalog.load(root)
     elif root.resolve() != catalog.root:
@@ -119,9 +136,13 @@ def create_generated_wiki_snapshot(
     return len(files)
 
 
-def restore_generated_wiki_snapshot(root: Path, archive_path: Path) -> int:
+def restore_generated_wiki_snapshot(
+    root: Path, archive_path: Path, *, site_ids: tuple[str, ...] = ()
+) -> int:
     """Restore a trusted snapshot while restricting writes to generated sections."""
     catalog = SiteCatalog.load(root)
+    if archive_path.is_dir():
+        return _restore_snapshot_directory(catalog, archive_path, site_ids=site_ids)
     resolved_root = catalog.root
     allowed_prefixes = _allowed_prefixes(catalog)
     resolved_archive = archive_path.resolve()
@@ -177,6 +198,213 @@ def restore_generated_wiki_snapshot(root: Path, archive_path: Path) -> int:
             f"Could not restore generated wiki snapshot {resolved_archive}: {error}"
         ) from error
     return count
+
+
+def _create_snapshot_directory(
+    root: Path, output: Path, *, catalog: SiteCatalog | None
+) -> int:
+    catalog = catalog or SiteCatalog.load(root)
+    output.mkdir(parents=True, exist_ok=True)
+    previous = {}
+    manifest_path = output / "manifest.json"
+    with suppress(OSError, json.JSONDecodeError, AttributeError):
+        previous = json.loads(manifest_path.read_text(encoding="utf-8")).get("sites", {})
+    entries: dict[str, dict[str, object]] = {}
+    total = 0
+    for site in catalog.published():
+        if not _is_published_data_site(site):
+            continue
+        files = _generated_files_for_site(site)
+        metadata_fingerprint = inventory_fingerprint({
+            path.relative_to(catalog.root).as_posix(): (
+                f"{stat.st_size}:{stat.st_mtime_ns}"
+            )
+            for path in files
+            if (stat := path.stat())
+        })
+        source_fingerprint = _site_source_fingerprint(catalog, site)
+        archive_path = output / f"{site.id}.tar.gz"
+        old = previous.get(site.id, {}) if isinstance(previous, dict) else {}
+        archive_sha256 = (
+            hashlib.sha256(archive_path.read_bytes()).hexdigest()
+            if archive_path.is_file()
+            else ""
+        )
+        compatible = (
+            old.get("source_fingerprint") == source_fingerprint
+            and old.get("archive_sha256") == archive_sha256
+        )
+        reusable = (
+            compatible
+            and old.get("metadata_fingerprint") == metadata_fingerprint
+        )
+        content_fingerprint = old.get("content_fingerprint")
+        if not reusable:
+            content_fingerprint = inventory_fingerprint({
+                path.relative_to(catalog.root).as_posix(): hashlib.sha256(
+                    path.read_bytes()
+                ).hexdigest()
+                for path in files
+            })
+            reusable = (
+                compatible
+                and old.get("content_fingerprint") == content_fingerprint
+            )
+        if not reusable:
+            _write_site_archive(catalog.root, archive_path, site.id, files, source_fingerprint)
+            archive_sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+        entries[site.id] = {
+            "archive": archive_path.name,
+            "file_count": len(files),
+            "content_fingerprint": content_fingerprint,
+            "metadata_fingerprint": metadata_fingerprint,
+            "source_fingerprint": source_fingerprint,
+            "archive_sha256": archive_sha256,
+        }
+        total += len(files)
+    write_json_atomic(manifest_path, {
+        "schema_version": DIRECTORY_SNAPSHOT_SCHEMA_VERSION,
+        "sites": entries,
+    })
+    for path in output.glob("*.tar.gz"):
+        if path.name not in {entry["archive"] for entry in entries.values()}:
+            path.unlink()
+    return total
+
+
+def _write_site_archive(
+    root: Path, output: Path, site_id: str, files: list[Path], source_fingerprint: str
+) -> None:
+    temporary = output.with_suffix(".tmp")
+    try:
+        with temporary.open("wb") as raw, gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as zipped, tarfile.open(fileobj=zipped, mode="w") as archive:
+            manifest = json.dumps({
+                "schema_version": DIRECTORY_SNAPSHOT_SCHEMA_VERSION,
+                "site": site_id,
+                "file_count": len(files),
+                "source_fingerprint": source_fingerprint,
+            }, sort_keys=True, separators=(",", ":")).encode()
+            info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
+            info.size = len(manifest); info.mode = 0o644; info.mtime = 0
+            archive.addfile(info, io.BytesIO(manifest))
+            for path in files:
+                data = path.read_bytes()
+                _validate_generated_link_context(path, data, root)
+                info = tarfile.TarInfo(path.relative_to(root).as_posix())
+                info.size = len(data); info.mode = 0o644; info.mtime = 0
+                archive.addfile(info, io.BytesIO(data))
+        temporary.replace(output)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def _restore_snapshot_directory(
+    catalog: SiteCatalog, directory: Path, *, site_ids: tuple[str, ...]
+) -> int:
+    try:
+        manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise SiteError(f"Generated wiki snapshot directory is invalid: {directory}") from error
+    if manifest.get("schema_version") != DIRECTORY_SNAPSHOT_SCHEMA_VERSION:
+        raise SiteError(f"Generated wiki snapshot directory has an unsupported manifest: {directory}")
+    selected = set(site_ids) if site_ids else set(manifest["sites"])
+    count = 0
+    for site_id in selected:
+        site = catalog.get(site_id)
+        entry = manifest["sites"].get(site_id)
+        if entry is None:
+            raise SiteError(f"Generated wiki snapshot has no site: {site_id}")
+        archive_path = directory / entry["archive"]
+        if hashlib.sha256(archive_path.read_bytes()).hexdigest() != entry["archive_sha256"]:
+            raise SiteError(f"Generated wiki snapshot archive is corrupt: {archive_path}")
+        if entry["source_fingerprint"] != _site_source_fingerprint(catalog, site):
+            raise SiteError(f"Generated wiki snapshot is stale for {site_id}")
+        count += _restore_site_archive(catalog, site, archive_path, int(entry["file_count"]))
+    return count
+
+
+def _restore_site_archive(
+    catalog: SiteCatalog, site: SiteDefinition, archive_path: Path, expected_count: int
+) -> int:
+    allowed = _allowed_prefixes(SiteCatalog(catalog.root, (site,)))
+    count = 0
+    with tarfile.open(archive_path, "r:gz") as archive:
+        members = [member for member in archive if member.name != SNAPSHOT_MANIFEST]
+        targets: set[PurePosixPath] = set()
+        for member in members:
+            relative = PurePosixPath(member.name)
+            if (
+                not member.isfile()
+                or relative.is_absolute()
+                or ".." in relative.parts
+                or not any(relative.is_relative_to(prefix) for prefix in allowed)
+            ):
+                raise SiteError(f"Generated snapshot contains invalid path: {member.name}")
+            targets.add(relative)
+        for prefix in allowed:
+            section_root = catalog.root.joinpath(*prefix.parts)
+            if section_root.is_dir():
+                for existing in section_root.rglob("*"):
+                    if existing.is_file() and PurePosixPath(
+                        existing.relative_to(catalog.root).as_posix()
+                    ) not in targets:
+                        existing.unlink()
+        for member in members:
+            relative = PurePosixPath(member.name)
+            source = archive.extractfile(member)
+            if source is None:
+                raise SiteError(f"Could not read generated snapshot entry: {member.name}")
+            destination = catalog.root.joinpath(*relative.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(source.read())
+            count += 1
+    if count != expected_count:
+        raise SiteError(f"Generated snapshot file count does not match: {archive_path}")
+    validate_public_data(site.config_path.parent / "wiki")
+    return count
+
+
+def _generated_files_for_site(site: SiteDefinition) -> list[Path]:
+    assert site.game is not None
+    wiki_root = site.config_path.parent / "wiki"
+    validate_public_data(wiki_root)
+    files = []
+    for section in (*site.game.generated_sections, "changes"):
+        section_root = wiki_root / section
+        if section != "changes" and not (section_root / "index.md").is_file():
+            raise SiteError(f"Generated wiki section is missing for {site.id}: {section}")
+        if section_root.is_dir():
+            files.extend(
+                Path(directory) / name
+                for directory, _, names in os.walk(section_root)
+                for name in names
+            )
+    return sorted(files, key=lambda path: path.as_posix())
+
+
+def _site_source_fingerprint(catalog: SiteCatalog, site: SiteDefinition) -> str:
+    digest = hashlib.sha256()
+    source_root = catalog.root / "src" / "romwiki"
+    paths = {
+        path for path in source_root.rglob("*.py")
+        if "engines" not in path.relative_to(source_root).parts
+        and path.relative_to(source_root).as_posix() not in _NON_GENERATION_SOURCES
+    }
+    if site.game is not None and catalog.profile_repository is not None:
+        profiles = {profile.id: profile for profile in catalog.profile_repository.profiles}
+        for profile_id in site.game.profiles:
+            profile = profiles[profile_id]
+            digest.update(profile_fingerprint(profile).encode())
+            for module in ("personal", "moves", "items", "encounters", "trainers", "locations"):
+                paths.update(source_root / value for value in extraction_source_files(profile.engine, f"romwiki.pipeline.{module}"))
+    paths.add(site.config_path.parent / "game.toml")
+    for path in sorted(paths):
+        if not path.is_file():
+            continue
+        digest.update(path.relative_to(catalog.root).as_posix().encode())
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
+    return digest.hexdigest()
 
 
 def _read_snapshot_manifest(

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import os
 import posixpath
 import re
+import sqlite3
 from bisect import bisect_right
 from collections.abc import Iterator, Sequence
 from concurrent.futures import ProcessPoolExecutor
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -230,10 +234,34 @@ def _parse_worker_count(jobs: int | None, page_count: int) -> int:
     return min(page_count, os.cpu_count() or 1)
 
 
+def _read_digest(task: tuple[str, str]) -> tuple[str, str]:
+    root, relative = task
+    return relative, hashlib.sha256((Path(root) / relative).read_bytes()).hexdigest()
+
+
+def _read_digest_and_parse(
+    task: tuple[str, str],
+) -> tuple[str, int, str, _ParsedPage]:
+    root, relative = task
+    data = (Path(root) / relative).read_bytes()
+    return (
+        relative,
+        len(data),
+        hashlib.sha256(data).hexdigest(),
+        _parse_page(data.decode("utf-8"), relative),
+    )
+
+
 def _parsed_pages(
-    tasks: Sequence[tuple[str, str]], *, jobs: int | None
+    tasks: Sequence[tuple[str, str]], *, jobs: int | None,
+    cache_path: Path | None = None, refresh_cache: bool = False,
 ) -> Iterator[tuple[str, int, _ParsedPage]]:
     """Yield (relative path, byte size, parse result) in `tasks` order."""
+    if cache_path is not None:
+        yield from _cached_parsed_pages(
+            tasks, jobs=jobs, cache_path=cache_path, refresh=refresh_cache
+        )
+        return
     worker_count = _parse_worker_count(jobs, len(tasks))
     if worker_count <= 1:
         yield from map(_read_and_parse, tasks)
@@ -245,6 +273,94 @@ def _parsed_pages(
         yield from pool.map(_read_and_parse, tasks, chunksize=_PARSE_CHUNK_SIZE)
 
 
+def _cached_parsed_pages(
+    tasks: Sequence[tuple[str, str]], *, jobs: int | None, cache_path: Path,
+    refresh: bool,
+) -> Iterator[tuple[str, int, _ParsedPage]]:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    parser_fingerprint = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    try:
+        with closing(sqlite3.connect(cache_path)) as database:
+            database.execute(
+                "CREATE TABLE IF NOT EXISTS pages (path TEXT PRIMARY KEY, digest TEXT NOT NULL, parser TEXT NOT NULL, payload TEXT NOT NULL)"
+            )
+            cached = {} if refresh else {
+                path: (digest, parser, payload)
+                for path, digest, parser, payload in database.execute(
+                    "SELECT path, digest, parser, payload FROM pages"
+                )
+            }
+            worker_count = _parse_worker_count(jobs, len(tasks))
+            if len(cached) < len(tasks) // 2:
+                if worker_count <= 1:
+                    fresh = list(map(_read_digest_and_parse, tasks))
+                else:
+                    with ProcessPoolExecutor(max_workers=worker_count) as pool:
+                        fresh = list(pool.map(
+                            _read_digest_and_parse, tasks, chunksize=_PARSE_CHUNK_SIZE
+                        ))
+                fingerprints = {relative: digest for relative, _, digest, _ in fresh}
+                parsed_misses = {
+                    relative: (size, parsed)
+                    for relative, size, _, parsed in fresh
+                }
+            else:
+                if worker_count <= 1:
+                    fingerprints = dict(map(_read_digest, tasks))
+                else:
+                    with ProcessPoolExecutor(max_workers=worker_count) as pool:
+                        fingerprints = dict(pool.map(
+                            _read_digest, tasks, chunksize=_PARSE_CHUNK_SIZE
+                        ))
+                misses = [
+                    task for task in tasks
+                    if task[1] not in cached
+                    or cached[task[1]][0] != fingerprints[task[1]]
+                    or cached[task[1]][1] != parser_fingerprint
+                ]
+                parsed_misses = {
+                    relative: (size, parsed)
+                    for relative, size, _, parsed in map(_read_digest_and_parse, misses)
+                }
+            for relative, (size, parsed) in parsed_misses.items():
+                payload = json.dumps(_parsed_page_to_dict(size, parsed), separators=(",", ":"))
+                database.execute(
+                    "INSERT OR REPLACE INTO pages VALUES (?, ?, ?, ?)",
+                    (relative, fingerprints[relative], parser_fingerprint, payload),
+                )
+            current_paths = {relative for _, relative in tasks}
+            database.executemany(
+                "DELETE FROM pages WHERE path = ?",
+                ((path,) for path in cached if path not in current_paths),
+            )
+            database.commit()
+            for _, relative in tasks:
+                if relative in parsed_misses:
+                    size, parsed = parsed_misses[relative]
+                else:
+                    size, parsed = _parsed_page_from_dict(json.loads(cached[relative][2]))
+                yield relative, size, parsed
+    except (sqlite3.DatabaseError, json.JSONDecodeError, OSError, KeyError, TypeError):
+        _LOG.warning("Audit cache is invalid; parsing all pages without reuse")
+        yield from _parsed_pages(tasks, jobs=jobs)
+
+
+def _parsed_page_to_dict(size: int, page: _ParsedPage) -> dict[str, object]:
+    return {
+        "size": size, "ids": sorted(page.ids), "links": page.links,
+        "classes": sorted(page.custom_classes), "images": page.image_count,
+        "issues": [issue.__dict__ for issue in page.issues],
+    }
+
+
+def _parsed_page_from_dict(value: dict[str, object]) -> tuple[int, _ParsedPage]:
+    return int(value["size"]), _ParsedPage(
+        set(value["ids"]), [tuple(link) for link in value["links"]],
+        set(value["classes"]),
+        [SiteAuditIssue(**issue) for issue in value["issues"]], int(value["images"]),
+    )
+
+
 def audit_site(
     root: Path,
     *,
@@ -252,6 +368,9 @@ def audit_site(
     max_images_per_page: int = 150,
     base_url: str | None = None,
     jobs: int | None = None,
+    cache_path: Path | None = None,
+    refresh_cache: bool = False,
+    expected_files: set[str] | None = None,
 ) -> SiteAuditReport:
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
@@ -277,12 +396,28 @@ def audit_site(
     warnings: list[SiteAuditIssue] = []
     total_bytes = 0
     largest_page: tuple[str, int] | None = None
+    if expected_files is not None:
+        for code, paths in (
+            ("artifact-missing", expected_files - existing_files),
+            ("artifact-unexpected", existing_files - expected_files),
+        ):
+            if paths:
+                sample = ", ".join(sorted(paths)[:5])
+                errors.append(
+                    SiteAuditIssue(
+                        code,
+                        "artifact",
+                        f"{len(paths):,} file(s); first: {sample}",
+                    )
+                )
     tasks = [
         (str(resolved_root), page.relative_to(resolved_root).as_posix())
         for page in html_files
     ]
     for page_number, (relative, size, result) in enumerate(
-        _parsed_pages(tasks, jobs=jobs), start=1
+        _parsed_pages(
+            tasks, jobs=jobs, cache_path=cache_path, refresh_cache=refresh_cache
+        ), start=1
     ):
         total_bytes += size
         if largest_page is None or size > largest_page[1]:
@@ -346,6 +481,26 @@ def audit_site(
                 f"custom selector {class_name!r} is unused in the artifact",
             )
         )
+
+    catalog_path = resolved_root / "games.json"
+    if catalog_path.is_file():
+        try:
+            catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+            games = catalog["games"]
+            if catalog.get("schema_version") != 1 or not isinstance(games, list):
+                raise ValueError
+            slugs = [game["slug"] for game in games]
+            if len(slugs) != len(set(slugs)) or not all(
+                isinstance(slug, str) and f"{slug}/index.html" in existing_files
+                for slug in slugs
+            ):
+                raise ValueError
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+            errors.append(
+                SiteAuditIssue(
+                    "game-catalog", "games.json", "game catalog is invalid", 1
+                )
+            )
 
     return SiteAuditReport(
         page_count=len(html_files),

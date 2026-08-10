@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -41,6 +42,11 @@ from romwiki.pipeline.marts import extract_mart_dataset
 from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
 from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
 from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
+from romwiki.pipeline.regeneration_state import (
+    can_reuse_generation,
+    regeneration_fingerprint,
+    write_regeneration_state,
+)
 from romwiki.pipeline.relationships import (
     RelationshipIndex,
     build_relationship_index,
@@ -82,6 +88,11 @@ from romwiki.sites import (
     create_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
     serve_sites,
+)
+from romwiki.sites.build_state import (
+    combined_artifact_files,
+    current_site_build_state,
+    site_build_fingerprint,
 )
 from romwiki.sites.data_exports import prune_public_datasets, write_public_dataset
 from romwiki.sites.dev_pages import DevPages
@@ -339,6 +350,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="reuse a compatible artifact and rebuild only changed MkDocs inputs",
     )
     regenerate_parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="ignore publication reuse state and rebuild generated content",
+    )
+    regenerate_parser.add_argument(
         "--snapshot",
         action="store_true",
         help="update the generated-wiki snapshot after a successful audit",
@@ -346,7 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
     regenerate_parser.add_argument(
         "--snapshot-output",
         type=Path,
-        default=Path("sites/generated-wiki.tar.gz"),
+        default=Path("sites/generated-wiki"),
     )
     regenerate_parser.add_argument("--max-page-kb", type=int, default=512)
     regenerate_parser.add_argument("--max-images", type=int, default=150)
@@ -418,8 +434,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="reuse a compatible artifact and rebuild only changed MkDocs inputs",
     )
+    build_site_parser.add_argument(
+        "--reuse-unchanged",
+        action="store_true",
+        help="skip byte-verified unchanged sites and clean-build changed sites",
+    )
     _add_jobs_argument(build_site_parser)
     _add_site_root_argument(build_site_parser)
+    fingerprint_parser = site_subparsers.add_parser(
+        "fingerprint", help="print a deterministic MkDocs build-input fingerprint"
+    )
+    fingerprint_parser.add_argument("site_id")
+    fingerprint_parser.add_argument("--output", type=Path, default=Path("dist"))
+    _add_site_root_argument(fingerprint_parser)
     serve_site_parser = site_subparsers.add_parser(
         "serve",
         help="build, serve, and live-reload selected wiki sites",
@@ -474,6 +501,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--base-url",
         help="deployment base URL used to resolve absolute project-site links",
     )
+    audit_site_parser.add_argument(
+        "--no-cache", action="store_true", help="parse every HTML page"
+    )
     _add_jobs_argument(audit_site_parser)
     snapshot_parser = site_subparsers.add_parser(
         "snapshot", help="archive generated, ROM-free wiki Markdown"
@@ -481,7 +511,7 @@ def build_parser() -> argparse.ArgumentParser:
     snapshot_parser.add_argument(
         "--output",
         type=Path,
-        default=Path("sites/generated-wiki.tar.gz"),
+        default=Path("sites/generated-wiki"),
     )
     _add_site_root_argument(snapshot_parser)
     restore_parser = site_subparsers.add_parser(
@@ -491,7 +521,10 @@ def build_parser() -> argparse.ArgumentParser:
         "archive",
         type=Path,
         nargs="?",
-        default=Path("sites/generated-wiki.tar.gz"),
+        default=Path("sites/generated-wiki"),
+    )
+    restore_parser.add_argument(
+        "--site", action="append", default=[], help="restore only this site"
     )
     _add_site_root_argument(restore_parser)
     return parser
@@ -719,6 +752,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                         max_images_per_page=args.max_images,
                         base_url=args.base_url,
                         jobs=args.jobs,
+                        cache_path=(
+                            None
+                            if args.no_cache
+                            else Path(".romwiki/audit-cache.sqlite3")
+                        ),
                     )
                 _report_site_audit(report)
             elif args.site_command == "list":
@@ -738,6 +776,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         build_all=args.build_all,
                         jobs=args.jobs,
                         incremental=args.incremental,
+                        reuse_unchanged=args.reuse_unchanged,
+                        site_url=os.environ.get("ROMWIKI_SITE_URL"),
                     )
                 for site in built:
                     _LOG.info(
@@ -766,12 +806,25 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             elif args.site_command == "restore-snapshot":
                 with timed_operation(_LOG, "Generated wiki snapshot restore"):
-                    count = restore_generated_wiki_snapshot(args.root, args.archive)
+                    count = restore_generated_wiki_snapshot(
+                        args.root, args.archive, site_ids=tuple(args.site)
+                    )
                 _LOG.info(
                     "Restored %s generated wiki files: %s",
                     f"{count:,}",
                     args.archive,
                 )
+            elif args.site_command == "fingerprint":
+                catalog = SiteCatalog.load(args.root)
+                site = catalog.get(args.site_id)
+                state = current_site_build_state(
+                    catalog,
+                    site,
+                    args.output.resolve(),
+                    dev=False,
+                    site_url=os.environ.get("ROMWIKI_SITE_URL"),
+                )
+                print(site_build_fingerprint(state))
         return 0
     except RomWikiError as error:
         _LOG.error("%s", error)
@@ -1230,6 +1283,8 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         raise SiteError("--snapshot requires --all")
     if args.snapshot and getattr(args, "incremental", False):
         raise SiteError("--snapshot cannot be combined with --incremental")
+    if getattr(args, "clean", False) and getattr(args, "incremental", False):
+        raise SiteError("--clean cannot be combined with --incremental")
 
     catalog = SiteCatalog.load(args.root)
     selected = catalog.select(
@@ -1313,11 +1368,26 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         f"{len(prepared):,}",
         perf_counter() - preflight_started,
     )
+    workflow = None
+    workflows = None
     for site, paths, current, baselines, pokedb in prepared:
         game = site.game
         assert game is not None
         site_started = perf_counter()
         _LOG.info("Regenerating %s", site.id)
+        state_path = args.root / ".romwiki" / "generation-state" / f"{site.id}.json"
+        input_fingerprint = regeneration_fingerprint(
+            args.root.resolve(),
+            site,
+            current,
+            baselines,
+            args.pokedb_root / f"gen{game.generation}",
+        )
+        if not getattr(args, "clean", False) and can_reuse_generation(
+            state_path, input_fingerprint, site
+        ):
+            _LOG.info("Generation for %s skipped; inputs are unchanged", site.id)
+            continue
         if len(game.profiles) == 1:
             build_args = argparse.Namespace(
                 input_rom=None,
@@ -1374,11 +1444,19 @@ def _run_regeneration(args: argparse.Namespace) -> None:
                 )
             }
             _run_version_family_build(build_args, workflows=workflows)
+        write_regeneration_state(state_path, input_fingerprint, site)
         _LOG.info(
             "Regenerated %s in %.1fs",
             site.id,
             perf_counter() - site_started,
         )
+
+    prepared.clear()
+    pokedb_generations.clear()
+    inspections.clear()
+    current = baselines = paths = ()
+    pokedb = None
+    workflow = workflows = None
 
     with timed_operation(_LOG, "Site builds"):
         built = build_sites(
@@ -1388,9 +1466,22 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             build_all=args.regenerate_all,
             jobs=args.jobs,
             incremental=getattr(args, "incremental", False),
+            reuse_unchanged=not getattr(args, "clean", False),
+            reuse_generation_state=True,
+            defer_output_validation=args.regenerate_all,
+            site_url=os.environ.get("ROMWIKI_SITE_URL"),
         )
     for site in built:
         _LOG.info("Built %s: %s", site.id, site.output_path(args.output.resolve()))
+    expected_files = (
+        combined_artifact_files(
+            catalog,
+            args.output,
+            args.root / ".romwiki" / "build-state",
+        )
+        if args.regenerate_all
+        else None
+    )
 
     with timed_operation(_LOG, "Site audit"):
         report = audit_site(
@@ -1399,6 +1490,9 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             max_images_per_page=args.max_images,
             base_url=args.base_url,
             jobs=args.jobs,
+            cache_path=args.root / ".romwiki" / "audit-cache.sqlite3",
+            refresh_cache=getattr(args, "clean", False),
+            expected_files=expected_files,
         )
     _report_site_audit(report)
 

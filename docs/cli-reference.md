@@ -192,10 +192,16 @@ audited generated content:
 romwiki regenerate --all --refresh --snapshot
 ```
 
+Complete regeneration safely reuses metadata-verified generation and build source
+state by default, while the build gate verifies the exact output path set. The
+following audit still hashes every HTML file. `--clean`
+bypasses publication reuse and reparses the audit while
+repopulating its cache; `--refresh` separately replaces ROM extraction caches.
+
 `--incremental` retains the selected site's existing artifact and asks MkDocs to
 process only added or changed source files. ROM extraction caches and deterministic
 rendering still run normally; unchanged generated files retain their modification
-times, so MkDocs can skip them. A content-addressed state file under
+times, so MkDocs can skip them. A metadata inventory under
 `.romwiki/build-state/` binds reuse to the output path, production/development
 mode, site URL, MkDocs versions, site configuration, shared templates and hooks,
 and the complete source-file set. Missing output, changed build inputs, or deleted
@@ -207,7 +213,7 @@ leaves unrelated games untouched. Reserve `regenerate --all` for final integrate
 validation and snapshot publication.
 
 Snapshot creation rejects `--incremental`. Publication snapshots must always come
-from the complete clean `--all` workflow.
+from the complete audited `--all` workflow; verified unchanged sites may be reused.
 
 ## Baseline caches
 
@@ -234,6 +240,7 @@ Build one or every published site:
 ```console
 romwiki site build renegade-platinum --output dist
 romwiki site build renegade-platinum --output dist --incremental
+romwiki site build renegade-platinum --output dist --reuse-unchanged
 romwiki site build --all --output dist
 ```
 
@@ -256,7 +263,14 @@ Create or restore the deterministic ROM-free publication snapshot:
 ```console
 romwiki site snapshot
 romwiki site restore-snapshot
+romwiki site restore-snapshot --site renegade-platinum
 ```
+
+The tracked snapshot is a manifest plus deterministic per-site archives under
+`sites/generated-wiki/`. Metadata inventories avoid rereading unchanged generated
+content; content hashes remain the fallback when metadata changes. Unchanged
+archives are not rewritten. Restore continues to accept the former monolithic
+archive during migration.
 
 Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
 because it guarantees generation, site building, and auditing succeeded before

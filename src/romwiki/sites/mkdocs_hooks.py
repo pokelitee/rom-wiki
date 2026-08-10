@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import posixpath
 import re
@@ -51,9 +52,11 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         **_site_context(current),
         "sections": sorted(_current_sections),
     }
-    config.extra["romwiki_games"] = [
-        _site_context(site) for site in catalog.published() if site.kind == "game"
-    ]
+    config.extra["romwiki_games"] = (
+        [_site_context(site) for site in catalog.published() if site.kind == "game"]
+        if current.kind == "portal"
+        else [_site_context(current)]
+    )
     deployment_url = os.environ.get("ROMWIKI_SITE_URL")
     if deployment_url:
         config.site_url = _deployment_site_url(deployment_url, current)
@@ -65,6 +68,19 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
         str(root / "sites" / "shared" / "partials")
     ]
     return config
+
+
+def on_post_build(config: MkDocsConfig) -> None:
+    if _catalog is None or _current_site is None or _current_site.kind != "portal":
+        return
+    games = [
+        _site_context(site) for site in _catalog.published() if site.kind == "game"
+    ]
+    destination = Path(config.site_dir) / "games.json"
+    destination.write_text(
+        json.dumps({"schema_version": 1, "games": games}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def on_files(files: Files, config: MkDocsConfig) -> Files:

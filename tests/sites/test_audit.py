@@ -3,12 +3,41 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from romwiki.sites.audit import _PARALLEL_PAGE_THRESHOLD, audit_site
 from romwiki.util.errors import SiteError
 
 
 class SiteAuditTests(unittest.TestCase):
+    def test_reuses_parsed_pages_by_content_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / "audit.sqlite3"
+            _write_page(root / "index.html", "<p>Cached</p>")
+            audit_site(root, cache_path=cache, jobs=1)
+
+            with patch("romwiki.sites.audit._parse_page") as parse:
+                report = audit_site(root, cache_path=cache, jobs=1)
+
+        self.assertTrue(report.ok)
+        parse.assert_not_called()
+
+    def test_validates_the_expected_artifact_file_set(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(root / "index.html", "<p>Index</p>")
+            (root / "extra.txt").write_text("extra", encoding="utf-8")
+
+            report = audit_site(
+                root, expected_files={"index.html", "missing.txt"}
+            )
+
+        self.assertEqual(
+            {issue.code for issue in report.errors},
+            {"artifact-missing", "artifact-unexpected"},
+        )
+
     def test_rejects_markdown_source_links_in_published_html(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

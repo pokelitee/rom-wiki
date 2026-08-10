@@ -52,11 +52,11 @@
       <span class="rw-sitebar__divider" aria-hidden="true">/</span>
       <div class="rw-game-picker">
         <label class="rw-visually-hidden" for="rw-game-picker">Choose a game</label>
-        <select id="rw-game-picker" data-rw-game-picker>
+        <select id="rw-game-picker" data-rw-game-picker data-rw-games-url="{{ romwiki.portal_url }}games.json" data-rw-current-game="{{ romwiki.current.id }}">
           {% if romwiki.current.kind == "portal" %}
             <option value="" selected>Choose a game</option>
           {% endif %}
-          {% for game in romwiki.games %}
+          {% for game in romwiki.games if romwiki.current.kind == "portal" or game.id == romwiki.current.id %}
             <option value="{{ game.url }}"{% if game.id == romwiki.current.id %} selected{% endif %}>{{ game.name }}</option>
           {% endfor %}
         </select>

@@ -20,6 +20,32 @@ from romwiki.util.errors import SiteError
 
 
 class GeneratedWikiSnapshotTests(unittest.TestCase):
+    def test_directory_snapshot_reuses_unchanged_site_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            generated_file = _make_site(root)
+            snapshot = root / "snapshot"
+            first_count = create_generated_wiki_snapshot(root, snapshot)
+            archive = snapshot / "test-game.tar.gz"
+            original = archive.read_bytes()
+            original_mtime = archive.stat().st_mtime_ns
+
+            second_count = create_generated_wiki_snapshot(root, snapshot)
+            generated_file.unlink()
+            stale = generated_file.parent / "stale.md"
+            stale.write_text("stale", encoding="utf-8")
+            restored_count = restore_generated_wiki_snapshot(
+                root, snapshot, site_ids=("test-game",)
+            )
+            reused = archive.read_bytes()
+            reused_mtime = archive.stat().st_mtime_ns
+            stale_exists = stale.exists()
+
+        self.assertEqual(second_count, first_count)
+        self.assertEqual(restored_count, first_count)
+        self.assertEqual(reused, original)
+        self.assertEqual(reused_mtime, original_mtime)
+        self.assertFalse(stale_exists)
     def test_type_chart_is_required_generated_content(self) -> None:
         self.assertIn("types", REQUIRED_WIKI_SECTIONS)
 

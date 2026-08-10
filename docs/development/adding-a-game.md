@@ -451,6 +451,9 @@ references.
 - Run `romwiki build game --game <id>` twice and confirm the second run reuses both
   current and baseline extraction caches. Change one extractor and confirm only
   its dependent raw datasets rebuild.
+- Before a major release, run `romwiki regenerate --all --clean --refresh
+  --snapshot`. Routine complete runs reuse verified per-site state and update only
+  changed snapshot archives.
 - Test catalogs with missing optional values, duplicate labels, and enough records
   to exercise progressive rendering.
 - Review representative pages at desktop and narrow mobile widths in light and dark
