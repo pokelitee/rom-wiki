@@ -203,8 +203,8 @@ engines require Pokémon, moves, items, and encounters. A new engine's first
 verified vertical slice may intentionally start smaller, for example:
 
 ```python
-dataset_kinds=frozenset({"pokemon", "abilities"}),
-required_dataset_kinds=frozenset({"pokemon"}),
+dataset_kinds = frozenset({"pokemon", "abilities"})
+required_dataset_kinds = frozenset({"pokemon"})
 ```
 
 Declare the profile keys understood by the adapter through its
