@@ -11,6 +11,7 @@ from urllib.parse import urlsplit, urlunsplit
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure.files import Files
 from mkdocs.structure.pages import Page
+from mkdocs.structure.toc import AnchorLink, TableOfContents
 
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.sites.dev_pages import DevPages
@@ -116,6 +117,8 @@ def on_page_context(
         if _current_site.kind == "portal"
         else (_current_site,)
     )
+    if _current_site.kind == "portal" and page.is_homepage:
+        _add_portal_toc(page, visible_sites)
     context["romwiki"] = {
         "current": {
             **_site_context(_current_site),
@@ -131,6 +134,21 @@ def on_page_context(
         ],
     }
     return context
+
+
+def _add_portal_toc(page: Page, sites: tuple[SiteDefinition, ...]) -> None:
+    generations = sorted({site.game.generation for site in sites if site.game})
+    games = AnchorLink("Game wikis", "games-heading", 2)
+    games.children = [
+        AnchorLink(
+            f"Generation {generation}",
+            f"generation-{generation}-heading",
+            3,
+        )
+        for generation in generations
+    ]
+    existing = page.toc.items if isinstance(page.toc, TableOfContents) else page.toc
+    page.toc = TableOfContents([games, *existing])
 
 
 def _rewrite_filtered_markdown_links(

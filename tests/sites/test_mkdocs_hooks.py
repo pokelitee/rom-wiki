@@ -14,6 +14,7 @@ from romwiki.sites import mkdocs_hooks
 from romwiki.util.errors import SiteError
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+PORTAL_CONFIG = REPOSITORY_ROOT / "sites/portal/mkdocs.yml"
 GAME_CONFIG = REPOSITORY_ROOT / "sites/games/renegade-platinum/mkdocs.yml"
 DEV_CONFIG = REPOSITORY_ROOT / "sites/games/renegade-platinum/mkdocs.dev.yml"
 
@@ -29,8 +30,7 @@ def _load_and_configure(config_path: Path):
 
 class MkDocsHooksTests(unittest.TestCase):
     def test_portal_build_writes_shared_game_catalog(self) -> None:
-        portal_config = REPOSITORY_ROOT / "sites/portal/mkdocs.yml"
-        config = _load_and_configure(portal_config)
+        config = _load_and_configure(PORTAL_CONFIG)
         with tempfile.TemporaryDirectory() as directory:
             config.site_dir = directory
             mkdocs_hooks.on_post_build(config)
@@ -40,6 +40,37 @@ class MkDocsHooksTests(unittest.TestCase):
 
         self.assertEqual(catalog["schema_version"], 1)
         self.assertIn("renegade-platinum", {game["id"] for game in catalog["games"]})
+
+    def test_portal_homepage_toc_lists_catalog_generations(self) -> None:
+        config = _load_and_configure(PORTAL_CONFIG)
+        file = File(
+            "index.md",
+            config.docs_dir,
+            config.site_dir,
+            config.use_directory_urls,
+        )
+        page = Page("ROM Wiki", file, config)
+
+        mkdocs_hooks.on_page_context({}, page, config, nav=None)
+
+        games = page.toc.items[0]
+        generations = sorted(
+            {game["generation"] for game in config.extra["romwiki_games"]}
+        )
+        self.assertEqual(
+            (games.title, games.id, games.level), ("Game wikis", "games-heading", 2)
+        )
+        self.assertEqual(
+            [(item.title, item.id, item.level) for item in games.children],
+            [
+                (
+                    f"Generation {generation}",
+                    f"generation-{generation}-heading",
+                    3,
+                )
+                for generation in generations
+            ],
+        )
 
     def test_rewrites_links_to_pages_filtered_from_dev_build(self) -> None:
         html = (

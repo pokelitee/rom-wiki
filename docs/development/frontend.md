@@ -43,7 +43,9 @@ The catalog and portal group published game wikis by generation. A descriptor's
 `order` is scoped to its generation and places a base game before its related
 hacks; adding a later generation does not require renumbering existing sites. One
 card may represent a sibling-version pair, so portal counts describe wikis rather
-than individual games.
+than individual games. The MkDocs hook also adds the catalog's generation groups
+to the portal homepage table of contents because those headings are rendered by
+the portal template rather than parsed from Markdown.
 
 Use `--rw-accent` for foreground text, borders, and decorative fills.
 Controls with text or icons on a solid theme-colored background use
