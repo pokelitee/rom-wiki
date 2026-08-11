@@ -298,7 +298,11 @@ Trainer pages render normalized `battle_families` declaratively as Battle
 Variants, including readable condition labels and links to every exact trainer
 record. No shared template contains generation-specific IDs. Exact class/name
 groups remain a clearly cautioned Same-name trainers fallback and are omitted only
-when the current record participates in a verified family. Catalog metadata may
+when the current record participates in a verified family. Same-name party
+previews list and link every Pokémon rather than truncating the party. Difficulty
+families also render their declared runtime party/level behavior and coverage note
+beside the variants, distinguishing stored levels from runtime displayed levels.
+Catalog metadata may
 surface family/condition labels for discovery, but reverse relationships and
 comparisons continue to use exact records so variant presentation cannot
 double-count facts.
@@ -312,9 +316,8 @@ may separately expose a post-victory party heal and an item given to the player.
 Those are normalized as `healer` and `victory_item`; item pages invert the latter
 into trainer-reward backlinks. Wild encounter
 slot tables show a per-slot catch-rate percentage from the fixed Generation
-III/IV engine weight tables (not ROM data) and combine slots that share a
-species and form into one row. The row retains each distinct level or level
-range with its own summed chance and also shows the species' total chance;
+III/IV engine weight tables (not ROM data) and combine slots only when their
+species, form, and level data all match. Different levels remain separate rows;
 the normalized source slots remain unchanged. Encounter display names and
 reciprocal location links come from the verified map-index-to-header
 relationship, with `Map NNN` retained only when no header is resolved.

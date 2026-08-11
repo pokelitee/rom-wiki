@@ -109,6 +109,19 @@ class TrainerRenderingTests(unittest.TestCase):
     def test_renders_same_name_trainers_without_assuming_identity(self) -> None:
         current = _related_trainer(5, "Route 202", 8, "Starly")
         related = _related_trainer(19, "Route 204", 12, "Staravia")
+        related["party"].extend(
+            [
+                {
+                    "level": 12,
+                    "pokemon": {"id": pokemon_id, "name": name, "slug": slug},
+                }
+                for pokemon_id, name, slug in (
+                    (74, "Geodude", "geodude"),
+                    (41, "Zubat", "zubat"),
+                    (66, "Machop", "machop"),
+                )
+            ]
+        )
         lines: list[str] = []
 
         _append_same_name_trainers(
@@ -124,7 +137,68 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("does not establish that they represent the same character", page)
         self.assertIn("ID 19", page)
         self.assertIn("Route 204", page)
-        self.assertIn("Staravia", page)
+        self.assertIn("[Staravia](../pokemon/staravia.md)", page)
+        self.assertIn("[Machop](../pokemon/machop.md)", page)
+        self.assertNotIn("more", page)
+
+    def test_explains_difficulty_party_and_level_behavior(self) -> None:
+        normal = _related_trainer(156, "Aspertia City", 13, "Lillipup")
+        challenge = _related_trainer(764, "Aspertia City", 13, "Lillipup")
+        family = {
+            "id": "gym-cheren",
+            "label": "Cheren Gym battle",
+            "order": 0,
+            "provenance": {
+                "source": "ROM script",
+                "reference": "gym:cheren",
+                "verification": "Dispatch targets verified.",
+            },
+            "variants": [
+                {
+                    "trainer_id": trainer_id,
+                    "order": order,
+                    "conditions": [
+                        {
+                            "kind": "difficulty-mode",
+                            "value": mode,
+                            "label": f"{mode.title()} mode",
+                        }
+                    ],
+                }
+                for order, (mode, trainer_id) in enumerate(
+                    (("easy", 156), ("normal", 156), ("challenge", 764))
+                )
+            ],
+        }
+        lines: list[str] = []
+
+        _append_battle_variants(
+            lines,
+            normal,
+            [(family, family["variants"][0])],
+            {156: normal, 764: challenge},
+            "trainers/trainer-0156.md",
+            {
+                "difficulty_mode": {
+                    "status": "partial",
+                    "note": "The exact displayed-level offset is unresolved.",
+                    "runtime": {
+                        "easy_party": "normal-record",
+                        "normal_party": "normal-record",
+                        "challenge_party": "challenge-record-where-dispatched",
+                        "displayed_level": "difficulty-adjusted-after-party-load",
+                        "stat_level": "stored-record-level",
+                    },
+                }
+            },
+        )
+        page = "\n".join(lines)
+
+        self.assertIn("### Difficulty behavior", page)
+        self.assertIn("exact levels stored in each trainer record", page)
+        self.assertIn("Coverage: **Partial**", page)
+        self.assertIn("| Easy party | Normal Record |", page)
+        self.assertIn("| Challenge party | Challenge Record Where Dispatched |", page)
 
     def test_collapses_large_same_name_groups(self) -> None:
         current = _related_trainer(1, "Route 201", 5, "Bidoof")
@@ -413,7 +487,16 @@ def _related_trainer(
         "trainer_id": trainer_id,
         "locations": [{"name": location}],
         "script_references": [],
-        "party": [{"level": level, "pokemon": {"name": pokemon}}],
+        "party": [
+            {
+                "level": level,
+                "pokemon": {
+                    "id": trainer_id,
+                    "name": pokemon,
+                    "slug": pokemon.lower(),
+                },
+            }
+        ],
     }
 
 

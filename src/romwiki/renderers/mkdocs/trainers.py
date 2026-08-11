@@ -116,6 +116,7 @@ def render_trainer_pages(
                     dataset_features,
                     family_memberships.get(record["trainer_id"], []),
                     records_by_id,
+                    dataset.get("trainer_variant_support", {}),
                 ),
             )
             page_count += 1
@@ -162,6 +163,7 @@ def render_trainer_pages(
                     dataset_features,
                     family_memberships.get(record["trainer_id"], []),
                     records_by_id,
+                    dataset.get("trainer_variant_support", {}),
                 ),
             )
             page_count += 1
@@ -289,6 +291,7 @@ def _render_trainer(
     features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
     family_memberships: list[tuple[dict[str, Any], dict[str, Any]]] | None = None,
     records_by_id: dict[int, dict[str, Any]] | None = None,
+    variant_support: dict[str, Any] | None = None,
 ) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
@@ -307,7 +310,12 @@ def _render_trainer(
     _append_script_references(lines, record.get("script_references", []), source_file)
     memberships = family_memberships or []
     _append_battle_variants(
-        lines, record, memberships, records_by_id or {}, source_file
+        lines,
+        record,
+        memberships,
+        records_by_id or {},
+        source_file,
+        variant_support or {},
     )
     if not memberships:
         _append_same_name_trainers(lines, record, same_name_records or [], source_file)
@@ -500,6 +508,24 @@ def _party_preview(record: dict[str, Any], limit: int = 3) -> str:
     preview = ", ".join(species[:limit])
     remaining = len(species) - limit
     return f"{preview}, +{remaining} more" if remaining > 0 else preview
+
+
+def _linked_party(record: dict[str, Any], source_file: str) -> str:
+    links = []
+    for member in record["party"]:
+        pokemon = member["pokemon"]
+        links.append(
+            ROUTES.markdown_link(
+                entity_reference(
+                    "pokemon",
+                    pokemon.get("id", pokemon.get("slug", pokemon["name"])),
+                    pokemon["name"],
+                    pokemon.get("page_slug", pokemon.get("slug")),
+                ),
+                source_file,
+            )
+        )
+    return ", ".join(links)
 
 
 def _trainer_disambiguator(record: dict[str, Any]) -> str:
@@ -931,7 +957,8 @@ def _append_same_name_trainers(
         locations = _location_names(candidate)
         lines.append(
             f"| {trainer_link} | {' / '.join(locations) or 'Unlinked'} | "
-            f"{_trainer_level_range(candidate)} | {_party_preview(candidate)} |"
+            f"{_trainer_level_range(candidate)} | "
+            f"{_linked_party(candidate, source_file)} |"
         )
     lines.append("")
     if collapsed:
@@ -944,6 +971,7 @@ def _append_battle_variants(
     memberships: list[tuple[dict[str, Any], dict[str, Any]]],
     records_by_id: dict[int, dict[str, Any]],
     source_file: str,
+    variant_support: dict[str, Any] | None = None,
 ) -> None:
     """Render verified relationships without changing the exact record unit."""
     families = {family["id"]: family for family, _variant in memberships}
@@ -1002,6 +1030,51 @@ def _append_battle_variants(
                 "",
             ]
         )
+    if any(
+        condition["kind"] == "difficulty-mode"
+        for family in families.values()
+        for variant in family["variants"]
+        for condition in variant["conditions"]
+    ):
+        _append_difficulty_behavior(
+            lines, (variant_support or {}).get("difficulty_mode", {})
+        )
+
+
+def _append_difficulty_behavior(lines: list[str], support: dict[str, Any]) -> None:
+    runtime = support.get("runtime", {})
+    lines.extend(
+        [
+            "### Difficulty behavior",
+            "",
+            (
+                "The levels in the Battle Variants table are the exact levels "
+                "stored in each trainer record. Runtime displayed levels may "
+                "differ when difficulty mode applies."
+            ),
+            "",
+        ]
+    )
+    note = support.get("note")
+    if note:
+        lines.extend(
+            [f"Coverage: **{support.get('status', 'unknown').title()}**. {note}", ""]
+        )
+    if not runtime:
+        return
+    labels = {
+        "easy_party": "Easy party",
+        "normal_party": "Normal party",
+        "challenge_party": "Challenge party",
+        "displayed_level": "Displayed level",
+        "stat_level": "Stat calculation level",
+        "iv_strength_field": "IV-strength byte",
+    }
+    lines.extend(["| Mechanic | Behavior |", "| -------- | -------- |"])
+    for key, label in labels.items():
+        if key in runtime:
+            lines.append(f"| {label} | {display_name(str(runtime[key]))} |")
+    lines.append("")
 
 
 def _trainer_label(record: dict[str, Any]) -> str:

@@ -505,52 +505,27 @@ def _append_locations(
 def _merge_slots(
     slots: list[dict[str, Any]], level_keys: tuple[str, ...]
 ) -> list[dict[str, Any]]:
-    """Combine slots for the same species and form into one display row.
+    """Combine slots only when species, form, and level data all match.
 
     The ROM assigns a species to multiple fixed-probability slots to give it
     a higher overall chance rather than storing a single percentage per
-    species. Distinct level bands remain visible with their individual summed
-    chances, while the raw normalized slots remain unchanged.
+    species. Different levels remain separate rows because they are distinct
+    encounter outcomes; exact duplicates have their fixed slot chances summed.
     """
     merged: dict[tuple[Any, ...], dict[str, Any]] = {}
     order: list[tuple[Any, ...]] = []
     for slot in slots:
-        key = (slot["species_id"], slot.get("form_id"))
-        levels = tuple(slot[level_key] for level_key in level_keys)
+        key = (
+            slot["species_id"],
+            slot.get("form_id"),
+            *(slot[level_key] for level_key in level_keys),
+        )
         if key not in merged:
             merged[key] = dict(slot)
-            merged[key]["chance"] = 0
-            merged[key]["level_chances"] = []
             order.append(key)
-        merged_slot = merged[key]
-        merged_slot["chance"] += slot["chance"]
-        for entry in merged_slot["level_chances"]:
-            if entry["levels"] == levels:
-                entry["chance"] += slot["chance"]
-                break
         else:
-            merged_slot["level_chances"].append(
-                {"levels": levels, "chance": slot["chance"]}
-            )
+            merged[key]["chance"] += slot["chance"]
     return [merged[key] for key in order]
-
-
-def _level_chances(slot: dict[str, Any]) -> str:
-    entries = slot["level_chances"]
-    labels = [
-        (
-            str(entry["levels"][0])
-            if len(entry["levels"]) == 1
-            else _level_range(*entry["levels"])
-        )
-        for entry in entries
-    ]
-    if len(entries) == 1:
-        return labels[0]
-    return "; ".join(
-        f"{label} ({entry['chance']}%)"
-        for label, entry in zip(labels, entries, strict=True)
-    )
 
 
 def _append_walking(
@@ -574,7 +549,7 @@ def _append_walking(
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
                     f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{_level_chances(slot)} | {slot['chance']}% |"
+                    f"{slot['level']} | {slot['chance']}% |"
                 )
                 for slot in slots
             ],
@@ -603,7 +578,7 @@ def _append_water(
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
                     f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{_level_chances(slot)} | "
+                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | "
                     f"{slot['chance']}% |"
                 )
                 for slot in slots
@@ -773,17 +748,23 @@ def _render_seasonal_encounter_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    records_by_map: dict[int, list[dict[str, Any]]] = {}
+    locations_by_route: dict[int | str, tuple[EncounterLocationReference, ...]] = {}
+    same_name_groups: dict[str, list[dict[str, Any]]] = {}
     for record in records:
-        records_by_map.setdefault(record["map_index"], []).append(record)
-    for index, record in enumerate(records):
-        change = record_comparison(comparison, record["area_id"])
-        filename = f"{encounter_route_key(record)}.md"
+        route_key = encounter_route_key(record)
         locations = (
-            relationships.encounter_locations.get(encounter_route_key(record), ())
+            relationships.encounter_locations.get(route_key, ())
             if relationships
             else ()
         )
+        locations_by_route[route_key] = locations
+        same_name_groups.setdefault(
+            _seasonal_display_name(record, locations), []
+        ).append(record)
+    for index, record in enumerate(records):
+        change = record_comparison(comparison, record["area_id"])
+        filename = f"{encounter_route_key(record)}.md"
+        locations = locations_by_route[encounter_route_key(record)]
         record_name = _seasonal_display_name(record, locations)
         previous = records[index - 1] if index else None
         following = records[index + 1] if index + 1 < len(records) else None
@@ -798,7 +779,7 @@ def _render_seasonal_encounter_pages(
                     locations,
                     previous,
                     following,
-                    records_by_map[record["map_index"]],
+                    same_name_groups[record_name],
                 ),
             )
             page_count += 1
@@ -921,7 +902,7 @@ def _render_seasonal_area(
     locations: tuple[EncounterLocationReference, ...],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
-    map_variants: list[dict[str, Any]],
+    same_name_records: list[dict[str, Any]],
 ) -> str:
     source_file = f"encounters/{encounter_route_key(record)}.md"
     lines = [
@@ -954,7 +935,7 @@ def _render_seasonal_area(
     else:
         for key, label in _SEASONAL_METHOD_LABELS.items():
             _append_seasonal_method(lines, label, record[key], source_file, references)
-    _append_seasonal_variants(lines, record, map_variants, source_file)
+    _append_same_name_encounters(lines, record, same_name_records, source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -1073,7 +1054,7 @@ def _append_seasonal_method(
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
                     f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{_level_chances(slot)} | "
+                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | "
                     f"{slot['chance']}% |"
                 )
                 for slot in slots
@@ -1110,41 +1091,49 @@ def _append_seasonal_record_navigation(
     )
 
 
-def _append_seasonal_variants(
+def _append_same_name_encounters(
     lines: list[str],
     record: dict[str, Any],
-    map_variants: list[dict[str, Any]],
+    same_name_records: list[dict[str, Any]],
     source_file: str,
 ) -> None:
     related = [
         candidate
-        for candidate in map_variants
+        for candidate in same_name_records
         if encounter_route_key(candidate) != encounter_route_key(record)
     ]
     if not related:
         return
     lines.extend(
         [
-            "## Seasonal variants",
+            "## Same-name encounter areas",
             "",
-            "These encounter records use the same verified wild-encounter map index.",
+            (
+                "These encounter tables resolve to the same map-header display "
+                "name. A shared map index identifies seasonal variants; a shared "
+                "name alone does not establish that two maps are the same area."
+            ),
             "",
-            "| Season | Encounter table |",
-            "| ------ | --------------- |",
+            "| Map index | Season | Relationship | Encounter table |",
+            "| --------: | ------ | ------------ | --------------- |",
         ]
     )
     for candidate in related:
         route_key = encounter_route_key(candidate)
         season = candidate.get("season")
-        label = season.title() if season else "All seasons"
+        label = f"Map {candidate['map_index']:03}" + (
+            f" ({season.title()})" if season else ""
+        )
         link = ROUTES.markdown_link(
             entity_reference(
-                "encounter_variant",
-                candidate["area_id"],
-                label,
-                route_key,
+                "encounter_variant", candidate["area_id"], label, route_key
             ),
             source_file,
         )
-        lines.append(f"| {label} | {link} |")
+        lines.append(
+            f"| {candidate['map_index']} | "
+            f"{season.title() if season else 'All'} | "
+            f"{'Seasonal variant' if candidate['map_index'] == record['map_index'] else 'Same display name'} | "
+            f"{link} |"
+        )
     lines.append("")

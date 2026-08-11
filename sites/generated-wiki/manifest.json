@@ -3,75 +3,75 @@
   "sites": {
     "black-2-white-2": {
       "archive": "black-2-white-2.tar.gz",
-      "archive_sha256": "3307abfa50ac5a984c7bca92f4692cd90206b9d4ab41f7a1237873c76f044ccf",
-      "content_fingerprint": "79b41ced3be4dec5caed4dfaeac959fc626bdcd4aa91347b8b83099d1616520d",
+      "archive_sha256": "1fcd7c042e20618c0a88eb313a8670de9b5a4c0675058e4b4633d642231df79d",
+      "content_fingerprint": "8e7665314a12f254fd8a21ee19d52750d8fb9c5c82301977a165f579c73d0e03",
       "file_count": 3637,
-      "metadata_fingerprint": "c4cd4f051c41da682d48fcb0ea483f27593c94b3ff22d1db9b3d2386ed1fa34d",
-      "source_fingerprint": "352b60784c099fccdc2bb6e6ce85e3f06b56ca235a2c06757161bcd66278322c"
+      "metadata_fingerprint": "7540ab50d17c566f74ab65806ebffe3905c85c21a509f2613d311b4c1aa4ac78",
+      "source_fingerprint": "afad467875510c3dbdd5f20edd6e074b3a711e4aeb876134840ee5efc3f1dd64"
     },
     "black-white": {
       "archive": "black-white.tar.gz",
-      "archive_sha256": "69055ffb78fe66e59f3bea4769b214ada0f5e10eb70436140f28a5cd43ed1813",
-      "content_fingerprint": "95cc84a5355438c031e511bc286a98867563ca8f2dce5f4f4d3256b516bcf176",
+      "archive_sha256": "67e663ba0f1a099dd2feb5cabe62ba70b3a1cc359e18cf1fab95b1dd9029578f",
+      "content_fingerprint": "030f9047b8dc8b7781cc431b504014d2a9bb95ea717300dc87ad563a75f46529",
       "file_count": 3206,
-      "metadata_fingerprint": "189ede8a98d910375792dc0c511e930af0bc441067487921bf600a6d905de0f5",
-      "source_fingerprint": "9cae3959478fd1aa97c461657a417e814afc61d4ce45c22367427eda5bd644af"
+      "metadata_fingerprint": "2b961fd399939578f4753cf1f03d5ef76ce3873d4e5202e25c862a4cdef8adf2",
+      "source_fingerprint": "51e05467f91fa8abc796e24f5a93557a8c30d3505ad274a005bc53cba006fc5f"
     },
     "blaze-black-2-redux-volt-white-2-redux": {
       "archive": "blaze-black-2-redux-volt-white-2-redux.tar.gz",
-      "archive_sha256": "51c2e278a2269bf627c8332d16d8ab4b03d76d579a7f8ad557c72750c54d7da4",
-      "content_fingerprint": "f217965d78b43095d65f2e0fd335caa6d07cf24f59e03191defa0032232da52f",
+      "archive_sha256": "f2262cd3c512a54e3ff6f5f825d7d0413e0f5efcd3ab9366e0be5e5870331132",
+      "content_fingerprint": "926b7d8c0081add458f02bf6a7618f1c0b318ae7843343707ec315e470515288",
       "file_count": 3722,
-      "metadata_fingerprint": "243008d11b89c9c2a8e7f1f36a6ef1c57425e3f81490db61c9d3a81a35b320ee",
-      "source_fingerprint": "1bf1121605465466cc0b96595c20fcd30fd22c19d760cce423a34775002b9575"
+      "metadata_fingerprint": "07c3d602f5b2ac26a6ecc11b3e4f3630b6c3414b20c410b0eda1bdf85cc4a428",
+      "source_fingerprint": "3c90bc328a931146c5ad9489c467e2bb96834ebb4cbfb2c3caa4fcacbd6fe35e"
     },
     "blaze-black-2-volt-white-2": {
       "archive": "blaze-black-2-volt-white-2.tar.gz",
-      "archive_sha256": "35b87a736dd2b7491ed71eb6b726181d05c4006313e3e1332662c3e6fb74b5ba",
-      "content_fingerprint": "db1f4832f78740e97da9b60ff91ad8a688943cb6f656da54ec1ab14412c6433f",
+      "archive_sha256": "2ad1ac274551d1ce59817a4163bba1969ebc9a31109e2e5c15cd4006df686dcd",
+      "content_fingerprint": "f8cfbddf74236e9fec21b6ad0051fc8c7a442cfd75ee8c05d594e59db0ec5b46",
       "file_count": 3674,
-      "metadata_fingerprint": "5e579b64f9b95ee87031aed0fb578a41912a168187158907db1ad79699bb22c2",
-      "source_fingerprint": "8a25ae93cf0dd0a45d8167fec0faf71ef91ea33e996477e316c81f80c84f29d2"
+      "metadata_fingerprint": "38d8cb640331c026bd41aa47fdf53d12f868a396337be90b75803d6a32b11048",
+      "source_fingerprint": "a0a81f420c8fff0be45a8205f8a598d97cfd844991683f994a648f18bca89257"
     },
     "blaze-black-volt-white": {
       "archive": "blaze-black-volt-white.tar.gz",
-      "archive_sha256": "462ffd8a63f147af2996df2b7235026034d994774866827b12e602e3677cc2e9",
-      "content_fingerprint": "225f6cfca86834623929acb24e77c6c03613fa18df323dea90a07f536abac90d",
+      "archive_sha256": "2ab6240d107e7a3d66d5edeaf5362ad347bbdea657dd5c19eb3f1c1cb4dda757",
+      "content_fingerprint": "4675b6e658c9c0f65fd5e51dadaf773a7716f69c121b54bd1378a035983bb62f",
       "file_count": 3214,
-      "metadata_fingerprint": "e9c869e193a3fcd28635018fd3e26ebb30e1937b3160e09d15a85331bd0ea07c",
-      "source_fingerprint": "a719686312a3671eca196a84c9a05a08381e0e34128bda9d5436db9b8fd8795e"
+      "metadata_fingerprint": "89536d4b044ad1eb5e39f1def1d37eca2ee7e0f6350c06fdb3a91142a6856158",
+      "source_fingerprint": "05d2b80d4c93fdaad447b4f6301ba44f8079d3869704c349a213b942006385dd"
     },
     "heart-gold-soul-silver": {
       "archive": "heart-gold-soul-silver.tar.gz",
-      "archive_sha256": "20b561b36d790a42913b9feecf850ad7b27e22bc1075023185fe0d9ccbeeaae2",
-      "content_fingerprint": "4320017ebf8627583c246295b64af7145fd6e73ee46c6eab8e977d4800fed2db",
+      "archive_sha256": "aab772b770ee288fd035fcb8b44780f26a651043661ecc0583b8940518270a05",
+      "content_fingerprint": "e6f365e9ae5218e759b451be8673320da0631fabca16fe11b4e25cb5920685d7",
       "file_count": 3052,
-      "metadata_fingerprint": "9edb2e7004a8ef427c9bb392215af55b9cf6bc4953af7372713b897dc6786425",
-      "source_fingerprint": "99d4c64e3102c3d306b113e71d8f6959f14e67fcd035ff3ebcf325e87df698e3"
+      "metadata_fingerprint": "c12916f09ba41c2facbc6f9bbac50cc59af2bc675d1413f672f5299f7f4fd549",
+      "source_fingerprint": "28be0d8eea8f32f935404b2a161d0310e53a2f7378be9b0859361f94459eface"
     },
     "platinum": {
       "archive": "platinum.tar.gz",
-      "archive_sha256": "63c077edfcb306fbd5c99ba14d47765a41c2d6d83105a70cc0c1aa856dd890cd",
-      "content_fingerprint": "e4ae9ba52340a46d0713a4dbe59c50d8b6ff97ee920f0c0967a648ebc367fedb",
+      "archive_sha256": "d9cc8e5256bb11d6a78d25ebdfcd7e33263d1592077eecc57d1b6515fdfddb90",
+      "content_fingerprint": "70c8bf7b674aa4c8194312dcbee47b9ccbd242c9557c941c23cc61410344cfd3",
       "file_count": 3269,
-      "metadata_fingerprint": "f9177963ce0548b58118e2e96edc0dea0f01ff8ed8a55cbc6260047a95cc9cf7",
-      "source_fingerprint": "95e88aba0d6f4ce6b51b18efc57f88fc24f4d28bd3ba66b9008e139f90d32370"
+      "metadata_fingerprint": "21735d421cc60e360dd1ce5d77b61b1de41241375549e5ba9e3b041df95b0c6b",
+      "source_fingerprint": "8b9ce5225a2670f2101f52f0f3e7b86dc8a75bc2d64b3f2eae77aebcd0cd47f8"
     },
     "renegade-platinum": {
       "archive": "renegade-platinum.tar.gz",
-      "archive_sha256": "23555db0263eaa73a05a811e79be3af8320efa7187bf4a9a51bcded507dafda2",
-      "content_fingerprint": "096b5665e87a08633a0bdb3c216e1db3cec5cd9779877af12695bb25ed0f5861",
+      "archive_sha256": "7566cfb1ce274cdc81dc009e2329a8c552c2a78f6db9685359548e610cc269f4",
+      "content_fingerprint": "dc2cb88035e8746cd9c0c6ca61719ac1bb0fee941007169682025a584dc09116",
       "file_count": 3408,
-      "metadata_fingerprint": "5c1ec1956cf870b030c2881261bf3cde31e58b97b28507c454ab675150858c57",
-      "source_fingerprint": "d3fa8f989f75458bc9414788d199261b753590eb09e7acb986257060e83d6d0f"
+      "metadata_fingerprint": "9618871d9de63c366faace95cbae59ca52fe04d73a4910dfa2d3eca166253d26",
+      "source_fingerprint": "ee12feff66d3f30920e533b9b7b6216245fc914699f43832e4c2c1d024f4865c"
     },
     "sacred-gold-storm-silver": {
       "archive": "sacred-gold-storm-silver.tar.gz",
-      "archive_sha256": "043c12b3a79ff24265e24d968528a40a30f20516bd88d907532193cbd967747e",
-      "content_fingerprint": "59e6185406f38efb405f95cb7a1805f9e76b72df79c1f4ffbfff1b283b67d6ad",
+      "archive_sha256": "a8e9344daa5cfda26cb5b2285a26b6cb199fc6a0ec53e5b75a6bcf26c7ea8d60",
+      "content_fingerprint": "af9383cd5ef95bc115610f1302a8d28936a2067696cfaafc3e68043640ee7d59",
       "file_count": 3060,
-      "metadata_fingerprint": "16f247c0dee1aefa16f72513ea9a8b4aa41d03947817f598ebacb415aa9fe696",
-      "source_fingerprint": "cdd8c8b6afd5006b4116fdcacd4c81d93b61021909b6675134ae2c47730d217f"
+      "metadata_fingerprint": "5dbf765de4c2cc4d9077694a62e90bdc16d388164398d817c7b6771379cc2c10",
+      "source_fingerprint": "39e6ddc55302e3cb87480e5627b45e8f8ae419e60bbc3c4e3191b63566adfed5"
     }
   }
 }

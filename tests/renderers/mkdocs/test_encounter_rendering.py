@@ -77,8 +77,12 @@ class EncounterRenderingTests(unittest.TestCase):
         seasonal["versions"] = ["black"]
         summer = _encounter_record(10, 3, "summer", "Route 1")
         summer["versions"] = ["black"]
+        same_name = _encounter_record(11, 5, "spring", "Map 005")
+        same_name["location_names"] = []
         nonseasonal = _encounter_record(9, 4, None, "Dreamyard")
-        encounter_dataset = _dataset("encounters", [seasonal, summer, nonseasonal])
+        encounter_dataset = _dataset(
+            "encounters", [seasonal, summer, same_name, nonseasonal]
+        )
         location_dataset = _dataset(
             "locations",
             [
@@ -97,6 +101,11 @@ class EncounterRenderingTests(unittest.TestCase):
                     "name": "Dreamyard",
                     "encounter_map_index": 4,
                     "versions": ["white"],
+                },
+                {
+                    "header_id": 9,
+                    "name": "Route 1",
+                    "encounter_map_index": 5,
                 },
             ],
         )
@@ -124,8 +133,11 @@ class EncounterRenderingTests(unittest.TestCase):
             "| [Route 1](../locations/header-007.md) | 7 | Black |",
             seasonal_page,
         )
-        self.assertIn("## Seasonal variants", seasonal_page)
-        self.assertIn("[Summer](map-003-summer.md)", seasonal_page)
+        self.assertIn("## Same-name encounter areas", seasonal_page)
+        self.assertIn("| 3 | Summer | Seasonal variant |", seasonal_page)
+        self.assertIn("[Map 003 (Summer)](map-003-summer.md)", seasonal_page)
+        self.assertIn("| 5 | Spring | Same display name |", seasonal_page)
+        self.assertIn("[Map 005 (Spring)](map-005-spring.md)", seasonal_page)
         self.assertIn("## Map headers", nonseasonal_page)
         self.assertIn(
             "| [Dreamyard](../locations/header-008.md) | 8 | White |",
@@ -210,9 +222,9 @@ class EncounterRenderingTests(unittest.TestCase):
 
         self.assertIn("# Icirrus City", page)
         self.assertNotIn("# Map 002", page)
-        self.assertEqual(page.count("gastrodon"), 1)
-        self.assertIn("45–55 (60%); 55–65 (40%)", page)
-        self.assertIn("| 100% |", page)
+        self.assertEqual(page.count("gastrodon"), 2)
+        self.assertIn("| 45–55 | 60% |", page)
+        self.assertIn("| 55–65 | 40% |", page)
         self.assertEqual(catalog["records"][0]["label"], "Icirrus City")
         self.assertEqual(catalog["records"][0]["locations"], ["Icirrus City"])
 
