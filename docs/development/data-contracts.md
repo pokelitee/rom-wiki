@@ -52,3 +52,18 @@ Trainer data keeps prize money distinct from AI battle items and victory items.
 Calculated base prize money is serialized only when all generation-specific inputs
 are exact, and the stored multiplier retains its ROM provenance. Unsupported or
 unresolved payouts are absent rather than represented by an estimate.
+
+Trainer datasets also carry an independently versioned `battle_families` list
+and `trainer_variant_support` capability map. A family is a relationship over
+exact `trainer_id` records, never a replacement trainer. Every variant has a
+stable order and one or more typed conditions (`starter-choice`,
+`difficulty-mode`, `rematch-stage`, `story-stage`, or `sibling-version`), while
+every family records the source, reference, and verification of its selection
+rule. Validation rejects dangling IDs, duplicate variants, duplicate ordering,
+contradictory conditions, and missing provenance.
+
+`version_variants` describe different values stored in sibling ROM datasets.
+Battle-family conditions describe runtime selection among trainer records. The
+two axes are not interchangeable: sibling merging requires matching family
+capabilities and rules, while exact trainer records remain the units compared and
+indexed by Pokémon appearances, items, locations, and other backlinks.

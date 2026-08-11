@@ -83,13 +83,35 @@ duplicated or assigned a guessed location.
 Trainer headers come from `a/0/9/1` and parties from `a/0/9/2`. The shared
 Generation V decoder reads each 20-byte header, then sizes its party records
 from the stored held-item and custom-move flags. Party entries retain species
-and form, level, difficulty, ability selection, forced gender, held items, and
+and form, stored level, IV strength, ability selection, forced gender, held items, and
 custom moves where present; derived attributes remain distinguished from facts
 stored in the ROM.
 
-Trainer locations are resolved from overworld objects that carry trainer IDs
-and from literal battle commands in each map's scripts. Post-battle healing and
-victory-item behavior are preserved where the script records them.
+The BW common-script band rule is not used for B2W2. It was validated against
+Black only and produced impossible sequel associations such as Nuvema Town and
+Cave of Being. B2W2 publishes only literal trainer IDs from its own map scripts
+until the sequel's common-script dispatch is independently decoded. This removes
+the false locations without replacing them with guesses. Post-battle healing and
+victory-item behavior remain exact header facts.
+
+Starter-dependent Hugh battles are represented as three-record Battle Variants.
+Retail and both supported hack families were ROM-checked independently; the Tepig
+branch is retained even when its first record has an unrelated static trainer
+name. Early, middle, late, and rematch triplets all reference their exact stored
+parties rather than a synthesized rival record.
+
+B2W2's Easy/Normal/Challenge selector is separate from the party member's
+`iv_strength` byte. Easy and Normal select the normal Gym record; Challenge
+selects the alternate record where the script dispatches one. The engine adjusts
+the displayed battle level after loading the party, but the retail-compatible
+stat calculation continues using the stored record level—the known level/stat
+bug. Retail, original Blaze Black 2/Volt White 2, and Redux declare separate
+profile contracts. Gym dispatch and the stored-level/stat behavior are verified;
+the complete executable level-offset band table is still unresolved, so
+difficulty coverage is reported as partial and no numeric per-record display
+level is guessed. Redux's creator documentation independently confirms shared
+Easy/Normal parties, Challenge-only teams, and the level/stat limitation:
+[Pokémon Trainer Changes](https://smilingzero.github.io/BlazeBlack2ReduxWiki/genTrainerChange/).
 
 ## Locations
 

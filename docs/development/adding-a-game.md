@@ -271,6 +271,14 @@ fields, and attach `stored`, `derived`, or `engine-default` provenance. Mark mov
 behavior as `explicit`, `level-up`, or `unavailable`, and increment
 `TRAINER_PARTY_SCHEMA_VERSION` for a breaking party-contract change.
 
+Trainer variants require a named engine/profile evidence contract. Decode starter,
+difficulty, rematch, story, and sibling-version selection in the owning leaf,
+declare each mechanic verified, partial, unsupported, or unresolved, and reference
+exact trainer IDs with rule provenance. Never construct a family from names,
+adjacent IDs, levels, party size, species similarity, or locations. Hacks must
+select an explicit compatible or overridden contract after ROM and creator-source
+verification; inheriting a retail profile alone is not evidence of script behavior.
+
 If party pages expose calculated stats, implement the generation's formula in its
 engine adapter and emit normalized `calculated_stats`; do not calculate them in a
 renderer. This keeps DV/Stat Experience generations separate from IV/EV formulas.

@@ -7,6 +7,7 @@ extends = "white-2-us"
 chart = "gen5"
 
 [parameters]
+trainer_variant_contract = "blaze-black-2-volt-white-2-v1.1"
 learnsets_allow_incorrect_data_block_size = true
 encounters_allow_trailing_data = true
 repair_invalid_secondary_egg_group = true

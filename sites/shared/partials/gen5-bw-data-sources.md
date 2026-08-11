@@ -281,7 +281,7 @@ items), class ID, battle mode (0=single, 1=double, 2=triple, 3=rotation --
 this generation adds Triple and Rotation battles, unlike Generation IV's
 single/double-only format), party size, four AI battle items, AI flags, a
 "healer" flag, a victory-money multiplier, and a victory item. Each party
-member is 8 bytes (difficulty, a byte combining ability slot and a
+member is 8 bytes (IV strength, a byte combining ability slot and a
 forced-gender flag, level, species, and forme -- all full words, unlike
 Generation IV's packed species/form value), plus an optional 2-byte held item
 and/or 8-byte custom-move block depending on the trainer's flags. Confirmed
@@ -300,6 +300,17 @@ ability slot or a forced gender, they're left unavailable rather than
 guessed. The same applies to nature and calculated stats: Generation V
 trainer parties have no stored nature field and no publicly documented,
 reproducible derivation for one, so both stay unavailable.
+
+The first party byte is serialized as `iv_strength`, scaled to a 0-31 IV. It is
+not a game difficulty selector (Black and White have no Easy/Challenge mode), and
+the legacy `difficulty` field name is no longer emitted for Generation V.
+
+Verified Cheren and Bianca starter-variable dispatches are published as Battle
+Variants for retail Black/White and the separately selected Blaze Black/Volt
+White v3.1 contract. The relationship is over exact trainer IDs, including first
+records whose static name slot is blank or unrelated. Other same-name trainers
+remain cautious navigation only. Rematch/story coverage is partial rather than
+being inferred from record adjacency or party composition.
 
 Real map locations and script references are now attached to trainers, closing
 what used to be this section's one remaining gap. Two literal-fact

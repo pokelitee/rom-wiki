@@ -1,3 +1,4 @@
+from .battle_variants import extract_trainer_battle_families
 from .constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
@@ -183,6 +184,7 @@ __all__ = [
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "derive_trainer_party_attributes",
+    "extract_trainer_battle_families",
     "disassemble_function",
     "discover_static_encounters",
     "find_fossil_revival_script",

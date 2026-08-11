@@ -129,7 +129,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
         normalized = normalize_trainer_party_member(
             "gen5_b2w2",
             {
-                "difficulty": 255,
+                "iv_strength": 255,
                 "ability_slot": 0,
                 "forced_gender_flag": 0,
                 "level": 50,
@@ -159,6 +159,8 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
         )
 
         stats = derived["calculated_stats"]
+        self.assertEqual(derived["source_fields"]["iv_strength"], 255)
+        self.assertNotIn("difficulty", derived["source_fields"])
         self.assertEqual(stats["values"]["hp"], 175)
         self.assertEqual(stats["values"]["attack"], {"minimum": 108, "maximum": 132})
         self.assertEqual(stats["limitation"], "nature-runtime-random")

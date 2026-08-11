@@ -24,7 +24,6 @@ def normalize_trainer_party_member(
         "level",
         "held_item_id",
         "move_ids",
-        "difficulty",
         "ability_slot",
         "forced_gender_flag",
     )
@@ -33,10 +32,10 @@ def normalize_trainer_party_member(
         raise DataSourceError(
             "Gen V trainer party member is missing fields: " + ", ".join(missing)
         )
-    difficulty = member["difficulty"]
-    if not isinstance(difficulty, int) or not 0 <= difficulty <= 255:
-        raise DataSourceError("Gen V trainer difficulty must be a byte")
-    iv = difficulty * 31 // 255
+    iv_strength = member.get("iv_strength", member.get("difficulty"))
+    if not isinstance(iv_strength, int) or not 0 <= iv_strength <= 255:
+        raise DataSourceError("Gen V trainer IV-strength value must be a byte")
+    iv = iv_strength * 31 // 255
     move_ids = list(member["move_ids"]) if has_custom_moves else []
     ability_slot = member["ability_slot"]
     forced_gender_flag = member["forced_gender_flag"]
@@ -68,9 +67,12 @@ def normalize_trainer_party_member(
         "evs": {"source": "engine-default", "values": dict.fromkeys(_STATS, 0)},
         "calculated_stats": None,
         "source_fields": {
-            field: member[field]
-            for field in ("difficulty", "ability_slot", "forced_gender_flag")
-            if field in member
+            "iv_strength": iv_strength,
+            **{
+                field: member[field]
+                for field in ("ability_slot", "forced_gender_flag")
+                if field in member
+            },
         },
     }
 

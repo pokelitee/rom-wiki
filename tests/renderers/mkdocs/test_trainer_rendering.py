@@ -4,6 +4,7 @@ import unittest
 
 from romwiki.renderers.mkdocs.trainers import (
     _append_ai_battle_items,
+    _append_battle_variants,
     _append_same_name_trainers,
     _group_ai_battle_items,
     _party_cards,
@@ -14,6 +15,60 @@ from romwiki.renderers.mkdocs.trainers import (
 
 
 class TrainerRenderingTests(unittest.TestCase):
+    def test_renders_verified_battle_variants_by_condition(self) -> None:
+        current = _related_trainer(161, "Aspertia City", 5, "Tepig")
+        related = _related_trainer(162, "Aspertia City", 5, "Oshawott")
+        family = {
+            "id": "hugh-aspertia",
+            "label": "Aspertia City rival battle",
+            "order": 0,
+            "provenance": {
+                "source": "ROM field-script selection",
+                "reference": "script:12@0x40",
+                "verification": "All dispatch targets were checked.",
+            },
+            "variants": [
+                {
+                    "trainer_id": 161,
+                    "order": 0,
+                    "conditions": [
+                        {
+                            "kind": "starter-choice",
+                            "value": "snivy",
+                            "label": "Player chose Snivy",
+                        }
+                    ],
+                },
+                {
+                    "trainer_id": 162,
+                    "order": 1,
+                    "conditions": [
+                        {
+                            "kind": "starter-choice",
+                            "value": "tepig",
+                            "label": "Player chose Tepig",
+                        }
+                    ],
+                },
+            ],
+        }
+        lines: list[str] = []
+
+        _append_battle_variants(
+            lines,
+            current,
+            [(family, family["variants"][0])],
+            {161: current, 162: related},
+            "trainers/trainer-0161.md",
+        )
+        page = "\n".join(lines)
+
+        self.assertIn("## Battle Variants", page)
+        self.assertIn("Player chose Snivy", page)
+        self.assertIn("ID 161 (this record)", page)
+        self.assertIn("ID 162", page)
+        self.assertIn("ROM field-script selection", page)
+
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
         lines = _trainer_provenance(
             {

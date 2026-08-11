@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+from romwiki.util.errors import ProfileError
+
+_CONTRACTS = {
+    "b2w2-retail-v1",
+    "blaze-black-2-volt-white-2-v1.1",
+    "blaze-black-2-redux-volt-white-2-redux-v1.4.1",
+}
+_RIVAL_GROUPS = (
+    ("aspertia", "Aspertia City rival battle", (161, 162, 163)),
+    ("floccesy-ranch", "Floccesy Ranch rival battle", (166, 167, 168)),
+    ("castelia-sewers", "Castelia Sewers rival battle", (588, 589, 590)),
+    ("pwt", "Pokémon World Tournament rival battle", (368, 369, 370)),
+    ("undella", "Undella Town rival battle", (378, 379, 380)),
+    ("route-13", "Route 13 rival battle", (701, 702, 703)),
+    ("victory-road", "Victory Road rival battle", (684, 685, 686)),
+    ("undella-rematch", "Undella Town rival rematch", (693, 694, 695)),
+    ("driftveil-rematch", "Driftveil City rival rematch", (696, 697, 698)),
+    ("seasonal-rematch", "Seasonal rival rematch", (794, 795, 796)),
+)
+_STARTERS = (
+    ("snivy", "Player chose Snivy"),
+    ("tepig", "Player chose Tepig"),
+    ("oshawott", "Player chose Oshawott"),
+)
+_GYMS = (
+    ("cheren", "Cheren Gym battle", 156, 764),
+    ("roxie", "Roxie Gym battle", 157, 765),
+    ("burgh", "Burgh Gym battle", 154, 766),
+    ("elesa", "Elesa Gym battle", 153, 767),
+    ("clay", "Clay Gym battle", 158, 768),
+    ("skyla", "Skyla Gym battle", 155, 769),
+    ("drayden", "Drayden Gym battle", 159, 770),
+    ("marlon", "Marlon Gym battle", 160, 771),
+)
+
+
+def _rival_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]:
+    families = []
+    for order, (stage, label, trainer_ids) in enumerate(_RIVAL_GROUPS):
+        if not all(value in available for value in trainer_ids):
+            continue
+        families.append(
+            {
+                "id": f"hugh-{stage}",
+                "label": label,
+                "order": order,
+                "provenance": {
+                    "source": "B2W2 ROM field-script selection",
+                    "reference": f"{profile_id}:hugh:{stage}",
+                    "verification": (
+                        "Starter-variable branches were traced to the complete Tepig, "
+                        "Oshawott, and Snivy trainer-record run. The first record's "
+                        "static message-table name was intentionally ignored."
+                    ),
+                },
+                "variants": [
+                    {
+                        "trainer_id": trainer_id,
+                        "order": variant_order,
+                        "conditions": [
+                            {
+                                "kind": "starter-choice",
+                                "value": starter,
+                                "label": starter_label,
+                            },
+                            {
+                                "kind": "story-stage",
+                                "value": stage,
+                                "label": label,
+                            },
+                        ],
+                    }
+                    for variant_order, (
+                        trainer_id,
+                        (starter, starter_label),
+                    ) in enumerate(zip(trainer_ids, _STARTERS, strict=True))
+                ],
+            }
+        )
+    return families
+
+
+def _difficulty_families(
+    profile_id: str, available: set[object]
+) -> list[dict[str, Any]]:
+    families = []
+    for order, (stage, label, normal_id, challenge_id) in enumerate(_GYMS, start=100):
+        if normal_id not in available or challenge_id not in available:
+            continue
+        families.append(
+            {
+                "id": f"gym-{stage}",
+                "label": label,
+                "order": order,
+                "provenance": {
+                    "source": "B2W2 difficulty-mode trainer dispatch",
+                    "reference": f"{profile_id}:difficulty:{stage}",
+                    "verification": (
+                        "Normal/Easy and Challenge dispatch targets were checked against "
+                        "the exact trainer archives for this profile contract."
+                    ),
+                },
+                "variants": [
+                    {
+                        "trainer_id": normal_id,
+                        "order": 0,
+                        "conditions": [
+                            {
+                                "kind": "difficulty-mode",
+                                "value": "easy",
+                                "label": "Easy Mode",
+                            },
+                            {
+                                "kind": "story-stage",
+                                "value": stage,
+                                "label": label,
+                            },
+                        ],
+                    },
+                    {
+                        "trainer_id": normal_id,
+                        "order": 1,
+                        "conditions": [
+                            {
+                                "kind": "difficulty-mode",
+                                "value": "normal",
+                                "label": "Normal Mode",
+                            },
+                            {
+                                "kind": "story-stage",
+                                "value": stage,
+                                "label": label,
+                            },
+                        ],
+                    },
+                    {
+                        "trainer_id": challenge_id,
+                        "order": 2,
+                        "conditions": [
+                            {
+                                "kind": "difficulty-mode",
+                                "value": "challenge",
+                                "label": "Challenge Mode",
+                            },
+                            {
+                                "kind": "story-stage",
+                                "value": stage,
+                                "label": label,
+                            },
+                        ],
+                    },
+                ],
+            }
+        )
+    return families
+
+
+def extract_trainer_battle_families(
+    profile_id: str,
+    parameters: Mapping[str, Any],
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    contract = parameters.get("trainer_variant_contract")
+    if contract not in _CONTRACTS:
+        raise ProfileError(
+            f"Profile {profile_id!r} must select a verified B2W2 trainer variant contract"
+        )
+    available = {record.get("trainer_id") for record in records}
+    families = _rival_families(profile_id, available)
+    families.extend(_difficulty_families(profile_id, available))
+    return {
+        "trainer_variant_support": {
+            "starter_choice": {"status": "verified"},
+            "difficulty_mode": {
+                "status": "partial",
+                "note": (
+                    "Gym party dispatch and the stored-level/stat bug are verified. "
+                    "The engine's complete level-offset band table remains unresolved."
+                ),
+                "runtime": {
+                    "easy_party": "normal-record",
+                    "normal_party": "normal-record",
+                    "challenge_party": "challenge-record-where-dispatched",
+                    "displayed_level": "difficulty-adjusted-after-party-load",
+                    "stat_level": "stored-record-level",
+                    "iv_strength_field": "independent-party-byte",
+                },
+            },
+            "rematch_stage": {"status": "partial"},
+            "story_stage": {"status": "partial"},
+            "sibling_version": {"status": "verified"},
+        },
+        "battle_families": families,
+    }

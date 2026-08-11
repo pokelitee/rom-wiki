@@ -294,6 +294,15 @@ must never derive those mechanics from raw engine fields. Cards group level,
 nature, and gender into one identity line, use a compact aligned list for ability
 and held item, and show final stats, IVs, and EVs in a six-column stat matrix.
 
+Trainer pages render normalized `battle_families` declaratively as Battle
+Variants, including readable condition labels and links to every exact trainer
+record. No shared template contains generation-specific IDs. Exact class/name
+groups remain a clearly cautioned Same-name trainers fallback and are omitted only
+when the current record participates in a verified family. Catalog metadata may
+surface family/condition labels for discovery, but reverse relationships and
+comparisons continue to use exact records so variant presentation cannot
+double-count facts.
+
 Trainers also carry an "AI battle items" summary and, when populated, detail
 section: the ROM's
 4-slot `reward_item_ids` array holds items the trainer's own AI may use on its

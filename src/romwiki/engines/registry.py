@@ -241,7 +241,7 @@ _ENGINES: dict[str, EngineAdapter] = {
     GEN5_B2W2_ENGINE: EngineAdapter(
         personal=gen5_b2w2,
         locations=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        trainers=gen5_bw,
+        trainers=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
         encounters=gen5_bw,
         evolutions=gen5_bw,
         items=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
@@ -252,7 +252,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         learnsets=gen5_bw,
         reference_names=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
         enrich=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        trainer_party=gen5_bw,
+        trainer_party=gen5_b2w2,
         trades=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
         marts=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
         static_encounters=gen5_b2w2,

@@ -57,6 +57,8 @@ class Gen5TrainerTests(unittest.TestCase):
         self.assertEqual(len(trainer.party), 1)
         self.assertEqual(trainer.party[0].species_id, 509)
         self.assertEqual(trainer.party[0].level, 7)
+        self.assertEqual(trainer.party[0].iv_strength, 0)
+        self.assertFalse(hasattr(trainer.party[0], "difficulty"))
         self.assertIsNone(trainer.party[0].held_item_id)
         self.assertEqual(trainer.party[0].move_ids, ())
 

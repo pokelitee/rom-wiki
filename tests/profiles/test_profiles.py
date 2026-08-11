@@ -84,6 +84,7 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "trainer_names_member": 729,
                 "trainer_classes_member": 730,
                 "trainer_class_gender_offset": 0xFFB90,
+                "trainer_variant_contract": "hgss-retail-v1",
                 "npc_trade_names_member": 200,
                 "npc_trades_unused": [6, 7],
                 "pickup_overlay_id": 12,

@@ -15,10 +15,15 @@ from romwiki.pipeline.trainer_party import (
     normalize_trainer_party_member,
 )
 from romwiki.pipeline.trainer_rewards import calculate_base_prize_money
+from romwiki.schema.trainers import (
+    unresolved_trainer_variant_support,
+    validate_trainer_battle_families,
+)
 from romwiki.schema.versions import (
     ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
     MOVES_ENRICHED_SCHEMA_VERSION,
     POKEMON_ENRICHED_SCHEMA_VERSION,
+    TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
     TRAINER_PARTY_SCHEMA_VERSION,
     TRAINERS_ENRICHED_SCHEMA_VERSION,
 )
@@ -193,6 +198,15 @@ def enrich_trainer_dataset(
     if not isinstance(engine, str):
         raise DataSourceError("Trainer dataset must declare its source engine")
     engine_tables = get_engine(engine).enrich
+    families = dataset.get("battle_families", [])
+    support = dataset.get(
+        "trainer_variant_support", unresolved_trainer_variant_support()
+    )
+    validate_trainer_battle_families(
+        families,
+        support,
+        (record.get("trainer_id") for record in source_records),
+    )
     pokemon_records = _trainer_pokemon_index(dataset, pokemon_dataset)
     move_records = _trainer_move_index(dataset, move_dataset)
     move_names = _resolve_move_names(engine_tables, dataset, move_names)
@@ -226,6 +240,9 @@ def enrich_trainer_dataset(
         "engine": engine,
         "dataset": "trainers",
         "party_schema_version": TRAINER_PARTY_SCHEMA_VERSION,
+        "battle_family_schema_version": TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
+        "trainer_variant_support": support,
+        "battle_families": families,
         "record_count": len(records),
         "active_record_count": sum(bool(record["party"]) for record in records),
         "linked_record_count": sum(bool(record["locations"]) for record in records),

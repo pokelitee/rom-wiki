@@ -24,6 +24,7 @@ from romwiki.engines.gen4.machines import (
     machine_name,
 )
 
+from .battle_variants import extract_trainer_battle_families
 from .berries import (
     GEN4_BERRY_FIRMNESS_NAMES,
     Gen4BerryData,
@@ -439,5 +440,6 @@ __all__ = [
     "parse_npc_trade_record",
     "trade_language_name",
     "derive_trainer_party_attributes",
+    "extract_trainer_battle_families",
     "normalize_trainer_party_member",
 ]

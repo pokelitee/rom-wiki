@@ -6,6 +6,9 @@ extends = "black-us"
 [type_chart]
 chart = "gen5"
 
+[parameters]
+trainer_variant_contract = "blaze-black-volt-white-v3.1"
+
 [[hashes]]
 algorithm = "sha256"
 value = "340c1416b2b107a59c9305c43747761804edce8e876c364abee1f0189bd768ac"

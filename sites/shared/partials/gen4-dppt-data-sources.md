@@ -175,6 +175,15 @@ script file for a literal `StartTrainerBattle` command immediately followed
 "opcode-signature-plus-validating-follow-on-command" pattern this project's
 Generation V engine later adopted for its own equivalent trainer-battle scan.
 
+Starter-variable branches for Barry's battles are published through the shared
+Battle Variants contract. Each branch remains its own exact trainer ID and party;
+the family records why the script selects it and the player's Turtwig, Chimchar,
+or Piplup choice. Renegade Platinum uses an explicit v1.3.0 profile contract and
+was checked separately against its patched trainer archive. Other same-name
+records remain fallback navigation only. Vs. Seeker chains and other unresolved
+rematch state machines are not inferred from names, nearby IDs, levels, or party
+similarity, so rematch/story-stage coverage is intentionally partial.
+
 ## Locations
 
 The map header table isn't a NARC archive in this generation — it's parsed

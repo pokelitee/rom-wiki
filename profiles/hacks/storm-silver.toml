@@ -7,6 +7,7 @@ extends = "soulsilver-us"
 chart = "gen4"
 
 [parameters]
+trainer_variant_contract = "sacred-gold-storm-silver-v1.05"
 messages_allow_truncated = true
 items_allow_truncated = true
 learnsets_allow_truncated = true

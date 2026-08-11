@@ -40,6 +40,7 @@ move_names_member = 403
 item_names_member = 64
 trainer_names_member = 382
 trainer_classes_member = 383
+trainer_variant_contract = "b2w2-retail-v1"
 map_names_member = 109
 npc_trade_names_member = 37
 npc_trades_unused = [25]

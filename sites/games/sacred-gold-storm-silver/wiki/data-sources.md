@@ -58,3 +58,9 @@ script semantics remain unverified. Static encounters, gifts and eggs,
 Headbutt tree slots, and Safari Zone block configuration likewise remain
 explicit blockers: retail offset inventories are not treated as proof of the
 patched scripts, and no placeholder hack data is emitted.
+
+Sacred Gold and Storm Silver explicitly select a v1.05 trainer-variant profile
+contract. ROM verification confirms that the retail-compatible Silver selection
+layout still dispatches all three starter branches, so those exact records are
+shown as Battle Variants. Phone-rematch progression and shared-script location
+ownership remain unresolved; the site does not infer those relationships.

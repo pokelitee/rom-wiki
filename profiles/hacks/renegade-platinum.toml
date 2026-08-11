@@ -26,6 +26,9 @@ additional_types = ["fairy"]
 "ghost>steel" = "1"
 "dark>steel" = "1"
 
+[parameters]
+trainer_variant_contract = "renegade-platinum-v1.3.0"
+
 [[hashes]]
 algorithm = "md5"
 value = "4cbf654b4735760f8efd64a8a41415ca"

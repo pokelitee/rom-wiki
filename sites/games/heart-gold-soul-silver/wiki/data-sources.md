@@ -65,6 +65,12 @@ yet decoded. Trainer-class payout multipliers also remain unavailable: the
 Platinum locator does not occur in HGSS and no unique HGSS table reference has
 been established.
 
+The Cherrygrove-through-Dragon's Den Silver branches are published as verified
+Battle Variants. Script selection was checked for all Chikorita, Cyndaquil, and
+Totodile choices in both retail ROMs; every variant still references its exact
+trainer record. The broader phone-rematch state machines and script-only/shared
+battle locations remain unresolved and are not reconstructed from trainer names.
+
 The event archive at `a/0/3/2` has 491 members and the matrix archive at
 `a/0/4/1` has 288. Together they publish 1,317 warps, 158 directional
 connections, and nine explicitly dynamic warps across 540 maps. Retail events

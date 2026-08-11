@@ -1,5 +1,6 @@
 """Pokémon Black 2 and White 2 engine-specific record support."""
 
+from .battle_variants import extract_trainer_battle_families
 from .constants import (
     GEN5_BASE_SPECIES_COUNT,
     GEN5_ITEM_FIELD_USE_NAMES,
@@ -34,6 +35,18 @@ from .marts import (
 )
 from .personal import parse_personal_record
 from .static_encounters import discover_static_encounters, find_fossil_revival_script
+from .trainer_party import (
+    derive_trainer_party_attributes,
+    normalize_trainer_party_member,
+)
+from .trainers import (
+    CHECK_TRAINER_BATTLE_WON,
+    START_TRAINER_BATTLE,
+    parse_overworld_npcs,
+    parse_trainer_battle_commands,
+    parse_trainer_record,
+    resolve_common_script_trainer_id,
+)
 from .tutors import (
     TUTOR_COMPATIBILITY_OFFSET,
     TUTOR_COUNT,
@@ -52,6 +65,7 @@ ITEM_FIELD_USE_NAMES = GEN5_ITEM_FIELD_USE_NAMES
 
 __all__ = [
     "BASE_SPECIES_COUNT",
+    "CHECK_TRAINER_BATTLE_WON",
     "COMMON_SCRIPT_MEMBER_BASE",
     "FORM_MEMBERS",
     "GEN5_BASE_SPECIES_COUNT",
@@ -70,6 +84,7 @@ __all__ = [
     "PERSONAL_TRANSFORMATION_MEMBERS",
     "POKEMON_NAME_COUNT",
     "SHOP_SELECTOR_TO_INVENTORY_ID",
+    "START_TRAINER_BATTLE",
     "TUTOR_COMPATIBILITY_OFFSET",
     "TUTOR_COUNT",
     "TUTOR_LOCATION_NAMES",
@@ -79,18 +94,25 @@ __all__ = [
     "TRANSFORMATION_MEMBERS",
     "WARP_DESTINATION_INDEXED",
     "discover_static_encounters",
+    "derive_trainer_party_attributes",
+    "extract_trainer_battle_families",
     "find_fossil_revival_script",
     "disassemble_function",
     "parse_personal_record",
     "parse_map_header_script_files",
     "parse_map_header_text_files",
     "parse_map_header_table",
+    "parse_overworld_npcs",
     "parse_function_offsets",
     "parse_archive_shop_catalog",
     "parse_tutor_compatibility_record",
     "parse_tutor_move_table",
+    "parse_trainer_battle_commands",
+    "parse_trainer_record",
     "parse_wild_map_names",
     "resolve_common_script_member",
+    "resolve_common_script_trainer_id",
     "resolve_location_special_vendors",
     "resolve_special_vendor",
+    "normalize_trainer_party_member",
 ]

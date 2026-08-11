@@ -63,7 +63,7 @@ def parse_trainer_record(
     party = []
     offset = 0
     for _ in range(party_count):
-        difficulty, ability_and_flag = struct.unpack_from("<BB", party_data, offset)
+        iv_strength, ability_and_flag = struct.unpack_from("<BB", party_data, offset)
         level, species_id, form_id = struct.unpack_from("<HHH", party_data, offset + 2)
         offset += 8
         held_item_id = None
@@ -76,7 +76,7 @@ def parse_trainer_record(
             offset += 8
         party.append(
             AbilitySlotTrainerPokemon(
-                difficulty=difficulty,
+                iv_strength=iv_strength,
                 ability_slot=ability_and_flag >> 4,
                 forced_gender_flag=ability_and_flag & 0xF,
                 level=level,

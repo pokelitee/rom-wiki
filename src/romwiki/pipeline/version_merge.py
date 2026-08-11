@@ -51,6 +51,14 @@ def merge_version_family_datasets(
         raise DataSourceError(
             "Version-family datasets must have matching feature capabilities"
         )
+    trainer_variant_support = first_dataset.get("trainer_variant_support")
+    if kind == "trainers" and any(
+        dataset.get("trainer_variant_support") != trainer_variant_support
+        for dataset in datasets.values()
+    ):
+        raise DataSourceError(
+            "Version-family trainer datasets must have matching variant capabilities"
+        )
 
     key_name = RECORD_KEY_FIELDS[kind]
     records = {
@@ -82,7 +90,7 @@ def merge_version_family_datasets(
             record["version_variants"] = variants
         merged_records.append(record)
 
-    return {
+    merged = {
         **first_dataset,
         "game": "-".join(versions),
         "source": {
@@ -91,6 +99,53 @@ def merge_version_family_datasets(
         "record_count": len(merged_records),
         "records": merged_records,
     }
+    if kind == "trainers":
+        merged["battle_families"] = _merge_trainer_battle_families(datasets)
+    return merged
+
+
+def _merge_trainer_battle_families(
+    datasets: Mapping[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge rule provenance while keeping sibling-ROM and battle axes separate."""
+    versions = tuple(datasets)
+    first = datasets[versions[0]].get("battle_families", [])
+    if not isinstance(first, list):
+        raise DataSourceError("Trainer battle families must be a list")
+    first_shape = [_family_without_provenance(family) for family in first]
+    for version in versions[1:]:
+        families = datasets[version].get("battle_families", [])
+        if (
+            not isinstance(families, list)
+            or [_family_without_provenance(family) for family in families]
+            != first_shape
+        ):
+            raise DataSourceError(
+                "Sibling-version trainer battle families differ; explicit "
+                "sibling-version conditions are required"
+            )
+    result = []
+    for index, family in enumerate(first):
+        references = [
+            f"{version}={datasets[version]['battle_families'][index]['provenance']['reference']}"
+            for version in versions
+        ]
+        result.append(
+            {
+                **family,
+                "provenance": {
+                    **family["provenance"],
+                    "reference": "; ".join(references),
+                },
+            }
+        )
+    return result
+
+
+def _family_without_provenance(family: object) -> object:
+    if not isinstance(family, dict):
+        return family
+    return {key: value for key, value in family.items() if key != "provenance"}
 
 
 def _merge_location_trade_variants(

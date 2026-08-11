@@ -27,6 +27,7 @@ additional_types = ["fairy"]
 17 = "fairy"
 
 [parameters]
+trainer_variant_contract = "blaze-black-2-redux-volt-white-2-redux-v1.4.1"
 learnsets_allow_incorrect_data_block_size = true
 learnsets_allow_trailing_data = true
 repair_invalid_secondary_egg_group = true

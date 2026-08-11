@@ -204,6 +204,20 @@ dataset. This is required for hacks that change forms, names, sprites, or abilit
 slots. PokéDB remains a reference and fallback source, not the authority for a
 game's mechanics.
 
+Trainer battle families form a second, independently versioned contract in the
+trainer dataset envelope. Engine leaves populate verified selection rules through
+an explicitly selected profile contract; shared enrichment validates their exact
+trainer references and the renderer formats their typed conditions. Families do
+not merge parties or become relationship-index records, so comparisons, Pokémon
+appearances, item backlinks, and location facts continue to count exact trainer
+records once. Unsupported and unresolved mechanics are declared per profile.
+
+The B2W2 trainer leaf deliberately overrides BW location selection. A fallback
+parser may be shared only for byte-compatible record formats; Black-validated
+common-script trainer arithmetic is not inherited by the sequel. Likewise, the
+Generation V party byte normalized as `iv_strength` is independent of B2W2's
+runtime Easy/Normal/Challenge selection and level presentation.
+
 Exact trainer rewards use a shared normalized contract while retaining
 generation-specific decoding. Engine parsers expose the stored multiplier and its
 provenance; `pipeline/trainer_rewards.py` calculates a payout only when every

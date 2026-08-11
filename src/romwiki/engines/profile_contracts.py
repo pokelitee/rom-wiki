@@ -111,6 +111,7 @@ _GEN5_PARAMETERS = frozenset(
         "pokemon_names_member",
         "trainer_classes_member",
         "trainer_names_member",
+        "trainer_variant_contract",
     }
 )
 
@@ -207,6 +208,7 @@ GEN4_DPPT_PROFILE_CONTRACT = EngineProfileContract(
             "trainer_class_prize_overlay_id",
             "trainer_classes_member",
             "trainer_names_member",
+            "trainer_variant_contract",
             "tutor_compatibility_offset",
             "tutor_count",
             "tutor_move_offset",
@@ -254,6 +256,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "trainer_class_gender_offset",
             "trainer_classes_member",
             "trainer_names_member",
+            "trainer_variant_contract",
             "tutor_move_offset",
             "tutor_overlay_id",
         }

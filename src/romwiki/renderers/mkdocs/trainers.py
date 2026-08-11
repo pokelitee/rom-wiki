@@ -49,6 +49,14 @@ def render_trainer_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     records = [record for record in dataset["records"] if record["party"]]
+    records_by_id = {record["trainer_id"]: record for record in records}
+    family_memberships: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for family in dataset.get("battle_families", []):
+        for variant in family["variants"]:
+            if variant["trainer_id"] in records_by_id:
+                family_memberships.setdefault(variant["trainer_id"], []).append(
+                    (family, variant)
+                )
     dataset_features = frozenset(dataset.get("features", _DEFAULT_TRAINER_FEATURES))
     same_name_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in records:
@@ -106,6 +114,8 @@ def render_trainer_pages(
                     following,
                     same_name_groups[(record["class_name"], record["name"])],
                     dataset_features,
+                    family_memberships.get(record["trainer_id"], []),
+                    records_by_id,
                 ),
             )
             page_count += 1
@@ -129,6 +139,7 @@ def render_trainer_pages(
                 location_names,
                 True,
                 change,
+                family_memberships.get(record["trainer_id"], []),
             )
         )
     for index, record in enumerate(unlinked):
@@ -149,6 +160,8 @@ def render_trainer_pages(
                     following,
                     same_name_groups[(record["class_name"], record["name"])],
                     dataset_features,
+                    family_memberships.get(record["trainer_id"], []),
+                    records_by_id,
                 ),
             )
             page_count += 1
@@ -171,6 +184,7 @@ def render_trainer_pages(
                 "",
                 False,
                 change,
+                family_memberships.get(record["trainer_id"], []),
             )
         )
     write_catalog(output_root, "trainers", catalog_records)
@@ -192,6 +206,7 @@ def _catalog_record(
     location_label: str,
     linked: bool,
     change: dict[str, Any] | None = None,
+    family_memberships: list[tuple[dict[str, Any], dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     levels = [member["level"] for member in record["party"]]
     location_names = _location_names(record)
@@ -246,6 +261,15 @@ def _catalog_record(
             "max_level": max(levels),
             "pokemon": species,
             "party": party,
+            "battle_variants": [
+                {
+                    "family": family["label"],
+                    "conditions": [
+                        condition["label"] for condition in variant["conditions"]
+                    ],
+                }
+                for family, variant in (family_memberships or [])
+            ],
             "search_text": " ".join(
                 (label, route_id, *location_names, *species)
             ).lower(),
@@ -263,6 +287,8 @@ def _render_trainer(
     following: dict[str, Any] | None = None,
     same_name_records: list[dict[str, Any]] | None = None,
     features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
+    family_memberships: list[tuple[dict[str, Any], dict[str, Any]]] | None = None,
+    records_by_id: dict[int, dict[str, Any]] | None = None,
 ) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
@@ -279,7 +305,12 @@ def _render_trainer(
     _append_ai_battle_items(lines, grouped_ai_items, source_file)
     _append_locations(lines, record["locations"], source_file)
     _append_script_references(lines, record.get("script_references", []), source_file)
-    _append_same_name_trainers(lines, record, same_name_records or [], source_file)
+    memberships = family_memberships or []
+    _append_battle_variants(
+        lines, record, memberships, records_by_id or {}, source_file
+    )
+    if not memberships:
+        _append_same_name_trainers(lines, record, same_name_records or [], source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(provenance_section(_trainer_provenance(record)))
     _append_record_navigation(lines, record, previous, following)
@@ -905,6 +936,72 @@ def _append_same_name_trainers(
     lines.append("")
     if collapsed:
         lines.extend(["</details>", ""])
+
+
+def _append_battle_variants(
+    lines: list[str],
+    record: dict[str, Any],
+    memberships: list[tuple[dict[str, Any], dict[str, Any]]],
+    records_by_id: dict[int, dict[str, Any]],
+    source_file: str,
+) -> None:
+    """Render verified relationships without changing the exact record unit."""
+    families = {family["id"]: family for family, _variant in memberships}
+    if not families:
+        return
+    lines.extend(
+        [
+            "## Battle Variants",
+            "",
+            (
+                "These exact trainer records are related by verified battle-selection "
+                "rules. Conditions describe when the game selects each record."
+            ),
+            "",
+        ]
+    )
+    for family in sorted(families.values(), key=lambda value: value["order"]):
+        lines.extend(
+            [
+                f"### {family['label']}",
+                "",
+                "| Conditions | Trainer record | Levels | Party |",
+                "| ---------- | -------------- | ------ | ----- |",
+            ]
+        )
+        for variant in sorted(family["variants"], key=lambda value: value["order"]):
+            candidate = records_by_id.get(variant["trainer_id"])
+            if candidate is None or not candidate.get("party"):
+                continue
+            trainer_id = candidate["trainer_id"]
+            trainer_link = ROUTES.markdown_link(
+                entity_reference(
+                    "trainer",
+                    trainer_id,
+                    f"ID {trainer_id}"
+                    + (" (this record)" if trainer_id == record["trainer_id"] else ""),
+                    trainer_id,
+                ),
+                source_file,
+            )
+            condition_label = "; ".join(
+                condition["label"] for condition in variant["conditions"]
+            )
+            lines.append(
+                f"| {condition_label} | {trainer_link} | "
+                f"{_trainer_level_range(candidate)} | {_party_preview(candidate)} |"
+            )
+        provenance = family["provenance"]
+        lines.extend(
+            [
+                "",
+                (
+                    f"Rule evidence: {provenance['source']} "
+                    f"(`{provenance['reference']}`). {provenance['verification']}"
+                ),
+                "",
+            ]
+        )
 
 
 def _trainer_label(record: dict[str, Any]) -> str:

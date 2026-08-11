@@ -10,7 +10,11 @@ from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
-from romwiki.schema.versions import TRAINERS_RAW_SCHEMA_VERSION
+from romwiki.schema.trainers import validate_trainer_battle_families
+from romwiki.schema.versions import (
+    TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
+    TRAINERS_RAW_SCHEMA_VERSION,
+)
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
@@ -128,11 +132,21 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         }
         for record in parsed_records
     ]
+    variant_contract = engine.extract_trainer_battle_families(
+        profile.id, profile.parameters, records
+    )
+    validate_trainer_battle_families(
+        variant_contract["battle_families"],
+        variant_contract["trainer_variant_support"],
+        (record["trainer_id"] for record in records),
+    )
     return {
         "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "engine": profile.engine,
         "dataset": "trainers",
+        "battle_family_schema_version": TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
+        **variant_contract,
         "record_count": len(records),
         "linked_record_count": sum(
             bool(record["locations"] or record["script_references"])
@@ -232,11 +246,21 @@ def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, 
         ).to_dict()
         for record in parsed_records
     ]
+    variant_contract = engine.extract_trainer_battle_families(
+        profile.id, profile.parameters, records
+    )
+    validate_trainer_battle_families(
+        variant_contract["battle_families"],
+        variant_contract["trainer_variant_support"],
+        (record["trainer_id"] for record in records),
+    )
     return {
         "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
         "engine": profile.engine,
         "dataset": "trainers",
+        "battle_family_schema_version": TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
+        **variant_contract,
         "record_count": len(records),
         "linked_record_count": sum(
             bool(record["locations"] or record["script_references"])
