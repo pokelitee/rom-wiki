@@ -19,7 +19,7 @@ from romwiki.sites.build_state import (
     read_site_build_state,
     write_site_build_state,
 )
-from romwiki.sites.catalog import SiteCatalog, SiteDefinition
+from romwiki.sites.catalog import SiteCatalog, SiteDefinition, site_display_key
 from romwiki.sites.inventory import file_path_inventory, read_inventory_state
 from romwiki.util.errors import SiteError
 
@@ -44,9 +44,7 @@ def build_sites(
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
     selected = catalog.select(site_ids, all_published=build_all)
-    ordered = tuple(
-        sorted(selected, key=lambda site: (site.kind != "portal", site.order))
-    )
+    ordered = tuple(sorted(selected, key=site_display_key))
     resolved_output = output_root.resolve()
     command_runner = runner or (
         lambda command: _run_command(command, site_url=site_url)

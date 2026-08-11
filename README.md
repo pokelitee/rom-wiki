@@ -19,13 +19,13 @@ committed.
 | --- | --- |
 | Pokémon Platinum | Data-driven Generation IV baseline |
 | Pokémon Renegade Platinum | Data-driven comparison against Platinum |
+| Pokémon HeartGold & SoulSilver | Data-driven sibling-version family |
+| Pokémon Sacred Gold & Storm Silver | Data-driven paired-hack comparison |
 | Pokémon Black & White | Data-driven sibling-version family |
-| Pokémon Black 2 & White 2 | Data-driven sibling-version family |
 | Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
+| Pokémon Black 2 & White 2 | Data-driven sibling-version family |
 | Pokémon Blaze Black 2 & Volt White 2 | Data-driven paired-hack comparison |
 | Pokémon Blaze Black 2 Redux & Volt White 2 Redux | Data-driven paired-hack comparison |
-| Pokémon HeartGold & SoulSilver | Unpublished data-driven Generation IV family |
-| Pokémon Sacred Gold & Storm Silver | Unpublished paired-hack comparison scaffold |
 
 The mature Generation IV and V engines cover Pokémon, abilities, moves, items,
 learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,

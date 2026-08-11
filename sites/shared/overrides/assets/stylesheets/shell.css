@@ -182,6 +182,17 @@
 .rw-section-heading h2 {
   margin: .12rem 0 0;
 }
+.rw-generation-group + .rw-generation-group {
+  margin-top: 1.6rem;
+}
+.rw-generation-heading {
+  margin: 0 0 .65rem;
+  color: var(--rw-text-muted);
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
 .rw-game-grid,
 .rw-section-grid {
   display: grid;
@@ -205,7 +216,7 @@
   transform: translateY(-2px);
   box-shadow: var(--rw-shadow);
 }
-.rw-game-card h3,
+.rw-game-card h4,
 .rw-section-card h3 {
   margin: .25rem 0 .35rem;
   font-size: 1rem;
@@ -216,13 +227,6 @@
   color: var(--rw-text-muted);
   font-size: .7rem;
   line-height: 1.55;
-}
-.rw-game-card__generation {
-  color: var(--rw-accent);
-  font-size: .62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .06em;
 }
 .rw-game-card dl {
   display: grid;

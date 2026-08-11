@@ -4,7 +4,7 @@ name = "Pokémon Sacred Gold & Storm Silver"
 kind = "game"
 slug = "sacred-gold-storm-silver"
 published = true
-order = 27
+order = 40
 mkdocs_config = "mkdocs.yml"
 description = "An exact, data-driven reference for Pokémon Sacred Gold and Storm Silver v1.05"
 
@@ -19,4 +19,4 @@ platform_name = "Nintendo DS"
 creator = "Drayano"
 
 [appearance]
-theme = "platinum"
+theme = "heart-gold-soul-silver"

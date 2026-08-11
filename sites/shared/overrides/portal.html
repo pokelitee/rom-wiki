@@ -8,24 +8,28 @@
   </section>
   <section aria-labelledby="games-heading">
     <div class="rw-section-heading">
-      <div><p class="rw-eyebrow">Published references</p><h2 id="games-heading">Games</h2></div>
-      <span class="rw-count">{{ romwiki.games | length }} game{% if romwiki.games | length != 1 %}s{% endif %}</span>
+      <div><p class="rw-eyebrow">Published references</p><h2 id="games-heading">Game wikis</h2></div>
+      <span class="rw-count">{{ romwiki.games | length }} wiki{% if romwiki.games | length != 1 %}s{% endif %}</span>
     </div>
-    <div class="rw-game-grid">
-      {% for game in romwiki.games %}
-        <a class="rw-game-card" href="{{ game.url }}" data-theme="{{ game.theme }}">
-          <span class="rw-game-card__generation">Generation {{ game.generation }}</span>
-          <h3>{{ game.name }}</h3>
-          <p>{{ game.description }}</p>
-          <dl>
-            <div><dt>Creator</dt><dd>{{ game.creator }}</dd></div>
-            <div><dt>Platform</dt><dd>{{ game.platform_name }}</dd></div>
-            <div><dt>Base game</dt><dd>{{ game.base_game | replace('-', ' ') | title }}</dd></div>
-          </dl>
-          <span class="rw-card-action">Open wiki <span aria-hidden="true">&rarr;</span></span>
-        </a>
-      {% endfor %}
-    </div>
+    {% for generation, games in romwiki.games | groupby("generation") %}
+      <section class="rw-generation-group" aria-labelledby="generation-{{ generation }}-heading">
+        <h3 class="rw-generation-heading" id="generation-{{ generation }}-heading">Generation {{ generation }}</h3>
+        <div class="rw-game-grid">
+          {% for game in games %}
+            <a class="rw-game-card" href="{{ game.url }}" data-theme="{{ game.theme }}">
+              <h4>{{ game.name }}</h4>
+              <p>{{ game.description }}</p>
+              <dl>
+                <div><dt>Creator</dt><dd>{{ game.creator }}</dd></div>
+                <div><dt>Platform</dt><dd>{{ game.platform_name }}</dd></div>
+                <div><dt>Base game</dt><dd>{{ game.base_game | replace('-', ' ') | title }}</dd></div>
+              </dl>
+              <span class="rw-card-action">Open wiki <span aria-hidden="true">&rarr;</span></span>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
   </section>
   <div class="rw-prose-intro">{{ page.content }}</div>
 {% endblock %}

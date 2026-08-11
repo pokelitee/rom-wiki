@@ -14,7 +14,15 @@ from romwiki.util.errors import SiteError
 
 SiteKind = Literal["portal", "game"]
 _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-SUPPORTED_THEMES = frozenset({"black-white", "platinum", "portal"})
+SUPPORTED_THEMES = frozenset(
+    {
+        "black-2-white-2",
+        "black-white",
+        "heart-gold-soul-silver",
+        "platinum",
+        "portal",
+    }
+)
 DEFAULT_GENERATED_SECTIONS = (
     *DATASET_KINDS,
     "types",
@@ -53,6 +61,11 @@ class SiteDefinition:
         return output_root / self.slug if self.slug else output_root
 
 
+def site_display_key(site: SiteDefinition) -> tuple[bool, int, int, str]:
+    generation = site.game.generation if site.game is not None else 0
+    return site.kind != "portal", generation, site.order, site.id
+
+
 class SiteCatalog:
     def __init__(
         self,
@@ -76,7 +89,7 @@ class SiteCatalog:
         sites = tuple(
             sorted(
                 (_load_site(path, resolved_root) for path in descriptor_paths),
-                key=lambda site: (site.order, site.id),
+                key=site_display_key,
             )
         )
         _validate_catalog(sites)

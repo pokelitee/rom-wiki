@@ -4,7 +4,7 @@ name = "Pokémon Black & White"
 kind = "game"
 slug = "black-white"
 published = true
-order = 20
+order = 10
 mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon Black and White (USA)"
 

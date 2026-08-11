@@ -30,10 +30,20 @@ color.
 Each published theme defines light and dark values for its accent, filled accent,
 surfaces, borders, muted text, and shadows. The portal applies the same tokens to
 game cards so their visual identity is visible before entering a game site.
+Themes follow base-game families: Platinum and Black/White each have a palette,
+while HeartGold/SoulSilver and Black 2/White 2 use distinct palettes inherited by
+their respective hacks. A hack should reuse its base game's token unless it has a
+deliberate, separately maintained visual identity.
 Material owns the active color-scheme attribute on the document body; shared
 selectors combine that body state with the site token on the document root. The
 head template applies site identity before loading CSS and synchronizes an explicit
 light/dark choice across the independently built wiki roots.
+
+The catalog and portal group published game wikis by generation. A descriptor's
+`order` is scoped to its generation and places a base game before its related
+hacks; adding a later generation does not require renumbering existing sites. One
+card may represent a sibling-version pair, so portal counts describe wikis rather
+than individual games.
 
 Use `--rw-accent` for foreground text, borders, and decorative fills.
 Controls with text or icons on a solid theme-colored background use

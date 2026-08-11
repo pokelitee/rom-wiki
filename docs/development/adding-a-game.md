@@ -361,6 +361,10 @@ theme token to `SUPPORTED_THEMES` and define its light and dark CSS variables in
 shared stylesheet only when the existing palettes are unsuitable. The frontend
 contract derives published tokens from the site catalog and verifies both selector
 coverage and contrast. Do not create a game-specific copy of the shared templates.
+Reuse the base game's theme for a hack unless a distinct maintained identity is
+intentional. Choose an `order` that places base games before their related hacks
+within that generation; the catalog supplies generation grouping automatically,
+so order values may repeat across generations.
 The descriptor's generation must match the generation declared by its registered
 engine adapter.
 

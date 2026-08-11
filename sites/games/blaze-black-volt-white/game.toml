@@ -4,7 +4,7 @@ name = "Pokémon Blaze Black & Volt White"
 kind = "game"
 slug = "blaze-black-volt-white"
 published = true
-order = 15
+order = 20
 mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon Blaze Black and Volt White v3.1"
 

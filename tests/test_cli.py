@@ -204,13 +204,13 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "portal",
                 "platinum",
                 "renegade-platinum",
-                "blaze-black-volt-white",
-                "blaze-black-2-volt-white-2",
-                "blaze-black-2-redux-volt-white-2-redux",
-                "black-white",
-                "black-2-white-2",
                 "heart-gold-soul-silver",
                 "sacred-gold-storm-silver",
+                "black-white",
+                "blaze-black-volt-white",
+                "black-2-white-2",
+                "blaze-black-2-volt-white-2",
+                "blaze-black-2-redux-volt-white-2-redux",
             ],
         )
         self.assertFalse(sites[0]["data_driven"])

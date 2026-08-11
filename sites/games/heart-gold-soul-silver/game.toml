@@ -4,7 +4,7 @@ name = "Pokémon HeartGold & SoulSilver"
 kind = "game"
 slug = "heart-gold-soul-silver"
 published = true
-order = 25
+order = 30
 mkdocs_config = "mkdocs.yml"
 description = "An exact, data-driven reference for Pokémon HeartGold and SoulSilver (USA)"
 
@@ -19,4 +19,4 @@ platform_name = "Nintendo DS"
 creator = "Game Freak"
 
 [appearance]
-theme = "platinum"
+theme = "heart-gold-soul-silver"

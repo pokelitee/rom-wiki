@@ -96,6 +96,30 @@ html[data-romwiki-theme="black-white"],
   --rw-shadow: 0 0.5rem 1.75rem rgba(20, 23, 28, 0.13);
 }
 
+html[data-romwiki-theme="heart-gold-soul-silver"],
+.rw-game-card[data-theme="heart-gold-soul-silver"] {
+  --rw-accent: #725c00;
+  --rw-accent-rgb: 114, 92, 0;
+  --rw-accent-strong: #725c00;
+  --rw-surface: #fffdf5;
+  --rw-surface-muted: #f7f2df;
+  --rw-border: #e4dbc0;
+  --rw-text-muted: #5f5b4d;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(76, 60, 12, 0.13);
+}
+
+html[data-romwiki-theme="black-2-white-2"],
+.rw-game-card[data-theme="black-2-white-2"] {
+  --rw-accent: #315e7a;
+  --rw-accent-rgb: 49, 94, 122;
+  --rw-accent-strong: #315e7a;
+  --rw-surface: #fbfdff;
+  --rw-surface-muted: #edf3f7;
+  --rw-border: #d2dee6;
+  --rw-text-muted: #56636c;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(25, 53, 70, 0.14);
+}
+
 html[data-romwiki-theme="platinum"] body[data-md-color-scheme="slate"],
 body[data-md-color-scheme="slate"] .rw-game-card[data-theme="platinum"] {
   --rw-accent: #aebde3;
@@ -118,6 +142,30 @@ body[data-md-color-scheme="slate"] .rw-game-card[data-theme="black-white"] {
   --rw-border: #3b3f45;
   --rw-text-muted: #b9bdc4;
   --rw-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.34);
+}
+
+html[data-romwiki-theme="heart-gold-soul-silver"] body[data-md-color-scheme="slate"],
+body[data-md-color-scheme="slate"] .rw-game-card[data-theme="heart-gold-soul-silver"] {
+  --rw-accent: #e6ca70;
+  --rw-accent-rgb: 230, 202, 112;
+  --rw-accent-strong: #665313;
+  --rw-surface: #242219;
+  --rw-surface-muted: #1c1a13;
+  --rw-border: #494431;
+  --rw-text-muted: #c5bdab;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.34);
+}
+
+html[data-romwiki-theme="black-2-white-2"] body[data-md-color-scheme="slate"],
+body[data-md-color-scheme="slate"] .rw-game-card[data-theme="black-2-white-2"] {
+  --rw-accent: #8dc5e6;
+  --rw-accent-rgb: 141, 197, 230;
+  --rw-accent-strong: #315b75;
+  --rw-surface: #1c252b;
+  --rw-surface-muted: #151d22;
+  --rw-border: #354751;
+  --rw-text-muted: #b4c0c7;
+  --rw-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.36);
 }
 
 @media (pointer: fine) {

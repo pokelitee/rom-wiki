@@ -63,18 +63,28 @@ class SiteCatalogTests(unittest.TestCase):
                 "portal",
                 "platinum",
                 "renegade-platinum",
-                "blaze-black-volt-white",
-                "blaze-black-2-volt-white-2",
-                "blaze-black-2-redux-volt-white-2-redux",
-                "black-white",
-                "black-2-white-2",
                 "heart-gold-soul-silver",
                 "sacred-gold-storm-silver",
+                "black-white",
+                "blaze-black-volt-white",
+                "black-2-white-2",
+                "blaze-black-2-volt-white-2",
+                "blaze-black-2-redux-volt-white-2-redux",
             ],
         )
         self.assertEqual(catalog.get("renegade-platinum").slug, "renegade-platinum")
+        self.assertEqual(catalog.get("platinum").order, 10)
+        self.assertEqual(catalog.get("black-white").order, 10)
         renegade_platinum = catalog.get("renegade-platinum")
         self.assertEqual(renegade_platinum.theme, "platinum")
+        self.assertEqual(
+            catalog.get("heart-gold-soul-silver").theme,
+            "heart-gold-soul-silver",
+        )
+        self.assertEqual(
+            catalog.get("black-2-white-2").theme,
+            "black-2-white-2",
+        )
         game = renegade_platinum.game
         self.assertIsNotNone(game)
         assert game is not None
@@ -153,13 +163,13 @@ class SiteCatalogTests(unittest.TestCase):
                     "portal",
                     "platinum",
                     "renegade-platinum",
-                    "blaze-black-volt-white",
-                    "blaze-black-2-volt-white-2",
-                    "blaze-black-2-redux-volt-white-2-redux",
-                    "black-white",
-                    "black-2-white-2",
                     "heart-gold-soul-silver",
                     "sacred-gold-storm-silver",
+                    "black-white",
+                    "blaze-black-volt-white",
+                    "black-2-white-2",
+                    "blaze-black-2-volt-white-2",
+                    "blaze-black-2-redux-volt-white-2-redux",
                 ],
             )
             # Game builds run concurrently, so only their destinations are

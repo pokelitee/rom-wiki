@@ -4,7 +4,7 @@ name = "Pokémon Black 2 & White 2"
 kind = "game"
 slug = "black-2-white-2"
 published = true
-order = 22
+order = 30
 mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon Black 2 and White 2 (USA/Europe)"
 
@@ -18,4 +18,4 @@ platform_name = "Nintendo DS"
 creator = "Game Freak"
 
 [appearance]
-theme = "black-white"
+theme = "black-2-white-2"

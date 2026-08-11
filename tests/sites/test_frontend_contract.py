@@ -119,6 +119,14 @@ class FrontendContractTests(unittest.TestCase):
                 theme,
             )
 
+    def test_portal_groups_wikis_by_generation(self) -> None:
+        template = (OVERRIDES / "portal.html").read_text(encoding="utf-8")
+
+        self.assertIn('romwiki.games | groupby("generation")', template)
+        self.assertIn('id="generation-{{ generation }}-heading"', template)
+        self.assertIn("Game wikis", template)
+        self.assertNotIn("rw-game-card__generation", template)
+
     def test_theme_text_and_filled_accents_meet_wcag_aa_contrast(self) -> None:
         css = (STYLES / "theme.css").read_text(encoding="utf-8")
         root = _rule_properties(css, ":root")
