@@ -16,13 +16,16 @@ class EvolutionEnrichmentTests(unittest.TestCase):
         ]
         item_names = [f"Item {item_id}" for item_id in range(468)]
         item_names[83] = "Thunder Stone"
+        item_names[84] = "Thunder Stone"
+        personal_records = [_source_record(member) for member in range(508)]
+        personal_records[25]["wild_held_items"]["rare"] = 83
 
         enriched = enrich_personal_dataset(
             {
                 "game": "test",
                 "engine": "gen4_dppt",
                 "source": {"archive": "personal.narc"},
-                "records": [_source_record(member) for member in range(508)],
+                "records": personal_records,
             },
             pokedb,
             evolution_dataset={
@@ -32,11 +35,22 @@ class EvolutionEnrichmentTests(unittest.TestCase):
                 "item_names": item_names,
                 "records": records,
             },
+            item_dataset={
+                "game": "test",
+                "records": [
+                    {"item_id": 83, "name": "Thunder Stone", "public": True},
+                    {"item_id": 84, "name": "Thunder Stone", "public": True},
+                ],
+            },
         )
 
         evolution = enriched["records"][25]["evolutions"][0]
         self.assertEqual(evolution["method"]["name"], "use-item")
         self.assertEqual(evolution["parameter_data"]["name"], "Thunder Stone")
+        self.assertEqual(evolution["parameter_data"]["slug"], "thunder-stone-83")
+        self.assertEqual(
+            enriched["records"][25]["held_items"][1]["slug"], "thunder-stone-83"
+        )
         self.assertEqual(evolution["target"]["slug"], "pokemon-26")
         self.assertEqual(
             enriched["records"][25]["evolution_provenance"]["archive"],

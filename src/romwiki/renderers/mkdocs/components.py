@@ -125,7 +125,11 @@ def class_badge(damage_class: dict[str, Any]) -> str:
     return f'<span class="rw-class rw-class--{escape(name)}">{escape(label)}</span>'
 
 
-def evolution_condition(entry: dict[str, Any], source_url: str) -> str:
+def evolution_condition(
+    entry: dict[str, Any],
+    source_url: str,
+    references: ReferenceIndex | None = None,
+) -> str:
     method = entry["method"]["name"]
     parameter = entry["parameter_data"]
     value = parameter.get("value") if parameter is not None else None
@@ -152,9 +156,12 @@ def evolution_condition(entry: dict[str, Any], source_url: str) -> str:
         route_key = parameter.get("slug")
         if route_key is None and parameter_kind == "move":
             route_key = raw_name
-        parameter_label = ROUTES.html_link(
-            entity_reference(parameter_kind, parameter_id, name, route_key), source_url
+        reference = (
+            references.resolve_matching(parameter_kind, parameter_id, name)
+            if references is not None
+            else entity_reference(parameter_kind, parameter_id, name, route_key)
         )
+        parameter_label = ROUTES.html_link(reference, source_url)
     conditions = {
         "friendship": "High friendship",
         "friendship-day": "High friendship during the day",

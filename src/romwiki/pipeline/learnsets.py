@@ -32,6 +32,9 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
         allow_incorrect_data_block_size=profile.parameters.get(
             "learnsets_allow_incorrect_data_block_size", False
         ),
+        allow_trailing_data=profile.parameters.get(
+            "learnsets_allow_trailing_data", False
+        ),
     )
     records = [
         engine.parse_level_up_learnset(

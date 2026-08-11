@@ -142,6 +142,21 @@ class ReferenceIndex:
             indexed.types if indexed is not None else None,
         )
 
+    def resolve_matching(
+        self, kind: str, identifier: int | str, label: str
+    ) -> EntityReference:
+        indexed = self._references.get((kind, identifier))
+        if indexed is None or indexed.label != label:
+            return EntityReference(kind, identifier, label, None)
+        return EntityReference(
+            kind,
+            identifier,
+            label,
+            indexed.route_key,
+            indexed.sprite_url,
+            indexed.types,
+        )
+
     def sprite_url(self, kind: str, identifier: int | str) -> str | None:
         reference = self._references.get((kind, identifier))
         return reference.sprite_url if reference is not None else None

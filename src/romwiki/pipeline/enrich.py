@@ -38,6 +38,7 @@ def enrich_personal_dataset(
     egg_move_dataset: dict[str, Any] | None = None,
     static_encounter_dataset: dict[str, Any] | None = None,
     *,
+    item_dataset: dict[str, Any] | None = None,
     type_names: Mapping[int, str] | None = None,
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
@@ -57,6 +58,9 @@ def enrich_personal_dataset(
     learnsets = _validate_learnsets(engine, learnset_dataset, dataset["game"])
     evolutions = _validate_evolutions(engine, evolution_dataset, dataset["game"])
     evolution_item_names = _validate_evolution_item_names(evolution_dataset)
+    evolution_item_slugs = _validate_evolution_item_slugs(
+        item_dataset, dataset["game"], pokedb
+    )
     machines = _validate_machines(engine, machine_dataset, dataset["game"])
     tutors, tutor_ids_by_member, tutor_locations = _validate_tutors(
         tutor_dataset, dataset["game"]
@@ -77,6 +81,7 @@ def enrich_personal_dataset(
                 learnsets[expected_member],
                 evolutions[expected_member],
                 evolution_item_names,
+                evolution_item_slugs,
                 machines,
                 tutors,
                 tutor_ids_by_member.get(expected_member, []),
@@ -393,10 +398,10 @@ def _enrich_trainer(
                     f"Unknown trainer form {form_id} for species {species_id}"
                 )
         else:
-            reference = pokedb.pokemon_for_id(species_id)
             cosmetic_form = None
             if pokemon_records is not None:
                 game_record = pokemon_records.get(species_id)
+            reference = None if game_record else pokedb.pokemon_for_id(species_id)
         pokemon = derive_trainer_party_attributes(
             engine,
             pokemon,
@@ -446,6 +451,13 @@ def _enrich_trainer(
                     "slug": pokemon_slug,
                     "name": pokemon_name
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),
+                    **(
+                        {"page_slug": None}
+                        if game_record
+                        and not game_record.get("public", True)
+                        and not game_record.get("base_species")
+                        else {}
+                    ),
                     "sprite": pokemon_sprite,
                     "types": game_record.get("types", []) if game_record else [],
                 },
@@ -550,6 +562,8 @@ def _trainer_ability(
     abilities = pokemon_record.get("abilities")
     if not isinstance(slot, int) or not isinstance(abilities, list):
         raise DataSourceError("Normalized trainer ability is missing its slot")
+    if not pokemon_record.get("public", True) and not abilities:
+        return None
     if not 1 <= slot <= len(abilities):
         raise DataSourceError(f"Trainer ability slot {slot} is out of range")
     ability = abilities[slot - 1]
@@ -612,6 +626,7 @@ def _enrich_record(
     learnset: dict[str, Any] | None,
     evolution_set: dict[str, Any] | None,
     evolution_item_names: list[str],
+    evolution_item_slugs: Mapping[int, str | None],
     machines: dict[int, dict[str, Any]],
     tutors: dict[int, dict[str, Any]],
     tutor_ids: list[int],
@@ -720,7 +735,15 @@ def _enrich_record(
             []
             if is_internal
             else [
-                {"rarity": rarity, **_item_reference(value, pokedb, item_names)}
+                {
+                    "rarity": rarity,
+                    **_item_reference(
+                        value,
+                        pokedb,
+                        item_names,
+                        page_slugs=evolution_item_slugs,
+                    ),
+                }
                 for rarity, value in (
                     ("common", source["wild_held_items"]["common"]),
                     ("rare", source["wild_held_items"]["rare"]),
@@ -803,6 +826,7 @@ def _enrich_record(
                 evolution_set,
                 pokedb,
                 evolution_item_names,
+                evolution_item_slugs,
                 move_names,
                 pokemon_names,
             )
@@ -958,6 +982,27 @@ def _validate_evolution_item_names(dataset: dict[str, Any] | None) -> list[str]:
     ):
         raise DataSourceError("Evolution dataset must include ROM item names")
     return item_names
+
+
+def _validate_evolution_item_slugs(
+    dataset: dict[str, Any] | None,
+    game: str,
+    pokedb: PokeDBGeneration,
+) -> dict[int, str | None]:
+    if dataset is None:
+        return {}
+    if dataset.get("game") != game or not isinstance(dataset.get("records"), list):
+        raise DataSourceError("Item dataset must be for the same game")
+    public_records = [record for record in dataset["records"] if record.get("public")]
+    counts: dict[str, int] = {}
+    for record in public_records:
+        slug = pokedb.item_slug(record["name"])
+        counts[slug] = counts.get(slug, 0) + 1
+    return {
+        record["item_id"]: (f"{slug}-{record['item_id']}" if counts[slug] > 1 else slug)
+        for record in public_records
+        for slug in (pokedb.item_slug(record["name"]),)
+    }
 
 
 def _validate_machines(
@@ -1149,6 +1194,7 @@ def _enrich_evolutions(
     evolution_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     item_names: list[str],
+    item_slugs: Mapping[int, str | None],
     move_names: Mapping[int, str] | None,
     pokemon_names: list[str] | None = None,
 ) -> list[dict[str, Any]]:
@@ -1165,7 +1211,13 @@ def _enrich_evolutions(
                     method_id, engine.EVOLUTION_METHOD_NAMES, "evolution method"
                 ),
                 "parameter_data": _evolution_parameter(
-                    engine, entry, pokedb, item_names, move_names, pokemon_names
+                    engine,
+                    entry,
+                    pokedb,
+                    item_names,
+                    item_slugs,
+                    move_names,
+                    pokemon_names,
                 ),
                 "target": {
                     "id": entry["target_species_id"],
@@ -1184,6 +1236,7 @@ def _evolution_parameter(
     entry: dict[str, Any],
     pokedb: PokeDBGeneration,
     item_names: list[str],
+    item_slugs: Mapping[int, str | None],
     move_names: Mapping[int, str] | None,
     pokemon_names: list[str] | None = None,
 ) -> dict[str, Any] | None:
@@ -1197,7 +1250,7 @@ def _evolution_parameter(
         return {
             "kind": "item",
             "id": parameter,
-            "slug": pokedb.item_slug(name),
+            "slug": item_slugs.get(parameter, pokedb.item_slug(name)),
             "name": name,
         }
     if kind == "move":
@@ -1337,16 +1390,28 @@ def _item_reference(
     item_id: int,
     pokedb: PokeDBGeneration,
     item_names: list[str] | None,
+    *,
+    page_slugs: Mapping[int, str | None] | None = None,
 ) -> dict[str, Any]:
     if item_id == 0:
         return {"id": 0, "slug": None, "name": None}
     if item_names is None:
-        slug = pokedb.item_name(item_id)
-        return {"id": item_id, "slug": slug, "name": title_case_slug(slug)}
+        reference_slug = pokedb.item_name(item_id)
+        page_slug = (
+            page_slugs.get(item_id) if page_slugs is not None else reference_slug
+        )
+        return {
+            "id": item_id,
+            "slug": page_slug,
+            "name": title_case_slug(reference_slug),
+        }
     if item_id >= len(item_names):
         raise DataSourceError(f"Unknown item ID: {item_id}")
     name = item_names[item_id]
-    return {"id": item_id, "slug": pokedb.item_slug(name), "name": name}
+    slug = pokedb.item_slug(name)
+    if page_slugs is not None:
+        slug = page_slugs.get(item_id)
+    return {"id": item_id, "slug": slug, "name": name}
 
 
 def _ability_id(

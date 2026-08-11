@@ -115,6 +115,17 @@ class RouteResolverTests(unittest.TestCase):
         self.assertEqual(ROUTES.html_link(unresolved, "items/test/"), "Unknown")
         self.assertNotIn("url", ROUTES.catalog_reference(unresolved, "items/"))
 
+    def test_resolves_only_matching_labels_when_requested(self) -> None:
+        index = ReferenceIndex(
+            [entity_reference("item", 110, "Link Cable", "link-cable")]
+        )
+
+        self.assertEqual(
+            index.resolve_matching("item", 110, "Link Cable").route_key,
+            "link-cable",
+        )
+        self.assertIsNone(index.resolve_matching("item", 110, "Oval Stone").route_key)
+
     def test_rejects_mixed_markdown_and_published_link_contexts(self) -> None:
         ability = entity_reference("ability", 65, "Overgrow", "overgrow")
 

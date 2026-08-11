@@ -971,8 +971,18 @@ def _extract_encounter_map_location_dataset(
     field_archive_options = {}
     if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
         field_archive_options["allow_incorrect_data_block_size"] = True
+    if profile.parameters.get("field_archives_allow_trailing_data", False):
+        field_archive_options["allow_trailing_data"] = True
     messages_path = profile.layout["messages"]
-    map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
+    map_headers = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     map_names = engine.parse_english_message_archive(messages.read(map_names_member))
     headers = engine.parse_map_header_table(
@@ -989,12 +999,16 @@ def _extract_encounter_map_location_dataset(
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path), **field_archive_options
     )
+    unused_overworld_members = frozenset(
+        profile.parameters.get("overworld_objects_unused", ())
+    )
     script_headers = _resolve_gen5_script_locations(
         engine,
         headers,
         script_file_ids,
         scripts,
         overworld_objects,
+        unused_overworld_members=unused_overworld_members,
     )
     static_encounters_by_header = _extract_static_encounter_references(
         engine, profile, messages, script_headers, static_encounter_dataset
@@ -1032,7 +1046,10 @@ def _extract_encounter_map_location_dataset(
         shops = []
         seen_vendor_ids: set[str] = set()
         script_file_id = script_file_ids[header.header_id]
-        if header.header_id < len(overworld_objects.members):
+        if (
+            header.header_id < len(overworld_objects.members)
+            and header.header_id not in unused_overworld_members
+        ):
             overworld_data = overworld_objects.read(header.header_id)
             npcs = engine.parse_overworld_npcs(overworld_data)
             for npc in npcs:
@@ -1174,7 +1191,10 @@ def _extract_encounter_map_location_dataset(
                 if special_vendor.vendor_id is not None:
                     seen_vendor_ids.add(special_vendor.vendor_id)
         warps = []
-        if header.header_id < len(overworld_objects.members):
+        if (
+            header.header_id < len(overworld_objects.members)
+            and header.header_id not in unused_overworld_members
+        ):
             raw_warps = engine.parse_overworld_warps(
                 overworld_objects.read(header.header_id)
             )
@@ -1198,6 +1218,8 @@ def _extract_encounter_map_location_dataset(
                 destination_warp_count = len(
                     engine.parse_overworld_warps(
                         overworld_objects.read(destination.header_id)
+                        if destination.header_id not in unused_overworld_members
+                        else b""
                     )
                 )
                 warps.append(
@@ -1263,6 +1285,7 @@ def _extract_encounter_map_location_dataset(
             "rom_sha256": result.image.hashes.sha256,
             "map_headers_archive": map_headers_path,
             "overworld_objects_archive": overworld_objects_path,
+            "unused_overworld_members": sorted(unused_overworld_members),
             "map_matrices_archive": map_matrices_path,
             "scripts_archive": scripts_path,
             "map_names": {"archive": messages_path, "member": map_names_member},
@@ -1615,6 +1638,8 @@ def _extract_trainer_references(
     seen: set[tuple[int, int, str]] = set()
     trainers = trainer_dataset or extract_trainer_dataset(result)
     for trainer in trainers["records"]:
+        if not trainer["party"]:
+            continue
         for source, locations in (
             ("overworld-object", trainer["locations"]),
             ("map-script", trainer["script_references"]),
@@ -1711,13 +1736,18 @@ def _resolve_gen5_script_locations(
     script_file_ids: tuple[int, ...],
     scripts: Any,
     overworld_objects: Any,
+    *,
+    unused_overworld_members: frozenset[int] = frozenset(),
 ) -> dict[int, tuple[int, ...]]:
     """Map dedicated and common script members to every proven map caller."""
     member_count = len(scripts.members)
     owners: dict[int, set[int]] = defaultdict(set)
     for header in headers:
         owners[script_file_ids[header.header_id]].add(header.header_id)
-        if header.header_id >= len(overworld_objects.members):
+        if (
+            header.header_id >= len(overworld_objects.members)
+            or header.header_id in unused_overworld_members
+        ):
             continue
         overworld = overworld_objects.read(header.header_id)
         references = [npc.script_used for npc in engine.parse_overworld_npcs(overworld)]

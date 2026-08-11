@@ -204,7 +204,7 @@ def _catalog_record(
                     "pokemon",
                     member["pokemon"].get("id", member["pokemon"]["slug"]),
                     member["pokemon"]["name"],
-                    member["pokemon"].get("slug"),
+                    member["pokemon"].get("page_slug", member["pokemon"].get("slug")),
                 ),
                 "trainers/",
             ),
@@ -600,7 +600,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 "pokemon",
                 pokemon.get("id", pokemon["slug"]),
                 pokemon["name"],
-                pokemon.get("slug"),
+                pokemon.get("page_slug", pokemon.get("slug")),
             ),
             source_url,
         )

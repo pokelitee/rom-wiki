@@ -244,6 +244,14 @@ kind of single-engine assumption, not just add the registry entry.
 For a hack-specific change, prefer a documented format variant shared through the
 engine over a parser named after one hack.
 
+Patching tools may leave stale container sizes even when every allocation still
+fits within the ROM's actual bytes. Keep archive parsing strict by default and
+enable trailing-data or incorrect-block-size compatibility only on the affected
+profile archive, after verifying its allocation table and adding a malformed-data
+regression test. Likewise, if one indexed record is structurally unusable, list
+that exact member in a profile parameter and omit only relationships sourced from
+it; do not weaken validation for the rest of the archive.
+
 ## 4. Emit normalized datasets
 
 Add an adapter or pipeline that maps engine records into the schemas under

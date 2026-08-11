@@ -766,15 +766,19 @@ def _format_evolutions(
             (old or new)["target"], "pokemon", source_url, references
         )
         if old is not None and new is not None:
-            old_condition = evolution_condition(old, source_url)
-            new_condition = evolution_condition(new, source_url)
+            old_condition = evolution_condition(old, source_url, references)
+            new_condition = evolution_condition(new, source_url, references)
             if old_condition == new_condition:
                 continue
             changed.append(f"{display}: {_diff(old_condition, new_condition)}")
         elif old is not None:
-            removed.append(f"{display}: {evolution_condition(old, source_url)}")
+            removed.append(
+                f"{display}: {evolution_condition(old, source_url, references)}"
+            )
         else:
-            added.append(f"{display}: {evolution_condition(new, source_url)}")
+            added.append(
+                f"{display}: {evolution_condition(new, source_url, references)}"
+            )
     groups = [
         ("evolution change", "evolution changes", changed),
         ("evolution removed", "evolutions removed", removed),

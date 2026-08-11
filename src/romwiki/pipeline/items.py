@@ -129,6 +129,8 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
             "field_archives_allow_incorrect_data_block_size", False
         ):
             archive_options["allow_incorrect_data_block_size"] = True
+        if profile.parameters.get("field_archives_allow_trailing_data", False):
+            archive_options["allow_trailing_data"] = True
         scripts_archive = platform.archive_cls.from_bytes(
             filesystem.read(scripts_path), **archive_options
         )

@@ -10,6 +10,7 @@ from romwiki.schema import (
 from romwiki.util.errors import InvalidRomError
 
 TRAINER_RECORD_SIZE = 20
+TRAINER_RECORD_SIZE_WITHOUT_VICTORY_ITEM = 18
 
 
 def parse_trainer_record(
@@ -22,10 +23,13 @@ def parse_trainer_record(
     trainer_archive: str,
     party_archive: str,
 ) -> BattleModeTrainer:
-    if len(data) != TRAINER_RECORD_SIZE:
+    if len(data) not in {
+        TRAINER_RECORD_SIZE,
+        TRAINER_RECORD_SIZE_WITHOUT_VICTORY_ITEM,
+    }:
         raise InvalidRomError(
             f"Gen V trainer {trainer_id} has size {len(data)}; expected "
-            f"{TRAINER_RECORD_SIZE}"
+            f"{TRAINER_RECORD_SIZE_WITHOUT_VICTORY_ITEM} or {TRAINER_RECORD_SIZE}"
         )
     poketype, class_id, battle_mode, party_count = struct.unpack_from("<BBBB", data)
     if class_id >= len(class_names):
@@ -36,7 +40,9 @@ def parse_trainer_record(
     ai_flags = struct.unpack_from("<H", data, 12)[0]
     healer = bool(data[16])
     victory_money_multiplier = data[17]
-    victory_item_id = struct.unpack_from("<H", data, 18)[0]
+    victory_item_id = (
+        struct.unpack_from("<H", data, 18)[0] if len(data) == TRAINER_RECORD_SIZE else 0
+    )
     has_custom_moves = bool(poketype & 1)
     has_held_items = bool(poketype & 2)
     record_size = 8 + (2 if has_held_items else 0) + (8 if has_custom_moves else 0)

@@ -244,6 +244,64 @@ class TrainerEnrichmentTests(unittest.TestCase):
 
 
 class Gen5TrainerEnrichmentTests(unittest.TestCase):
+    def test_resolves_internal_trainer_species_from_game_data(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 867,
+            "class_id": 1,
+            "has_custom_moves": False,
+            "reward_item_ids": (),
+            "party": [
+                {
+                    "difficulty": 255,
+                    "ability_slot": 1,
+                    "forced_gender_flag": 0,
+                    "level": 48,
+                    "species_id": 660,
+                    "form_id": 0,
+                    "held_item_id": None,
+                    "move_ids": (),
+                }
+            ],
+        }
+        pokemon_record = {
+            "slug": "pokestar-studios-11",
+            "name": "Pokestar Studios 11",
+            "public": False,
+            "base_species": None,
+            "gender_ratio": 255,
+            "base_stats": {
+                "hp": 100,
+                "attack": 100,
+                "defense": 100,
+                "special_attack": 100,
+                "special_defense": 100,
+                "speed": 100,
+            },
+            "sprite": None,
+            "types": [],
+            "abilities": [],
+        }
+
+        trainer = _enrich_trainer(
+            source,
+            pokedb,
+            None,
+            None,
+            engine="gen5_b2w2",
+            pokemon_records={660: pokemon_record},
+        )
+
+        self.assertEqual(trainer["party"][0]["pokemon"]["slug"], "pokestar-studios-11")
+        self.assertIsNone(trainer["party"][0]["pokemon"]["page_slug"])
+        self.assertIsNone(trainer["party"][0]["ability"])
+
     def test_links_battle_only_forms_to_their_public_base_page(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={},
@@ -356,6 +414,51 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
 
         self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Shellos (East Sea)")
         self.assertEqual(trainer["party"][1]["pokemon"]["name"], "Rotom Heat")
+
+    def test_resolves_redux_cosmetic_trainer_forms(self) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={
+                201: {"id": 201, "name": "unown", "species": "unown"},
+                618: {"id": 618, "name": "stunfisk", "species": "stunfisk"},
+            },
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 1,
+            "class_id": 1,
+            "has_custom_moves": False,
+            "reward_item_ids": (),
+            "party": [
+                {
+                    "difficulty": 0,
+                    "ability_slot": 0,
+                    "forced_gender_flag": 0,
+                    "level": 41,
+                    "species_id": 201,
+                    "form_id": 12,
+                    "held_item_id": None,
+                    "move_ids": (),
+                },
+                {
+                    "difficulty": 255,
+                    "ability_slot": 2,
+                    "forced_gender_flag": 0,
+                    "level": 35,
+                    "species_id": 618,
+                    "form_id": 5,
+                    "held_item_id": None,
+                    "move_ids": (),
+                },
+            ],
+        }
+
+        trainer = _enrich_trainer(source, pokedb, None, None, engine="gen5_b2w2")
+
+        self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Unown (M)")
+        self.assertEqual(trainer["party"][1]["pokemon"]["name"], "Stunfisk (Form 5)")
 
     def test_enriches_and_renders_a_triple_battle_trainer(self) -> None:
         source = {

@@ -1,0 +1,43 @@
+[profile]
+id = "blaze-black-2-redux"
+name = "Pokémon Blaze Black 2 Redux v1.4.1 Complete"
+extends = "black-2-us"
+
+[type_chart]
+chart = "gen5"
+additional_types = ["fairy"]
+
+[type_chart.overrides]
+"fairy>fighting" = "2"
+"fairy>dragon" = "2"
+"fairy>dark" = "2"
+"fairy>fire" = "1/2"
+"fairy>poison" = "1/2"
+"fairy>steel" = "1/2"
+"fighting>fairy" = "1/2"
+"bug>fairy" = "1/2"
+"dark>fairy" = "1/2"
+"dragon>fairy" = "0"
+"poison>fairy" = "2"
+"steel>fairy" = "2"
+"ghost>steel" = "1"
+"dark>steel" = "1"
+
+[semantics.types]
+17 = "fairy"
+
+[parameters]
+learnsets_allow_incorrect_data_block_size = true
+learnsets_allow_trailing_data = true
+repair_invalid_secondary_egg_group = true
+field_archives_allow_incorrect_data_block_size = true
+field_archives_allow_trailing_data = true
+map_headers_allow_trailing_data = true
+map_headers_allow_incorrect_data_block_size = true
+overworld_objects_unused = [464]
+pickup_table_locator = "19005C003500"
+
+[[hashes]]
+algorithm = "sha256"
+value = "332d07576e2077b4ef91e394603d144108098b7624c6a918b175f90530c0036a"
+variant = "complete-v1.4.1"

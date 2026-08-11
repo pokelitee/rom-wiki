@@ -1,0 +1,12 @@
+INHERIT: mkdocs.yml
+
+site_name: Pokémon Blaze Black 2 Redux & Volt White 2 Redux Wiki (Development)
+site_dir: ../../../build/mkdocs-dev/blaze-black-2-redux-volt-white-2-redux
+
+extra:
+  romwiki_site_id: blaze-black-2-redux-volt-white-2-redux
+  romwiki_dev_pages: dev-pages.toml
+
+validation:
+  links:
+    not_found: ignore

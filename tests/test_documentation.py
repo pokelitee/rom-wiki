@@ -24,6 +24,7 @@ class DocumentationTests(unittest.TestCase):
             "gen5-b2w2-data-sources.md": {
                 "black-2-white-2",
                 "blaze-black-2-volt-white-2",
+                "blaze-black-2-redux-volt-white-2-redux",
             },
         }
         game_pages = {
@@ -129,7 +130,11 @@ class DocumentationTests(unittest.TestCase):
         self.assertIn("complete 30-item catalog", shared_bw_notes)
         self.assertNotIn("**Black City market stock:**", shared_bw_notes)
 
-        for site_id in ("black-2-white-2", "blaze-black-2-volt-white-2"):
+        for site_id in (
+            "black-2-white-2",
+            "blaze-black-2-volt-white-2",
+            "blaze-black-2-redux-volt-white-2-redux",
+        ):
             notes = (
                 REPOSITORY_ROOT / f"sites/games/{site_id}/wiki/data-sources.md"
             ).read_text(encoding="utf-8")

@@ -1,0 +1,21 @@
+[site]
+id = "blaze-black-2-redux-volt-white-2-redux"
+name = "Pokémon Blaze Black 2 Redux & Volt White 2 Redux"
+kind = "game"
+slug = "blaze-black-2-redux-volt-white-2-redux"
+published = true
+order = 18
+mkdocs_config = "mkdocs.yml"
+description = "A data-driven reference for Pokémon Blaze Black 2 Redux and Volt White 2 Redux v1.4.1 Complete"
+
+[game]
+profiles = ["blaze-black-2-redux", "volt-white-2-redux"]
+versions = ["blaze-black-2-redux", "volt-white-2-redux"]
+generation = 5
+base_game = "black-2-white-2"
+platform = "nintendo-ds"
+platform_name = "Nintendo DS"
+creator = "AphexCubed & Drayano"
+
+[appearance]
+theme = "black-white"

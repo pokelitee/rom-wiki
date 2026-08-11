@@ -57,6 +57,24 @@ class NarcArchiveTests(unittest.TestCase):
         archive = NarcArchive.from_bytes(data, allow_incorrect_data_block_size=True)
         self.assertEqual(archive.read(1), b"de")
 
+    def test_requires_both_flags_when_data_block_crosses_declared_size(self) -> None:
+        data = bytearray(make_narc())
+        struct.pack_into("<I", data, 8, len(data) - 1)
+        struct.pack_into("<I", data, 40, 7)
+        data.extend(b"x-tool-output")
+
+        with self.assertRaises(InvalidRomError):
+            NarcArchive.from_bytes(data, allow_trailing_data=True)
+        with self.assertRaises(InvalidRomError):
+            NarcArchive.from_bytes(data, allow_incorrect_data_block_size=True)
+
+        archive = NarcArchive.from_bytes(
+            data,
+            allow_trailing_data=True,
+            allow_incorrect_data_block_size=True,
+        )
+        self.assertEqual(archive.read(1), b"dex")
+
     def test_requires_both_flags_for_truncated_archive_with_short_data_block(
         self,
     ) -> None:

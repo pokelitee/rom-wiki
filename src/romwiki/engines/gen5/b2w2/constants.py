@@ -85,9 +85,16 @@ TRAINER_FORM_SLUGS: dict[tuple[int, int], str] = {
     (647, 1): "keldeo-resolute",
 }
 
+_UNOWN_FORM_LABELS = (*"BCDEFGHIJKLMNOPQRSTUVWXYZ", "!", "?")
+
 TRAINER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {
+    **{
+        (201, form_id): label
+        for form_id, label in enumerate(_UNOWN_FORM_LABELS, start=1)
+    },
     (422, 1): "East Sea",
     (423, 1): "East Sea",
+    (618, 5): "Form 5",
 }
 
 GEN5_MACHINE_COUNT = 101

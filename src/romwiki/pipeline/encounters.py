@@ -150,7 +150,15 @@ def _extract_seasonal_wild_map_names(
     map_headers_path = profile.layout["map_headers"]
     map_names_member = profile.parameters["map_names_member"]
     messages_path = profile.layout["messages"]
-    map_headers = platform.archive_cls.from_bytes(filesystem.read(map_headers_path))
+    map_headers = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     map_names = engine.parse_english_message_archive(messages.read(map_names_member))
     wild_map_names = engine.parse_wild_map_names(

@@ -127,7 +127,13 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
         {
             "encounters_allow_trailing_data",
             "field_archives_allow_incorrect_data_block_size",
+            "field_archives_allow_trailing_data",
             "learnsets_allow_incorrect_data_block_size",
+            "learnsets_allow_trailing_data",
+            "map_headers_allow_trailing_data",
+            "map_headers_allow_incorrect_data_block_size",
+            "overworld_objects_unused",
+            "pickup_table_locator",
             "repair_invalid_secondary_egg_group",
         }
     ),

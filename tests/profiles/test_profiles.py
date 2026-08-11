@@ -333,6 +333,54 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertNotIn("static_pokemon", volt.parameters)
         self.assertNotIn("static_pokemon_egg_indices", volt.parameters)
 
+    def test_loads_blaze_black_2_and_volt_white_2_redux_profiles(self) -> None:
+        profiles = {
+            value.id: value
+            for value in ProfileRepository.load(Path("profiles")).profiles
+        }
+
+        blaze = profiles["blaze-black-2-redux"]
+        volt = profiles["volt-white-2-redux"]
+
+        self.assertEqual(blaze.engine, "gen5_b2w2")
+        self.assertEqual(blaze.base_game, "black-2")
+        self.assertEqual(blaze.hashes[0].variant, "complete-v1.4.1")
+        self.assertEqual(
+            blaze.hashes[0].value,
+            "332d07576e2077b4ef91e394603d144108098b7624c6a918b175f90530c0036a",
+        )
+        self.assertEqual(blaze.game_codes, ("IREO",))
+        self.assertEqual(blaze.type_chart.chart, "gen5")
+        self.assertEqual(blaze.type_chart.additional_types, ("fairy",))
+        self.assertEqual(blaze.type_chart.overrides["dragon>fairy"], "0")
+        self.assertEqual(blaze.type_chart.overrides["ghost>steel"], "1")
+        self.assertEqual(blaze.type_names[17], "fairy")
+        self.assertTrue(blaze.parameters["field_archives_allow_trailing_data"])
+        self.assertTrue(blaze.parameters["map_headers_allow_trailing_data"])
+        self.assertTrue(blaze.parameters["map_headers_allow_incorrect_data_block_size"])
+        self.assertTrue(blaze.parameters["repair_invalid_secondary_egg_group"])
+        self.assertEqual(blaze.parameters["overworld_objects_unused"], [464])
+        self.assertEqual(blaze.parameters["pickup_table_locator"], "19005C003500")
+        self.assertEqual(volt.engine, "gen5_b2w2")
+        self.assertEqual(volt.base_game, "white-2")
+        self.assertEqual(volt.hashes[0].variant, "complete-v1.4.1")
+        self.assertEqual(
+            volt.hashes[0].value,
+            "cf75c45ef07596e31f9d5bf4babde67b60a028e6b85eb811c14a7d4715a21120",
+        )
+        self.assertEqual(volt.game_codes, ("IRDO",))
+        self.assertEqual(volt.type_chart.chart, "gen5")
+        self.assertEqual(volt.type_chart.additional_types, ("fairy",))
+        self.assertEqual(volt.type_chart.overrides["dragon>fairy"], "0")
+        self.assertEqual(volt.type_chart.overrides["dark>steel"], "1")
+        self.assertEqual(volt.type_names[17], "fairy")
+        self.assertTrue(volt.parameters["field_archives_allow_trailing_data"])
+        self.assertTrue(volt.parameters["map_headers_allow_trailing_data"])
+        self.assertTrue(volt.parameters["map_headers_allow_incorrect_data_block_size"])
+        self.assertTrue(volt.parameters["repair_invalid_secondary_egg_group"])
+        self.assertEqual(volt.parameters["overworld_objects_unused"], [464])
+        self.assertEqual(volt.parameters["pickup_table_locator"], "19005C003500")
+
     def test_matches_a_known_hash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "test.toml"

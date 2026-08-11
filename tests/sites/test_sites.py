@@ -65,6 +65,7 @@ class SiteCatalogTests(unittest.TestCase):
                 "renegade-platinum",
                 "blaze-black-volt-white",
                 "blaze-black-2-volt-white-2",
+                "blaze-black-2-redux-volt-white-2-redux",
                 "black-white",
                 "black-2-white-2",
                 "heart-gold-soul-silver",
@@ -154,6 +155,7 @@ class SiteCatalogTests(unittest.TestCase):
                     "renegade-platinum",
                     "blaze-black-volt-white",
                     "blaze-black-2-volt-white-2",
+                    "blaze-black-2-redux-volt-white-2-redux",
                     "black-white",
                     "black-2-white-2",
                     "heart-gold-soul-silver",
@@ -170,6 +172,7 @@ class SiteCatalogTests(unittest.TestCase):
                     output.resolve() / "renegade-platinum",
                     output.resolve() / "blaze-black-volt-white",
                     output.resolve() / "blaze-black-2-volt-white-2",
+                    output.resolve() / "blaze-black-2-redux-volt-white-2-redux",
                     output.resolve() / "black-white",
                     output.resolve() / "black-2-white-2",
                     output.resolve() / "heart-gold-soul-silver",
@@ -315,6 +318,51 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertIn("--dirty", commands[3])
         self.assertIn("--clean", commands[4])
 
+    def test_complete_reuse_rebuilds_a_missing_portal_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            portal_root = root / "sites" / "portal"
+            wiki_root = portal_root / "wiki"
+            wiki_root.mkdir(parents=True)
+            config = portal_root / "mkdocs.yml"
+            config.write_text("site_name: Portal\n", encoding="utf-8")
+            (wiki_root / "index.md").write_text("# Portal\n", encoding="utf-8")
+            site = SiteDefinition(
+                id="portal",
+                name="Portal",
+                kind="portal",
+                slug=None,
+                published=True,
+                order=0,
+                config_path=config,
+                description="Portal",
+                theme="portal",
+                game=None,
+            )
+            catalog = SiteCatalog(root, (site,))
+            output = root / "dist"
+            commands: list[tuple[str, ...]] = []
+
+            def build(command: Sequence[str]) -> None:
+                commands.append(tuple(command))
+                destination = Path(command[-1])
+                destination.mkdir(parents=True, exist_ok=True)
+                (destination / "index.html").write_text("ok", encoding="utf-8")
+
+            for _ in range(2):
+                build_sites(
+                    catalog,
+                    output,
+                    build_all=True,
+                    reuse_unchanged=True,
+                    defer_output_validation=True,
+                    state_root=root / "state",
+                    runner=build,
+                )
+                (output / "index.html").unlink()
+
+        self.assertEqual(len(commands), 2)
+
     def test_b2w2_site_uses_paired_hack_profiles(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         site = catalog.get("blaze-black-2-volt-white-2")
@@ -325,6 +373,15 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertEqual(
             site.game.profiles,
             ("blaze-black-2", "volt-white-2"),
+        )
+
+        redux = catalog.get("blaze-black-2-redux-volt-white-2-redux")
+        self.assertIsNotNone(redux.game)
+        assert redux.game is not None
+        self.assertTrue(redux.game.data_driven)
+        self.assertEqual(
+            redux.game.profiles,
+            ("blaze-black-2-redux", "volt-white-2-redux"),
         )
 
     def test_rejects_generation_that_does_not_match_profile_engine(self) -> None:
@@ -460,6 +517,7 @@ class SiteCatalogTests(unittest.TestCase):
                 "renegade-platinum",
                 "blaze-black-volt-white",
                 "blaze-black-2-volt-white-2",
+                "blaze-black-2-redux-volt-white-2-redux",
                 "black-white",
                 "black-2-white-2",
                 "heart-gold-soul-silver",

@@ -306,7 +306,13 @@ def _extract_battle_mode_trainer_locations(
     map_names_member = profile.parameters["map_names_member"]
 
     map_headers_archive = platform.archive_cls.from_bytes(
-        filesystem.read(map_headers_path)
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
     )
     map_headers_data = map_headers_archive.read(0)
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
@@ -319,6 +325,8 @@ def _extract_battle_mode_trainer_locations(
     field_archive_options = {}
     if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
         field_archive_options["allow_incorrect_data_block_size"] = True
+    if profile.parameters.get("field_archives_allow_trailing_data", False):
+        field_archive_options["allow_trailing_data"] = True
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path),
         allow_truncated=True,
@@ -326,6 +334,9 @@ def _extract_battle_mode_trainer_locations(
     )
     overworld_objects = platform.archive_cls.from_bytes(
         filesystem.read(overworld_objects_path), **field_archive_options
+    )
+    unused_overworld_members = frozenset(
+        profile.parameters.get("overworld_objects_unused", ())
     )
 
     locations: dict[int, list[TrainerLocation]] = {}
@@ -336,7 +347,10 @@ def _extract_battle_mode_trainer_locations(
         header_id = header.header_id
         internal_name = f"map_{header_id}"
 
-        if header_id < len(overworld_objects.members):
+        if (
+            header_id < len(overworld_objects.members)
+            and header_id not in unused_overworld_members
+        ):
             npcs = engine.parse_overworld_npcs(overworld_objects.read(header_id))
             for npc in npcs:
                 trainer_id = engine.resolve_common_script_trainer_id(

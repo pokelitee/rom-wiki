@@ -232,9 +232,15 @@ def _build_site(
             generated_source_files=generated_source_files,
         )
         previous = read_site_build_state(state_path)
-        if defer_output_validation and previous is not None:
+        if (
+            defer_output_validation
+            and previous is not None
+            and output_path != resolved_output
+        ):
             # Complete regeneration compares the combined path set during the
-            # audit's existing artifact discovery pass.
+            # audit's existing artifact discovery pass. The root portal is
+            # inexpensive to inventory and must be present before nested-site
+            # links can be audited.
             known_output_files = previous.output_files
         reusable = can_reuse_site_output(
             previous,

@@ -23,6 +23,7 @@ committed.
 | Pokémon Black 2 & White 2 | Data-driven sibling-version family |
 | Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
 | Pokémon Blaze Black 2 & Volt White 2 | Data-driven paired-hack comparison |
+| Pokémon Blaze Black 2 Redux & Volt White 2 Redux | Data-driven paired-hack comparison |
 | Pokémon HeartGold & SoulSilver | Unpublished data-driven Generation IV family |
 | Pokémon Sacred Gold & Storm Silver | Unpublished paired-hack comparison scaffold |
 

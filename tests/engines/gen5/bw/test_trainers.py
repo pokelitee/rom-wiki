@@ -113,6 +113,30 @@ class Gen5TrainerTests(unittest.TestCase):
                 party_archive="parties.narc",
             )
 
+    def test_decodes_redux_header_without_victory_item(self) -> None:
+        data = _trainer_header(
+            poketype=0,
+            class_id=1,
+            battle_mode=0,
+            party_count=1,
+            victory_money=50,
+            victory_item=123,
+        )[:-2]
+        party_data = struct.pack("<BBHHH", 0, 0, 21, 587, 0)
+
+        trainer = parse_trainer_record(
+            data,
+            party_data,
+            trainer_id=847,
+            name="Lance",
+            class_names=_CLASS_NAMES,
+            trainer_archive="trainers.narc",
+            party_archive="parties.narc",
+        )
+
+        self.assertEqual(trainer.victory_money_multiplier, 50)
+        self.assertEqual(trainer.victory_item_id, 0)
+
     def test_rejects_mismatched_party_size(self) -> None:
         data = _trainer_header(poketype=0, class_id=0, battle_mode=0, party_count=2)
         with self.assertRaises(InvalidRomError):

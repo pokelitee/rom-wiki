@@ -65,14 +65,40 @@ class NarcArchive:
         data_block_size = _block_size(
             data, data_block_offset, b"GMIF", allow_truncated=allow_truncated
         )
-        if data_block_offset + data_block_size != file_size:
+        allocated_data_size = max(
+            (
+                struct.unpack_from("<I", data, fat_offset + 16 + index * 8)[0]
+                for index in range(member_count)
+            ),
+            default=0,
+        )
+        data_block_end = data_block_offset + data_block_size
+        if data_block_end != file_size:
+            block_uses_allowed_trailing_data = (
+                allow_trailing_data and file_size < data_block_end <= len(data)
+            )
             if (
                 not allow_incorrect_data_block_size
-                or (file_size != len(data) and not allow_truncated)
-                or data_block_offset + data_block_size > file_size
+                or (
+                    file_size != len(data)
+                    and not allow_truncated
+                    and not allow_trailing_data
+                    and not block_uses_allowed_trailing_data
+                )
+                or (data_block_end > file_size and not block_uses_allowed_trailing_data)
             ):
                 raise InvalidRomError("NARC blocks do not fill the declared archive")
-            data_block_size = file_size - data_block_offset
+            if not block_uses_allowed_trailing_data:
+                data_block_size = file_size - data_block_offset
+        if (
+            allocated_data_size > data_block_size - 8
+            and allow_trailing_data
+            and allow_incorrect_data_block_size
+            and file_size < len(data)
+        ):
+            data_block_size = 8 + allocated_data_size
+        if data_block_offset + data_block_size > len(data) and not allow_truncated:
+            raise InvalidRomError("NARC allocation entries exceed available data")
 
         raw_data_offset = data_block_offset + 8
         raw_data_size = data_block_size - 8

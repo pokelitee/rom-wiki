@@ -206,6 +206,7 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "renegade-platinum",
                 "blaze-black-volt-white",
                 "blaze-black-2-volt-white-2",
+                "blaze-black-2-redux-volt-white-2-redux",
                 "black-white",
                 "black-2-white-2",
                 "heart-gold-soul-silver",
