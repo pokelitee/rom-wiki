@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,7 @@ from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 CACHE_REVISION = 5
+_LOG = logging.getLogger("romwiki")
 
 
 class GameBuildContext:
@@ -331,8 +333,12 @@ class GameBuildContext:
             if not self.refresh:
                 cached = self._read_cache(key, path, source_fingerprint)
                 if cached is not None:
+                    _LOG.debug("Extraction cache hit for %s: %s", self.profile.id, key)
                     self._values[key] = cached
                     return cached
+            reason = "refresh" if self.refresh else "miss"
+            _LOG.debug("Extraction cache %s for %s: %s", reason, self.profile.id, key)
+        _LOG.debug("Extracting %s for %s", key, self.profile.id)
         value = extractor(self.result)
         validate_dataset_envelope(value, context=key)
         self._values[key] = value
@@ -340,6 +346,7 @@ class GameBuildContext:
             write_json_atomic(path, value)
             assert source_fingerprint is not None
             self._write_manifest(key, source_fingerprint)
+            _LOG.debug("Extraction cache updated for %s: %s", self.profile.id, key)
         return value
 
     def _memo(self, key: str, factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:

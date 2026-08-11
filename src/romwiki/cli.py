@@ -587,7 +587,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         # (rather than a hand-maintained command list) keeps this check in
         # sync with the parser definitions by construction.
         if hasattr(args, "rom_override"):
-            result = inspect_rom(_resolve_input_rom(args), args.profiles_dir)
+            input_rom = _resolve_input_rom(args)
+            _LOG.info("ROM input: %s", input_rom)
+            with timed_operation(_LOG, "ROM inspection"):
+                result = inspect_rom(input_rom, args.profiles_dir)
         if args.command == "inspect":
             if args.manifest_output is not None:
                 write_manifest(create_manifest(result), args.manifest_output)
@@ -734,15 +737,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             "build-moves",
             "build-items",
         }:
-            _run_section_build(args, result)
+            with timed_operation(_LOG, "Section build"):
+                _run_section_build(args, result)
         elif args.command == "build-game":
-            _run_full_game_build(args, result)
+            with timed_operation(_LOG, "Game build"):
+                _run_full_game_build(args, result)
         elif args.command == "build-version-family":
-            _run_version_family_build(args)
+            with timed_operation(_LOG, "Version-family build"):
+                _run_version_family_build(args)
         elif args.command == "regenerate":
             _run_regeneration(args)
         elif args.command == "baseline":
-            _run_baseline_build(args)
+            with timed_operation(_LOG, "Baseline build"):
+                _run_baseline_build(args)
         elif args.command == "site":
             if args.site_command == "audit":
                 with timed_operation(_LOG, "Site audit"):
@@ -1149,10 +1156,17 @@ def _run_version_family_build(
         }
         compare_to_bases = _version_family_uses_baselines(game_paths)
 
-        current_results = {
-            version: inspect_rom(game_paths[version].rom(), args.profiles_dir)
-            for version in versions
-        }
+        current_results = {}
+        for version_number, version in enumerate(versions, start=1):
+            _LOG.info(
+                "Version-family input [%s/%s] %s: inspecting ROM",
+                version_number,
+                len(versions),
+                version,
+            )
+            current_results[version] = inspect_rom(
+                game_paths[version].rom(), args.profiles_dir
+            )
         unmatched = [
             version
             for version, result in current_results.items()
@@ -1170,9 +1184,16 @@ def _run_version_family_build(
         )
         pokedb = PokeDBGeneration.load(_resolve_pokedb_path(args.pokedb, profiles))
         workflows = {}
-        for version in versions:
+        for version_number, version in enumerate(versions, start=1):
             paths = game_paths[version]
             result = current_results[version]
+            if compare_to_bases:
+                _LOG.info(
+                    "Version-family baseline [%s/%s] %s: inspecting ROM",
+                    version_number,
+                    len(versions),
+                    version,
+                )
             baseline = (
                 inspect_rom(paths.rom(base=True), args.profiles_dir)
                 if compare_to_bases
@@ -1277,8 +1298,11 @@ def _run_version_family_build(
 
 
 def _run_regeneration(args: argparse.Namespace) -> None:
-    regeneration_started = perf_counter()
-    _LOG.info("Complete regeneration started")
+    with timed_operation(_LOG, "Complete regeneration"):
+        _run_regeneration_steps(args)
+
+
+def _run_regeneration_steps(args: argparse.Namespace) -> None:
     if args.snapshot and not args.regenerate_all:
         raise SiteError("--snapshot requires --all")
     if args.snapshot and getattr(args, "incremental", False):
@@ -1313,10 +1337,16 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         ]
     ] = []
     preflight_started = perf_counter()
-    _LOG.info("Regeneration preflight started")
-    for site in data_sites:
+    _LOG.info("Regeneration preflight: %s sites", f"{len(data_sites):,}")
+    for site_number, site in enumerate(data_sites, start=1):
         assert site.game is not None
         assert profiles is not None
+        _LOG.info(
+            "Regeneration preflight [%s/%s]: %s",
+            site_number,
+            len(data_sites),
+            site.id,
+        )
         pokedb_path = args.pokedb_root / f"gen{site.game.generation}"
         if not pokedb_path.is_dir():
             raise LocalConfigError(
@@ -1364,17 +1394,20 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         prepared.append((site, paths, tuple(current), tuple(baselines), pokedb))
 
     _LOG.info(
-        "Validated regeneration inputs for %s data-driven site(s) in %.1fs",
-        f"{len(prepared):,}",
+        "Regeneration preflight completed in %.1fs for %s sites",
         perf_counter() - preflight_started,
+        f"{len(prepared):,}",
     )
     workflow = None
     workflows = None
-    for site, paths, current, baselines, pokedb in prepared:
+    for site_number, (site, paths, current, baselines, pokedb) in enumerate(
+        prepared, start=1
+    ):
         game = site.game
         assert game is not None
         site_started = perf_counter()
-        _LOG.info("Regenerating %s", site.id)
+        progress = f"{site_number}/{len(prepared)}"
+        _LOG.info("Generation [%s] %s: checking inputs", progress, site.id)
         state_path = args.root / ".romwiki" / "generation-state" / f"{site.id}.json"
         input_fingerprint = regeneration_fingerprint(
             args.root.resolve(),
@@ -1386,7 +1419,11 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         if not getattr(args, "clean", False) and can_reuse_generation(
             state_path, input_fingerprint, site
         ):
-            _LOG.info("Generation for %s skipped; inputs are unchanged", site.id)
+            _LOG.info(
+                "Generation [%s] %s skipped; inputs are unchanged",
+                progress,
+                site.id,
+            )
             continue
         if len(game.profiles) == 1:
             build_args = argparse.Namespace(
@@ -1446,7 +1483,8 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             _run_version_family_build(build_args, workflows=workflows)
         write_regeneration_state(state_path, input_fingerprint, site)
         _LOG.info(
-            "Regenerated %s in %.1fs",
+            "Generation [%s] %s completed in %.1fs",
+            progress,
             site.id,
             perf_counter() - site_started,
         )
@@ -1509,10 +1547,6 @@ def _run_regeneration(args: argparse.Namespace) -> None:
             f"{count:,}",
             args.snapshot_output,
         )
-    _LOG.info(
-        "Complete regeneration finished in %.1fs",
-        perf_counter() - regeneration_started,
-    )
 
 
 def _validate_regeneration_rom(
@@ -1632,6 +1666,7 @@ def _version_family_uses_baselines(
 
 def _run_baseline_build(args: argparse.Namespace) -> None:
     paths = LocalGameRegistry.load(args.games_config).get(args.game)
+    _LOG.info("Baseline input for %s: inspecting ROM", args.game)
     result = inspect_rom(paths.rom(base=True), args.profiles_dir)
     if result.match is None:
         raise LocalConfigError("The configured base ROM did not match a game profile")
@@ -1642,7 +1677,14 @@ def _run_baseline_build(args: argparse.Namespace) -> None:
     context = GameBuildContext(
         result, pokedb, cache_root=cache_root, refresh=args.refresh
     )
-    for kind in args.scope:
+    for dataset_number, kind in enumerate(args.scope, start=1):
+        _LOG.info(
+            "Baseline dataset [%s/%s] %s: %s",
+            dataset_number,
+            len(args.scope),
+            result.match.profile.id,
+            kind,
+        )
         getattr(context, kind)()
     print(
         f"Cached {len(args.scope)} baseline dataset groups for "

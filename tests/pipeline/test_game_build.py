@@ -28,10 +28,13 @@ class GameBuildWorkflowTests(unittest.TestCase):
         baseline = _inspection("base")
         workflow = GameBuildWorkflow(current, Mock(), baseline=baseline)
 
-        result = workflow.build("moves")
+        with self.assertLogs("romwiki", level="INFO") as logs:
+            result = workflow.build("moves")
 
         self.assertEqual(calls, ["baseline", "current"])
         self.assertEqual(result.comparison["counts"]["changed"], 1)
+        self.assertIn("Preparing moves dataset for base", "\n".join(logs.output))
+        self.assertIn("Preparing moves dataset for hack", "\n".join(logs.output))
 
     @patch("romwiki.pipeline.game_build.GameBuildContext")
     def test_hack_only_build_has_no_baseline_or_comparison(

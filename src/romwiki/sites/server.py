@@ -13,6 +13,7 @@ from urllib.parse import unquote, urlsplit
 from romwiki.sites.build import build_sites
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.util.errors import SiteError
+from romwiki.util.logging import timed_operation
 
 _LOG = logging.getLogger("romwiki")
 _RELOAD_ENDPOINT = "/__romwiki_dev__/version"
@@ -377,19 +378,19 @@ def _rebuild_worker(
             changes.clear()
             if stop.wait(timeout=0.2):
                 return
-        _LOG.info("Site source change detected; rebuilding combined wiki")
+        _LOG.info("Site source change detected")
         try:
-            build_sites(
-                catalog,
-                output_root,
-                site_ids=site_ids,
-                build_all=serve_all,
-                dev=dev,
-                site_url=site_url,
-                incremental=True,
-            )
+            with timed_operation(_LOG, "Development rebuild"):
+                build_sites(
+                    catalog,
+                    output_root,
+                    site_ids=site_ids,
+                    build_all=serve_all,
+                    dev=dev,
+                    site_url=site_url,
+                    incremental=True,
+                )
         except SiteError as error:
             _LOG.error("Development rebuild failed: %s", error)
             continue
         reload_state.advance()
-        _LOG.info("Development rebuild complete")

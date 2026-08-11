@@ -19,6 +19,7 @@ from romwiki.util.errors import SiteError
 
 _LOG = logging.getLogger("romwiki")
 _PAGE_PROGRESS_INTERVAL = 1_000
+_LINK_PROGRESS_INTERVAL = 100_000
 # Below this page count, process startup costs more than the parse it saves.
 _PARALLEL_PAGE_THRESHOLD = 500
 _PARSE_CHUNK_SIZE = 64
@@ -449,6 +450,7 @@ def audit_site(
         (str(resolved_root), page.relative_to(resolved_root).as_posix())
         for page in html_files
     ]
+    _LOG.info("Parsing %s HTML pages", f"{len(html_files):,}")
     for page_number, (relative, size, result) in enumerate(
         _parsed_pages(
             tasks, jobs=jobs, cache_path=cache_path, refresh_cache=refresh_cache
@@ -482,10 +484,11 @@ def audit_site(
                 f"{page_number:,}",
                 f"{len(html_files):,}",
             )
+    _LOG.info("Parsed %s HTML pages", f"{len(html_files):,}")
 
     link_count = 0
     total_links = sum(len(result.links) for result in parsed.values())
-    _LOG.info("Validating %s links", f"{total_links:,}")
+    _LOG.info("Validating %s link references", f"{total_links:,}")
     base_path = unquote(urlsplit(base_url).path).rstrip("/") if base_url else ""
     for page, result in parsed.items():
         for href, line in result.links:
@@ -495,6 +498,12 @@ def audit_site(
             )
             if issue is not None:
                 errors.append(issue)
+            if link_count % _LINK_PROGRESS_INTERVAL == 0:
+                _LOG.info(
+                    "Audit validated %s/%s links",
+                    f"{link_count:,}",
+                    f"{total_links:,}",
+                )
 
     used_classes = set().union(*(page.custom_classes for page in parsed.values()))
     for asset in (path for path in artifact_files if path.suffix.lower() == ".js"):

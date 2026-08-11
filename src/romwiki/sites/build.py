@@ -10,7 +10,6 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
-from time import perf_counter
 
 from romwiki.sites.build_state import (
     artifact_files,
@@ -22,6 +21,7 @@ from romwiki.sites.build_state import (
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition, site_display_key
 from romwiki.sites.inventory import file_path_inventory, read_inventory_state
 from romwiki.util.errors import SiteError
+from romwiki.util.logging import timed_operation
 
 CommandRunner = Callable[[Sequence[str]], None]
 _LOG = logging.getLogger("romwiki")
@@ -322,18 +322,8 @@ def _build_site(
 def _run_site_build(
     site: SiteDefinition, command: Sequence[str], command_runner: CommandRunner
 ) -> None:
-    started = perf_counter()
-    _LOG.info("MkDocs build for %s started", site.id)
-    try:
+    with timed_operation(_LOG, f"MkDocs build for {site.id}"):
         command_runner(command)
-    except Exception:
-        _LOG.info(
-            "MkDocs build for %s failed after %.1fs", site.id, perf_counter() - started
-        )
-        raise
-    _LOG.info(
-        "MkDocs build for %s completed in %.1fs", site.id, perf_counter() - started
-    )
 
 
 def _site_config_path(site: SiteDefinition, *, dev: bool) -> Path:

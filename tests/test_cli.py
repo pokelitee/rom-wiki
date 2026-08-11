@@ -792,6 +792,7 @@ patched_rom = "roms/white-us.nds"
                     return_value={"index.html"},
                 ),
                 patch("romwiki.cli.audit_site", return_value=report),
+                self.assertLogs("romwiki", level="INFO") as logs,
             ):
                 _run_regeneration(args)
 
@@ -813,6 +814,12 @@ patched_rom = "roms/white-us.nds"
                 set(build_family.call_args.kwargs["workflows"]),
                 {"black", "white"},
             )
+            messages = "\n".join(logs.output)
+            self.assertIn("Regeneration preflight [1/2]: platinum", messages)
+            self.assertIn("Regeneration preflight [2/2]: black-white", messages)
+            self.assertIn("Generation [1/2] platinum: checking inputs", messages)
+            self.assertIn("Generation [2/2] black-white: checking inputs", messages)
+            self.assertIn("Complete regeneration completed in", messages)
 
     def test_snapshot_requires_complete_regeneration(self) -> None:
         args = SimpleNamespace(

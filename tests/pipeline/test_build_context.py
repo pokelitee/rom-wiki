@@ -57,14 +57,18 @@ class GameBuildContextCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             cache_root = Path(directory)
 
-            first = _context(cache_root)
-            first_value = first._raw("moves/raw", extractor)
+            with self.assertLogs("romwiki", level="DEBUG") as logs:
+                first = _context(cache_root)
+                first_value = first._raw("moves/raw", extractor)
 
-            second = _context(cache_root)
-            second_value = second._raw("moves/raw", extractor)
+                second = _context(cache_root)
+                second_value = second._raw("moves/raw", extractor)
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(first_value, second_value)
+        messages = "\n".join(logs.output)
+        self.assertIn("Extraction cache miss for test-profile: moves/raw", messages)
+        self.assertIn("Extraction cache hit for test-profile: moves/raw", messages)
 
     def test_a_changed_rom_hash_invalidates_the_cache(self) -> None:
         calls: list = []

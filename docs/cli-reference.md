@@ -20,6 +20,12 @@ Global `--verbose` and `--quiet` options must precede the command:
 romwiki --verbose regenerate --all
 ```
 
+Default informational logs report command lifecycles and bounded progress for
+long-running work at the ROM, dataset, site, page, link, and snapshot levels.
+Individual records and files are not logged. `--verbose` adds diagnostic detail;
+`--quiet` retains warnings and errors while suppressing routine progress. Lifecycle
+messages consistently use `started`, `completed in`, and `failed after` wording.
+
 ## ROM inputs
 
 Commands that operate on one ROM accept three input forms:
@@ -270,9 +276,11 @@ romwiki site restore-snapshot --site renegade-platinum
 The tracked snapshot is a manifest plus deterministic per-site archives under
 `sites/generated-wiki/`. Metadata inventories avoid rereading unchanged generated
 content; content hashes remain the fallback when metadata changes. Unchanged
-archives are not rewritten. Restore continues to accept the former monolithic
-archive during migration. For compatibility, an explicit `.tar.gz` output keeps
-`site snapshot` in the monolithic format.
+archives are not rewritten. Snapshot creation and restore report bounded,
+site-level progress so long hashing and archive operations remain visible without
+logging individual files. Restore continues to accept the former monolithic archive
+during migration. For compatibility, an explicit `.tar.gz` output keeps `site
+snapshot` in the monolithic format.
 
 Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
 because it guarantees generation, site building, and auditing succeeded before

@@ -76,11 +76,16 @@ class SiteAuditTests(unittest.TestCase):
                 ".rw-link { color: blue; }", encoding="utf-8"
             )
 
-            report = audit_site(root)
+            with self.assertLogs("romwiki", level="INFO") as logs:
+                report = audit_site(root)
 
         self.assertTrue(report.ok)
         self.assertEqual(report.page_count, 2)
         self.assertEqual(report.link_count, 1)
+        messages = "\n".join(logs.output)
+        self.assertIn("Parsing 2 HTML pages", messages)
+        self.assertIn("Parsed 2 HTML pages", messages)
+        self.assertIn("Validating 1 link references", messages)
 
     def test_accepts_minified_bareword_alt_attribute(self) -> None:
         # mkdocs.base.yml's minify_html plugin collapses alt="" down to the

@@ -80,6 +80,7 @@ def create_generated_wiki_snapshot(
         raise SiteError("Generated wiki snapshot catalog does not match its root")
     resolved_root = catalog.root
     files = _generated_files(catalog)
+    _LOG.info("Snapshot: discovered %s generated files", f"{len(files):,}")
     resolved_output = output.resolve()
     resolved_output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -188,6 +189,12 @@ def restore_generated_wiki_snapshot(
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(source.read())
                 count += 1
+                if count % _SNAPSHOT_PROGRESS_INTERVAL == 0:
+                    _LOG.info(
+                        "Snapshot restore: restored %s/%s files",
+                        f"{count:,}",
+                        f"{int(manifest['file_count']):,}",
+                    )
             if count != manifest.get("file_count"):
                 raise SiteError(
                     "Generated wiki snapshot file count does not match its manifest"
@@ -215,9 +222,12 @@ def _create_snapshot_directory(
         )
     entries: dict[str, dict[str, object]] = {}
     total = 0
-    for site in catalog.published():
-        if not _is_published_data_site(site):
-            continue
+    data_sites = tuple(
+        site for site in catalog.published() if _is_published_data_site(site)
+    )
+    for site_number, site in enumerate(data_sites, start=1):
+        progress = f"{site_number}/{len(data_sites)}"
+        _LOG.info("Snapshot [%s] %s: scanning generated files", progress, site.id)
         files = _generated_files_for_site(site)
         metadata_fingerprint = _metadata_fingerprint(catalog.root, files)
         source_fingerprint = _site_source_fingerprint(catalog, site)
@@ -253,6 +263,14 @@ def _create_snapshot_directory(
                 source_fingerprint,
             )
             archive_sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+        outcome = "reused" if reusable else "updated"
+        _LOG.info(
+            "Snapshot [%s] %s: %s %s files",
+            progress,
+            site.id,
+            outcome,
+            f"{len(files):,}",
+        )
         entries[site.id] = {
             "archive": archive_path.name,
             "file_count": len(files),
@@ -346,11 +364,13 @@ def _restore_snapshot_directory(
     sites = _read_snapshot_directory_manifest(directory)
     selected = sorted(set(site_ids) if site_ids else sites)
     count = 0
-    for site_id in selected:
+    for site_number, site_id in enumerate(selected, start=1):
         site = catalog.get(site_id)
         entry = sites.get(site_id)
         if entry is None:
             raise SiteError(f"Generated wiki snapshot has no site: {site_id}")
+        progress = f"{site_number}/{len(selected)}"
+        _LOG.info("Snapshot restore [%s] %s: validating archive", progress, site_id)
         archive_path = directory / str(entry["archive"])
         try:
             if (
@@ -362,12 +382,19 @@ def _restore_snapshot_directory(
                 )
             if entry["source_fingerprint"] != _site_source_fingerprint(catalog, site):
                 raise SiteError(f"Generated wiki snapshot is stale for {site_id}")
-            count += _restore_site_archive(
+            restored = _restore_site_archive(
                 catalog,
                 site,
                 archive_path,
                 int(entry["file_count"]),
                 str(entry["source_fingerprint"]),
+            )
+            count += restored
+            _LOG.info(
+                "Snapshot restore [%s] %s: restored %s files",
+                progress,
+                site_id,
+                f"{restored:,}",
             )
         except (OSError, tarfile.TarError) as error:
             raise SiteError(

@@ -83,13 +83,15 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
             original = archive.read_bytes()
             original_mtime = archive.stat().st_mtime_ns
 
-            second_count = create_generated_wiki_snapshot(root, snapshot)
+            with self.assertLogs("romwiki", level="INFO") as snapshot_logs:
+                second_count = create_generated_wiki_snapshot(root, snapshot)
             generated_file.unlink()
             stale = generated_file.parent / "stale.md"
             stale.write_text("stale", encoding="utf-8")
-            restored_count = restore_generated_wiki_snapshot(
-                root, snapshot, site_ids=("test-game",)
-            )
+            with self.assertLogs("romwiki", level="INFO") as restore_logs:
+                restored_count = restore_generated_wiki_snapshot(
+                    root, snapshot, site_ids=("test-game",)
+                )
             reused = archive.read_bytes()
             reused_mtime = archive.stat().st_mtime_ns
             stale_exists = stale.exists()
@@ -99,6 +101,22 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
         self.assertEqual(reused, original)
         self.assertEqual(reused_mtime, original_mtime)
         self.assertFalse(stale_exists)
+        self.assertIn(
+            "Snapshot [1/1] test-game: scanning generated files",
+            "\n".join(snapshot_logs.output),
+        )
+        self.assertIn(
+            f"Snapshot [1/1] test-game: reused {first_count:,} files",
+            "\n".join(snapshot_logs.output),
+        )
+        self.assertIn(
+            "Snapshot restore [1/1] test-game: validating archive",
+            "\n".join(restore_logs.output),
+        )
+        self.assertIn(
+            f"Snapshot restore [1/1] test-game: restored {first_count:,} files",
+            "\n".join(restore_logs.output),
+        )
 
     def test_type_chart_is_required_generated_content(self) -> None:
         self.assertIn("types", REQUIRED_WIKI_SECTIONS)

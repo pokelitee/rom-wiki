@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,8 @@ from romwiki.pipeline.sections import (
 )
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError, ProfileError
+
+_LOG = logging.getLogger("romwiki")
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +122,7 @@ class GameBuildWorkflow:
     def _dataset(context: GameBuildContext | None, kind: str) -> dict[str, Any]:
         if context is None:
             raise DataSourceError("Dataset context is required")
+        _LOG.info("Preparing %s dataset for %s", kind, context.profile.id)
         factory = getattr(context, kind)
         dataset = factory()
         if dataset is None:
