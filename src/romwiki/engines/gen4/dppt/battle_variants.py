@@ -36,7 +36,7 @@ def extract_trainer_battle_families(
         raise ProfileError(
             f"Profile {profile_id!r} must select a verified DPPT trainer variant contract"
         )
-    available = {record.get("trainer_id") for record in records}
+    available = {record.get("trainer_id") for record in records if record.get("party")}
     groups = [
         group
         for group in _RIVAL_GROUPS

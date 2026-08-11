@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -74,8 +75,10 @@ class EncounterRenderingTests(unittest.TestCase):
     def test_links_seasonal_and_nonseasonal_gen5_encounters_to_locations(self) -> None:
         seasonal = _encounter_record(8, 3, "spring", "Route 1")
         seasonal["versions"] = ["black"]
+        summer = _encounter_record(10, 3, "summer", "Route 1")
+        summer["versions"] = ["black"]
         nonseasonal = _encounter_record(9, 4, None, "Dreamyard")
-        encounter_dataset = _dataset("encounters", [seasonal, nonseasonal])
+        encounter_dataset = _dataset("encounters", [seasonal, summer, nonseasonal])
         location_dataset = _dataset(
             "locations",
             [
@@ -121,6 +124,8 @@ class EncounterRenderingTests(unittest.TestCase):
             "| [Route 1](../locations/header-007.md) | 7 | Black |",
             seasonal_page,
         )
+        self.assertIn("## Seasonal variants", seasonal_page)
+        self.assertIn("[Summer](map-003-summer.md)", seasonal_page)
         self.assertIn("## Map headers", nonseasonal_page)
         self.assertIn(
             "| [Dreamyard](../locations/header-008.md) | 8 | White |",
@@ -145,6 +150,71 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertNotIn("## Map headers", page)
         self.assertNotIn("../locations/", page)
         self.assertIn("no location link is guessed", page)
+
+    def test_uses_verified_map_header_name_and_combines_species_rows(self) -> None:
+        record = _encounter_record(2, 2, "spring", "Map 002")
+        record["location_names"] = []
+        pokemon = {
+            "id": 423,
+            "slug": "gastrodon",
+            "name": "Gastrodon",
+            "sprite": None,
+        }
+        record["surfing"] = {
+            "rate": 10,
+            "slots": [
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 45,
+                    "maximum_level": 55,
+                    "chance": 60,
+                    "pokemon": pokemon,
+                },
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 55,
+                    "maximum_level": 65,
+                    "chance": 30,
+                    "pokemon": pokemon,
+                },
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 55,
+                    "maximum_level": 65,
+                    "chance": 10,
+                    "pokemon": pokemon,
+                },
+            ],
+        }
+        encounter_dataset = _dataset("encounters", [record])
+        location_dataset = _dataset(
+            "locations",
+            [{"header_id": 113, "name": "Icirrus City", "encounter_map_index": 2}],
+        )
+        relationships = build_relationship_index(
+            {"encounters": encounter_dataset, "locations": location_dataset}
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(
+                encounter_dataset,
+                output,
+                relationships=relationships,
+            )
+            page = (output / "map-002-spring.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertIn("# Icirrus City", page)
+        self.assertNotIn("# Map 002", page)
+        self.assertEqual(page.count("gastrodon"), 1)
+        self.assertIn("45–55 (60%); 55–65 (40%)", page)
+        self.assertIn("| 100% |", page)
+        self.assertEqual(catalog["records"][0]["label"], "Icirrus City")
+        self.assertEqual(catalog["records"][0]["locations"], ["Icirrus City"])
 
 
 def _dataset(kind: str, records: list[dict]) -> dict:

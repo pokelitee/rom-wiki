@@ -64,6 +64,9 @@ def render_encounter_map_location_pages(
     catalog_records = []
     page_count = 0
     sorted_records = sorted(records, key=lambda item: (item["name"], item["header_id"]))
+    same_name_groups: dict[str, list[dict[str, Any]]] = {}
+    for record in sorted_records:
+        same_name_groups.setdefault(record["name"], []).append(record)
     for index, record in enumerate(sorted_records):
         filename = _filename(record["header_id"])
         encounters = (
@@ -84,6 +87,7 @@ def render_encounter_map_location_pages(
                     following,
                     references,
                     encounters,
+                    same_name_groups[record["name"]],
                 ),
             )
             page_count += 1
@@ -140,6 +144,7 @@ def _render_encounter_map_location(
     following: dict[str, Any] | None,
     references: ReferenceIndex | None = None,
     encounters: tuple[LocationEncounterReference, ...] = (),
+    same_name_records: list[dict[str, Any]] | None = None,
 ) -> str:
     source_file = f"locations/{_filename(record['header_id'])}"
     facts = [f"<div><dt>Header ID</dt><dd>{record['header_id']}</dd></div>"]
@@ -155,7 +160,8 @@ def _render_encounter_map_location(
     ]
     if encounters:
         lines.extend(["## Wild encounters", ""])
-        _append_encounter_variants(lines, encounters, source_file)
+        _append_encounter_variants(lines, encounters, source_file, record["name"])
+    _append_same_name_locations(lines, record, same_name_records or [], source_file)
     _append_connections(lines, record["connections"], source_file)
     _append_trainers(lines, record["trainers"], source_file)
     _append_warps(lines, record["warps"], source_file)
@@ -216,6 +222,7 @@ def _append_encounter_variants(
     lines: list[str],
     encounters: tuple[LocationEncounterReference, ...],
     source_file: str,
+    location_name: str,
 ) -> None:
     if len(encounters) == 1 and encounters[0].season is None:
         encounter = encounters[0]
@@ -241,7 +248,7 @@ def _append_encounter_variants(
         ]
     )
     for encounter in encounters:
-        label = f"Map {encounter.map_index:03}" + (
+        label = location_name + (
             f" ({encounter.season.title()})" if encounter.season else ""
         )
         link = ROUTES.markdown_link(
@@ -259,5 +266,45 @@ def _append_encounter_variants(
         lines.append(
             f"| {encounter.season.title() if encounter.season else 'All'} | "
             f"{link} | {versions} |"
+        )
+    lines.append("")
+
+
+def _append_same_name_locations(
+    lines: list[str],
+    record: dict[str, Any],
+    same_name_records: list[dict[str, Any]],
+    source_file: str,
+) -> None:
+    related = [
+        candidate
+        for candidate in same_name_records
+        if candidate["header_id"] != record["header_id"]
+    ]
+    if not related:
+        return
+    lines.extend(
+        [
+            "## Same-name locations",
+            "",
+            (
+                "These ROM map-header records share the same display name. "
+                "They may represent different rooms or map sections."
+            ),
+            "",
+            "| Location | Header | Wild encounter map |",
+            "| -------- | -----: | ------------------ |",
+        ]
+    )
+    for candidate in related:
+        header_id = candidate["header_id"]
+        link = ROUTES.markdown_link(
+            entity_reference("location", header_id, f"Header {header_id}", header_id),
+            source_file,
+        )
+        encounter_index = candidate.get("encounter_map_index")
+        lines.append(
+            f"| {link} | {header_id} | "
+            f"{encounter_index if encounter_index is not None else 'None'} |"
         )
     lines.append("")

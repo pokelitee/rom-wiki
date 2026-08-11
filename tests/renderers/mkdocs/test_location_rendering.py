@@ -118,8 +118,8 @@ class LocationRenderingTests(unittest.TestCase):
             page = (output / "header-006.md").read_text(encoding="utf-8")
             nonseasonal_page = (output / "header-007.md").read_text(encoding="utf-8")
 
-        self.assertIn("[Map 003 (Spring)](../encounters/map-003-spring.md)", page)
-        self.assertIn("[Map 003 (Summer)](../encounters/map-003-summer.md)", page)
+        self.assertIn("[Route 1 (Spring)](../encounters/map-003-spring.md)", page)
+        self.assertIn("[Route 1 (Summer)](../encounters/map-003-summer.md)", page)
         self.assertIn("| Spring |", page)
         self.assertIn("| Black |", page)
         self.assertIn("Wild encounter table index | `3`", page)
@@ -193,6 +193,8 @@ class LocationRenderingTests(unittest.TestCase):
             output = Path(directory)
             render_location_pages(dataset, output)
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            first_page = (output / "header-006.md").read_text(encoding="utf-8")
+            second_page = (output / "header-007.md").read_text(encoding="utf-8")
 
         self.assertEqual(
             [(record["label"], record["route_id"]) for record in catalog["records"]],
@@ -201,6 +203,10 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertTrue(
             all("(header " not in record["label"] for record in catalog["records"])
         )
+        self.assertIn("## Same-name locations", first_page)
+        self.assertIn("[Header 7](header-007.md)", first_page)
+        self.assertIn("[Header 6](header-006.md)", second_page)
+        self.assertIn("may represent different rooms or map sections", first_page)
 
     def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
         record = {

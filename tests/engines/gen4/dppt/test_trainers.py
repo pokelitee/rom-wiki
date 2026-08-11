@@ -7,6 +7,9 @@ from romwiki.engines.gen4.dppt import (
     parse_trainer_class_genders,
     parse_trainer_record,
 )
+from romwiki.engines.gen4.dppt.battle_variants import (
+    extract_trainer_battle_families,
+)
 from romwiki.engines.gen4.dppt.trainers import (
     parse_trainer_class_prize_multipliers,
 )
@@ -93,6 +96,29 @@ class Gen4TrainerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(InvalidRomError, "has size 2; expected 3"):
             parse_trainer_class_prize_multipliers(b"\x00\x04", count=3)
+
+    def test_does_not_relate_profile_records_without_parties(self) -> None:
+        records = [
+            *(
+                {"trainer_id": trainer_id, "party": []}
+                for trainer_id in range(837, 843)
+            ),
+            *(
+                {"trainer_id": trainer_id, "party": [{"species_id": 1}]}
+                for trainer_id in range(850, 853)
+            ),
+        ]
+
+        result = extract_trainer_battle_families(
+            "renegade-platinum",
+            {"trainer_variant_contract": "renegade-platinum-v1.3.0"},
+            records,
+        )
+
+        family_ids = {family["id"] for family in result["battle_families"]}
+        self.assertNotIn("barry-fight-area", family_ids)
+        self.assertNotIn("barry-weekend-rematch-1", family_ids)
+        self.assertIn("barry-starter-demo", family_ids)
 
 
 if __name__ == "__main__":

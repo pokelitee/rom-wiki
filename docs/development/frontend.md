@@ -313,9 +313,11 @@ Those are normalized as `healer` and `victory_item`; item pages invert the latte
 into trainer-reward backlinks. Wild encounter
 slot tables show a per-slot catch-rate percentage from the fixed Generation
 III/IV engine weight tables (not ROM data) and combine slots that share a
-species and level(s) into one row with their chances summed, since the ROM
-encodes higher odds by repeating a species across more slots rather than
-storing a percentage.
+species and form into one row. The row retains each distinct level or level
+range with its own summed chance and also shows the species' total chance;
+the normalized source slots remain unchanged. Encounter display names and
+reciprocal location links come from the verified map-index-to-header
+relationship, with `Map NNN` retained only when no header is resolved.
 
 Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
 These are labeled reference content. Stat, type, ability, training, breeding,

@@ -162,7 +162,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
-        self.assertEqual(enriched["party_schema_version"], 3)
+        self.assertEqual(enriched["party_schema_version"], 4)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
