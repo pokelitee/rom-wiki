@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.location_sections import location_reference_label
 from romwiki.pipeline.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -136,7 +137,7 @@ def render_event_map_location_pages(
                 {
                     "id": record["header_id"],
                     "route_id": route_id,
-                    "label": _location_label(record),
+                    "label": record["name"],
                     "location_name": record["name"],
                     "section_name": record.get("section_name"),
                     "url": route_id + "/",
@@ -344,7 +345,7 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
 
 
 def _location_label(record: dict[str, Any]) -> str:
-    return record.get("section_name") or record["name"]
+    return location_reference_label(record)
 
 
 def _section_name_provenance_facts(
@@ -354,12 +355,13 @@ def _section_name_provenance_facts(
     source = record.get("section_name_source")
     if not section_name or not source:
         return ()
+    if source.get("source") == "rom":
+        source_label = f"ROM `{source['field']}` field"
+    else:
+        source_label = f"profile `{source['profile']}`, key `{source['key']}`"
     return (
         ("Section name", escape_table_cell(section_name)),
-        (
-            "Section name source",
-            f"profile `{source['profile']}`, key `{source['key']}`",
-        ),
+        ("Section name source", source_label),
     )
 
 

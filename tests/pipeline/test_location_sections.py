@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from romwiki.pipeline.location_sections import (
+    location_reference_label,
     resolve_location_section,
     validate_location_sections,
 )
@@ -11,7 +12,7 @@ from romwiki.util.errors import ProfileError
 
 
 class LocationSectionResolverTests(unittest.TestCase):
-    def test_resolves_profile_labels_without_decoding_native_names(self) -> None:
+    def test_prefers_profile_labels_and_falls_back_to_native_names(self) -> None:
         profile = GameProfile(
             id="example-hack",
             name="Example Hack",
@@ -46,7 +47,29 @@ class LocationSectionResolverTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_location_section(profile, header_id=10, internal_name="D25R0102"),
+            (
+                "D25R0102",
+                {"source": "rom", "field": "internal_name"},
+            ),
+        )
+        self.assertEqual(
+            resolve_location_section(profile, header_id=11, internal_name=None),
             (None, None),
+        )
+
+    def test_combines_rom_section_with_display_name_for_references(self) -> None:
+        self.assertEqual(
+            location_reference_label(
+                {
+                    "name": "Canalave City",
+                    "section_name": "C02PC0101",
+                    "section_name_source": {
+                        "source": "rom",
+                        "field": "internal_name",
+                    },
+                }
+            ),
+            "Canalave City — C02PC0101",
         )
 
     def test_rejects_unmatched_and_conflicting_selectors(self) -> None:

@@ -107,12 +107,11 @@ has a stable ID, display label, final directory URL, and normalized `search_text
 World catalogs also expose the exact final route segment as `route_id`; their
 tables show it in a shared ID column after the recognizable record name.
 Location records retain the ROM display name even when several map headers share
-it, with values such as `header-340` providing exact disambiguation. A profile may
-also supply an optional, human-readable `section_name` for an exact header or
-native internal map name. When present, catalogs and page headings use that more
-specific label while exposing the ROM location name separately. Missing section
-labels remain empty; renderers must not derive floors or rooms from identifiers,
-header adjacency, map topology, or external lookup tables.
+it, with values such as `header-340` providing exact disambiguation. Catalogs put
+the ROM's raw internal map name in a separate Section column and the typed route
+in ID. A profile may replace that raw section value with a verified human-readable
+label for an exact header or internal map name. Renderers do not derive floors or
+rooms from identifiers, header adjacency, map topology, or external lookup tables.
 Section-specific fields provide only the values visible, searchable, sortable,
 or filterable in the catalog. Catalog definitions may use select or searchable
 combobox facets, numeric ranges, sort direction, and correlations between facets.

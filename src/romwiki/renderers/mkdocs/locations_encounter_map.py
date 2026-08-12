@@ -121,7 +121,7 @@ def render_encounter_map_location_pages(
             {
                 "id": record["header_id"],
                 "route_id": route_id,
-                "label": _location_label(record),
+                "label": record["name"],
                 "location_name": record["name"],
                 "section_name": record.get("section_name"),
                 "url": route_id + "/",

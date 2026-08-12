@@ -315,7 +315,8 @@ Extend a schema only for a real cross-game concept. New fields should be optiona
 when older games cannot supply them, and a breaking semantic change requires a
 schema-version change.
 
-Profiles may add verified location-section labels without changing the ROM's
+Raw internal map names are used automatically as location sections. Profiles may
+replace them with verified human-readable labels without changing the ROM's
 display names:
 
 ```toml

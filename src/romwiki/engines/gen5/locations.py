@@ -67,6 +67,7 @@ def parse_map_header_table(
             EncounterMapLocation(
                 header_id=header_id,
                 name=map_names[name_index],
+                internal_name=f"map_{header_id}",
                 encounter_map_index=(
                     None if wild_set == (_NULL_WILD_SET & wild_set_mask) else wild_set
                 ),

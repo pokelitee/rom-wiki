@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from romwiki.pipeline.encounter_identity import encounter_route_key
+from romwiki.pipeline.location_sections import location_reference_label
 from romwiki.util.errors import DataSourceError
 
 
@@ -893,8 +894,7 @@ def _freeze_encounter_locations(
 
 
 def _location_display_name(location: Mapping[str, Any]) -> str:
-    section_name = location.get("section_name")
-    return section_name if isinstance(section_name, str) else str(location["name"])
+    return location_reference_label(location)
 
 
 def _deduplicate(values: Iterable[Any]) -> Iterable[Any]:

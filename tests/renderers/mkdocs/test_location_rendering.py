@@ -252,7 +252,7 @@ class LocationRenderingTests(unittest.TestCase):
             unresolved = (output / "header-062.md").read_text(encoding="utf-8")
 
         self.assertEqual(catalog["records"][0]["label"], "Chargestone Cave")
-        self.assertEqual(catalog["records"][1]["label"], "Chargestone Cave B1F")
+        self.assertEqual(catalog["records"][1]["label"], "Chargestone Cave")
         self.assertEqual(catalog["records"][1]["location_name"], "Chargestone Cave")
         self.assertEqual(catalog["records"][1]["section_name"], "Chargestone Cave B1F")
         self.assertIn("# Chargestone Cave B1F", resolved)

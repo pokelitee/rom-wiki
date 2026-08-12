@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import ProfileError
@@ -12,7 +13,7 @@ def resolve_location_section(
     header_id: int,
     internal_name: str | None,
 ) -> tuple[str | None, dict[str, str] | None]:
-    """Resolve only labels explicitly owned by the matched ROM profile."""
+    """Resolve an explicit label or fall back to the ROM's internal map name."""
 
     configured = profile.location_sections
     if header_id in configured.by_header:
@@ -27,7 +28,25 @@ def resolve_location_section(
             "profile": profile.id,
             "key": internal_name,
         }
+    if internal_name:
+        return internal_name, {
+            "source": "rom",
+            "field": "internal_name",
+        }
     return None, None
+
+
+def location_reference_label(location: Mapping[str, Any]) -> str:
+    """Return an exact but readable label for a location reference."""
+
+    name = str(location["name"])
+    section_name = location.get("section_name")
+    if not isinstance(section_name, str) or not section_name:
+        return name
+    source = location.get("section_name_source")
+    if isinstance(source, Mapping) and source.get("source") == "rom":
+        return f"{name} — {section_name}"
+    return section_name
 
 
 def validate_location_sections(

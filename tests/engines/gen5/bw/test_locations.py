@@ -79,10 +79,12 @@ class Gen5LocationsTests(unittest.TestCase):
         self.assertEqual(len(headers), 2)
         self.assertEqual(headers[0].header_id, 0)
         self.assertEqual(headers[0].name, "Route 1")
+        self.assertEqual(headers[0].internal_name, "map_0")
         self.assertEqual(headers[0].encounter_map_index, 5)
         self.assertEqual(headers[0].provenance.archive, "maps.narc")
         self.assertEqual(headers[0].provenance.member, 0)
         self.assertEqual(headers[1].name, "Accumula Town")
+        self.assertEqual(headers[1].internal_name, "map_1")
         self.assertIsNone(headers[1].encounter_map_index)
 
     def test_parses_each_header_s_own_script_file_index(self) -> None:
