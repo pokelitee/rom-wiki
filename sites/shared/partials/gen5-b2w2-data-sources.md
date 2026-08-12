@@ -122,6 +122,10 @@ per-record display level is guessed. Redux's creator documentation independently
 confirms shared Easy/Normal parties, Challenge-only teams, and the level/stat
 limitation:
 [Pokémon Trainer Changes](https://smilingzero.github.io/BlazeBlack2ReduxWiki/genTrainerChange/).
+Redux's documented Reversal Mountain Bianca teams are also related explicitly:
+Easy/Normal use trainer record 4 and Challenge uses record 852. Other apparent
+same-name or three-record runs remain ungrouped unless their runtime selector is
+independently verified.
 
 ## Locations
 

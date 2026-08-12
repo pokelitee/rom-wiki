@@ -75,6 +75,23 @@ class B2W2TrainerVariantTests(unittest.TestCase):
             [341, 341, 776, 536, 536, 781],
         )
 
+    def test_redux_relates_biancas_documented_difficulty_teams(self) -> None:
+        contract = extract_trainer_battle_families(
+            "blaze-black-2-redux",
+            {
+                "trainer_variant_contract": (
+                    "blaze-black-2-redux-volt-white-2-redux-v1.4.1"
+                )
+            },
+            [{"trainer_id": 4}, {"trainer_id": 852}],
+        )
+
+        family = contract["battle_families"][0]
+        self.assertEqual(family["id"], "bianca-reversal-mountain")
+        self.assertEqual(
+            [variant["trainer_id"] for variant in family["variants"]], [4, 4, 852]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

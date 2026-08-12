@@ -229,6 +229,52 @@ def _pokemon_league_difficulty_families(
     return families
 
 
+def _profile_difficulty_families(
+    profile_id: str, contract: object, available: set[object]
+) -> list[dict[str, Any]]:
+    if (
+        contract != "blaze-black-2-redux-volt-white-2-redux-v1.4.1"
+        or not {4, 852}.issubset(available)
+    ):
+        return []
+    return [
+        {
+            "id": "bianca-reversal-mountain",
+            "label": "Bianca Reversal Mountain battle",
+            "order": 300,
+            "provenance": {
+                "source": "Redux creator trainer documentation and ROM records",
+                "reference": f"{profile_id}:difficulty:bianca:reversal-mountain",
+                "verification": (
+                    "The documented Easy/Normal and Challenge teams were matched "
+                    "to exact Redux trainer records 4 and 852."
+                ),
+            },
+            "variants": [
+                {
+                    "trainer_id": trainer_id,
+                    "order": order,
+                    "conditions": [
+                        {
+                            "kind": "difficulty-mode",
+                            "value": mode,
+                            "label": f"{mode.title()} Mode",
+                        },
+                        {
+                            "kind": "story-stage",
+                            "value": "reversal-mountain",
+                            "label": "Reversal Mountain",
+                        },
+                    ],
+                }
+                for order, (mode, trainer_id) in enumerate(
+                    (("easy", 4), ("normal", 4), ("challenge", 852))
+                )
+            ],
+        }
+    ]
+
+
 def extract_trainer_battle_families(
     profile_id: str,
     parameters: Mapping[str, Any],
@@ -243,6 +289,7 @@ def extract_trainer_battle_families(
     families = _rival_families(profile_id, available)
     families.extend(_difficulty_families(profile_id, available))
     families.extend(_pokemon_league_difficulty_families(profile_id, available))
+    families.extend(_profile_difficulty_families(profile_id, contract, available))
     return {
         "trainer_variant_support": {
             "starter_choice": {"status": "verified"},

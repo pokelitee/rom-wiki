@@ -1030,7 +1030,8 @@ def _append_battle_variants(
             )
             lines.append(
                 f"| {condition_label} | {trainer_link} | "
-                f"{_trainer_level_range(candidate)} | {_party_preview(candidate)} |"
+                f"{_trainer_level_range(candidate)} | "
+                f"{_linked_party(candidate, source_file)} |"
             )
         provenance = family["provenance"]
         lines.extend(

@@ -69,6 +69,8 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("ID 161 (this record)", page)
         self.assertIn("ID 162", page)
         self.assertIn("ROM field-script selection", page)
+        self.assertIn("[Tepig](../pokemon/tepig.md)", page)
+        self.assertIn("[Oshawott](../pokemon/oshawott.md)", page)
 
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
         lines = _trainer_provenance(
