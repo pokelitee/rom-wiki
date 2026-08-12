@@ -13,6 +13,7 @@ TrainerBattleConditionKind = Literal[
     "rematch-stage",
     "story-stage",
     "sibling-version",
+    "season",
 ]
 TrainerVariantSupportStatus = Literal[
     "verified", "partial", "unsupported", "unresolved"
@@ -67,6 +68,7 @@ class TrainerVariantSupport(TypedDict):
     rematch_stage: TrainerVariantMechanicSupport
     story_stage: TrainerVariantMechanicSupport
     sibling_version: TrainerVariantMechanicSupport
+    season: TrainerVariantMechanicSupport
 
 
 _CONDITION_KINDS = {
@@ -75,6 +77,7 @@ _CONDITION_KINDS = {
     "rematch-stage",
     "story-stage",
     "sibling-version",
+    "season",
 }
 _SUPPORT_KEYS = {
     "starter_choice",
@@ -82,6 +85,7 @@ _SUPPORT_KEYS = {
     "rematch_stage",
     "story_stage",
     "sibling_version",
+    "season",
 }
 _SUPPORT_STATUSES = {"verified", "partial", "unsupported", "unresolved"}
 
@@ -94,6 +98,7 @@ def unresolved_trainer_variant_support() -> TrainerVariantSupport:
         "rematch_stage": {"status": "unresolved"},
         "story_stage": {"status": "unresolved"},
         "sibling_version": {"status": "unresolved"},
+        "season": {"status": "unresolved"},
     }
 
 

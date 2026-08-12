@@ -275,6 +275,94 @@ def _profile_difficulty_families(
     ]
 
 
+def _n_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]:
+    families: list[dict[str, Any]] = []
+    if {5, 6}.issubset(available):
+        families.append(
+            {
+                "id": "n-castle-first-battle",
+                "label": "N's Castle first battle",
+                "order": 400,
+                "provenance": {
+                    "source": "B2W2 version dispatch and exact trainer records",
+                    "reference": f"{profile_id}:n-castle:first-battle",
+                    "verification": (
+                        "The Black 2-based Zekrom and White 2-based Reshiram "
+                        "targets were matched to exact trainer records 5 and 6."
+                    ),
+                },
+                "variants": [
+                    {
+                        "trainer_id": trainer_id,
+                        "order": order,
+                        "conditions": [
+                            {
+                                "kind": "sibling-version",
+                                "value": version,
+                                "label": version_label,
+                            },
+                            {
+                                "kind": "story-stage",
+                                "value": "n-castle-first-battle",
+                                "label": "First battle",
+                            },
+                        ],
+                    }
+                    for order, (trainer_id, version, version_label) in enumerate(
+                        (
+                            (5, "black-2-based", "Black 2-based version"),
+                            (6, "white-2-based", "White 2-based version"),
+                        )
+                    )
+                ],
+            }
+        )
+    seasonal_records = (
+        (782, "spring", "Spring"),
+        (783, "summer", "Summer"),
+        (784, "autumn", "Autumn"),
+        (785, "winter", "Winter"),
+    )
+    if all(trainer_id in available for trainer_id, _, _ in seasonal_records):
+        families.append(
+            {
+                "id": "n-castle-seasonal-rematch",
+                "label": "N's Castle seasonal rematch",
+                "order": 401,
+                "provenance": {
+                    "source": "B2W2 seasonal dispatch and exact trainer records",
+                    "reference": f"{profile_id}:n-castle:seasonal-rematch",
+                    "verification": (
+                        "Spring, summer, autumn, and winter selection was matched "
+                        "to exact trainer records 782 through 785."
+                    ),
+                },
+                "variants": [
+                    {
+                        "trainer_id": trainer_id,
+                        "order": order,
+                        "conditions": [
+                            {
+                                "kind": "season",
+                                "value": season,
+                                "label": season_label,
+                            },
+                            {
+                                "kind": "rematch-stage",
+                                "value": "seasonal-rematch",
+                                "label": "Seasonal rematch",
+                            },
+                        ],
+                    }
+                    for order, (trainer_id, season, season_label) in enumerate(
+                        seasonal_records
+                    )
+                ],
+            }
+        )
+    return families
+
+
 def extract_trainer_battle_families(
     profile_id: str,
     parameters: Mapping[str, Any],
@@ -290,6 +378,7 @@ def extract_trainer_battle_families(
     families.extend(_difficulty_families(profile_id, available))
     families.extend(_pokemon_league_difficulty_families(profile_id, available))
     families.extend(_profile_difficulty_families(profile_id, contract, available))
+    families.extend(_n_families(profile_id, available))
     return {
         "trainer_variant_support": {
             "starter_choice": {"status": "verified"},
@@ -313,6 +402,7 @@ def extract_trainer_battle_families(
             "rematch_stage": {"status": "partial"},
             "story_stage": {"status": "partial"},
             "sibling_version": {"status": "verified"},
+            "season": {"status": "verified"},
         },
         "battle_families": families,
     }

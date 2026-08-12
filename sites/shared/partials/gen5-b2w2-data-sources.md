@@ -127,6 +127,17 @@ Easy/Normal use trainer record 4 and Challenge uses record 852. Other apparent
 same-name or three-record runs remain ungrouped unless their runtime selector is
 independently verified.
 
+N's Castle uses two independently verified selectors. The first battle selects
+the Zekrom record in Black 2-based versions and the Reshiram record in White
+2-based versions. Later rematches select records 782 through 785 for spring,
+summer, autumn, and winter respectively. Retail research documents both rules,
+and the exact parties were checked in each supported retail, original-hack, and
+Redux ROM contract. Redux's creator documentation independently lists the
+version tabs and four seasonal teams:
+[Other Important Trainers](https://smilingzero.github.io/BlazeBlack2ReduxWiki/postgame/otherimportanttrainers/).
+These are rendered as two Battle Variant families rather than one six-record
+same-name group.
+
 ## Locations
 
 Map headers come from member 0 of `a/0/1/2`, one 48-byte record per map.

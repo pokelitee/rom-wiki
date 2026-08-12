@@ -34,6 +34,11 @@ def _family() -> dict[str, object]:
                         "value": "black-2",
                         "label": "Black 2",
                     },
+                    {
+                        "kind": "season",
+                        "value": "spring",
+                        "label": "Spring",
+                    },
                 ],
             },
             {

@@ -57,7 +57,8 @@ Trainer datasets also carry an independently versioned `battle_families` list
 and `trainer_variant_support` capability map. A family is a relationship over
 exact `trainer_id` records, never a replacement trainer. Every variant has a
 stable order and one or more typed conditions (`starter-choice`,
-`difficulty-mode`, `rematch-stage`, `story-stage`, or `sibling-version`), while
+`difficulty-mode`, `rematch-stage`, `story-stage`, `sibling-version`, or
+`season`), while
 every family records the source, reference, and verification of its selection
 rule. Validation rejects dangling IDs, duplicate variants, duplicate ordering,
 contradictory conditions, and missing provenance.

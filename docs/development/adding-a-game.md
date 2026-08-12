@@ -272,7 +272,7 @@ behavior as `explicit`, `level-up`, or `unavailable`, and increment
 `TRAINER_PARTY_SCHEMA_VERSION` for a breaking party-contract change.
 
 Trainer variants require a named engine/profile evidence contract. Decode starter,
-difficulty, rematch, story, and sibling-version selection in the owning leaf,
+difficulty, rematch, story, sibling-version, and season selection in the owning leaf,
 declare each mechanic verified, partial, unsupported, or unresolved, and reference
 exact trainer IDs with rule provenance. Never construct a family from names,
 adjacent IDs, levels, party size, species similarity, or locations. Hacks must

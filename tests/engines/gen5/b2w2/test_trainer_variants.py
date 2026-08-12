@@ -92,6 +92,45 @@ class B2W2TrainerVariantTests(unittest.TestCase):
             [variant["trainer_id"] for variant in family["variants"]], [4, 4, 852]
         )
 
+    def test_relates_ns_version_selected_first_battle(self) -> None:
+        contract = extract_trainer_battle_families(
+            "black-2-us",
+            {"trainer_variant_contract": "b2w2-retail-v1"},
+            [{"trainer_id": trainer_id} for trainer_id in (5, 6)],
+        )
+
+        family = contract["battle_families"][0]
+        self.assertEqual(family["id"], "n-castle-first-battle")
+        self.assertEqual(
+            [variant["trainer_id"] for variant in family["variants"]], [5, 6]
+        )
+        self.assertEqual(
+            [variant["conditions"][0]["value"] for variant in family["variants"]],
+            ["black-2-based", "white-2-based"],
+        )
+
+    def test_relates_ns_four_seasonal_rematches(self) -> None:
+        contract = extract_trainer_battle_families(
+            "blaze-black-2-redux",
+            {
+                "trainer_variant_contract": (
+                    "blaze-black-2-redux-volt-white-2-redux-v1.4.1"
+                )
+            },
+            [{"trainer_id": trainer_id} for trainer_id in range(782, 786)],
+        )
+
+        family = contract["battle_families"][0]
+        self.assertEqual(family["id"], "n-castle-seasonal-rematch")
+        self.assertEqual(
+            [variant["trainer_id"] for variant in family["variants"]],
+            [782, 783, 784, 785],
+        )
+        self.assertEqual(
+            [variant["conditions"][0]["value"] for variant in family["variants"]],
+            ["spring", "summer", "autumn", "winter"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

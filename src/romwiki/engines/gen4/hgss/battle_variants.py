@@ -88,6 +88,7 @@ def extract_trainer_battle_families(
             },
             "story_stage": {"status": "partial"},
             "sibling_version": {"status": "verified"},
+            "season": {"status": "unsupported"},
         },
         "battle_families": families,
     }
