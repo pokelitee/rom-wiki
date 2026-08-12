@@ -1029,6 +1029,11 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
         if locations is not None:
             relationship_datasets["locations"] = locations
         relationship_index = build_relationship_index(relationship_datasets)
+    elif args.command in {"build-items", "build-trainers"}:
+        locations = workflow.current.locations()
+        if locations is not None:
+            relationship_datasets = {"locations": locations}
+            relationship_index = build_relationship_index(relationship_datasets)
     reference_datasets = {}
     if args.command == "build-locations":
         relationship_datasets = {
@@ -1784,7 +1789,7 @@ def _write_dataset_build(
             type_dataset,
             only_pages=only_pages,
         )
-    elif kind in {"moves", "encounters", "locations"}:
+    elif kind in {"moves", "items", "encounters", "trainers", "locations"}:
         page_count = renderer(
             dataset,
             wiki_output,

@@ -186,6 +186,8 @@ class EventMapLocation:
     daily_encounter_pool: LocationDailyEncounterPool | None
     game_corner_prizes: tuple[LocationGameCornerPrize, ...]
     provenance: RecordProvenance
+    section_name: str | None = None
+    section_name_source: dict[str, str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -205,6 +207,9 @@ class EncounterMapLocation:
     # `_MATRIX_ID_OFFSET` docstring for how this was found and verified.
     matrix_id: int
     provenance: RecordProvenance
+    internal_name: str | None = None
+    section_name: str | None = None
+    section_name_source: dict[str, str] | None = None
     trainers: tuple[LocationTrainerReference, ...] = ()
     warps: tuple[LocationWarp, ...] = ()
     static_encounters: tuple[LocationStaticEncounter, ...] = ()

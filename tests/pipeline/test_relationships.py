@@ -179,6 +179,7 @@ class RelationshipIndexTests(unittest.TestCase):
                 {
                     "header_id": 6,
                     "name": "Route 1",
+                    "section_name": "Route 1 lower path",
                     "encounter_map_index": 3,
                 }
             ],
@@ -189,8 +190,8 @@ class RelationshipIndexTests(unittest.TestCase):
         wild = index.pokemon_wild_encounters["basculin-blue-striped"]
         self.assertEqual(len(wild), 1)
         self.assertEqual((wild[0].season, wild[0].method), ("spring", "Fishing"))
-        self.assertEqual(wild[0].area_name, "Route 1")
-        self.assertEqual(wild[0].locations, ((6, "Route 1"),))
+        self.assertEqual(wild[0].area_name, "Route 1 lower path")
+        self.assertEqual(wild[0].locations, ((6, "Route 1 lower path"),))
         self.assertNotIn("basculin-red-striped", index.pokemon_wild_encounters)
         variants = index.location_encounters[6]
         self.assertEqual(
@@ -207,7 +208,7 @@ class RelationshipIndexTests(unittest.TestCase):
                 (entry.header_id, entry.location_name, entry.versions)
                 for entry in spring_locations
             ],
-            [(6, "Route 1", ())],
+            [(6, "Route 1 lower path", ())],
         )
         self.assertEqual(wild[0].encounter_route_key, "map-003")
 

@@ -6,7 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.platforms.registry import RomImage
-from romwiki.profiles.models import GameProfile, HashMatch, KnownHash, TypeChartConfig
+from romwiki.profiles.models import (
+    GameProfile,
+    HashMatch,
+    KnownHash,
+    LocationSectionConfig,
+    TypeChartConfig,
+)
 from romwiki.util.errors import ProfileError
 
 
@@ -146,6 +152,7 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
             semantics_data.get("moves", {}), path, "move", 0xFFFF
         )
         type_chart = _load_type_chart(data.get("type_chart"), path)
+        location_sections = _load_location_sections(data.get("location_sections"), path)
         hashes = tuple(
             KnownHash(
                 algorithm=item["algorithm"].lower(),
@@ -174,11 +181,56 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
             type_names=type_names,
             move_names=move_names,
             type_chart=type_chart,
+            location_sections=location_sections,
             layout=dict(data.get("layout", {})),
             parameters=dict(data.get("parameters", {})),
         )
     except (KeyError, TypeError) as error:
         raise ProfileError(f"Invalid profile {path}: {error}") from error
+
+
+def _load_location_sections(value: object, path: Path) -> LocationSectionConfig:
+    if value is None:
+        return LocationSectionConfig()
+    if not isinstance(value, dict) or set(value) - {
+        "by_header",
+        "by_internal_name",
+    }:
+        raise ProfileError(f"Invalid location section metadata in {path}")
+    raw_by_header = value.get("by_header", {})
+    raw_by_internal_name = value.get("by_internal_name", {})
+    if not isinstance(raw_by_header, dict) or not isinstance(
+        raw_by_internal_name, dict
+    ):
+        raise ProfileError(f"Invalid location section metadata in {path}")
+
+    by_header: dict[int, str] = {}
+    for raw_header_id, name in raw_by_header.items():
+        try:
+            header_id = int(raw_header_id)
+        except (TypeError, ValueError) as error:
+            raise ProfileError(
+                f"Invalid location section header ID in {path}: {raw_header_id}"
+            ) from error
+        if header_id < 0 or not isinstance(name, str) or not name.strip():
+            raise ProfileError(
+                f"Invalid location section in {path}: {raw_header_id} = {name!r}"
+            )
+        by_header[header_id] = name.strip()
+
+    by_internal_name: dict[str, str] = {}
+    for internal_name, name in raw_by_internal_name.items():
+        if (
+            not isinstance(internal_name, str)
+            or not internal_name.strip()
+            or not isinstance(name, str)
+            or not name.strip()
+        ):
+            raise ProfileError(
+                f"Invalid location section in {path}: {internal_name!r} = {name!r}"
+            )
+        by_internal_name[internal_name] = name.strip()
+    return LocationSectionConfig(by_header, by_internal_name)
 
 
 def _load_semantic_names(

@@ -181,6 +181,16 @@ corresponding ARM9-table or archive-backed strategy. A new family can therefore
 reuse an existing renderer without pretending its map data uses another game's
 storage layout.
 
+The shared location contract also carries optional `section_name` and
+`section_name_source` fields. The resolver accepts only labels explicitly owned by
+the matched profile, keyed by exact header ID or a native internal map name. It
+does not decode semantic floor or room names from structural ROM identifiers.
+Unresolved records preserve a null section name and continue to use the ROM's
+display name plus typed header route. Relationship construction exposes one
+header-keyed presentation-label index to every renderer, keeping location pages,
+warps, connections, encounters, trainer locations, and item backlinks consistent
+without rewriting their normalized source records.
+
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract
 is defined in `schema/trainers.py`. Normalized members state their move source

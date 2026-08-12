@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from romwiki.pipeline.enrich import _enrich_trainer, enrich_trainer_dataset
+from romwiki.pipeline.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_trainer_pages
 from romwiki.sources import PokeDBGeneration
 
@@ -151,13 +152,27 @@ class TrainerEnrichmentTests(unittest.TestCase):
             },
         )
         enriched["features"] = []
+        relationships = build_relationship_index(
+            {
+                "locations": {
+                    "game": "test",
+                    "records": [
+                        {
+                            "header_id": 343,
+                            "name": "Route 202",
+                            "section_name": "Route 202 south",
+                        }
+                    ],
+                }
+            }
+        )
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             stale_page = output / "trainer-9999.md"
             stale_page.parent.mkdir(parents=True, exist_ok=True)
             stale_page.write_text("stale", encoding="utf-8")
-            count = render_trainer_pages(enriched, output)
+            count = render_trainer_pages(enriched, output, relationships=relationships)
             page = (output / "trainer-0000.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
@@ -165,6 +180,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["party_schema_version"], 5)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
+        self.assertIn("[Route 202 south](../locations/header-343.md)", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn('src="https://example.test/bulbasaur.png"', page)
         self.assertIn('width="48" height="48" loading="lazy"', page)
@@ -178,7 +194,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("<dt>Nature</dt><dd>Timid</dd>", page)
         self.assertIn('aria-label="Male" title="Male">♂</span>', page)
         self.assertIn(
-            "| [Route 202](../locations/header-343.md) | `header-343` | `R202` | "
+            "| [Route 202 south](../locations/header-343.md) | `header-343` | `R202` | "
             "(181, 818) | `329:0` |",
             page,
         )

@@ -7,6 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from romwiki.pipeline.items import build_item_dataset
+from romwiki.pipeline.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_item_pages
 from romwiki.sources import PokeDBGeneration
 
@@ -74,6 +75,7 @@ class ItemDatasetTests(unittest.TestCase):
                 {
                     "header_id": 10,
                     "name": "Route 1",
+                    "section_name": "Route 1 north",
                     "internal_name": "R1",
                     "items": [{"item_id": 1, "kind": "visible", "x": 3, "z": 4}],
                     "shops": [],
@@ -91,6 +93,7 @@ class ItemDatasetTests(unittest.TestCase):
         )
 
         dataset = build_item_dataset(raw, pokedb, pokemon, trainers, locations)
+        relationships = build_relationship_index({"locations": locations})
         record = dataset["records"][0]
         self.assertEqual(record["slug"], "master-ball")
         self.assertEqual(record["wild_held_by"][0]["name"], "Bulbasaur")
@@ -100,7 +103,7 @@ class ItemDatasetTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            count = render_item_pages(dataset, output)
+            count = render_item_pages(dataset, output, relationships=relationships)
             page = (output / "master-ball.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
@@ -111,7 +114,7 @@ class ItemDatasetTests(unittest.TestCase):
         self.assertIn("<dt>Base price</dt><dd>₽0</dd>", page)
         self.assertEqual(page.count("<dt>Fling power</dt>"), 1)
         self.assertIn("<dt>Fling effect ID</dt><dd>7</dd>", page)
-        self.assertIn("[Route 1](../locations/header-010.md)", page)
+        self.assertIn("[Route 1 north](../locations/header-010.md)", page)
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("trainer-0002.md", page)
         self.assertNotIn("## Shops", page)
@@ -128,7 +131,7 @@ class ItemDatasetTests(unittest.TestCase):
                 {
                     "kind": "location",
                     "id": 10,
-                    "label": "Route 1",
+                    "label": "Route 1 north",
                     "url": "../locations/header-010/",
                 }
             ],

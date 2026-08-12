@@ -4,6 +4,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -36,6 +37,7 @@ from romwiki.renderers.mkdocs.components import (
     type_badges,
     version_availability_note,
     version_variant_records,
+    with_resolved_location_labels,
     yes_no,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -53,10 +55,15 @@ def render_item_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = dataset["records"]
+    location_labels = relationships.location_labels if relationships else None
+    records = [
+        with_resolved_location_labels(record, location_labels)
+        for record in dataset["records"]
+    ]
     name_source = dataset.get("source", {}).get("item_names")
     output_root.mkdir(parents=True, exist_ok=True)
     filenames = {

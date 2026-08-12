@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from romwiki.pipeline.encounter_identity import encounter_route_key
@@ -96,6 +96,7 @@ class RelationshipIndex:
     move_machine_learners: Mapping[int, tuple[MoveLearnerReference, ...]]
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]]
     encounter_locations: Mapping[int | str, tuple[EncounterLocationReference, ...]]
+    location_labels: Mapping[int, str] = field(default_factory=dict)
 
 
 def build_relationship_index(
@@ -140,6 +141,10 @@ def build_relationship_index(
         move_machine_learners=_freeze(machines, _learner_sort_key),
         location_encounters=location_encounters,
         encounter_locations=encounter_locations,
+        location_labels={
+            location["header_id"]: _location_display_name(location)
+            for location in location_records
+        },
     )
 
 
@@ -390,7 +395,11 @@ def _encounter_locations(
         names = record.get("location_names")
         if isinstance(names, list):
             values.extend((None, name) for name in names if isinstance(name, str))
-    return tuple(dict.fromkeys(values))
+    resolved: dict[tuple[str, int | str], tuple[int | None, str]] = {}
+    for header_id, name in values:
+        key = ("header", header_id) if header_id is not None else ("name", name)
+        resolved[key] = (header_id, name)
+    return tuple(resolved.values())
 
 
 def _encounter_location_index(
@@ -398,13 +407,14 @@ def _encounter_location_index(
 ) -> dict[tuple[str, int], tuple[tuple[int, str], ...]]:
     values: dict[tuple[str, int], list[tuple[int, str]]] = defaultdict(list)
     for record in records:
+        display_name = _location_display_name(record)
         if isinstance(record.get("encounter_id"), int):
             values[("area-id", record["encounter_id"])].append(
-                (record["header_id"], record["name"])
+                (record["header_id"], display_name)
             )
         if isinstance(record.get("encounter_map_index"), int):
             values[("map-index", record["encounter_map_index"])].append(
-                (record["header_id"], record["name"])
+                (record["header_id"], display_name)
             )
     return {key: tuple(dict.fromkeys(locations)) for key, locations in values.items()}
 
@@ -473,7 +483,7 @@ def _acquisition_references(
         versions = _record_versions(location)
         common = {
             "location_id": location["header_id"],
-            "location_name": location["name"],
+            "location_name": _location_display_name(location),
             "versions": versions,
         }
         for gift in location.get("pokemon_gifts", []):
@@ -846,7 +856,10 @@ def _freeze_encounter_locations(
     locations: list[dict[str, Any]],
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]],
 ) -> dict[int | str, tuple[EncounterLocationReference, ...]]:
-    location_names = {location["header_id"]: location["name"] for location in locations}
+    location_names = {
+        location["header_id"]: _location_display_name(location)
+        for location in locations
+    }
     values: dict[int | str, list[EncounterLocationReference]] = defaultdict(list)
     for header_id, encounters in location_encounters.items():
         location_name = location_names[header_id]
@@ -877,6 +890,11 @@ def _freeze_encounter_locations(
             )
         )
     return result
+
+
+def _location_display_name(location: Mapping[str, Any]) -> str:
+    section_name = location.get("section_name")
+    return section_name if isinstance(section_name, str) else str(location["name"])
 
 
 def _deduplicate(values: Iterable[Any]) -> Iterable[Any]:

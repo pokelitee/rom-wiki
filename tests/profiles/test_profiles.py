@@ -498,6 +498,40 @@ variant = "child"
             with self.assertRaisesRegex(ProfileError, "unknown profile missing"):
                 ProfileRepository.load(Path(directory))
 
+    def test_loads_explicit_location_section_names(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "game.toml"
+            path.write_text(
+                """
+[profile]
+id = "example"
+name = "Example"
+platform = "nintendo-ds"
+engine = "gen4_hgss"
+base_game = "heartgold"
+[header]
+game_codes = ["TEST"]
+rom_versions = [0]
+[location_sections.by_header]
+"12" = "Example Cave B1F"
+[location_sections.by_internal_name]
+MAP_CUSTOM = "Example Cave 2F"
+[[hashes]]
+algorithm = "sha256"
+value = "00"
+variant = "test"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            profile = ProfileRepository.load(Path(directory)).profiles[0]
+
+        self.assertEqual(profile.location_sections.by_header, {12: "Example Cave B1F"})
+        self.assertEqual(
+            profile.location_sections.by_internal_name,
+            {"MAP_CUSTOM": "Example Cave 2F"},
+        )
+
     def test_inherited_profile_cannot_silently_inherit_a_type_chart(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

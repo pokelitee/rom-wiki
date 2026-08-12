@@ -203,9 +203,64 @@ class LocationRenderingTests(unittest.TestCase):
             all("(header " not in record["label"] for record in catalog["records"])
         )
         self.assertIn("## Same-name locations", first_page)
-        self.assertIn("[Route 1](header-007.md) | `header-007`", first_page)
-        self.assertIn("[Route 1](header-006.md) | `header-006`", second_page)
+        self.assertIn("[Route 1](header-007.md) | — | `header-007`", first_page)
+        self.assertIn("[Route 1](header-006.md) | — | `header-006`", second_page)
         self.assertIn("may represent different rooms or map sections", first_page)
+
+    def test_renders_only_explicit_profile_section_names(self) -> None:
+        base = {
+            "name": "Chargestone Cave",
+            "encounter_map_index": None,
+            "matrix_id": 0,
+            "internal_name": None,
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        dataset = {
+            "engine": "gen5_bw",
+            "records": [
+                {
+                    **base,
+                    "header_id": 61,
+                    "section_name": "Chargestone Cave B1F",
+                    "section_name_source": {
+                        "source": "profile",
+                        "profile": "example-hack",
+                        "key": "header-061",
+                    },
+                    "provenance": {"archive": "a/0/1/2", "member": 61},
+                },
+                {
+                    **base,
+                    "header_id": 62,
+                    "section_name": None,
+                    "section_name_source": None,
+                    "provenance": {"archive": "a/0/1/2", "member": 62},
+                },
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output)
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            resolved = (output / "header-061.md").read_text(encoding="utf-8")
+            unresolved = (output / "header-062.md").read_text(encoding="utf-8")
+
+        self.assertEqual(catalog["records"][0]["label"], "Chargestone Cave")
+        self.assertEqual(catalog["records"][1]["label"], "Chargestone Cave B1F")
+        self.assertEqual(catalog["records"][1]["location_name"], "Chargestone Cave")
+        self.assertEqual(catalog["records"][1]["section_name"], "Chargestone Cave B1F")
+        self.assertIn("# Chargestone Cave B1F", resolved)
+        self.assertIn("<dt>Location</dt><dd>Chargestone Cave</dd>", resolved)
+        self.assertIn("<dt>Section</dt><dd>Chargestone Cave B1F</dd>", resolved)
+        self.assertIn("profile `example-hack`, key `header-061`", resolved)
+        self.assertIn("# Chargestone Cave", unresolved)
+        self.assertNotIn("<dt>Section</dt>", unresolved)
 
     def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
         record = {
@@ -346,6 +401,12 @@ class LocationRenderingTests(unittest.TestCase):
             "internal_name": "C03",
             "location_name_id": 7,
             "name": "Oreburgh City",
+            "section_name": "Oreburgh City central district",
+            "section_name_source": {
+                "source": "profile",
+                "profile": "example-platinum-hack",
+                "key": "C03",
+            },
             "matrix_id": 0,
             "area_data_id": 2,
             "level_script_id": 12,
@@ -524,18 +585,50 @@ class LocationRenderingTests(unittest.TestCase):
                 },
             }
         )
+        relationships = build_relationship_index(
+            {
+                "locations": {
+                    "game": "test",
+                    "records": [
+                        {
+                            "header_id": 47,
+                            "name": "Oreburgh City",
+                            "section_name": "Oreburgh Gym",
+                        },
+                        {
+                            "header_id": 344,
+                            "name": "Route 203",
+                            "section_name": "Route 203 west",
+                        },
+                    ],
+                }
+            }
+        )
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             stale_page = output / "header-999.md"
             stale_page.parent.mkdir(parents=True, exist_ok=True)
             stale_page.write_text("stale", encoding="utf-8")
 
-            count = render_location_pages(dataset, output, references=references)
+            count = render_location_pages(
+                dataset,
+                output,
+                references=references,
+                relationships=relationships,
+            )
             page = (output / "header-045.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
         self.assertFalse(stale_page.exists())
+        self.assertIn("# Oreburgh City central district", page)
+        self.assertIn("<dt>Location</dt><dd>Oreburgh City</dd>", page)
+        self.assertIn("profile `example-platinum-hack`, key `C03`", page)
+        self.assertEqual(catalog["records"][0]["location_name"], "Oreburgh City")
+        self.assertEqual(
+            catalog["records"][0]["section_name"],
+            "Oreburgh City central district",
+        )
         self.assertIn("../encounters/area-003.md", page)
         self.assertIn('<a href="#wild-encounters">Yes</a>', page)
         self.assertIn('<a href="#item-pickups">2</a>', page)
@@ -583,9 +676,10 @@ class LocationRenderingTests(unittest.TestCase):
         )
         self.assertIn("header-047.md", page)
         self.assertIn("| Warp | Position | Destination | ID | Destination warp |", page)
-        self.assertIn("[Oreburgh City](header-047.md) | `header-047` | 0 |", page)
+        self.assertIn("[Oreburgh Gym](header-047.md) | `header-047` | 0 |", page)
         self.assertNotIn("C03GYM0101", page.split("## Outdoor connections")[0])
         self.assertIn("header-344.md", page)
+        self.assertIn("[Route 203 west](header-344.md)", page)
         self.assertIn("## Roaming activations", page)
         self.assertIn("Darkrai", page)
         self.assertIn("| 2 | `51@0x140` |", page)

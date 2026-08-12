@@ -315,6 +315,26 @@ Extend a schema only for a real cross-game concept. New fields should be optiona
 when older games cannot supply them, and a breaking semantic change requires a
 schema-version change.
 
+Profiles may add verified location-section labels without changing the ROM's
+display names:
+
+```toml
+[location_sections.by_header]
+"150" = "Example Cave B1F"
+
+[location_sections.by_internal_name]
+MAP_CUSTOM_02 = "Example Cave 2F"
+```
+
+Header mappings work for engines without native map names. Internal-name mappings
+survive header reordering when the hack retains that exact identifier. A
+header-specific entry and an internal-name entry may identify the same map only
+when their labels agree. Extraction rejects unmatched selectors and conflicting
+labels. Configure only labels owned and verified by that profile; do not import
+external map-name tables or infer section semantics from IDs, warps, coordinates,
+adjacency, or layout similarity. Omit an entry when the profile cannot establish
+the label.
+
 ## 5. Configure enrichment
 
 Provide the matching PokéDB generation output when the wiki needs canonical names,

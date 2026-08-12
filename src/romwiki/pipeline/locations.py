@@ -7,6 +7,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.location_sections import (
+    resolve_location_section,
+    validate_location_sections,
+)
 from romwiki.pipeline.map_headers import (
     code_load_address,
     read_code_binary,
@@ -128,6 +132,10 @@ def _extract_arm9_encounter_map_location_dataset(
         count=count,
         location_names_member=location_names_member,
     )
+    validate_location_sections(
+        profile,
+        ((header.header_id, header.internal_name) for header in headers),
+    )
     null_encounter_id = profile.parameters.get(
         "null_encounter_id", engine.ENCOUNTER_MEMBER_NONE
     )
@@ -173,6 +181,11 @@ def _extract_arm9_encounter_map_location_dataset(
     trainers = _extract_trainer_references(result, trainer_dataset)
     records = []
     for header in headers:
+        section_name, section_name_source = resolve_location_section(
+            profile,
+            header_id=header.header_id,
+            internal_name=header.internal_name,
+        )
         encounter_id = header.encounter_id
         encounter_map_index = (
             None if encounter_id == null_encounter_id else encounter_id
@@ -233,6 +246,9 @@ def _extract_arm9_encounter_map_location_dataset(
                 name=location_names[header.location_name_id],
                 encounter_map_index=encounter_map_index,
                 matrix_id=header.matrix_id,
+                internal_name=header.internal_name,
+                section_name=section_name,
+                section_name_source=section_name_source,
                 trainers=tuple(trainers.get(header.header_id, ())),
                 warps=tuple(warps),
                 connections=tuple(connections.get(header.header_id, ())),
@@ -399,6 +415,10 @@ def _extract_arm9_event_map_location_dataset(
         table_offset=table_offset,
         count=count,
         location_names_member=location_names_member,
+    )
+    validate_location_sections(
+        profile,
+        ((header.header_id, header.internal_name) for header in headers),
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
     if game_corner_prize_table_offset is not None:
@@ -604,6 +624,11 @@ def _extract_arm9_event_map_location_dataset(
     trainers = _extract_trainer_references(result, trainer_dataset)
     records = []
     for header in headers:
+        section_name, section_name_source = resolve_location_section(
+            profile,
+            header_id=header.header_id,
+            internal_name=header.internal_name,
+        )
         if header.script_file_id >= len(scripts.members):
             raise InvalidRomError(
                 f"Map header {header.header_id} references missing script file "
@@ -766,6 +791,8 @@ def _extract_arm9_event_map_location_dataset(
                 provenance=RecordProvenance(
                     source="rom", archive="arm9", member=header.header_id
                 ),
+                section_name=section_name,
+                section_name_source=section_name_source,
             ).to_dict()
         )
     return {
@@ -990,6 +1017,10 @@ def _extract_encounter_map_location_dataset(
         map_names=tuple(map_names),
         archive_path=map_headers_path,
     )
+    validate_location_sections(
+        profile,
+        ((header.header_id, header.internal_name) for header in headers),
+    )
     script_file_ids = engine.parse_map_header_script_files(map_headers.read(0))
     trainers_by_header = _extract_trainer_references(result, trainer_dataset)
     overworld_objects = platform.archive_cls.from_bytes(
@@ -1042,6 +1073,11 @@ def _extract_encounter_map_location_dataset(
     records = []
     unsupported_shop_selectors = []
     for header in headers:
+        section_name, section_name_source = resolve_location_section(
+            profile,
+            header_id=header.header_id,
+            internal_name=header.internal_name,
+        )
         items = []
         shops = []
         seen_vendor_ids: set[str] = set()
@@ -1246,6 +1282,8 @@ def _extract_encounter_map_location_dataset(
         records.append(
             replace(
                 header,
+                section_name=section_name,
+                section_name_source=section_name_source,
                 trainers=tuple(trainers_by_header.get(header.header_id, ())),
                 warps=tuple(warps),
                 static_encounters=tuple(

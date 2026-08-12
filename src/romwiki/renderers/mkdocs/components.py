@@ -454,6 +454,44 @@ def display_name(value: str) -> str:
     )
 
 
+def resolved_location_label(
+    header_id: int,
+    fallback: str,
+    location_labels: Mapping[int, str] | None,
+) -> str:
+    if location_labels is None:
+        return fallback
+    return location_labels.get(header_id, fallback)
+
+
+def with_resolved_location_labels(
+    value: Any,
+    location_labels: Mapping[int, str] | None,
+) -> Any:
+    """Copy renderer input while replacing exact location-reference labels."""
+
+    if not location_labels:
+        return value
+    if isinstance(value, list):
+        return [with_resolved_location_labels(item, location_labels) for item in value]
+    if isinstance(value, tuple):
+        return tuple(
+            with_resolved_location_labels(item, location_labels) for item in value
+        )
+    if not isinstance(value, dict):
+        return value
+    result = {
+        key: with_resolved_location_labels(item, location_labels)
+        for key, item in value.items()
+    }
+    header_id = result.get("header_id")
+    if isinstance(header_id, int) and isinstance(result.get("name"), str):
+        result["name"] = resolved_location_label(
+            header_id, result["name"], location_labels
+        )
+    return result
+
+
 def table_sprite_cell(sprite: dict[str, Any] | str | None) -> str:
     url = sprite if isinstance(sprite, str) else sprite.get("url") if sprite else None
     if not url:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ from romwiki.renderers.mkdocs.components import (
     record_navigation_for,
     reference_sprite_cell,
     reference_type_cell,
+    resolved_location_label,
     shop_price,
     sprite_with_link,
     summary_section,
@@ -70,6 +72,7 @@ def render_event_map_location_pages(
         records,
         key=lambda item: (
             item["name"],
+            item.get("section_name") or "",
             item["internal_name"],
             item["header_id"],
         ),
@@ -91,11 +94,12 @@ def render_event_map_location_pages(
                     references,
                     previous,
                     following,
+                    relationships.location_labels if relationships else None,
                 ),
             )
             page_count += 1
         route_id = filename.removesuffix(".md")
-        fallback_label = f"{record['name']} — {route_id}"
+        fallback_label = f"{_location_label(record)} — {route_id}"
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -132,12 +136,15 @@ def render_event_map_location_pages(
                 {
                     "id": record["header_id"],
                     "route_id": route_id,
-                    "label": record["name"],
+                    "label": _location_label(record),
+                    "location_name": record["name"],
+                    "section_name": record.get("section_name"),
                     "url": route_id + "/",
                     "internal_name": record["internal_name"],
                     "features": features,
                     "search_text": (
-                        f"{record['name']} {record['internal_name']} {route_id}".lower()
+                        f"{record['name']} {record.get('section_name') or ''} "
+                        f"{record['internal_name']} {route_id}".lower()
                     ),
                 },
                 change,
@@ -163,10 +170,11 @@ def _render_location(
     references: ReferenceIndex | None = None,
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
+    location_labels: Mapping[int, str] | None = None,
 ) -> str:
     source_file = f"locations/{_filename(record['header_id'])}"
     lines = [
-        f"# {record['name']}",
+        f"# {_location_label(record)}",
         "",
         *_location_summary(record),
     ]
@@ -207,8 +215,8 @@ def _render_location(
         lines, record.get("game_corner_prizes", []), source_file, references
     )
     _append_trainers(lines, record["trainers"], source_file)
-    _append_warps(lines, record["warps"], source_file)
-    _append_connections(lines, record["connections"], source_file)
+    _append_warps(lines, record["warps"], source_file, location_labels)
+    _append_connections(lines, record["connections"], source_file, location_labels)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
@@ -216,6 +224,7 @@ def _render_location(
                 *provenance_fact_table(
                     (
                         ("Internal map", f"`{record['internal_name']}`"),
+                        *(_section_name_provenance_facts(record)),
                         ("Header ID", f"`{record['header_id']}`"),
                         ("Location name ID", f"`{record['location_name_id']}`"),
                         ("Matrix ID", f"`{record['matrix_id']}`"),
@@ -280,7 +289,7 @@ def _append_record_navigation(
             aria_label="Location navigation",
             identity=lambda value: value["header_id"],
             route_key=lambda value: value["header_id"],
-            label=lambda value: value["name"],
+            label=_location_label,
         )
     )
 
@@ -321,12 +330,37 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
     fact_lines.insert(
         0, f"<div><dt>Header ID</dt><dd>header-{record['header_id']:03}</dd></div>"
     )
+    if record.get("section_name"):
+        fact_lines[0:0] = [
+            f"<div><dt>Location</dt><dd>{escape_table_cell(record['name'])}</dd></div>",
+            f"<div><dt>Section</dt><dd>{escape_table_cell(record['section_name'])}</dd></div>",
+        ]
     if not fact_lines:
         fact_lines.append(
             "<div><dt>Notable features</dt>"
             '<dd><span class="rw-summary__empty">None</span></dd></div>'
         )
     return summary_section("rw-location-summary", fact_lines)
+
+
+def _location_label(record: dict[str, Any]) -> str:
+    return record.get("section_name") or record["name"]
+
+
+def _section_name_provenance_facts(
+    record: dict[str, Any],
+) -> tuple[tuple[str, str], ...]:
+    section_name = record.get("section_name")
+    source = record.get("section_name_source")
+    if not section_name or not source:
+        return ()
+    return (
+        ("Section name", escape_table_cell(section_name)),
+        (
+            "Section name source",
+            f"profile `{source['profile']}`, key `{source['key']}`",
+        ),
+    )
 
 
 def _append_items(
@@ -865,7 +899,10 @@ def _entity_sprite(
 
 
 def _append_warps(
-    lines: list[str], warps: list[dict[str, Any]], source_file: str
+    lines: list[str],
+    warps: list[dict[str, Any]],
+    source_file: str,
+    location_labels: Mapping[int, str] | None = None,
 ) -> None:
     if not warps:
         return
@@ -898,7 +935,11 @@ def _append_warps(
                 entity_reference(
                     "location",
                     warp["destination_header_id"],
-                    warp["destination_name"],
+                    resolved_location_label(
+                        warp["destination_header_id"],
+                        warp["destination_name"],
+                        location_labels,
+                    ),
                     warp.get("destination_header_id"),
                 ),
                 source_file,
@@ -918,7 +959,10 @@ def _append_warps(
 
 
 def _append_connections(
-    lines: list[str], connections: list[dict[str, Any]], source_file: str
+    lines: list[str],
+    connections: list[dict[str, Any]],
+    source_file: str,
+    location_labels: Mapping[int, str] | None = None,
 ) -> None:
     if not connections:
         return
@@ -929,7 +973,11 @@ def _append_connections(
             entity_reference(
                 "location",
                 connection["destination_header_id"],
-                connection["destination_name"],
+                resolved_location_label(
+                    connection["destination_header_id"],
+                    connection["destination_name"],
+                    location_labels,
+                ),
                 connection.get("destination_header_id"),
             ),
             source_file,

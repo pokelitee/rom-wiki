@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.pipeline.features import POST_BATTLE_HEALING, VICTORY_ITEMS
+from romwiki.pipeline.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -28,6 +29,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section_link,
     table_sprite_cell,
     type_badges,
+    with_resolved_location_labels,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -45,10 +47,16 @@ def render_trainer_pages(
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
+    relationships: RelationshipIndex | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = [record for record in dataset["records"] if record["party"]]
+    location_labels = relationships.location_labels if relationships else None
+    records = [
+        with_resolved_location_labels(record, location_labels)
+        for record in dataset["records"]
+        if record["party"]
+    ]
     records_by_id = {record["trainer_id"]: record for record in records}
     family_memberships: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
     for family in dataset.get("battle_families", []):

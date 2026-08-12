@@ -22,6 +22,14 @@ class TypeChartConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationSectionConfig:
+    """Profile-owned human labels for exact map-header sections."""
+
+    by_header: Mapping[int, str] = field(default_factory=dict)
+    by_internal_name: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
 class GameProfile:
     id: str
     name: str
@@ -35,6 +43,9 @@ class GameProfile:
     type_names: Mapping[int, str] = field(default_factory=dict)
     move_names: Mapping[int, str] = field(default_factory=dict)
     type_chart: TypeChartConfig | None = None
+    location_sections: LocationSectionConfig = field(
+        default_factory=LocationSectionConfig
+    )
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, Any] = field(default_factory=dict)
 
