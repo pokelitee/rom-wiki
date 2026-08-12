@@ -249,12 +249,16 @@ def _wild_encounters(
     location_index = _encounter_location_index(locations)
     for merged_record in records:
         for versions, record in _record_variants(merged_record):
+            encounter_locations = _encounter_locations(record, location_index)
             common = {
                 "area_id": record["area_id"],
-                "area_name": record["name"],
+                "area_name": (
+                    " / ".join(dict.fromkeys(name for _, name in encounter_locations))
+                    or record["name"]
+                ),
                 "encounter_route_key": encounter_route_key(record),
                 "season": record.get("season"),
-                "locations": _encounter_locations(record, location_index),
+                "locations": encounter_locations,
                 "versions": versions,
             }
             for key, label in _ENCOUNTER_METHODS:

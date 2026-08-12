@@ -4,6 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from romwiki.pipeline.relationships import (
+    EncounterLocationReference,
+    RelationshipIndex,
+)
 from romwiki.renderers.mkdocs.comparisons import (
     comparison_section,
     render_changes_pages,
@@ -12,6 +16,43 @@ from romwiki.renderers.mkdocs.references import ReferenceIndex, entity_reference
 
 
 class ComparisonRenderingTests(unittest.TestCase):
+    def test_uses_resolved_encounter_name_in_changes_table(self) -> None:
+        comparison = {
+            "kind": "wild_encounters",
+            "game": "hack",
+            "baseline": "base",
+            "counts": {"unchanged": 0, "changed": 1, "added": 0, "removed": 0},
+            "records": [
+                {
+                    "key": 8,
+                    "label": "Map 003 (Spring)",
+                    "slug": "map-003",
+                    "status": "changed",
+                    "detail_available": True,
+                    "changes": [],
+                }
+            ],
+        }
+        relationships = RelationshipIndex(
+            pokemon_wild_encounters={},
+            pokemon_trainers={},
+            pokemon_acquisition={},
+            move_level_up_learners={},
+            move_machine_learners={},
+            location_encounters={},
+            encounter_locations={
+                "map-003": (EncounterLocationReference("map-003", 6, "Route 1", ()),)
+            },
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            render_changes_pages({"encounters": comparison}, root, relationships)
+            overview = (root / "changes" / "index.md").read_text(encoding="utf-8")
+
+        self.assertIn("| [Route 1](../encounters/map-003.md) | Changed |", overview)
+        self.assertNotIn("Map 003", overview)
+
     def test_hack_only_overview_is_explicit_and_prunes_stale_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

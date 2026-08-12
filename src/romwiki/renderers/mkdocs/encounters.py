@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -792,6 +792,7 @@ def _render_seasonal_encounter_pages(
                     previous,
                     following,
                     same_name_groups[record_name],
+                    locations_by_route,
                 ),
             )
             page_count += 1
@@ -928,6 +929,7 @@ def _render_seasonal_area(
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
     same_name_groups: list[list[dict[str, Any]]],
+    locations_by_route: Mapping[int | str, tuple[EncounterLocationReference, ...]],
 ) -> str:
     record = records[0]
     source_file = f"encounters/{encounter_route_key(record)}.md"
@@ -1009,7 +1011,13 @@ def _render_seasonal_area(
             lines.extend(change_contents[0][1])
         else:
             _append_content_tabs(lines, change_contents)
-    _append_same_name_encounters(lines, record, same_name_groups, source_file)
+    _append_same_name_encounters(
+        lines,
+        record,
+        same_name_groups,
+        locations_by_route,
+        source_file,
+    )
     lines.extend(
         provenance_section(
             [
@@ -1039,7 +1047,9 @@ def _render_seasonal_area(
             ]
         )
     )
-    _append_seasonal_record_navigation(lines, record, previous, following)
+    _append_seasonal_record_navigation(
+        lines, record, previous, following, locations_by_route
+    )
     return "\n".join(lines)
 
 
@@ -1167,6 +1177,7 @@ def _append_seasonal_record_navigation(
     record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
+    locations_by_route: Mapping[int | str, tuple[EncounterLocationReference, ...]],
 ) -> None:
     lines.extend(
         record_navigation_for(
@@ -1177,7 +1188,10 @@ def _append_seasonal_record_navigation(
             aria_label="Wild encounter navigation",
             identity=encounter_route_key,
             route_key=encounter_route_key,
-            label=lambda value: value["name"],
+            label=lambda value: _seasonal_display_name(
+                value,
+                locations_by_route.get(encounter_route_key(value), ()),
+            ),
         )
     )
 
@@ -1186,6 +1200,7 @@ def _append_same_name_encounters(
     lines: list[str],
     record: dict[str, Any],
     same_name_groups: list[list[dict[str, Any]]],
+    locations_by_route: Mapping[int | str, tuple[EncounterLocationReference, ...]],
     source_file: str,
 ) -> None:
     related = [
@@ -1211,7 +1226,7 @@ def _append_same_name_encounters(
     )
     for candidate in related:
         route_key = encounter_route_key(candidate)
-        label = candidate["name"]
+        label = _seasonal_display_name(candidate, locations_by_route.get(route_key, ()))
         link = ROUTES.markdown_link(
             entity_reference(
                 "encounter_variant", candidate["area_id"], label, route_key

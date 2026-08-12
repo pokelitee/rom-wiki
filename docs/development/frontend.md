@@ -322,6 +322,9 @@ Spring/Summer/Autumn/Winter content tabs, and Material's linked-tab behavior
 synchronizes the selected season across those tables. Encounter display names and
 reciprocal location links come from the verified map-index-to-header relationship,
 with `Map NNN` retained only when no header is resolved.
+The same resolved display name is used in encounter catalogs, Same-name encounter
+tables, Pokémon appearance tables, change overviews, and record navigation; the
+typed `map-NNN` identity remains separate in links and ID columns.
 
 Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
 These are labeled reference content. Stat, type, ability, training, breeding,

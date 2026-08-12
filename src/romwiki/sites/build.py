@@ -43,6 +43,8 @@ def build_sites(
     state_root: Path | None = None,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
+    if jobs is not None and jobs < 1:
+        raise SiteError(f"Parallel job count must be at least 1: {jobs}")
     selected = catalog.select(site_ids, all_published=build_all)
     ordered = tuple(sorted(selected, key=site_display_key))
     resolved_output = output_root.resolve()

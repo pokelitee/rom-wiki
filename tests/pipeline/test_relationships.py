@@ -189,6 +189,7 @@ class RelationshipIndexTests(unittest.TestCase):
         wild = index.pokemon_wild_encounters["basculin-blue-striped"]
         self.assertEqual(len(wild), 1)
         self.assertEqual((wild[0].season, wild[0].method), ("spring", "Fishing"))
+        self.assertEqual(wild[0].area_name, "Route 1")
         self.assertEqual(wild[0].locations, ((6, "Route 1"),))
         self.assertNotIn("basculin-red-striped", index.pokemon_wild_encounters)
         variants = index.location_encounters[6]

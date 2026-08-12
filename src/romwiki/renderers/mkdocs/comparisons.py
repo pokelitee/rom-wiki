@@ -9,6 +9,7 @@ from romwiki.pipeline.comparisons import (
     comparison_by_key,
     normalize_comparison_value,
 )
+from romwiki.pipeline.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import write_text
 from romwiki.renderers.mkdocs.components import (
     display_name,
@@ -166,7 +167,9 @@ def add_change_status(
 
 
 def render_changes_pages(
-    comparisons: dict[str, dict[str, Any]], output_root: Path
+    comparisons: dict[str, dict[str, Any]],
+    output_root: Path,
+    relationships: RelationshipIndex | None = None,
 ) -> int:
     changes_root = output_root / "changes"
     changes_root.mkdir(parents=True, exist_ok=True)
@@ -226,7 +229,7 @@ def render_changes_pages(
         )
         for record in changed:
             href = _change_href(kind, record)
-            label = escape_markdown(record["label"])
+            label = escape_markdown(_change_record_label(kind, record, relationships))
             record_cell = f"[{label}]({href})" if href else label
             labels = ", ".join(change["label"] for change in record["changes"])
             lines.append(
@@ -243,6 +246,19 @@ def render_changes_pages(
             path.unlink()
     write_text(changes_root / "index.md", "\n".join(lines))
     return total_pages
+
+
+def _change_record_label(
+    kind: str,
+    record: dict[str, Any],
+    relationships: RelationshipIndex | None,
+) -> str:
+    if kind != "wild_encounters" or relationships is None:
+        return record["label"]
+    route_key = record.get("slug") or record["key"]
+    locations = relationships.encounter_locations.get(route_key, ())
+    names = list(dict.fromkeys(location.location_name for location in locations))
+    return " / ".join(names) or record["label"]
 
 
 def _change_href(kind: str, record: dict[str, Any]) -> str | None:

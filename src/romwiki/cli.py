@@ -1087,7 +1087,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             comparison_path = data_root / "comparisons" / f"{kind}.json"
             if comparison_path.is_file():
                 comparison_path.unlink()
-    render_changes_pages(comparisons, wiki_root)
+    render_changes_pages(comparisons, wiki_root, relationship_index)
 
 
 def _run_full_game_build(
@@ -1132,7 +1132,7 @@ def _run_full_game_build(
         if comparison_root.is_dir():
             for path in comparison_root.glob("*.json"):
                 path.unlink()
-    page_count = render_changes_pages(comparisons, wiki_root)
+    page_count = render_changes_pages(comparisons, wiki_root, relationship_index)
     _LOG.info(
         "Rendered %s change overview pages: %s",
         page_count,
@@ -1289,7 +1289,9 @@ def _run_version_family_build(
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
     if merged_comparisons:
-        page_count = render_changes_pages(merged_comparisons, wiki_root)
+        page_count = render_changes_pages(
+            merged_comparisons, wiki_root, relationship_index
+        )
         _LOG.info(
             "Rendered %s change overview pages: %s",
             page_count,
