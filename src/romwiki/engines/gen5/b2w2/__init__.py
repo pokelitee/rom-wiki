@@ -46,6 +46,7 @@ from .trainers import (
     parse_trainer_battle_commands,
     parse_trainer_record,
     resolve_common_script_trainer_id,
+    trainer_name_index,
 )
 from .tutors import (
     TUTOR_COMPATIBILITY_OFFSET,
@@ -112,6 +113,7 @@ __all__ = [
     "parse_wild_map_names",
     "resolve_common_script_member",
     "resolve_common_script_trainer_id",
+    "trainer_name_index",
     "resolve_location_special_vendors",
     "resolve_special_vendor",
     "normalize_trainer_party_member",

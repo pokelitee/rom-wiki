@@ -16,6 +16,11 @@ from romwiki.engines.gen5.trainer_records import (
 )
 
 
+def trainer_name_index(trainer_id: int) -> int:
+    """Return B2W2's message index, whose table retains entry zero."""
+    return trainer_id
+
+
 def resolve_common_script_trainer_id(script_used: int, *, trainer_count: int) -> None:
     """Do not apply BW's Black-validated common-script arithmetic to B2W2."""
     return None
@@ -31,4 +36,5 @@ __all__ = [
     "parse_trainer_battle_commands",
     "parse_trainer_record",
     "resolve_common_script_trainer_id",
+    "trainer_name_index",
 ]

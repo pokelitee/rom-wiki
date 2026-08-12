@@ -88,7 +88,7 @@ from .trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
-from .trainers import parse_trainer_record
+from .trainers import parse_trainer_record, trainer_name_index
 
 # EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
 # This engine currently implements the Pokémon personal-data, Items, Moves,
@@ -215,6 +215,7 @@ __all__ = [
     "resolve_special_vendor",
     "parse_trainer_battle_commands",
     "parse_trainer_record",
+    "trainer_name_index",
     "pickup_level_range_item_ids",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",

@@ -317,6 +317,19 @@ def _render_trainer(
         source_file,
         variant_support or {},
     )
+    difficulty_support = (variant_support or {}).get("difficulty_mode", {})
+    has_difficulty_family = any(
+        condition["kind"] == "difficulty-mode"
+        for family, _variant in memberships
+        for variant in family["variants"]
+        for condition in variant["conditions"]
+    )
+    if (
+        not has_difficulty_family
+        and difficulty_support.get("runtime", {}).get("level_adjustment_scope")
+        == "all-trainer-battles"
+    ):
+        _append_difficulty_behavior(lines, difficulty_support, heading_level=2)
     if not memberships:
         _append_same_name_trainers(lines, record, same_name_records or [], source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
@@ -1041,16 +1054,21 @@ def _append_battle_variants(
         )
 
 
-def _append_difficulty_behavior(lines: list[str], support: dict[str, Any]) -> None:
+def _append_difficulty_behavior(
+    lines: list[str],
+    support: dict[str, Any],
+    *,
+    heading_level: int = 3,
+) -> None:
     runtime = support.get("runtime", {})
     lines.extend(
         [
-            "### Difficulty behavior",
+            f"{'#' * heading_level} Difficulty behavior",
             "",
             (
-                "The levels in the Battle Variants table are the exact levels "
-                "stored in each trainer record. Runtime displayed levels may "
-                "differ when difficulty mode applies."
+                "Party levels shown on this page and in any Battle Variants table "
+                "are the exact levels stored in each trainer record. Runtime "
+                "displayed levels may differ when difficulty mode applies."
             ),
             "",
         ]
@@ -1069,6 +1087,8 @@ def _append_difficulty_behavior(lines: list[str], support: dict[str, Any]) -> No
         "displayed_level": "Displayed level",
         "stat_level": "Stat calculation level",
         "iv_strength_field": "IV-strength byte",
+        "level_adjustment_scope": "Level adjustment scope",
+        "party_variant_scope": "Alternate-party scope",
     }
     lines.extend(["| Mechanic | Behavior |", "| -------- | -------- |"])
     for key, label in labels.items():

@@ -5,6 +5,7 @@ import unittest
 from romwiki.renderers.mkdocs.trainers import (
     _append_ai_battle_items,
     _append_battle_variants,
+    _append_difficulty_behavior,
     _append_same_name_trainers,
     _group_ai_battle_items,
     _party_cards,
@@ -199,6 +200,26 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("Coverage: **Partial**", page)
         self.assertIn("| Easy party | Normal Record |", page)
         self.assertIn("| Challenge party | Challenge Record Where Dispatched |", page)
+
+    def test_can_explain_global_difficulty_without_a_party_variant(self) -> None:
+        lines: list[str] = []
+        _append_difficulty_behavior(
+            lines,
+            {
+                "status": "partial",
+                "runtime": {
+                    "level_adjustment_scope": "all-trainer-battles",
+                    "party_variant_scope": "verified-dispatch-only",
+                },
+            },
+            heading_level=2,
+        )
+        page = "\n".join(lines)
+
+        self.assertIn("## Difficulty behavior", page)
+        self.assertIn("Party levels shown on this page", page)
+        self.assertIn("| Level adjustment scope | All Trainer Battles |", page)
+        self.assertIn("| Alternate-party scope | Verified Dispatch Only |", page)
 
     def test_collapses_large_same_name_groups(self) -> None:
         current = _related_trainer(1, "Route 201", 5, "Bidoof")

@@ -37,6 +37,13 @@ _GYMS = (
     ("drayden", "Drayden Gym battle", 159, 770),
     ("marlon", "Marlon Gym battle", 160, 771),
 )
+_POKEMON_LEAGUE = (
+    ("shauntal", "Shauntal Pokémon League battle", 38, 772, 143, 777),
+    ("grimsley", "Grimsley Pokémon League battle", 40, 773, 145, 778),
+    ("marshal", "Marshal Pokémon League battle", 39, 774, 144, 779),
+    ("caitlin", "Caitlin Pokémon League battle", 41, 775, 146, 780),
+    ("iris", "Iris Pokémon League battle", 341, 776, 536, 781),
+)
 
 
 def _rival_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]:
@@ -160,6 +167,68 @@ def _difficulty_families(
     return families
 
 
+def _pokemon_league_difficulty_families(
+    profile_id: str, available: set[object]
+) -> list[dict[str, Any]]:
+    families = []
+    stages = (
+        ("first-clear", "First Pokémon League clear", 0, 1),
+        ("rematch", "Pokémon League rematch", 2, 3),
+    )
+    for order, (member, label, *trainer_ids) in enumerate(
+        _POKEMON_LEAGUE, start=200
+    ):
+        if not all(trainer_id in available for trainer_id in trainer_ids):
+            continue
+        variants = []
+        variant_order = 0
+        for stage, stage_label, normal_offset, challenge_offset in stages:
+            normal_id = trainer_ids[normal_offset]
+            challenge_id = trainer_ids[challenge_offset]
+            for mode, trainer_id in (
+                ("easy", normal_id),
+                ("normal", normal_id),
+                ("challenge", challenge_id),
+            ):
+                variants.append(
+                    {
+                        "trainer_id": trainer_id,
+                        "order": variant_order,
+                        "conditions": [
+                            {
+                                "kind": "difficulty-mode",
+                                "value": mode,
+                                "label": f"{mode.title()} Mode",
+                            },
+                            {
+                                "kind": "rematch-stage",
+                                "value": stage,
+                                "label": stage_label,
+                            },
+                        ],
+                    }
+                )
+                variant_order += 1
+        families.append(
+            {
+                "id": f"pokemon-league-{member}",
+                "label": label,
+                "order": order,
+                "provenance": {
+                    "source": "B2W2 difficulty-mode Pokémon League dispatch",
+                    "reference": f"{profile_id}:difficulty:pokemon-league:{member}",
+                    "verification": (
+                        "Easy/Normal and Challenge first-clear and rematch rosters "
+                        "were matched to the exact trainer archive records for this "
+                        "profile contract."
+                    ),
+                },
+                "variants": variants,
+            }
+        )
+    return families
+
+
 def extract_trainer_battle_families(
     profile_id: str,
     parameters: Mapping[str, Any],
@@ -173,6 +242,7 @@ def extract_trainer_battle_families(
     available = {record.get("trainer_id") for record in records}
     families = _rival_families(profile_id, available)
     families.extend(_difficulty_families(profile_id, available))
+    families.extend(_pokemon_league_difficulty_families(profile_id, available))
     return {
         "trainer_variant_support": {
             "starter_choice": {"status": "verified"},
@@ -189,6 +259,8 @@ def extract_trainer_battle_families(
                     "displayed_level": "difficulty-adjusted-after-party-load",
                     "stat_level": "stored-record-level",
                     "iv_strength_field": "independent-party-byte",
+                    "level_adjustment_scope": "all-trainer-battles",
+                    "party_variant_scope": "verified-dispatch-only",
                 },
             },
             "rematch_stage": {"status": "partial"},

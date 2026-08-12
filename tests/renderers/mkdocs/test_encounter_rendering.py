@@ -180,15 +180,7 @@ class EncounterRenderingTests(unittest.TestCase):
                     "form_id": 0,
                     "minimum_level": 45,
                     "maximum_level": 55,
-                    "chance": 60,
-                    "pokemon": pokemon,
-                },
-                {
-                    "species_id": 423,
-                    "form_id": 0,
-                    "minimum_level": 55,
-                    "maximum_level": 65,
-                    "chance": 30,
+                    "chance": 20,
                     "pokemon": pokemon,
                 },
                 {
@@ -197,6 +189,38 @@ class EncounterRenderingTests(unittest.TestCase):
                     "minimum_level": 55,
                     "maximum_level": 65,
                     "chance": 10,
+                    "pokemon": pokemon,
+                },
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 55,
+                    "maximum_level": 65,
+                    "chance": 10,
+                    "pokemon": pokemon,
+                },
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 55,
+                    "maximum_level": 65,
+                    "chance": 10,
+                    "pokemon": pokemon,
+                },
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 55,
+                    "maximum_level": 65,
+                    "chance": 10,
+                    "pokemon": pokemon,
+                },
+                {
+                    "species_id": 423,
+                    "form_id": 0,
+                    "minimum_level": 55,
+                    "maximum_level": 65,
+                    "chance": 40,
                     "pokemon": pokemon,
                 },
             ],
@@ -223,8 +247,8 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("# Icirrus City", page)
         self.assertNotIn("# Map 002", page)
         self.assertEqual(page.count("gastrodon"), 2)
-        self.assertIn("| 45–55 | 60% |", page)
-        self.assertIn("| 55–65 | 40% |", page)
+        self.assertIn("| 45–55 | 20% |", page)
+        self.assertIn("| 55–65 | 80% |", page)
         self.assertEqual(catalog["records"][0]["label"], "Icirrus City")
         self.assertEqual(catalog["records"][0]["locations"], ["Icirrus City"])
 

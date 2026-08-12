@@ -87,6 +87,12 @@ and form, stored level, IV strength, ability selection, forced gender, held item
 custom moves where present; derived attributes remain distinguished from facts
 stored in the ROM.
 
+Unlike Black and White's trainer-name bank, the B2W2 bank retains entry zero.
+Trainer names therefore use the trainer ID directly as their message index. This
+leaf-specific rule prevents the one-record shift that previously labeled Skyla's
+record as Burgh, Cheren's as Skyla, and Pokémon League records as the preceding
+trainer.
+
 The BW common-script band rule is not used for B2W2. It was validated against
 Black only and produced impossible sequel associations such as Nuvema Town and
 Cave of Being. B2W2 publishes only literal trainer IDs from its own map scripts
@@ -101,16 +107,20 @@ name. Early, middle, late, and rematch triplets all reference their exact stored
 parties rather than a synthesized rival record.
 
 B2W2's Easy/Normal/Challenge selector is separate from the party member's
-`iv_strength` byte. Easy and Normal select the normal Gym record; Challenge
-selects the alternate record where the script dispatches one. The engine adjusts
-the displayed battle level after loading the party, but the retail-compatible
-stat calculation continues using the stored record level—the known level/stat
-bug. Retail, original Blaze Black 2/Volt White 2, and Redux declare separate
-profile contracts. Gym dispatch and the stored-level/stat behavior are verified;
-the complete executable level-offset band table is still unresolved, so
-difficulty coverage is reported as partial and no numeric per-record display
-level is guessed. Redux's creator documentation independently confirms shared
-Easy/Normal parties, Challenge-only teams, and the level/stat limitation:
+`iv_strength` byte. Runtime level adjustment applies to trainer battles generally;
+alternate party records are related only where a verified dispatcher selects one.
+Easy and Normal share the normal record for the documented Gym and Pokémon League
+battles, while Challenge selects their alternate record. First-clear and rematch
+Elite Four/Champion records are represented as distinct conditions. The engine
+adjusts the displayed battle level after loading the party, but the
+retail-compatible stat calculation continues using the stored record level—the
+known level/stat bug. Retail, original Blaze Black 2/Volt White 2, and Redux
+declare separate profile contracts; their exact normal and Challenge archive
+records were checked independently. The complete executable level-offset band
+table is still unresolved, so difficulty coverage remains partial and no numeric
+per-record display level is guessed. Redux's creator documentation independently
+confirms shared Easy/Normal parties, Challenge-only teams, and the level/stat
+limitation:
 [Pokémon Trainer Changes](https://smilingzero.github.io/BlazeBlack2ReduxWiki/genTrainerChange/).
 
 ## Locations

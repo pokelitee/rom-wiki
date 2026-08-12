@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.trainers import parse_trainer_record
+from romwiki.engines.gen5.bw.trainers import parse_trainer_record, trainer_name_index
 from romwiki.util.errors import InvalidRomError
 
 _CLASS_NAMES = ("Youngster", "Lass", "Leader")
@@ -36,6 +36,9 @@ def _trainer_header(
 
 
 class Gen5TrainerTests(unittest.TestCase):
+    def test_omits_entry_zero_from_the_trainer_name_table(self) -> None:
+        self.assertEqual(trainer_name_index(155), 154)
+
     def test_decodes_a_simple_single_pokemon_party(self) -> None:
         # Real Black ROM trainer 2 (Lass Jimmy): a level 7 Purrloin, no
         # held item, no custom moves.

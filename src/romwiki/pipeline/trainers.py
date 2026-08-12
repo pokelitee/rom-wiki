@@ -188,8 +188,8 @@ def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, 
     # optional held-item/custom-move blocks). Member 0 of both archives is an
     # unused, differently-shaped placeholder (confirmed against real ROM
     # data: 16 bytes vs. the normal 20, 6 bytes vs. a real party record), so
-    # real trainer IDs start at 1; trainer names are indexed by
-    # trainer_id - 1 (Gen5RomHandler.java's own `tnames.get(i - 1)`).
+    # real trainer IDs start at 1. The owning engine leaf resolves the
+    # message-table index: BW omits entry zero, while B2W2 retains it.
     profile = result.match.profile
     try:
         trainer_path = profile.layout["trainer_data"]
@@ -213,7 +213,12 @@ def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, 
         raise InvalidRomError("Trainer data and party archives have different counts")
     names = engine.parse_english_message_archive(messages.read(names_member))
     classes = engine.parse_english_message_archive(messages.read(classes_member))
-    if len(names) < len(trainers.members) - 1:
+    name_indexes = {
+        member.index: engine.trainer_name_index(member.index)
+        for member in trainers.members
+        if member.index != 0
+    }
+    if any(index < 0 or index >= len(names) for index in name_indexes.values()):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
 
     parsed_records = [
@@ -221,7 +226,7 @@ def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, 
             trainers.read(member.index),
             parties.read(member.index),
             trainer_id=member.index,
-            name=names[member.index - 1],
+            name=names[name_indexes[member.index]],
             class_names=classes,
             trainer_archive=trainer_path,
             party_archive=party_path,
