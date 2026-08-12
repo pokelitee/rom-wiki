@@ -4,6 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen4.dppt import (
+    Gen4StarterBranchFamily,
     parse_trainer_class_genders,
     parse_trainer_record,
 )
@@ -97,28 +98,91 @@ class Gen4TrainerTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidRomError, "has size 2; expected 3"):
             parse_trainer_class_prize_multipliers(b"\x00\x04", count=3)
 
-    def test_does_not_relate_profile_records_without_parties(self) -> None:
-        records = [
-            *(
-                {"trainer_id": trainer_id, "party": []}
-                for trainer_id in range(837, 843)
-            ),
-            *(
-                {"trainer_id": trainer_id, "party": [{"species_id": 1}]}
-                for trainer_id in range(850, 853)
-            ),
-        ]
-
-        result = resolve_trainer_variants(
-            "renegade-platinum",
-            {"trainer_variant_contract": "renegade-platinum-v1.3.0"},
-            records,
+    @staticmethod
+    def _decoded_family(*, script_file_id: int = 429):
+        # Whatever the ROM's branches happened to select; nothing about these
+        # numbers is known to the resolver in advance.
+        return Gen4StarterBranchFamily(
+            script_file_id=script_file_id,
+            selected=((387, 5001), (390, 5002)),
+            fallthrough_trainer_id=5003,
         )
 
-        family_ids = {family["id"] for family in result["battle_families"]}
-        self.assertNotIn("barry-fight-area", family_ids)
-        self.assertNotIn("barry-weekend-rematch-1", family_ids)
-        self.assertIn("barry-starter-demo", family_ids)
+    def _records(self, *, site: str | None = "Relocated Town", ids=(5001, 5002, 5003)):
+        return [
+            {
+                "trainer_id": trainer_id,
+                "party": [{"species_id": 1}],
+                **({"script_references": [{"name": site}]} if site else {}),
+            }
+            for trainer_id in ids
+        ]
+
+    def _resolve(self, records, family):
+        return resolve_trainer_variants(
+            "platinum-us",
+            {"trainer_variant_contract": "platinum-retail-v1"},
+            records,
+            selector_data={
+                "starter_branch_families": (family,),
+                "species_names": {387: "TURTWIG", 390: "CHIMCHAR"},
+            },
+        )
+
+    def test_builds_a_family_from_the_decoded_branches(self) -> None:
+        result = self._resolve(self._records(), self._decoded_family())
+
+        family = result["battle_families"][0]
+        self.assertEqual(family["id"], "starter-branch-0429")
+        self.assertEqual(
+            [v["trainer_id"] for v in family["variants"]], [5001, 5002, 5003]
+        )
+        self.assertEqual(
+            [v["conditions"][0]["value"] for v in family["variants"]],
+            ["turtwig", "chimchar", "remaining-starter"],
+        )
+
+    def test_labels_a_battle_site_from_the_profile_s_own_scripts(self) -> None:
+        result = self._resolve(self._records(), self._decoded_family())
+
+        self.assertEqual(
+            result["battle_families"][0]["label"], "Relocated Town rival battle"
+        )
+
+    def test_falls_back_when_variants_disagree_on_a_battle_site(self) -> None:
+        records = [
+            {
+                "trainer_id": trainer_id,
+                "party": [{"species_id": 1}],
+                "script_references": [{"name": name}],
+            }
+            for trainer_id, name in (
+                (5001, "One Town"),
+                (5002, "Other Town"),
+                (5003, "One Town"),
+            )
+        ]
+
+        result = self._resolve(records, self._decoded_family())
+
+        self.assertEqual(result["battle_families"][0]["label"], "Rival battle")
+
+    def test_does_not_relate_records_without_parties(self) -> None:
+        records = [{"trainer_id": trainer_id, "party": []} for trainer_id in (5001,)]
+
+        result = self._resolve(records, self._decoded_family())
+
+        self.assertEqual(result["battle_families"], [])
+
+    def test_reports_nothing_when_no_branches_were_decoded(self) -> None:
+        result = resolve_trainer_variants(
+            "platinum-us",
+            {"trainer_variant_contract": "platinum-retail-v1"},
+            self._records(),
+            selector_data=None,
+        )
+
+        self.assertEqual(result["battle_families"], [])
 
 
 if __name__ == "__main__":

@@ -167,6 +167,12 @@ from .pickup import (
     SplitPickupTable,
     parse_pickup_tables,
 )
+from .rematch import (
+    REMATCH_RECORD_SIZE,
+    REMATCH_STAGE_COUNT,
+    Gen4RematchChain,
+    parse_rematch_table,
+)
 from .scripts import (
     CHECK_WON_BATTLE,
     PLATINUM_ROAMING_SLOT_COUNT,
@@ -181,6 +187,11 @@ from .scripts import (
     parse_script_table,
     parse_static_encounter_commands,
     parse_trainer_battle_commands,
+)
+from .starter_branches import (
+    GET_STARTER_SPECIES,
+    Gen4StarterBranchFamily,
+    parse_starter_branch_families,
 )
 from .trades import (
     NPC_TRADE_RECORD_SIZE,
@@ -440,6 +451,13 @@ __all__ = [
     "parse_npc_trade_record",
     "trade_language_name",
     "derive_trainer_party_attributes",
+    "REMATCH_RECORD_SIZE",
+    "REMATCH_STAGE_COUNT",
+    "Gen4RematchChain",
+    "parse_rematch_table",
+    "GET_STARTER_SPECIES",
+    "Gen4StarterBranchFamily",
+    "parse_starter_branch_families",
     "resolve_trainer_variants",
     "normalize_trainer_party_member",
 ]

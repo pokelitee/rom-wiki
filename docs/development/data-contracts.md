@@ -63,6 +63,12 @@ every family records the source, reference, and verification of its selection
 rule. Validation rejects dangling IDs, duplicate variants, duplicate ordering,
 contradictory conditions, and missing provenance.
 
+Resolvers see normalized records only. Selectors that live in the ROM image —
+such as the DPPT Vs. Seeker rematch table — are decoded in the trainer pipeline,
+which passes them to the resolver as `selector_data` and records their location
+under `source`. Profiles own the offsets, so a hack that moves or rewrites a
+selector declares its own without changing engine code.
+
 The public renderer names only Starter, Difficulty, Season, Rematch, and Version.
 Story-stage-only and other neutral relationships render as `Variant N`. The
 resolver and renderer never combine exact trainer records. Encounter row

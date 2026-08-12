@@ -175,14 +175,53 @@ script file for a literal `StartTrainerBattle` command immediately followed
 "opcode-signature-plus-validating-follow-on-command" pattern this project's
 Generation V engine later adopted for its own equivalent trainer-battle scan.
 
-Starter-variable branches for Barry's battles are published through the shared
-trainer-variant resolver. Each branch remains its own exact trainer ID and party;
-the family records why the script selects it and the player's Turtwig, Chimchar,
-or Piplup choice. Renegade Platinum uses an explicit v1.3.0 profile contract and
-was checked separately against its patched trainer archive. Other same-name
-records remain fallback navigation only. Vs. Seeker chains and other unresolved
-rematch state machines are not inferred from names, nearby IDs, levels, or party
-similarity, so rematch/story-stage coverage is intentionally partial.
+Starter-variable branches for the rival's battles are decoded from each
+profile's own scripts rather than listed by hand. One opcode is named — the
+command that reads the player's starter species into a script variable. From
+there the engine finds each comparison against that variable, follows the
+conditional jump that guards it, and reports the exact trainer record the branch
+lands on; the record no branch jumps to is the remaining starter's. A group is
+only published when at least two branches each resolve onto a literal battle
+command, so a script that merely contains many battles yields nothing instead of
+a guess, and the species names come from the profile's own name table.
+
+Because nothing is hardcoded, a hack that renumbers, relocates, or re-teams
+these battles is described from its own ROM. Renegade Platinum uses an explicit
+v1.3.0 profile contract and resolves to the same five groups with the same
+species-to-record mapping as retail. Battle sites are likewise the maps the
+profile's scripts place the records on, which corrected two descriptions carried
+over from hand-written labels: the first rival battle is on Route 203 rather
+than Route 201, and the post-Hearthome battle is on Route 209 rather than in
+Hearthome City. Other same-name records remain fallback navigation only.
+
+Groups whose selection is not a plain starter branch are not published, for two
+distinct reasons. The Spear Pillar partner battle, the weekend rematch stages,
+the starter demonstration, and the Pokémon League rival rematch have no literal
+battle command anywhere in the scripts, so there is nothing to resolve. The
+Survival Area pair stages two battles inside each starter branch rather than
+one, and its branches jump to the start of those blocks instead of onto a
+battle; resolving a whole block instead was tried and rejected, because the
+starter variable is also the engine's general-purpose scratch variable and an
+unrelated comparison then captured a battle belonging to the fall-through,
+producing a confident but wrong branch. Both sets are left unresolved rather
+than asserted.
+
+Vs. Seeker rematches come from the game's own rematch table in overlay 5, decoded
+once and enumerated in full. Each 12-byte record is a base trainer ID followed by
+five story-progress stage slots; a slot either names a distinct trainer record, is
+marked as no upgrade at that tier, or is unused padding. The table's bounds are
+taken from the code that reads it — four separate references resolve to its first
+record and one to its end — rather than from a data scan, and decoding fails
+outright unless the ROM satisfies the layout's invariants: unique base IDs, every
+stage record referenced exactly once table-wide, and unused slots only ever
+trailing. Chains that merely re-select their base encode a rematch with an
+unchanged party and produce no variant family. Renegade Platinum's table is
+byte-identical to retail, so it keeps the retail selector layout and needs no
+profile override; only its parties differ.
+
+Gym Leader and Elite Four rematch records are selected by different logic and are
+not part of this table, so rematch and story-stage coverage remains partial. They
+are not inferred from names, nearby IDs, levels, or party similarity.
 
 ## Locations
 

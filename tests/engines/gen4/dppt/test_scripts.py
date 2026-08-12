@@ -23,10 +23,30 @@ class Gen4ScriptTests(unittest.TestCase):
         self.assertEqual(commands[0].trainer_ids, (250,))
         self.assertEqual(commands[1].trainer_ids, (536, 551))
 
-    def test_ignores_variables_and_unverified_opcode_values(self) -> None:
-        body = struct.pack("<HHHH", 0xE5, 0x8004, 0, 0xEC) + struct.pack(
-            "<HHHH", 0xE5, 250, 0, 0x16
+    def test_ignores_variable_supplied_trainer_ids(self) -> None:
+        body = struct.pack("<HHHH", 0xE5, 0x8004, 0, 0xEC)
+
+        self.assertEqual(
+            parse_trainer_battle_commands(make_script(body), trainer_count=1000),
+            (),
         )
+
+    def test_resolves_battles_that_handle_their_own_result(self) -> None:
+        # 0x0016 follows the rival battles and 0x001B the Elite Four's; both are
+        # real commands, so requiring CheckWonBattle would drop both categories.
+        body = struct.pack("<HHHH", 0xE5, 250, 0, 0x16) + struct.pack(
+            "<HHHH", 0xE5, 261, 0, 0x1B
+        )
+
+        commands = parse_trainer_battle_commands(make_script(body), trainer_count=1000)
+
+        self.assertEqual(
+            [command.trainer_ids for command in commands], [(250,), (261,)]
+        )
+
+    def test_ignores_a_follow_on_that_is_not_a_real_command(self) -> None:
+        body = struct.pack("<HHHH", 0xE5, 250, 0, 0x9999)
+
         self.assertEqual(
             parse_trainer_battle_commands(make_script(body), trainer_count=1000),
             (),

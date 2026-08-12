@@ -376,7 +376,10 @@ def resolve_trainer_variants(
     profile_id: str,
     parameters: Mapping[str, Any],
     records: Sequence[Mapping[str, Any]],
+    *,
+    selector_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    del selector_data  # This engine's selectors are decoded from records alone.
     contract = parameters.get("trainer_variant_contract")
     if contract not in _CONTRACTS:
         raise ProfileError(
@@ -409,7 +412,16 @@ def resolve_trainer_variants(
                 },
             },
             "rematch_stage": {"status": "partial"},
-            "story_stage": {"status": "partial"},
+            "story_stage": {
+                "status": "partial",
+                "note": (
+                    "Stages come from this engine's curated battle list, not a "
+                    "decoded selector. Story stage is a neutral axis that never "
+                    "names a public label, and its surface is every story-gated "
+                    "branch in every field script rather than one table, so it is "
+                    "deliberately not pursued further."
+                ),
+            },
             "sibling_version": {"status": "verified"},
             "season": {"status": "verified"},
         },

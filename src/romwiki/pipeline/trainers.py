@@ -132,8 +132,25 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         }
         for record in parsed_records
     ]
+    rematch_source, rematch_chains = _read_rematch_table(
+        profile, platform, engine, result, trainer_count=len(trainers.members)
+    )
+    starter_families = _read_starter_branch_families(
+        profile, platform, engine, filesystem, trainer_count=len(trainers.members)
+    )
+    selector_data = {
+        key: value
+        for key, value in (
+            ("rematch_chains", rematch_chains),
+            ("starter_branch_families", starter_families),
+            # Branch conditions name the species the ROM itself compares, so the
+            # resolver needs this profile's own species names.
+            ("species_names", reference_names.get("pokemon_names")),
+        )
+        if value is not None
+    }
     variant_contract = resolve_trainer_variants(
-        engine, profile.id, profile.parameters, records
+        engine, profile.id, profile.parameters, records, selector_data or None
     )
     return {
         "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
@@ -170,11 +187,79 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
                 if class_prize_multipliers is not None
                 else None
             ),
+            "trainer_rematch_table": rematch_source,
             **location_source,
         },
         **reference_names,
         "records": records,
     }
+
+
+def _read_starter_branch_families(
+    profile: Any,
+    platform: Any,
+    engine: Any,
+    filesystem: Any,
+    *,
+    trainer_count: int,
+) -> tuple[Any, ...] | None:
+    """Decode starter-selected battle groups from the profile's own scripts.
+
+    Returns `None` when the engine has no starter-branch decoder, so engines
+    that resolve their relationships from records alone are unaffected.
+    """
+    parse = getattr(engine, "parse_starter_branch_families", None)
+    scripts_path = profile.layout.get("scripts")
+    if parse is None or scripts_path is None:
+        return None
+
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), allow_truncated=True
+    )
+    families = []
+    for member in scripts.members:
+        families.extend(
+            parse(
+                scripts.read(member.index),
+                script_file_id=member.index,
+                trainer_count=trainer_count,
+            )
+        )
+    return tuple(families)
+
+
+def _read_rematch_table(
+    profile: Any,
+    platform: Any,
+    engine: Any,
+    result: InspectionResult,
+    *,
+    trainer_count: int,
+) -> tuple[dict[str, Any] | None, tuple[Any, ...] | None]:
+    """Decode the profile's rematch selector table, if it declares one.
+
+    Resolvers only see normalized records, so the selector has to be read here
+    where the ROM image is still available. Profiles that declare no table get
+    `None` and the resolver reports the mechanic as unresolved.
+    """
+    overlay_id = profile.parameters.get("trainer_rematch_overlay_id")
+    offset = profile.parameters.get("trainer_rematch_offset")
+    count = profile.parameters.get("trainer_rematch_count")
+    parse = getattr(engine, "parse_rematch_table", None)
+    if overlay_id is None or offset is None or count is None or parse is None:
+        return None, None
+
+    record_size = engine.REMATCH_RECORD_SIZE
+    _, overlay = platform.read_overlay(result.image, overlay_id)
+    chains = parse(
+        overlay[offset : offset + count * record_size],
+        count=count,
+        trainer_count=trainer_count,
+    )
+    return (
+        {"overlay_id": overlay_id, "offset": offset, "count": count},
+        chains,
+    )
 
 
 def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
