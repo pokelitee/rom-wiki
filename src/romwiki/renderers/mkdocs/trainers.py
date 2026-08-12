@@ -116,7 +116,6 @@ def render_trainer_pages(
                     dataset_features,
                     family_memberships.get(record["trainer_id"], []),
                     records_by_id,
-                    dataset.get("trainer_variant_support", {}),
                 ),
             )
             page_count += 1
@@ -163,7 +162,6 @@ def render_trainer_pages(
                     dataset_features,
                     family_memberships.get(record["trainer_id"], []),
                     records_by_id,
-                    dataset.get("trainer_variant_support", {}),
                 ),
             )
             page_count += 1
@@ -263,15 +261,6 @@ def _catalog_record(
             "max_level": max(levels),
             "pokemon": species,
             "party": party,
-            "battle_variants": [
-                {
-                    "family": family["label"],
-                    "conditions": [
-                        condition["label"] for condition in variant["conditions"]
-                    ],
-                }
-                for family, variant in (family_memberships or [])
-            ],
             "search_text": " ".join(
                 (label, route_id, *location_names, *species)
             ).lower(),
@@ -291,7 +280,6 @@ def _render_trainer(
     features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
     family_memberships: list[tuple[dict[str, Any], dict[str, Any]]] | None = None,
     records_by_id: dict[int, dict[str, Any]] | None = None,
-    variant_support: dict[str, Any] | None = None,
 ) -> str:
     label = _trainer_label(record)
     source_file = f"trainers/trainer-{record['trainer_id']:04}.md"
@@ -301,37 +289,20 @@ def _render_trainer(
         f"# {label}",
         "",
         *_trainer_summary(record, grouped_ai_items, source_url, features=features),
-        "## Party",
-        "",
-        *_party_cards(record["party"], source_url),
     ]
-    _append_ai_battle_items(lines, grouped_ai_items, source_file)
-    _append_locations(lines, record["locations"], source_file)
-    _append_script_references(lines, record.get("script_references", []), source_file)
     memberships = family_memberships or []
-    _append_battle_variants(
+    _append_party(
         lines,
         record,
         memberships,
         records_by_id or {},
         source_file,
-        variant_support or {},
+        source_url,
     )
-    difficulty_support = (variant_support or {}).get("difficulty_mode", {})
-    has_difficulty_family = any(
-        condition["kind"] == "difficulty-mode"
-        for family, _variant in memberships
-        for variant in family["variants"]
-        for condition in variant["conditions"]
-    )
-    if (
-        not has_difficulty_family
-        and difficulty_support.get("runtime", {}).get("level_adjustment_scope")
-        == "all-trainer-battles"
-    ):
-        _append_difficulty_behavior(lines, difficulty_support, heading_level=2)
-    if not memberships:
-        _append_same_name_trainers(lines, record, same_name_records or [], source_file)
+    _append_ai_battle_items(lines, grouped_ai_items, source_file)
+    _append_locations(lines, record["locations"], source_file)
+    _append_script_references(lines, record.get("script_references", []), source_file)
+    _append_same_name_trainers(lines, record, same_name_records or [], source_file)
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(provenance_section(_trainer_provenance(record)))
     _append_record_navigation(lines, record, previous, following)
@@ -601,7 +572,7 @@ def _trainer_summary(
     return summary_section(
         "rw-trainer-summary",
         [
-            f"<div><dt>Trainer ID</dt><dd>{record['trainer_id']}</dd></div>",
+            f"<div><dt>Trainer ID</dt><dd>trainer-{record['trainer_id']:04}</dd></div>",
             f"<div><dt>Class</dt><dd>{display_name(record['class_name'])}</dd></div>",
             (
                 "<div><dt>Location</dt><dd>"
@@ -786,6 +757,76 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
     return lines
 
 
+def _append_party(
+    lines: list[str],
+    record: dict[str, Any],
+    memberships: list[tuple[dict[str, Any], dict[str, Any]]],
+    records_by_id: dict[int, dict[str, Any]],
+    source_file: str,
+    source_url: str,
+) -> None:
+    lines.extend(["## Party", ""])
+    families = {family["id"]: family for family, _variant in memberships}
+    if not families:
+        lines.extend(_party_cards(record["party"], source_url))
+        return
+
+    tabs: list[tuple[str, dict[str, Any]]] = []
+    for family in sorted(families.values(), key=lambda value: value["order"]):
+        variants = sorted(
+            family["variants"],
+            key=lambda value: (
+                value["trainer_id"] != record["trainer_id"],
+                value["order"],
+            ),
+        )
+        for variant in variants:
+            candidate = records_by_id.get(variant["trainer_id"])
+            if candidate is None or not candidate.get("party"):
+                continue
+            tabs.append((_variant_tab_label(variant, len(tabs) + 1), candidate))
+
+    seen_labels: dict[str, int] = {}
+    for label, candidate in tabs:
+        seen_labels[label] = seen_labels.get(label, 0) + 1
+        tab_label = (
+            label if seen_labels[label] == 1 else f"{label} ({seen_labels[label]})"
+        )
+        route_id = f"trainer-{candidate['trainer_id']:04}"
+        record_link = ROUTES.markdown_link(
+            entity_reference(
+                "trainer",
+                candidate["trainer_id"],
+                route_id,
+                candidate["trainer_id"],
+            ),
+            source_file,
+        )
+        content = [
+            f"Exact record: {record_link}",
+            "",
+            *_party_cards(candidate["party"], source_url),
+        ]
+        lines.extend([f'=== "{tab_label}"', ""])
+        lines.extend(f"    {line}" if line else "" for line in content)
+
+
+def _variant_tab_label(variant: dict[str, Any], generic_number: int) -> str:
+    named_kinds = {
+        "starter-choice",
+        "difficulty-mode",
+        "season",
+        "rematch-stage",
+        "sibling-version",
+    }
+    labels = [
+        display_name(condition["value"])
+        for condition in variant["conditions"]
+        if condition["kind"] in named_kinds
+    ]
+    return " · ".join(labels) if labels else f"Variant {generic_number}"
+
+
 def _party_gender(gender: dict[str, Any] | None) -> str:
     if not gender:
         return ""
@@ -814,12 +855,22 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
         ("SpD", "special_defense"),
         ("Spe", "speed"),
     )
-    rows = []
-    for label, field in (
-        ("Value", "calculated_stats"),
-        ("IV", "ivs"),
-        ("EV", "evs"),
+    rows: list[tuple[str, dict[str, Any]]] = []
+    calculated = member.get("calculated_stats")
+    calculated_values = calculated.get("values") if calculated else None
+    if isinstance(calculated_values, dict) and all(
+        key in calculated_values for _, key in ordered
     ):
+        if any(_is_stat_range(calculated_values[key]) for _, key in ordered):
+            rows.extend(
+                [
+                    ("Minimum", _stat_bounds(calculated_values, ordered, "minimum")),
+                    ("Maximum", _stat_bounds(calculated_values, ordered, "maximum")),
+                ]
+            )
+        else:
+            rows.append(("Value", calculated_values))
+    for label, field in (("IV", "ivs"), ("EV", "evs")):
         attribute = member.get(field)
         values = attribute.get("values") if attribute else None
         if isinstance(values, dict) and all(key in values for _, key in ordered):
@@ -844,6 +895,22 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
     ]
 
 
+def _is_stat_range(value: Any) -> bool:
+    return isinstance(value, dict) and {"minimum", "maximum"}.issubset(value)
+
+
+def _stat_bounds(
+    values: dict[str, Any],
+    ordered: tuple[tuple[str, str], ...],
+    bound: str,
+) -> dict[str, Any]:
+    return {
+        key: value[bound] if _is_stat_range(value) else value
+        for _, key in ordered
+        for value in (values[key],)
+    }
+
+
 def _stat_value(value: Any) -> str:
     if isinstance(value, dict) and {
         "minimum",
@@ -862,8 +929,8 @@ def _append_locations(
         [
             "## Locations",
             "",
-            "| Location | Header | Internal map | Position | Event object |",
-            "| -------- | -----: | ------------ | -------- | ------------ |",
+            "| Location | ID | Internal map | Position | Event object |",
+            "| -------- | -- | ------------ | -------- | ------------ |",
         ]
     )
     for location in locations:
@@ -878,7 +945,7 @@ def _append_locations(
         )
         lines.append(
             f"| {link} "
-            f"| {location['header_id']} | "
+            f"| `header-{location['header_id']:03}` | "
             f"`{location['internal_name']}` | ({location['x']}, {location['z']}) | "
             f"`{location['event_file_id']}:{location['object_index']}` |"
         )
@@ -894,8 +961,8 @@ def _append_script_references(
         [
             "## Scripted battle locations",
             "",
-            "| Location | Header | Internal map | Script command | Opponent slot |",
-            "| -------- | -----: | ------------ | -------------- | ------------: |",
+            "| Location | ID | Internal map | Script command | Opponent slot |",
+            "| -------- | -- | ------------ | -------------- | ------------: |",
         ]
     )
     for reference in references:
@@ -910,7 +977,7 @@ def _append_script_references(
         )
         lines.append(
             f"| {link} "
-            f"| {reference['header_id']} | "
+            f"| `header-{reference['header_id']:03}` | "
             f"`{reference['internal_name']}` | "
             f"`{reference['script_file_id']}@0x{reference['command_offset']:X}` | "
             f"{reference['opponent_slot']} |"
@@ -957,145 +1024,28 @@ def _append_same_name_trainers(
         )
     lines.extend(
         [
-            "| Trainer | Location | Levels | Party |",
-            "| ------- | -------- | ------ | ----- |",
+            "| Trainer | ID | Location | Levels | Party |",
+            "| ------- | -- | -------- | ------ | ----- |",
         ]
     )
     for candidate in related:
         trainer_id = candidate["trainer_id"]
         trainer_link = ROUTES.markdown_link(
-            entity_reference("trainer", trainer_id, f"ID {trainer_id}", trainer_id),
+            entity_reference(
+                "trainer", trainer_id, _trainer_label(candidate), trainer_id
+            ),
             source_file,
         )
+        route_id = f"trainer-{trainer_id:04}"
         locations = _location_names(candidate)
         lines.append(
-            f"| {trainer_link} | {' / '.join(locations) or 'Unlinked'} | "
+            f"| {trainer_link} | `{route_id}` | {' / '.join(locations) or 'Unlinked'} | "
             f"{_trainer_level_range(candidate)} | "
             f"{_linked_party(candidate, source_file)} |"
         )
     lines.append("")
     if collapsed:
         lines.extend(["</details>", ""])
-
-
-def _append_battle_variants(
-    lines: list[str],
-    record: dict[str, Any],
-    memberships: list[tuple[dict[str, Any], dict[str, Any]]],
-    records_by_id: dict[int, dict[str, Any]],
-    source_file: str,
-    variant_support: dict[str, Any] | None = None,
-) -> None:
-    """Render verified relationships without changing the exact record unit."""
-    families = {family["id"]: family for family, _variant in memberships}
-    if not families:
-        return
-    lines.extend(
-        [
-            "## Battle Variants",
-            "",
-            (
-                "These exact trainer records are related by verified battle-selection "
-                "rules. Conditions describe when the game selects each record."
-            ),
-            "",
-        ]
-    )
-    for family in sorted(families.values(), key=lambda value: value["order"]):
-        lines.extend(
-            [
-                f"### {family['label']}",
-                "",
-                "| Conditions | Trainer record | Levels | Party |",
-                "| ---------- | -------------- | ------ | ----- |",
-            ]
-        )
-        for variant in sorted(family["variants"], key=lambda value: value["order"]):
-            candidate = records_by_id.get(variant["trainer_id"])
-            if candidate is None or not candidate.get("party"):
-                continue
-            trainer_id = candidate["trainer_id"]
-            trainer_link = ROUTES.markdown_link(
-                entity_reference(
-                    "trainer",
-                    trainer_id,
-                    f"ID {trainer_id}"
-                    + (" (this record)" if trainer_id == record["trainer_id"] else ""),
-                    trainer_id,
-                ),
-                source_file,
-            )
-            condition_label = "; ".join(
-                condition["label"] for condition in variant["conditions"]
-            )
-            lines.append(
-                f"| {condition_label} | {trainer_link} | "
-                f"{_trainer_level_range(candidate)} | "
-                f"{_linked_party(candidate, source_file)} |"
-            )
-        provenance = family["provenance"]
-        lines.extend(
-            [
-                "",
-                (
-                    f"Rule evidence: {provenance['source']} "
-                    f"(`{provenance['reference']}`). {provenance['verification']}"
-                ),
-                "",
-            ]
-        )
-    if any(
-        condition["kind"] == "difficulty-mode"
-        for family in families.values()
-        for variant in family["variants"]
-        for condition in variant["conditions"]
-    ):
-        _append_difficulty_behavior(
-            lines, (variant_support or {}).get("difficulty_mode", {})
-        )
-
-
-def _append_difficulty_behavior(
-    lines: list[str],
-    support: dict[str, Any],
-    *,
-    heading_level: int = 3,
-) -> None:
-    runtime = support.get("runtime", {})
-    lines.extend(
-        [
-            f"{'#' * heading_level} Difficulty behavior",
-            "",
-            (
-                "Party levels shown on this page and in any Battle Variants table "
-                "are the exact levels stored in each trainer record. Runtime "
-                "displayed levels may differ when difficulty mode applies."
-            ),
-            "",
-        ]
-    )
-    note = support.get("note")
-    if note:
-        lines.extend(
-            [f"Coverage: **{support.get('status', 'unknown').title()}**. {note}", ""]
-        )
-    if not runtime:
-        return
-    labels = {
-        "easy_party": "Easy party",
-        "normal_party": "Normal party",
-        "challenge_party": "Challenge party",
-        "displayed_level": "Displayed level",
-        "stat_level": "Stat calculation level",
-        "iv_strength_field": "IV-strength byte",
-        "level_adjustment_scope": "Level adjustment scope",
-        "party_variant_scope": "Alternate-party scope",
-    }
-    lines.extend(["| Mechanic | Behavior |", "| -------- | -------- |"])
-    for key, label in labels.items():
-        if key in runtime:
-            lines.append(f"| {label} | {display_name(str(runtime[key]))} |")
-    lines.append("")
 
 
 def _trainer_label(record: dict[str, Any]) -> str:

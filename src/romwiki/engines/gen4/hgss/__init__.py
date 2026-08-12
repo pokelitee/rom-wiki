@@ -62,7 +62,7 @@ from romwiki.engines.gen4.trainers import (
     parse_trainer_record,
 )
 
-from .battle_variants import extract_trainer_battle_families
+from .battle_variants import resolve_trainer_variants
 from .encounters import (
     HGSS_FISHING_SLOT_CHANCES,
     HGSS_ROCK_SMASH_SLOT_CHANCES,
@@ -200,7 +200,7 @@ __all__ = [
     "parse_tutor_compatibility_table",
     "parse_tutor_move_table",
     "derive_trainer_party_attributes",
-    "extract_trainer_battle_families",
+    "resolve_trainer_variants",
     "normalize_trainer_party_member",
     "machine_name",
     "parse_personal_record",

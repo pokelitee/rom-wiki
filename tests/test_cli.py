@@ -397,7 +397,7 @@ class FocusedSectionBuildTests(unittest.TestCase):
 
         relationships = write_build.call_args.kwargs["relationship_index"]
         self.assertEqual(
-            relationships.encounter_locations["map-003-spring"][0].header_id,
+            relationships.encounter_locations["map-003"][0].header_id,
             6,
         )
         self.assertIsNotNone(write_build.call_args.kwargs["reference_index"])

@@ -4,19 +4,41 @@ import unittest
 
 from romwiki.renderers.mkdocs.trainers import (
     _append_ai_battle_items,
-    _append_battle_variants,
-    _append_difficulty_behavior,
+    _append_party,
     _append_same_name_trainers,
     _group_ai_battle_items,
     _party_cards,
     _party_gender,
     _trainer_provenance,
     _trainer_summary,
+    _variant_tab_label,
 )
 
 
 class TrainerRenderingTests(unittest.TestCase):
-    def test_renders_verified_battle_variants_by_condition(self) -> None:
+    def test_uses_only_named_public_axes_and_generic_fallback(self) -> None:
+        self.assertEqual(
+            _variant_tab_label(
+                {
+                    "conditions": [
+                        {"kind": "season", "value": "winter"},
+                        {"kind": "rematch-stage", "value": "rematch"},
+                        {"kind": "sibling-version", "value": "white-2"},
+                    ]
+                },
+                1,
+            ),
+            "Winter · Rematch · White 2",
+        )
+        self.assertEqual(
+            _variant_tab_label(
+                {"conditions": [{"kind": "story-stage", "value": "late-game"}]},
+                3,
+            ),
+            "Variant 3",
+        )
+
+    def test_renders_verified_battle_variants_as_complete_party_tabs(self) -> None:
         current = _related_trainer(161, "Aspertia City", 5, "Tepig")
         related = _related_trainer(162, "Aspertia City", 5, "Oshawott")
         family = {
@@ -55,22 +77,24 @@ class TrainerRenderingTests(unittest.TestCase):
         }
         lines: list[str] = []
 
-        _append_battle_variants(
+        _append_party(
             lines,
             current,
             [(family, family["variants"][0])],
             {161: current, 162: related},
             "trainers/trainer-0161.md",
+            "trainers/trainer-0161/",
         )
         page = "\n".join(lines)
 
-        self.assertIn("## Battle Variants", page)
-        self.assertIn("Player chose Snivy", page)
-        self.assertIn("ID 161 (this record)", page)
-        self.assertIn("ID 162", page)
-        self.assertIn("ROM field-script selection", page)
-        self.assertIn("[Tepig](../pokemon/tepig.md)", page)
-        self.assertIn("[Oshawott](../pokemon/oshawott.md)", page)
+        self.assertIn("## Party", page)
+        self.assertIn('=== "Snivy"', page)
+        self.assertIn('=== "Tepig"', page)
+        self.assertIn("Exact record: [trainer-0161]", page)
+        self.assertIn("Exact record: [trainer-0162]", page)
+        self.assertNotIn("Battle Variants", page)
+        self.assertIn("Tepig", page)
+        self.assertIn("Oshawott", page)
 
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
         lines = _trainer_provenance(
@@ -138,13 +162,13 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("## Same-name trainers", page)
         self.assertNotIn("<details", page)
         self.assertIn("does not establish that they represent the same character", page)
-        self.assertIn("ID 19", page)
+        self.assertIn("`trainer-0019`", page)
         self.assertIn("Route 204", page)
         self.assertIn("[Staravia](../pokemon/staravia.md)", page)
         self.assertIn("[Machop](../pokemon/machop.md)", page)
         self.assertNotIn("more", page)
 
-    def test_explains_difficulty_party_and_level_behavior(self) -> None:
+    def test_renders_difficulty_parties_without_mechanics_prose(self) -> None:
         normal = _related_trainer(156, "Aspertia City", 13, "Lillipup")
         challenge = _related_trainer(764, "Aspertia City", 13, "Lillipup")
         family = {
@@ -175,53 +199,21 @@ class TrainerRenderingTests(unittest.TestCase):
         }
         lines: list[str] = []
 
-        _append_battle_variants(
+        _append_party(
             lines,
             normal,
             [(family, family["variants"][0])],
             {156: normal, 764: challenge},
             "trainers/trainer-0156.md",
-            {
-                "difficulty_mode": {
-                    "status": "partial",
-                    "note": "The exact displayed-level offset is unresolved.",
-                    "runtime": {
-                        "easy_party": "normal-record",
-                        "normal_party": "normal-record",
-                        "challenge_party": "challenge-record-where-dispatched",
-                        "displayed_level": "difficulty-adjusted-after-party-load",
-                        "stat_level": "stored-record-level",
-                    },
-                }
-            },
+            "trainers/trainer-0156/",
         )
         page = "\n".join(lines)
 
-        self.assertIn("### Difficulty behavior", page)
-        self.assertIn("exact levels stored in each trainer record", page)
-        self.assertIn("Coverage: **Partial**", page)
-        self.assertIn("| Easy party | Normal Record |", page)
-        self.assertIn("| Challenge party | Challenge Record Where Dispatched |", page)
-
-    def test_can_explain_global_difficulty_without_a_party_variant(self) -> None:
-        lines: list[str] = []
-        _append_difficulty_behavior(
-            lines,
-            {
-                "status": "partial",
-                "runtime": {
-                    "level_adjustment_scope": "all-trainer-battles",
-                    "party_variant_scope": "verified-dispatch-only",
-                },
-            },
-            heading_level=2,
-        )
-        page = "\n".join(lines)
-
-        self.assertIn("## Difficulty behavior", page)
-        self.assertIn("Party levels shown on this page", page)
-        self.assertIn("| Level adjustment scope | All Trainer Battles |", page)
-        self.assertIn("| Alternate-party scope | Verified Dispatch Only |", page)
+        self.assertIn('=== "Easy"', page)
+        self.assertIn('=== "Normal"', page)
+        self.assertIn('=== "Challenge"', page)
+        self.assertNotIn("Difficulty behavior", page)
+        self.assertNotIn("displayed level", page)
 
     def test_collapses_large_same_name_groups(self) -> None:
         current = _related_trainer(1, "Route 201", 5, "Bidoof")
@@ -450,6 +442,18 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn('<tr><th scope="row">IV</th><td>12</td>', page)
         self.assertIn('<tr><th scope="row">EV</th><td>0</td>', page)
 
+    def test_renders_minimum_and_maximum_rows_when_any_stat_is_ranged(self) -> None:
+        member = _party_member([])
+        values = _stats(42)
+        values["attack"] = {"minimum": 38, "maximum": 45}
+        member["calculated_stats"] = {"source": "derived", "values": values}
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertIn('<tr><th scope="row">Minimum</th><td>42</td><td>38</td>', page)
+        self.assertIn('<tr><th scope="row">Maximum</th><td>42</td><td>45</td>', page)
+        self.assertNotIn('<th scope="row">Value</th>', page)
+
     def test_marks_a_hidden_ability_in_the_party_card(self) -> None:
         member = _party_member([])
         member["ability"] = {
@@ -508,6 +512,8 @@ def _related_trainer(
 ) -> dict[str, object]:
     return {
         "trainer_id": trainer_id,
+        "class_name": "Ace Trainer",
+        "name": "Sam",
         "locations": [{"name": location}],
         "script_references": [],
         "party": [
@@ -518,6 +524,15 @@ def _related_trainer(
                     "name": pokemon,
                     "slug": pokemon.lower(),
                 },
+                "held_item": None,
+                "moves": [],
+                "moves_source": "level-up",
+                "ability": None,
+                "nature": None,
+                "gender": None,
+                "ivs": None,
+                "evs": None,
+                "calculated_stats": None,
             }
         ],
     }

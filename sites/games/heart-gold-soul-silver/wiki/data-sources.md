@@ -66,7 +66,7 @@ Platinum locator does not occur in HGSS and no unique HGSS table reference has
 been established.
 
 The Cherrygrove-through-Dragon's Den Silver branches are published as verified
-Battle Variants. Script selection was checked for all Chikorita, Cyndaquil, and
+party tabs. Script selection was checked for all Chikorita, Cyndaquil, and
 Totodile choices in both retail ROMs; every variant still references its exact
 trainer record. The broader phone-rematch state machines and script-only/shared
 battle locations remain unresolved and are not reconstructed from trainer names.

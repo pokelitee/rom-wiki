@@ -288,7 +288,7 @@ class ComparisonRenderingTests(unittest.TestCase):
     def test_links_encounter_changes_across_route_families(self) -> None:
         cases = (
             (7, None, "../encounters/area-007.md"),
-            (7, "map-007-spring", "../encounters/map-007-spring.md"),
+            (7, "map-007", "../encounters/map-007.md"),
         )
         for key, slug, expected_href in cases:
             with self.subTest(slug=slug), tempfile.TemporaryDirectory() as directory:

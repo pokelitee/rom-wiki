@@ -318,6 +318,9 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
         for label, value, anchor, populated in facts
         if populated
     ]
+    fact_lines.insert(
+        0, f"<div><dt>Header ID</dt><dd>header-{record['header_id']:03}</dd></div>"
+    )
     if not fact_lines:
         fact_lines.append(
             "<div><dt>Notable features</dt>"
@@ -870,15 +873,17 @@ def _append_warps(
         [
             "## Warps",
             "",
-            "| Warp | Position | Destination | Destination warp |",
-            "| ---: | -------- | ----------- | ---------------: |",
+            "| Warp | Position | Destination | ID | Destination warp |",
+            "| ---: | -------- | ----------- | -- | ---------------: |",
         ]
     )
     for warp in warps:
         if warp["dynamic"]:
             destination = "Dynamic destination"
+            destination_id = "—"
             destination_warp = "—"
         else:
+            destination_id = f"`header-{warp['destination_header_id']:03}`"
             destination = ROUTES.markdown_link(
                 entity_reference(
                     "location",
@@ -888,7 +893,6 @@ def _append_warps(
                 ),
                 source_file,
             )
-            destination += f" (`{warp['destination_internal_name']}`)"
             destination_warp = (
                 "Coordinate-based"
                 if warp["destination_warp_id"] is None
@@ -898,7 +902,7 @@ def _append_warps(
                 destination_warp += " (one-way or special landing)"
         lines.append(
             f"| {warp['index']} | ({warp['x']}, {warp['z']}) | "
-            f"{destination} | {destination_warp} |"
+            f"{destination} | {destination_id} | {destination_warp} |"
         )
     lines.append("")
 

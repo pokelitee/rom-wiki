@@ -178,7 +178,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("<dt>Nature</dt><dd>Timid</dd>", page)
         self.assertIn('aria-label="Male" title="Male">♂</span>', page)
         self.assertIn(
-            "| [Route 202](../locations/header-343.md) | 343 | `R202` | "
+            "| [Route 202](../locations/header-343.md) | `header-343` | `R202` | "
             "(181, 818) | `329:0` |",
             page,
         )

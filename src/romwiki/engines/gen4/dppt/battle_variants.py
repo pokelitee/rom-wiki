@@ -24,9 +24,14 @@ _STARTERS = (
     ("turtwig", "Player chose Turtwig"),
     ("chimchar", "Player chose Chimchar"),
 )
+_REMATCH_STAGES = {
+    "weekend-rematch-1",
+    "weekend-rematch-2",
+    "pokemon-league-rematch",
+}
 
 
-def extract_trainer_battle_families(
+def resolve_trainer_variants(
     profile_id: str,
     parameters: Mapping[str, Any],
     records: Sequence[Mapping[str, Any]],
@@ -72,6 +77,17 @@ def extract_trainer_battle_families(
                                 "value": stage,
                                 "label": label,
                             },
+                            *(
+                                [
+                                    {
+                                        "kind": "rematch-stage",
+                                        "value": "rematch",
+                                        "label": "Rematch",
+                                    }
+                                ]
+                                if stage in _REMATCH_STAGES
+                                else []
+                            ),
                         ],
                     }
                     for variant_order, (

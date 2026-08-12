@@ -205,12 +205,14 @@ slots. PokéDB remains a reference and fallback source, not the authority for a
 game's mechanics.
 
 Trainer battle families form a second, independently versioned contract in the
-trainer dataset envelope. Engine leaves populate verified selection rules through
-an explicitly selected profile contract; shared enrichment validates their exact
-trainer references and the renderer formats their typed conditions. Families do
-not merge parties or become relationship-index records, so comparisons, Pokémon
-appearances, item backlinks, and location facts continue to count exact trainer
-records once. Unsupported and unresolved mechanics are declared per profile.
+trainer dataset envelope. The pipeline calls the shared
+`resolve_trainer_variants` entry point; each engine leaf owns its selector and
+dispatch mechanics, with profile refinement only for verified hack differences.
+The named public axes are Starter, Difficulty, Season, Rematch, and Version;
+other relationships use neutral variant labels. Families do not merge parties or
+become relationship-index records, so comparisons, Pokémon appearances, item
+backlinks, and location facts continue to count exact trainer records once.
+Unsupported and unresolved mechanics are declared per profile.
 
 The B2W2 trainer leaf deliberately overrides BW location selection. A fallback
 parser may be shared only for byte-compatible record formats; Black-validated
@@ -250,6 +252,13 @@ Normalized relationships identify entities by stable IDs, not page paths. The
 MkDocs reference resolver maps those identities and resolved route keys to Markdown
 source links or published directory URLs. This keeps routing out of extraction and
 ensures catalog and detail-page links share one implementation.
+
+Encounter aggregation is presentation-only: renderers group exact slots by
+species and form inside one method, season, and version, sum their weights, and
+show their level envelope. Generation V retains each seasonal record while
+publishing one `map-NNN` page with season tabs. Public routes use typed IDs such
+as `trainer-0782`, `header-191`, and `map-002`; native ROM identifiers remain in
+their named audit fields.
 
 Type effectiveness follows a separate engine/profile contract. Each data-driven
 profile must explicitly select a chart registered by its engine. A hack may declare

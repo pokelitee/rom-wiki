@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.engines.trainer_variants import resolve_trainer_variants
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.pipeline.map_headers import read_code_binary, resolve_map_headers
 from romwiki.pipeline.reference_names import extract_reference_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
-from romwiki.schema.trainers import validate_trainer_battle_families
 from romwiki.schema.versions import (
     TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
     TRAINERS_RAW_SCHEMA_VERSION,
@@ -132,13 +132,8 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
         }
         for record in parsed_records
     ]
-    variant_contract = engine.extract_trainer_battle_families(
-        profile.id, profile.parameters, records
-    )
-    validate_trainer_battle_families(
-        variant_contract["battle_families"],
-        variant_contract["trainer_variant_support"],
-        (record["trainer_id"] for record in records),
+    variant_contract = resolve_trainer_variants(
+        engine, profile.id, profile.parameters, records
     )
     return {
         "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
@@ -251,13 +246,8 @@ def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, 
         ).to_dict()
         for record in parsed_records
     ]
-    variant_contract = engine.extract_trainer_battle_families(
-        profile.id, profile.parameters, records
-    )
-    validate_trainer_battle_families(
-        variant_contract["battle_families"],
-        variant_contract["trainer_variant_support"],
-        (record["trainer_id"] for record in records),
+    variant_contract = resolve_trainer_variants(
+        engine, profile.id, profile.parameters, records
     )
     return {
         "schema_version": TRAINERS_RAW_SCHEMA_VERSION,

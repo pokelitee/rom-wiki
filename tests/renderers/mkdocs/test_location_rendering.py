@@ -118,10 +118,9 @@ class LocationRenderingTests(unittest.TestCase):
             page = (output / "header-006.md").read_text(encoding="utf-8")
             nonseasonal_page = (output / "header-007.md").read_text(encoding="utf-8")
 
-        self.assertIn("[Route 1 (Spring)](../encounters/map-003-spring.md)", page)
-        self.assertIn("[Route 1 (Summer)](../encounters/map-003-summer.md)", page)
-        self.assertIn("| Spring |", page)
-        self.assertIn("| Black |", page)
+        self.assertEqual(page.count("[Route 1](../encounters/map-003.md)"), 1)
+        self.assertIn("| Spring / Summer |", page)
+        self.assertIn("| Black / White |", page)
         self.assertIn("Wild encounter table index | `3`", page)
         self.assertIn(
             "[View encounter table](../encounters/map-004.md)",
@@ -204,8 +203,8 @@ class LocationRenderingTests(unittest.TestCase):
             all("(header " not in record["label"] for record in catalog["records"])
         )
         self.assertIn("## Same-name locations", first_page)
-        self.assertIn("[Header 7](header-007.md)", first_page)
-        self.assertIn("[Header 6](header-006.md)", second_page)
+        self.assertIn("[Route 1](header-007.md) | `header-007`", first_page)
+        self.assertIn("[Route 1](header-006.md) | `header-006`", second_page)
         self.assertIn("may represent different rooms or map sections", first_page)
 
     def test_renders_gen5_location_linked_and_dynamic_shops(self) -> None:
@@ -583,6 +582,9 @@ class LocationRenderingTests(unittest.TestCase):
             page,
         )
         self.assertIn("header-047.md", page)
+        self.assertIn("| Warp | Position | Destination | ID | Destination warp |", page)
+        self.assertIn("[Oreburgh City](header-047.md) | `header-047` | 0 |", page)
+        self.assertNotIn("C03GYM0101", page.split("## Outdoor connections")[0])
         self.assertIn("header-344.md", page)
         self.assertIn("## Roaming activations", page)
         self.assertIn("Darkrai", page)
@@ -611,6 +613,35 @@ class LocationRenderingTests(unittest.TestCase):
             "[Togepi](../pokemon/togepi.md)</span> | — |",
             page,
         )
+
+    def test_keeps_coordinate_based_destination_warp_in_its_column(self) -> None:
+        lines: list[str] = []
+        from romwiki.renderers.mkdocs.locations_event_map import _append_warps
+
+        _append_warps(
+            lines,
+            [
+                {
+                    "index": 0,
+                    "x": 232,
+                    "z": 424,
+                    "destination_header_id": 191,
+                    "destination_warp_id": None,
+                    "destination_name": "PWT",
+                    "destination_internal_name": "map_191",
+                    "destination_warp_exists": None,
+                    "dynamic": False,
+                }
+            ],
+            "locations/header-001.md",
+        )
+        page = "\n".join(lines)
+
+        self.assertIn(
+            "| 0 | (232, 424) | [PWT](header-191.md) | `header-191` | Coordinate-based |",
+            page,
+        )
+        self.assertNotIn("map_191", page)
 
     def test_renders_great_marsh_daily_pool_with_both_dex_groups(self) -> None:
         record = {

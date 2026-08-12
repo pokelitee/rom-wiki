@@ -23,7 +23,7 @@ class PokemonAvailabilityTests(unittest.TestCase):
                     pokemon_slug="basculin-blue-striped",
                     area_id=8,
                     area_name="Route 1",
-                    encounter_route_key="map-003-spring",
+                    encounter_route_key="map-003",
                     method="Fishing",
                     minimum_level=35,
                     maximum_level=55,
@@ -40,7 +40,7 @@ class PokemonAvailabilityTests(unittest.TestCase):
 
         page = "\n".join(lines)
         self.assertIn("### Wild encounters", page)
-        self.assertIn("[Route 1](../encounters/map-003-spring.md)", page)
+        self.assertIn("[Route 1](../encounters/map-003.md)", page)
         self.assertIn("[Route 1](../locations/header-006.md)", page)
         self.assertIn("| Fishing | 35–55 | 60% | Spring | White |", page)
 

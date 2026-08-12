@@ -76,6 +76,17 @@ def _families(
                                 "value": stage,
                                 "label": label,
                             },
+                            *(
+                                [
+                                    {
+                                        "kind": "rematch-stage",
+                                        "value": "rematch",
+                                        "label": "Rematch",
+                                    }
+                                ]
+                                if stage == "nuvema-rematch"
+                                else []
+                            ),
                         ],
                     }
                     for variant_order, (
@@ -88,7 +99,7 @@ def _families(
     return result
 
 
-def extract_trainer_battle_families(
+def resolve_trainer_variants(
     profile_id: str,
     parameters: Mapping[str, Any],
     records: Sequence[Mapping[str, Any]],

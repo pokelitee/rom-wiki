@@ -384,8 +384,14 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
         ("locations", "encounter-map"): ("parse_map_header_table",),
         ("pickup", "split-table"): ("parse_pickup_tables",),
         ("pickup", "sliding-table"): ("parse_pickup_table",),
-        ("trainers", "class-gender"): ("parse_trainer_record",),
-        ("trainers", "battle-mode"): ("parse_trainer_record",),
+        ("trainers", "class-gender"): (
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+        ),
+        ("trainers", "battle-mode"): (
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+        ),
         ("tutors", "overlay-table"): ("parse_tutor_move_table",),
         ("tutors", "personal-archive"): ("parse_tutor_move_table",),
     }

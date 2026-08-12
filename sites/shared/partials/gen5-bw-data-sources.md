@@ -305,8 +305,8 @@ The first party byte is serialized as `iv_strength`, scaled to a 0-31 IV. It is
 not a game difficulty selector (Black and White have no Easy/Challenge mode), and
 the legacy `difficulty` field name is no longer emitted for Generation V.
 
-Verified Cheren and Bianca starter-variable dispatches are published as Battle
-Variants for retail Black/White and the separately selected Blaze Black/Volt
+Verified Cheren and Bianca starter-variable dispatches are published as exact
+party tabs for retail Black/White and the separately selected Blaze Black/Volt
 White v3.1 contract. The relationship is over exact trainer IDs, including first
 records whose static name slot is blank or unrelated. Other same-name trainers
 remain cautious navigation only. Rematch/story coverage is partial rather than
@@ -361,10 +361,11 @@ cross-reference to table index 0; every one of the 427 headers has a valid
 name index, and exactly 112 distinct wild-encounter cross-references are
 used, matching the Wild Encounters archive's own 112 members exactly.
 
-Each location page links to every rendered Wild Encounters variant selected by
-its table index. A single index can expand into up to 4 seasonal encounter areas
-(see Wild Encounters above), so the shared relationship index preserves each
-variant's stable route key and version applicability. Encounter pages use the
+Each location page links to one canonical Wild Encounters page selected by its
+table index. A single index can contain up to four exact seasonal records (see
+Wild Encounters above), rendered as Spring, Summer, Autumn, and Winter content
+tabs under one `map-NNN` route. The shared relationship index preserves season
+and version applicability. Encounter pages use the
 same relationship index in reverse to link back to every matching map header;
 an unresolved relationship remains unlinked rather than being guessed from a
 display name.

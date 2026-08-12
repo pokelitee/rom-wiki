@@ -8,7 +8,7 @@ from romwiki.engines.gen4.dppt import (
     parse_trainer_record,
 )
 from romwiki.engines.gen4.dppt.battle_variants import (
-    extract_trainer_battle_families,
+    resolve_trainer_variants,
 )
 from romwiki.engines.gen4.dppt.trainers import (
     parse_trainer_class_prize_multipliers,
@@ -109,7 +109,7 @@ class Gen4TrainerTests(unittest.TestCase):
             ),
         ]
 
-        result = extract_trainer_battle_families(
+        result = resolve_trainer_variants(
             "renegade-platinum",
             {"trainer_variant_contract": "renegade-platinum-v1.3.0"},
             records,

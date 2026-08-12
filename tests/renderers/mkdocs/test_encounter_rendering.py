@@ -10,6 +10,56 @@ from romwiki.renderers.mkdocs import render_encounter_pages
 
 
 class EncounterRenderingTests(unittest.TestCase):
+    def test_aggregates_nonadjacent_slots_by_species_and_form(self) -> None:
+        gastrodon = {
+            "id": 423,
+            "slug": "gastrodon",
+            "name": "Gastrodon",
+            "sprite": None,
+        }
+        shellos = {
+            "id": 422,
+            "slug": "shellos",
+            "name": "Shellos",
+            "sprite": None,
+        }
+        record = _encounter_record(2, 2, "spring", "Map 002")
+        record["surfing"] = {
+            "rate": 10,
+            "slots": [
+                _seasonal_slot(423, 0, 45, 55, 20, gastrodon),
+                _seasonal_slot(422, 0, 40, 40, 10, shellos),
+                _seasonal_slot(423, 1, 50, 60, 30, gastrodon),
+                _seasonal_slot(423, 0, 55, 65, 40, gastrodon),
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(_dataset("encounters", [record]), output)
+            page = (output / "map-002.md").read_text(encoding="utf-8")
+
+        self.assertIn("| 45–65 | 60% |", page)
+        self.assertIn("| 50–60 | 30% |", page)
+        self.assertIn("| 40 | 10% |", page)
+        self.assertEqual(page.count("[Gastrodon]"), 2)
+
+    def test_aggregates_generation_four_walking_level_envelope(self) -> None:
+        pokemon = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
+        slots = [
+            {"species_id": 25, "level": 4, "chance": 20, "pokemon": pokemon},
+            {"species_id": 19, "level": 3, "chance": 30, "pokemon": None},
+            {"species_id": 25, "level": 8, "chance": 50, "pokemon": pokemon},
+        ]
+        lines: list[str] = []
+        from romwiki.renderers.mkdocs.encounters import _append_walking
+
+        _append_walking(lines, {"rate": 20, "slots": slots}, "encounters/a.md", None)
+        page = "\n".join(lines)
+
+        self.assertIn("| 4–8 | 70% |", page)
+        self.assertEqual(page.count("[Pikachu]"), 1)
+
     def test_renders_hgss_periods_rock_smash_and_special_groups(self) -> None:
         pokemon = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
         walking_slot = {
@@ -77,11 +127,13 @@ class EncounterRenderingTests(unittest.TestCase):
         seasonal["versions"] = ["black"]
         summer = _encounter_record(10, 3, "summer", "Route 1")
         summer["versions"] = ["black"]
+        autumn = _encounter_record(12, 3, "autumn", "Route 1")
+        winter = _encounter_record(13, 3, "winter", "Route 1")
         same_name = _encounter_record(11, 5, "spring", "Map 005")
         same_name["location_names"] = []
         nonseasonal = _encounter_record(9, 4, None, "Dreamyard")
         encounter_dataset = _dataset(
-            "encounters", [seasonal, summer, same_name, nonseasonal]
+            "encounters", [winter, seasonal, summer, same_name, nonseasonal, autumn]
         )
         location_dataset = _dataset(
             "locations",
@@ -115,32 +167,42 @@ class EncounterRenderingTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
+            stale_page = output / "map-003-spring.md"
+            stale_page.write_text("stale", encoding="utf-8")
             render_encounter_pages(
                 encounter_dataset,
                 output,
                 relationships=relationships,
             )
-            seasonal_page = (output / "map-003-spring.md").read_text(encoding="utf-8")
+            seasonal_page = (output / "map-003.md").read_text(encoding="utf-8")
             nonseasonal_page = (output / "map-004.md").read_text(encoding="utf-8")
+            stale_page_removed = not stale_page.exists()
 
+        self.assertTrue(stale_page_removed)
+        self.assertLess(
+            seasonal_page.index('=== "Spring"'), seasonal_page.index('=== "Summer"')
+        )
+        self.assertLess(
+            seasonal_page.index('=== "Summer"'), seasonal_page.index('=== "Autumn"')
+        )
+        self.assertLess(
+            seasonal_page.index('=== "Autumn"'), seasonal_page.index('=== "Winter"')
+        )
         self.assertIn("## Map headers", seasonal_page)
         self.assertIn('<a href="#map-headers">2</a>', seasonal_page)
         self.assertIn(
-            "| [Route 1](../locations/header-006.md) | 6 | Black |",
+            "| [Route 1](../locations/header-006.md) | `header-006` | Black |",
             seasonal_page,
         )
         self.assertIn(
-            "| [Route 1](../locations/header-007.md) | 7 | Black |",
+            "| [Route 1](../locations/header-007.md) | `header-007` | Black |",
             seasonal_page,
         )
         self.assertIn("## Same-name encounter areas", seasonal_page)
-        self.assertIn("| 3 | Summer | Seasonal variant |", seasonal_page)
-        self.assertIn("[Map 003 (Summer)](map-003-summer.md)", seasonal_page)
-        self.assertIn("| 5 | Spring | Same display name |", seasonal_page)
-        self.assertIn("[Map 005 (Spring)](map-005-spring.md)", seasonal_page)
+        self.assertIn("[Map 005](map-005.md)", seasonal_page)
         self.assertIn("## Map headers", nonseasonal_page)
         self.assertIn(
-            "| [Dreamyard](../locations/header-008.md) | 8 | White |",
+            "| [Dreamyard](../locations/header-008.md) | `header-008` | White |",
             nonseasonal_page,
         )
 
@@ -157,7 +219,7 @@ class EncounterRenderingTests(unittest.TestCase):
                 output,
                 relationships=relationships,
             )
-            page = (output / "map-003-spring.md").read_text(encoding="utf-8")
+            page = (output / "map-003.md").read_text(encoding="utf-8")
 
         self.assertNotIn("## Map headers", page)
         self.assertNotIn("../locations/", page)
@@ -241,14 +303,13 @@ class EncounterRenderingTests(unittest.TestCase):
                 output,
                 relationships=relationships,
             )
-            page = (output / "map-002-spring.md").read_text(encoding="utf-8")
+            page = (output / "map-002.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertIn("# Icirrus City", page)
         self.assertNotIn("# Map 002", page)
-        self.assertEqual(page.count("gastrodon"), 2)
-        self.assertIn("| 45–55 | 20% |", page)
-        self.assertIn("| 55–65 | 80% |", page)
+        self.assertEqual(page.count("gastrodon"), 1)
+        self.assertIn("| 45–65 | 100% |", page)
         self.assertEqual(catalog["records"][0]["label"], "Icirrus City")
         self.assertEqual(catalog["records"][0]["locations"], ["Icirrus City"])
 
@@ -285,6 +346,24 @@ def _encounter_record(
         "fishing": empty_method,
         "fishing_spots": empty_method,
         "provenance": {"archive": "encounters.narc", "member": map_index},
+    }
+
+
+def _seasonal_slot(
+    species_id: int,
+    form_id: int,
+    minimum_level: int,
+    maximum_level: int,
+    chance: int,
+    pokemon: dict,
+) -> dict:
+    return {
+        "species_id": species_id,
+        "form_id": form_id,
+        "minimum_level": minimum_level,
+        "maximum_level": maximum_level,
+        "chance": chance,
+        "pokemon": pokemon,
     }
 
 

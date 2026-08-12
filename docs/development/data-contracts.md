@@ -63,6 +63,15 @@ every family records the source, reference, and verification of its selection
 rule. Validation rejects dangling IDs, duplicate variants, duplicate ordering,
 contradictory conditions, and missing provenance.
 
+The public renderer names only Starter, Difficulty, Season, Rematch, and Version.
+Story-stage-only and other neutral relationships render as `Variant N`. The
+resolver and renderer never combine exact trainer records. Encounter row
+aggregation and canonical seasonal pages are likewise presentation-only: all
+source slots, seasonal records, weights, provenance, and `version_variants` stay
+intact in normalized downloads and comparisons. Typed public routes
+(`trainer-NNNN`, `header-NNN`, and `map-NNN`) are distinct from raw numeric IDs
+and native names such as `map_191`.
+
 `version_variants` describe different values stored in sibling ROM datasets.
 Battle-family conditions describe runtime selection among trainer records. The
 two axes are not interchangeable: sibling merging requires matching family

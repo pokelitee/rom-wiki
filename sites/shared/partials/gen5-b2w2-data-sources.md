@@ -100,7 +100,7 @@ until the sequel's common-script dispatch is independently decoded. This removes
 the false locations without replacing them with guesses. Post-battle healing and
 victory-item behavior remain exact header facts.
 
-Starter-dependent Hugh battles are represented as three-record Battle Variants.
+Starter-dependent Hugh battles are represented as three exact party tabs.
 Retail and both supported hack families were ROM-checked independently; the Tepig
 branch is retained even when its first record has an unrelated static trainer
 name. Early, middle, late, and rematch triplets all reference their exact stored
@@ -135,7 +135,7 @@ and the exact parties were checked in each supported retail, original-hack, and
 Redux ROM contract. Redux's creator documentation independently lists the
 version tabs and four seasonal teams:
 [Other Important Trainers](https://smilingzero.github.io/BlazeBlack2ReduxWiki/postgame/otherimportanttrainers/).
-These are rendered as two Battle Variant families rather than one six-record
+These are rendered as two tab families rather than one six-record
 same-name group.
 
 ## Locations

@@ -13,7 +13,7 @@ from romwiki.renderers.mkdocs.references import (
 class RouteResolverTests(unittest.TestCase):
     def test_selects_encounter_route_family_from_normalized_identity(self) -> None:
         self.assertEqual(encounter_route_kind(7), "encounter")
-        self.assertEqual(encounter_route_kind("map-007-spring"), "encounter_variant")
+        self.assertEqual(encounter_route_kind("map-007"), "encounter_variant")
 
     def test_resolves_markdown_and_published_routes_from_page_depth(self) -> None:
         ability = entity_reference("ability", 65, "Overgrow", "overgrow")
@@ -62,9 +62,9 @@ class RouteResolverTests(unittest.TestCase):
             ),
             (
                 "encounter_variant",
-                "map-007-spring",
-                "../encounters/map-007-spring.md",
-                "../../encounters/map-007-spring/",
+                "map-007",
+                "../encounters/map-007.md",
+                "../../encounters/map-007/",
             ),
         )
         for kind, route_key, markdown_href, published_href in cases:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from romwiki.engines.gen5.b2w2.battle_variants import (
-    extract_trainer_battle_families,
+    resolve_trainer_variants,
 )
 from romwiki.engines.gen5.b2w2.trainers import (
     resolve_common_script_trainer_id,
@@ -21,7 +21,7 @@ class B2W2TrainerVariantTests(unittest.TestCase):
                 (163, "Rival"),
             )
         ]
-        contract = extract_trainer_battle_families(
+        contract = resolve_trainer_variants(
             "black-2-us",
             {"trainer_variant_contract": "b2w2-retail-v1"},
             records,
@@ -54,7 +54,7 @@ class B2W2TrainerVariantTests(unittest.TestCase):
             536,
             *range(772, 782),
         }
-        contract = extract_trainer_battle_families(
+        contract = resolve_trainer_variants(
             "black-2-us",
             {"trainer_variant_contract": "b2w2-retail-v1"},
             [{"trainer_id": trainer_id} for trainer_id in trainer_ids],
@@ -66,9 +66,7 @@ class B2W2TrainerVariantTests(unittest.TestCase):
             [variant["trainer_id"] for variant in shauntal["variants"]],
             [38, 38, 772, 143, 143, 777],
         )
-        self.assertEqual(
-            shauntal["variants"][-1]["conditions"][1]["value"], "rematch"
-        )
+        self.assertEqual(shauntal["variants"][-1]["conditions"][1]["value"], "rematch")
         iris = families["pokemon-league-iris"]
         self.assertEqual(
             [variant["trainer_id"] for variant in iris["variants"]],
@@ -76,7 +74,7 @@ class B2W2TrainerVariantTests(unittest.TestCase):
         )
 
     def test_redux_relates_biancas_documented_difficulty_teams(self) -> None:
-        contract = extract_trainer_battle_families(
+        contract = resolve_trainer_variants(
             "blaze-black-2-redux",
             {
                 "trainer_variant_contract": (
@@ -93,7 +91,7 @@ class B2W2TrainerVariantTests(unittest.TestCase):
         )
 
     def test_relates_ns_version_selected_first_battle(self) -> None:
-        contract = extract_trainer_battle_families(
+        contract = resolve_trainer_variants(
             "black-2-us",
             {"trainer_variant_contract": "b2w2-retail-v1"},
             [{"trainer_id": trainer_id} for trainer_id in (5, 6)],
@@ -110,7 +108,7 @@ class B2W2TrainerVariantTests(unittest.TestCase):
         )
 
     def test_relates_ns_four_seasonal_rematches(self) -> None:
-        contract = extract_trainer_battle_families(
+        contract = resolve_trainer_variants(
             "blaze-black-2-redux",
             {
                 "trainer_variant_contract": (

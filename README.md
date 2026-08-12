@@ -35,6 +35,12 @@ items, encounters, trainers, and map-header locations, with explicitly recorded
 gaps for trainer payouts and map associations. Each site's data-sources page
 records its exact input versions, provenance, and known limitations.
 
+Rendered encounter tables aggregate exact slots by species and form without
+changing the downloads. Generation V seasons share canonical `map-NNN` pages.
+Trainer relationships are resolved by the owning engine and shown as complete
+party tabs, while typed routes such as `trainer-0782` and `header-191` remain
+separate from native ROM identifiers.
+
 “Data-driven” means a site is generated from normalized ROM datasets; it does
 not imply exhaustive extraction of every mechanic. Exact coverage belongs in
 the site's data-sources page rather than a broad completion label.

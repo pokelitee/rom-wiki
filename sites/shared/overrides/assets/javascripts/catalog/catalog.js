@@ -17,7 +17,7 @@ async function loadCatalog(root) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const config = CATALOGS[data.kind];
-    if (data.schema_version !== 4 || !config || !Array.isArray(data.records)) {
+    if (data.schema_version !== 5 || !config || !Array.isArray(data.records)) {
       throw new Error("Unsupported catalog format");
     }
     const records = ROUTE_ID_KINDS.has(data.kind)

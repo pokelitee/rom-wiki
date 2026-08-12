@@ -482,6 +482,13 @@ references.
 
 See [Frontend](frontend.md) for the shared component and catalog contracts.
 
+Trainer-enabled engines must expose `resolve_trainer_variants` through their
+trainer concern. Decode each owning selector or dispatch table once and enumerate
+its exact records; do not infer Starter, Difficulty, Season, Rematch, or Version
+from names, adjacent IDs, levels, or party similarity. Declare unresolved coverage
+on the Data Sources page. Seasonal encounter engines publish one `map-NNN` route
+per map index while preserving all seasonal normalized records.
+
 ## Recommended implementation order
 
 Implement one vertical slice first: identification, a small engine parser, a

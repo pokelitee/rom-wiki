@@ -198,9 +198,9 @@ class RelationshipIndexTests(unittest.TestCase):
         )
         self.assertEqual(
             [entry.encounter_route_key for entry in variants],
-            ["map-003-spring", "map-003-summer"],
+            ["map-003", "map-003"],
         )
-        spring_locations = index.encounter_locations["map-003-spring"]
+        spring_locations = index.encounter_locations["map-003"]
         self.assertEqual(
             [
                 (entry.header_id, entry.location_name, entry.versions)
@@ -208,7 +208,7 @@ class RelationshipIndexTests(unittest.TestCase):
             ],
             [(6, "Route 1", ())],
         )
-        self.assertEqual(wild[0].encounter_route_key, "map-003-spring")
+        self.assertEqual(wild[0].encounter_route_key, "map-003")
 
     def test_preserves_version_variants_and_deduplicates_equal_slots(self) -> None:
         black = {
@@ -307,9 +307,9 @@ class RelationshipIndexTests(unittest.TestCase):
 
         references = index.location_encounters[6]
         self.assertEqual(len(references), 1)
-        self.assertEqual(references[0].encounter_route_key, "map-000-spring")
+        self.assertEqual(references[0].encounter_route_key, "map-000")
         self.assertEqual(references[0].versions, ("black", "white"))
-        reverse = index.encounter_locations["map-000-spring"]
+        reverse = index.encounter_locations["map-000"]
         self.assertEqual(len(reverse), 1)
         self.assertEqual(reverse[0].header_id, 6)
         self.assertEqual(reverse[0].versions, ("black", "white"))

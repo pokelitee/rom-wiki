@@ -264,7 +264,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         self.assertIn("4 Red, 4 Green", page)
         self.assertIn("[Frenzy Plant](../moves/frenzy-plant.md)", page)
         self.assertIn("Friendship 255", page)
-        self.assertEqual(catalog["schema_version"], 4)
+        self.assertEqual(catalog["schema_version"], 5)
         self.assertEqual(catalog["kind"], "pokemon")
         self.assertEqual(catalog["records"][0]["bst"], 318)
         self.assertEqual(catalog["records"][0]["trainer_count"], 0)

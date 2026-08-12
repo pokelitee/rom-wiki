@@ -80,6 +80,17 @@ def _rival_families(profile_id: str, available: set[object]) -> list[dict[str, A
                                 "value": stage,
                                 "label": label,
                             },
+                            *(
+                                [
+                                    {
+                                        "kind": "rematch-stage",
+                                        "value": "rematch",
+                                        "label": "Rematch",
+                                    }
+                                ]
+                                if stage == "seasonal-rematch"
+                                else []
+                            ),
                         ],
                     }
                     for variant_order, (
@@ -175,9 +186,7 @@ def _pokemon_league_difficulty_families(
         ("first-clear", "First Pokémon League clear", 0, 1),
         ("rematch", "Pokémon League rematch", 2, 3),
     )
-    for order, (member, label, *trainer_ids) in enumerate(
-        _POKEMON_LEAGUE, start=200
-    ):
+    for order, (member, label, *trainer_ids) in enumerate(_POKEMON_LEAGUE, start=200):
         if not all(trainer_id in available for trainer_id in trainer_ids):
             continue
         variants = []
@@ -232,10 +241,10 @@ def _pokemon_league_difficulty_families(
 def _profile_difficulty_families(
     profile_id: str, contract: object, available: set[object]
 ) -> list[dict[str, Any]]:
-    if (
-        contract != "blaze-black-2-redux-volt-white-2-redux-v1.4.1"
-        or not {4, 852}.issubset(available)
-    ):
+    if contract != "blaze-black-2-redux-volt-white-2-redux-v1.4.1" or not {
+        4,
+        852,
+    }.issubset(available):
         return []
     return [
         {
@@ -363,7 +372,7 @@ def _n_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]
     return families
 
 
-def extract_trainer_battle_families(
+def resolve_trainer_variants(
     profile_id: str,
     parameters: Mapping[str, Any],
     records: Sequence[Mapping[str, Any]],

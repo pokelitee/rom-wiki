@@ -147,7 +147,7 @@ def _render_encounter_map_location(
     same_name_records: list[dict[str, Any]] | None = None,
 ) -> str:
     source_file = f"locations/{_filename(record['header_id'])}"
-    facts = [f"<div><dt>Header ID</dt><dd>{record['header_id']}</dd></div>"]
+    facts = [f"<div><dt>Header ID</dt><dd>header-{record['header_id']:03}</dd></div>"]
     if encounters:
         facts.append(
             "<div><dt>Wild encounters</dt><dd>"
@@ -224,7 +224,8 @@ def _append_encounter_variants(
     source_file: str,
     location_name: str,
 ) -> None:
-    if len(encounters) == 1 and encounters[0].season is None:
+    route_keys = list(dict.fromkeys(value.encounter_route_key for value in encounters))
+    if len(route_keys) == 1 and all(value.season is None for value in encounters):
         encounter = encounters[0]
         lines.extend(
             [
@@ -241,22 +242,36 @@ def _append_encounter_variants(
             ]
         )
         return
+    grouped: dict[int | str, list[LocationEncounterReference]] = {}
+    for encounter in encounters:
+        grouped.setdefault(encounter.encounter_route_key, []).append(encounter)
     lines.extend(
         [
-            "| Season | Encounter area | Version |",
-            "| ------ | -------------- | ------- |",
+            "| Seasons | Encounter area | Version |",
+            "| ------- | -------------- | ------- |",
         ]
     )
-    for encounter in encounters:
-        label = location_name + (
-            f" ({encounter.season.title()})" if encounter.season else ""
+    for route_key, related in grouped.items():
+        encounter = related[0]
+        label = location_name
+        seasons = list(
+            dict.fromkeys(
+                display_name(value.season)
+                for value in related
+                if value.season is not None
+            )
+        )
+        all_versions = list(
+            dict.fromkeys(
+                display_name(version) for value in related for version in value.versions
+            )
         )
         link = ROUTES.markdown_link(
             entity_reference(
-                encounter_route_kind(encounter.encounter_route_key),
+                encounter_route_kind(route_key),
                 encounter.area_id,
                 label,
-                encounter.encounter_route_key,
+                route_key,
             ),
             source_file,
         )
@@ -264,8 +279,8 @@ def _append_encounter_variants(
             " / ".join(display_name(value) for value in encounter.versions) or "—"
         )
         lines.append(
-            f"| {encounter.season.title() if encounter.season else 'All'} | "
-            f"{link} | {versions} |"
+            f"| {' / '.join(seasons) or 'All'} | "
+            f"{link} | {' / '.join(all_versions) or versions} |"
         )
     lines.append("")
 
@@ -292,19 +307,19 @@ def _append_same_name_locations(
                 "They may represent different rooms or map sections."
             ),
             "",
-            "| Location | Header | Wild encounter map |",
-            "| -------- | -----: | ------------------ |",
+            "| Location | ID | Wild encounter map |",
+            "| -------- | -- | ------------------ |",
         ]
     )
     for candidate in related:
         header_id = candidate["header_id"]
         link = ROUTES.markdown_link(
-            entity_reference("location", header_id, f"Header {header_id}", header_id),
+            entity_reference("location", header_id, candidate["name"], header_id),
             source_file,
         )
         encounter_index = candidate.get("encounter_map_index")
         lines.append(
-            f"| {link} | {header_id} | "
+            f"| {link} | `header-{header_id:03}` | "
             f"{encounter_index if encounter_index is not None else 'None'} |"
         )
     lines.append("")

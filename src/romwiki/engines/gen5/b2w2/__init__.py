@@ -1,6 +1,6 @@
 """Pokémon Black 2 and White 2 engine-specific record support."""
 
-from .battle_variants import extract_trainer_battle_families
+from .battle_variants import resolve_trainer_variants
 from .constants import (
     GEN5_BASE_SPECIES_COUNT,
     GEN5_ITEM_FIELD_USE_NAMES,
@@ -96,7 +96,7 @@ __all__ = [
     "WARP_DESTINATION_INDEXED",
     "discover_static_encounters",
     "derive_trainer_party_attributes",
-    "extract_trainer_battle_families",
+    "resolve_trainer_variants",
     "find_fossil_revival_script",
     "disassemble_function",
     "parse_personal_record",

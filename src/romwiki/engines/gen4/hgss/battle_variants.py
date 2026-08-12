@@ -26,7 +26,7 @@ _STARTERS = (
 )
 
 
-def extract_trainer_battle_families(
+def resolve_trainer_variants(
     profile_id: str,
     parameters: Mapping[str, Any],
     records: Sequence[Mapping[str, Any]],

@@ -167,8 +167,11 @@ loading indicator occupies the catalog region in the meantime. The fallback stay
 visible without JavaScript and is restored if the catalog cannot load or validate.
 Filtering and sorting happen locally, 50 rows render at a time, and non-default
 controls are stored in the query string. Player-facing tables should lead with
-recognizable game data; internal IDs should be combined or moved later in the row
-when they distinguish otherwise identical records.
+recognizable game data. Display names and typed route IDs occupy separate columns
+where both are needed. Trainer variants render complete exact parties as Material
+content tabs; Same-name trainers remain available independently as cautious
+navigation. Trainer pages never explain difficulty mechanics; the applicable Data
+Sources page owns that prose.
 
 Do not put sprites in catalog rows. Hundreds of external image requests would make
 indexes slower and less reliable.
@@ -299,10 +302,7 @@ Variants, including readable condition labels and links to every exact trainer
 record. No shared template contains generation-specific IDs. Exact class/name
 groups remain a clearly cautioned Same-name trainers fallback and are omitted only
 when the current record participates in a verified family. Same-name party
-previews list and link every Pokémon rather than truncating the party. Difficulty
-families also render their declared runtime party/level behavior and coverage note
-beside the variants, distinguishing stored levels from runtime displayed levels.
-Catalog metadata may
+previews list and link every Pokémon rather than truncating the party. Catalog metadata may
 surface family/condition labels for discovery, but reverse relationships and
 comparisons continue to use exact records so variant presentation cannot
 double-count facts.
@@ -315,10 +315,11 @@ so the field and its UI are both named for what it actually is. Gen V trainers
 may separately expose a post-victory party heal and an item given to the player.
 Those are normalized as `healer` and `victory_item`; item pages invert the latter
 into trainer-reward backlinks. Wild encounter
-slot tables show a per-slot catch-rate percentage from the fixed Generation
-III/IV engine weight tables (not ROM data) and combine slots only when their
-species, form, and level data all match. Different levels remain separate rows;
-the normalized source slots remain unchanged. Encounter display names and
+slot tables show a per-slot catch-rate percentage from fixed engine weights and
+aggregate rows by exact species and form inside each method, season, and version.
+Chances are summed and levels display the minimum-to-maximum envelope; normalized
+source slots remain unchanged. Generation V seasons share one canonical map page
+with content tabs. Encounter display names and
 reciprocal location links come from the verified map-index-to-header
 relationship, with `Map NNN` retained only when no header is resolved.
 

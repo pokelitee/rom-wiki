@@ -54,6 +54,7 @@ _SEASONAL_METHOD_LABELS = {
     "fishing": "Fishing",
     "fishing_spots": "Fishing Spots",
 }
+_SEASONS = ("spring", "summer", "autumn", "winter")
 
 
 def render_encounter_pages(
@@ -482,8 +483,8 @@ def _append_locations(
         [
             "## Map headers",
             "",
-            "| Location | Header | Location name ID | Internal map |",
-            "| -------- | -----: | ----------------: | ------------ |",
+            "| Location | ID | Location name ID | Internal map |",
+            "| -------- | -- | ----------------: | ------------ |",
         ]
     )
     for location in locations:
@@ -495,36 +496,39 @@ def _append_locations(
         )
         lines.append(
             f"| {ROUTES.markdown_link(reference, source_file)} "
-            f"| {location['header_id']} | "
+            f"| `header-{location['header_id']:03}` | "
             f"{location['location_name_id']} | "
             f"`{location['internal_name']}` |"
         )
     lines.append("")
 
 
-def _merge_slots(
-    slots: list[dict[str, Any]], level_keys: tuple[str, ...]
+def _aggregate_slots(
+    slots: list[dict[str, Any]],
+    minimum_level_key: str,
+    maximum_level_key: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Combine slots only when species, form, and level data all match.
-
-    The ROM assigns a species to multiple fixed-probability slots to give it
-    a higher overall chance rather than storing a single percentage per
-    species. Different levels remain separate rows because they are distinct
-    encounter outcomes; exact duplicates have their fixed slot chances summed.
-    """
+    """Aggregate rendered slots by exact species and form in one pass."""
     merged: dict[tuple[Any, ...], dict[str, Any]] = {}
     order: list[tuple[Any, ...]] = []
+    maximum_level_key = maximum_level_key or minimum_level_key
     for slot in slots:
+        pokemon = slot.get("pokemon") or {}
         key = (
-            slot["species_id"],
-            slot.get("form_id"),
-            *(slot[level_key] for level_key in level_keys),
+            slot.get("species_id", pokemon.get("id", pokemon.get("slug"))),
+            slot.get("form_id", pokemon.get("form_id", 0)),
         )
+        minimum = slot[minimum_level_key]
+        maximum = slot[maximum_level_key]
         if key not in merged:
             merged[key] = dict(slot)
+            merged[key]["minimum_level"] = minimum
+            merged[key]["maximum_level"] = maximum
             order.append(key)
         else:
             merged[key]["chance"] += slot["chance"]
+            merged[key]["minimum_level"] = min(merged[key]["minimum_level"], minimum)
+            merged[key]["maximum_level"] = max(merged[key]["maximum_level"], maximum)
     return [merged[key] for key in order]
 
 
@@ -537,19 +541,19 @@ def _append_walking(
 ) -> None:
     if not method["rate"]:
         return
-    slots = _merge_slots(method["slots"], ("level",))
+    slots = _aggregate_slots(method["slots"], "level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         pokemon_table(
             [
-                "| Pokémon | Type | Level | Chance |",
-                "| ------- | ---- | ----: | -----: |",
+                "| Pokémon | Type | Levels | Chance |",
+                "| ------- | ---- | -----: | -----: |",
             ],
             [
                 (
                     f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
                     f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{slot['level']} | {slot['chance']}% |"
+                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | {slot['chance']}% |"
                 )
                 for slot in slots
             ],
@@ -566,7 +570,7 @@ def _append_water(
 ) -> None:
     if not method["rate"]:
         return
-    slots = _merge_slots(method["slots"], ("minimum_level", "maximum_level"))
+    slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         pokemon_table(
@@ -633,7 +637,10 @@ def _append_special(
         for game, entries in special["dual_slot"].items()
     )
     populated_slotted = [
-        (label, [entry for entry in entries if entry["pokemon"]])
+        (
+            label,
+            _aggregate_slots([entry for entry in entries if entry["pokemon"]], "level"),
+        )
         for label, entries in slotted_groups
     ]
     populated_slotted = [
@@ -649,14 +656,14 @@ def _append_special(
         lines.extend(
             pokemon_table(
                 [
-                    "| Pokémon | Type | Level | Chance |",
-                    "| ------- | ---- | ----: | -----: |",
+                    "| Pokémon | Type | Levels | Chance |",
+                    "| ------- | ---- | -----: | -----: |",
                 ],
                 [
                     (
                         f"| {sprite_with_link(table_sprite_cell(entry['pokemon'].get('sprite')), _pokemon_link(entry['pokemon'], source_file))} | "
                         f"{_slot_type_cell(entry['pokemon'], references)} | "
-                        f"{entry['level']} | {entry['chance']}% |"
+                        f"{_level_range(entry['minimum_level'], entry['maximum_level'])} | {entry['chance']}% |"
                     )
                     for entry in entries
                 ],
@@ -729,19 +736,23 @@ def _render_seasonal_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = sorted(
-        (record for record in dataset["records"] if record["active"]),
-        key=lambda record: record["area_id"],
-    )
+    active_records = [record for record in dataset["records"] if record["active"]]
+    grouped: dict[int, list[dict[str, Any]]] = {}
+    for record in active_records:
+        grouped.setdefault(record["map_index"], []).append(record)
+    groups = [
+        sorted(values, key=_seasonal_record_sort_key)
+        for _, values in sorted(grouped.items())
+    ]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
         {
             "index.md",
             *(
-                f"{encounter_route_key(record)}.md"
-                for record in records
-                if _seasonal_page_selected(record, only_pages)
+                f"{encounter_route_key(records[0])}.md"
+                for records in groups
+                if _seasonal_page_selected(records, only_pages)
             ),
         },
     )
@@ -749,8 +760,9 @@ def _render_seasonal_encounter_pages(
     catalog_records = []
     page_count = 0
     locations_by_route: dict[int | str, tuple[EncounterLocationReference, ...]] = {}
-    same_name_groups: dict[str, list[dict[str, Any]]] = {}
-    for record in records:
+    same_name_groups: dict[str, list[list[dict[str, Any]]]] = {}
+    for group in groups:
+        record = group[0]
         route_key = encounter_route_key(record)
         locations = (
             relationships.encounter_locations.get(route_key, ())
@@ -760,20 +772,20 @@ def _render_seasonal_encounter_pages(
         locations_by_route[route_key] = locations
         same_name_groups.setdefault(
             _seasonal_display_name(record, locations), []
-        ).append(record)
-    for index, record in enumerate(records):
-        change = record_comparison(comparison, record["area_id"])
+        ).append(group)
+    for index, group in enumerate(groups):
+        record = group[0]
         filename = f"{encounter_route_key(record)}.md"
         locations = locations_by_route[encounter_route_key(record)]
         record_name = _seasonal_display_name(record, locations)
-        previous = records[index - 1] if index else None
-        following = records[index + 1] if index + 1 < len(records) else None
-        if _seasonal_page_selected(record, only_pages):
+        previous = groups[index - 1][0] if index else None
+        following = groups[index + 1][0] if index + 1 < len(groups) else None
+        if _seasonal_page_selected(group, only_pages):
             write_text(
                 output_root / filename,
                 _render_seasonal_area(
-                    record,
-                    change,
+                    group,
+                    comparison,
                     comparison.get("baseline") if comparison else None,
                     references,
                     locations,
@@ -797,9 +809,9 @@ def _render_seasonal_encounter_pages(
         )
         catalog_records.append(
             _seasonal_catalog_record(
-                record,
+                group,
                 filename.removesuffix(".md") + "/",
-                change,
+                record_comparison(comparison, record["area_id"]),
                 locations,
             )
         )
@@ -817,29 +829,42 @@ def _render_seasonal_encounter_pages(
 
 
 def _seasonal_page_selected(
-    record: dict[str, Any],
+    records: list[dict[str, Any]],
     only_pages: frozenset[str] | None,
 ) -> bool:
+    record = records[0]
     return (
         only_pages is None
         or str(encounter_route_key(record)) in only_pages
-        or f"area-{record['area_id']:03}" in only_pages
+        or any(f"area-{value['area_id']:03}" in only_pages for value in records)
+    )
+
+
+def _seasonal_record_sort_key(record: dict[str, Any]) -> tuple[int, int]:
+    season = record.get("season")
+    return (
+        _SEASONS.index(season) if season in _SEASONS else len(_SEASONS),
+        record["area_id"],
     )
 
 
 def _seasonal_catalog_record(
-    record: dict[str, Any],
+    records: list[dict[str, Any]],
     filename: str,
     change: dict[str, Any] | None = None,
     locations: tuple[EncounterLocationReference, ...] = (),
 ) -> dict[str, Any]:
+    record = records[0]
     methods = []
     levels = []
     species = []
     pokemon_refs = []
     method_pokemon = {}
-    variant_records = version_variant_records(record)
-    source_records = [value for _, value in variant_records]
+    source_records = [
+        value
+        for seasonal_record in records
+        for _, value in version_variant_records(seasonal_record)
+    ]
     for source_record in source_records:
         for key, label in _SEASONAL_METHOD_LABELS.items():
             method = source_record[key]
@@ -895,53 +920,50 @@ def _seasonal_catalog_record(
 
 
 def _render_seasonal_area(
-    record: dict[str, Any],
-    change: dict[str, Any] | None,
+    records: list[dict[str, Any]],
+    comparison: dict[str, Any] | None,
     baseline_name: str | None,
     references: ReferenceIndex | None,
     locations: tuple[EncounterLocationReference, ...],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
-    same_name_records: list[dict[str, Any]],
+    same_name_groups: list[list[dict[str, Any]]],
 ) -> str:
+    record = records[0]
     source_file = f"encounters/{encounter_route_key(record)}.md"
     lines = [
         f"# {_seasonal_display_name(record, locations)}",
         "",
-        *_seasonal_area_summary(record, locations),
+        *_seasonal_area_summary(records, locations),
     ]
     _append_seasonal_locations(lines, locations, source_file)
-    variant_records = version_variant_records(record)
-    if variant_records[0][0] is not None:
-        lines.extend(
-            [
-                '!!! info "Version differences"',
-                "    Encounter tables on this page differ between the two versions.",
-                "",
-            ]
+    seasonal = len(records) > 1 or record.get("season") is not None
+    for seasonal_record in records:
+        content: list[str] = []
+        _append_seasonal_record_content(
+            content,
+            seasonal_record,
+            source_file,
+            references,
+            record_comparison(comparison, seasonal_record["area_id"]),
+            baseline_name,
         )
-        for version, version_record in variant_records:
-            assert version is not None
-            lines.extend([f"## {display_name(version)}", ""])
-            for key, label in _SEASONAL_METHOD_LABELS.items():
-                _append_seasonal_method(
-                    lines,
-                    label,
-                    version_record[key],
-                    source_file,
-                    references,
-                    heading_level=3,
-                )
-    else:
-        for key, label in _SEASONAL_METHOD_LABELS.items():
-            _append_seasonal_method(lines, label, record[key], source_file, references)
-    _append_same_name_encounters(lines, record, same_name_records, source_file)
-    lines.extend(comparison_section(change, baseline_name, source_file, references))
+        if seasonal:
+            label = display_name(seasonal_record.get("season") or "all")
+            lines.extend([f'=== "{label}"', ""])
+            lines.extend(f"    {line}" if line else "" for line in content)
+        else:
+            lines.extend(content)
+    _append_same_name_encounters(lines, record, same_name_groups, source_file)
     lines.extend(
         provenance_section(
             [
-                rom_record_source(
-                    record["provenance"]["archive"], record["provenance"]["member"]
+                *(
+                    rom_record_source(
+                        value["provenance"]["archive"],
+                        value["provenance"]["member"],
+                    )
+                    for value in records
                 ),
                 "Chance percentages are not stored in the ROM's encounter tables — "
                 "only each slot's species and level(s) are ROM data — they are "
@@ -967,11 +989,14 @@ def _render_seasonal_area(
 
 
 def _seasonal_area_summary(
-    record: dict[str, Any],
+    records: list[dict[str, Any]],
     locations: tuple[EncounterLocationReference, ...],
 ) -> list[str]:
+    record = records[0]
     methods = [
-        label for key, label in _SEASONAL_METHOD_LABELS.items() if record[key]["rate"]
+        label
+        for key, label in _SEASONAL_METHOD_LABELS.items()
+        if any(value[key]["rate"] for value in records)
     ]
     facts = [
         f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
@@ -980,9 +1005,13 @@ def _seasonal_area_summary(
         + (", ".join(methods) if methods else "None")
         + "</dd></div>",
     ]
-    if record.get("season"):
+    seasons = [value["season"] for value in records if value.get("season")]
+    if seasons:
         facts.insert(
-            2, f"<div><dt>Season</dt><dd>{record['season'].title()}</dd></div>"
+            2,
+            "<div><dt>Seasons</dt><dd>"
+            + ", ".join(display_name(value) for value in seasons)
+            + "</dd></div>",
         )
     if locations:
         facts.append(
@@ -1003,8 +1032,8 @@ def _append_seasonal_locations(
         [
             "## Map headers",
             "",
-            "| Location | Header | Version |",
-            "| -------- | -----: | ------- |",
+            "| Location | ID | Version |",
+            "| -------- | -- | ------- |",
         ]
     )
     for location in locations:
@@ -1020,7 +1049,7 @@ def _append_seasonal_locations(
         versions = (
             " / ".join(display_name(version) for version in location.versions) or "â€”"
         )
-        lines.append(f"| {link} | {location.header_id} | {versions} |")
+        lines.append(f"| {link} | `header-{location.header_id:03}` | {versions} |")
     lines.append("")
 
 
@@ -1035,7 +1064,7 @@ def _append_seasonal_method(
 ) -> None:
     if not method["rate"]:
         return
-    slots = _merge_slots(method["slots"], ("minimum_level", "maximum_level"))
+    slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
     lines.extend(
         [
             f"{'#' * heading_level} {heading}",
@@ -1061,6 +1090,41 @@ def _append_seasonal_method(
             ],
         )
     )
+
+
+def _append_seasonal_record_content(
+    lines: list[str],
+    record: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+    change: dict[str, Any] | None,
+    baseline_name: str | None,
+) -> None:
+    variant_records = version_variant_records(record)
+    if variant_records[0][0] is not None:
+        lines.extend(
+            [
+                '!!! info "Version differences"',
+                "    Encounter tables differ between the sibling versions.",
+                "",
+            ]
+        )
+        for version, version_record in variant_records:
+            assert version is not None
+            lines.extend([f"## {display_name(version)}", ""])
+            for key, label in _SEASONAL_METHOD_LABELS.items():
+                _append_seasonal_method(
+                    lines,
+                    label,
+                    version_record[key],
+                    source_file,
+                    references,
+                    heading_level=3,
+                )
+    else:
+        for key, label in _SEASONAL_METHOD_LABELS.items():
+            _append_seasonal_method(lines, label, record[key], source_file, references)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
 
 
 def _seasonal_display_name(
@@ -1094,13 +1158,13 @@ def _append_seasonal_record_navigation(
 def _append_same_name_encounters(
     lines: list[str],
     record: dict[str, Any],
-    same_name_records: list[dict[str, Any]],
+    same_name_groups: list[list[dict[str, Any]]],
     source_file: str,
 ) -> None:
     related = [
-        candidate
-        for candidate in same_name_records
-        if encounter_route_key(candidate) != encounter_route_key(record)
+        group[0]
+        for group in same_name_groups
+        if encounter_route_key(group[0]) != encounter_route_key(record)
     ]
     if not related:
         return
@@ -1110,30 +1174,22 @@ def _append_same_name_encounters(
             "",
             (
                 "These encounter tables resolve to the same map-header display "
-                "name. A shared map index identifies seasonal variants; a shared "
-                "name alone does not establish that two maps are the same area."
+                "name. A shared name alone does not establish that two maps are "
+                "the same area."
             ),
             "",
-            "| Map index | Season | Relationship | Encounter table |",
-            "| --------: | ------ | ------------ | --------------- |",
+            "| Encounter area | ID |",
+            "| -------------- | -- |",
         ]
     )
     for candidate in related:
         route_key = encounter_route_key(candidate)
-        season = candidate.get("season")
-        label = f"Map {candidate['map_index']:03}" + (
-            f" ({season.title()})" if season else ""
-        )
+        label = candidate["name"]
         link = ROUTES.markdown_link(
             entity_reference(
                 "encounter_variant", candidate["area_id"], label, route_key
             ),
             source_file,
         )
-        lines.append(
-            f"| {candidate['map_index']} | "
-            f"{season.title() if season else 'All'} | "
-            f"{'Seasonal variant' if candidate['map_index'] == record['map_index'] else 'Same display name'} | "
-            f"{link} |"
-        )
+        lines.append(f"| {link} | `{route_key}` |")
     lines.append("")
