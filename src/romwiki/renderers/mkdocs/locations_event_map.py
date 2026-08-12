@@ -873,6 +873,16 @@ def _append_warps(
         [
             "## Warps",
             "",
+            *(
+                [
+                    "Dynamic destination means the ROM does not store one fixed "
+                    "destination header or destination warp for that row. The em "
+                    "dashes are explicit unavailable values, not missing cells.",
+                    "",
+                ]
+                if any(warp["dynamic"] for warp in warps)
+                else []
+            ),
             "| Warp | Position | Destination | ID | Destination warp |",
             "| ---: | -------- | ----------- | -- | ---------------: |",
         ]

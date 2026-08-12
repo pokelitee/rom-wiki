@@ -179,15 +179,6 @@ class EncounterRenderingTests(unittest.TestCase):
             stale_page_removed = not stale_page.exists()
 
         self.assertTrue(stale_page_removed)
-        self.assertLess(
-            seasonal_page.index('=== "Spring"'), seasonal_page.index('=== "Summer"')
-        )
-        self.assertLess(
-            seasonal_page.index('=== "Summer"'), seasonal_page.index('=== "Autumn"')
-        )
-        self.assertLess(
-            seasonal_page.index('=== "Autumn"'), seasonal_page.index('=== "Winter"')
-        )
         self.assertIn("## Map headers", seasonal_page)
         self.assertIn('<a href="#map-headers">2</a>', seasonal_page)
         self.assertIn(
@@ -205,6 +196,56 @@ class EncounterRenderingTests(unittest.TestCase):
             "| [Dreamyard](../locations/header-008.md) | `header-008` | White |",
             nonseasonal_page,
         )
+
+    def test_places_season_tabs_around_each_active_pokemon_table(self) -> None:
+        pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
+        records = []
+        for area_id, season in enumerate(("spring", "summer", "autumn", "winter")):
+            record = _encounter_record(area_id, 2, season, "Map 002")
+            record["grass_cave"] = {
+                "rate": 20,
+                "slots": [
+                    _seasonal_slot(25, 0, 5 + area_id, 7 + area_id, 100, pikachu)
+                ],
+            }
+            record["surfing"] = {
+                "rate": 10,
+                "slots": [
+                    _seasonal_slot(25, 0, 8 + area_id, 9 + area_id, 100, pikachu)
+                ],
+            }
+            records.append(record)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(_dataset("encounters", records), output)
+            page = (output / "map-002.md").read_text(encoding="utf-8")
+
+        self.assertEqual(page.count("## Grass/Cave"), 1)
+        self.assertEqual(page.count("## Surfing"), 1)
+        self.assertEqual(page.count('=== "Spring"'), 2)
+        self.assertEqual(page.count('=== "Winter"'), 2)
+        self.assertNotIn("    ##", page)
+
+    def test_omits_tabs_for_a_method_unchanged_across_seasons(self) -> None:
+        pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
+        records = []
+        for area_id, season in enumerate(("spring", "summer", "autumn", "winter")):
+            record = _encounter_record(area_id, 2, season, "Map 002")
+            record["grass_cave"] = {
+                "rate": 20,
+                "slots": [_seasonal_slot(25, 0, 5, 7, 100, pikachu)],
+            }
+            records.append(record)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(_dataset("encounters", records), output)
+            page = (output / "map-002.md").read_text(encoding="utf-8")
+
+        self.assertEqual(page.count("## Grass/Cave"), 1)
+        self.assertNotIn('=== "Spring"', page)
+        self.assertEqual(page.count("[Pikachu]"), 1)
 
     def test_does_not_guess_an_unresolved_gen5_location_link(self) -> None:
         encounter_dataset = _dataset(

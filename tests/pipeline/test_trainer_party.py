@@ -160,6 +160,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
 
         stats = derived["calculated_stats"]
         self.assertEqual(derived["source_fields"]["iv_strength"], 255)
+        self.assertEqual(derived["ability"], {"source": "engine-default", "slot": 0})
         self.assertNotIn("difficulty", derived["source_fields"])
         self.assertEqual(stats["values"]["hp"], 175)
         self.assertEqual(stats["values"]["attack"], {"minimum": 108, "maximum": 132})

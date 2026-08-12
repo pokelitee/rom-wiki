@@ -96,6 +96,43 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("Tepig", page)
         self.assertIn("Oshawott", page)
 
+    def test_links_selections_without_tabs_when_all_parties_are_identical(self) -> None:
+        current = _related_trainer(161, "Aspertia City", 5, "Tepig")
+        related = _related_trainer(162, "Aspertia City", 5, "Tepig")
+        family = {
+            "id": "hugh-aspertia",
+            "label": "Aspertia City rival battle",
+            "order": 0,
+            "variants": [
+                {
+                    "trainer_id": trainer_id,
+                    "order": order,
+                    "conditions": [
+                        {"kind": "starter-choice", "value": starter, "label": starter}
+                    ],
+                }
+                for order, (trainer_id, starter) in enumerate(
+                    ((161, "snivy"), (162, "tepig"))
+                )
+            ],
+        }
+        lines: list[str] = []
+
+        _append_party(
+            lines,
+            current,
+            [(family, family["variants"][0])],
+            {161: current, 162: related},
+            "trainers/trainer-0161.md",
+            "trainers/trainer-0161/",
+        )
+        page = "\n".join(lines)
+
+        self.assertNotIn('=== "', page)
+        self.assertIn("Selections: [Snivy (trainer-0161)]", page)
+        self.assertIn("[Tepig (trainer-0162)]", page)
+        self.assertEqual(page.count('class="rw-party-grid"'), 1)
+
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
         lines = _trainer_provenance(
             {
@@ -170,7 +207,7 @@ class TrainerRenderingTests(unittest.TestCase):
 
     def test_renders_difficulty_parties_without_mechanics_prose(self) -> None:
         normal = _related_trainer(156, "Aspertia City", 13, "Lillipup")
-        challenge = _related_trainer(764, "Aspertia City", 13, "Lillipup")
+        challenge = _related_trainer(764, "Aspertia City", 14, "Lillipup")
         family = {
             "id": "gym-cheren",
             "label": "Cheren Gym battle",
@@ -450,8 +487,8 @@ class TrainerRenderingTests(unittest.TestCase):
 
         page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
 
-        self.assertIn('<tr><th scope="row">Minimum</th><td>42</td><td>38</td>', page)
-        self.assertIn('<tr><th scope="row">Maximum</th><td>42</td><td>45</td>', page)
+        self.assertIn('<tr><th scope="row">Min</th><td>42</td><td>38</td>', page)
+        self.assertIn('<tr><th scope="row">Max</th><td>42</td><td>45</td>', page)
         self.assertNotIn('<th scope="row">Value</th>', page)
 
     def test_marks_a_hidden_ability_in_the_party_card(self) -> None:

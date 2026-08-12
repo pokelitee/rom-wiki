@@ -295,9 +295,10 @@ with zero leftover bytes.
 Ability slot 0 and an unforced gender are genuine in-game randomness for this
 generation, not something recorded in the ROM (Generation IV's trainers, by
 contrast, use a documented, reproducible personality-value algorithm this
-project already replicates for that generation) -- so unlike a stored
-ability slot or a forced gender, they're left unavailable rather than
-guessed. The same applies to nature and calculated stats: Generation V
+project already replicates for that generation). A random ability selector is
+shown only when every available personal-data slot resolves to the same exact
+ability; otherwise it remains unavailable rather than being guessed. The same
+applies to nature and calculated stats: Generation V
 trainer parties have no stored nature field and no publicly documented,
 reproducible derivation for one, so both stay unavailable.
 

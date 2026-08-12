@@ -786,12 +786,39 @@ def _append_party(
                 continue
             tabs.append((_variant_tab_label(variant, len(tabs) + 1), candidate))
 
+    prepared_tabs: list[tuple[str, dict[str, Any], list[str]]] = []
     seen_labels: dict[str, int] = {}
     for label, candidate in tabs:
         seen_labels[label] = seen_labels.get(label, 0) + 1
         tab_label = (
             label if seen_labels[label] == 1 else f"{label} ({seen_labels[label]})"
         )
+        prepared_tabs.append(
+            (tab_label, candidate, _party_cards(candidate["party"], source_url))
+        )
+
+    if prepared_tabs and all(
+        party == prepared_tabs[0][2] for _, _, party in prepared_tabs
+    ):
+        selection_links = []
+        for tab_label, candidate, _party in prepared_tabs:
+            route_id = f"trainer-{candidate['trainer_id']:04}"
+            selection_links.append(
+                ROUTES.markdown_link(
+                    entity_reference(
+                        "trainer",
+                        candidate["trainer_id"],
+                        f"{tab_label} ({route_id})",
+                        candidate["trainer_id"],
+                    ),
+                    source_file,
+                )
+            )
+        lines.extend(["Selections: " + " · ".join(selection_links), ""])
+        lines.extend(prepared_tabs[0][2])
+        return
+
+    for tab_label, candidate, party in prepared_tabs:
         route_id = f"trainer-{candidate['trainer_id']:04}"
         record_link = ROUTES.markdown_link(
             entity_reference(
@@ -805,7 +832,7 @@ def _append_party(
         content = [
             f"Exact record: {record_link}",
             "",
-            *_party_cards(candidate["party"], source_url),
+            *party,
         ]
         lines.extend([f'=== "{tab_label}"', ""])
         lines.extend(f"    {line}" if line else "" for line in content)
@@ -864,8 +891,8 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
         if any(_is_stat_range(calculated_values[key]) for _, key in ordered):
             rows.extend(
                 [
-                    ("Minimum", _stat_bounds(calculated_values, ordered, "minimum")),
-                    ("Maximum", _stat_bounds(calculated_values, ordered, "maximum")),
+                    ("Min", _stat_bounds(calculated_values, ordered, "minimum")),
+                    ("Max", _stat_bounds(calculated_values, ordered, "maximum")),
                 ]
             )
         else:

@@ -61,16 +61,27 @@ def comparison_section(
     baseline_name: str | None,
     source_file: str = "",
     references: ReferenceIndex | None = None,
+    *,
+    heading_level: int | None = 2,
 ) -> list[str]:
     if entry is None:
         return []
     version_comparisons = entry.get("version_comparisons")
     if version_comparisons:
-        lines = ["## Hack changes", ""]
+        lines = (
+            [f"{'#' * heading_level} Hack changes", ""]
+            if heading_level is not None
+            else []
+        )
         for version, version_entry in version_comparisons.items():
+            version_label = escape_markdown(display_name(version))
             lines.extend(
                 [
-                    f"### {escape_markdown(display_name(version))}",
+                    (
+                        f"{'#' * (heading_level + 1)} {version_label}"
+                        if heading_level is not None
+                        else f"**{version_label}**"
+                    ),
                     "",
                     *_comparison_body(
                         version_entry,
@@ -82,8 +93,11 @@ def comparison_section(
             )
         return lines
     return [
-        "## Hack changes",
-        "",
+        *(
+            [f"{'#' * heading_level} Hack changes", ""]
+            if heading_level is not None
+            else []
+        ),
         *_comparison_body(entry, baseline_name, source_file, references),
     ]
 

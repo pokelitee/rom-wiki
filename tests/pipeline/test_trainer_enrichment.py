@@ -162,7 +162,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
-        self.assertEqual(enriched["party_schema_version"], 4)
+        self.assertEqual(enriched["party_schema_version"], 5)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
@@ -244,6 +244,77 @@ class TrainerEnrichmentTests(unittest.TestCase):
 
 
 class Gen5TrainerEnrichmentTests(unittest.TestCase):
+    def test_resolves_random_selector_when_every_ability_slot_is_identical(
+        self,
+    ) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 378,
+            "class_id": 1,
+            "has_custom_moves": False,
+            "reward_item_ids": (),
+            "party": [
+                {
+                    "difficulty": 255,
+                    "ability_slot": 0,
+                    "forced_gender_flag": 0,
+                    "level": 54,
+                    "species_id": 330,
+                    "form_id": 0,
+                    "held_item_id": None,
+                    "move_ids": (),
+                }
+            ],
+        }
+        levitate = {
+            "id": 26,
+            "name": "Levitate",
+            "slug": "levitate",
+            "is_hidden": False,
+        }
+        pokemon_record = {
+            "slug": "flygon",
+            "name": "Flygon",
+            "public": True,
+            "base_species": None,
+            "gender_ratio": 127,
+            "base_stats": dict.fromkeys(
+                (
+                    "hp",
+                    "attack",
+                    "defense",
+                    "special_attack",
+                    "special_defense",
+                    "speed",
+                ),
+                100,
+            ),
+            "sprite": None,
+            "types": [],
+            "abilities": [levitate, levitate, {**levitate, "is_hidden": True}],
+        }
+
+        trainer = _enrich_trainer(
+            source,
+            pokedb,
+            None,
+            None,
+            engine="gen5_b2w2",
+            pokemon_records={330: pokemon_record},
+        )
+
+        self.assertEqual(
+            trainer["party"][0]["ability"],
+            {**levitate, "slot": 0, "source": "engine-default"},
+        )
+        self.assertEqual(trainer["party"][0]["source_fields"]["ability_slot"], 0)
+
     def test_resolves_internal_trainer_species_from_game_data(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={},

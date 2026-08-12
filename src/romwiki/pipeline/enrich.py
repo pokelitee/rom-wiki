@@ -581,6 +581,17 @@ def _trainer_ability(
         raise DataSourceError("Normalized trainer ability is missing its slot")
     if not pokemon_record.get("public", True) and not abilities:
         return None
+    if slot == 0:
+        possible = [
+            ability
+            for ability in abilities
+            if isinstance(ability, dict) and ability.get("name")
+        ]
+        identities = {(ability.get("id"), ability.get("name")) for ability in possible}
+        if len(identities) != 1:
+            return None
+        ability = possible[0]
+        return {**ability, "slot": 0, "source": value["source"]}
     if not 1 <= slot <= len(abilities):
         raise DataSourceError(f"Trainer ability slot {slot} is out of range")
     ability = abilities[slot - 1]

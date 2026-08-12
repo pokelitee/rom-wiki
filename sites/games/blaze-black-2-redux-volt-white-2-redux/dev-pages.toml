@@ -29,11 +29,13 @@ items = [
 ]
 encounters = [
     "map-000",
+    "map-002",
     "map-009",
 ]
 trainers = [
     "trainer-0099",
     "trainer-0284",
+    "trainer-0378",
     "trainer-0847",
     "trainer-0867",
 ]
@@ -41,6 +43,7 @@ locations = [
     "header-000",
     "header-006",
     "header-113",
+    "header-150",
     "header-178",
     "header-464",
 ]

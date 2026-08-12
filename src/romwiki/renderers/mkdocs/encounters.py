@@ -938,22 +938,77 @@ def _render_seasonal_area(
     ]
     _append_seasonal_locations(lines, locations, source_file)
     seasonal = len(records) > 1 or record.get("season") is not None
-    for seasonal_record in records:
-        content: list[str] = []
-        _append_seasonal_record_content(
-            content,
-            seasonal_record,
-            source_file,
-            references,
-            record_comparison(comparison, seasonal_record["area_id"]),
-            baseline_name,
+    if any(
+        version_variant_records(seasonal_record)[0][0] is not None
+        for seasonal_record in records
+    ):
+        lines.extend(
+            [
+                '!!! info "Version differences"',
+                "    Encounter tables differ between the sibling versions.",
+                "",
+            ]
         )
-        if seasonal:
-            label = display_name(seasonal_record.get("season") or "all")
-            lines.extend([f'=== "{label}"', ""])
-            lines.extend(f"    {line}" if line else "" for line in content)
+    for key, label in _SEASONAL_METHOD_LABELS.items():
+        if not any(
+            version_record[key]["rate"]
+            for seasonal_record in records
+            for _, version_record in version_variant_records(seasonal_record)
+        ):
+            continue
+        lines.extend([f"## {label}", ""])
+        method_contents: list[tuple[str, list[str]]] = []
+        for seasonal_record in records:
+            content: list[str] = []
+            variants = version_variant_records(seasonal_record)
+            for version, version_record in variants:
+                method = version_record[key]
+                if not method["rate"]:
+                    continue
+                if version is not None:
+                    content.extend([f"**{display_name(version)}**", ""])
+                _append_seasonal_method(
+                    content,
+                    label,
+                    method,
+                    source_file,
+                    references,
+                    heading_level=None,
+                )
+            if not content:
+                content.extend(["No encounters.", ""])
+            method_contents.append(
+                (display_name(seasonal_record.get("season") or "all"), content)
+            )
+        if not seasonal or _all_tab_content_identical(method_contents):
+            lines.extend(method_contents[0][1])
         else:
-            lines.extend(content)
+            _append_content_tabs(lines, method_contents)
+    comparisons = [
+        (
+            seasonal_record,
+            record_comparison(comparison, seasonal_record["area_id"]),
+        )
+        for seasonal_record in records
+    ]
+    if any(change is not None for _, change in comparisons):
+        lines.extend(["## Hack changes", ""])
+        change_contents: list[tuple[str, list[str]]] = []
+        for seasonal_record, change in comparisons:
+            content = comparison_section(
+                change,
+                baseline_name,
+                source_file,
+                references,
+                heading_level=None,
+            )
+            change_contents.append(
+                (display_name(seasonal_record.get("season") or "all"), content)
+            )
+        if not seasonal or _all_tab_content_identical(change_contents):
+            lines.extend(change_contents[0][1])
+        else:
+            _append_content_tabs(lines, change_contents)
     _append_same_name_encounters(lines, record, same_name_groups, source_file)
     lines.extend(
         provenance_section(
@@ -986,6 +1041,18 @@ def _render_seasonal_area(
     )
     _append_seasonal_record_navigation(lines, record, previous, following)
     return "\n".join(lines)
+
+
+def _all_tab_content_identical(contents: list[tuple[str, list[str]]]) -> bool:
+    return bool(contents) and all(content == contents[0][1] for _, content in contents)
+
+
+def _append_content_tabs(
+    lines: list[str], contents: list[tuple[str, list[str]]]
+) -> None:
+    for label, content in contents:
+        lines.extend([f'=== "{label}"', ""])
+        lines.extend(f"    {line}" if line else "" for line in content)
 
 
 def _seasonal_area_summary(
@@ -1060,19 +1127,14 @@ def _append_seasonal_method(
     source_file: str,
     references: ReferenceIndex | None,
     *,
-    heading_level: int = 2,
+    heading_level: int | None = 2,
 ) -> None:
     if not method["rate"]:
         return
     slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
-    lines.extend(
-        [
-            f"{'#' * heading_level} {heading}",
-            "",
-            f"Encounter rate: {method['rate']}",
-            "",
-        ]
-    )
+    if heading_level is not None:
+        lines.extend([f"{'#' * heading_level} {heading}", ""])
+    lines.extend([f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         pokemon_table(
             [
@@ -1090,41 +1152,6 @@ def _append_seasonal_method(
             ],
         )
     )
-
-
-def _append_seasonal_record_content(
-    lines: list[str],
-    record: dict[str, Any],
-    source_file: str,
-    references: ReferenceIndex | None,
-    change: dict[str, Any] | None,
-    baseline_name: str | None,
-) -> None:
-    variant_records = version_variant_records(record)
-    if variant_records[0][0] is not None:
-        lines.extend(
-            [
-                '!!! info "Version differences"',
-                "    Encounter tables differ between the sibling versions.",
-                "",
-            ]
-        )
-        for version, version_record in variant_records:
-            assert version is not None
-            lines.extend([f"## {display_name(version)}", ""])
-            for key, label in _SEASONAL_METHOD_LABELS.items():
-                _append_seasonal_method(
-                    lines,
-                    label,
-                    version_record[key],
-                    source_file,
-                    references,
-                    heading_level=3,
-                )
-    else:
-        for key, label in _SEASONAL_METHOD_LABELS.items():
-            _append_seasonal_method(lines, label, record[key], source_file, references)
-    lines.extend(comparison_section(change, baseline_name, source_file, references))
 
 
 def _seasonal_display_name(

@@ -297,15 +297,13 @@ must never derive those mechanics from raw engine fields. Cards group level,
 nature, and gender into one identity line, use a compact aligned list for ability
 and held item, and show final stats, IVs, and EVs in a six-column stat matrix.
 
-Trainer pages render normalized `battle_families` declaratively as Battle
-Variants, including readable condition labels and links to every exact trainer
-record. No shared template contains generation-specific IDs. Exact class/name
-groups remain a clearly cautioned Same-name trainers fallback and are omitted only
-when the current record participates in a verified family. Same-name party
-previews list and link every Pokémon rather than truncating the party. Catalog metadata may
-surface family/condition labels for discovery, but reverse relationships and
-comparisons continue to use exact records so variant presentation cannot
-double-count facts.
+Trainer pages render normalized `battle_families` declaratively as complete party
+tabs, including readable condition labels and links to every exact trainer record.
+No shared template contains generation-specific IDs. Exact class/name groups
+remain a clearly cautioned Same-name trainers fallback even when verified tabs are
+present. Same-name party previews list and link every Pokémon rather than
+truncating the party. Reverse relationships and comparisons continue to use exact
+records so variant presentation cannot double-count facts.
 
 Trainers also carry an "AI battle items" summary and, when populated, detail
 section: the ROM's
@@ -318,10 +316,12 @@ into trainer-reward backlinks. Wild encounter
 slot tables show a per-slot catch-rate percentage from fixed engine weights and
 aggregate rows by exact species and form inside each method, season, and version.
 Chances are summed and levels display the minimum-to-maximum envelope; normalized
-source slots remain unchanged. Generation V seasons share one canonical map page
-with content tabs. Encounter display names and
-reciprocal location links come from the verified map-index-to-header
-relationship, with `Map NNN` retained only when no header is resolved.
+source slots remain unchanged. Generation V seasons share one canonical map page.
+Each encounter-method heading appears once; its Pokémon table gets
+Spring/Summer/Autumn/Winter content tabs, and Material's linked-tab behavior
+synchronizes the selected season across those tables. Encounter display names and
+reciprocal location links come from the verified map-index-to-header relationship,
+with `Map NNN` retained only when no header is resolved.
 
 Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
 These are labeled reference content. Stat, type, ability, training, breeding,

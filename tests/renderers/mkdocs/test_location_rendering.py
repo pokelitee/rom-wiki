@@ -643,6 +643,32 @@ class LocationRenderingTests(unittest.TestCase):
         )
         self.assertNotIn("map_191", page)
 
+    def test_explains_dynamic_warp_placeholder_cells(self) -> None:
+        lines: list[str] = []
+        from romwiki.renderers.mkdocs.locations_event_map import _append_warps
+
+        _append_warps(
+            lines,
+            [
+                {
+                    "index": 0,
+                    "x": 488,
+                    "z": 824,
+                    "destination_header_id": None,
+                    "destination_warp_id": None,
+                    "destination_name": None,
+                    "destination_internal_name": None,
+                    "destination_warp_exists": None,
+                    "dynamic": True,
+                }
+            ],
+            "locations/header-150.md",
+        )
+        page = "\n".join(lines)
+
+        self.assertIn("explicit unavailable values, not missing cells", page)
+        self.assertIn("| 0 | (488, 824) | Dynamic destination | — | — |", page)
+
     def test_renders_great_marsh_daily_pool_with_both_dex_groups(self) -> None:
         record = {
             "header_id": 504,

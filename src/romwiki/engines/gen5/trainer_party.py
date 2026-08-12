@@ -43,9 +43,10 @@ def normalize_trainer_party_member(
         "held_item_id": member["held_item_id"],
         "move_ids": move_ids,
         "moves_source": "explicit" if has_custom_moves else "level-up",
-        "ability": (
-            {"source": "stored", "slot": ability_slot} if ability_slot else None
-        ),
+        "ability": {
+            "source": "stored" if ability_slot else "engine-default",
+            "slot": ability_slot,
+        },
         "nature": None,
         "gender": (
             {"source": "stored", "name": _FORCED_GENDER_NAMES[forced_gender_flag]}
