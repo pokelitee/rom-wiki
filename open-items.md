@@ -19,8 +19,29 @@ The Normal/Challenge differences for the verified dispatch pairs are already
 stored in the ROM records — Challenge Gym records carry an extra party member at
 identical levels, and League rematch Challenge records are +1 level. The
 unresolved band table is a separate *runtime* adjustment, so its practical
-effect is a displayed level, not the parties themselves. An unanchored search
-over arm9 plus 344 overlays (4.3 MB) returns only noise.
+effect is a displayed level, not the parties themselves.
+
+Three anchored approaches have failed; none should be repeated without a new
+idea:
+
+1. Unanchored byte search over arm9 plus 344 overlays (4.3 MB) for a
+   level-indexed ramp or `(threshold, offset)` pairs. Returns only noise,
+   because there is no ground truth to recognise a correct table with.
+2. Searching for a Gym difficulty dispatch table. The Challenge IDs are
+   consecutive (`764`–`771`) while the Normal IDs are not
+   (`156,157,154,153,158,155,159,160`), so the Normal order should be data —
+   but that sequence appears nowhere as u16 or u32, in either order, and
+   neither do the League IDs or interleaved `(normal, challenge)` pairs.
+3. Following the one hit that did land — the Challenge IDs at `arm9+0x8D4B6`.
+   It sits inside a long mixed list of trainer and non-trainer IDs (Leaders,
+   Elite Four, Ace Trainers, Subway Bosses) with no clean bounds: constraining
+   entries to real trainer IDs truncates it at 66, and relaxing that swallows
+   1278 entries spanning several unrelated tables. No pointer resolves to a
+   plausible table start.
+
+The missing anchor is the code that applies the adjustment. Finding it needs a
+way in from the save-data difficulty flag or from trainer-party load, not
+another scan of the data.
 
 ### DPPT Battleground rematches (`853`–`860`)
 
