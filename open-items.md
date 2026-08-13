@@ -128,9 +128,32 @@ Groundwork already done, so a future attempt need not repeat it:
   early return, and `GotoIf` appears in nearly every script, so a one-byte error
   there desynchronises almost immediately.
 
-The remaining step is per-command operand layouts precise enough for `GotoIf`,
-which likely means following each handler's control flow rather than counting
-its call sites.
+- **A working script walker exists, but only as research tooling.** Operand
+  widths can be fitted to the scripts themselves rather than read from handlers:
+  a correct table walks from a script's own entry points onto a valid command
+  every time, and wrong widths desynchronise immediately. Learning widths by
+  which candidate sustains the longest chain of valid successors — seeded with
+  the three commands this project already knows (`0x00E5`=4, `0x0011`=4,
+  `0x001C`=5) — reaches **90.8%** agreement with Platinum's 98 known battle
+  sites, against 1% for handler-derived counts. Scoring by a single valid
+  successor instead of chain depth gives 75.5%, because one-step tests reward
+  small widths that land on a plausible halfword by luck.
+
+**HGSS battle-command identification is still unsolved, and the obstacle is not
+alignment.** Running the same walker over HGSS gives 166,313 aligned command
+positions, but no opcode looks like a battle command: the highest distinct
+operand counts are ~50 across 3,000–4,000 occurrences (far too frequent), while
+opcodes at 100% "operand is a valid trainer" have as few as 2 distinct values,
+which makes them flags. Every probe set tried — the Silver rivals, all 33
+Leader-class records — appears in full both at aligned positions and in raw
+unaligned bytes, so it cannot discriminate: HGSS trainer IDs are small integers
+and small integers are ubiquitous in scripts.
+
+One explanation fits all of it, and should be tested first next time: HGSS may
+not invoke trainer battles from scripts with literal IDs at all, instead
+triggering them from overworld trainer-sight events, which is consistent with
+`TRAINER_SCRIPT_REFERENCE_EXTRACTION` being `False` for this engine in the first
+place. Confirming or refuting that is cheaper than further opcode search.
 
 ## 3. Open, unblocked
 
