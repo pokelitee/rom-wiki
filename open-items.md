@@ -45,9 +45,29 @@ another scan of the data.
 
 ### DPPT Battleground rematches (`853`–`860`)
 
-Absent from the Vs. Seeker table, absent from every overlay as a literal
-sequence, and backed by no literal battle command. Genuinely variable-supplied;
-needs script data-flow analysis.
+The selector is **identified but not safely generalizable**. Script 156 branches
+on variable `0x8004`, comparing it against trainer IDs `853`, `854`, `855`,
+`856`, `857` and jumping to a distinct target for each — a "which Leader is here
+today" dispatch. The IDs appear as comparison operands, not battle operands,
+which is why the battle scan never saw them; the battle itself is invoked from
+the variable.
+
+Two reasons this is not published:
+
+- It does not relate a first battle to its rematch. The dispatch chooses between
+  *different characters*, so it yields no variant family. Relating `246` to
+  `858` would need whatever selects between them, which this is not.
+- Generalizing it produces noise. Scanning all scripts for "compare a variable
+  against several trainer IDs, then jump" yields 148 groups in Platinum, mostly
+  ordinary thresholds and counters (`5`, `6`, `50`, `100`, `150`, `200`, `255`)
+  that merely coincide with low trainer IDs. Separating the real dispatch would
+  need an arbitrary magnitude threshold, which is heuristic stacking rather than
+  decoding.
+
+It could yield location links for these otherwise-unlinked records if a
+principled way to distinguish a trainer-ID dispatch from a numeric comparison is
+found. Small-integer ambiguity in a large corpus is the recurring obstacle here,
+as it is for the HGSS opcode search.
 
 ## 2. Blocked on an HGSS script decode
 
