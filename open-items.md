@@ -110,11 +110,27 @@ Groundwork already done, so a future attempt need not repeat it:
 - **Handler fingerprinting does not work.** Only 6 of the 840/853 handlers are
   byte-identical between the two games, so Platinum's battle handler cannot be
   located in HGSS by matching its body.
-- **Operand counts alone are not enough to walk a script.** A linear walk using
-  them reaches 0 of Platinum's 98 known battle sites, because operands are not
-  uniformly halfwords — `GotoIf`, for one, takes a byte condition and a signed
-  32-bit relative offset. Recovering per-operand *widths*, not just counts, is
-  the remaining step.
+- **The operand readers themselves are identified, with widths.** Three per
+  game advance the VM's script cursor (field 8 of the VM struct): in Platinum
+  `0x0203E838` reads 2 bytes and serves 547 handlers, `0x0203E850` reads 4, and
+  `0x0202A750` reads 3; HeartGold's equivalents are `0x0203FE2C`, `0x0203FE44`
+  and `0x02041770`. The 2-byte reader is byte-identical between the two games —
+  it loads two bytes and combines them with a shift, advancing the cursor twice.
+  Summing reader widths per handler gives Platinum's `handler[0x00E5]` exactly
+  4 operand bytes, matching its known two-halfword battle command.
+- **Linear walking still does not work**, and this is the blocker to solve next.
+  A walk driven by those widths reaches 1 of Platinum's 98 known battle sites.
+  The cause is visible in the numbers: `handler[0x001C]` (`GotoIf`) sums to 4
+  operand bytes, but its real operand block is 5 — a byte condition plus a
+  signed 32-bit offset, as independently established by the starter-branch
+  decoder, which resolves real jump targets with that layout. Counting static
+  call sites misses reads that are conditional, inlined, or in a path past an
+  early return, and `GotoIf` appears in nearly every script, so a one-byte error
+  there desynchronises almost immediately.
+
+The remaining step is per-command operand layouts precise enough for `GotoIf`,
+which likely means following each handler's control flow rather than counting
+its call sites.
 
 ## 3. Open, unblocked
 
