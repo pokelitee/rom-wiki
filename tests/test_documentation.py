@@ -11,6 +11,14 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_trainer_party_extension_uses_engine_registry(self) -> None:
+        guide = (REPOSITORY_ROOT / "docs/development/adding-a-game.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("`EngineAdapter.trainer_party`", guide)
+        self.assertNotIn("Register it in\n`pipeline/trainer_party.py`", guide)
+
     def test_engine_data_source_partials_have_explicit_consumers(self) -> None:
         consumers = {
             "gen4-dppt-data-sources.md": {

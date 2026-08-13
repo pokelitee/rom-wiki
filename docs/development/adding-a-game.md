@@ -262,13 +262,15 @@ must remain, name the variant for that difference rather than the generation tha
 introduced it. Generation-specific binary intermediates belong in the engine.
 
 Trainer party formats require an engine translator under
-`src/romwiki/engines/<generation>/<family>/trainer_party.py`. Register it in
-`pipeline/trainer_party.py` and emit the shared contract from
-`schema/trainers.py`. Do not teach the shared trainer renderer about a generation's
-difficulty byte, PID algorithm, ability flags, or EV defaults. Preserve those raw
-inputs under `source_fields`, expose their semantic result through the canonical
-fields, and attach `stored`, `derived`, or `engine-default` provenance. Mark move
-behavior as `explicit`, `level-up`, or `unavailable`, and increment
+`src/romwiki/engines/<generation>/<family>/trainer_party.py`. Expose it through
+the engine registry's `EngineAdapter.trainer_party` concern and emit the shared
+contract from `schema/trainers.py`. The shared `pipeline/trainer_party.py` module
+dispatches through that registry; it does not register engine implementations.
+Do not teach the shared trainer renderer about a generation's difficulty byte,
+PID algorithm, ability flags, or EV defaults. Preserve those raw inputs under
+`source_fields`, expose their semantic result through the canonical fields, and
+attach `stored`, `derived`, or `engine-default` provenance. Mark move behavior as
+`explicit`, `level-up`, or `unavailable`, and increment
 `TRAINER_PARTY_SCHEMA_VERSION` for a breaking party-contract change.
 
 Trainer variants require a named engine/profile evidence contract. Decode starter,
