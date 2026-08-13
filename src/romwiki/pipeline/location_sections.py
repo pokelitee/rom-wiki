@@ -37,16 +37,9 @@ def resolve_location_section(
 
 
 def location_reference_label(location: Mapping[str, Any]) -> str:
-    """Return an exact but readable label for a location reference."""
+    """Return the player-facing location name without record metadata."""
 
-    name = str(location["name"])
-    section_name = location.get("section_name")
-    if not isinstance(section_name, str) or not section_name:
-        return name
-    source = location.get("section_name_source")
-    if isinstance(source, Mapping) and source.get("source") == "rom":
-        return f"{name} — {section_name}"
-    return section_name
+    return str(location["name"])
 
 
 def validate_location_sections(

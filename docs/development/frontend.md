@@ -105,11 +105,12 @@ Each generated section writes `catalog.json` with this envelope:
 The `kind` selects the shared filters, columns, and sorting behavior. Every record
 has a stable ID, display label, final directory URL, and normalized `search_text`.
 World catalogs also expose the exact final route segment as `route_id`; their
-tables show it in a shared ID column after the recognizable record name.
+tables show it after the recognizable record name. Location catalogs call this
+column Map header so it cannot be confused with native location-name indices.
 Location records retain the ROM display name even when several map headers share
 it, with values such as `header-340` providing exact disambiguation. Catalogs put
 the ROM's raw internal map name in a separate Section column and the typed route
-in ID. A profile may replace that raw section value with a verified human-readable
+in Map header. A profile may replace that raw section value with a verified human-readable
 label for an exact header or internal map name. Renderers do not derive floors or
 rooms from identifiers, header adjacency, map topology, or external lookup tables.
 Section-specific fields provide only the values visible, searchable, sortable,
@@ -326,9 +327,10 @@ Spring/Summer/Autumn/Winter content tabs, and Material's linked-tab behavior
 synchronizes the selected season across those tables. Encounter display names and
 reciprocal location links come from the verified map-index-to-header relationship,
 with `Map NNN` retained only when no header is resolved.
-The same resolved display name is used in encounter catalogs, Same-name encounter
-tables, Pokémon appearance tables, change overviews, and record navigation; the
-typed `map-NNN` identity remains separate in links and ID columns.
+The same player-facing location name is used in encounter catalogs, Same-name
+encounter tables, Pokémon appearance tables, change overviews, and record
+navigation. Section labels and typed record identities remain separate table
+fields rather than being appended to that name.
 
 Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
 These are labeled reference content. Stat, type, ability, training, breeding,

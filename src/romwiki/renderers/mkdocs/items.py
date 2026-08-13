@@ -357,11 +357,12 @@ def _append_locations(
     lines.extend(["## Overworld locations", ""])
     lines.extend(
         [
-            "| Location | Kind | Coordinates |",
-            "| -------- | ---- | ----------- |",
+            "| Location | Section | Map header | Kind | Coordinates |",
+            "| -------- | ------- | ---------- | ---- | ----------- |",
             *[
                 (
                     f"| {_location_link(value, source_file)} "
+                    f"| {_location_section(value)} | {_map_header(value)} "
                     f"| {value['kind'].title()} | ({value['x']}, {value['z']}) |"
                 )
                 for value in record["locations"]
@@ -381,11 +382,12 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
     if linked_shops:
         lines.extend(
             [
-                "| Location | Shop | Price | Availability |",
-                "| -------- | ---- | ----: | ------------ |",
+                "| Location | Section | Map header | Shop | Price | Availability |",
+                "| -------- | ------- | ---------- | ---- | ----: | ------------ |",
                 *[
                     (
                         f"| {_location_link(shop, source_file)} "
+                        f"| {_location_section(shop)} | {_map_header(shop)} "
                         f"| {escape(shop.get('shop_name') or shop['kind'].title())} "
                         "| "
                         f"{shop_price(shop['price'], shop.get('currency', 'money'))} | "
@@ -531,11 +533,12 @@ def _append_gift_trade_table(
 ) -> None:
     lines.extend(
         [
-            "| Location | Kind | Pokémon | Type |",
-            "| -------- | ---- | ------- | ---- |",
+            "| Location | Section | Map header | Kind | Pokémon | Type |",
+            "| -------- | ------- | ---------- | ---- | ------- | ---- |",
             *[
                 (
                     f"| {_location_or_trade_cell(value, source_file)} "
+                    f"| {_location_section(value)} | {_map_header(value)} "
                     f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), pokemon_record_link(pokemon, source_file))} "
                     f"| {reference_type_cell('pokemon', pokemon.get('member', pokemon.get('id')), references)} |"
                 )
@@ -759,6 +762,15 @@ def _location_link(value: dict[str, Any], source_file: str) -> str:
         source_file,
         route_key=value.get("header_id"),
     )
+
+
+def _location_section(value: dict[str, Any]) -> str:
+    return escape(value.get("section_name") or "—")
+
+
+def _map_header(value: dict[str, Any]) -> str:
+    header_id = value.get("header_id")
+    return f"`header-{header_id:03}`" if isinstance(header_id, int) else "—"
 
 
 def _trainer_link(value: dict[str, Any], source_file: str) -> str:

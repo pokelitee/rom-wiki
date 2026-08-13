@@ -165,7 +165,7 @@ def _render_encounter_map_location(
     location_labels: Mapping[int, str] | None = None,
 ) -> str:
     source_file = f"locations/{_filename(record['header_id'])}"
-    facts = [f"<div><dt>Header ID</dt><dd>header-{record['header_id']:03}</dd></div>"]
+    facts = [f"<div><dt>Map header</dt><dd>header-{record['header_id']:03}</dd></div>"]
     if record.get("section_name"):
         facts[0:0] = [
             f"<div><dt>Location</dt><dd>{escape_table_cell(record['name'])}</dd></div>",
@@ -199,7 +199,7 @@ def _render_encounter_map_location(
             [
                 *provenance_fact_table(
                     (
-                        ("Header ID", f"`{record['header_id']}`"),
+                        ("Map header", f"`header-{record['header_id']:03}`"),
                         *(_section_name_provenance_facts(record)),
                         *(
                             (("Internal map", f"`{record['internal_name']}`"),)
@@ -336,8 +336,8 @@ def _append_same_name_locations(
                 "They may represent different rooms or map sections."
             ),
             "",
-            "| Location | Section | ID | Wild encounter map |",
-            "| -------- | ------- | -- | ------------------ |",
+            "| Location | Section | Map header | Wild encounter map |",
+            "| -------- | ------- | ---------- | ------------------ |",
         ]
     )
     for candidate in related:

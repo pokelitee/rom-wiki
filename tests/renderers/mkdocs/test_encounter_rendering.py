@@ -182,18 +182,18 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("## Map headers", seasonal_page)
         self.assertIn('<a href="#map-headers">2</a>', seasonal_page)
         self.assertIn(
-            "| [Route 1](../locations/header-006.md) | `header-006` | Black |",
+            "| [Route 1](../locations/header-006.md) | — | `header-006` | Black |",
             seasonal_page,
         )
         self.assertIn(
-            "| [Route 1](../locations/header-007.md) | `header-007` | Black |",
+            "| [Route 1](../locations/header-007.md) | — | `header-007` | Black |",
             seasonal_page,
         )
         self.assertIn("## Same-name encounter areas", seasonal_page)
         self.assertIn("[Route 1](map-005.md)", seasonal_page)
         self.assertIn("## Map headers", nonseasonal_page)
         self.assertIn(
-            "| [Dreamyard](../locations/header-008.md) | `header-008` | White |",
+            "| [Dreamyard](../locations/header-008.md) | — | `header-008` | White |",
             nonseasonal_page,
         )
 

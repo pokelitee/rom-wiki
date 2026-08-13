@@ -57,7 +57,7 @@ class LocationSectionResolverTests(unittest.TestCase):
             (None, None),
         )
 
-    def test_combines_rom_section_with_display_name_for_references(self) -> None:
+    def test_keeps_section_metadata_out_of_location_reference_names(self) -> None:
         self.assertEqual(
             location_reference_label(
                 {
@@ -69,7 +69,7 @@ class LocationSectionResolverTests(unittest.TestCase):
                     },
                 }
             ),
-            "Canalave City — C02PC0101",
+            "Canalave City",
         )
 
     def test_rejects_unmatched_and_conflicting_selectors(self) -> None:

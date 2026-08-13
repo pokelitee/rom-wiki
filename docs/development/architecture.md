@@ -186,10 +186,11 @@ The shared location contract also carries `section_name` and
 matched profile, keyed by exact header ID or a native internal map name, then uses
 the extracted internal map name verbatim. It does not decode semantic floor or
 room names from structural ROM identifiers. Records without an internal name
-retain a null section. Relationship construction exposes one
-header-keyed presentation-label index to every renderer, keeping location pages,
-warps, connections, encounters, trainer locations, and item backlinks consistent
-without rewriting their normalized source records.
+retain a null section. Relationship construction exposes one header-keyed
+location-name index to every renderer, keeping the player-facing name consistent
+across location pages, warps, connections, encounters, trainer locations, and
+item backlinks. Rendered tables keep Section, Map header, Location-name index,
+and Internal map values in dedicated columns.
 
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract

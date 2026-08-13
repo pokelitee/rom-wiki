@@ -345,6 +345,7 @@ def build_item_dataset(
         location_reference = {
             "header_id": location["header_id"],
             "name": location["name"],
+            "section_name": location.get("section_name"),
             "internal_name": location.get("internal_name", location["name"]),
         }
         for item in location.get("items", []):

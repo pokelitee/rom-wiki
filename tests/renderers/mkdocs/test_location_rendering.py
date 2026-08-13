@@ -255,7 +255,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["records"][1]["label"], "Chargestone Cave")
         self.assertEqual(catalog["records"][1]["location_name"], "Chargestone Cave")
         self.assertEqual(catalog["records"][1]["section_name"], "Chargestone Cave B1F")
-        self.assertIn("# Chargestone Cave B1F", resolved)
+        self.assertIn("# Chargestone Cave", resolved)
         self.assertIn("<dt>Location</dt><dd>Chargestone Cave</dd>", resolved)
         self.assertIn("<dt>Section</dt><dd>Chargestone Cave B1F</dd>", resolved)
         self.assertIn("profile `example-hack`, key `header-061`", resolved)
@@ -621,7 +621,7 @@ class LocationRenderingTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertFalse(stale_page.exists())
-        self.assertIn("# Oreburgh City central district", page)
+        self.assertIn("# Oreburgh City", page)
         self.assertIn("<dt>Location</dt><dd>Oreburgh City</dd>", page)
         self.assertIn("profile `example-platinum-hack`, key `C03`", page)
         self.assertEqual(catalog["records"][0]["location_name"], "Oreburgh City")
@@ -675,11 +675,14 @@ class LocationRenderingTests(unittest.TestCase):
             page,
         )
         self.assertIn("header-047.md", page)
-        self.assertIn("| Warp | Position | Destination | ID | Destination warp |", page)
-        self.assertIn("[Oreburgh Gym](header-047.md) | `header-047` | 0 |", page)
+        self.assertIn(
+            "| Warp | Position | Destination | Destination map header | Destination warp |",
+            page,
+        )
+        self.assertIn("[Oreburgh City](header-047.md) | `header-047` | 0 |", page)
         self.assertNotIn("C03GYM0101", page.split("## Outdoor connections")[0])
         self.assertIn("header-344.md", page)
-        self.assertIn("[Route 203 west](header-344.md)", page)
+        self.assertIn("[Route 203](header-344.md)", page)
         self.assertIn("## Roaming activations", page)
         self.assertIn("Darkrai", page)
         self.assertIn("| 2 | `51@0x140` |", page)

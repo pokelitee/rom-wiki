@@ -180,7 +180,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertEqual(enriched["party_schema_version"], 5)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
-        self.assertIn("[Route 202 south](../locations/header-343.md)", page)
+        self.assertIn("[Route 202](../locations/header-343.md)", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn('src="https://example.test/bulbasaur.png"', page)
         self.assertIn('width="48" height="48" loading="lazy"', page)
@@ -194,7 +194,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("<dt>Nature</dt><dd>Timid</dd>", page)
         self.assertIn('aria-label="Male" title="Male">♂</span>', page)
         self.assertIn(
-            "| [Route 202 south](../locations/header-343.md) | `header-343` | `R202` | "
+            "| [Route 202](../locations/header-343.md) | `header-343` | `R202` | "
             "(181, 818) | `329:0` |",
             page,
         )

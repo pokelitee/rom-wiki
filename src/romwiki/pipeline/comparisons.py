@@ -233,7 +233,7 @@ _LABELS = {
     "party_use": "Party use",
     "party_effects": "Party effects",
     "prevent_toss": "Prevents tossing",
-    "location_name_id": "Location-name ID",
+    "location_name_id": "Location-name index",
     "matrix_id": "Matrix ID",
     "area_data_id": "Area data ID",
     "level_script_id": "Level script",

@@ -226,8 +226,8 @@ def _render_location(
                     (
                         ("Internal map", f"`{record['internal_name']}`"),
                         *(_section_name_provenance_facts(record)),
-                        ("Header ID", f"`{record['header_id']}`"),
-                        ("Location name ID", f"`{record['location_name_id']}`"),
+                        ("Map header", f"`header-{record['header_id']:03}`"),
+                        ("Location-name index", f"`{record['location_name_id']}`"),
                         ("Matrix ID", f"`{record['matrix_id']}`"),
                         (
                             "Event file ID",
@@ -329,7 +329,7 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
         if populated
     ]
     fact_lines.insert(
-        0, f"<div><dt>Header ID</dt><dd>header-{record['header_id']:03}</dd></div>"
+        0, f"<div><dt>Map header</dt><dd>header-{record['header_id']:03}</dd></div>"
     )
     if record.get("section_name"):
         fact_lines[0:0] = [
@@ -922,8 +922,8 @@ def _append_warps(
                 if any(warp["dynamic"] for warp in warps)
                 else []
             ),
-            "| Warp | Position | Destination | ID | Destination warp |",
-            "| ---: | -------- | ----------- | -- | ---------------: |",
+            "| Warp | Position | Destination | Destination map header | Destination warp |",
+            "| ---: | -------- | ----------- | ---------------------- | ---------------: |",
         ]
     )
     for warp in warps:

@@ -114,7 +114,10 @@ class ItemDatasetTests(unittest.TestCase):
         self.assertIn("<dt>Base price</dt><dd>₽0</dd>", page)
         self.assertEqual(page.count("<dt>Fling power</dt>"), 1)
         self.assertIn("<dt>Fling effect ID</dt><dd>7</dd>", page)
-        self.assertIn("[Route 1 north](../locations/header-010.md)", page)
+        self.assertIn(
+            "[Route 1](../locations/header-010.md) | Route 1 north | `header-010`",
+            page,
+        )
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
         self.assertIn("trainer-0002.md", page)
         self.assertNotIn("## Shops", page)
@@ -131,7 +134,7 @@ class ItemDatasetTests(unittest.TestCase):
                 {
                     "kind": "location",
                     "id": 10,
-                    "label": "Route 1 north",
+                    "label": "Route 1",
                     "url": "../locations/header-010/",
                 }
             ],

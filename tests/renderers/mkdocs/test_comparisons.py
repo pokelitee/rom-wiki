@@ -41,7 +41,9 @@ class ComparisonRenderingTests(unittest.TestCase):
             move_machine_learners={},
             location_encounters={},
             encounter_locations={
-                "map-003": (EncounterLocationReference("map-003", 6, "Route 1", ()),)
+                "map-003": (
+                    EncounterLocationReference("map-003", 6, "Route 1", None, ()),
+                )
             },
         )
 

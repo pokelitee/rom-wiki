@@ -483,8 +483,8 @@ def _append_locations(
         [
             "## Map headers",
             "",
-            "| Location | ID | Location name ID | Internal map |",
-            "| -------- | -- | ----------------: | ------------ |",
+            "| Location | Map header | Location-name index | Internal map |",
+            "| -------- | ---------- | ------------------: | ------------ |",
         ]
     )
     for location in locations:
@@ -1109,8 +1109,8 @@ def _append_seasonal_locations(
         [
             "## Map headers",
             "",
-            "| Location | ID | Version |",
-            "| -------- | -- | ------- |",
+            "| Location | Section | Map header | Version |",
+            "| -------- | ------- | ---------- | ------- |",
         ]
     )
     for location in locations:
@@ -1126,7 +1126,10 @@ def _append_seasonal_locations(
         versions = (
             " / ".join(display_name(version) for version in location.versions) or "â€”"
         )
-        lines.append(f"| {link} | `header-{location.header_id:03}` | {versions} |")
+        lines.append(
+            f"| {link} | {location.section_name or '—'} | "
+            f"`header-{location.header_id:03}` | {versions} |"
+        )
     lines.append("")
 
 

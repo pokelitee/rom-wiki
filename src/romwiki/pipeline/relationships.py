@@ -85,6 +85,7 @@ class EncounterLocationReference:
     encounter_route_key: int | str
     header_id: int
     location_name: str
+    section_name: str | None
     versions: tuple[str, ...]
 
 
@@ -857,37 +858,45 @@ def _freeze_encounter_locations(
     locations: list[dict[str, Any]],
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]],
 ) -> dict[int | str, tuple[EncounterLocationReference, ...]]:
-    location_names = {
-        location["header_id"]: _location_display_name(location)
+    location_details = {
+        location["header_id"]: (
+            _location_display_name(location),
+            location.get("section_name"),
+        )
         for location in locations
     }
     values: dict[int | str, list[EncounterLocationReference]] = defaultdict(list)
     for header_id, encounters in location_encounters.items():
-        location_name = location_names[header_id]
+        location_name, section_name = location_details[header_id]
         for encounter in encounters:
             values[encounter.encounter_route_key].append(
                 EncounterLocationReference(
                     encounter_route_key=encounter.encounter_route_key,
                     header_id=header_id,
                     location_name=location_name,
+                    section_name=section_name,
                     versions=encounter.versions,
                 )
             )
 
     result = {}
     for route_key, entries in sorted(values.items(), key=lambda item: str(item[0])):
-        grouped: dict[tuple[int, str], set[str]] = defaultdict(set)
+        grouped: dict[tuple[int, str, str | None], set[str]] = defaultdict(set)
         for entry in entries:
-            grouped[(entry.header_id, entry.location_name)].update(entry.versions)
+            grouped[(entry.header_id, entry.location_name, entry.section_name)].update(
+                entry.versions
+            )
         result[route_key] = tuple(
             EncounterLocationReference(
                 encounter_route_key=route_key,
                 header_id=header_id,
                 location_name=location_name,
+                section_name=section_name,
                 versions=tuple(sorted(versions)),
             )
-            for (header_id, location_name), versions in sorted(
-                grouped.items(), key=lambda item: (item[0][1], item[0][0])
+            for (header_id, location_name, section_name), versions in sorted(
+                grouped.items(),
+                key=lambda item: (item[0][1], item[0][2] or "", item[0][0]),
             )
         )
     return result

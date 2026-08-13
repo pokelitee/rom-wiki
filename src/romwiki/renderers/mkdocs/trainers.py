@@ -964,8 +964,8 @@ def _append_locations(
         [
             "## Locations",
             "",
-            "| Location | ID | Internal map | Position | Event object |",
-            "| -------- | -- | ------------ | -------- | ------------ |",
+            "| Location | Map header | Internal map | Position | Event object |",
+            "| -------- | ---------- | ------------ | -------- | ------------ |",
         ]
     )
     for location in locations:
@@ -996,8 +996,8 @@ def _append_script_references(
         [
             "## Scripted battle locations",
             "",
-            "| Location | ID | Internal map | Script command | Opponent slot |",
-            "| -------- | -- | ------------ | -------------- | ------------: |",
+            "| Location | Map header | Internal map | Script command | Opponent slot |",
+            "| -------- | ---------- | ------------ | -------------- | ------------: |",
         ]
     )
     for reference in references:

@@ -87,8 +87,10 @@ class CatalogPresentationTests(unittest.TestCase):
         )
         self.assertIn('["Availability", pokemonAvailability]', text)
         self.assertIn('["Party", trainerPartySummary]', text)
-        self.assertEqual(text.count('["ID", routeId]'), 3)
-        self.assertEqual(text.count('["route_id", "ID"]'), 3)
+        self.assertEqual(text.count('["ID", routeId]'), 2)
+        self.assertEqual(text.count('["route_id", "ID"]'), 2)
+        self.assertIn('["Map header", routeId]', text)
+        self.assertIn('["route_id", "Map header"]', text)
 
         catalog = CATALOG_CONFIG_JS.with_name("catalog.js").read_text(encoding="utf-8")
         self.assertIn('new Set(["encounters", "trainers", "locations"])', catalog)
@@ -108,7 +110,6 @@ class CatalogPresentationTests(unittest.TestCase):
             'label: "Encounter locations"',
             'label: "Minimum obtainable level"',
             'label: "Location status"',
-            '["Map header",',
             '["Learners",',
         ):
             with self.subTest(value=value):
