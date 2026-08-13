@@ -87,7 +87,13 @@ def resolve_trainer_variants(
             "difficulty_mode": {"status": "unsupported"},
             "rematch_stage": {
                 "status": "partial",
-                "note": "Silver stages are verified; phone-rematch state machines are unresolved.",
+                "note": (
+                    "Silver stages are verified; the phone-rematch tables are not decoded. Rematch is not a pursued axis: the supported "
+                    "relationship set is Starter, Difficulty, Version, and Season, "
+                    "so existing rematch coverage is kept as-is and is not "
+                    "extended. Records outside it stay unrelated rather than "
+                    "asserted."
+                ),
             },
             "story_stage": {
                 "status": "partial",

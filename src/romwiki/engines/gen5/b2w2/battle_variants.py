@@ -411,7 +411,16 @@ def resolve_trainer_variants(
                     "party_variant_scope": "verified-dispatch-only",
                 },
             },
-            "rematch_stage": {"status": "partial"},
+            "rematch_stage": {
+                "status": "partial",
+                "note": (
+                    "Pokemon League first-clear and rematch records are verified. Rematch is not a pursued axis: the supported "
+                    "relationship set is Starter, Difficulty, Version, and Season, "
+                    "so existing rematch coverage is kept as-is and is not "
+                    "extended. Records outside it stay unrelated rather than "
+                    "asserted."
+                ),
+            },
             "story_stage": {
                 "status": "partial",
                 "note": (

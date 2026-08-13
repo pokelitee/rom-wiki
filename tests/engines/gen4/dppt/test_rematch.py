@@ -129,7 +129,7 @@ class Gen4VsSeekerFamilyTests(unittest.TestCase):
 
         support = result["trainer_variant_support"]["rematch_stage"]
         self.assertEqual(support["status"], "partial")
-        self.assertIn("Elite Four", support["note"])
+        self.assertIn("not a pursued axis", support["note"])
 
 
 if __name__ == "__main__":

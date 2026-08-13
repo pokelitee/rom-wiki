@@ -125,7 +125,16 @@ def resolve_trainer_variants(
         "trainer_variant_support": {
             "starter_choice": {"status": "verified"},
             "difficulty_mode": {"status": "unsupported"},
-            "rematch_stage": {"status": "partial"},
+            "rematch_stage": {
+                "status": "partial",
+                "note": (
+                    "The Nuvema Town rival rematch is verified. Rematch is not a pursued axis: the supported "
+                    "relationship set is Starter, Difficulty, Version, and Season, "
+                    "so existing rematch coverage is kept as-is and is not "
+                    "extended. Records outside it stay unrelated rather than "
+                    "asserted."
+                ),
+            },
             "story_stage": {
                 "status": "partial",
                 "note": (

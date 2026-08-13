@@ -69,6 +69,16 @@ which passes them to the resolver as `selector_data` and records their location
 under `source`. Profiles own the offsets, so a hack that moves or rewrites a
 selector declares its own without changing engine code.
 
+**Starter, Difficulty, Version, and Season are the pursued axes.** New decoding
+effort goes to those four; `rematch_stage` and `story_stage` are not extended.
+Rematch coverage that is already decoded and verified — notably DPPT's Vs. Seeker
+table — is kept and still renders, because deleting exact ROM data to tidy a
+taxonomy loses information for no gain. What stops is the search for more of it:
+records whose selector is unknown stay unrelated rather than asserted. This bounds
+the per-engine decoding work, which was otherwise open-ended, since rematch
+selection is expressed differently in every engine while the four pursued axes
+are comparatively uniform.
+
 The public renderer names only Starter, Difficulty, Season, Rematch, and Version.
 Story-stage-only and other neutral relationships render as `Variant N`. The
 resolver and renderer never combine exact trainer records. Encounter row
