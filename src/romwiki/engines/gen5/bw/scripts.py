@@ -4,6 +4,7 @@ import struct
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from romwiki.engines.gen5.script_opcode_table import OPCODE_TABLE
 from romwiki.util.errors import InvalidRomError
 
 # Gen V field-script opcodes needed to locate literal trainer-battle triggers.
@@ -25,22 +26,24 @@ START_TRAINER_MULTI_BATTLE = 0x0086
 CHECK_TRAINER_BATTLE_WON = 0x008D
 
 # The "always followed by TrainerBattleIsVictory" claim above held for the 12
-# samples it was drawn from, but not for the ROM as a whole: 17 of the 130
-# sites with valid trainer operands are followed by something else, and those
-# are not noise. They are almost entirely the rival battles -- Cheren (53, 54,
-# 55, 594), Bianca (59, 60, 61, 494, 495, 595) and N (90) -- trainer records
-# that this engine's independently verified Cheren/Bianca/N families already
-# contain, which a false positive would not manage. Requiring the win check
-# therefore dropped whole battle categories, exactly as the equivalent rule did
-# for Platinum in `gen4/dppt/scripts.py`.
+# samples it was drawn from, but not for the ROM: 17 of the 130 BW sites with
+# valid trainer operands are followed by something else, and B2W2 is far worse
+# at 121 of 180. Those are not noise -- in BW they are almost entirely the rival
+# battles, whose records the independently verified Cheren/Bianca/N families
+# already contain, and every follow-on seen in either engine is a *named*
+# command in this generation's own opcode table (`VMCall`, `VMJump`,
+# `WorkSetConst`, `ActorDelete`, `CallTrainerBattleEnd`, ...), never an unknown
+# value. Requiring the win check alone dropped whole battle categories, exactly
+# as the equivalent rule did for Platinum in `gen4/dppt/scripts.py`.
 #
-# Black and Blaze Black agree exactly on this set (130 and 131 sites, the same
-# six follow-on commands in the same proportions), so it is verified rather than
-# fitted to one ROM. A profile whose scripts use some further follow-on loses
-# that link rather than gaining a wrong one, which is the safe direction.
-BATTLE_RESULT_COMMANDS = frozenset(
-    {CHECK_TRAINER_BATTLE_WON, 0x001E, 0x0019, 0x006C, 0x008E, 0x0028}
-)
+# The follow-on is therefore validated as "a real command in the engine's
+# opcode table" rather than against one specific command or a fitted list, which
+# is the same shape of check the Generation IV engine uses and does not need
+# revisiting per ROM.
+
+
+def _is_known_command(opcode: int) -> bool:
+    return opcode in OPCODE_TABLE
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,7 +70,7 @@ def parse_trainer_battle_commands(
     for offset in range(0, len(data) - 9):
         if data[offset : offset + 2] == single_signature:
             follow_on = struct.unpack_from("<H", data, offset + 8)[0]
-            if follow_on not in BATTLE_RESULT_COMMANDS:
+            if not _is_known_command(follow_on):
                 continue
             first_trainer, second_trainer, _flags = struct.unpack_from(
                 "<HHH", data, offset + 2
@@ -86,7 +89,7 @@ def parse_trainer_battle_commands(
             if offset + 12 > len(data):
                 continue
             follow_on = struct.unpack_from("<H", data, offset + 10)[0]
-            if follow_on not in BATTLE_RESULT_COMMANDS:
+            if not _is_known_command(follow_on):
                 continue
             ally, first_trainer, second_trainer, _flags = struct.unpack_from(
                 "<HHHH", data, offset + 2

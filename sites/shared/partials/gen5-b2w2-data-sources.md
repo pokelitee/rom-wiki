@@ -97,7 +97,22 @@ The BW common-script band rule is not used for B2W2. It was validated against
 Black only and produced impossible sequel associations such as Nuvema Town and
 Cave of Being. B2W2 publishes only literal trainer IDs from its own map scripts
 until the sequel's common-script dispatch is independently decoded. This removes
-the false locations without replacing them with guesses. Post-battle healing and
+the false locations without replacing them with guesses.
+
+A battle command is accepted when its trainer operands are valid and the command
+that follows it is a real entry in this engine's opcode table. Requiring the
+follow-on to be `TrainerBattleIsVictory` specifically had discarded two thirds
+of the scripted battles: only 59 of the 180 sites with valid operands use it,
+while the rest continue with `VMCall`, `VMJump`, or `WorkSetConst`, all of them
+named commands. Correcting this raises resolved script references from 65 to 241
+in Black 2, 65 to 287 in Blaze Black 2, and 123 to 351 in Redux, with no
+previously resolved battle lost. The recovered records land where they should:
+every Gym Leader in their own city — Cheren in Aspertia, Roxie in Virbank, Burgh
+in Castelia, Elesa in Nimbasa, Clay in Driftveil, Skyla in Mistralton, Drayden
+in Opelucid, Marlon in Humilau — and each Elite Four member's first and rematch
+records in the same Pokémon League room. The eight Normal and Challenge Gym
+records now resolve to the same city as each other in all eight cases, which
+corroborates the difficulty dispatch pairs from a second, independent direction. Post-battle healing and
 victory-item behavior remain exact header facts.
 
 Starter-dependent Hugh battles are represented as three exact party tabs.
