@@ -305,7 +305,7 @@ def unregister_engine(engine: str) -> None:
     _ENGINES.pop(engine, None)
 
 
-def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
+def _validate_engine_formats(engine: str, adapter: EngineAdapter) -> None:
     format_types = {
         "encounters": EncounterFormat,
         "locations": LocationFormat,
@@ -337,6 +337,10 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
             f"{adapter.formats.location_extraction!r} requires normalized "
             f"shape {expected_location_shape!r}"
         )
+
+
+def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
+    _validate_engine_formats(engine, adapter)
     if adapter.generation is not None and (
         not isinstance(adapter.generation, int) or adapter.generation < 1
     ):

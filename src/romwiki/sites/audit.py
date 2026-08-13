@@ -397,6 +397,29 @@ def _parsed_page_from_dict(value: dict[str, object]) -> tuple[int, _ParsedPage]:
     )
 
 
+def _validate_game_catalog(
+    catalog_path: Path, existing_files: set[str]
+) -> SiteAuditIssue | None:
+    if not catalog_path.is_file():
+        return None
+    try:
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        games = catalog["games"]
+        if catalog.get("schema_version") != 1 or not isinstance(games, list):
+            raise ValueError
+        slugs = [game["slug"] for game in games]
+        if len(slugs) != len(set(slugs)) or not all(
+            isinstance(slug, str) and f"{slug}/index.html" in existing_files
+            for slug in slugs
+        ):
+            raise ValueError
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return SiteAuditIssue(
+            "game-catalog", "games.json", "game catalog is invalid", 1
+        )
+    return None
+
+
 def audit_site(
     root: Path,
     *,
@@ -525,25 +548,9 @@ def audit_site(
             )
         )
 
-    catalog_path = resolved_root / "games.json"
-    if catalog_path.is_file():
-        try:
-            catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-            games = catalog["games"]
-            if catalog.get("schema_version") != 1 or not isinstance(games, list):
-                raise ValueError
-            slugs = [game["slug"] for game in games]
-            if len(slugs) != len(set(slugs)) or not all(
-                isinstance(slug, str) and f"{slug}/index.html" in existing_files
-                for slug in slugs
-            ):
-                raise ValueError
-        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
-            errors.append(
-                SiteAuditIssue(
-                    "game-catalog", "games.json", "game catalog is invalid", 1
-                )
-            )
+    catalog_issue = _validate_game_catalog(resolved_root / "games.json", existing_files)
+    if catalog_issue is not None:
+        errors.append(catalog_issue)
 
     return SiteAuditReport(
         page_count=len(html_files),

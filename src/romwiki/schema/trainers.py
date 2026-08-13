@@ -176,36 +176,10 @@ def validate_trainer_battle_families(
                 raise DataSourceError(
                     f"Trainer battle family {family_id!r} has duplicate variant order"
                 )
-            if not isinstance(conditions, list) or not conditions:
-                raise DataSourceError(
-                    f"Trainer battle family {family_id!r} has an unconditioned variant"
-                )
-            normalized_conditions: list[tuple[str, str]] = []
-            condition_kinds: set[str] = set()
-            for condition in conditions:
-                if not isinstance(condition, Mapping):
-                    raise DataSourceError(
-                        f"Trainer battle family {family_id!r} has an invalid condition"
-                    )
-                kind = condition.get("kind")
-                value = condition.get("value")
-                condition_label = condition.get("label")
-                if kind not in _CONDITION_KINDS or kind in condition_kinds:
-                    raise DataSourceError(
-                        f"Trainer battle family {family_id!r} has contradictory condition {kind!r}"
-                    )
-                if (
-                    not isinstance(value, str)
-                    or not value
-                    or not isinstance(condition_label, str)
-                    or not condition_label
-                ):
-                    raise DataSourceError(
-                        f"Trainer battle family {family_id!r} has an invalid condition value"
-                    )
-                condition_kinds.add(kind)
-                normalized_conditions.append((kind, value))
-            identity = (trainer_id, tuple(sorted(normalized_conditions)))
+            identity = (
+                trainer_id,
+                _normalize_trainer_variant_conditions(family_id, conditions),
+            )
             if identity in seen_variants:
                 raise DataSourceError(
                     f"Trainer battle family {family_id!r} has a duplicate variant"
@@ -214,6 +188,41 @@ def validate_trainer_battle_families(
             variant_orders.add(variant_order)
         family_ids.add(family_id)
         family_orders.add(order)
+
+
+def _normalize_trainer_variant_conditions(
+    family_id: str, conditions: object
+) -> tuple[tuple[str, str], ...]:
+    if not isinstance(conditions, list) or not conditions:
+        raise DataSourceError(
+            f"Trainer battle family {family_id!r} has an unconditioned variant"
+        )
+    normalized: list[tuple[str, str]] = []
+    condition_kinds: set[str] = set()
+    for condition in conditions:
+        if not isinstance(condition, Mapping):
+            raise DataSourceError(
+                f"Trainer battle family {family_id!r} has an invalid condition"
+            )
+        kind = condition.get("kind")
+        value = condition.get("value")
+        label = condition.get("label")
+        if kind not in _CONDITION_KINDS or kind in condition_kinds:
+            raise DataSourceError(
+                f"Trainer battle family {family_id!r} has contradictory condition {kind!r}"
+            )
+        if (
+            not isinstance(value, str)
+            or not value
+            or not isinstance(label, str)
+            or not label
+        ):
+            raise DataSourceError(
+                f"Trainer battle family {family_id!r} has an invalid condition value"
+            )
+        condition_kinds.add(kind)
+        normalized.append((kind, value))
+    return tuple(sorted(normalized))
 
 
 class TrainerAttribute(TypedDict):

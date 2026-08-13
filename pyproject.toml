@@ -41,7 +41,10 @@ addopts = "-ra"
 cache_dir = ".romwiki/pytest-cache"
 
 [tool.ruff.lint]
-select = ["F", "I", "UP", "B", "C4", "SIM"]
+select = ["F", "I", "UP", "B", "C4", "C90", "SIM"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 20
 
 [tool.ruff.format]
 line-ending = "lf"
