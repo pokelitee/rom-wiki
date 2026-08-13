@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Any
 
 from romwiki.engines.registry import get_engine
@@ -72,6 +72,46 @@ def _build_gen5_special_vendor_shop(
     )
 
 
+@dataclass(frozen=True)
+class _ArchiveLocationSource:
+    profile: Any
+    engine: Any
+    rom_sha256: str
+    map_headers_path: str
+    map_names_member: int
+    overworld_objects_path: str
+    map_matrices_path: str
+    scripts_path: str
+    messages_path: str
+    map_headers: Any
+    messages: Any
+    headers: tuple[Any, ...]
+    script_file_ids: tuple[int, ...]
+    overworld_objects: Any
+    map_matrices: Any
+    scripts: Any
+    unused_overworld_members: frozenset[int]
+
+
+@dataclass(frozen=True)
+class _ArchiveLocationRelationships:
+    trainers_by_header: dict[int, list[Any]]
+    static_encounters_by_header: dict[int, list[LocationStaticEncounter]]
+    npc_trades_by_header: dict[int, list[dict[str, Any]]]
+    connections_by_header: dict[int, list[LocationConnection]]
+
+
+@dataclass(frozen=True)
+class _ArchiveLocationCatalogs:
+    item_names_by_id: dict[int, str]
+    item_prices_by_id: dict[int, int | None]
+    shops_by_id: dict[int, dict[str, Any]]
+
+    @property
+    def item_count(self) -> int:
+        return max(self.item_names_by_id, default=-1) + 1
+
+
 def extract_archive_encounter_map_location_dataset(
     result: InspectionResult,
     trainer_dataset: dict[str, Any] | None = None,
@@ -80,10 +120,25 @@ def extract_archive_encounter_map_location_dataset(
     mart_dataset: dict[str, Any] | None = None,
     trade_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    # Each map header's display name, its wild-encounter-table cross-
-    # reference, its real trainers, its real warps, its real static
-    # (gift/single) PokÃ©mon encounters, its real outdoor connections, and its
-    # real field items, and its real script-linked shops.
+    source = _load_archive_location_source(result)
+    relationships = _collect_archive_location_relationships(
+        result,
+        source,
+        trainer_dataset=trainer_dataset,
+        static_encounter_dataset=static_encounter_dataset,
+        trade_dataset=trade_dataset,
+        item_dataset=item_dataset,
+    )
+    catalogs = _build_archive_location_catalogs(item_dataset, mart_dataset)
+    records, unsupported_shop_selectors = _build_archive_location_records(
+        source, relationships, catalogs
+    )
+    return _build_archive_location_envelope(source, records, unsupported_shop_selectors)
+
+
+def _load_archive_location_source(
+    result: InspectionResult,
+) -> _ArchiveLocationSource:
     profile = result.match.profile
     try:
         map_headers_path = profile.layout["map_headers"]
@@ -104,6 +159,7 @@ def extract_archive_encounter_map_location_dataset(
         field_archive_options["allow_incorrect_data_block_size"] = True
     if profile.parameters.get("field_archives_allow_trailing_data", False):
         field_archive_options["allow_trailing_data"] = True
+
     messages_path = profile.layout["messages"]
     map_headers = platform.archive_cls.from_bytes(
         filesystem.read(map_headers_path),
@@ -126,7 +182,6 @@ def extract_archive_encounter_map_location_dataset(
         ((header.header_id, header.internal_name) for header in headers),
     )
     script_file_ids = engine.parse_map_header_script_files(map_headers.read(0))
-    trainers_by_header = extract_trainer_references(result, trainer_dataset)
     overworld_objects = platform.archive_cls.from_bytes(
         filesystem.read(overworld_objects_path), **field_archive_options
     )
@@ -134,275 +189,429 @@ def extract_archive_encounter_map_location_dataset(
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path), **field_archive_options
     )
-    unused_overworld_members = frozenset(
-        profile.parameters.get("overworld_objects_unused", ())
+    return _ArchiveLocationSource(
+        profile=profile,
+        engine=engine,
+        rom_sha256=result.image.hashes.sha256,
+        map_headers_path=map_headers_path,
+        map_names_member=map_names_member,
+        overworld_objects_path=overworld_objects_path,
+        map_matrices_path=map_matrices_path,
+        scripts_path=scripts_path,
+        messages_path=messages_path,
+        map_headers=map_headers,
+        messages=messages,
+        headers=headers,
+        script_file_ids=script_file_ids,
+        overworld_objects=overworld_objects,
+        map_matrices=map_matrices,
+        scripts=scripts,
+        unused_overworld_members=frozenset(
+            profile.parameters.get("overworld_objects_unused", ())
+        ),
     )
+
+
+def _collect_archive_location_relationships(
+    result: InspectionResult,
+    source: _ArchiveLocationSource,
+    *,
+    trainer_dataset: dict[str, Any] | None,
+    static_encounter_dataset: dict[str, Any] | None,
+    trade_dataset: dict[str, Any] | None,
+    item_dataset: dict[str, Any] | None,
+) -> _ArchiveLocationRelationships:
     script_headers = _resolve_gen5_script_locations(
-        engine,
-        headers,
-        script_file_ids,
-        scripts,
-        overworld_objects,
-        unused_overworld_members=unused_overworld_members,
+        source.engine,
+        source.headers,
+        source.script_file_ids,
+        source.scripts,
+        source.overworld_objects,
+        unused_overworld_members=source.unused_overworld_members,
     )
-    static_encounters_by_header = _extract_static_encounter_references(
-        engine, profile, messages, script_headers, static_encounter_dataset
+    return _ArchiveLocationRelationships(
+        trainers_by_header=extract_trainer_references(result, trainer_dataset),
+        static_encounters_by_header=_extract_static_encounter_references(
+            source.engine,
+            source.profile,
+            source.messages,
+            script_headers,
+            static_encounter_dataset,
+        ),
+        npc_trades_by_header=_extract_gen5_npc_trade_references(
+            source.engine,
+            source.profile,
+            source.messages,
+            source.map_headers.read(0),
+            source.scripts,
+            script_headers,
+            trade_dataset,
+            item_dataset,
+        ),
+        connections_by_header=_extract_encounter_map_connections(
+            source.engine, source.headers, source.map_matrices
+        ),
     )
-    npc_trades_by_header = _extract_gen5_npc_trade_references(
-        engine,
-        profile,
-        messages,
-        map_headers.read(0),
-        scripts,
-        script_headers,
-        trade_dataset,
-        item_dataset,
+
+
+def _build_archive_location_catalogs(
+    item_dataset: dict[str, Any] | None,
+    mart_dataset: dict[str, Any] | None,
+) -> _ArchiveLocationCatalogs:
+    return _ArchiveLocationCatalogs(
+        item_names_by_id={
+            record["item_id"]: record["name"]
+            for record in (item_dataset or {}).get("records", ())
+        },
+        item_prices_by_id={
+            record["item_id"]: record.get("price")
+            for record in (item_dataset or {}).get("records", ())
+        },
+        shops_by_id={
+            record["shop_id"]: record
+            for record in (mart_dataset or {}).get("records", ())
+        },
     )
-    connections_by_header = _extract_encounter_map_connections(
-        engine, headers, map_matrices
-    )
-    item_names_by_id = {
-        record["item_id"]: record["name"]
-        for record in (item_dataset or {}).get("records", ())
-    }
-    item_prices_by_id = {
-        record["item_id"]: record.get("price")
-        for record in (item_dataset or {}).get("records", ())
-    }
-    shops_by_id = {
-        record["shop_id"]: record for record in (mart_dataset or {}).get("records", ())
-    }
-    item_count = max(item_names_by_id, default=-1) + 1
-    headers_by_id = {header.header_id: header for header in headers}
+
+
+def _build_archive_location_records(
+    source: _ArchiveLocationSource,
+    relationships: _ArchiveLocationRelationships,
+    catalogs: _ArchiveLocationCatalogs,
+) -> tuple[list[dict[str, Any]], list[int]]:
+    headers_by_id = {header.header_id: header for header in source.headers}
     records = []
     unsupported_shop_selectors = []
-    for header in headers:
-        section_name, section_name_source = resolve_location_section(
-            profile,
-            header_id=header.header_id,
-            internal_name=header.internal_name,
+    for header in source.headers:
+        record, unsupported_selectors = _build_archive_location_record(
+            source, relationships, catalogs, headers_by_id, header
         )
-        items = []
-        shops = []
+        records.append(record)
+        unsupported_shop_selectors.extend(unsupported_selectors)
+    return records, unsupported_shop_selectors
+
+
+def _build_archive_location_record(
+    source: _ArchiveLocationSource,
+    relationships: _ArchiveLocationRelationships,
+    catalogs: _ArchiveLocationCatalogs,
+    headers_by_id: dict[int, Any],
+    header: Any,
+) -> tuple[dict[str, Any], list[int]]:
+    section_name, section_name_source = resolve_location_section(
+        source.profile,
+        header_id=header.header_id,
+        internal_name=header.internal_name,
+    )
+    script_file_id = source.script_file_ids[header.header_id]
+    overworld_data = _read_overworld_data(source, header.header_id)
+    items = (
+        _extract_gen5_field_items(source.engine, overworld_data, catalogs)
+        if overworld_data is not None
+        else []
+    )
+    if overworld_data is None:
+        shops: list[LocationShop] = []
         seen_vendor_ids: set[str] = set()
-        script_file_id = script_file_ids[header.header_id]
-        if (
-            header.header_id < len(overworld_objects.members)
-            and header.header_id not in unused_overworld_members
-        ):
-            overworld_data = overworld_objects.read(header.header_id)
-            npcs = engine.parse_overworld_npcs(overworld_data)
-            for npc in npcs:
-                item_id = engine.resolve_visible_item_id(npc, item_count=item_count)
-                if item_id is None or item_id not in item_names_by_id:
-                    continue
-                items.append(
-                    LocationItem(
-                        item_id=item_id,
-                        name=item_names_by_id[item_id],
-                        kind="visible",
-                        event_index=npc.index,
-                        x=npc.x,
-                        z=npc.y,
-                        y=npc.z,
-                        hidden_flag=None,
-                    )
-                )
-            if script_file_id < len(scripts.members):
-                script = scripts.read(script_file_id)
-                function_offsets = engine.parse_function_offsets(script)
-                seen_dispatches = set()
-                for function_offset in function_offsets:
-                    dispatch = engine.parse_shop_dispatch(script, function_offset)
-                    if dispatch is None:
-                        continue
-                    dispatch_key = (dispatch.selector_id, dispatch.command_offset)
-                    if dispatch_key in seen_dispatches:
-                        continue
-                    seen_dispatches.add(dispatch_key)
-                    inventory_id = engine.SHOP_SELECTOR_TO_INVENTORY_ID.get(
-                        dispatch.selector_id
-                    )
-                    if inventory_id is None:
-                        special_vendor = engine.resolve_special_vendor(
-                            dispatch.selector_id
-                        )
-                        if special_vendor is not None:
-                            if (
-                                special_vendor.vendor_id is None
-                                or special_vendor.vendor_id not in seen_vendor_ids
-                            ):
-                                shops.append(
-                                    _build_gen5_special_vendor_shop(
-                                        special_vendor,
-                                        item_names_by_id,
-                                        script_file_id=script_file_id,
-                                        command_offset=dispatch.command_offset,
-                                        selector_id=dispatch.selector_id,
-                                        mode=dispatch.mode,
-                                    )
-                                )
-                                if special_vendor.vendor_id is not None:
-                                    seen_vendor_ids.add(special_vendor.vendor_id)
-                            continue
-                        if dispatch.selector_id != engine.STANDARD_SHOP_SELECTOR:
-                            unsupported_shop_selectors.append(dispatch.selector_id)
-                            continue
-                        shops.append(
-                            LocationShop(
-                                kind="common",
-                                currency="money",
-                                inventory_id=dispatch.selector_id,
-                                script_file_id=script_file_id,
-                                command_offset=dispatch.command_offset,
-                                items=(),
-                                name="Standard Poké Mart",
-                                is_main_game=True,
-                                selector_id=dispatch.selector_id,
-                                mode=dispatch.mode,
-                                dynamic=True,
-                                inventory_source="runtime",
-                                availability=("Stock changes with badge progression."),
-                            )
-                        )
-                        continue
-                    catalog_shop = shops_by_id.get(inventory_id)
-                    if catalog_shop is None:
-                        continue
-                    shops.append(
-                        LocationShop(
-                            kind=catalog_shop["kind"],
-                            currency="money",
-                            inventory_id=inventory_id,
-                            script_file_id=script_file_id,
-                            command_offset=dispatch.command_offset,
-                            items=tuple(
-                                LocationShopItem(
-                                    item_id=item["item_id"],
-                                    name=item["name"],
-                                    price=item_prices_by_id.get(item["item_id"]),
-                                    required_badges=None,
-                                )
-                                for item in catalog_shop["items"]
-                            ),
-                            name=catalog_shop["name"],
-                            is_main_game=catalog_shop["is_main_game"],
-                            selector_id=dispatch.selector_id,
-                            mode=dispatch.mode,
-                            inventory_source="rom-catalog",
-                        )
-                    )
-            for furniture in engine.parse_overworld_furniture(overworld_data):
-                item_id = engine.resolve_hidden_item_id(
-                    furniture, item_count=item_count
-                )
-                if item_id is None or item_id not in item_names_by_id:
-                    continue
-                items.append(
-                    LocationItem(
-                        item_id=item_id,
-                        name=item_names_by_id[item_id],
-                        kind="hidden",
-                        event_index=furniture.index,
-                        x=furniture.x,
-                        z=furniture.y,
-                        y=furniture.z,
-                        hidden_flag=None,
-                    )
-                )
-        resolve_location_vendors = getattr(
-            engine, "resolve_location_special_vendors", None
+        unsupported_shop_selectors: list[int] = []
+    else:
+        shops, seen_vendor_ids, unsupported_shop_selectors = _extract_gen5_script_shops(
+            source, catalogs, script_file_id
         )
-        if resolve_location_vendors is not None:
-            for special_vendor in resolve_location_vendors(header.header_id):
-                if (
-                    special_vendor.vendor_id is not None
-                    and special_vendor.vendor_id in seen_vendor_ids
-                ):
-                    continue
+    shops.extend(
+        _extract_gen5_location_vendors(
+            source.engine,
+            header.header_id,
+            catalogs.item_names_by_id,
+            script_file_id,
+            seen_vendor_ids,
+        )
+    )
+    warps = _extract_gen5_location_warps(source, overworld_data, headers_by_id)
+    return (
+        replace(
+            header,
+            section_name=section_name,
+            section_name_source=section_name_source,
+            trainers=tuple(relationships.trainers_by_header.get(header.header_id, ())),
+            warps=tuple(warps),
+            static_encounters=tuple(
+                relationships.static_encounters_by_header.get(header.header_id, ())
+            ),
+            connections=tuple(
+                relationships.connections_by_header.get(header.header_id, ())
+            ),
+            items=tuple(items),
+            shops=tuple(shops),
+            npc_trades=tuple(
+                relationships.npc_trades_by_header.get(header.header_id, ())
+            ),
+        ).to_dict(),
+        unsupported_shop_selectors,
+    )
+
+
+def _read_overworld_data(
+    source: _ArchiveLocationSource, header_id: int
+) -> bytes | None:
+    if (
+        header_id >= len(source.overworld_objects.members)
+        or header_id in source.unused_overworld_members
+    ):
+        return None
+    return source.overworld_objects.read(header_id)
+
+
+def _extract_gen5_field_items(
+    engine: Any,
+    overworld_data: bytes,
+    catalogs: _ArchiveLocationCatalogs,
+) -> list[LocationItem]:
+    items = []
+    for npc in engine.parse_overworld_npcs(overworld_data):
+        item_id = engine.resolve_visible_item_id(npc, item_count=catalogs.item_count)
+        if item_id is None or item_id not in catalogs.item_names_by_id:
+            continue
+        items.append(
+            LocationItem(
+                item_id=item_id,
+                name=catalogs.item_names_by_id[item_id],
+                kind="visible",
+                event_index=npc.index,
+                x=npc.x,
+                z=npc.y,
+                y=npc.z,
+                hidden_flag=None,
+            )
+        )
+    for furniture in engine.parse_overworld_furniture(overworld_data):
+        item_id = engine.resolve_hidden_item_id(
+            furniture, item_count=catalogs.item_count
+        )
+        if item_id is None or item_id not in catalogs.item_names_by_id:
+            continue
+        items.append(
+            LocationItem(
+                item_id=item_id,
+                name=catalogs.item_names_by_id[item_id],
+                kind="hidden",
+                event_index=furniture.index,
+                x=furniture.x,
+                z=furniture.y,
+                y=furniture.z,
+                hidden_flag=None,
+            )
+        )
+    return items
+
+
+def _extract_gen5_script_shops(
+    source: _ArchiveLocationSource,
+    catalogs: _ArchiveLocationCatalogs,
+    script_file_id: int,
+) -> tuple[list[LocationShop], set[str], list[int]]:
+    shops = []
+    seen_vendor_ids: set[str] = set()
+    unsupported_shop_selectors = []
+    if script_file_id >= len(source.scripts.members):
+        return shops, seen_vendor_ids, unsupported_shop_selectors
+
+    script = source.scripts.read(script_file_id)
+    seen_dispatches = set()
+    for function_offset in source.engine.parse_function_offsets(script):
+        dispatch = source.engine.parse_shop_dispatch(script, function_offset)
+        if dispatch is None:
+            continue
+        dispatch_key = (dispatch.selector_id, dispatch.command_offset)
+        if dispatch_key in seen_dispatches:
+            continue
+        seen_dispatches.add(dispatch_key)
+        inventory_id = source.engine.SHOP_SELECTOR_TO_INVENTORY_ID.get(
+            dispatch.selector_id
+        )
+        if inventory_id is not None:
+            catalog_shop = catalogs.shops_by_id.get(inventory_id)
+            if catalog_shop is not None:
+                shops.append(
+                    _build_gen5_catalog_shop(
+                        catalog_shop,
+                        catalogs.item_prices_by_id,
+                        inventory_id=inventory_id,
+                        script_file_id=script_file_id,
+                        dispatch=dispatch,
+                    )
+                )
+            continue
+
+        special_vendor = source.engine.resolve_special_vendor(dispatch.selector_id)
+        if special_vendor is not None:
+            if (
+                special_vendor.vendor_id is None
+                or special_vendor.vendor_id not in seen_vendor_ids
+            ):
                 shops.append(
                     _build_gen5_special_vendor_shop(
                         special_vendor,
-                        item_names_by_id,
+                        catalogs.item_names_by_id,
                         script_file_id=script_file_id,
-                        command_offset=-1,
+                        command_offset=dispatch.command_offset,
+                        selector_id=dispatch.selector_id,
+                        mode=dispatch.mode,
                     )
                 )
                 if special_vendor.vendor_id is not None:
                     seen_vendor_ids.add(special_vendor.vendor_id)
-        warps = []
-        if (
-            header.header_id < len(overworld_objects.members)
-            and header.header_id not in unused_overworld_members
-        ):
-            raw_warps = engine.parse_overworld_warps(
-                overworld_objects.read(header.header_id)
+            continue
+        if dispatch.selector_id != source.engine.STANDARD_SHOP_SELECTOR:
+            unsupported_shop_selectors.append(dispatch.selector_id)
+            continue
+        shops.append(
+            LocationShop(
+                kind="common",
+                currency="money",
+                inventory_id=dispatch.selector_id,
+                script_file_id=script_file_id,
+                command_offset=dispatch.command_offset,
+                items=(),
+                name="Standard Poké Mart",
+                is_main_game=True,
+                selector_id=dispatch.selector_id,
+                mode=dispatch.mode,
+                dynamic=True,
+                inventory_source="runtime",
+                availability="Stock changes with badge progression.",
             )
-            for warp in raw_warps:
-                if warp.destination_header_id not in headers_by_id:
-                    warps.append(
-                        LocationWarp(
-                            index=warp.index,
-                            x=warp.x,
-                            z=warp.z,
-                            destination_header_id=None,
-                            destination_warp_id=None,
-                            destination_name=None,
-                            destination_internal_name=None,
-                            destination_warp_exists=None,
-                            dynamic=True,
-                        )
-                    )
-                    continue
-                destination = headers_by_id[warp.destination_header_id]
-                destination_warp_count = len(
-                    engine.parse_overworld_warps(
-                        overworld_objects.read(destination.header_id)
-                        if destination.header_id not in unused_overworld_members
-                        else b""
-                    )
-                )
-                warps.append(
-                    LocationWarp(
-                        index=warp.index,
-                        x=warp.x,
-                        z=warp.z,
-                        destination_header_id=destination.header_id,
-                        destination_warp_id=(
-                            warp.destination_warp_id
-                            if getattr(engine, "WARP_DESTINATION_INDEXED", True)
-                            else None
-                        ),
-                        destination_name=destination.name,
-                        destination_internal_name=f"map_{destination.header_id}",
-                        destination_warp_exists=(
-                            0 <= warp.destination_warp_id < destination_warp_count
-                            if getattr(engine, "WARP_DESTINATION_INDEXED", True)
-                            else None
-                        ),
-                        dynamic=False,
-                    )
-                )
-        records.append(
-            replace(
-                header,
-                section_name=section_name,
-                section_name_source=section_name_source,
-                trainers=tuple(trainers_by_header.get(header.header_id, ())),
-                warps=tuple(warps),
-                static_encounters=tuple(
-                    static_encounters_by_header.get(header.header_id, ())
-                ),
-                connections=tuple(connections_by_header.get(header.header_id, ())),
-                items=tuple(items),
-                shops=tuple(shops),
-                npc_trades=tuple(npc_trades_by_header.get(header.header_id, ())),
-            ).to_dict()
         )
+    return shops, seen_vendor_ids, unsupported_shop_selectors
+
+
+def _build_gen5_catalog_shop(
+    catalog_shop: dict[str, Any],
+    item_prices_by_id: dict[int, int | None],
+    *,
+    inventory_id: int,
+    script_file_id: int,
+    dispatch: Any,
+) -> LocationShop:
+    return LocationShop(
+        kind=catalog_shop["kind"],
+        currency="money",
+        inventory_id=inventory_id,
+        script_file_id=script_file_id,
+        command_offset=dispatch.command_offset,
+        items=tuple(
+            LocationShopItem(
+                item_id=item["item_id"],
+                name=item["name"],
+                price=item_prices_by_id.get(item["item_id"]),
+                required_badges=None,
+            )
+            for item in catalog_shop["items"]
+        ),
+        name=catalog_shop["name"],
+        is_main_game=catalog_shop["is_main_game"],
+        selector_id=dispatch.selector_id,
+        mode=dispatch.mode,
+        inventory_source="rom-catalog",
+    )
+
+
+def _extract_gen5_location_vendors(
+    engine: Any,
+    header_id: int,
+    item_names_by_id: dict[int, str],
+    script_file_id: int,
+    seen_vendor_ids: set[str],
+) -> list[LocationShop]:
+    resolve_location_vendors = getattr(engine, "resolve_location_special_vendors", None)
+    if resolve_location_vendors is None:
+        return []
+
+    shops = []
+    for special_vendor in resolve_location_vendors(header_id):
+        if (
+            special_vendor.vendor_id is not None
+            and special_vendor.vendor_id in seen_vendor_ids
+        ):
+            continue
+        shops.append(
+            _build_gen5_special_vendor_shop(
+                special_vendor,
+                item_names_by_id,
+                script_file_id=script_file_id,
+                command_offset=-1,
+            )
+        )
+        if special_vendor.vendor_id is not None:
+            seen_vendor_ids.add(special_vendor.vendor_id)
+    return shops
+
+
+def _extract_gen5_location_warps(
+    source: _ArchiveLocationSource,
+    overworld_data: bytes | None,
+    headers_by_id: dict[int, Any],
+) -> list[LocationWarp]:
+    if overworld_data is None:
+        return []
+
+    warps = []
+    for warp in source.engine.parse_overworld_warps(overworld_data):
+        if warp.destination_header_id not in headers_by_id:
+            warps.append(
+                LocationWarp(
+                    index=warp.index,
+                    x=warp.x,
+                    z=warp.z,
+                    destination_header_id=None,
+                    destination_warp_id=None,
+                    destination_name=None,
+                    destination_internal_name=None,
+                    destination_warp_exists=None,
+                    dynamic=True,
+                )
+            )
+            continue
+        destination = headers_by_id[warp.destination_header_id]
+        destination_warp_count = len(
+            source.engine.parse_overworld_warps(
+                source.overworld_objects.read(destination.header_id)
+                if destination.header_id not in source.unused_overworld_members
+                else b""
+            )
+        )
+        destination_indexed = getattr(source.engine, "WARP_DESTINATION_INDEXED", True)
+        warps.append(
+            LocationWarp(
+                index=warp.index,
+                x=warp.x,
+                z=warp.z,
+                destination_header_id=destination.header_id,
+                destination_warp_id=(
+                    warp.destination_warp_id if destination_indexed else None
+                ),
+                destination_name=destination.name,
+                destination_internal_name=f"map_{destination.header_id}",
+                destination_warp_exists=(
+                    0 <= warp.destination_warp_id < destination_warp_count
+                    if destination_indexed
+                    else None
+                ),
+                dynamic=False,
+            )
+        )
+    return warps
+
+
+def _build_archive_location_envelope(
+    source: _ArchiveLocationSource,
+    records: list[dict[str, Any]],
+    unsupported_shop_selectors: list[int],
+) -> dict[str, Any]:
     return {
         "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
+        "game": source.profile.id,
+        "engine": source.profile.engine,
         "dataset": "locations",
         "record_count": len(records),
         "encounter_reference_count": sum(
@@ -424,13 +633,16 @@ def extract_archive_encounter_map_location_dataset(
             len(record["connections"]) for record in records
         ),
         "source": {
-            "rom_sha256": result.image.hashes.sha256,
-            "map_headers_archive": map_headers_path,
-            "overworld_objects_archive": overworld_objects_path,
-            "unused_overworld_members": sorted(unused_overworld_members),
-            "map_matrices_archive": map_matrices_path,
-            "scripts_archive": scripts_path,
-            "map_names": {"archive": messages_path, "member": map_names_member},
+            "rom_sha256": source.rom_sha256,
+            "map_headers_archive": source.map_headers_path,
+            "overworld_objects_archive": source.overworld_objects_path,
+            "unused_overworld_members": sorted(source.unused_overworld_members),
+            "map_matrices_archive": source.map_matrices_path,
+            "scripts_archive": source.scripts_path,
+            "map_names": {
+                "archive": source.messages_path,
+                "member": source.map_names_member,
+            },
         },
         "records": records,
     }
