@@ -9,6 +9,7 @@ from romwiki.renderers.mkdocs.components import (
     badge_requirement,
     display_name,
     escape_table_cell,
+    markdown_section,
     markdown_table,
     reference_sprite_cell,
     reference_type_cell,
@@ -322,22 +323,23 @@ def append_warps(
     if not warps:
         return
     lines.extend(
-        [
-            "## Warps",
-            "",
-            *(
-                [
-                    "Dynamic destination means the ROM does not store one fixed "
-                    "destination header or destination warp for that row. The em "
-                    "dashes are explicit unavailable values, not missing cells.",
-                    "",
-                ]
-                if any(warp["dynamic"] for warp in warps)
-                else []
-            ),
-            "| Warp | Position | Destination | Destination map header | Destination warp |",
-            "| ---: | -------- | ----------- | ---------------------- | ---------------: |",
-        ]
+        markdown_section(
+            "Warps",
+            [
+                *(
+                    [
+                        "Dynamic destination means the ROM does not store one fixed "
+                        "destination header or destination warp for that row. The em "
+                        "dashes are explicit unavailable values, not missing cells.",
+                        "",
+                    ]
+                    if any(warp["dynamic"] for warp in warps)
+                    else []
+                ),
+                "| Warp | Position | Destination | Destination map header | Destination warp |",
+                "| ---: | -------- | ----------- | ---------------------- | ---------------: |",
+            ],
+        )
     )
     for warp in warps:
         if warp["dynamic"]:

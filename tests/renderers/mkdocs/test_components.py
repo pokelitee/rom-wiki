@@ -14,6 +14,7 @@ from romwiki.renderers.mkdocs.components import (
     effectiveness_value,
     evolution_condition,
     fact_grid,
+    markdown_section,
     markdown_table,
     markdown_table_from_cells,
     record_nav_link,
@@ -190,6 +191,32 @@ class MarkdownTableTests(unittest.TestCase):
                 (MarkdownColumn("Name"), MarkdownColumn("Value")),
                 (("Bulbasaur",),),
             )
+
+
+class MarkdownSectionTests(unittest.TestCase):
+    def test_frames_pre_rendered_body_without_rewriting_it(self) -> None:
+        lines = markdown_section(
+            "Details",
+            ("Raw **Markdown** and <span>HTML</span>.", ""),
+            level=3,
+        )
+
+        self.assertEqual(
+            lines,
+            [
+                "### Details",
+                "",
+                "Raw **Markdown** and <span>HTML</span>.",
+                "",
+            ],
+        )
+
+    def test_empty_body_keeps_heading_separation(self) -> None:
+        self.assertEqual(markdown_section("Details", ()), ["## Details", ""])
+
+    def test_rejects_invalid_heading_level(self) -> None:
+        with self.assertRaisesRegex(ValueError, "between 1 and 6"):
+            markdown_section("Details", (), level=7)
 
 
 class MoveReferenceSectionTests(unittest.TestCase):

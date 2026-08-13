@@ -511,6 +511,15 @@ def markdown_table(header_lines: Iterable[str], row_lines: Iterable[str]) -> lis
     return [*header_lines, *row_lines, ""]
 
 
+def markdown_section(
+    title: str, body_lines: Iterable[str], *, level: int = 2
+) -> list[str]:
+    """Frame an already-rendered section body with a heading and blank line."""
+    if not 1 <= level <= 6:
+        raise ValueError("Markdown heading level must be between 1 and 6")
+    return [f"{'#' * level} {title}", "", *body_lines]
+
+
 @dataclass(frozen=True, slots=True)
 class MarkdownColumn:
     label: str
