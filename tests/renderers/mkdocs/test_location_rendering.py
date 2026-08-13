@@ -395,7 +395,8 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("## In-game trades", page)
         self.assertIn("| Black |", page)
 
-    def test_renders_navigation_encounters_and_trainers(self) -> None:
+    @staticmethod
+    def _render_feature_rich_location() -> tuple[int, bool, str, dict]:
         record = {
             "header_id": 45,
             "internal_name": "C03",
@@ -618,9 +619,15 @@ class LocationRenderingTests(unittest.TestCase):
             )
             page = (output / "header-045.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            stale_page_removed = not stale_page.exists()
+
+        return count, stale_page_removed, page, catalog
+
+    def test_renders_location_summary_and_catalog(self) -> None:
+        count, stale_page_removed, page, catalog = self._render_feature_rich_location()
 
         self.assertEqual(count, 1)
-        self.assertFalse(stale_page.exists())
+        self.assertTrue(stale_page_removed)
         self.assertIn("# Oreburgh City", page)
         self.assertIn("<dt>Location</dt><dd>Oreburgh City</dd>", page)
         self.assertIn("profile `example-platinum-hack`, key `C03`", page)
@@ -635,6 +642,12 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn('<a href="#shops">2</a>', page)
         self.assertNotIn("In-game trades", page)
         self.assertIn("../trainers/trainer-0246.md", page)
+        self.assertEqual(catalog["kind"], "locations")
+        self.assertIn("shops", catalog["records"][0]["features"])
+
+    def test_renders_location_items_shops_and_encounters(self) -> None:
+        _, _, page, _ = self._render_feature_rich_location()
+
         self.assertIn(
             '| Visible | <span class="rw-cell-media">'
             '<img class="rw-table-sprite" src="https://example.test/potion.png" '
@@ -674,6 +687,17 @@ class LocationRenderingTests(unittest.TestCase):
             "[Rotom](../pokemon/rotom.md)</span> | — | 20 | `WildBattle` |",
             page,
         )
+        self.assertIn("## Game Corner prizes", page)
+        self.assertIn("[Potion](../items/potion.md)</span> | 17 | 1,000 coins |", page)
+        self.assertIn('<a href="#game-corner-prizes">1</a>', page)
+        self.assertIn(
+            "[Togepi](../pokemon/togepi.md)</span> | — |",
+            page,
+        )
+
+    def test_renders_location_navigation_and_map_metadata(self) -> None:
+        _, _, page, _ = self._render_feature_rich_location()
+
         self.assertIn("header-047.md", page)
         self.assertIn(
             "| Warp | Position | Destination | Destination map header | Destination warp |",
@@ -689,8 +713,10 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Music ID | day `1103`, night `1119` |", page)
         self.assertIn("| Weather ID | `0` |", page)
         self.assertIn("| Map flags | `0x0304` |", page)
-        self.assertEqual(catalog["kind"], "locations")
-        self.assertIn("shops", catalog["records"][0]["features"])
+
+    def test_renders_location_special_mechanics(self) -> None:
+        _, _, page, catalog = self._render_feature_rich_location()
+
         self.assertIn("roaming", catalog["records"][0]["features"])
         self.assertIn("honey tree", catalog["records"][0]["features"])
         self.assertIn("daily rotation", catalog["records"][0]["features"])
@@ -702,14 +728,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("**Rare:**", page)
         self.assertIn("## Trophy Garden daily rotation", page)
         self.assertNotIn("After National Dex", page)
-        self.assertIn("## Game Corner prizes", page)
-        self.assertIn("[Potion](../items/potion.md)</span> | 17 | 1,000 coins |", page)
-        self.assertIn('<a href="#game-corner-prizes">1</a>', page)
         self.assertIn("game corner", catalog["records"][0]["features"])
-        self.assertIn(
-            "[Togepi](../pokemon/togepi.md)</span> | — |",
-            page,
-        )
 
     def test_keeps_coordinate_based_destination_warp_in_its_column(self) -> None:
         lines: list[str] = []

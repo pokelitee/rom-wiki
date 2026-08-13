@@ -1,3 +1,8 @@
+from romwiki.engines.gen5.script_disassembler import (
+    disassemble_function,
+    parse_function_offsets,
+)
+
 from .battle_variants import resolve_trainer_variants
 from .constants import (
     ABILITY_NAME_COUNT,
@@ -24,7 +29,6 @@ from .constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
-from .disassembler import disassemble_function, parse_function_offsets
 from .egg_moves import parse_egg_move_set
 from .encounters import (
     METHOD_NAMES as ENCOUNTER_METHOD_NAMES,

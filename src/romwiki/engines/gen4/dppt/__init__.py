@@ -18,10 +18,59 @@ from romwiki.engines.gen4.constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
+from romwiki.engines.gen4.egg_moves import (
+    EGG_MOVE_SPECIES_MARKER_BASE,
+    EGG_MOVE_TABLE_TERMINATOR,
+    parse_egg_move_table,
+)
+from romwiki.engines.gen4.events import (
+    Gen4BackgroundEvent,
+    Gen4MapEvents,
+    Gen4ObjectEvent,
+    Gen4WarpEvent,
+    parse_map_events,
+    parse_object_events,
+    parse_warp_events,
+    resolve_hidden_item_id,
+    resolve_visible_item_id,
+)
+from romwiki.engines.gen4.evolutions import (
+    EVOLUTION_RECORD_SIZE,
+    EVOLUTION_SLOT_COUNT,
+    EVOLUTION_SLOT_SIZE,
+    parse_evolution_record,
+)
+from romwiki.engines.gen4.items import (
+    GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE,
+    GEN4_ITEM_FIELD_USE_NAMES,
+    GEN4_ITEM_POCKET_NAMES,
+    GEN4_ITEM_RECORD_SIZE,
+    find_item_archive_members,
+    parse_item_record,
+)
+from romwiki.engines.gen4.learnsets import (
+    LEARNSET_TERMINATOR,
+    LEVEL_SHIFT,
+    MOVE_ID_MASK,
+    parse_level_up_learnset,
+)
 from romwiki.engines.gen4.machines import (
     GEN4_MACHINE_COUNT,
     GEN4_TM_COUNT,
     machine_name,
+    parse_machine_move_table,
+)
+from romwiki.engines.gen4.map_matrices import Gen4MapMatrix, parse_map_matrix
+from romwiki.engines.gen4.messages import parse_english_message_archive
+from romwiki.engines.gen4.moves import MOVE_RECORD_SIZE, parse_move_record
+from romwiki.engines.gen4.personal import (
+    GEN4_BASE_SPECIES_COUNT,
+    PERSONAL_FORM_MEMBERS,
+    PERSONAL_INTERNAL_MEMBERS,
+    PERSONAL_RECORD_SIZE,
+    TRAINER_COSMETIC_FORM_LABELS,
+    TRAINER_FORM_SLUGS,
+    parse_personal_record,
 )
 from romwiki.engines.gen4.starter_branches import (
     GET_STARTER_SPECIES,
@@ -33,6 +82,18 @@ from romwiki.engines.gen4.starter_branches import (
 from romwiki.engines.gen4.starter_species import (
     STARTER_SPECIES_ENTRY_SIZE,
     parse_starter_species,
+)
+from romwiki.engines.gen4.trainer_party import (
+    derive_trainer_party_attributes,
+    normalize_trainer_party_member,
+)
+from romwiki.engines.gen4.trainers import (
+    TRAINER_RECORD_SIZE,
+    parse_trainer_class_genders,
+    parse_trainer_record,
+)
+from romwiki.engines.gen4.trainers import (
+    parse_trainer_class_prize_multipliers as parse_trainer_class_prize_multipliers,
 )
 
 from .battle_variants import resolve_trainer_variants
@@ -62,11 +123,6 @@ from .constants import (
     PLATINUM_ROAMING_SLOT_SPECIES_IDS,
     PLATINUM_TROPHY_GARDEN_HEADER_ID,
 )
-from .egg_moves import (
-    EGG_MOVE_SPECIES_MARKER_BASE,
-    EGG_MOVE_TABLE_TERMINATOR,
-    parse_egg_move_table,
-)
 from .encounters import (
     DUAL_SLOT_GAMES,
     ENCOUNTER_RECORD_SIZES,
@@ -81,23 +137,6 @@ from .encounters import (
     GEN4_WALKING_SLOT_CHANCES,
     GEN4_WATER_SLOT_CHANCES,
     parse_encounter_record,
-)
-from .events import (
-    Gen4BackgroundEvent,
-    Gen4MapEvents,
-    Gen4ObjectEvent,
-    Gen4WarpEvent,
-    parse_map_events,
-    parse_object_events,
-    parse_warp_events,
-    resolve_hidden_item_id,
-    resolve_visible_item_id,
-)
-from .evolutions import (
-    EVOLUTION_RECORD_SIZE,
-    EVOLUTION_SLOT_COUNT,
-    EVOLUTION_SLOT_SIZE,
-    parse_evolution_record,
 )
 from .fossils import (
     Gen4FossilRevival,
@@ -116,29 +155,11 @@ from .gifts import (
     parse_egg_gift_commands,
     parse_pokemon_gift_commands,
 )
-from .items import (
-    GEN4_ITEM_ARCHIVE_MAP_RECORD_SIZE,
-    GEN4_ITEM_FIELD_USE_NAMES,
-    GEN4_ITEM_POCKET_NAMES,
-    GEN4_ITEM_RECORD_SIZE,
-    find_item_archive_members,
-    parse_item_record,
-)
-from .learnsets import (
-    LEARNSET_TERMINATOR,
-    LEVEL_SHIFT,
-    MOVE_ID_MASK,
-    parse_level_up_learnset,
-)
-from .machines import (
-    parse_machine_move_table,
-)
 from .map_headers import (
     MAP_HEADER_SIZE,
     PlatinumMapHeader,
     parse_platinum_map_headers,
 )
-from .map_matrices import Gen4MapMatrix, parse_map_matrix
 from .marts import (
     COMMON_MART_COMMAND,
     DECORATION_MART_COMMAND,
@@ -158,17 +179,6 @@ from .marts import (
     parse_seal_price_table,
     parse_specialty_mart_inventories,
     shop_schedule_label,
-)
-from .messages import parse_english_message_archive
-from .moves import MOVE_RECORD_SIZE, parse_move_record
-from .personal import (
-    GEN4_BASE_SPECIES_COUNT,
-    PERSONAL_FORM_MEMBERS,
-    PERSONAL_INTERNAL_MEMBERS,
-    PERSONAL_RECORD_SIZE,
-    TRAINER_COSMETIC_FORM_LABELS,
-    TRAINER_FORM_SLUGS,
-    parse_personal_record,
 )
 from .pickup import (
     PICKUP_COMMON_ITEM_COUNT,
@@ -206,18 +216,6 @@ from .trades import (
     parse_npc_trade_commands,
     parse_npc_trade_record,
     trade_language_name,
-)
-from .trainer_party import (
-    derive_trainer_party_attributes,
-    normalize_trainer_party_member,
-)
-from .trainers import (
-    TRAINER_RECORD_SIZE,
-    parse_trainer_class_genders,
-    parse_trainer_record,
-)
-from .trainers import (
-    parse_trainer_class_prize_multipliers as parse_trainer_class_prize_multipliers,
 )
 from .tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,

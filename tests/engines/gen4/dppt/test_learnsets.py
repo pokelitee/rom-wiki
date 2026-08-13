@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt.learnsets import parse_level_up_learnset
+from romwiki.engines.gen4.learnsets import parse_level_up_learnset
 from romwiki.util.errors import InvalidRomError
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
+from romwiki.engines.gen5.script_disassembler import disassemble_function
 from romwiki.engines.gen5.vendors import (
     Gen5SpecialVendor,
     Gen5SpecialVendorItem,
@@ -10,8 +11,6 @@ from romwiki.engines.gen5.vendors import (
 )
 from romwiki.schema import RecordProvenance, Shop
 from romwiki.util.byte_search import find_unique_pattern
-
-from .disassembler import disassemble_function
 
 # `ShopItemOffsets`/`ShopItemSizes` (gen5_offsets.ini, `[Black (U)]`/
 # `[White (U)]`): one persistent item list per location-specific shop,

@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from romwiki.engines.gen5.script_disassembler import (
+    Gen5Instruction,
+    disassemble_script,
+)
 from romwiki.schema import RecordProvenance, StaticEncounter
 from romwiki.util.errors import InvalidRomError
 
-from .disassembler import Gen5Instruction, disassemble_script
 from .scripts import FOSSIL_SPECIES_VARIABLE, find_fossil_revival_script
 
 

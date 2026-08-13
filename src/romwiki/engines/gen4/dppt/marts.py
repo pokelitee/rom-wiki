@@ -3,9 +3,9 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
+from romwiki.engines.gen4.items import GEN4_ITEM_RECORD_SIZE
 from romwiki.util.errors import InvalidRomError
 
-from .items import GEN4_ITEM_RECORD_SIZE
 from .scripts import parse_script_table
 
 COMMON_MART_COMMAND = 0x0147
