@@ -39,6 +39,19 @@ happens at all. Both HGSS items are gated behind decoding its opcode set first.
 - Decode the phone-rematch tables and their state machines. Expect the table to
   be tractable and the surrounding state machine not to be.
 
+Statistical opcode search does not work here and should not be retried as-is.
+Every HGSS trainer record has a party, so "operand is a valid trainer" is barely
+stronger than "operand is a small number", and precision ranking returns a dozen
+near-tied candidates. The best-looking one, `0x02EF` — 616 sites, 273 distinct
+trainer operands, spread across the whole ID range — is **not** the battle
+command: its sites split 333/283 across odd and even alignment relative to the
+code offset, its second operand is `0xFF` in 542 of 616 cases, and its
+"follow-on opcode" histogram descends `0, 1, 2, 3, …`. Those are byte
+coincidences inside data, found by scanning unaligned over a large corpus.
+
+Identifying the command requires HGSS's actual script command table, which means
+disassembling its script interpreter rather than searching its scripts.
+
 ## 3. Open, unblocked
 
 ### BW rematch selectors
