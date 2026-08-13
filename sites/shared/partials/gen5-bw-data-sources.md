@@ -333,12 +333,20 @@ trainer battle trigger without a full script-engine disassembly:
   "opcode signature + validating follow-on command" technique this
   project's Generation IV engine already uses for Platinum's
   `StartTrainerBattle`. The opcode table itself (`CallTrainerBattle` =
-  `0x0085`, followed in every real occurrence by `TrainerBattleIsVictory` =
-  `0x008D`) is adopted from FrostFalcon/FrostsGen5Editor, an actively
+  `0x0085`) is adopted from FrostFalcon/FrostsGen5Editor, an actively
   maintained community Gen V ROM editor, and independently cross-checked
   against real ROM bytes (walking a known static-encounter script from its
   own function-table start lands byte-exact on the already-verified
-  Magikarp species fact).
+  Magikarp species fact). The follow-on command is validated against a
+  verified set rather than against `TrainerBattleIsVictory` alone: 17 of the
+  130 sites with valid trainer operands handle their own result instead, and
+  those are almost entirely the rival battles, whose records this engine's
+  independently verified Cheren, Bianca, and N families already contain.
+  Requiring the win check alone left every one of those battles unlinked.
+  Black and Blaze Black agree exactly on the set, and each newly resolved
+  battle lands on the map its curated family already names — the Nuvema Town
+  opening battles in Nuvema Town, the Route 5, Route 8, and Route 2 rival
+  battles on those routes, and the Nuvema Town rematch on its own later map.
 
 Both mechanisms resolve trainer IDs to real trainer records only -- battles
 whose ID doesn't resolve are left unlinked rather than guessed at. Verified

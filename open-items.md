@@ -97,9 +97,20 @@ disassembling its script interpreter rather than searching its scripts.
 
 ### BW rematch selectors
 
-Unscoped. "Decode each additional selector" never names them; needs a survey
-before it can be estimated. Inherited behaviour in Blaze Black/Volt White must
-be verified before its coverage is described as complete.
+Now scoped. Surveying same class+name records whose parties strictly escalate
+gives 13 candidate groups, 12 of them outside any existing family. The clearest
+are the Elite Four pairs `229`/`564`, `230`/`565`, `231`/`566`, then the three
+Backers trios, Infielder Alex (`321, 192, 322, 323`) and Ace Trainer Elmer
+(`607`/`608`).
+
+Every one of those records is already reachable and linked; what is missing is a
+selector *relating* a first battle to its rematch, exactly as for the DPPT Elite
+Four. Candidate identification alone must not assign a Rematch label, so none is
+published. The follow-on relaxation below linked the remaining rival battles but
+did not create any new family.
+
+Inherited behaviour in Blaze Black/Volt White is verified for the link scan
+(both ROMs agree exactly) but not yet for any new family.
 
 ### DPPT groups with no ROM evidence
 

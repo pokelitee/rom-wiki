@@ -24,6 +24,24 @@ START_TRAINER_BATTLE = 0x0085
 START_TRAINER_MULTI_BATTLE = 0x0086
 CHECK_TRAINER_BATTLE_WON = 0x008D
 
+# The "always followed by TrainerBattleIsVictory" claim above held for the 12
+# samples it was drawn from, but not for the ROM as a whole: 17 of the 130
+# sites with valid trainer operands are followed by something else, and those
+# are not noise. They are almost entirely the rival battles -- Cheren (53, 54,
+# 55, 594), Bianca (59, 60, 61, 494, 495, 595) and N (90) -- trainer records
+# that this engine's independently verified Cheren/Bianca/N families already
+# contain, which a false positive would not manage. Requiring the win check
+# therefore dropped whole battle categories, exactly as the equivalent rule did
+# for Platinum in `gen4/dppt/scripts.py`.
+#
+# Black and Blaze Black agree exactly on this set (130 and 131 sites, the same
+# six follow-on commands in the same proportions), so it is verified rather than
+# fitted to one ROM. A profile whose scripts use some further follow-on loses
+# that link rather than gaining a wrong one, which is the safe direction.
+BATTLE_RESULT_COMMANDS = frozenset(
+    {CHECK_TRAINER_BATTLE_WON, 0x001E, 0x0019, 0x006C, 0x008E, 0x0028}
+)
+
 
 @dataclass(frozen=True, slots=True)
 class Gen5TrainerBattleCommand:
@@ -45,11 +63,11 @@ def parse_trainer_battle_commands(
     commands = []
     single_signature = struct.pack("<H", START_TRAINER_BATTLE)
     multi_signature = struct.pack("<H", START_TRAINER_MULTI_BATTLE)
-    win_check = struct.pack("<H", CHECK_TRAINER_BATTLE_WON)
 
     for offset in range(0, len(data) - 9):
         if data[offset : offset + 2] == single_signature:
-            if data[offset + 8 : offset + 10] != win_check:
+            follow_on = struct.unpack_from("<H", data, offset + 8)[0]
+            if follow_on not in BATTLE_RESULT_COMMANDS:
                 continue
             first_trainer, second_trainer, _flags = struct.unpack_from(
                 "<HHH", data, offset + 2
@@ -65,7 +83,10 @@ def parse_trainer_battle_commands(
                 Gen5TrainerBattleCommand(offset=offset, trainer_ids=trainer_ids)
             )
         elif data[offset : offset + 2] == multi_signature:
-            if offset + 12 > len(data) or data[offset + 10 : offset + 12] != win_check:
+            if offset + 12 > len(data):
+                continue
+            follow_on = struct.unpack_from("<H", data, offset + 10)[0]
+            if follow_on not in BATTLE_RESULT_COMMANDS:
                 continue
             ally, first_trainer, second_trainer, _flags = struct.unpack_from(
                 "<HHHH", data, offset + 2
