@@ -152,6 +152,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    _add_inspect_parser(subparsers)
+    _add_extract_parser(subparsers)
+    _add_build_parser(subparsers)
+    _add_regenerate_parser(subparsers)
+    _add_baseline_parser(subparsers)
+    _add_site_parser(subparsers)
+    return parser
+
+
+def _add_inspect_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     inspect_parser = subparsers.add_parser("inspect", help="identify a ROM image")
     _add_input_arguments(inspect_parser)
     inspect_parser.add_argument("--json", action="store_true", help="emit JSON")
@@ -161,6 +173,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="write a versioned input manifest to this path",
     )
 
+
+def _add_extract_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     extract_parser = subparsers.add_parser(
         "extract", help="write one normalized single-ROM audit dataset"
     )
@@ -194,6 +210,10 @@ def build_parser() -> argparse.ArgumentParser:
             ),
         )
 
+
+def _add_build_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     build_group_parser = subparsers.add_parser(
         "build", help="build one section, game, or sibling-version family"
     )
@@ -312,6 +332,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_dev_argument(family_parser)
     _add_cache_argument(family_parser)
 
+
+def _add_regenerate_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     regenerate_parser = subparsers.add_parser(
         "regenerate",
         help="regenerate selected game data, build sites, and audit the artifact",
@@ -370,6 +394,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_jobs_argument(regenerate_parser)
     _add_site_root_argument(regenerate_parser)
 
+
+def _add_baseline_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     baseline_parser = subparsers.add_parser(
         "baseline", help="manage clean-ROM baseline caches"
     )
@@ -402,6 +430,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     baseline_build_parser.add_argument("--refresh", action="store_true")
 
+
+def _add_site_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     site_parser = subparsers.add_parser(
         "site", help="list, build, serve, audit, snapshot, and restore wiki sites"
     )
@@ -527,7 +559,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--site", action="append", default=[], help="restore only this site"
     )
     _add_site_root_argument(restore_parser)
-    return parser
 
 
 def _normalize_legacy_argv(
@@ -567,12 +598,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     normalized_argv, legacy_command = _normalize_legacy_argv(raw_argv)
     args = build_parser().parse_args(normalized_argv)
     configure_logging(verbose=args.verbose, quiet=args.quiet)
+    _warn_legacy_command(legacy_command)
+    _normalize_command(args)
+    try:
+        result = _inspect_command_input(args)
+        _dispatch_command(args, result)
+        return 0
+    except RomWikiError as error:
+        _LOG.error("%s", error)
+        return 2
+
+
+def _warn_legacy_command(legacy_command: str | None) -> None:
     if legacy_command is not None:
         _LOG.warning(
             "Command %s is deprecated; use %s",
             legacy_command,
             " ".join(_LEGACY_COMMANDS.get(legacy_command, ("inspect",))),
         )
+
+
+def _normalize_command(args: argparse.Namespace) -> None:
     if args.command == "extract":
         args.command = f"extract-{args.extract_kind}"
     elif args.command == "build":
@@ -581,261 +627,280 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.build_command == "family"
             else f"build-{args.build_command}"
         )
-    try:
-        # Every subcommand that needs a `result` below registers ROM input
-        # arguments via `_add_input_arguments`; keying off that attribute
-        # (rather than a hand-maintained command list) keeps this check in
-        # sync with the parser definitions by construction.
-        if hasattr(args, "rom_override"):
-            input_rom = _resolve_input_rom(args)
-            _LOG.info("ROM input: %s", input_rom)
-            with timed_operation(_LOG, "ROM inspection"):
-                result = inspect_rom(input_rom, args.profiles_dir)
-        if args.command == "inspect":
-            if args.manifest_output is not None:
-                write_manifest(create_manifest(result), args.manifest_output)
-                print(f"Wrote manifest: {args.manifest_output}")
-            if args.manifest_output is None or args.json:
-                _print_inspection(result, as_json=args.json)
-        elif args.command == "extract-personal":
-            dataset = extract_personal_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "pokemon" / "personal.json"
-            )
-            write_personal_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} personal records: {output}")
-        elif args.command == "extract-encounters":
-            dataset = extract_encounter_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "encounters" / "raw.json"
-            )
-            write_encounter_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} encounter records: {output}")
-        elif args.command == "extract-trainers":
-            dataset = extract_trainer_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "trainers" / "raw.json"
-            )
-            write_trainer_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} trainer records: {output}")
-        elif args.command == "extract-locations":
-            profile = result.match.profile
-            dataset = extract_location_dataset(
-                result,
-                trainer_dataset=(
-                    extract_trainer_dataset(result)
-                    if "trainer_data" in profile.layout
-                    else None
-                ),
-                static_encounter_dataset=(
-                    extract_static_encounter_dataset(result)
-                    if get_engine(profile.engine).formats.static_encounters != "none"
-                    else None
-                ),
-                item_dataset=extract_item_dataset(result),
-                mart_dataset=(
-                    extract_mart_dataset(result)
-                    if "shop_item_overlay_id" in profile.parameters
-                    or "shop_items" in profile.layout
-                    else None
-                ),
-                trade_dataset=(
-                    extract_npc_trade_dataset(result)
-                    if "npc_trades" in profile.layout
-                    else None
+
+
+def _inspect_command_input(args: argparse.Namespace) -> InspectionResult | None:
+    # Commands that need an inspection all register input arguments through
+    # `_add_input_arguments`, keeping this check aligned with parser construction.
+    if not hasattr(args, "rom_override"):
+        return None
+    input_rom = _resolve_input_rom(args)
+    _LOG.info("ROM input: %s", input_rom)
+    with timed_operation(_LOG, "ROM inspection"):
+        return inspect_rom(input_rom, args.profiles_dir)
+
+
+def _dispatch_command(
+    args: argparse.Namespace, result: InspectionResult | None
+) -> None:
+    if args.command == "inspect" or args.command.startswith("extract-"):
+        assert result is not None
+        _run_rom_command(args, result)
+    elif args.command in {
+        "build-pokemon",
+        "build-encounters",
+        "build-trainers",
+        "build-locations",
+        "build-moves",
+        "build-items",
+        "build-game",
+    }:
+        assert result is not None
+        _run_single_rom_build_command(args, result)
+    elif args.command == "build-version-family":
+        with timed_operation(_LOG, "Version-family build"):
+            _run_version_family_build(args)
+    elif args.command == "regenerate":
+        _run_regeneration(args)
+    elif args.command == "baseline":
+        with timed_operation(_LOG, "Baseline build"):
+            _run_baseline_build(args)
+    elif args.command == "site":
+        _run_site_command(args)
+
+
+def _run_site_command(args: argparse.Namespace) -> None:
+    if args.site_command == "audit":
+        with timed_operation(_LOG, "Site audit"):
+            report = audit_site(
+                args.artifact,
+                max_html_bytes=args.max_page_kb * 1024,
+                max_images_per_page=args.max_images,
+                base_url=args.base_url,
+                jobs=args.jobs,
+                cache_path=(
+                    None if args.no_cache else Path(".romwiki/audit-cache.sqlite3")
                 ),
             )
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "locations" / "raw.json"
+        _report_site_audit(report)
+    elif args.site_command == "list":
+        catalog = SiteCatalog.load(args.root)
+        _print_sites(
+            catalog,
+            as_json=args.json,
+            published_only=args.published,
+        )
+    elif args.site_command == "build":
+        catalog = SiteCatalog.load(args.root)
+        with timed_operation(_LOG, "Site builds"):
+            built = build_sites(
+                catalog,
+                args.output,
+                site_ids=args.site_ids,
+                build_all=args.build_all,
+                jobs=args.jobs,
+                incremental=args.incremental,
+                reuse_unchanged=args.reuse_unchanged,
+                site_url=os.environ.get("ROMWIKI_SITE_URL"),
             )
-            write_location_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} location records: {output}")
-        elif args.command == "extract-moves":
-            dataset = extract_move_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "moves" / "raw.json"
+        for site in built:
+            _LOG.info(
+                "Built %s: %s",
+                site.id,
+                site.output_path(args.output.resolve()),
             )
-            write_move_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} move records: {output}")
-        elif args.command == "extract-items":
-            dataset = extract_item_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "items" / "raw.json"
+    elif args.site_command == "serve":
+        catalog = SiteCatalog.load(args.root)
+        serve_sites(
+            catalog,
+            args.output,
+            site_ids=args.site_ids,
+            serve_all=args.serve_all,
+            dev=args.dev,
+            host=args.host,
+            port=args.port,
+        )
+    elif args.site_command == "snapshot":
+        with timed_operation(_LOG, "Generated wiki snapshot"):
+            count = create_generated_wiki_snapshot(args.root, args.output)
+        _LOG.info(
+            "Archived %s generated wiki files: %s",
+            f"{count:,}",
+            args.output,
+        )
+    elif args.site_command == "restore-snapshot":
+        with timed_operation(_LOG, "Generated wiki snapshot restore"):
+            count = restore_generated_wiki_snapshot(
+                args.root, args.archive, site_ids=tuple(args.site)
             )
-            write_item_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} item records: {output}")
-        elif args.command == "extract-learnsets":
-            dataset = extract_learnset_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "pokemon" / "learnsets.json"
+        _LOG.info(
+            "Restored %s generated wiki files: %s",
+            f"{count:,}",
+            args.archive,
+        )
+    elif args.site_command == "fingerprint":
+        catalog = SiteCatalog.load(args.root)
+        site = catalog.get(args.site_id)
+        state = current_site_build_state(
+            catalog,
+            site,
+            args.output.resolve(),
+            dev=False,
+            site_url=os.environ.get("ROMWIKI_SITE_URL"),
+        )
+        print(site_build_fingerprint(state))
+
+
+def _run_single_rom_build_command(
+    args: argparse.Namespace, result: InspectionResult
+) -> None:
+    if args.command == "build-game":
+        with timed_operation(_LOG, "Game build"):
+            _run_full_game_build(args, result)
+        return
+    with timed_operation(_LOG, "Section build"):
+        _run_section_build(args, result)
+
+
+def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None:
+    if args.command == "inspect":
+        if args.manifest_output is not None:
+            write_manifest(create_manifest(result), args.manifest_output)
+            print(f"Wrote manifest: {args.manifest_output}")
+        if args.manifest_output is None or args.json:
+            _print_inspection(result, as_json=args.json)
+    elif args.command == "extract-personal":
+        dataset = extract_personal_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "pokemon" / "personal.json"
+        )
+        write_personal_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} personal records: {output}")
+    elif args.command == "extract-encounters":
+        dataset = extract_encounter_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "encounters" / "raw.json"
+        )
+        write_encounter_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} encounter records: {output}")
+    elif args.command == "extract-trainers":
+        dataset = extract_trainer_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "trainers" / "raw.json"
+        )
+        write_trainer_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} trainer records: {output}")
+    elif args.command == "extract-locations":
+        profile = result.match.profile
+        dataset = extract_location_dataset(
+            result,
+            trainer_dataset=(
+                extract_trainer_dataset(result)
+                if "trainer_data" in profile.layout
+                else None
+            ),
+            static_encounter_dataset=(
+                extract_static_encounter_dataset(result)
+                if get_engine(profile.engine).formats.static_encounters != "none"
+                else None
+            ),
+            item_dataset=extract_item_dataset(result),
+            mart_dataset=(
+                extract_mart_dataset(result)
+                if "shop_item_overlay_id" in profile.parameters
+                or "shop_items" in profile.layout
+                else None
+            ),
+            trade_dataset=(
+                extract_npc_trade_dataset(result)
+                if "npc_trades" in profile.layout
+                else None
+            ),
+        )
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "locations" / "raw.json"
+        )
+        write_location_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} location records: {output}")
+    elif args.command == "extract-moves":
+        dataset = extract_move_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "moves" / "raw.json"
+        )
+        write_move_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} move records: {output}")
+    elif args.command == "extract-items":
+        dataset = extract_item_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "items" / "raw.json"
+        )
+        write_item_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} item records: {output}")
+    elif args.command == "extract-learnsets":
+        dataset = extract_learnset_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "pokemon" / "learnsets.json"
+        )
+        write_learnset_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} learnsets: {output}")
+    elif args.command == "extract-egg-moves":
+        dataset = extract_egg_move_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "pokemon" / "egg-moves.json"
+        )
+        write_egg_move_dataset(dataset, output)
+        print(
+            f"Wrote {dataset['record_count']} egg move sets with "
+            f"{dataset['move_reference_count']} move references: {output}"
+        )
+    elif args.command == "extract-evolutions":
+        dataset = extract_evolution_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "pokemon" / "evolutions.json"
+        )
+        write_evolution_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} evolution records: {output}")
+    elif args.command == "extract-machines":
+        dataset = extract_machine_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "machines" / "raw.json"
+        )
+        write_machine_dataset(dataset, output)
+        print(f"Wrote {dataset['record_count']} machine records: {output}")
+    elif args.command == "extract-tutors":
+        dataset = extract_tutor_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "tutors" / "raw.json"
+        )
+        write_tutor_dataset(dataset, output)
+        print(
+            f"Wrote {dataset['record_count']} shard tutor records, "
+            f"{dataset['special_record_count']} special tutor records, and "
+            f"{dataset['compatibility_record_count']} shard compatibility "
+            f"rows plus {dataset['special_compatibility_record_count']} "
+            f"special compatibility rows: "
+            f"{output}"
+        )
+    elif args.command == "extract-pickup":
+        dataset = extract_pickup_dataset(result)
+        output = args.output or (
+            Path("build/data") / dataset["game"] / "pickup" / "raw.json"
+        )
+        write_pickup_dataset(dataset, output)
+        if "level_ranges" in dataset:
+            slot_count = sum(
+                len(level_range["slots"]) for level_range in dataset["level_ranges"]
             )
-            write_learnset_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} learnsets: {output}")
-        elif args.command == "extract-egg-moves":
-            dataset = extract_egg_move_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "pokemon" / "egg-moves.json"
-            )
-            write_egg_move_dataset(dataset, output)
             print(
-                f"Wrote {dataset['record_count']} egg move sets with "
-                f"{dataset['move_reference_count']} move references: {output}"
+                f"Wrote {len(dataset['level_ranges'])} Pickup level ranges "
+                f"with {slot_count} slots: {output}"
             )
-        elif args.command == "extract-evolutions":
-            dataset = extract_evolution_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "pokemon" / "evolutions.json"
-            )
-            write_evolution_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} evolution records: {output}")
-        elif args.command == "extract-machines":
-            dataset = extract_machine_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "machines" / "raw.json"
-            )
-            write_machine_dataset(dataset, output)
-            print(f"Wrote {dataset['record_count']} machine records: {output}")
-        elif args.command == "extract-tutors":
-            dataset = extract_tutor_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "tutors" / "raw.json"
-            )
-            write_tutor_dataset(dataset, output)
+        else:
+            tables = dataset["tables"]
             print(
-                f"Wrote {dataset['record_count']} shard tutor records, "
-                f"{dataset['special_record_count']} special tutor records, and "
-                f"{dataset['compatibility_record_count']} shard compatibility "
-                f"rows plus {dataset['special_compatibility_record_count']} "
-                f"special compatibility rows: "
-                f"{output}"
+                f"Wrote {len(tables['common_items'])} common and "
+                f"{len(tables['rare_items'])} rare Pickup items: {output}"
             )
-        elif args.command == "extract-pickup":
-            dataset = extract_pickup_dataset(result)
-            output = args.output or (
-                Path("build/data") / dataset["game"] / "pickup" / "raw.json"
-            )
-            write_pickup_dataset(dataset, output)
-            if "level_ranges" in dataset:
-                slot_count = sum(
-                    len(level_range["slots"]) for level_range in dataset["level_ranges"]
-                )
-                print(
-                    f"Wrote {len(dataset['level_ranges'])} Pickup level ranges "
-                    f"with {slot_count} slots: {output}"
-                )
-            else:
-                tables = dataset["tables"]
-                print(
-                    f"Wrote {len(tables['common_items'])} common and "
-                    f"{len(tables['rare_items'])} rare Pickup items: {output}"
-                )
-        elif args.command in {
-            "build-pokemon",
-            "build-encounters",
-            "build-trainers",
-            "build-locations",
-            "build-moves",
-            "build-items",
-        }:
-            with timed_operation(_LOG, "Section build"):
-                _run_section_build(args, result)
-        elif args.command == "build-game":
-            with timed_operation(_LOG, "Game build"):
-                _run_full_game_build(args, result)
-        elif args.command == "build-version-family":
-            with timed_operation(_LOG, "Version-family build"):
-                _run_version_family_build(args)
-        elif args.command == "regenerate":
-            _run_regeneration(args)
-        elif args.command == "baseline":
-            with timed_operation(_LOG, "Baseline build"):
-                _run_baseline_build(args)
-        elif args.command == "site":
-            if args.site_command == "audit":
-                with timed_operation(_LOG, "Site audit"):
-                    report = audit_site(
-                        args.artifact,
-                        max_html_bytes=args.max_page_kb * 1024,
-                        max_images_per_page=args.max_images,
-                        base_url=args.base_url,
-                        jobs=args.jobs,
-                        cache_path=(
-                            None
-                            if args.no_cache
-                            else Path(".romwiki/audit-cache.sqlite3")
-                        ),
-                    )
-                _report_site_audit(report)
-            elif args.site_command == "list":
-                catalog = SiteCatalog.load(args.root)
-                _print_sites(
-                    catalog,
-                    as_json=args.json,
-                    published_only=args.published,
-                )
-            elif args.site_command == "build":
-                catalog = SiteCatalog.load(args.root)
-                with timed_operation(_LOG, "Site builds"):
-                    built = build_sites(
-                        catalog,
-                        args.output,
-                        site_ids=args.site_ids,
-                        build_all=args.build_all,
-                        jobs=args.jobs,
-                        incremental=args.incremental,
-                        reuse_unchanged=args.reuse_unchanged,
-                        site_url=os.environ.get("ROMWIKI_SITE_URL"),
-                    )
-                for site in built:
-                    _LOG.info(
-                        "Built %s: %s",
-                        site.id,
-                        site.output_path(args.output.resolve()),
-                    )
-            elif args.site_command == "serve":
-                catalog = SiteCatalog.load(args.root)
-                serve_sites(
-                    catalog,
-                    args.output,
-                    site_ids=args.site_ids,
-                    serve_all=args.serve_all,
-                    dev=args.dev,
-                    host=args.host,
-                    port=args.port,
-                )
-            elif args.site_command == "snapshot":
-                with timed_operation(_LOG, "Generated wiki snapshot"):
-                    count = create_generated_wiki_snapshot(args.root, args.output)
-                _LOG.info(
-                    "Archived %s generated wiki files: %s",
-                    f"{count:,}",
-                    args.output,
-                )
-            elif args.site_command == "restore-snapshot":
-                with timed_operation(_LOG, "Generated wiki snapshot restore"):
-                    count = restore_generated_wiki_snapshot(
-                        args.root, args.archive, site_ids=tuple(args.site)
-                    )
-                _LOG.info(
-                    "Restored %s generated wiki files: %s",
-                    f"{count:,}",
-                    args.archive,
-                )
-            elif args.site_command == "fingerprint":
-                catalog = SiteCatalog.load(args.root)
-                site = catalog.get(args.site_id)
-                state = current_site_build_state(
-                    catalog,
-                    site,
-                    args.output.resolve(),
-                    dev=False,
-                    site_url=os.environ.get("ROMWIKI_SITE_URL"),
-                )
-                print(site_build_fingerprint(state))
-        return 0
-    except RomWikiError as error:
-        _LOG.error("%s", error)
-        return 2
 
 
 def _add_input_arguments(parser: argparse.ArgumentParser) -> None:
