@@ -5,6 +5,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import STATIC_ENCOUNTERS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
@@ -46,15 +47,14 @@ def extract_static_encounter_dataset(result: InspectionResult) -> dict[str, Any]
         item_count=engine.ITEM_NAME_COUNT,
     )
     records = [encounter.to_dict() for encounter in encounters]
-    return {
-        "schema_version": STATIC_ENCOUNTERS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "static_encounters",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=STATIC_ENCOUNTERS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="static_encounters",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": scripts_path,
         },
-        "records": records,
-    }
+        records=records,
+    )

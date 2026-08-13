@@ -7,6 +7,7 @@ from typing import Any
 
 from romwiki.pipeline.encounter_identity import encounter_route_key
 from romwiki.pipeline.location_sections import location_reference_label
+from romwiki.pipeline.special_encounters import special_encounter_groups
 from romwiki.util.errors import DataSourceError
 
 
@@ -292,55 +293,16 @@ def _add_conditional_special_encounters(
     for period, method in record.get("walking_variants", {}).items():
         for slot in method.get("slots", []):
             _add_wild_reference(result, aliases, slot, "Walking", period, common)
-    if special.get("format") == "hgss":
-        for key, condition in (
-            ("land_swarm", "land swarm"),
-            ("surf_swarm", "surf swarm"),
-            ("hoenn_radio", "Hoenn Sound radio"),
-            ("sinnoh_radio", "Sinnoh Sound radio"),
-            ("night_fishing", "night fishing"),
-            ("fishing_swarm", "fishing swarm"),
-        ):
-            values = special.get(key, [])
-            if isinstance(values, dict) or values is None:
-                values = [values]
-            for pokemon in values:
-                _add_wild_reference(
-                    result,
-                    aliases,
-                    {"pokemon": pokemon, "species_id": (pokemon or {}).get("id")},
-                    (
-                        "Fishing"
-                        if "fishing" in condition
-                        else "Surf"
-                        if condition == "surf swarm"
-                        else "Walking"
-                    ),
-                    condition,
-                    common,
-                )
-        return
-    for key, label in (
-        ("swarm", "Walking"),
-        ("day", "Walking"),
-        ("night", "Walking"),
-    ):
-        for slot in special.get(key, []):
-            _add_wild_reference(result, aliases, slot, label, key, common)
-    for game, slots in special.get("dual_slot", {}).items():
-        for slot in slots:
+    for group in special_encounter_groups(special):
+        for slot in group.slots:
             _add_wild_reference(
-                result, aliases, slot, "Walking", f"dual-slot: {game}", common
+                result,
+                aliases,
+                slot,
+                group.method,
+                group.condition,
+                common,
             )
-    for pokemon in special.get("radar", []):
-        _add_wild_reference(
-            result,
-            aliases,
-            {"pokemon": pokemon, "species_id": (pokemon or {}).get("id")},
-            "Walking",
-            "Poké Radar",
-            common,
-        )
 
 
 def _add_wild_reference(

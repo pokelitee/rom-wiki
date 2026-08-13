@@ -18,6 +18,11 @@ SEMANTIC_DISPATCH_PATHS = (
     SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
     SOURCE_ROOT / "renderers" / "mkdocs" / "locations.py",
 )
+NORMALIZED_ENCOUNTER_CONSUMERS = (
+    SOURCE_ROOT / "pipeline" / "relationships.py",
+    SOURCE_ROOT / "pipeline" / "special_encounters.py",
+    SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
+)
 
 
 class EnginePackageBoundaryTests(unittest.TestCase):
@@ -64,6 +69,15 @@ class EnginePackageBoundaryTests(unittest.TestCase):
             for path in SEMANTIC_DISPATCH_PATHS
             for token in forbidden
             if token in path.read_text(encoding="utf-8")
+        ]
+
+        self.assertEqual(violations, [])
+
+    def test_normalized_encounter_consumers_do_not_use_family_markers(self) -> None:
+        violations = [
+            str(path.relative_to(SOURCE_ROOT))
+            for path in NORMALIZED_ENCOUNTER_CONSUMERS
+            if '"hgss"' in path.read_text(encoding="utf-8")
         ]
 
         self.assertEqual(violations, [])

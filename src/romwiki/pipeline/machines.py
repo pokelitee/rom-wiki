@@ -6,6 +6,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import MACHINES_RAW_SCHEMA_VERSION
 from romwiki.util.byte_search import find_unique_pattern
 from romwiki.util.errors import InvalidRomError, ProfileError
@@ -16,12 +17,12 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for machine extraction")
     profile = result.match.profile
-    engine = get_engine(profile.engine).machines
-    if "machine_move_prefix" in profile.parameters or hasattr(
-        engine, "MACHINE_TABLE_LOCATOR"
-    ):
+    machine_format = get_engine(profile.engine).formats.machines
+    if machine_format == "binary-prefix":
         return _extract_from_arm9_prefix(result)
-    return _extract_from_offset(result)
+    if machine_format == "profile-offset":
+        return _extract_from_offset(result)
+    raise ProfileError(f"Engine {profile.engine!r} does not support machine extraction")
 
 
 def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
@@ -53,19 +54,18 @@ def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
             tm_count=tm_count,
         )
     ]
-    return {
-        "schema_version": MACHINES_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "machines",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=MACHINES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="machines",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "offset": offset,
             "size": size,
         },
-        "records": records,
-    }
+        records=records,
+    )
 
 
 def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
@@ -92,20 +92,19 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
         )
     data = arm9[offset : offset + size]
     records = [machine.to_dict() for machine in engine.parse_machine_move_table(data)]
-    return {
-        "schema_version": MACHINES_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "machines",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=MACHINES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="machines",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "arm9_prefix": prefix_hex,
             "arm9_offset": offset,
             "size": size,
         },
-        "records": records,
-    }
+        records=records,
+    )
 
 
 def write_machine_dataset(dataset: dict[str, Any], output_path: Path) -> None:

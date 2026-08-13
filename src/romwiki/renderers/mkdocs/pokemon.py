@@ -56,6 +56,7 @@ from romwiki.renderers.mkdocs.references import (
     entity_markdown_link,
     entity_reference,
 )
+from romwiki.schema.rendering import PokemonRenderRecord, RenderDataset
 
 _CATALOG_AVAILABILITY_METHOD_ORDER = (
     "wild",
@@ -74,7 +75,7 @@ _DEFAULT_LEARNSET_FEATURES = frozenset({MOVE_TUTORS, EGG_MOVES})
 
 
 def render_pokemon_pages(
-    dataset: dict[str, Any],
+    dataset: RenderDataset[PokemonRenderRecord],
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     move_dataset: dict[str, Any] | None = None,

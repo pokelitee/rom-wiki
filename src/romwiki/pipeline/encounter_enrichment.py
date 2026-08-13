@@ -2,9 +2,51 @@ from __future__ import annotations
 
 from typing import Any
 
+from romwiki.engines.registry import get_engine
 from romwiki.pipeline.encounter_identity import encounter_route_key
+from romwiki.pipeline.enrichment_names import resolve_pokemon_names
+from romwiki.pipeline.special_encounters import special_encounter_groups
+from romwiki.schema.versions import ENCOUNTERS_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug
+
+
+def enrich_encounter_dataset(
+    dataset: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    *,
+    sprite_version: str | None = None,
+) -> dict[str, Any]:
+    source_records = dataset.get("records")
+    if not isinstance(source_records, list):
+        raise DataSourceError("Encounter dataset records must be a list")
+    adapter = get_engine(dataset["engine"])
+    engine = adapter.enrich
+    pokemon_names = resolve_pokemon_names(engine, dataset)
+    enrich_area = (
+        enrich_seasonal_encounter_area
+        if adapter.formats.encounters == "seasonal"
+        else enrich_conditional_encounter_area
+    )
+
+    records = []
+    for expected_area, source in enumerate(source_records):
+        if source.get("area_id") != expected_area:
+            raise DataSourceError("Encounter records must be ordered by area ID")
+        records.append(
+            enrich_area(engine, source, pokedb, sprite_version, pokemon_names)
+        )
+    return {
+        "schema_version": ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
+        "game": dataset["game"],
+        "engine": dataset["engine"],
+        "dataset": "wild_encounters",
+        "record_count": len(records),
+        "active_record_count": sum(record["active"] for record in records),
+        "source": dataset["source"],
+        "records": records,
+    }
 
 
 def enrich_conditional_encounter_area(
@@ -209,7 +251,7 @@ def _enrich_hgss_encounter_area(
         "active": bool(
             source["walking_rate"]
             or any(method["rate"] for method in methods.values())
-            or any(value for key, value in special.items() if key != "format")
+            or bool(special_encounter_groups(special))
         ),
         "walking": walking_variants["day"],
         "walking_variants": walking_variants,

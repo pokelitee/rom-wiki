@@ -37,13 +37,14 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     unique_references,
 )
+from romwiki.schema.rendering import RenderDataset, TrainerRenderRecord
 
 _SAME_NAME_COLLAPSE_THRESHOLD = 5
 _DEFAULT_TRAINER_FEATURES = frozenset({POST_BATTLE_HEALING, VICTORY_ITEMS})
 
 
 def render_trainer_pages(
-    dataset: dict[str, Any],
+    dataset: RenderDataset[TrainerRenderRecord],
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,

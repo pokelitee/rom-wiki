@@ -14,6 +14,27 @@ class DatasetEnvelope(TypedDict):
     source: dict[str, Any]
 
 
+def dataset_envelope(
+    *,
+    schema_version: int,
+    game: str,
+    engine: str,
+    dataset: str,
+    source: dict[str, Any],
+    records: list[Any],
+) -> dict[str, Any]:
+    """Construct the required normalized dataset fields in canonical order."""
+    return {
+        "schema_version": schema_version,
+        "game": game,
+        "engine": engine,
+        "dataset": dataset,
+        "record_count": len(records),
+        "source": source,
+        "records": records,
+    }
+
+
 def validate_dataset_envelope(
     dataset: dict[str, Any], *, context: str
 ) -> DatasetEnvelope:

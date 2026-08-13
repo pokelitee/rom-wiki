@@ -38,8 +38,10 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
     platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).items
-    fossil_format = get_engine(profile.engine).formats.fossils
+    adapter = get_engine(profile.engine)
+    engine = adapter.items
+    fossil_format = adapter.formats.fossils
+    item_archive_format = adapter.formats.item_archive
     filesystem = platform.filesystem_from_image(result.image)
     item_archive = platform.archive_cls.from_bytes(
         filesystem.read(item_archive_path),
@@ -72,7 +74,7 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         },
     }
 
-    if hasattr(engine, "find_item_archive_members"):
+    if item_archive_format == "arm9-map":
         arm9_data = read_code_binary(platform, result.image, engine)
         map_offset, data_members = engine.find_item_archive_members(
             arm9_data,

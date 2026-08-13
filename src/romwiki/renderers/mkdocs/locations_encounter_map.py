@@ -40,10 +40,11 @@ from romwiki.renderers.mkdocs.references import (
     encounter_route_kind,
     entity_reference,
 )
+from romwiki.schema.rendering import LocationRenderRecord, RenderDataset
 
 
 def render_encounter_map_location_pages(
-    dataset: dict[str, Any],
+    dataset: RenderDataset[LocationRenderRecord],
     output_root: Path,
     references: ReferenceIndex | None = None,
     relationships: RelationshipIndex | None = None,

@@ -6,6 +6,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import POKEMON_LEARNSETS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 from romwiki.util.json_io import write_json_atomic
@@ -44,18 +45,17 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
         ).to_dict()
         for member in archive.members[: adapter.personal.PERSONAL_RECORD_COUNT]
     ]
-    return {
-        "schema_version": POKEMON_LEARNSETS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "level_up_learnsets",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=POKEMON_LEARNSETS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="level_up_learnsets",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
         },
-        "records": records,
-    }
+        records=records,
+    )
 
 
 def write_learnset_dataset(dataset: dict[str, Any], output_path: Path) -> None:

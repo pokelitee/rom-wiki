@@ -106,11 +106,11 @@ class GameBuildContext:
         return self._raw("pokemon/evolutions", extract_evolution_dataset)
 
     def machines_raw(self) -> dict[str, Any] | None:
-        engine = get_engine(self.profile.engine).machines
+        machine_format = get_engine(self.profile.engine).formats.machines
         if (
             "machine_move_offset" not in self.profile.parameters
             and "machine_move_prefix" not in self.profile.parameters
-            and not hasattr(engine, "MACHINE_TABLE_LOCATOR")
+            and machine_format == "none"
         ):
             return None
         return self._raw("machines/raw", extract_machine_dataset)

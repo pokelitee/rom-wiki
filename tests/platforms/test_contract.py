@@ -128,6 +128,9 @@ class PlatformContractTests(unittest.TestCase):
             tutors="none",
             fossils="none",
             static_encounters="none",
+            egg_moves="none",
+            item_archive="archive-index",
+            machines="none",
         )
         register_engine(_FAKE_ENGINE_ID, EngineAdapter(**engine_fields), validate=False)
         profile = _fake_profile()

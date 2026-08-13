@@ -32,6 +32,9 @@ TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
 TutorFormat = Literal["none", "overlay-table", "overlay-archive", "personal-archive"]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
+EggMoveFormat = Literal["none", "overlay-table", "archive-table", "species-archive"]
+ItemArchiveFormat = Literal["archive-index", "arm9-map"]
+MachineFormat = Literal["none", "profile-offset", "binary-prefix"]
 
 DATASET_KINDS = (
     "pokemon",
@@ -67,6 +70,9 @@ class EngineFormats:
     tutors: TutorFormat
     fossils: FossilFormat
     static_encounters: StaticEncounterFormat
+    egg_moves: EggMoveFormat
+    item_archive: ItemArchiveFormat
+    machines: MachineFormat
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,6 +155,9 @@ _ENGINES: dict[str, EngineAdapter] = {
             tutors="overlay-table",
             fossils="arm9-table",
             static_encounters="none",
+            egg_moves="overlay-table",
+            item_archive="arm9-map",
+            machines="profile-offset",
         ),
         generation=4,
         presentation_features=frozenset({"contests"}),
@@ -182,6 +191,9 @@ _ENGINES: dict[str, EngineAdapter] = {
             tutors="overlay-archive",
             fossils="none",
             static_encounters="none",
+            egg_moves="archive-table",
+            item_archive="arm9-map",
+            machines="binary-prefix",
         ),
         generation=4,
         dataset_kinds=frozenset(
@@ -227,6 +239,9 @@ _ENGINES: dict[str, EngineAdapter] = {
             tutors="none",
             fossils="script-pattern",
             static_encounters="script-commands",
+            egg_moves="species-archive",
+            item_archive="archive-index",
+            machines="binary-prefix",
         ),
         generation=5,
         presentation_features=frozenset(
@@ -266,6 +281,9 @@ _ENGINES: dict[str, EngineAdapter] = {
             tutors="personal-archive",
             fossils="script-pattern",
             static_encounters="script-commands",
+            egg_moves="species-archive",
+            item_archive="archive-index",
+            machines="binary-prefix",
         ),
         generation=5,
         presentation_features=frozenset(
@@ -315,6 +333,9 @@ def _validate_engine_formats(engine: str, adapter: EngineAdapter) -> None:
         "tutors": TutorFormat,
         "fossils": FossilFormat,
         "static_encounters": StaticEncounterFormat,
+        "egg_moves": EggMoveFormat,
+        "item_archive": ItemArchiveFormat,
+        "machines": MachineFormat,
     }
     invalid_formats = [
         f"{name}={getattr(adapter.formats, name)!r}"
@@ -398,6 +419,15 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
         ),
         ("tutors", "overlay-table"): ("parse_tutor_move_table",),
         ("tutors", "personal-archive"): ("parse_tutor_move_table",),
+        ("egg_moves", "overlay-table"): ("parse_egg_move_table",),
+        ("egg_moves", "archive-table"): ("parse_egg_move_table",),
+        ("egg_moves", "species-archive"): ("parse_egg_move_set",),
+        ("item_archive", "arm9-map"): ("find_item_archive_members",),
+        ("machines", "profile-offset"): ("parse_machine_move_table",),
+        ("machines", "binary-prefix"): (
+            "MACHINE_TABLE_LOCATOR",
+            "parse_machine_move_table",
+        ),
     }
     for (concern, format_name), members in format_required.items():
         dataset_kind = {
@@ -406,6 +436,9 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
             "pickup": None,
             "trainers": "trainers",
             "tutors": None,
+            "egg_moves": None,
+            "item_archive": "items",
+            "machines": None,
         }[concern]
         if (dataset_kind is None or dataset_kind in adapter.dataset_kinds) and getattr(
             adapter.formats, concern
@@ -419,7 +452,7 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
     ):
         required["static_encounters"] = ("discover_static_encounters",)
     for concern, members in required.items():
-        namespace = getattr(adapter, concern)
+        namespace = getattr(adapter, "items" if concern == "item_archive" else concern)
         missing = [member for member in members if not hasattr(namespace, member)]
         if missing:
             names = ", ".join(missing)

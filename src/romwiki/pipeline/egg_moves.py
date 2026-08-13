@@ -14,10 +14,16 @@ from romwiki.util.json_io import write_json_atomic
 def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for egg move extraction")
-    profile = result.match.profile
-    if "egg_moves" in profile.layout:
-        return _extract_from_archive(result)
-    return _extract_from_overlay_table(result)
+    egg_move_format = get_engine(result.match.profile.engine).formats.egg_moves
+    if egg_move_format == "overlay-table":
+        return _extract_from_overlay_table(result)
+    if egg_move_format in {"archive-table", "species-archive"}:
+        return _extract_from_archive(
+            result, table_archive=egg_move_format == "archive-table"
+        )
+    raise ProfileError(
+        f"Engine {result.match.profile.engine!r} does not support egg move extraction"
+    )
 
 
 def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
@@ -51,14 +57,20 @@ def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
     }
 
 
-def _extract_from_archive(result: InspectionResult) -> dict[str, Any]:
+def _extract_from_archive(
+    result: InspectionResult, *, table_archive: bool
+) -> dict[str, Any]:
     profile = result.match.profile
     archive_path = profile.layout["egg_moves"]
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).egg_moves
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
-    if hasattr(engine, "parse_egg_move_table") and len(archive.members) == 1:
+    if table_archive:
+        if len(archive.members) != 1:
+            raise ProfileError(
+                f"Profile {profile.id} egg move table archive must contain one member"
+            )
         records = engine.parse_egg_move_table(archive.read(0), table_offset=0)
         return {
             "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,

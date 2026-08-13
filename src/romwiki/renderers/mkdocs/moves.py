@@ -48,6 +48,7 @@ from romwiki.renderers.mkdocs.references import (
     pokemon_record_link,
     resolved_reference,
 )
+from romwiki.schema.rendering import MoveRenderRecord, RenderDataset
 
 _LEARNER_TABLE_SCHEMA_VERSION = 1
 _LEARNER_TABLE_PAGE_SIZE = 50
@@ -55,7 +56,7 @@ _LEARNER_TABLE_PAGINATION_THRESHOLD = 50
 
 
 def render_move_pages(
-    dataset: dict[str, Any],
+    dataset: RenderDataset[MoveRenderRecord],
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,

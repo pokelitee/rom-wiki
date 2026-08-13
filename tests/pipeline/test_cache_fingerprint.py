@@ -40,6 +40,13 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         self.assertIn("pipeline/location_archive_encounter_map.py", gen5_files)
         self.assertIn("pipeline/location_helpers.py", gen5_files)
 
+    def test_includes_split_trainer_strategy_dependencies(self) -> None:
+        class_gender = extraction_source_files("gen4_dppt", "romwiki.pipeline.trainers")
+        battle_mode = extraction_source_files("gen5_bw", "romwiki.pipeline.trainers")
+
+        self.assertIn("pipeline/trainer_class_gender.py", class_gender)
+        self.assertIn("pipeline/trainer_battle_mode.py", battle_mode)
+
 
 if __name__ == "__main__":
     unittest.main()

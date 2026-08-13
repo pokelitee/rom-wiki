@@ -196,6 +196,13 @@ pipeline module's extraction and enrichment logic *dispatch* to the new engine.
 Extend `tests/engines/test_contract.py`'s fake-engine coverage if the new engine
 exercises a shared code path the fake engine doesn't yet cover.
 
+Populate `EngineAdapter.formats` with semantic storage declarations rather than
+branching on an engine ID in shared pipelines. In particular, declare the egg-move
+layout, item archive mapping, and machine source (`egg_moves`, `item_archive`, and
+`machines`) alongside the existing encounter, location, trainer, tutor, fossil,
+and static-encounter formats. Registry validation rejects a declaration whose
+required parser or locator is missing.
+
 Declare the public sections the engine actually supports through
 `EngineAdapter.dataset_kinds`, and separately declare which of those sections a
 complete build must contain through `required_dataset_kinds`. Existing complete

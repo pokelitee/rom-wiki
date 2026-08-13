@@ -133,6 +133,12 @@ the shared party contract. `pipeline/trainer_party.py` dispatches by the explici
 `engine` field on the raw dataset; it must not accumulate generation-specific
 branches itself.
 
+Trainer dataset extraction follows the same boundary. `pipeline/trainers.py` is
+the semantic dispatcher, with class-gender and battle-mode entry modules owning
+the two declared storage strategies. Their shared ROM-reading support lives in
+`pipeline/trainer_extraction_support.py`; battle-family resolution remains in the
+engine layer where format-specific rules are declared.
+
 ### Pipelines and normalized schemas
 
 `src/romwiki/pipeline/` joins decoded records into datasets. The dataclasses under
@@ -143,6 +149,16 @@ enriched contracts expose the normalized values consumed by renderers. Every
 dataset uses the shared envelope validated by `schema/datasets.py`: a
 `schema_version`, game and engine identifiers, semantic dataset name, record count,
 source metadata, and record-level provenance where appropriate.
+
+Simple extractors construct those required fields through `dataset_envelope()` and
+then add only dataset-specific summaries. Companion joins keep mechanic-specific
+identity, shape, ordering, and reference validation in the enrichment module that
+owns the resulting dataset.
+
+Enrichment entry points are grouped by normalized dataset: Pokémon, encounters,
+moves, and trainers have focused modules, while `pipeline/enrich.py` remains a
+small compatibility facade. Shared ROM-derived name and entity-reference helpers
+live in neutral enrichment modules rather than being duplicated by each dataset.
 
 Enriched datasets also carry a normalized `features` list derived from the engine
 adapter and exact profile configuration. Renderers use this contract to distinguish
@@ -174,6 +190,17 @@ Shared pipeline and renderer dispatch follows the adapter's semantic format
 metadata (`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and
 so on). Generation numbers and particular engine IDs must not select a shared code
 path.
+
+Storage choices are declared beside those semantic formats. Egg moves distinguish
+overlay tables, single-table archives, and per-species archives; item extraction
+declares archive-index versus ARM9 member mapping; machine extraction declares a
+profile offset versus a binary prefix. Registry validation checks the parser or
+locator members required by each declaration before extraction begins.
+
+Conditional special encounters retain their versioned serialized shape, but shared
+consumers traverse them through `pipeline/special_encounters.py`. That semantic
+view supplies method, condition, slots, and display grouping without requiring
+renderers or relationship indexes to inspect an engine-family marker.
 
 Location output shape and storage strategy are separate contracts. Renderers select
 the normalized `event-map` or `encounter-map` shape, while extraction selects the
@@ -317,6 +344,14 @@ produces a false "changed" result.
 
 `src/romwiki/renderers/` turns normalized datasets into documentation. The MkDocs
 renderer has no responsibility for identifying or parsing a ROM.
+
+Renderer entry points accept the shared enriched-record contracts in
+`schema/rendering.py`. Reusable Markdown framing lives in `components.py`: table
+specifications own headers and alignment while preserving already-rendered cells,
+and section framing owns heading separation without interpreting section content.
+Location presentation shared by event-map and encounter-map records lives in the
+neutral `location_components.py`; sibling renderers must not import each other's
+private helpers.
 
 `sites/games/<slug>/` contains one independently configurable game wiki. The site
 catalog builds those wikis and the portal into one GitHub Pages artifact while

@@ -11,6 +11,7 @@ from romwiki.pipeline.relationships import (
     EncounterLocationReference,
     RelationshipIndex,
 )
+from romwiki.pipeline.special_encounters import special_encounter_groups
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,
@@ -44,6 +45,7 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     unique_references,
 )
+from romwiki.schema.rendering import EncounterRenderRecord, RenderDataset
 
 # Generation V's own display labels for its seven encounter methods
 # (Gen5Constants.encounterTypeNames, Ajarmar/universal-pokemon-randomizer-zx).
@@ -66,7 +68,7 @@ _ENCOUNTER_SLOT_COLUMNS = (
 
 
 def render_encounter_pages(
-    dataset: dict[str, Any],
+    dataset: RenderDataset[EncounterRenderRecord],
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
@@ -235,18 +237,12 @@ def _catalog_record(
     special_species = [pokemon["name"] for pokemon in special_pokemon]
     pokemon_refs.extend(_pokemon_reference(pokemon) for pokemon in special_pokemon)
     species.extend(special_species)
-    if record["special"].get("format") != "hgss":
-        levels.extend(
-            entry["level"]
-            for group in (
-                record["special"]["swarm"],
-                record["special"]["day"],
-                record["special"]["night"],
-                *record["special"]["dual_slot"].values(),
-            )
-            for entry in group
-            if entry["pokemon"]
-        )
+    levels.extend(
+        slot["level"]
+        for group in special_encounter_groups(record["special"])
+        for slot in group.slots
+        if slot.get("level") is not None
+    )
     if special_species and "walking" in method_pokemon:
         method_pokemon["walking"] = list(
             dict.fromkeys((*method_pokemon["walking"], *special_species))
@@ -279,26 +275,12 @@ def _catalog_record(
 
 
 def _special_pokemon(special: dict[str, Any]) -> list[dict[str, Any]]:
-    if special.get("format") == "hgss":
-        pokemon = [special["land_swarm"], special["surf_swarm"]]
-        pokemon.extend(special["hoenn_radio"])
-        pokemon.extend(special["sinnoh_radio"])
-        pokemon.extend((special["night_fishing"], special["fishing_swarm"]))
-        return _unique_pokemon(value for value in pokemon if value is not None)
-    slotted_groups = (
-        special["swarm"],
-        special["day"],
-        special["night"],
-        *(entries for entries in special["dual_slot"].values()),
+    return _unique_pokemon(
+        pokemon
+        for group in special_encounter_groups(special)
+        for slot in group.slots
+        if isinstance((pokemon := slot.get("pokemon")), dict)
     )
-    pokemon = [
-        entry["pokemon"]
-        for group in slotted_groups
-        for entry in group
-        if entry["pokemon"]
-    ]
-    pokemon.extend(value for value in special["radar"] if value is not None)
-    return _unique_pokemon(pokemon)
 
 
 def _unique_pokemon(pokemon: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -606,100 +588,57 @@ def _append_special(
     source_file: str,
     references: ReferenceIndex | None,
 ) -> None:
-    if special.get("format") == "hgss":
-        groups = [
-            ("Land swarm", [special["land_swarm"]]),
-            ("Surf swarm", [special["surf_swarm"]]),
-            ("Hoenn Sound radio", special["hoenn_radio"]),
-            ("Sinnoh Sound radio", special["sinnoh_radio"]),
-            ("Night fishing", [special["night_fishing"]]),
-            ("Fishing swarm", [special["fishing_swarm"]]),
-        ]
-        groups = [
-            (label, _unique_pokemon(value for value in values if value))
-            for label, values in groups
-        ]
-        groups = [(label, values) for label, values in groups if values]
-        if not groups:
-            return
-        lines.extend(["## Special encounters", ""])
-        for label, values in groups:
-            lines.extend([f"**{label}:**", ""])
-            lines.extend(
-                markdown_table(
-                    ["| Pokémon | Type |", "| ------- | ---- |"],
-                    [
-                        f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file))} | "
-                        f"{_slot_type_cell(value, references)} |"
-                        for value in values
-                    ],
-                )
-            )
-        return
-    slotted_groups = [
-        ("Swarm", special["swarm"]),
-        ("Day replacements", special["day"]),
-        ("Night replacements", special["night"]),
-    ]
-    slotted_groups.extend(
-        (f"Dual-slot: {game.replace('-', ' ').title()}", entries)
-        for game, entries in special["dual_slot"].items()
-    )
-    populated_slotted = [
-        (
-            label,
-            _aggregate_slots([entry for entry in entries if entry["pokemon"]], "level"),
-        )
-        for label, entries in slotted_groups
-    ]
-    populated_slotted = [
-        (label, entries) for label, entries in populated_slotted if entries
-    ]
-    radar = _unique_pokemon(value for value in special["radar"] if value)
-    unown_forms = special["unown_forms"]
-    if not populated_slotted and not radar and not unown_forms:
+    groups = special_encounter_groups(special)
+    unown_forms = special.get("unown_forms") or []
+    if not groups and not unown_forms:
         return
     lines.extend(["## Special encounters", ""])
-    for label, entries in populated_slotted:
-        lines.extend([f"**{label}:**", ""])
-        lines.extend(
-            markdown_table_from_cells(
-                _ENCOUNTER_SLOT_COLUMNS,
-                (
-                    (
-                        sprite_with_link(
-                            table_sprite_cell(entry["pokemon"].get("sprite")),
-                            _pokemon_link(entry["pokemon"], source_file),
-                        ),
-                        _slot_type_cell(entry["pokemon"], references),
-                        _level_range(entry["minimum_level"], entry["maximum_level"]),
-                        f"{entry['chance']}%",
-                    )
-                    for entry in entries
-                ),
+    for group in groups:
+        lines.extend([f"**{group.label}:**", ""])
+        if group.key == "radar":
+            lines.extend(
+                [
+                    "Only appears for one specific Poké Radar shake outcome; most "
+                    "radar encounters instead continue the current chain's species "
+                    "rather than drawing from this table, so no fixed level or "
+                    "chance applies here.",
+                    "",
+                ]
             )
-        )
-    if radar:
-        lines.extend(
-            [
-                "**Poké Radar:**",
-                "",
-                "Only appears for one specific Poké Radar shake outcome; most "
-                "radar encounters instead continue the current chain's species "
-                "rather than drawing from this table, so no fixed level or "
-                "chance applies here.",
-                "",
-            ]
+        if group.slotted:
+            entries = _aggregate_slots(list(group.slots), "level")
+            lines.extend(
+                markdown_table_from_cells(
+                    _ENCOUNTER_SLOT_COLUMNS,
+                    (
+                        (
+                            sprite_with_link(
+                                table_sprite_cell(entry["pokemon"].get("sprite")),
+                                _pokemon_link(entry["pokemon"], source_file),
+                            ),
+                            _slot_type_cell(entry["pokemon"], references),
+                            _level_range(
+                                entry["minimum_level"], entry["maximum_level"]
+                            ),
+                            f"{entry['chance']}%",
+                        )
+                        for entry in entries
+                    ),
+                )
+            )
+            continue
+        pokemon = _unique_pokemon(
+            value
+            for slot in group.slots
+            if isinstance((value := slot.get("pokemon")), dict)
         )
         lines.extend(
             markdown_table(
                 ["| Pokémon | Type |", "| ------- | ---- |"],
                 [
-                    (
-                        f"| {sprite_with_link(table_sprite_cell((value or {}).get('sprite')), _pokemon_link(value, source_file))} | "
-                        f"{_slot_type_cell(value, references)} |"
-                    )
-                    for value in radar
+                    f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file))} | "
+                    f"{_slot_type_cell(value, references)} |"
+                    for value in pokemon
                 ],
             )
         )

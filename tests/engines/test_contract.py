@@ -113,6 +113,9 @@ def _register_fake_engine(tables: types.SimpleNamespace) -> None:
             tutors="none",
             fossils="none",
             static_encounters="none",
+            egg_moves="none",
+            item_archive="archive-index",
+            machines="none",
         ),
     )
     register_engine(_FAKE_ENGINE_ID, adapter, validate=False)

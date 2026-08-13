@@ -17,7 +17,9 @@ from romwiki.renderers.mkdocs.components import (
     markdown_section,
     markdown_table,
     markdown_table_from_cells,
+    provenance_section,
     record_nav_link,
+    record_navigation,
     summary_section_link,
     tutor_requirement,
     type_badges,
@@ -217,6 +219,43 @@ class MarkdownSectionTests(unittest.TestCase):
     def test_rejects_invalid_heading_level(self) -> None:
         with self.assertRaisesRegex(ValueError, "between 1 and 6"):
             markdown_section("Details", (), level=7)
+
+
+class DisclosureAndNavigationContractTests(unittest.TestCase):
+    def test_provenance_disclosure_has_stable_markdown_nesting(self) -> None:
+        lines = provenance_section(["Source: exact ROM record."])
+
+        self.assertEqual(
+            lines,
+            [
+                '<details class="rw-source-details" markdown="1">',
+                "<summary>Data provenance</summary>",
+                "",
+                "Source: exact ROM record.",
+                "",
+                "</details>",
+                "",
+            ],
+        )
+        rendered = markdown.markdown("\n".join(lines), extensions=["md_in_html"])
+        self.assertIn('<details class="rw-source-details">', rendered)
+        self.assertIn("<summary>Data provenance</summary>", rendered)
+
+    def test_previous_next_navigation_preserves_empty_side_and_trailing_blank(
+        self,
+    ) -> None:
+        lines = record_navigation(None, '<a href="next/">Next →</a>', "Navigation")
+
+        self.assertEqual(
+            lines,
+            [
+                '<nav class="rw-record-nav" aria-label="Navigation">',
+                "<span></span>",
+                '<a href="next/">Next →</a>',
+                "</nav>",
+                "",
+            ],
+        )
 
 
 class MoveReferenceSectionTests(unittest.TestCase):

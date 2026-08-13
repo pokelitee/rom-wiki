@@ -48,10 +48,11 @@ from romwiki.renderers.mkdocs.references import (
     pokemon_record_link,
     unique_references,
 )
+from romwiki.schema.rendering import ItemRenderRecord, RenderDataset
 
 
 def render_item_pages(
-    dataset: dict[str, Any],
+    dataset: RenderDataset[ItemRenderRecord],
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
