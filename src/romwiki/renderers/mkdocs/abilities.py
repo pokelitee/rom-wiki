@@ -16,8 +16,10 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     HIDDEN_ABILITY_MARKER,
+    MarkdownColumn,
     empty_state,
     markdown_table,
+    markdown_table_from_cells,
     name_table_source,
     provenance_section,
     record_navigation_for,
@@ -37,6 +39,11 @@ from romwiki.renderers.mkdocs.references import (
     entity_markdown_link,
     entity_reference,
     pokemon_markdown_link,
+)
+
+_ITEM_ID_COLUMNS = (
+    MarkdownColumn("Item"),
+    MarkdownColumn("Item ID", "right"),
 )
 
 
@@ -252,22 +259,34 @@ def _pickup_section(
     )
     lines.extend(["", "**Common pool:**", ""])
     lines.extend(
-        markdown_table(
-            ["| Item | Item ID |", "| ---- | ------: |"],
-            [
-                f"| {sprite_with_link(reference_sprite_cell('item', item['item_id'], references), _item_link(item, source_file, references))} | {item['item_id']} |"
+        markdown_table_from_cells(
+            _ITEM_ID_COLUMNS,
+            (
+                (
+                    sprite_with_link(
+                        reference_sprite_cell("item", item["item_id"], references),
+                        _item_link(item, source_file, references),
+                    ),
+                    str(item["item_id"]),
+                )
                 for item in pickup["common_items"]
-            ],
+            ),
         )
     )
     lines.extend(["**Rare pool** (the remaining chance):", ""])
     lines.extend(
-        markdown_table(
-            ["| Item | Item ID |", "| ---- | ------: |"],
-            [
-                f"| {sprite_with_link(reference_sprite_cell('item', item['item_id'], references), _item_link(item, source_file, references))} | {item['item_id']} |"
+        markdown_table_from_cells(
+            _ITEM_ID_COLUMNS,
+            (
+                (
+                    sprite_with_link(
+                        reference_sprite_cell("item", item["item_id"], references),
+                        _item_link(item, source_file, references),
+                    ),
+                    str(item["item_id"]),
+                )
                 for item in pickup["rare_items"]
-            ],
+            ),
         )
     )
     return lines

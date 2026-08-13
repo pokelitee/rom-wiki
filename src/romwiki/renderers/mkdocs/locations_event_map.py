@@ -17,8 +17,10 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    MarkdownColumn,
     escape_table_cell,
     markdown_table,
+    markdown_table_from_cells,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -46,6 +48,12 @@ from romwiki.renderers.mkdocs.references import (
     ReferenceIndex,
     entity_reference,
     escape_markdown,
+)
+
+_POKEMON_TYPE_CHANCE_COLUMNS = (
+    MarkdownColumn("Pokémon"),
+    MarkdownColumn("Type"),
+    MarkdownColumn("Chance", "right"),
 )
 
 
@@ -507,18 +515,23 @@ def _append_honey_tree(
     ):
         rows = [
             (
-                f"| {sprite_with_link(entity_sprite('pokemon', entry['species_id'], references), entity_link('pokemon', entry['species_id'], entry['name'], source_file, references))} | "
-                f"{reference_type_cell('pokemon', entry['species_id'], references)} | "
-                f"{_format_chance(entry['chance'])} |"
+                sprite_with_link(
+                    entity_sprite("pokemon", entry["species_id"], references),
+                    entity_link(
+                        "pokemon",
+                        entry["species_id"],
+                        entry["name"],
+                        source_file,
+                        references,
+                    ),
+                ),
+                reference_type_cell("pokemon", entry["species_id"], references),
+                _format_chance(entry["chance"]),
             )
             for entry in _merge_bonus_species(honey_tree[key])
         ]
         lines.extend([f"**{label}:**", ""])
-        lines.extend(
-            markdown_table(
-                ["| Pokémon | Type | Chance |", "| ------- | ---- | -----: |"], rows
-            )
-        )
+        lines.extend(markdown_table_from_cells(_POKEMON_TYPE_CHANCE_COLUMNS, rows))
 
 
 def _append_daily_encounter_pool(
@@ -560,19 +573,24 @@ def _append_daily_encounter_pool(
     for group_label, entries in groups:
         rows = [
             (
-                f"| {sprite_with_link(entity_sprite('pokemon', entry['species_id'], references), entity_link('pokemon', entry['species_id'], entry['name'], source_file, references))} | "
-                f"{reference_type_cell('pokemon', entry['species_id'], references)} | "
-                f"{_format_chance(entry['chance'])} |"
+                sprite_with_link(
+                    entity_sprite("pokemon", entry["species_id"], references),
+                    entity_link(
+                        "pokemon",
+                        entry["species_id"],
+                        entry["name"],
+                        source_file,
+                        references,
+                    ),
+                ),
+                reference_type_cell("pokemon", entry["species_id"], references),
+                _format_chance(entry["chance"]),
             )
             for entry in _merge_bonus_species(entries)
         ]
         if group_label:
             lines.extend([f"**{group_label}:**", ""])
-        lines.extend(
-            markdown_table(
-                ["| Pokémon | Type | Chance |", "| ------- | ---- | -----: |"], rows
-            )
-        )
+        lines.extend(markdown_table_from_cells(_POKEMON_TYPE_CHANCE_COLUMNS, rows))
 
 
 def _append_game_corner_prizes(

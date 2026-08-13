@@ -7,6 +7,7 @@ import markdown
 
 from romwiki.pipeline.relationships import MoveLearnerReference
 from romwiki.renderers.mkdocs.components import (
+    MarkdownColumn,
     class_badge,
     display_name,
     effectiveness_table_cell,
@@ -14,6 +15,7 @@ from romwiki.renderers.mkdocs.components import (
     evolution_condition,
     fact_grid,
     markdown_table,
+    markdown_table_from_cells,
     record_nav_link,
     summary_section_link,
     tutor_requirement,
@@ -161,6 +163,33 @@ class MarkdownTableTests(unittest.TestCase):
         rendered = "\n".join(lines)
         self.assertNotIn("<details", rendered)
         self.assertIn("Row 119", rendered)
+
+    def test_column_specification_owns_headers_and_alignment(self) -> None:
+        lines = markdown_table_from_cells(
+            (
+                MarkdownColumn("Pokémon"),
+                MarkdownColumn("Levels", "right"),
+                MarkdownColumn("Chance", "right"),
+            ),
+            (("<a>Bulbasaur</a>", "5–7", "20%"),),
+        )
+
+        self.assertEqual(
+            lines,
+            [
+                "| Pokémon | Levels | Chance |",
+                "| ------- | -----: | -----: |",
+                "| <a>Bulbasaur</a> | 5–7 | 20% |",
+                "",
+            ],
+        )
+
+    def test_column_specification_rejects_wrong_row_width(self) -> None:
+        with self.assertRaisesRegex(ValueError, "1 cells; expected 2"):
+            markdown_table_from_cells(
+                (MarkdownColumn("Name"), MarkdownColumn("Value")),
+                (("Bulbasaur",),),
+            )
 
 
 class MoveReferenceSectionTests(unittest.TestCase):

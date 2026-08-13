@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from html import escape
-from typing import Any
+from typing import Any, Literal
 
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -509,6 +509,39 @@ def sprite_with_link(sprite_html: str, link_html: str) -> str:
 def markdown_table(header_lines: Iterable[str], row_lines: Iterable[str]) -> list[str]:
     """Join pre-rendered Markdown table lines with the standard trailing blank."""
     return [*header_lines, *row_lines, ""]
+
+
+@dataclass(frozen=True, slots=True)
+class MarkdownColumn:
+    label: str
+    alignment: Literal["left", "right"] = "left"
+
+    def delimiter(self) -> str:
+        colon_width = 1 if self.alignment == "right" else 0
+        rule = "-" * max(3, len(self.label) - colon_width)
+        return f"{rule}:" if self.alignment == "right" else rule
+
+
+def markdown_table_from_cells(
+    columns: Sequence[MarkdownColumn], rows: Iterable[Sequence[str]]
+) -> list[str]:
+    """Render already-formatted cells without escaping or rewriting their content."""
+    if not columns:
+        raise ValueError("Markdown tables require at least one column")
+    row_lines = []
+    for row in rows:
+        if len(row) != len(columns):
+            raise ValueError(
+                f"Markdown table row has {len(row)} cells; expected {len(columns)}"
+            )
+        row_lines.append("| " + " | ".join(row) + " |")
+    return markdown_table(
+        (
+            "| " + " | ".join(column.label for column in columns) + " |",
+            "| " + " | ".join(column.delimiter() for column in columns) + " |",
+        ),
+        row_lines,
+    )
 
 
 def machine_markdown_link(

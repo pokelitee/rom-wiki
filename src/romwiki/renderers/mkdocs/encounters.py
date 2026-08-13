@@ -23,8 +23,10 @@ from romwiki.renderers.mkdocs.comparisons import (
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
+    MarkdownColumn,
     display_name,
     markdown_table,
+    markdown_table_from_cells,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -55,6 +57,12 @@ _SEASONAL_METHOD_LABELS = {
     "fishing_spots": "Fishing Spots",
 }
 _SEASONS = ("spring", "summer", "autumn", "winter")
+_ENCOUNTER_SLOT_COLUMNS = (
+    MarkdownColumn("Pokémon"),
+    MarkdownColumn("Type"),
+    MarkdownColumn("Levels", "right"),
+    MarkdownColumn("Chance", "right"),
+)
 
 
 def render_encounter_pages(
@@ -544,19 +552,20 @@ def _append_walking(
     slots = _aggregate_slots(method["slots"], "level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        markdown_table(
-            [
-                "| Pokémon | Type | Levels | Chance |",
-                "| ------- | ---- | -----: | -----: |",
-            ],
-            [
+        markdown_table_from_cells(
+            _ENCOUNTER_SLOT_COLUMNS,
+            (
                 (
-                    f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
-                    f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | {slot['chance']}% |"
+                    sprite_with_link(
+                        table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
+                        _pokemon_link(slot["pokemon"], source_file),
+                    ),
+                    _slot_type_cell(slot["pokemon"], references),
+                    _level_range(slot["minimum_level"], slot["maximum_level"]),
+                    f"{slot['chance']}%",
                 )
                 for slot in slots
-            ],
+            ),
         )
     )
 
@@ -573,20 +582,20 @@ def _append_water(
     slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        markdown_table(
-            [
-                "| Pokémon | Type | Levels | Chance |",
-                "| ------- | ---- | -----: | -----: |",
-            ],
-            [
+        markdown_table_from_cells(
+            _ENCOUNTER_SLOT_COLUMNS,
+            (
                 (
-                    f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
-                    f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | "
-                    f"{slot['chance']}% |"
+                    sprite_with_link(
+                        table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
+                        _pokemon_link(slot["pokemon"], source_file),
+                    ),
+                    _slot_type_cell(slot["pokemon"], references),
+                    _level_range(slot["minimum_level"], slot["maximum_level"]),
+                    f"{slot['chance']}%",
                 )
                 for slot in slots
-            ],
+            ),
         )
     )
 
@@ -654,19 +663,20 @@ def _append_special(
     for label, entries in populated_slotted:
         lines.extend([f"**{label}:**", ""])
         lines.extend(
-            markdown_table(
-                [
-                    "| Pokémon | Type | Levels | Chance |",
-                    "| ------- | ---- | -----: | -----: |",
-                ],
-                [
+            markdown_table_from_cells(
+                _ENCOUNTER_SLOT_COLUMNS,
+                (
                     (
-                        f"| {sprite_with_link(table_sprite_cell(entry['pokemon'].get('sprite')), _pokemon_link(entry['pokemon'], source_file))} | "
-                        f"{_slot_type_cell(entry['pokemon'], references)} | "
-                        f"{_level_range(entry['minimum_level'], entry['maximum_level'])} | {entry['chance']}% |"
+                        sprite_with_link(
+                            table_sprite_cell(entry["pokemon"].get("sprite")),
+                            _pokemon_link(entry["pokemon"], source_file),
+                        ),
+                        _slot_type_cell(entry["pokemon"], references),
+                        _level_range(entry["minimum_level"], entry["maximum_level"]),
+                        f"{entry['chance']}%",
                     )
                     for entry in entries
-                ],
+                ),
             )
         )
     if radar:
@@ -1149,20 +1159,20 @@ def _append_seasonal_method(
         lines.extend([f"{'#' * heading_level} {heading}", ""])
     lines.extend([f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        markdown_table(
-            [
-                "| Pokémon | Type | Levels | Chance |",
-                "| ------- | ---- | -----: | -----: |",
-            ],
-            [
+        markdown_table_from_cells(
+            _ENCOUNTER_SLOT_COLUMNS,
+            (
                 (
-                    f"| {sprite_with_link(table_sprite_cell((slot['pokemon'] or {}).get('sprite')), _pokemon_link(slot['pokemon'], source_file))} | "
-                    f"{_slot_type_cell(slot['pokemon'], references)} | "
-                    f"{_level_range(slot['minimum_level'], slot['maximum_level'])} | "
-                    f"{slot['chance']}% |"
+                    sprite_with_link(
+                        table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
+                        _pokemon_link(slot["pokemon"], source_file),
+                    ),
+                    _slot_type_cell(slot["pokemon"], references),
+                    _level_range(slot["minimum_level"], slot["maximum_level"]),
+                    f"{slot['chance']}%",
                 )
                 for slot in slots
-            ],
+            ),
         )
     )
 
