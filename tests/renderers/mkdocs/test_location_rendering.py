@@ -732,9 +732,9 @@ class LocationRenderingTests(unittest.TestCase):
 
     def test_keeps_coordinate_based_destination_warp_in_its_column(self) -> None:
         lines: list[str] = []
-        from romwiki.renderers.mkdocs.locations_event_map import _append_warps
+        from romwiki.renderers.mkdocs.location_components import append_warps
 
-        _append_warps(
+        append_warps(
             lines,
             [
                 {
@@ -761,9 +761,9 @@ class LocationRenderingTests(unittest.TestCase):
 
     def test_explains_dynamic_warp_placeholder_cells(self) -> None:
         lines: list[str] = []
-        from romwiki.renderers.mkdocs.locations_event_map import _append_warps
+        from romwiki.renderers.mkdocs.location_components import append_warps
 
-        _append_warps(
+        append_warps(
             lines,
             [
                 {

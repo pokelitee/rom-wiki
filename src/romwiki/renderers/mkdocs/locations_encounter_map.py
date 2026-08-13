@@ -22,17 +22,17 @@ from romwiki.renderers.mkdocs.components import (
     record_navigation_for,
     summary_section,
 )
-from romwiki.renderers.mkdocs.locations_event_map import (
-    _append_connections,
-    _append_items,
-    _append_npc_trades,
-    _append_shops,
-    _append_static_encounters,
-    _append_trainers,
-    _append_warps,
-    _filename,
-    _location_label,
-    _section_name_provenance_facts,
+from romwiki.renderers.mkdocs.location_components import (
+    append_connections,
+    append_items,
+    append_npc_trades,
+    append_shops,
+    append_static_encounters,
+    append_trainers,
+    append_warps,
+    location_filename,
+    location_label,
+    section_name_provenance_facts,
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
@@ -57,10 +57,11 @@ def render_encounter_map_location_pages(
         {
             "index.md",
             *(
-                _filename(record["header_id"])
+                location_filename(record["header_id"])
                 for record in records
                 if only_pages is None
-                or _filename(record["header_id"]).removesuffix(".md") in only_pages
+                or location_filename(record["header_id"]).removesuffix(".md")
+                in only_pages
             ),
         },
     )
@@ -79,7 +80,7 @@ def render_encounter_map_location_pages(
     for record in sorted_records:
         same_name_groups.setdefault(record["name"], []).append(record)
     for index, record in enumerate(sorted_records):
-        filename = _filename(record["header_id"])
+        filename = location_filename(record["header_id"])
         encounters = (
             relationships.location_encounters.get(record["header_id"], ())
             if relationships
@@ -104,7 +105,7 @@ def render_encounter_map_location_pages(
             )
             page_count += 1
         route_id = filename.removesuffix(".md")
-        fallback_label = f"{_location_label(record)} — {route_id}"
+        fallback_label = f"{location_label(record)} — {route_id}"
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -164,7 +165,7 @@ def _render_encounter_map_location(
     same_name_records: list[dict[str, Any]] | None = None,
     location_labels: Mapping[int, str] | None = None,
 ) -> str:
-    source_file = f"locations/{_filename(record['header_id'])}"
+    source_file = f"locations/{location_filename(record['header_id'])}"
     facts = [f"<div><dt>Map header</dt><dd>header-{record['header_id']:03}</dd></div>"]
     if record.get("section_name"):
         facts[0:0] = [
@@ -177,7 +178,7 @@ def _render_encounter_map_location(
             f"map index {record['encounter_map_index']}</dd></div>"
         )
     lines = [
-        f"# {_location_label(record)}",
+        f"# {location_label(record)}",
         "",
         *summary_section("rw-location-summary", facts),
     ]
@@ -185,13 +186,13 @@ def _render_encounter_map_location(
         lines.extend(["## Wild encounters", ""])
         _append_encounter_variants(lines, encounters, source_file, record["name"])
     _append_same_name_locations(lines, record, same_name_records or [], source_file)
-    _append_connections(lines, record["connections"], source_file, location_labels)
-    _append_trainers(lines, record["trainers"], source_file)
-    _append_warps(lines, record["warps"], source_file, location_labels)
-    _append_items(lines, record["items"], source_file, references)
-    _append_shops(lines, record.get("shops", []), source_file, references)
-    _append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
-    _append_static_encounters(
+    append_connections(lines, record["connections"], source_file, location_labels)
+    append_trainers(lines, record["trainers"], source_file)
+    append_warps(lines, record["warps"], source_file, location_labels)
+    append_items(lines, record["items"], source_file, references)
+    append_shops(lines, record.get("shops", []), source_file, references)
+    append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
+    append_static_encounters(
         lines, record["static_encounters"], source_file, references
     )
     lines.extend(
@@ -200,7 +201,7 @@ def _render_encounter_map_location(
                 *provenance_fact_table(
                     (
                         ("Map header", f"`header-{record['header_id']:03}`"),
-                        *(_section_name_provenance_facts(record)),
+                        *(section_name_provenance_facts(record)),
                         *(
                             (("Internal map", f"`{record['internal_name']}`"),)
                             if record.get("internal_name")
@@ -235,13 +236,13 @@ def _render_encounter_map_location(
     lines.extend(
         record_navigation_for(
             "location",
-            f"locations/{_filename(record['header_id']).removesuffix('.md')}/",
+            f"locations/{location_filename(record['header_id']).removesuffix('.md')}/",
             previous,
             following,
             aria_label="Location navigation",
             identity=lambda value: value["header_id"],
             route_key=lambda value: value["header_id"],
-            label=_location_label,
+            label=location_label,
         )
     )
     return "\n".join(lines)
