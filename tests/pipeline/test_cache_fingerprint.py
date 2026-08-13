@@ -36,6 +36,10 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         self.assertIn("pipeline/location_arm9_event_map.py", dppt_files)
         self.assertIn("pipeline/location_helpers.py", dppt_files)
 
+        gen5_files = extraction_source_files("gen5_bw", "romwiki.pipeline.locations")
+        self.assertIn("pipeline/location_archive_encounter_map.py", gen5_files)
+        self.assertIn("pipeline/location_helpers.py", gen5_files)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,9 @@ import unittest
 from types import SimpleNamespace
 
 from romwiki.engines.gen5.bw.overworld import resolve_common_script_member
-from romwiki.pipeline.locations import _resolve_gen5_script_locations
+from romwiki.pipeline.location_archive_encounter_map import (
+    _resolve_gen5_script_locations,
+)
 from romwiki.pipeline.relationships import build_relationship_index
 
 
