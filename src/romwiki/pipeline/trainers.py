@@ -135,8 +135,14 @@ def extract_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
     rematch_source, rematch_chains = _read_rematch_table(
         profile, platform, engine, result, trainer_count=len(trainers.members)
     )
+    starter_species = _read_starter_species(profile, platform, engine, result)
     starter_families = _read_starter_branch_families(
-        profile, platform, engine, filesystem, trainer_count=len(trainers.members)
+        profile,
+        platform,
+        engine,
+        filesystem,
+        trainer_count=len(trainers.members),
+        starter_species=starter_species,
     )
     selector_data = {
         key: value
@@ -202,6 +208,7 @@ def _read_starter_branch_families(
     filesystem: Any,
     *,
     trainer_count: int,
+    starter_species: tuple[int, ...] | None,
 ) -> tuple[Any, ...] | None:
     """Decode starter-selected battle groups from the profile's own scripts.
 
@@ -223,9 +230,35 @@ def _read_starter_branch_families(
                 scripts.read(member.index),
                 script_file_id=member.index,
                 trainer_count=trainer_count,
+                starter_species=starter_species,
             )
         )
     return tuple(families)
+
+
+def _read_starter_species(
+    profile: Any, platform: Any, engine: Any, result: InspectionResult
+) -> tuple[int, ...] | None:
+    """Decode the species this profile's starter accessor can return.
+
+    Without it the branch decoder cannot tell a starter comparison from an
+    unrelated one sharing the same scratch variable, so it falls back to the
+    stricter direct-target rule.
+    """
+    overlay_id = profile.parameters.get("starter_species_overlay_id")
+    offset = profile.parameters.get("starter_species_offset")
+    count = profile.parameters.get("starter_species_count")
+    parse = getattr(engine, "parse_starter_species", None)
+    if overlay_id is None or offset is None or count is None or parse is None:
+        return None
+
+    size = count * engine.STARTER_SPECIES_ENTRY_SIZE
+    _, overlay = platform.read_overlay(result.image, overlay_id)
+    return parse(
+        overlay[offset : offset + size],
+        count=count,
+        species_count=engine.BASE_SPECIES_COUNT + 1,
+    )
 
 
 def _read_rematch_table(

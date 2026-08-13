@@ -87,7 +87,7 @@ def _starter_branch_families(
             continue
         families.append(
             {
-                "id": f"starter-branch-{family.script_file_id:04d}",
+                "id": (f"starter-branch-{family.script_file_id:04d}-{family.position}"),
                 "label": label,
                 "order": len(families),
                 "provenance": {

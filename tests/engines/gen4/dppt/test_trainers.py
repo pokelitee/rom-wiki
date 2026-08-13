@@ -104,6 +104,7 @@ class Gen4TrainerTests(unittest.TestCase):
         # numbers is known to the resolver in advance.
         return Gen4StarterBranchFamily(
             script_file_id=script_file_id,
+            position=0,
             selected=((387, 5001), (390, 5002)),
             fallthrough_trainer_id=5003,
         )
@@ -133,7 +134,7 @@ class Gen4TrainerTests(unittest.TestCase):
         result = self._resolve(self._records(), self._decoded_family())
 
         family = result["battle_families"][0]
-        self.assertEqual(family["id"], "starter-branch-0429")
+        self.assertEqual(family["id"], "starter-branch-0429-0")
         self.assertEqual(
             [v["trainer_id"] for v in family["variants"]], [5001, 5002, 5003]
         )

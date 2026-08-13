@@ -193,6 +193,10 @@ from .starter_branches import (
     Gen4StarterBranchFamily,
     parse_starter_branch_families,
 )
+from .starter_species import (
+    STARTER_SPECIES_ENTRY_SIZE,
+    parse_starter_species,
+)
 from .trades import (
     NPC_TRADE_RECORD_SIZE,
     Gen4NpcTrade,
@@ -458,6 +462,8 @@ __all__ = [
     "GET_STARTER_SPECIES",
     "Gen4StarterBranchFamily",
     "parse_starter_branch_families",
+    "STARTER_SPECIES_ENTRY_SIZE",
+    "parse_starter_species",
     "resolve_trainer_variants",
     "normalize_trainer_party_member",
 ]

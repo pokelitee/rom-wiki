@@ -194,17 +194,24 @@ over from hand-written labels: the first rival battle is on Route 203 rather
 than Route 201, and the post-Hearthome battle is on Route 209 rather than in
 Hearthome City. Other same-name records remain fallback navigation only.
 
-Groups whose selection is not a plain starter branch are not published, for two
-distinct reasons. The Spear Pillar partner battle, the weekend rematch stages,
-the starter demonstration, and the Pokémon League rival rematch have no literal
-battle command anywhere in the scripts, so there is nothing to resolve. The
-Survival Area pair stages two battles inside each starter branch rather than
-one, and its branches jump to the start of those blocks instead of onto a
-battle; resolving a whole block instead was tried and rejected, because the
-starter variable is also the engine's general-purpose scratch variable and an
-unrelated comparison then captured a battle belonging to the fall-through,
-producing a confident but wrong branch. Both sets are left unresolved rather
-than asserted.
+Where a starter branch jumps to the start of a block rather than onto a battle,
+as the Survival Area pair does, the block's staged battles are paired by
+position across the branches. That is only attempted once the game's own starter
+accessor has been decoded, because the starter variable doubles as the engine's
+general-purpose scratch variable: without knowing which species are really
+starters, an unrelated comparison captures a battle belonging to the
+fall-through and publishes a confident but wrong branch. Direct branch targets
+are still preferred wherever they resolve, since they stay stable across hacks
+that pack extra battles into the same script. The fall-through block is located
+either side of the branched region, because Renegade Platinum emits it last
+where retail emits it first.
+
+The Spear Pillar partner battle, the weekend rematch stages, the starter
+demonstration, and the Pokémon League rival rematch have no literal battle
+command anywhere in the scripts, so there is nothing to resolve and they are
+left unresolved rather than asserted. Renegade Platinum publishes one fewer
+Survival Area group than retail because it empties those trainer records
+outright, and a group is never published over a record with no party.
 
 Vs. Seeker rematches come from the game's own rematch table in overlay 5, decoded
 once and enumerated in full. Each 12-byte record is a base trainer ID followed by

@@ -3,7 +3,11 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import parse_starter_branch_families
+from romwiki.engines.gen4.dppt import (
+    parse_starter_branch_families,
+    parse_starter_species,
+)
+from romwiki.util.errors import InvalidRomError
 from tests.conftest import make_script
 
 _STARTER_VAR = 0x800C
@@ -134,6 +138,70 @@ class Gen4StarterBranchTests(unittest.TestCase):
         self.assertEqual(
             parse_starter_branch_families(
                 bytes(broken), script_file_id=1, trainer_count=928
+            ),
+            (),
+        )
+
+
+class Gen4StarterSpeciesTests(unittest.TestCase):
+    def test_decodes_word_sized_entries(self) -> None:
+        data = struct.pack("<3I", 387, 390, 393)
+
+        self.assertEqual(
+            parse_starter_species(data, count=3, species_count=494), (387, 390, 393)
+        )
+
+    def test_rejects_a_wrongly_sized_region(self) -> None:
+        with self.assertRaisesRegex(InvalidRomError, "has size 8; expected 12"):
+            parse_starter_species(
+                struct.pack("<2I", 387, 390), count=3, species_count=494
+            )
+
+    def test_rejects_values_that_are_not_species(self) -> None:
+        with self.assertRaisesRegex(InvalidRomError, "invalid species"):
+            parse_starter_species(
+                struct.pack("<3I", 387, 9999, 393), count=3, species_count=494
+            )
+
+    def test_rejects_a_repeated_species(self) -> None:
+        with self.assertRaisesRegex(InvalidRomError, "repeats a species"):
+            parse_starter_species(
+                struct.pack("<3I", 387, 387, 393), count=3, species_count=494
+            )
+
+
+class Gen4StarterBranchBlockTests(unittest.TestCase):
+    def test_declines_block_resolution_without_a_starter_set(self) -> None:
+        # Branches jump past the battles, so only block resolution could pair
+        # them -- and that is withheld until the starter species are known.
+        data = _script(
+            species_targets=((387, 248), (390, 249)),
+            battles=(247, 248, 249),
+        )
+        broken = bytearray(data)
+        struct.pack_into("<i", broken, _HEADER + 4 + 5, 4)
+
+        self.assertEqual(
+            parse_starter_branch_families(
+                bytes(broken), script_file_id=1, trainer_count=928
+            ),
+            (),
+        )
+
+    def test_ignores_a_comparison_value_that_is_not_a_starter(self) -> None:
+        # Value 3 is a real species ID but not a starter; with the starter set
+        # known it can no longer pose as one.
+        data = _script(
+            species_targets=((387, 248), (3, 249)),
+            battles=(247, 248, 249),
+        )
+
+        self.assertEqual(
+            parse_starter_branch_families(
+                data,
+                script_file_id=1,
+                trainer_count=928,
+                starter_species=(387, 390, 393),
             ),
             (),
         )

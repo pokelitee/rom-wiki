@@ -5,11 +5,13 @@ not make partially decoded ROM mechanics complete: every semantic label must
 come from a verified engine or profile selector. Names, adjacent IDs, levels,
 and party similarity may identify candidates but must never assign a label.
 
-## 1. Blocked on an ARM disassembler
+## 1. Blocked without further disassembly
 
-These three share one root cause. Table-shaped selectors can be found by
-anchored search and validated against structural invariants; logic-shaped ones
-cannot, because there is no ground truth to recognise a correct answer with.
+Table-shaped selectors can be found by anchored search and validated against
+structural invariants; logic-shaped ones cannot, because there is no ground
+truth to recognise a correct answer with. `capstone` is available as a dev
+dependency and already resolved the starter accessor, so these are tractable
+with effort rather than fundamentally blocked.
 
 ### B2W2 difficulty level-offset band table
 
@@ -19,15 +21,6 @@ identical levels, and League rematch Challenge records are +1 level. The
 unresolved band table is a separate *runtime* adjustment, so its practical
 effect is a displayed level, not the parties themselves. An unanchored search
 over arm9 plus 344 overlays (4.3 MB) returns only noise.
-
-### DPPT starter species list
-
-Needed to make block-level branch resolution safe (see item 3). Two candidate
-locations were rejected: `overlay_0104+0x12B32` is a long ascending species list
-that merely contains the three starters, and `overlay_0078+0x1BC0` is an ARM
-literal pool — treating it as a species table is the exact anti-pattern this
-project forbids. No field script contains a literal `GivePokemon` for a starter,
-so that decoder cannot supply the set either.
 
 ### DPPT Battleground rematches (`853`–`860`)
 
@@ -47,16 +40,6 @@ happens at all. Both HGSS items are gated behind decoding its opcode set first.
   be tractable and the surrounding state machine not to be.
 
 ## 3. Open, unblocked
-
-### DPPT Survival Area pair (`837`–`839`, `871`–`873`)
-
-Real battles that the decoder declines. The starter branch jumps to the start of
-a block staging two battles rather than onto a battle. Resolving whole blocks
-was implemented and **rejected**: the starter variable `0x800C` is also the
-engine's general-purpose scratch variable, so an unrelated comparison captured a
-battle belonging to the fall-through and produced a confident, wrong "Venusaur"
-branch, while Renegade Platinum collapsed from five families to zero. Unblocked
-by the starter species list above.
 
 ### BW rematch selectors
 
