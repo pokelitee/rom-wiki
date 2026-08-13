@@ -17,8 +17,8 @@ from romwiki.renderers.mkdocs.comparisons import (
 from romwiki.renderers.mkdocs.components import (
     HIDDEN_ABILITY_MARKER,
     empty_state,
+    markdown_table,
     name_table_source,
-    pokemon_table,
     provenance_section,
     record_navigation_for,
     reference_description,
@@ -163,7 +163,7 @@ def _render_record(
     ]
     if record["pokemon"]:
         lines.extend(
-            pokemon_table(
+            markdown_table(
                 [
                     "| Pokémon | Type | Ability slot |",
                     "| ------- | ---- | ------------ |",
@@ -252,7 +252,7 @@ def _pickup_section(
     )
     lines.extend(["", "**Common pool:**", ""])
     lines.extend(
-        pokemon_table(
+        markdown_table(
             ["| Item | Item ID |", "| ---- | ------: |"],
             [
                 f"| {sprite_with_link(reference_sprite_cell('item', item['item_id'], references), _item_link(item, source_file, references))} | {item['item_id']} |"
@@ -262,7 +262,7 @@ def _pickup_section(
     )
     lines.extend(["**Rare pool** (the remaining chance):", ""])
     lines.extend(
-        pokemon_table(
+        markdown_table(
             ["| Item | Item ID |", "| ---- | ------: |"],
             [
                 f"| {sprite_with_link(reference_sprite_cell('item', item['item_id'], references), _item_link(item, source_file, references))} | {item['item_id']} |"
@@ -296,7 +296,7 @@ def _sliding_pickup_section(
             ]
         )
         lines.extend(
-            pokemon_table(
+            markdown_table(
                 ["| Item | Item ID | Chance |", "| ---- | ------: | -----: |"],
                 [
                     f"| {sprite_with_link(reference_sprite_cell('item', slot['item_id'], references), _item_link(slot, source_file, references))} | "

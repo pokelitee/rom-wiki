@@ -24,7 +24,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     display_name,
-    pokemon_table,
+    markdown_table,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -544,7 +544,7 @@ def _append_walking(
     slots = _aggregate_slots(method["slots"], "level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        pokemon_table(
+        markdown_table(
             [
                 "| Pokémon | Type | Levels | Chance |",
                 "| ------- | ---- | -----: | -----: |",
@@ -573,7 +573,7 @@ def _append_water(
     slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        pokemon_table(
+        markdown_table(
             [
                 "| Pokémon | Type | Levels | Chance |",
                 "| ------- | ---- | -----: | -----: |",
@@ -617,7 +617,7 @@ def _append_special(
         for label, values in groups:
             lines.extend([f"**{label}:**", ""])
             lines.extend(
-                pokemon_table(
+                markdown_table(
                     ["| Pokémon | Type |", "| ------- | ---- |"],
                     [
                         f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file))} | "
@@ -654,7 +654,7 @@ def _append_special(
     for label, entries in populated_slotted:
         lines.extend([f"**{label}:**", ""])
         lines.extend(
-            pokemon_table(
+            markdown_table(
                 [
                     "| Pokémon | Type | Levels | Chance |",
                     "| ------- | ---- | -----: | -----: |",
@@ -682,7 +682,7 @@ def _append_special(
             ]
         )
         lines.extend(
-            pokemon_table(
+            markdown_table(
                 ["| Pokémon | Type |", "| ------- | ---- |"],
                 [
                     (
@@ -1149,7 +1149,7 @@ def _append_seasonal_method(
         lines.extend([f"{'#' * heading_level} {heading}", ""])
     lines.extend([f"Encounter rate: {method['rate']}", ""])
     lines.extend(
-        pokemon_table(
+        markdown_table(
             [
                 "| Pokémon | Type | Levels | Chance |",
                 "| ------- | ---- | -----: | -----: |",

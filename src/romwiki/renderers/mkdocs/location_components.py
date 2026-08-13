@@ -9,7 +9,7 @@ from romwiki.renderers.mkdocs.components import (
     badge_requirement,
     display_name,
     escape_table_cell,
-    pokemon_table,
+    markdown_table,
     reference_sprite_cell,
     reference_type_cell,
     resolved_location_label,
@@ -208,7 +208,7 @@ def append_static_encounters(
             f"{encounter['level']} | `{encounter['command']}` |"
         )
     lines.extend(
-        pokemon_table(
+        markdown_table(
             [
                 "| Pokémon | Type | Level | Command |",
                 "| ------- | ---- | ----: | ------- |",

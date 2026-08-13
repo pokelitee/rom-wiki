@@ -18,7 +18,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     escape_table_cell,
-    pokemon_table,
+    markdown_table,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -402,7 +402,7 @@ def _append_pokemon_gifts(
             f"{kind} | {gift['level']} | {held_item_cell} |"
         )
     lines.extend(
-        pokemon_table(
+        markdown_table(
             [
                 "| Pokémon | Type | Kind | Level | Held item |",
                 "| ------- | ---- | ---- | ----: | --------- |",
@@ -441,7 +441,7 @@ def _append_roaming_activations(
         for activation in activations
     ]
     lines.extend(
-        pokemon_table(
+        markdown_table(
             [
                 "| Pokémon | Type | Roaming slot | Script command |",
                 "| ------- | ---- | -----------: | -------------- |",
@@ -515,7 +515,7 @@ def _append_honey_tree(
         ]
         lines.extend([f"**{label}:**", ""])
         lines.extend(
-            pokemon_table(
+            markdown_table(
                 ["| Pokémon | Type | Chance |", "| ------- | ---- | -----: |"], rows
             )
         )
@@ -569,7 +569,7 @@ def _append_daily_encounter_pool(
         if group_label:
             lines.extend([f"**{group_label}:**", ""])
         lines.extend(
-            pokemon_table(
+            markdown_table(
                 ["| Pokémon | Type | Chance |", "| ------- | ---- | -----: |"], rows
             )
         )

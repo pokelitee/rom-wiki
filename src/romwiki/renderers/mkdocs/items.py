@@ -20,8 +20,8 @@ from romwiki.renderers.mkdocs.components import (
     badge_requirement,
     display_name,
     fact_grid,
+    markdown_table,
     name_table_source,
-    pokemon_table,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -436,7 +436,7 @@ def _append_pokemon(
         return
     lines.extend(["## Wild held by", ""])
     lines.extend(
-        pokemon_table(
+        markdown_table(
             ["| Pokémon | Type | Rarity |", "| ------- | ---- | ------ |"],
             [
                 (

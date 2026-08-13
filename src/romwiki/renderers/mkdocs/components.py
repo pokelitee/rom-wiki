@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from html import escape
 from typing import Any
@@ -506,7 +506,8 @@ def sprite_with_link(sprite_html: str, link_html: str) -> str:
     return f'<span class="rw-cell-media">{sprite_html}{link_html}</span>'
 
 
-def pokemon_table(header_lines: list[str], row_lines: list[str]) -> list[str]:
+def markdown_table(header_lines: Iterable[str], row_lines: Iterable[str]) -> list[str]:
+    """Join pre-rendered Markdown table lines with the standard trailing blank."""
     return [*header_lines, *row_lines, ""]
 
 

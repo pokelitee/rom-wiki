@@ -24,8 +24,8 @@ from romwiki.renderers.mkdocs.components import (
     escape_table_cell,
     fact_grid,
     machine_html_link,
+    markdown_table,
     name_table_source,
-    pokemon_table,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -544,7 +544,7 @@ def _relationship_learner_table(
         f"| Pokémon | Form | {detail_heading} | Version |",
         "| ------- | ---- | ------- | ------- |",
     ]
-    fallback = pokemon_table(header, fallback_rows)
+    fallback = markdown_table(header, fallback_rows)
     if show_sprites:
         return fallback
     return _paginated_learner_table(
@@ -665,7 +665,7 @@ def _pokemon_sprite_table(
     if not pokemon:
         return empty_state(empty_message)
     show_sprites = len(pokemon) <= _LEARNER_TABLE_PAGINATION_THRESHOLD
-    fallback = pokemon_table(
+    fallback = markdown_table(
         ["| Pokémon | Type |", "| ------- | ---- |"],
         [
             (

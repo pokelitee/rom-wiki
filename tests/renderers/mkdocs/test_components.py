@@ -13,7 +13,7 @@ from romwiki.renderers.mkdocs.components import (
     effectiveness_value,
     evolution_condition,
     fact_grid,
-    pokemon_table,
+    markdown_table,
     record_nav_link,
     summary_section_link,
     tutor_requirement,
@@ -135,11 +135,28 @@ class ComponentEscapingTests(unittest.TestCase):
         )
 
 
-class PokemonTableTests(unittest.TestCase):
+class MarkdownTableTests(unittest.TestCase):
+    def test_preserves_rendered_lines_and_adds_one_trailing_blank(self) -> None:
+        lines = markdown_table(
+            ("| Name | Value |", "| ---- | ----: |"),
+            (row for row in ("| A | 1 |", "| B | 2 |")),
+        )
+
+        self.assertEqual(
+            lines,
+            [
+                "| Name | Value |",
+                "| ---- | ----: |",
+                "| A | 1 |",
+                "| B | 2 |",
+                "",
+            ],
+        )
+
     def test_renders_full_table_without_collapsing(self) -> None:
         rows = [f"| Row {i} |" for i in range(120)]
 
-        lines = pokemon_table(["| Col |", "| --- |"], rows)
+        lines = markdown_table(["| Col |", "| --- |"], rows)
 
         rendered = "\n".join(lines)
         self.assertNotIn("<details", rendered)
