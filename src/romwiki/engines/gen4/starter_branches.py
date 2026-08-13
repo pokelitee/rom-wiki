@@ -4,16 +4,15 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.dppt.scripts import (
-    START_TRAINER_BATTLE,
-    parse_script_table,
-)
+from romwiki.engines.gen4.script_table import parse_script_table
 
-#: Reads the player's starter species into a script variable. This is the one
-#: opcode this decoder has to know; which species the branches test, which
-#: records they select, and which record is the fall-through are all read out of
-#: the script itself.
+#: Reads the player's starter species into a script variable.
 GET_STARTER_SPECIES = 0x00DE
+
+#: Platinum and HeartGold/SoulSilver share this generation's branch idiom --
+#: the same compare, the same scratch variable, the same conditional jump --
+#: and differ only in which opcode starts a trainer battle, so that one is a
+#: parameter and everything else is common.
 
 COMPARE_VAR_TO_VALUE = 0x0011
 GOTO_IF = 0x001C
@@ -56,6 +55,7 @@ def parse_starter_branch_families(
     *,
     script_file_id: int,
     trainer_count: int,
+    battle_opcode: int,
     starter_species: Sequence[int] | None = None,
 ) -> tuple[Gen4StarterBranchFamily, ...]:
     """Decode a script file's starter-selected battles.
@@ -79,10 +79,20 @@ def parse_starter_branch_families(
         return ()
 
     starter_vars = _starter_variables(data, code_offset)
+    if starter_species:
+        # A variable compared against one of this profile's own starter species
+        # is a starter variable. This is the general anchor: Platinum also reads
+        # the starter through a dedicated command, but HeartGold/SoulSilver has
+        # no such command and is recognised only by what it compares against.
+        starter_vars |= {
+            variable
+            for variable, value, _target in _all_branches(data, code_offset)
+            if value in set(starter_species)
+        }
     if not starter_vars:
         return ()
 
-    battles = _literal_battles(data, code_offset, trainer_count)
+    battles = _literal_battles(data, code_offset, trainer_count, battle_opcode)
     if not battles:
         return ()
 
@@ -158,6 +168,24 @@ def _resolve_blocks(
     return blocks if len(blocks) >= 2 else None
 
 
+def _all_branches(data: bytes, code_offset: int) -> list[tuple[int, int, int]]:
+    """(variable, value, target) for every compare-and-jump pair in the script."""
+    limit = len(data) - (6 + _GOTO_IF_RELATIVE_FIELD + _RELATIVE_FIELD_SIZE)
+    branches = []
+    for offset in range(code_offset, limit):
+        if struct.unpack_from("<H", data, offset)[0] != COMPARE_VAR_TO_VALUE:
+            continue
+        variable, value = struct.unpack_from("<HH", data, offset + 2)
+        if struct.unpack_from("<H", data, offset + 6)[0] != GOTO_IF:
+            continue
+        relative_field = offset + 6 + _GOTO_IF_RELATIVE_FIELD
+        relative = struct.unpack_from("<i", data, relative_field)[0]
+        target = relative_field + _RELATIVE_FIELD_SIZE + relative
+        if code_offset <= target < len(data):
+            branches.append((variable, value, target))
+    return branches
+
+
 def _starter_variables(data: bytes, code_offset: int) -> set[int]:
     return {
         struct.unpack_from("<H", data, offset + 2)[0]
@@ -167,11 +195,11 @@ def _starter_variables(data: bytes, code_offset: int) -> set[int]:
 
 
 def _literal_battles(
-    data: bytes, code_offset: int, trainer_count: int
+    data: bytes, code_offset: int, trainer_count: int, battle_opcode: int
 ) -> dict[int, int]:
     battles = {}
     for offset in range(code_offset, len(data) - 7):
-        if struct.unpack_from("<H", data, offset)[0] != START_TRAINER_BATTLE:
+        if struct.unpack_from("<H", data, offset)[0] != battle_opcode:
             continue
         if struct.unpack_from("<H", data, offset + 6)[0] >= _SCRIPT_COMMAND_COUNT:
             continue

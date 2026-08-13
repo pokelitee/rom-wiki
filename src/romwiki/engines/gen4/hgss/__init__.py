@@ -52,6 +52,19 @@ from romwiki.engines.gen4.personal import (
 from romwiki.engines.gen4.personal import (
     TRAINER_FORM_SLUGS as GEN4_TRAINER_FORM_SLUGS,
 )
+from romwiki.engines.gen4.starter_branches import (
+    GET_STARTER_SPECIES as GET_STARTER_SPECIES,
+)
+from romwiki.engines.gen4.starter_branches import (
+    Gen4StarterBranchFamily as Gen4StarterBranchFamily,
+)
+from romwiki.engines.gen4.starter_branches import (
+    parse_starter_branch_families as _parse_starter_branch_families,
+)
+from romwiki.engines.gen4.starter_species import (
+    STARTER_SPECIES_ENTRY_SIZE,
+    parse_starter_species,
+)
 from romwiki.engines.gen4.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
@@ -201,6 +214,11 @@ __all__ = [
     "parse_tutor_move_table",
     "derive_trainer_party_attributes",
     "resolve_trainer_variants",
+    "STARTER_BATTLE_OPCODE",
+    "STARTER_SPECIES_ENTRY_SIZE",
+    "Gen4StarterBranchFamily",
+    "parse_starter_branch_families",
+    "parse_starter_species",
     "normalize_trainer_party_member",
     "machine_name",
     "parse_personal_record",
@@ -209,3 +227,28 @@ __all__ = [
     "parse_english_message_archive",
     "parse_move_record",
 ]
+
+
+#: HeartGold/SoulSilver's trainer-battle command. This generation's two
+#: leaves share the branch idiom but not this opcode: Platinum uses
+#: 0x00E5, HGSS 0x00D5. Established by locating the curated Silver groups
+#: in their own scripts, where each trainer ID is preceded by 0x00D5, and
+#: the same compare/jump pair on variable 0x800C guards each branch.
+STARTER_BATTLE_OPCODE = 0x00D5
+
+
+def parse_starter_branch_families(
+    data: bytes,
+    *,
+    script_file_id: int,
+    trainer_count: int,
+    starter_species=None,
+):
+    """Decode this leaf's starter-selected battles (see `gen4.starter_branches`)."""
+    return _parse_starter_branch_families(
+        data,
+        script_file_id=script_file_id,
+        trainer_count=trainer_count,
+        battle_opcode=STARTER_BATTLE_OPCODE,
+        starter_species=starter_species,
+    )

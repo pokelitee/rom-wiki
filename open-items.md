@@ -24,17 +24,6 @@ script opcode table.
 
 ## 1. Open
 
-### De-hardcode starter branches for HGSS
-
-Code quality, not coverage. HGSS still lists its 8 Silver groups by hand, so a
-hack that renumbers them silently loses the family. DPPT and BW no longer do:
-each decodes its own starter selector and follows every branch to the record it
-selects, so both describe any ROM from that ROM.
-
-HGSS is the expensive case. BW was tractable because it already had a working
-script disassembler and a community-sourced opcode table with operand widths;
-HGSS has neither, and recovering them is the work described in the appendix.
-
 ### B2W2 difficulty level-offset band table
 
 The only open item on a pursued axis, and its value is narrow. The
@@ -106,8 +95,10 @@ Snapshot generation is not deployment.
 
 ## Appendix: HGSS script decoding
 
-Retained because it is hard-won, not because it is scheduled. Only needed if
-HGSS starter branches are de-hardcoded.
+Retained because it is hard-won, not because it is scheduled. It is no longer
+needed for starter branches — those turned out to require only one opcode, not
+the whole table — but it is the groundwork for any future attempt at HGSS's
+script-only battle locations.
 
 - **Command dispatch tables are located** by scanning for long runs of
   word-aligned pointers into loaded code: Platinum at `arm9+0x0EAC58` (840

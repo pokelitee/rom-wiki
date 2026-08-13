@@ -59,17 +59,34 @@ Trainer data (`a/0/5/5`) and parties (`a/0/5/6`) contain 738 members; member 0
 is unused, so 737 trainers are published. Names, classes, class genders, flags,
 items, AI settings, battle type, party species/forms, levels, held items, and
 custom moves are ROM-derived. Event objects link 390 trainer IDs to map headers
-through HGSS's verified `script_id - 3000 + 1` convention. Script-only and
-shared/tag battle links remain unavailable because HGSS battle commands are not
-yet decoded. Trainer-class payout multipliers also remain unavailable: the
-Platinum locator does not occur in HGSS and no unique HGSS table reference has
-been established.
+through HGSS's verified `script_id - 3000 + 1` convention. Trainer-class payout
+multipliers remain unavailable: the Platinum locator does not occur in HGSS and
+no unique HGSS table reference has been established.
 
-The Cherrygrove-through-Dragon's Den Silver branches are published as verified
-party tabs. Script selection was checked for all Chikorita, Cyndaquil, and
-Totodile choices in both retail ROMs; every variant still references its exact
-trainer record. The broader phone-rematch state machines and script-only/shared
-battle locations remain unresolved and are not reconstructed from trainer names.
+Starter-variable branches are decoded from each profile's own scripts rather
+than listed by hand. HGSS shares Platinum's branch idiom exactly — the same
+compare, the same scratch variable, the same conditional jump — and differs only
+in which opcode starts a trainer battle: Platinum uses `0x00E5`, HGSS `0x00D5`.
+That opcode was established by locating Silver's battles in their own scripts,
+where each trainer ID is directly preceded by it.
+
+Because the scratch variable carries unrelated comparisons too, a branch counts
+as a starter test only when the value it compares against is one of the species
+in this profile's own starter table, decoded from overlay 61 and validated as
+species. Each qualifying branch is then followed to the exact trainer record it
+selects, and the record no branch selects is the remaining starter's. Nothing is
+inferred from trainer names, adjacent IDs, levels, or party similarity, so a
+hack that renumbers or re-teams these battles is described from its own ROM;
+Sacred Gold and Storm Silver are decoded the same way as retail.
+
+Coverage differs from the hand-written list this replaced. Six of its eight
+Silver groups are recovered, and a seventh group it never contained — three
+Passerby Boy records selected by the same branch — is now published. Silver's
+first Cherrygrove battle and the Dragon's Den double battle are not: the first
+uses trainer IDs so small that they cannot be located unambiguously, and the
+second has a different command shape. Both are left unresolved rather than
+asserted. The phone-rematch state machines likewise remain undecoded, and
+rematch is no longer a pursued axis.
 
 The event archive at `a/0/3/2` has 491 members and the matrix archive at
 `a/0/4/1` has 288. Together they publish 1,317 warps, 158 directional

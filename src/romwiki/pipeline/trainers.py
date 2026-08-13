@@ -222,6 +222,8 @@ def _read_starter_branch_families(
         # index or species against, so the scripts are not even read.
         return None
 
+    # Hacks repack these archives loosely, and each engine family names the
+    # tolerance differently, so both spellings are honoured.
     options = {"allow_truncated": True}
     for parameter, option in (
         (
@@ -229,6 +231,9 @@ def _read_starter_branch_families(
             "allow_incorrect_data_block_size",
         ),
         ("field_archives_allow_trailing_data", "allow_trailing_data"),
+        ("events_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
+        ("scripts_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
+        ("scripts_allow_trailing_data", "allow_trailing_data"),
     ):
         if profile.parameters.get(parameter, False):
             options[option] = True

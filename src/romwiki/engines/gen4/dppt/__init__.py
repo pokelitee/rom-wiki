@@ -23,6 +23,17 @@ from romwiki.engines.gen4.machines import (
     GEN4_TM_COUNT,
     machine_name,
 )
+from romwiki.engines.gen4.starter_branches import (
+    GET_STARTER_SPECIES,
+    Gen4StarterBranchFamily,
+)
+from romwiki.engines.gen4.starter_branches import (
+    parse_starter_branch_families as _parse_starter_branch_families,
+)
+from romwiki.engines.gen4.starter_species import (
+    STARTER_SPECIES_ENTRY_SIZE,
+    parse_starter_species,
+)
 
 from .battle_variants import resolve_trainer_variants
 from .berries import (
@@ -187,15 +198,6 @@ from .scripts import (
     parse_script_table,
     parse_static_encounter_commands,
     parse_trainer_battle_commands,
-)
-from .starter_branches import (
-    GET_STARTER_SPECIES,
-    Gen4StarterBranchFamily,
-    parse_starter_branch_families,
-)
-from .starter_species import (
-    STARTER_SPECIES_ENTRY_SIZE,
-    parse_starter_species,
 )
 from .trades import (
     NPC_TRADE_RECORD_SIZE,
@@ -467,3 +469,24 @@ __all__ = [
     "resolve_trainer_variants",
     "normalize_trainer_party_member",
 ]
+
+
+#: Platinum's StartTrainerBattle.
+STARTER_BATTLE_OPCODE = START_TRAINER_BATTLE
+
+
+def parse_starter_branch_families(
+    data: bytes,
+    *,
+    script_file_id: int,
+    trainer_count: int,
+    starter_species=None,
+):
+    """Decode this leaf's starter-selected battles (see `gen4.starter_branches`)."""
+    return _parse_starter_branch_families(
+        data,
+        script_file_id=script_file_id,
+        trainer_count=trainer_count,
+        battle_opcode=STARTER_BATTLE_OPCODE,
+        starter_species=starter_species,
+    )
