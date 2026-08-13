@@ -217,12 +217,22 @@ def _read_starter_branch_families(
     """
     parse = getattr(engine, "parse_starter_branch_families", None)
     scripts_path = profile.layout.get("scripts")
-    if parse is None or scripts_path is None:
+    if parse is None or scripts_path is None or starter_species is None:
+        # Without the profile's starter table there is nothing to resolve an
+        # index or species against, so the scripts are not even read.
         return None
 
-    scripts = platform.archive_cls.from_bytes(
-        filesystem.read(scripts_path), allow_truncated=True
-    )
+    options = {"allow_truncated": True}
+    for parameter, option in (
+        (
+            "field_archives_allow_incorrect_data_block_size",
+            "allow_incorrect_data_block_size",
+        ),
+        ("field_archives_allow_trailing_data", "allow_trailing_data"),
+    ):
+        if profile.parameters.get(parameter, False):
+            options[option] = True
+    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path), **options)
     families = []
     for member in scripts.members:
         families.extend(
@@ -253,7 +263,10 @@ def _read_starter_species(
         return None
 
     size = count * engine.STARTER_SPECIES_ENTRY_SIZE
-    _, overlay = platform.read_overlay(result.image, overlay_id)
+    # Generation V overlays are BLZ-compressed; Generation IV's are stored raw,
+    # so the decompressing reader is correct for both.
+    read = platform.read_overlay_decompressed or platform.read_overlay
+    _, overlay = read(result.image, overlay_id)
     return parse(
         overlay[offset : offset + size],
         count=count,
@@ -364,8 +377,26 @@ def _extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, 
         ).to_dict()
         for record in parsed_records
     ]
+    starter_species = _read_starter_species(profile, platform, engine, result)
+    starter_families = _read_starter_branch_families(
+        profile,
+        platform,
+        engine,
+        filesystem,
+        trainer_count=len(parsed_records) + 1,
+        starter_species=starter_species,
+    )
+    selector_data = {
+        key: value
+        for key, value in (
+            ("starter_branch_families", starter_families),
+            ("starter_species", starter_species),
+            ("species_names", reference_names.get("pokemon_names")),
+        )
+        if value is not None
+    }
     variant_contract = resolve_trainer_variants(
-        engine, profile.id, profile.parameters, records
+        engine, profile.id, profile.parameters, records, selector_data or None
     )
     return {
         "schema_version": TRAINERS_RAW_SCHEMA_VERSION,

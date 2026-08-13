@@ -117,7 +117,13 @@ _GEN5_PARAMETERS = frozenset(
 
 GEN5_BW_PROFILE_CONTRACT = EngineProfileContract(
     required_layout=_GEN5_LAYOUT,
-    required_parameters=_GEN5_PARAMETERS | {"shop_item_overlay_id"},
+    required_parameters=_GEN5_PARAMETERS
+    | {
+        "shop_item_overlay_id",
+        "starter_species_count",
+        "starter_species_offset",
+        "starter_species_overlay_id",
+    },
     reject_unknown=True,
 )
 

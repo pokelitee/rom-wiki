@@ -348,6 +348,23 @@ trainer battle trigger without a full script-engine disassembly:
   opening battles in Nuvema Town, the Route 5, Route 8, and Route 2 rival
   battles on those routes, and the Nuvema Town rematch on its own later map.
 
+Starter-variable branches for Cheren's and Bianca's battles are decoded from
+each profile's own scripts rather than listed by hand. BW branches on a starter
+*index*: it pushes the starter variable, pushes a constant, compares them, and
+jumps past the block it guards when they differ. Each branch is followed to the
+exact trainer record it selects, and the record no branch guards is the
+remaining starter's. Indices are resolved to species through the profile's own
+starter table, so the labels name Snivy, Tepig, and Oshawott without any of
+those being written into the engine.
+
+A script may stage more than one such battle -- Nuvema Town holds both rivals'
+opening battles, sharing the starter variable -- so a group is closed when an
+index repeats, which is exactly where the next battle site begins. Groups are
+only published when at least two indices each guard a distinct literal battle.
+Black and Blaze Black derive the same fourteen groups with the same
+index-to-record mapping, so a hack that renumbers or relocates these battles is
+described from its own ROM.
+
 Both mechanisms resolve trainer IDs to real trainer records only -- battles
 whose ID doesn't resolve are left unlinked rather than guessed at. Verified
 end-to-end: trainer 13 (Cilan, Striaton City's Grass-type Gym Leader) shows

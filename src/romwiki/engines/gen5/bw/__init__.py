@@ -82,6 +82,12 @@ from .scripts import (
     parse_fossil_revival_table,
     parse_trainer_battle_commands,
 )
+from .starter_branches import (
+    STARTER_SPECIES_ENTRY_SIZE,
+    Gen5StarterBranchFamily,
+    parse_starter_branch_families,
+    parse_starter_species,
+)
 from .static_encounters import discover_static_encounters
 from .trades import parse_npc_trade_record
 from .trainer_party import (
@@ -185,6 +191,10 @@ __all__ = [
     "TYPE_NAMES",
     "derive_trainer_party_attributes",
     "resolve_trainer_variants",
+    "STARTER_SPECIES_ENTRY_SIZE",
+    "Gen5StarterBranchFamily",
+    "parse_starter_branch_families",
+    "parse_starter_species",
     "disassemble_function",
     "discover_static_encounters",
     "find_fossil_revival_script",
