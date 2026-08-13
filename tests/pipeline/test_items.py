@@ -13,6 +13,184 @@ from romwiki.sources import PokeDBGeneration
 
 
 class ItemDatasetTests(unittest.TestCase):
+    def test_preserves_relationship_source_order_and_deduplicates_trainer_items(
+        self,
+    ) -> None:
+        raw = {
+            "game": "test",
+            "source": {},
+            "records": [{**_gen5_item_record(), "item_id": 234}],
+        }
+        pokemon_records = []
+        for member, name in ((2, "Second"), (1, "First")):
+            pokemon_records.append(
+                {
+                    "public": True,
+                    "member": member,
+                    "national_dex_id": member,
+                    "slug": name.lower(),
+                    "name": name,
+                    "held_items": [{"id": 234, "rarity": "rare"}],
+                    "evolutions": [
+                        {
+                            "parameter_data": {"kind": "item", "id": 234},
+                            "target": {"id": member + 10, "name": f"{name} target"},
+                            "method": {"name": "Use item"},
+                        }
+                    ],
+                }
+            )
+        pokemon = {
+            "game": "test",
+            "engine": "gen5_bw",
+            "source": {},
+            "records": pokemon_records,
+        }
+        trainers = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "trainer_id": trainer_id,
+                    "name": f"Trainer {trainer_id}",
+                    "class_name": "Ace Trainer",
+                    "party": [
+                        {
+                            "pokemon": {"name": "First", "slug": "first"},
+                            "held_item": {"id": 234},
+                        }
+                    ],
+                    "ai_battle_items": [{"id": 234}, {"id": 234}],
+                    "victory_item": {"id": 234},
+                }
+                for trainer_id in (2, 1)
+            ],
+        }
+        locations = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "header_id": header_id,
+                    "name": f"Location {header_id}",
+                    "items": [
+                        {"item_id": 234, "kind": "visible", "x": header_id, "z": 0}
+                    ],
+                    "shops": [
+                        {
+                            "inventory_id": shop_id,
+                            "kind": "specialty",
+                            "currency": "money",
+                            "dynamic": False,
+                            "items": [
+                                {
+                                    "item_id": 234,
+                                    "price": 100,
+                                    "required_badges": None,
+                                }
+                            ],
+                        }
+                    ],
+                    "pokemon_gifts": [
+                        {
+                            "held_item_id": 234,
+                            "species_id": 1,
+                            "name": "First",
+                        }
+                    ],
+                    "npc_trades": [
+                        {
+                            "trade_id": trade_id,
+                            "held_item_id": 234,
+                            "offered_species_id": 1,
+                            "offered_species_name": "First",
+                        }
+                    ],
+                }
+                for header_id, shop_id, trade_id in ((20, 3, 5), (10, 4, 6))
+            ],
+        }
+        trades = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "trade_id": trade_id,
+                    "held_item_id": 234,
+                    "offered_species_id": 1,
+                    "offered_forme_id": 0,
+                    "ot_name": f"Trader {trade_id}",
+                    "nickname": "First",
+                }
+                for trade_id in (5, 7)
+            ],
+        }
+        marts = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "shop_id": shop_id,
+                    "name": f"Shop {shop_id}",
+                    "is_main_game": True,
+                    "items": [{"item_id": 234}],
+                }
+                for shop_id in (3, 99)
+            ],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
+        )
+
+        record = build_item_dataset(
+            raw,
+            pokedb,
+            pokemon,
+            trainers,
+            locations,
+            trade_dataset=trades,
+            mart_dataset=marts,
+        )["records"][0]
+
+        self.assertEqual(
+            [reference["name"] for reference in record["wild_held_by"]],
+            ["Second", "First"],
+        )
+        self.assertEqual(
+            [reference["source"]["name"] for reference in record["evolutions"]],
+            ["Second", "First"],
+        )
+        for relationship in (
+            "trainer_held_by",
+            "trainer_battle_items",
+            "trainer_rewards",
+        ):
+            self.assertEqual(
+                [reference["trainer_id"] for reference in record[relationship]],
+                [2, 1],
+            )
+        self.assertEqual(
+            [reference["header_id"] for reference in record["locations"]],
+            [20, 10],
+        )
+        self.assertEqual(
+            [reference.get("header_id") for reference in record["shops"]],
+            [20, 10, None],
+        )
+        self.assertEqual(record["shops"][-1]["shop_id"], 99)
+        self.assertEqual(
+            [reference["header_id"] for reference in record["gifts"]],
+            [20, 10],
+        )
+        self.assertEqual(
+            [reference["trade_id"] for reference in record["trades"]],
+            [5, 6, 7],
+        )
+
     def test_builds_relationships_and_renders_item_page(self) -> None:
         raw = {
             "game": "test",

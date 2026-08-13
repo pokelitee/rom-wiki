@@ -242,6 +242,283 @@ def write_item_dataset(dataset: dict[str, Any], output_path: Path) -> None:
     write_json_atomic(output_path, dataset)
 
 
+ItemRelationships = dict[int, dict[str, list[dict[str, Any]]]]
+
+
+def _add_relationship(
+    relationships: ItemRelationships,
+    item_id: int,
+    kind: str,
+    value: dict[str, Any],
+) -> None:
+    if item_id:
+        relationships.setdefault(item_id, {}).setdefault(kind, []).append(value)
+
+
+def _merge_relationships(target: ItemRelationships, source: ItemRelationships) -> None:
+    for item_id, relationships in source.items():
+        for kind, values in relationships.items():
+            target.setdefault(item_id, {}).setdefault(kind, []).extend(values)
+
+
+def _collect_pokemon_relationships(
+    pokemon_dataset: dict[str, Any],
+) -> tuple[
+    ItemRelationships,
+    dict[int, dict[str, Any]],
+    dict[str, dict[str, Any]],
+]:
+    relationships: ItemRelationships = {}
+    pokemon_by_species: dict[int, dict[str, Any]] = {}
+    pokemon_by_slug: dict[str, dict[str, Any]] = {}
+    for pokemon in pokemon_dataset["records"]:
+        if not pokemon["public"]:
+            continue
+        reference = {
+            "member": pokemon["member"],
+            "national_dex_id": pokemon["national_dex_id"],
+            "slug": pokemon["slug"],
+            "name": pokemon["name"],
+        }
+        pokemon_by_slug[pokemon["slug"]] = reference
+        if pokemon["national_dex_id"] is not None:
+            pokemon_by_species.setdefault(pokemon["national_dex_id"], reference)
+        for held_item in pokemon["held_items"]:
+            _add_relationship(
+                relationships,
+                held_item["id"],
+                "wild_held_by",
+                {**reference, "rarity": held_item["rarity"]},
+            )
+        for evolution in pokemon.get("evolutions", []):
+            parameter = evolution.get("parameter_data")
+            if parameter and parameter.get("kind") == "item":
+                _add_relationship(
+                    relationships,
+                    parameter["id"],
+                    "evolutions",
+                    {
+                        "source": reference,
+                        "target": evolution["target"],
+                        "method": evolution["method"]["name"],
+                    },
+                )
+    return relationships, pokemon_by_species, pokemon_by_slug
+
+
+def _collect_trainer_relationships(
+    trainer_dataset: dict[str, Any] | None,
+) -> ItemRelationships:
+    relationships: ItemRelationships = {}
+    for trainer in (trainer_dataset or {}).get("records", []):
+        if not trainer["party"]:
+            continue
+        trainer_reference = {
+            "trainer_id": trainer["trainer_id"],
+            "name": trainer["name"],
+            "class_name": trainer["class_name"],
+        }
+        for party_member in trainer["party"]:
+            held_item = party_member.get("held_item")
+            if held_item:
+                _add_relationship(
+                    relationships,
+                    held_item["id"],
+                    "trainer_held_by",
+                    {**trainer_reference, "pokemon": party_member["pokemon"]},
+                )
+        battle_items = {
+            battle_item["id"]: battle_item
+            for battle_item in trainer.get("ai_battle_items", [])
+        }
+        for battle_item in battle_items.values():
+            _add_relationship(
+                relationships,
+                battle_item["id"],
+                "trainer_battle_items",
+                trainer_reference,
+            )
+        victory_item = trainer.get("victory_item")
+        if victory_item:
+            _add_relationship(
+                relationships,
+                victory_item["id"],
+                "trainer_rewards",
+                trainer_reference,
+            )
+    return relationships
+
+
+def _collect_location_relationships(
+    item_dataset: dict[str, Any],
+    location_dataset: dict[str, Any] | None,
+) -> tuple[ItemRelationships, set[int], set[int], dict[int, list[dict[str, Any]]]]:
+    relationships: ItemRelationships = {}
+    linked_shop_ids: set[int] = set()
+    linked_trade_ids: set[int] = set()
+    fossil_locations_by_species: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    fossil_source = item_dataset.get("source", {}).get("fossil_revival_table")
+    fossil_member = (
+        fossil_source.get("member") if isinstance(fossil_source, dict) else None
+    )
+    for location in (location_dataset or {}).get("records", []):
+        location_reference = {
+            "header_id": location["header_id"],
+            "name": location["name"],
+            "section_name": location.get("section_name"),
+            "internal_name": location.get("internal_name", location["name"]),
+        }
+        for item in location.get("items", []):
+            _add_relationship(
+                relationships,
+                item["item_id"],
+                "locations",
+                {
+                    **location_reference,
+                    "kind": item["kind"],
+                    "x": item["x"],
+                    "z": item["z"],
+                },
+            )
+        for shop in location.get("shops", []):
+            if not shop.get("dynamic") and shop.get("inventory_id") is not None:
+                linked_shop_ids.add(shop["inventory_id"])
+            for item in shop["items"]:
+                _add_relationship(
+                    relationships,
+                    item["item_id"],
+                    "shops",
+                    {
+                        **location_reference,
+                        "kind": shop["kind"],
+                        "currency": shop["currency"],
+                        "price": item["price"],
+                        "required_badges": item["required_badges"],
+                        "shop_id": shop["inventory_id"],
+                        "selector_id": shop.get("selector_id"),
+                        "selector_ids": shop.get("selector_ids", []),
+                        "vendor_id": shop.get("vendor_id"),
+                        "shop_name": shop.get("name"),
+                        "is_main_game": shop.get("is_main_game"),
+                        "availability": (
+                            item.get("availability") or shop.get("availability")
+                        ),
+                    },
+                )
+        for gift in location.get("pokemon_gifts", []):
+            if gift.get("held_item_id"):
+                _add_relationship(
+                    relationships,
+                    gift["held_item_id"],
+                    "gifts",
+                    {
+                        **location_reference,
+                        "pokemon": {"id": gift["species_id"], "name": gift["name"]},
+                    },
+                )
+        for trade in location.get("npc_trades", []):
+            linked_trade_ids.add(trade["trade_id"])
+            if trade.get("held_item_id"):
+                _add_relationship(
+                    relationships,
+                    trade["held_item_id"],
+                    "trades",
+                    {
+                        **location_reference,
+                        "trade_id": trade["trade_id"],
+                        "pokemon": {
+                            "id": trade["offered_species_id"],
+                            "name": trade["offered_species_name"],
+                        },
+                    },
+                )
+        if isinstance(fossil_member, int):
+            for encounter in location.get("static_encounters", []):
+                if encounter.get("script_file_id") != fossil_member:
+                    continue
+                reference = {
+                    "header_id": location["header_id"],
+                    "name": location["name"],
+                    "internal_name": location.get("internal_name", location["name"]),
+                }
+                locations = fossil_locations_by_species[encounter["species_id"]]
+                if reference not in locations:
+                    locations.append(reference)
+    return (
+        relationships,
+        linked_shop_ids,
+        linked_trade_ids,
+        fossil_locations_by_species,
+    )
+
+
+def _collect_detached_trade_relationships(
+    trade_dataset: dict[str, Any] | None,
+    pokemon_dataset: dict[str, Any],
+    pokemon_by_species: dict[int, dict[str, Any]],
+    pokemon_by_slug: dict[str, dict[str, Any]],
+    linked_trade_ids: set[int],
+) -> ItemRelationships:
+    relationships: ItemRelationships = {}
+    for trade in (trade_dataset or {}).get("records", []):
+        if trade["trade_id"] in linked_trade_ids:
+            continue
+        held_item_id = trade.get("held_item_id")
+        if not held_item_id:
+            continue
+        offered = None
+        forme_id = trade.get("offered_forme_id")
+        if forme_id:
+            engine_tables = get_engine(pokemon_dataset["engine"]).enrich
+            form_slug = engine_tables.TRAINER_FORM_SLUGS.get(
+                (trade["offered_species_id"], forme_id)
+            )
+            if form_slug is not None:
+                offered = pokemon_by_slug.get(form_slug)
+        if offered is None:
+            offered = pokemon_by_species.get(trade["offered_species_id"])
+        pokemon_reference = (
+            {"id": offered["member"], "name": offered["name"], "slug": offered["slug"]}
+            if offered is not None
+            else {"id": trade["offered_species_id"], "name": None}
+        )
+        _add_relationship(
+            relationships,
+            held_item_id,
+            "trades",
+            {
+                "trade_id": trade["trade_id"],
+                "name": trade["ot_name"],
+                "nickname": trade["nickname"],
+                "ot_name": trade["ot_name"],
+                "interaction": trade.get("interaction", "fixed-location"),
+                "pokemon": pokemon_reference,
+            },
+        )
+    return relationships
+
+
+def _collect_mart_relationships(
+    mart_dataset: dict[str, Any] | None, linked_shop_ids: set[int]
+) -> ItemRelationships:
+    relationships: ItemRelationships = {}
+    for shop in (mart_dataset or {}).get("records", []):
+        if shop["shop_id"] in linked_shop_ids:
+            continue
+        for item in shop["items"]:
+            _add_relationship(
+                relationships,
+                item["item_id"],
+                "shops",
+                {
+                    "shop_id": shop["shop_id"],
+                    "shop_name": shop["name"],
+                    "is_main_game": shop["is_main_game"],
+                },
+            )
+    return relationships
+
+
 def build_item_dataset(
     item_dataset: dict[str, Any],
     pokedb: PokeDBGeneration,
@@ -266,213 +543,34 @@ def build_item_dataset(
                 f"Item and {label} datasets must be for the same game"
             )
 
-    relationships: dict[int, dict[str, list[dict[str, Any]]]] = {}
-
-    def add(item_id: int, kind: str, value: dict[str, Any]) -> None:
-        if not item_id:
-            return
-        relationships.setdefault(item_id, {}).setdefault(kind, []).append(value)
-
-    pokemon_by_species: dict[int, dict[str, Any]] = {}
-    pokemon_by_slug: dict[str, dict[str, Any]] = {}
-    for pokemon in pokemon_dataset["records"]:
-        if not pokemon["public"]:
-            continue
-        reference = {
-            "member": pokemon["member"],
-            "national_dex_id": pokemon["national_dex_id"],
-            "slug": pokemon["slug"],
-            "name": pokemon["name"],
-        }
-        pokemon_by_slug[pokemon["slug"]] = reference
-        if pokemon["national_dex_id"] is not None:
-            pokemon_by_species.setdefault(pokemon["national_dex_id"], reference)
-        for held_item in pokemon["held_items"]:
-            add(
-                held_item["id"],
-                "wild_held_by",
-                {**reference, "rarity": held_item["rarity"]},
-            )
-        for evolution in pokemon.get("evolutions", []):
-            parameter = evolution.get("parameter_data")
-            if parameter and parameter.get("kind") == "item":
-                add(
-                    parameter["id"],
-                    "evolutions",
-                    {
-                        "source": reference,
-                        "target": evolution["target"],
-                        "method": evolution["method"]["name"],
-                    },
-                )
-
-    for trainer in (trainer_dataset or {}).get("records", []):
-        if not trainer["party"]:
-            continue
-        trainer_reference = {
-            "trainer_id": trainer["trainer_id"],
-            "name": trainer["name"],
-            "class_name": trainer["class_name"],
-        }
-        for party_member in trainer["party"]:
-            held_item = party_member.get("held_item")
-            if held_item:
-                add(
-                    held_item["id"],
-                    "trainer_held_by",
-                    {**trainer_reference, "pokemon": party_member["pokemon"]},
-                )
-        battle_items = {
-            battle_item["id"]: battle_item
-            for battle_item in trainer.get("ai_battle_items", [])
-        }
-        for battle_item in battle_items.values():
-            add(battle_item["id"], "trainer_battle_items", trainer_reference)
-        victory_item = trainer.get("victory_item")
-        if victory_item:
-            add(victory_item["id"], "trainer_rewards", trainer_reference)
-
-    linked_shop_ids = set()
-    linked_trade_ids = set()
-    fossil_locations_by_species: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    fossil_source = item_dataset.get("source", {}).get("fossil_revival_table")
-    fossil_member = (
-        fossil_source.get("member") if isinstance(fossil_source, dict) else None
+    pokemon_relationships, pokemon_by_species, pokemon_by_slug = (
+        _collect_pokemon_relationships(pokemon_dataset)
     )
-    for location in (location_dataset or {}).get("records", []):
-        # Gen5 has no distinct internal debug-map name, so use its display
-        # name for the shared relationship shape.
-        location_reference = {
-            "header_id": location["header_id"],
-            "name": location["name"],
-            "section_name": location.get("section_name"),
-            "internal_name": location.get("internal_name", location["name"]),
-        }
-        for item in location.get("items", []):
-            add(
-                item["item_id"],
-                "locations",
-                {
-                    **location_reference,
-                    "kind": item["kind"],
-                    "x": item["x"],
-                    "z": item["z"],
-                },
-            )
-        for shop in location.get("shops", []):
-            if not shop.get("dynamic") and shop.get("inventory_id") is not None:
-                linked_shop_ids.add(shop["inventory_id"])
-            for item in shop["items"]:
-                add(
-                    item["item_id"],
-                    "shops",
-                    {
-                        **location_reference,
-                        "kind": shop["kind"],
-                        "currency": shop["currency"],
-                        "price": item["price"],
-                        "required_badges": item["required_badges"],
-                        "shop_id": shop["inventory_id"],
-                        "selector_id": shop.get("selector_id"),
-                        "selector_ids": shop.get("selector_ids", []),
-                        "vendor_id": shop.get("vendor_id"),
-                        "shop_name": shop.get("name"),
-                        "is_main_game": shop.get("is_main_game"),
-                        "availability": (
-                            item.get("availability") or shop.get("availability")
-                        ),
-                    },
-                )
-        for gift in location.get("pokemon_gifts", []):
-            if gift.get("held_item_id"):
-                add(
-                    gift["held_item_id"],
-                    "gifts",
-                    {
-                        **location_reference,
-                        "pokemon": {"id": gift["species_id"], "name": gift["name"]},
-                    },
-                )
-        for trade in location.get("npc_trades", []):
-            linked_trade_ids.add(trade["trade_id"])
-            if trade.get("held_item_id"):
-                add(
-                    trade["held_item_id"],
-                    "trades",
-                    {
-                        **location_reference,
-                        "trade_id": trade["trade_id"],
-                        "pokemon": {
-                            "id": trade["offered_species_id"],
-                            "name": trade["offered_species_name"],
-                        },
-                    },
-                )
-        if isinstance(fossil_member, int):
-            for encounter in location.get("static_encounters", []):
-                if encounter.get("script_file_id") != fossil_member:
-                    continue
-                reference = {
-                    "header_id": location["header_id"],
-                    "name": location["name"],
-                    "internal_name": location.get("internal_name", location["name"]),
-                }
-                locations = fossil_locations_by_species[encounter["species_id"]]
-                if reference not in locations:
-                    locations.append(reference)
+    trainer_relationships = _collect_trainer_relationships(trainer_dataset)
+    (
+        location_relationships,
+        linked_shop_ids,
+        linked_trade_ids,
+        fossil_locations_by_species,
+    ) = _collect_location_relationships(item_dataset, location_dataset)
+    trade_relationships = _collect_detached_trade_relationships(
+        trade_dataset,
+        pokemon_dataset,
+        pokemon_by_species,
+        pokemon_by_slug,
+        linked_trade_ids,
+    )
+    mart_relationships = _collect_mart_relationships(mart_dataset, linked_shop_ids)
 
-    # Preserve detached trades that genuinely have no fixed map (notably the
-    # B2W2 Curtis/Yancy phone trades). Fixed trades were already linked above.
-    for trade in (trade_dataset or {}).get("records", []):
-        if trade["trade_id"] in linked_trade_ids:
-            continue
-        held_item_id = trade.get("held_item_id")
-        if not held_item_id:
-            continue
-        offered = None
-        forme_id = trade.get("offered_forme_id")
-        if forme_id:
-            engine_tables = get_engine(pokemon_dataset["engine"]).enrich
-            form_slug = engine_tables.TRAINER_FORM_SLUGS.get(
-                (trade["offered_species_id"], forme_id)
-            )
-            if form_slug is not None:
-                offered = pokemon_by_slug.get(form_slug)
-        if offered is None:
-            offered = pokemon_by_species.get(trade["offered_species_id"])
-        pokemon_reference = (
-            {"id": offered["member"], "name": offered["name"], "slug": offered["slug"]}
-            if offered is not None
-            else {"id": trade["offered_species_id"], "name": None}
-        )
-        add(
-            held_item_id,
-            "trades",
-            {
-                "trade_id": trade["trade_id"],
-                "name": trade["ot_name"],
-                "nickname": trade["nickname"],
-                "ot_name": trade["ot_name"],
-                "interaction": trade.get("interaction", "fixed-location"),
-                "pokemon": pokemon_reference,
-            },
-        )
-
-    # Preserve a flat fallback for any decoded inventory without a verified
-    # location dispatcher.
-    for shop in (mart_dataset or {}).get("records", []):
-        if shop["shop_id"] in linked_shop_ids:
-            continue
-        for item in shop["items"]:
-            add(
-                item["item_id"],
-                "shops",
-                {
-                    "shop_id": shop["shop_id"],
-                    "shop_name": shop["name"],
-                    "is_main_game": shop["is_main_game"],
-                },
-            )
+    relationships: ItemRelationships = {}
+    for collected in (
+        pokemon_relationships,
+        trainer_relationships,
+        location_relationships,
+        trade_relationships,
+        mart_relationships,
+    ):
+        _merge_relationships(relationships, collected)
 
     # ROM item names are usually unique, but not always: e.g. Gen5's real,
     # distinct male- and female-color Xtransceiver items share the exact
