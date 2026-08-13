@@ -26,6 +26,12 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         self.assertIn("pipeline/moves.py", files)
         self.assertNotIn("pipeline/locations.py", files)
 
+    def test_includes_split_location_strategy_dependencies(self) -> None:
+        files = extraction_source_files("gen4_hgss", "romwiki.pipeline.locations")
+
+        self.assertIn("pipeline/location_arm9_encounter_map.py", files)
+        self.assertIn("pipeline/location_helpers.py", files)
+
 
 if __name__ == "__main__":
     unittest.main()

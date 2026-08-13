@@ -7,6 +7,14 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.identify import InspectionResult
+from romwiki.pipeline.location_arm9_encounter_map import (
+    extract_arm9_encounter_map_location_dataset,
+)
+from romwiki.pipeline.location_helpers import (
+    extract_event_map_connections,
+    extract_event_map_items,
+    extract_trainer_references,
+)
 from romwiki.pipeline.location_sections import (
     resolve_location_section,
     validate_location_sections,
@@ -16,11 +24,9 @@ from romwiki.pipeline.map_headers import (
     read_code_binary,
     resolve_map_headers,
 )
-from romwiki.pipeline.trainers import extract_trainer_dataset
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     BonusEncounterSpecies,
-    EncounterMapLocation,
     EventMapLocation,
     LocationConnection,
     LocationDailyEncounterPool,
@@ -33,7 +39,6 @@ from romwiki.schema import (
     LocationShop,
     LocationShopItem,
     LocationStaticEncounter,
-    LocationTrainerReference,
     LocationWarp,
     RecordProvenance,
 )
@@ -64,7 +69,7 @@ def extract_location_dataset(
             trade_dataset,
         )
     if extraction_format == "arm9-encounter-map":
-        return _extract_arm9_encounter_map_location_dataset(
+        return extract_arm9_encounter_map_location_dataset(
             result, trainer_dataset=trainer_dataset, item_dataset=item_dataset
         )
     if extraction_format == "arm9-event-map":
@@ -79,220 +84,6 @@ def extract_location_dataset(
     raise DataSourceError(
         f"Unsupported location extraction format: {extraction_format!r}"
     )
-
-
-def _extract_arm9_encounter_map_location_dataset(
-    result: InspectionResult,
-    trainer_dataset: dict[str, Any] | None = None,
-    item_dataset: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    assert result.match is not None
-    profile = result.match.profile
-    try:
-        map_names_path = profile.layout["map_names"]
-        messages_path = profile.layout["messages"]
-        encounters_path = profile.layout["encounters"]
-        events_path = profile.layout["events"]
-        matrices_path = profile.layout["map_matrices"]
-        count = profile.parameters["map_header_count"]
-        table_offset = profile.parameters["map_header_offset"]
-        location_names_member = profile.parameters["location_names_member"]
-        item_names_member = profile.parameters["item_names_member"]
-    except KeyError as error:
-        raise ProfileError(
-            f"Profile {profile.id} is missing location metadata: {error.args[0]}"
-        ) from error
-
-    platform = get_platform(profile.platform)
-    engine = get_engine(profile.engine).locations
-    filesystem = platform.filesystem_from_image(result.image)
-    messages = platform.archive_cls.from_bytes(
-        filesystem.read(messages_path),
-        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
-    )
-    encounters = platform.archive_cls.from_bytes(
-        filesystem.read(encounters_path),
-        allow_truncated=profile.parameters.get("encounters_allow_truncated", False),
-    )
-    event_options = {}
-    if profile.parameters.get("events_allow_incorrect_data_block_size", False):
-        event_options["allow_incorrect_data_block_size"] = True
-    events = platform.archive_cls.from_bytes(
-        filesystem.read(events_path), **event_options
-    )
-    matrices = platform.archive_cls.from_bytes(filesystem.read(matrices_path))
-    arm9_data = read_code_binary(platform, result.image, engine)
-    headers, location_names = resolve_map_headers(
-        engine,
-        arm9_data,
-        filesystem,
-        messages,
-        map_names_path=map_names_path,
-        table_offset=table_offset,
-        count=count,
-        location_names_member=location_names_member,
-    )
-    validate_location_sections(
-        profile,
-        ((header.header_id, header.internal_name) for header in headers),
-    )
-    null_encounter_id = profile.parameters.get(
-        "null_encounter_id", engine.ENCOUNTER_MEMBER_NONE
-    )
-    null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)
-    dynamic_warp_header_id = profile.parameters.get(
-        "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
-    )
-    dynamic_warp_id = profile.parameters.get("dynamic_warp_id", engine.DYNAMIC_WARP_ID)
-    matrix_void_header_ids = frozenset(
-        profile.parameters.get("matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS)
-    )
-    item_names = tuple(
-        record["name"] for record in (item_dataset or {}).get("records", ())
-    ) or engine.parse_english_message_archive(messages.read(item_names_member))
-    parsed_events: dict[int, Any] = {}
-    items_by_event: dict[int, tuple[LocationItem, ...]] = {}
-    raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
-    for header in headers:
-        if header.event_file_id == null_event_id:
-            raw_warps_by_header[header.header_id] = ()
-            continue
-        if header.event_file_id >= len(events.members):
-            raise InvalidRomError(
-                f"Map header {header.header_id} references missing event file "
-                f"{header.event_file_id}"
-            )
-        if header.event_file_id not in parsed_events:
-            parsed = engine.parse_map_events(
-                events.read(header.event_file_id), event_file_id=header.event_file_id
-            )
-            parsed_events[header.event_file_id] = parsed
-            items_by_event[header.event_file_id] = (
-                _extract_event_map_location_items(engine, parsed, item_names)
-                if item_names
-                else ()
-            )
-        raw_warps_by_header[header.header_id] = parsed_events[
-            header.event_file_id
-        ].warps
-    connections = _extract_event_map_connections(
-        engine, headers, matrices, location_names, matrix_void_header_ids
-    )
-    trainers = _extract_trainer_references(result, trainer_dataset)
-    records = []
-    for header in headers:
-        section_name, section_name_source = resolve_location_section(
-            profile,
-            header_id=header.header_id,
-            internal_name=header.internal_name,
-        )
-        encounter_id = header.encounter_id
-        encounter_map_index = (
-            None if encounter_id == null_encounter_id else encounter_id
-        )
-        if encounter_map_index is not None and encounter_map_index >= len(
-            encounters.members
-        ):
-            raise InvalidRomError(
-                f"Map header {header.header_id} references missing encounter "
-                f"member {encounter_map_index}"
-            )
-        warps = []
-        for warp in raw_warps_by_header[header.header_id]:
-            dynamic = (
-                warp.destination_header_id == dynamic_warp_header_id
-                and warp.destination_warp_id == dynamic_warp_id
-            )
-            if dynamic:
-                warps.append(
-                    LocationWarp(
-                        index=warp.index,
-                        x=warp.x,
-                        z=warp.z,
-                        destination_header_id=None,
-                        destination_warp_id=None,
-                        destination_name=None,
-                        destination_internal_name=None,
-                        destination_warp_exists=None,
-                        dynamic=True,
-                    )
-                )
-                continue
-            if warp.destination_header_id >= len(headers):
-                raise InvalidRomError(
-                    f"Map header {header.header_id} warp {warp.index} references "
-                    f"missing header {warp.destination_header_id}"
-                )
-            destination = headers[warp.destination_header_id]
-            warps.append(
-                LocationWarp(
-                    index=warp.index,
-                    x=warp.x,
-                    z=warp.z,
-                    destination_header_id=destination.header_id,
-                    destination_warp_id=warp.destination_warp_id,
-                    destination_name=location_names[destination.location_name_id],
-                    destination_internal_name=destination.internal_name,
-                    destination_warp_exists=(
-                        warp.destination_warp_id
-                        < len(raw_warps_by_header[destination.header_id])
-                    ),
-                    dynamic=False,
-                )
-            )
-        records.append(
-            EncounterMapLocation(
-                header_id=header.header_id,
-                name=location_names[header.location_name_id],
-                encounter_map_index=encounter_map_index,
-                matrix_id=header.matrix_id,
-                internal_name=header.internal_name,
-                section_name=section_name,
-                section_name_source=section_name_source,
-                trainers=tuple(trainers.get(header.header_id, ())),
-                warps=tuple(warps),
-                connections=tuple(connections.get(header.header_id, ())),
-                items=(
-                    ()
-                    if header.event_file_id == null_event_id
-                    else items_by_event[header.event_file_id]
-                ),
-                provenance=RecordProvenance(
-                    source="rom", archive="arm9", member=header.header_id
-                ),
-            ).to_dict()
-        )
-    return {
-        "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "locations",
-        "record_count": len(records),
-        "warp_count": sum(len(record["warps"]) for record in records),
-        "connection_count": sum(len(record["connections"]) for record in records),
-        "visible_item_count": sum(
-            item["kind"] == "visible" for record in records for item in record["items"]
-        ),
-        "hidden_item_count": sum(
-            item["kind"] == "hidden" for record in records for item in record["items"]
-        ),
-        "source": {
-            "rom_sha256": result.image.hashes.sha256,
-            "map_headers": {"arm9_offset": table_offset, "count": count},
-            "internal_names": map_names_path,
-            "events_archive": events_path,
-            "map_matrices_archive": matrices_path,
-            "location_names": {
-                "archive": messages_path,
-                "member": location_names_member,
-            },
-            "item_names": {
-                "archive": messages_path,
-                "member": item_names_member,
-            },
-        },
-        "records": records,
-    }
 
 
 def _extract_arm9_event_map_location_dataset(
@@ -612,16 +403,16 @@ def _extract_arm9_event_map_location_dataset(
             events_by_id[header.event_file_id] = engine.parse_map_events(
                 events.read(header.event_file_id), event_file_id=header.event_file_id
             )
-            items_by_event[header.event_file_id] = _extract_event_map_location_items(
+            items_by_event[header.event_file_id] = extract_event_map_items(
                 engine, events_by_id[header.event_file_id], item_names
             )
         raw_warps_by_header[header.header_id] = events_by_id[header.event_file_id].warps
         raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
 
-    connections = _extract_event_map_connections(
+    connections = extract_event_map_connections(
         engine, headers, matrices, location_names, matrix_void_header_ids
     )
-    trainers = _extract_trainer_references(result, trainer_dataset)
+    trainers = extract_trainer_references(result, trainer_dataset)
     records = []
     for header in headers:
         section_name, section_name_source = resolve_location_section(
@@ -1022,7 +813,7 @@ def _extract_encounter_map_location_dataset(
         ((header.header_id, header.internal_name) for header in headers),
     )
     script_file_ids = engine.parse_map_header_script_files(map_headers.read(0))
-    trainers_by_header = _extract_trainer_references(result, trainer_dataset)
+    trainers_by_header = extract_trainer_references(result, trainer_dataset)
     overworld_objects = platform.archive_cls.from_bytes(
         filesystem.read(overworld_objects_path), **field_archive_options
     )
@@ -1570,136 +1361,6 @@ def _extract_event_map_location_npc_trades(
     return tuple(trades)
 
 
-def _extract_event_map_location_items(
-    engine: Any, events: Any, item_names: tuple[str, ...]
-) -> tuple[LocationItem, ...]:
-    items = []
-    for event in events.objects:
-        item_id = engine.resolve_visible_item_id(event, item_count=len(item_names))
-        if item_id is None:
-            continue
-        items.append(
-            LocationItem(
-                item_id=item_id,
-                name=item_names[item_id],
-                kind="visible",
-                event_index=event.index,
-                x=event.x,
-                z=event.z,
-                y=event.y,
-                hidden_flag=event.hidden_flag,
-            )
-        )
-    for event in events.backgrounds:
-        item_id = engine.resolve_hidden_item_id(event, item_count=len(item_names))
-        if item_id is None:
-            continue
-        items.append(
-            LocationItem(
-                item_id=item_id,
-                name=item_names[item_id],
-                kind="hidden",
-                event_index=event.index,
-                x=event.x,
-                z=event.z,
-                y=event.y,
-                hidden_flag=None,
-            )
-        )
-    return tuple(items)
-
-
-def _extract_event_map_connections(
-    engine: Any,
-    headers: tuple[Any, ...],
-    matrices: Any,
-    location_names: tuple[str, ...],
-    void_header_ids: frozenset[int],
-) -> dict[int, list[LocationConnection]]:
-    directions: dict[int, dict[int, set[str]]] = defaultdict(lambda: defaultdict(set))
-    for matrix_id in sorted({header.matrix_id for header in headers}):
-        if matrix_id >= len(matrices.members):
-            raise InvalidRomError(f"Map header references missing matrix {matrix_id}")
-        matrix = engine.parse_map_matrix(matrices.read(matrix_id), matrix_id=matrix_id)
-        if matrix.header_ids is None:
-            continue
-        for index, source in enumerate(matrix.header_ids):
-            if source in void_header_ids:
-                continue
-            if source >= len(headers):
-                raise InvalidRomError(
-                    f"Map matrix {matrix_id} references missing header {source}"
-                )
-            x = index % matrix.width
-            z = index // matrix.width
-            for offset, forward, reverse in (
-                (1, "east", "west"),
-                (matrix.width, "south", "north"),
-            ):
-                if (forward == "east" and x + 1 >= matrix.width) or (
-                    forward == "south" and z + 1 >= matrix.height
-                ):
-                    continue
-                destination = matrix.header_ids[index + offset]
-                if destination == source or destination in void_header_ids:
-                    continue
-                if destination >= len(headers):
-                    raise InvalidRomError(
-                        f"Map matrix {matrix_id} references missing header "
-                        f"{destination}"
-                    )
-                directions[source][destination].add(forward)
-                directions[destination][source].add(reverse)
-
-    result = {}
-    direction_order = {"north": 0, "east": 1, "south": 2, "west": 3}
-    for source, destinations in directions.items():
-        result[source] = []
-        for destination_id, values in sorted(destinations.items()):
-            destination = headers[destination_id]
-            result[source].append(
-                LocationConnection(
-                    destination_header_id=destination_id,
-                    destination_name=location_names[destination.location_name_id],
-                    destination_internal_name=destination.internal_name,
-                    directions=tuple(sorted(values, key=direction_order.__getitem__)),
-                )
-            )
-    return result
-
-
-def _extract_trainer_references(
-    result: InspectionResult,
-    trainer_dataset: dict[str, Any] | None = None,
-) -> dict[int, list[LocationTrainerReference]]:
-    references: dict[int, list[LocationTrainerReference]] = defaultdict(list)
-    seen: set[tuple[int, int, str]] = set()
-    trainers = trainer_dataset or extract_trainer_dataset(result)
-    for trainer in trainers["records"]:
-        if not trainer["party"]:
-            continue
-        for source, locations in (
-            ("overworld-object", trainer["locations"]),
-            ("map-script", trainer["script_references"]),
-        ):
-            for location in locations:
-                key = (location["header_id"], trainer["trainer_id"], source)
-                if key in seen:
-                    continue
-                seen.add(key)
-                references[location["header_id"]].append(
-                    LocationTrainerReference(
-                        trainer_id=trainer["trainer_id"],
-                        name=trainer["name"],
-                        class_name=trainer["class_name"],
-                        source=source,
-                    )
-                )
-    for values in references.values():
-        values.sort(key=lambda item: (item.class_name, item.name, item.trainer_id))
-    return references
-
-
 def _extract_encounter_map_connections(
     engine: Any,
     headers: tuple[Any, ...],
@@ -1712,7 +1373,7 @@ def _extract_encounter_map_connections(
     `layout.map_matrices`; adjacent grid cells are real, geographically
     adjacent maps. A cell value of -1 means "no map there" (verified: real
     grids are ragged rectangles, not fully packed). Mirrors Gen IV's own
-    `_extract_event_map_connections` algorithm, adapted to the differently-
+    `extract_event_map_connections` algorithm, adapted to the differently-
     shaped `Gen5MapMatrix` (no separate location-name-id indirection --
     `EncounterMapLocation.name` is already the display name).
     """

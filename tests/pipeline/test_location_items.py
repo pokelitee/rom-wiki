@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.locations import _extract_event_map_location_items
+from romwiki.pipeline.location_helpers import extract_event_map_items
 
 
 class LocationItemTests(unittest.TestCase):
@@ -43,7 +43,7 @@ class LocationItemTests(unittest.TestCase):
             ),
         )
 
-        items = _extract_event_map_location_items(
+        items = extract_event_map_items(
             get_engine("gen4_dppt").locations, events, tuple(names)
         )
 
