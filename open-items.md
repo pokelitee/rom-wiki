@@ -93,6 +93,29 @@ coincidences inside data, found by scanning unaligned over a large corpus.
 Identifying the command requires HGSS's actual script command table, which means
 disassembling its script interpreter rather than searching its scripts.
 
+Groundwork already done, so a future attempt need not repeat it:
+
+- **The command dispatch tables are located.** Scanning for long runs of
+  word-aligned pointers into loaded code finds one table per game:
+  Platinum at `arm9+0x0EAC58` with 840 entries, HeartGold at `arm9+0x0FAD00`
+  with 853. The method is validated by Platinum, whose command count this
+  project already knows independently to be `0x033A` (826) — close to the 840
+  found, the remainder being adjacent pointers the run-detector absorbs.
+- **Per-command operand counts can be recovered** by disassembling each handler
+  with `capstone` and counting calls to the shared operand-read helper (the
+  most-called function across all handlers: `0x0203E838` in Platinum,
+  `0x0203FE2C` in HeartGold). This is validated too: Platinum's
+  `handler[0x00E5]` reports exactly 2 operands, matching its known battle
+  command.
+- **Handler fingerprinting does not work.** Only 6 of the 840/853 handlers are
+  byte-identical between the two games, so Platinum's battle handler cannot be
+  located in HGSS by matching its body.
+- **Operand counts alone are not enough to walk a script.** A linear walk using
+  them reaches 0 of Platinum's 98 known battle sites, because operands are not
+  uniformly halfwords — `GotoIf`, for one, takes a byte condition and a signed
+  32-bit relative offset. Recovering per-operand *widths*, not just counts, is
+  the remaining step.
+
 ## 3. Open, unblocked
 
 ### BW rematch selectors
