@@ -42,9 +42,9 @@ from romwiki.renderers.mkdocs.references import (
 )
 from romwiki.schema.rendering import AbilityRenderRecord, RenderDataset
 
-_ITEM_ID_COLUMNS = (
+_ITEM_COLUMNS = (
     MarkdownColumn("Item"),
-    MarkdownColumn("Item ID", "right"),
+    MarkdownColumn("ID", "right"),
 )
 
 
@@ -251,8 +251,8 @@ def _pickup_section(
         "valuable entries in each list rather than always drawing from the "
         "start.",
         "",
-        "| Level | Common pool chance |",
-        "| ----: | ------------------: |",
+        "| Level | Common chance |",
+        "| ----: | -------------: |",
     ]
     lines.extend(
         f"| {tier * 10 + 1}–{tier * 10 + 10} | {rate}% |"
@@ -261,7 +261,7 @@ def _pickup_section(
     lines.extend(["", "**Common pool:**", ""])
     lines.extend(
         markdown_table_from_cells(
-            _ITEM_ID_COLUMNS,
+            _ITEM_COLUMNS,
             (
                 (
                     sprite_with_link(
@@ -277,7 +277,7 @@ def _pickup_section(
     lines.extend(["**Rare pool** (the remaining chance):", ""])
     lines.extend(
         markdown_table_from_cells(
-            _ITEM_ID_COLUMNS,
+            _ITEM_COLUMNS,
             (
                 (
                     sprite_with_link(
@@ -317,7 +317,7 @@ def _sliding_pickup_section(
         )
         lines.extend(
             markdown_table(
-                ["| Item | Item ID | Chance |", "| ---- | ------: | -----: |"],
+                ["| Item | ID | Chance |", "| ---- | -: | -----: |"],
                 [
                     f"| {sprite_with_link(reference_sprite_cell('item', slot['item_id'], references), _item_link(slot, source_file, references))} | "
                     f"{slot['item_id']} | {slot['chance']}% |"

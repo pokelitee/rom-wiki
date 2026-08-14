@@ -301,7 +301,7 @@ def _build_archive_location_record(
     section_name, section_name_source = resolve_location_section(
         source.profile,
         header_id=header.header_id,
-        internal_name=header.internal_name,
+        internal_name=None,
     )
     script_file_id = source.script_file_ids[header.header_id]
     overworld_data = _read_overworld_data(source, header.header_id)
@@ -566,6 +566,7 @@ def _extract_gen5_location_warps(
                     destination_header_id=None,
                     destination_warp_id=None,
                     destination_name=None,
+                    destination_section_name=None,
                     destination_internal_name=None,
                     destination_warp_exists=None,
                     dynamic=True,
@@ -573,6 +574,11 @@ def _extract_gen5_location_warps(
             )
             continue
         destination = headers_by_id[warp.destination_header_id]
+        destination_section_name, _ = resolve_location_section(
+            source.profile,
+            header_id=destination.header_id,
+            internal_name=None,
+        )
         destination_warp_count = len(
             source.engine.parse_overworld_warps(
                 source.overworld_objects.read(destination.header_id)
@@ -591,6 +597,7 @@ def _extract_gen5_location_warps(
                     warp.destination_warp_id if destination_indexed else None
                 ),
                 destination_name=destination.name,
+                destination_section_name=destination_section_name,
                 destination_internal_name=f"map_{destination.header_id}",
                 destination_warp_exists=(
                     0 <= warp.destination_warp_id < destination_warp_count

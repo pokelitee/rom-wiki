@@ -67,11 +67,11 @@ scan. Accepting this as a limitation is reasonable given the payoff.
   rematch have no literal battle command anywhere in the scripts. Previously
   asserted by a hardcoded table, now unpublished.
 
-## 3. Deferred publication validation
+## 3. Release validation
 
-Skipped by request as too slow; the trainer work was validated with
-`build game --dev` and per-profile extraction instead. Still required before
-this effort can close:
+Routine development uses the full unit suite and focused site generation; it does
+not regenerate or snapshot every site after each renderer change. Before the next
+snapshot or deployment:
 
 1. Regenerate all nine sites and the portal together, without incremental or
    development-page filtering.
@@ -82,10 +82,9 @@ this effort can close:
 6. Update the deterministic generated-wiki snapshot only after a clean audit.
 7. Verify the new snapshot restores successfully.
 
-This matters more than it did: Gen V script-reference coverage roughly tripled
-for the B2W2 sites (65 → 241, 65 → 287, 123 → 351), DPPT family IDs changed
-shape, and several groups are no longer published. None of that has been checked
-at the page level.
+Run the combined audit against a clean output directory. A locked pre-existing
+artifact, especially the root `404.html` on Windows, can prevent cleanup or audit
+reads even when every selected site generated and built successfully.
 
 The nine sites are Platinum, Renegade Platinum, HeartGold/SoulSilver, Sacred
 Gold/Storm Silver, Black/White, Blaze Black/Volt White, Black 2/White 2, Blaze

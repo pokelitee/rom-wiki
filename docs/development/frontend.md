@@ -293,14 +293,22 @@ encounter area's per-method slot table, one trainer's party cards — has at
 most a few dozen rows and renders a shared `table_sprite_cell()` icon column;
 this is a deliberate exception, not an inconsistency with the catalog rule.
 
+Public table headers use the shortest unambiguous player-facing label. For
+example, location tables use `Map ID`, `Internal ID`, `Position`, `Event`, and
+`Script`; native structure names such as "map header" remain in provenance and
+diagnostics where that distinction is meaningful. A label should not repeat the
+section context (`Arrival` is sufficient in a Warps table), but IDs stay qualified
+when an adjacent entity name does not make their type obvious.
+
 Trainer party cards consume only normalized data. They show each Pokémon's sprite
 and, when the slot has one, the held item's icon. Explicit moves retain their stored
-order in a numbered list; `level-up` moves render as a distinct default-moves
-state rather than a numbered move. Optional ability, nature, gender, IV, and EV
-fields must be omitted cleanly when an engine cannot provide them. Renderer code
-must never derive those mechanics from raw engine fields. Cards group level,
-nature, and gender into one identity line, use a compact aligned list for ability
-and held item, and show final stats, IVs, and EVs in a six-column stat matrix.
+order. When a party slot does not store moves, enrichment supplies the latest four
+distinct moves in the Pokémon's level-up learnset at or below its level; the card
+labels that list as derived. Optional ability, nature, gender, IV, and EV fields
+must be omitted cleanly when an engine cannot provide them. Renderer code must
+never derive those mechanics from raw engine fields. Cards group level, nature,
+and gender into one identity line, use a compact aligned list for ability and held
+item, and show IV, EV, then calculated Min/Max values in a six-column stat matrix.
 
 Trainer pages render normalized `battle_families` declaratively as complete party
 tabs, including readable condition labels and links to every exact trainer record.

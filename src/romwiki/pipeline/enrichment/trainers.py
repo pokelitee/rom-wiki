@@ -62,9 +62,8 @@ def enrich_trainer_dataset(
     item_names = resolve_item_names(engine_tables, dataset)
     pokemon_names = resolve_pokemon_names(engine_tables, dataset)
     records = []
-    # Trainer IDs are expected to be consecutive, but not necessarily
-    # starting at 0: Generation V's trainer archive has an unused member 0
-    # with a different shape, so its real trainer IDs start at 1.
+    # IDs are consecutive but may start above zero when an archive reserves
+    # leading members for a different record shape.
     base_trainer_id = source_records[0].get("trainer_id") if source_records else 0
     for offset, source in enumerate(source_records):
         if source.get("trainer_id") != base_trainer_id + offset:
@@ -157,6 +156,10 @@ def enrich_trainer_record(
             gender_ratio=(game_record.get("gender_ratio") if game_record else None),
             base_stats=(game_record.get("base_stats") if game_record else None),
         )
+        if pokemon["moves_source"] == "level-up" and game_record is not None:
+            pokemon["move_ids"] = _default_level_up_move_ids(
+                game_record.get("level_up_moves", []), pokemon["level"]
+            )
         if game_record:
             pokemon_slug = (
                 game_record.get("base_species")
@@ -244,10 +247,8 @@ def enrich_trainer_record(
             if source.get("victory_item_id")
             else None
         ),
-        # The ROM's "reward_item_ids" slots are the trainer's own AI battle
-        # items (e.g. a carried Full Restore the AI uses on itself mid-fight)
-        # — not something given to the player. See pokeemerald/pokeplatinum
-        # decompilations for the equivalent trainer-struct field.
+        # These slots are consumables available to the battle AI, not rewards
+        # given to the player.
         "ai_battle_items": [
             _with_item_sprite(
                 item_reference(item_id, pokedb, item_names), pokedb, reference_version
@@ -256,6 +257,30 @@ def enrich_trainer_record(
             if item_id
         ],
     }
+
+
+def _default_level_up_move_ids(learnset: object, level: int) -> list[int]:
+    """Resolve the four-move window used when no moves are stored per party slot."""
+
+    if not isinstance(learnset, list):
+        raise DataSourceError("Pokémon level-up moves must be a list")
+    moves: list[int] = []
+    for entry in learnset:
+        if not isinstance(entry, Mapping):
+            raise DataSourceError("Pokémon level-up move entries must be objects")
+        learned_at = entry.get("level")
+        move = entry.get("move")
+        move_id = move.get("id") if isinstance(move, Mapping) else None
+        if not isinstance(learned_at, int) or not isinstance(move_id, int):
+            raise DataSourceError("Pokémon level-up move entries are incomplete")
+        if learned_at > level:
+            continue
+        if move_id in moves:
+            moves.remove(move_id)
+        moves.append(move_id)
+        if len(moves) > 4:
+            moves.pop(0)
+    return moves
 
 
 def _trainer_pokemon_index(

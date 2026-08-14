@@ -197,16 +197,65 @@ def render_trainer_pages(
             )
         )
     write_catalog(output_root, "trainers", catalog_records)
+    coverage_notice = _trainer_variant_coverage_notice(
+        dataset.get("trainer_variant_support", {})
+    )
+    location_notice = _trainer_location_coverage_notice(records)
     write_text(
         output_root / "index.md",
         catalog_index(
             "Trainers",
-            "Trainer parties and battle settings extracted directly from the ROM.",
+            "Trainer parties and battle settings extracted directly from the ROM."
+            + coverage_notice
+            + location_notice,
             "trainers",
             fallback_links,
         ),
     )
     return page_count
+
+
+def _trainer_variant_coverage_notice(support: object) -> str:
+    if not isinstance(support, dict):
+        return ""
+    incomplete = [
+        (mechanic.replace("_", " ").title(), declaration)
+        for mechanic, declaration in support.items()
+        if isinstance(declaration, dict)
+        and declaration.get("status") in {"partial", "unresolved"}
+    ]
+    if not incomplete:
+        return ""
+    lines = [
+        "",
+        "",
+        '!!! warning "Trainer variant coverage is not exhaustive"',
+        "    Exact trainer records remain available independently, but records are "
+        "only grouped when their selecting mechanic has been verified.",
+    ]
+    for label, declaration in incomplete:
+        note = str(declaration.get("note") or "No complete selector is available.")
+        lines.append(f"    **{label} ({declaration['status']}):** {note}")
+    return "\n".join(lines)
+
+
+def _trainer_location_coverage_notice(records: list[dict[str, Any]]) -> str:
+    unlinked_count = sum(
+        bool(record.get("party"))
+        and not record.get("locations")
+        and not record.get("script_references")
+        for record in records
+    )
+    if not unlinked_count:
+        return ""
+    noun = "record" if unlinked_count == 1 else "records"
+    return (
+        "\n\n"
+        '!!! info "Trainer location coverage"\n'
+        f"    {unlinked_count} active trainer {noun} have no literal overworld "
+        "or script link. This can include facilities, dynamic dispatch, and "
+        "unused records; their parties remain available as Unlinked entries."
+    )
 
 
 def _catalog_record(
@@ -467,10 +516,7 @@ def _trainer_provenance(record: dict[str, Any]) -> list[str]:
     return entries
 
 
-# Trainer Data record comment, Gen5RomHandler.java: "Battle Mode; 1 byte;
-# 0=single, 1=double, 2=triple, 3=rotation" -- unlike Generation IV, which
-# only ever has single/double battles, so `double_battle` alone would
-# misrepresent a triple or rotation battle as merely "double".
+# Labels for the optional multi-format battle-mode field in the shared contract.
 _BATTLE_MODE_LABELS = {
     0: "Single battle",
     1: "Double battle",
@@ -524,13 +570,10 @@ def _linked_party(record: dict[str, Any], source_file: str) -> str:
 def _trainer_disambiguator(record: dict[str, Any]) -> str:
     """A compact "which one is this" hint for trainers sharing a display name.
 
-    Many trainers share a class + name — some legitimately are the same
-    story character rematched later with a stronger team (Gym Leaders, the
-    Sinnoh trio, Cyrus), but most are simply distinct NPCs the game never
-    gave individual names (dozens of unrelated "Galactic Grunt" trainers).
-    The ROM has no field distinguishing the two, so rather than guess, every
-    entry gets its level range and party species — usually enough to tell
-    apart trainers that share both a name and a location.
+    The source has no universal field distinguishing rematches or story
+    variants from unrelated NPCs with the same name. Every entry therefore
+    gets its level range and party species, which usually disambiguates it
+    without inferring an unsupported relationship.
     """
     return f"Lv. {_trainer_level_range(record)}: {_party_preview(record)}"
 
@@ -718,7 +761,12 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
                 '<h4 class="rw-party-card__section-title">Moves</h4>',
             ]
         )
-        if member["moves_source"] == "explicit":
+        if member["moves_source"] == "explicit" or member["moves"]:
+            if member["moves_source"] == "level-up":
+                lines.append(
+                    '<p class="rw-party-card__default-moves">Derived from the '
+                    "Pokémon's level-up learnset at this level.</p>"
+                )
             move_label = escape(f"{pokemon['name']} moves", quote=True)
             lines.append(f'<ol class="rw-party-card__moves" aria-label="{move_label}">')
             for move_index, move in enumerate(member["moves"], start=1):
@@ -894,11 +942,12 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
     rows: list[tuple[str, dict[str, Any]]] = []
     calculated = member.get("calculated_stats")
     calculated_values = calculated.get("values") if calculated else None
+    ranged_stats: list[tuple[str, dict[str, Any]]] = []
     if isinstance(calculated_values, dict) and all(
         key in calculated_values for _, key in ordered
     ):
         if any(_is_stat_range(calculated_values[key]) for _, key in ordered):
-            rows.extend(
+            ranged_stats.extend(
                 [
                     ("Min", _stat_bounds(calculated_values, ordered, "minimum")),
                     ("Max", _stat_bounds(calculated_values, ordered, "maximum")),
@@ -911,6 +960,7 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
         values = attribute.get("values") if attribute else None
         if isinstance(values, dict) and all(key in values for _, key in ordered):
             rows.append((label, values))
+    rows.extend(ranged_stats)
     if not rows:
         return []
     return [
@@ -965,8 +1015,8 @@ def _append_locations(
         [
             "## Locations",
             "",
-            "| Location | Map header | Internal map | Position | Event object |",
-            "| -------- | ---------- | ------------ | -------- | ------------ |",
+            "| Location | Map ID | Internal ID | Position | Event |",
+            "| -------- | ------ | ----------- | -------- | ----- |",
         ]
     )
     for location in locations:
@@ -997,8 +1047,8 @@ def _append_script_references(
         [
             "## Scripted battle locations",
             "",
-            "| Location | Map header | Internal map | Script command | Opponent slot |",
-            "| -------- | ---------- | ------------ | -------------- | ------------: |",
+            "| Location | Map ID | Internal ID | Script | Opponent |",
+            "| -------- | ------ | ----------- | ------ | -------: |",
         ]
     )
     for reference in references:

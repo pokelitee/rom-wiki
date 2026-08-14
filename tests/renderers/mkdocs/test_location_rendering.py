@@ -519,6 +519,7 @@ class LocationRenderingTests(unittest.TestCase):
                     "destination_header_id": 47,
                     "destination_warp_id": 0,
                     "destination_name": "Oreburgh City",
+                    "destination_section_name": "Oreburgh Gym",
                     "destination_internal_name": "C03GYM0101",
                     "destination_warp_exists": True,
                     "dynamic": False,
@@ -700,10 +701,13 @@ class LocationRenderingTests(unittest.TestCase):
 
         self.assertIn("header-047.md", page)
         self.assertIn(
-            "| Warp | Position | Destination | Destination map header | Destination warp |",
+            "| Warp | Position | To | Section | Map ID | Arrival |",
             page,
         )
-        self.assertIn("[Oreburgh City](header-047.md) | `header-047` | 0 |", page)
+        self.assertIn(
+            "[Oreburgh City](header-047.md) | Oreburgh Gym | `header-047` | 0 |",
+            page,
+        )
         self.assertNotIn("C03GYM0101", page.split("## Outdoor connections")[0])
         self.assertIn("header-344.md", page)
         self.assertIn("[Route 203](header-344.md)", page)
@@ -744,6 +748,7 @@ class LocationRenderingTests(unittest.TestCase):
                     "destination_header_id": 191,
                     "destination_warp_id": None,
                     "destination_name": "PWT",
+                    "destination_section_name": None,
                     "destination_internal_name": "map_191",
                     "destination_warp_exists": None,
                     "dynamic": False,
@@ -754,7 +759,7 @@ class LocationRenderingTests(unittest.TestCase):
         page = "\n".join(lines)
 
         self.assertIn(
-            "| 0 | (232, 424) | [PWT](header-191.md) | `header-191` | Coordinate-based |",
+            "| 0 | (232, 424) | [PWT](header-191.md) | — | `header-191` | Coordinate-based |",
             page,
         )
         self.assertNotIn("map_191", page)
@@ -773,6 +778,7 @@ class LocationRenderingTests(unittest.TestCase):
                     "destination_header_id": None,
                     "destination_warp_id": None,
                     "destination_name": None,
+                    "destination_section_name": None,
                     "destination_internal_name": None,
                     "destination_warp_exists": None,
                     "dynamic": True,
@@ -783,7 +789,7 @@ class LocationRenderingTests(unittest.TestCase):
         page = "\n".join(lines)
 
         self.assertIn("explicit unavailable values, not missing cells", page)
-        self.assertIn("| 0 | (488, 824) | Dynamic destination | — | — |", page)
+        self.assertIn("| 0 | (488, 824) | Dynamic destination | — | — | — |", page)
 
     def test_renders_great_marsh_daily_pool_with_both_dex_groups(self) -> None:
         record = {

@@ -53,8 +53,8 @@ export const CATALOGS = {
   locations: {
     searchPlaceholder: "Search location or internal map name",
     filters: [{ key: "features", label: "Contains", multi: true }],
-    sorts: [["label", "Name"], ["section_name", "Section"], ["route_id", "Map header"]],
-    columns: [["Location", recordLink], ["Section", (record) => text(record.section_name || "—", "rw-catalog__id")], ["Map header", routeId], ["Contains", (record) => text(record.features.map(title).join(", ") || "—")]],
+    sorts: [["label", "Name"], ["section_name", "Section"], ["route_id", "Map ID"]],
+    columns: [["Location", recordLink], ["Section", (record) => text(record.section_name || "—", "rw-catalog__id")], ["Map ID", routeId], ["Contains", (record) => text(record.features.map(title).join(", ") || "—")]],
   },
   encounters: {
     searchPlaceholder: "Search areas or wild Pokémon",

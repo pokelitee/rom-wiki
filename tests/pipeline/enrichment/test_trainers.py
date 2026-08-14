@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from romwiki.pipeline.enrichment.trainers import (
+    _default_level_up_move_ids,
     enrich_trainer_dataset,
     enrich_trainer_record,
 )
@@ -15,6 +16,22 @@ from romwiki.sources import PokeDBGeneration
 
 
 class TrainerEnrichmentTests(unittest.TestCase):
+    def test_derives_the_latest_four_distinct_level_up_moves(self) -> None:
+        learnset = [
+            {"level": 1, "move": {"id": 10}},
+            {"level": 3, "move": {"id": 20}},
+            {"level": 5, "move": {"id": 30}},
+            {"level": 7, "move": {"id": 40}},
+            {"level": 9, "move": {"id": 50}},
+            {"level": 10, "move": {"id": 20}},
+            {"level": 12, "move": {"id": 60}},
+        ]
+
+        self.assertEqual(
+            _default_level_up_move_ids(learnset, 10),
+            [30, 40, 50, 20],
+        )
+
     def test_labels_burmy_cosmetic_cloaks(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={412: {"id": 412, "name": "burmy", "species": "burmy"}},
@@ -180,7 +197,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertEqual(count, 1)
-        self.assertEqual(enriched["party_schema_version"], 5)
+        self.assertEqual(enriched["party_schema_version"], 6)
         self.assertFalse(stale_page.exists())
         self.assertIn("# Youngster Tristan", page)
         self.assertIn("[Route 202](../locations/header-343.md)", page)

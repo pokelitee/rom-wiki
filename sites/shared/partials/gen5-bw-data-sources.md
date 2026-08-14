@@ -292,6 +292,11 @@ elemental monkeys, Liepard, Swoobat, and Zebstrika) with real held items and
 move sets, whose party data ends exactly on the computed record boundary
 with zero leftover bytes.
 
+When that custom-move block is absent, the generated party page derives the
+four most recent distinct moves available from that ROM's own level-up learnset
+at the party member's level. Those moves are explicitly labeled as derived;
+they are not represented as bytes stored in the trainer-party record.
+
 Ability slot 0 and an unforced gender are genuine in-game randomness for this
 generation, not something recorded in the ROM (Generation IV's trainers, by
 contrast, use a documented, reproducible personality-value algorithm this
@@ -430,6 +435,12 @@ integers, it's stored in 16.16 fixed point, caught by comparing a hidden
 item's huge raw `x` value against its own map's NPCs' coordinates (dividing
 by 65536 landed in the exact same magnitude range, across five unrelated
 real maps).
+
+Presence in an overworld record does not by itself prove that a pickup remains
+reachable after a hack changes the map or scripts. Location pages therefore
+identify these rows as ROM item-event records and warn on origin coordinates or
+unnamed item slots rather than silently presenting suspicious leftovers as
+confirmed obtainable pickups.
 
 Static (gift/single) Pokémon encounters are cross-referenced to their real map
 locations through both dedicated map scripts and overworld common-script

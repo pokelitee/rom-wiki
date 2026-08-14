@@ -14,6 +14,7 @@ class LocationWarp:
     destination_header_id: int | None
     destination_warp_id: int | None
     destination_name: str | None
+    destination_section_name: str | None
     destination_internal_name: str | None
     destination_warp_exists: bool | None
     dynamic: bool

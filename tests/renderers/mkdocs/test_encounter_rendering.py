@@ -227,6 +227,32 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(page.count('=== "Winter"'), 2)
         self.assertNotIn("    ##", page)
 
+    def test_combines_version_and_season_in_content_tabs(self) -> None:
+        pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
+        eevee = {"id": 133, "slug": "eevee", "name": "Eevee", "sprite": None}
+        record = _encounter_record(2, 2, "spring", "Map 002")
+        black = {**record}
+        black["grass_cave"] = {
+            "rate": 20,
+            "slots": [_seasonal_slot(25, 0, 5, 5, 100, pikachu)],
+        }
+        white = {**record}
+        white["grass_cave"] = {
+            "rate": 20,
+            "slots": [_seasonal_slot(133, 0, 5, 5, 100, eevee)],
+        }
+        record["version_variants"] = {"black": black, "white": white}
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(_dataset("encounters", [record]), output)
+            page = (output / "map-002.md").read_text(encoding="utf-8")
+
+        self.assertIn('=== "Black · Spring"', page)
+        self.assertIn('=== "White · Spring"', page)
+        self.assertNotIn("**Black**", page)
+        self.assertNotIn("**White**", page)
+
     def test_omits_tabs_for_a_method_unchanged_across_seasons(self) -> None:
         pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
         records = []

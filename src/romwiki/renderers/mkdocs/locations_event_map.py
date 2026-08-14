@@ -39,6 +39,7 @@ from romwiki.renderers.mkdocs.location_components import (
     append_warps,
     entity_link,
     entity_sprite,
+    item_event_coverage_notice,
     location_filename,
     location_label,
     section_name_provenance_facts,
@@ -172,7 +173,8 @@ def render_event_map_location_pages(
         output_root / "index.md",
         catalog_index(
             "Locations",
-            "Map headers, items, shops, trades, connections, encounters, and trainers extracted from the ROM.",
+            "Map headers, items, shops, trades, connections, encounters, and trainers extracted from the ROM."
+            + item_event_coverage_notice(records),
             "locations",
             fallback_links,
         ),
@@ -452,8 +454,8 @@ def _append_roaming_activations(
     lines.extend(
         markdown_table(
             [
-                "| Pokémon | Type | Roaming slot | Script command |",
-                "| ------- | ---- | -----------: | -------------- |",
+                "| Pokémon | Type | Slot | Script |",
+                "| ------- | ---- | ---: | ------ |",
             ],
             rows,
         )
@@ -608,8 +610,8 @@ def _append_game_corner_prizes(
             "",
             "Coin prices from the Prize Exchange counter's fixed prize table.",
             "",
-            "| Item | Item ID | Price |",
-            "| ---- | ------: | ----: |",
+            "| Item | ID | Price |",
+            "| ---- | -: | ----: |",
         ]
     )
     for prize in prizes:

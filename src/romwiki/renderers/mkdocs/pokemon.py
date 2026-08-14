@@ -313,8 +313,8 @@ def _render_record(
     if held_items:
         lines.extend(
             [
-                "| Rarity | Item | Item ID |",
-                "| ------ | ---- | ------: |",
+                "| Rarity | Item | ID |",
+                "| ------ | ---- | -: |",
                 *[
                     (
                         f"| {item['rarity'].replace('_', ' ').title()} | "
@@ -1110,8 +1110,8 @@ def _append_trainer_appearances(
         [
             "## Used by trainers",
             "",
-            "| Trainer | Party slot | Level | Held item | Location | Version |",
-            "| ------- | ---------: | ----: | --------- | -------- | ------- |",
+            "| Trainer | Slot | Level | Held item | Location | Version |",
+            "| ------- | ---: | ----: | --------- | -------- | ------- |",
         ]
     )
     for appearance in appearances:

@@ -4,10 +4,53 @@ import unittest
 
 import markdown
 
-from romwiki.renderers.mkdocs.location_components import append_warps
+from romwiki.renderers.mkdocs.location_components import (
+    append_items,
+    append_warps,
+    item_event_coverage_notice,
+)
 
 
 class LocationComponentContractTests(unittest.TestCase):
+    def test_summarizes_unresolved_item_events_for_the_location_index(self) -> None:
+        notice = item_event_coverage_notice(
+            [
+                {
+                    "items": [
+                        {"name": "Potion", "x": 0, "z": 0},
+                        {"name": "Antidote", "x": 5, "z": 8},
+                    ]
+                },
+                {"items": [{"name": "???", "x": 2, "z": 3}]},
+            ]
+        )
+
+        self.assertIn("2 ROM item-event records", notice)
+        self.assertIn("not asserted to be reachable pickups", notice)
+
+    def test_flags_suspicious_item_event_records(self) -> None:
+        lines: list[str] = []
+
+        append_items(
+            lines,
+            [
+                {
+                    "event_index": 7,
+                    "kind": "visible",
+                    "item_id": 17,
+                    "name": "Potion",
+                    "x": 0,
+                    "z": 0,
+                }
+            ],
+            "locations/header-001.md",
+            None,
+        )
+
+        page = "\n".join(lines)
+        self.assertIn('!!! warning "Suspicious ROM item records"', page)
+        self.assertIn("Potion (event 7)", page)
+
     def test_empty_warp_section_does_not_change_the_document(self) -> None:
         lines = ["# Location", ""]
 
@@ -28,6 +71,7 @@ class LocationComponentContractTests(unittest.TestCase):
                     "destination_header_id": None,
                     "destination_warp_id": None,
                     "destination_name": None,
+                    "destination_section_name": None,
                     "destination_internal_name": None,
                     "destination_warp_exists": None,
                     "dynamic": True,
@@ -45,16 +89,16 @@ class LocationComponentContractTests(unittest.TestCase):
                 "destination header or destination warp for that row. The em "
                 "dashes are explicit unavailable values, not missing cells.",
                 "",
-                "| Warp | Position | Destination | Destination map header | Destination warp |",
-                "| ---: | -------- | ----------- | ---------------------- | ---------------: |",
-                "| 0 | (488, 824) | Dynamic destination | — | — |",
+                "| Warp | Position | To | Section | Map ID | Arrival |",
+                "| ---: | -------- | -- | ------- | ------ | ------- |",
+                "| 0 | (488, 824) | Dynamic destination | — | — | — |",
                 "",
             ],
         )
         rendered = markdown.markdown("\n".join(lines), extensions=["tables"])
         self.assertIn("<h2>Warps</h2>", rendered)
         self.assertIn("<table>", rendered)
-        self.assertEqual(rendered.count("<td"), 5)
+        self.assertEqual(rendered.count("<td"), 6)
 
 
 if __name__ == "__main__":

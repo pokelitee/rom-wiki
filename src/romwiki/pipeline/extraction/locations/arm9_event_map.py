@@ -799,6 +799,7 @@ def _build_event_map_location_warps(
                     destination_header_id=None,
                     destination_warp_id=None,
                     destination_name=None,
+                    destination_section_name=None,
                     destination_internal_name=None,
                     destination_warp_exists=None,
                     dynamic=True,
@@ -812,6 +813,11 @@ def _build_event_map_location_warps(
             )
         destination = context.headers[warp.destination_header_id]
         destination_warps = context.raw_warps_by_header[destination.header_id]
+        destination_section_name, _ = resolve_location_section(
+            context.profile,
+            header_id=destination.header_id,
+            internal_name=destination.internal_name,
+        )
         warps.append(
             LocationWarp(
                 index=warp.index,
@@ -820,6 +826,7 @@ def _build_event_map_location_warps(
                 destination_header_id=destination.header_id,
                 destination_warp_id=warp.destination_warp_id,
                 destination_name=context.names.location[destination.location_name_id],
+                destination_section_name=destination_section_name,
                 destination_internal_name=destination.internal_name,
                 destination_warp_exists=(
                     warp.destination_warp_id < len(destination_warps)

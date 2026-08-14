@@ -62,8 +62,14 @@ def append_items(
         [
             "## Item pickups",
             "",
-            "| Kind | Item | Item ID | Position |",
-            "| ---- | ---- | ------: | -------- |",
+            (
+                "These rows are item-event records present in the ROM. A record can "
+                "still be unreachable or intentionally disabled by a hack's map or "
+                "scripts; suspicious raw coordinates are called out below."
+            ),
+            "",
+            "| Kind | Item | ID | Position |",
+            "| ---- | ---- | -: | -------- |",
         ]
     )
     for item in items:
@@ -76,6 +82,46 @@ def append_items(
             f"| {item['item_id']} | ({item['x']}, {item['z']}) |"
         )
     lines.append("")
+    suspicious = [item for item in items if _is_suspicious_item_event(item)]
+    if suspicious:
+        labels = ", ".join(
+            f"{item['name']} (event {item['event_index']})" for item in suspicious
+        )
+        lines.extend(
+            [
+                '!!! warning "Suspicious ROM item records"',
+                "    The following item-event records use an origin coordinate or "
+                "an unnamed item slot and may be stale, disabled, or otherwise "
+                f"unreachable: {labels}.",
+                "",
+            ]
+        )
+
+
+def item_event_coverage_notice(records: list[dict[str, Any]]) -> str:
+    suspicious_count = sum(
+        1
+        for record in records
+        for item in record.get("items", [])
+        if _is_suspicious_item_event(item)
+    )
+    if not suspicious_count:
+        return ""
+    noun = "record" if suspicious_count == 1 else "records"
+    return (
+        "\n\n"
+        '!!! warning "Unresolved item events"\n'
+        f"    {suspicious_count} ROM item-event {noun} use an origin coordinate "
+        "or unnamed item slot. They remain visible on the affected location "
+        "pages, but are not asserted to be reachable pickups."
+    )
+
+
+def _is_suspicious_item_event(item: Mapping[str, Any]) -> bool:
+    return (item.get("x"), item.get("z")) == (0, 0) or item.get("name") in {
+        "???",
+        "—",
+    }
 
 
 def append_shops(
@@ -120,8 +166,8 @@ def append_shops(
             lines.extend([f"Availability: {shop['availability']}", ""])
         lines.extend(
             [
-                "| Item | Item ID | Price | Availability |",
-                "| ---- | ------: | ----: | ------------ |",
+                "| Item | ID | Price | Availability |",
+                "| ---- | -: | ----: | ------------ |",
             ]
         )
         currency = shop.get("currency", "money")
@@ -336,18 +382,20 @@ def append_warps(
                     if any(warp["dynamic"] for warp in warps)
                     else []
                 ),
-                "| Warp | Position | Destination | Destination map header | Destination warp |",
-                "| ---: | -------- | ----------- | ---------------------- | ---------------: |",
+                "| Warp | Position | To | Section | Map ID | Arrival |",
+                "| ---: | -------- | -- | ------- | ------ | ------- |",
             ],
         )
     )
     for warp in warps:
         if warp["dynamic"]:
             destination = "Dynamic destination"
+            destination_section = "—"
             destination_id = "—"
             destination_warp = "—"
         else:
             destination_id = f"`header-{warp['destination_header_id']:03}`"
+            destination_section = warp.get("destination_section_name") or "—"
             destination = ROUTES.markdown_link(
                 entity_reference(
                     "location",
@@ -370,7 +418,8 @@ def append_warps(
                 destination_warp += " (one-way or special landing)"
         lines.append(
             f"| {warp['index']} | ({warp['x']}, {warp['z']}) | "
-            f"{destination} | {destination_id} | {destination_warp} |"
+            f"{destination} | {destination_section} | {destination_id} | "
+            f"{destination_warp} |"
         )
     lines.append("")
 

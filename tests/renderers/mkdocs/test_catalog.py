@@ -89,8 +89,8 @@ class CatalogPresentationTests(unittest.TestCase):
         self.assertIn('["Party", trainerPartySummary]', text)
         self.assertEqual(text.count('["ID", routeId]'), 2)
         self.assertEqual(text.count('["route_id", "ID"]'), 2)
-        self.assertIn('["Map header", routeId]', text)
-        self.assertIn('["route_id", "Map header"]', text)
+        self.assertIn('["Map ID", routeId]', text)
+        self.assertIn('["route_id", "Map ID"]', text)
 
         catalog = CATALOG_CONFIG_JS.with_name("catalog.js").read_text(encoding="utf-8")
         self.assertIn('new Set(["encounters", "trainers", "locations"])', catalog)

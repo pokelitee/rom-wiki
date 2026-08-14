@@ -49,6 +49,10 @@ class ProfileRepositoryTests(unittest.TestCase):
 
         self.assertEqual(heartgold.engine, "gen4_hgss")
         self.assertEqual(heartgold.game_codes, ("IPKE",))
+        self.assertEqual(heartgold.sprite_version, "heartgold-soulsilver")
+        self.assertEqual(soulsilver.sprite_version, "heartgold-soulsilver")
+        self.assertEqual(sacred_gold.sprite_version, "heartgold-soulsilver")
+        self.assertEqual(storm_silver.sprite_version, "heartgold-soulsilver")
         self.assertEqual(
             heartgold.layout,
             {

@@ -9,13 +9,43 @@ from romwiki.renderers.mkdocs.trainers import (
     _group_ai_battle_items,
     _party_cards,
     _party_gender,
+    _trainer_location_coverage_notice,
     _trainer_provenance,
     _trainer_summary,
+    _trainer_variant_coverage_notice,
     _variant_tab_label,
 )
 
 
 class TrainerRenderingTests(unittest.TestCase):
+    def test_summarizes_unlinked_active_trainer_records(self) -> None:
+        notice = _trainer_location_coverage_notice(
+            [
+                {"party": [{}], "locations": [], "script_references": []},
+                {"party": [{}], "locations": [{}], "script_references": []},
+                {"party": [], "locations": [], "script_references": []},
+            ]
+        )
+
+        self.assertIn("1 active trainer record", notice)
+        self.assertIn("facilities, dynamic dispatch, and unused records", notice)
+
+    def test_warns_when_trainer_variant_grouping_is_incomplete(self) -> None:
+        notice = _trainer_variant_coverage_notice(
+            {
+                "starter_choice": {"status": "verified", "note": "Complete."},
+                "story_stage": {
+                    "status": "unresolved",
+                    "note": "The selector has not been decoded.",
+                },
+            }
+        )
+
+        self.assertIn("Trainer variant coverage is not exhaustive", notice)
+        self.assertIn("Story Stage (unresolved)", notice)
+        self.assertIn("selector has not been decoded", notice)
+        self.assertNotIn("Starter Choice", notice)
+
     def test_uses_only_named_public_axes_and_generic_fallback(self) -> None:
         self.assertEqual(
             _variant_tab_label(
@@ -448,6 +478,18 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertNotIn('<ol class="rw-party-card__moves"', page)
         self.assertIn("Uses default level-up moves.", page)
 
+    def test_labels_derived_default_moves(self) -> None:
+        member = _party_member(["Tackle", "Growl"])
+        member["moves_source"] = "level-up"
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertIn("Tackle", page)
+        self.assertIn("Growl", page)
+        self.assertIn(
+            "Derived from the Pokémon's level-up learnset at this level.", page
+        )
+
     def test_renders_available_party_attributes_compactly(self) -> None:
         member = _party_member([])
         member.update(
@@ -484,12 +526,17 @@ class TrainerRenderingTests(unittest.TestCase):
         values = _stats(42)
         values["attack"] = {"minimum": 38, "maximum": 45}
         member["calculated_stats"] = {"source": "derived", "values": values}
+        member["ivs"] = {"source": "derived", "values": _stats(12)}
+        member["evs"] = {"source": "engine-default", "values": _stats(0)}
 
         page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn('<tr><th scope="row">Min</th><td>42</td><td>38</td>', page)
         self.assertIn('<tr><th scope="row">Max</th><td>42</td><td>45</td>', page)
         self.assertNotIn('<th scope="row">Value</th>', page)
+        self.assertLess(page.index('scope="row">IV'), page.index('scope="row">EV'))
+        self.assertLess(page.index('scope="row">EV'), page.index('scope="row">Min'))
+        self.assertLess(page.index('scope="row">Min'), page.index('scope="row">Max'))
 
     def test_marks_a_hidden_ability_in_the_party_card(self) -> None:
         member = _party_member([])

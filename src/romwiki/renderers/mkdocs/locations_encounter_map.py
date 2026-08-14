@@ -30,6 +30,7 @@ from romwiki.renderers.mkdocs.location_components import (
     append_static_encounters,
     append_trainers,
     append_warps,
+    item_event_coverage_notice,
     location_filename,
     location_label,
     section_name_provenance_facts,
@@ -149,7 +150,7 @@ def render_encounter_map_location_pages(
         catalog_index(
             "Locations",
             "Map header names and wild-encounter cross-references extracted "
-            "from the ROM.",
+            "from the ROM." + item_event_coverage_notice(records),
             "locations",
             fallback_links,
         ),
@@ -338,8 +339,8 @@ def _append_same_name_locations(
                 "They may represent different rooms or map sections."
             ),
             "",
-            "| Location | Section | Map header | Wild encounter map |",
-            "| -------- | ------- | ---------- | ------------------ |",
+            "| Location | Section | Map ID | Encounter ID |",
+            "| -------- | ------- | ------ | ------------ |",
         ]
     )
     for candidate in related:

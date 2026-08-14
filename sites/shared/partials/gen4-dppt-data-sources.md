@@ -161,6 +161,11 @@ optional 2-byte held item and/or 8-byte custom-move block depending on the
 trainer's own flags, and a trailing 2-byte "ball seal" field always present
 regardless of flags.
 
+When that custom-move block is absent, the generated party page derives the
+four most recent distinct moves available from that ROM's own level-up learnset
+at the party member's level. Those moves are explicitly labeled as derived;
+they are not represented as bytes stored in the trainer-party record.
+
 Trainer class gender is read from a dedicated one-byte-per-class ARM9 table:
 a value of 1 means the class is female, values 0 and 2 both mean male (2
 being a mixed/double-battle-class value with no independent gender meaning
@@ -256,6 +261,12 @@ graphics ID whose own script ID is a flat `7000 + item_id` offset, and hidden
 items are background events of a specific event type whose script ID is a
 flat `8000 + item_id` offset, each validated against the real item-name
 table rather than assumed.
+
+Presence in that event table does not by itself prove that a pickup is reachable:
+a hack may leave an old event behind while changing the map or scripts. Location
+pages therefore identify the rows as ROM item-event records and warn on origin
+coordinates or unnamed item slots instead of silently presenting those records as
+confirmed obtainable pickups.
 
 Several bonus-encounter categories specific to this generation are decoded
 from a separate archive (`arc/encdata_ex.narc`), not the main wild encounter

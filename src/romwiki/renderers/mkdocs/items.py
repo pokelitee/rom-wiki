@@ -358,8 +358,8 @@ def _append_locations(
     lines.extend(["## Overworld locations", ""])
     lines.extend(
         [
-            "| Location | Section | Map header | Kind | Coordinates |",
-            "| -------- | ------- | ---------- | ---- | ----------- |",
+            "| Location | Section | Map ID | Kind | Position |",
+            "| -------- | ------- | ------ | ---- | -------- |",
             *[
                 (
                     f"| {_location_link(value, source_file)} "
@@ -383,8 +383,8 @@ def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) ->
     if linked_shops:
         lines.extend(
             [
-                "| Location | Section | Map header | Shop | Price | Availability |",
-                "| -------- | ------- | ---------- | ---- | ----: | ------------ |",
+                "| Location | Section | Map ID | Shop | Price | Availability |",
+                "| -------- | ------- | ------ | ---- | ----: | ------------ |",
                 *[
                     (
                         f"| {_location_link(shop, source_file)} "
@@ -534,8 +534,8 @@ def _append_gift_trade_table(
 ) -> None:
     lines.extend(
         [
-            "| Location | Section | Map header | Kind | Pokémon | Type |",
-            "| -------- | ------- | ---------- | ---- | ------- | ---- |",
+            "| Location | Section | Map ID | Kind | Pokémon | Type |",
+            "| -------- | ------- | ------ | ---- | ------- | ---- |",
             *[
                 (
                     f"| {_location_or_trade_cell(value, source_file)} "

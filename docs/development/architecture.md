@@ -506,9 +506,10 @@ and shared renderer system against two real generations, including retail games,
 single-version hacks, and sibling-version hack families. The `gen4_hgss` adapter
 independently exercises Pokémon, ability, move, item, encounter, trainer, and
 location pipelines and renderers against HeartGold and SoulSilver. Trainer-to-map
+references from direct overworld trainer events are available, but scripted battle
 references and trainer-class payout multipliers remain explicitly unavailable
-pending exact ROM locators. Generation-specific binary decoding stays in each engine
-package; optional presentation behavior is advertised through dataset
+pending exact ROM locators. Generation-specific binary decoding stays in each
+engine package; optional presentation behavior is advertised through dataset
 capabilities. A second physical platform remains proven only by
 `tests/platforms/test_contract.py`'s fake adapter. A real platform addition should
 still add profile-identification, parser, and normalized-output fixtures following

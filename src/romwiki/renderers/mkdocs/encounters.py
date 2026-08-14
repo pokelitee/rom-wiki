@@ -47,8 +47,7 @@ from romwiki.renderers.mkdocs.references import (
 )
 from romwiki.schema.rendering import EncounterRenderRecord, RenderDataset
 
-# Generation V's own display labels for its seven encounter methods
-# (Gen5Constants.encounterTypeNames, Ajarmar/universal-pokemon-randomizer-zx).
+# Display labels for the seasonal encounter-method keys emitted by supporting engines.
 _SEASONAL_METHOD_LABELS = {
     "grass_cave": "Grass/Cave",
     "doubles_grass": "Doubles Grass",
@@ -473,8 +472,8 @@ def _append_locations(
         [
             "## Map headers",
             "",
-            "| Location | Map header | Location-name index | Internal map |",
-            "| -------- | ---------- | ------------------: | ------------ |",
+            "| Location | Map ID | Name ID | Internal ID |",
+            "| -------- | ------ | ------: | ----------- |",
         ]
     )
     for location in locations:
@@ -910,28 +909,27 @@ def _render_seasonal_area(
         lines.extend([f"## {label}", ""])
         method_contents: list[tuple[str, list[str]]] = []
         for seasonal_record in records:
-            content: list[str] = []
-            variants = version_variant_records(seasonal_record)
-            for version, version_record in variants:
+            for version, version_record in version_variant_records(seasonal_record):
+                content: list[str] = []
                 method = version_record[key]
-                if not method["rate"]:
-                    continue
-                if version is not None:
-                    content.extend([f"**{display_name(version)}**", ""])
-                _append_seasonal_method(
-                    content,
-                    label,
-                    method,
-                    source_file,
-                    references,
-                    heading_level=None,
-                )
-            if not content:
-                content.extend(["No encounters.", ""])
-            method_contents.append(
-                (display_name(seasonal_record.get("season") or "all"), content)
-            )
-        if not seasonal or _all_tab_content_identical(method_contents):
+                if method["rate"]:
+                    _append_seasonal_method(
+                        content,
+                        label,
+                        method,
+                        source_file,
+                        references,
+                        heading_level=None,
+                    )
+                else:
+                    content.extend(["No encounters.", ""])
+                tab_parts = [
+                    display_name(value)
+                    for value in (version, seasonal_record.get("season"))
+                    if value is not None
+                ]
+                method_contents.append((" · ".join(tab_parts) or "All", content))
+        if len(method_contents) == 1 or _all_tab_content_identical(method_contents):
             lines.extend(method_contents[0][1])
         else:
             _append_content_tabs(lines, method_contents)
@@ -1058,8 +1056,8 @@ def _append_seasonal_locations(
         [
             "## Map headers",
             "",
-            "| Location | Section | Map header | Version |",
-            "| -------- | ------- | ---------- | ------- |",
+            "| Location | Section | Map ID | Version |",
+            "| -------- | ------- | ------ | ------- |",
         ]
     )
     for location in locations:
