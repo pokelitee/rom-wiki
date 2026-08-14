@@ -5,7 +5,7 @@ import unittest
 
 import markdown
 
-from romwiki.pipeline.relationships import MoveLearnerReference
+from romwiki.pipeline.transforms.relationships import MoveLearnerReference
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     class_badge,

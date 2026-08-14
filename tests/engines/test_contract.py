@@ -23,13 +23,11 @@ from romwiki.engines.registry import (
     register_engine,
     unregister_engine,
 )
-from romwiki.pipeline.abilities import build_ability_dataset
-from romwiki.pipeline.enrich import (
-    enrich_encounter_dataset,
-    enrich_move_dataset,
-    enrich_personal_dataset,
-    enrich_trainer_dataset,
-)
+from romwiki.pipeline.enrichment.abilities import build_ability_dataset
+from romwiki.pipeline.enrichment.encounters import enrich_encounter_dataset
+from romwiki.pipeline.enrichment.moves import enrich_move_dataset
+from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
+from romwiki.pipeline.enrichment.trainers import enrich_trainer_dataset
 from romwiki.renderers.mkdocs import (
     render_ability_pages,
     render_encounter_pages,

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from romwiki.pipeline.relationships import build_relationship_index
+from romwiki.pipeline.transforms.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_location_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 

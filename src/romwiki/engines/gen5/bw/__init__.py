@@ -153,7 +153,7 @@ FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 TRANSFORMATION_MEMBERS = PERSONAL_TRANSFORMATION_MEMBERS
 MACHINE_COUNT = GEN5_MACHINE_COUNT
 MACHINE_TABLE_LOCATOR = GEN5_MACHINE_TABLE_PREFIX
-# Consumed generically by pipeline/items.py (keyed off attribute name, not
+# Consumed generically by pipeline/extraction/items.py (keyed off attribute name, not
 # per-engine branching), matching Gen4's own `ITEM_POCKET_NAMES`/
 # `ITEM_FIELD_USE_NAMES` precedent.
 ITEM_POCKET_NAMES = GEN5_ITEM_POCKET_NAMES

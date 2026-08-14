@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from romwiki.pipeline.relationships import (
+from romwiki.pipeline.transforms.relationships import (
     EncounterLocationReference,
     RelationshipIndex,
 )

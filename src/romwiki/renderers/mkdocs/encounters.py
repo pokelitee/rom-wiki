@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.encounter_identity import encounter_route_key
-from romwiki.pipeline.relationships import (
+from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
+from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
+from romwiki.pipeline.transforms.relationships import (
     EncounterLocationReference,
     RelationshipIndex,
 )
-from romwiki.pipeline.special_encounters import special_encounter_groups
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,

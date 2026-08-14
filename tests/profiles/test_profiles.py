@@ -8,7 +8,7 @@ from romwiki.engines.gen5.b2w2.static_encounters import (
     discover_static_encounters as discover_b2w2_static_encounters,
 )
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.sections import enabled_dataset_kinds
+from romwiki.pipeline.build.sections import enabled_dataset_kinds
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.reader import NintendoDSImage, RomHashes
 from romwiki.profiles.loader import ProfileRepository

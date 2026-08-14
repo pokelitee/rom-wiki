@@ -4,8 +4,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.features import POST_BATTLE_HEALING, VICTORY_ITEMS
-from romwiki.pipeline.relationships import RelationshipIndex
+from romwiki.pipeline.enrichment.features import POST_BATTLE_HEALING, VICTORY_ITEMS
+from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,

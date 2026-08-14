@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from romwiki.pipeline.type_charts import build_type_dataset
+from romwiki.pipeline.enrichment.type_charts import build_type_dataset
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.renderers.mkdocs.types import render_type_chart
 

@@ -8,24 +8,72 @@ SOURCE_ROOT = Path(__file__).resolve().parents[2] / "src" / "romwiki"
 ENGINE_ROOT = SOURCE_ROOT / "engines"
 REGISTRY_PATH = ENGINE_ROOT / "registry.py"
 SEMANTIC_DISPATCH_PATHS = (
-    SOURCE_ROOT / "pipeline" / "encounters.py",
-    SOURCE_ROOT / "pipeline" / "enrich.py",
-    SOURCE_ROOT / "pipeline" / "locations.py",
-    SOURCE_ROOT / "pipeline" / "pickup.py",
-    SOURCE_ROOT / "pipeline" / "trainers.py",
-    SOURCE_ROOT / "pipeline" / "trainer_rewards.py",
-    SOURCE_ROOT / "pipeline" / "tutors.py",
+    SOURCE_ROOT / "pipeline" / "extraction" / "encounters.py",
+    SOURCE_ROOT / "pipeline" / "extraction" / "locations" / "dispatcher.py",
+    SOURCE_ROOT / "pipeline" / "extraction" / "pickup.py",
+    SOURCE_ROOT / "pipeline" / "extraction" / "trainers" / "dispatcher.py",
+    SOURCE_ROOT / "pipeline" / "extraction" / "tutors.py",
+    SOURCE_ROOT / "pipeline" / "enrichment" / "trainer_rewards.py",
     SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
     SOURCE_ROOT / "renderers" / "mkdocs" / "locations.py",
 )
 NORMALIZED_ENCOUNTER_CONSUMERS = (
-    SOURCE_ROOT / "pipeline" / "relationships.py",
-    SOURCE_ROOT / "pipeline" / "special_encounters.py",
+    SOURCE_ROOT / "pipeline" / "transforms" / "relationships.py",
+    SOURCE_ROOT / "pipeline" / "enrichment" / "special_encounters.py",
     SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
 )
+PIPELINE_ROOT = SOURCE_ROOT / "pipeline"
+PIPELINE_DEPENDENCIES = {
+    "semantics": frozenset(),
+    "extraction": frozenset({"semantics"}),
+    "enrichment": frozenset({"semantics"}),
+    "transforms": frozenset({"enrichment", "semantics"}),
+    "build": frozenset({"extraction", "enrichment", "semantics", "transforms"}),
+}
 
 
 class EnginePackageBoundaryTests(unittest.TestCase):
+    def test_pipeline_lifecycle_dependencies_point_forward(self) -> None:
+        violations = []
+        for path in PIPELINE_ROOT.rglob("*.py"):
+            relative = path.relative_to(PIPELINE_ROOT)
+            source_group = relative.parts[0]
+            if source_group not in PIPELINE_DEPENDENCIES:
+                continue
+            for imported in _imports(path):
+                prefix = "romwiki.pipeline."
+                if not imported.startswith(prefix):
+                    continue
+                target_group = imported.removeprefix(prefix).split(".", 1)[0]
+                if (
+                    target_group in PIPELINE_DEPENDENCIES
+                    and target_group != source_group
+                    and target_group not in PIPELINE_DEPENDENCIES[source_group]
+                ):
+                    violations.append(
+                        f"{relative} imports {target_group} from {source_group}"
+                    )
+
+        self.assertEqual(violations, [])
+
+    def test_modules_do_not_import_private_sibling_names(self) -> None:
+        violations = []
+        for path in SOURCE_ROOT.rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ImportFrom) or node.module is None:
+                    continue
+                private_names = [
+                    alias.name for alias in node.names if alias.name.startswith("_")
+                ]
+                if private_names and node.module.startswith("romwiki."):
+                    violations.append(
+                        f"{path.relative_to(SOURCE_ROOT)} imports "
+                        f"{', '.join(private_names)} from {node.module}"
+                    )
+
+        self.assertEqual(violations, [])
+
     def test_leaf_engines_do_not_depend_on_other_leaves_or_generations(self) -> None:
         leaves = _engine_leaves()
         violations = []

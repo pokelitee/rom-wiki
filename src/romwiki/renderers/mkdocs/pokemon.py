@@ -4,15 +4,15 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.features import EGG_MOVES, MOVE_TUTORS
-from romwiki.pipeline.relationships import (
+from romwiki.pipeline.enrichment.features import EGG_MOVES, MOVE_TUTORS
+from romwiki.pipeline.enrichment.type_charts import defensive_effectiveness
+from romwiki.pipeline.transforms.relationships import (
     AcquisitionReference,
     RelationshipIndex,
     TrainerAppearance,
     WildEncounterReference,
     build_relationship_index,
 )
-from romwiki.pipeline.type_charts import defensive_effectiveness
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,

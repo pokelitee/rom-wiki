@@ -315,7 +315,7 @@ def ability_link(value: dict[str, Any], source_url: str) -> str:
 
     Every renderer that displays a Pokémon's assigned ability (species
     pages, trainer parties, catalogs) should go through this so the
-    hidden-ability marker (`is_hidden`, set in `pipeline/enrich.py` from
+    hidden-ability marker (`is_hidden`, set in `pipeline/enrichment/pokemon.py` from
     the ROM's own ability-slot position) shows up consistently everywhere,
     not just on the species page.
     """

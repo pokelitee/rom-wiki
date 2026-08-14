@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.relationships import (
+from romwiki.pipeline.transforms.relationships import (
     LocationEncounterReference,
     RelationshipIndex,
 )

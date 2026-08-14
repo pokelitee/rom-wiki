@@ -5,7 +5,10 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.relationships import MoveLearnerReference, RelationshipIndex
+from romwiki.pipeline.transforms.relationships import (
+    MoveLearnerReference,
+    RelationshipIndex,
+)
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
     prune_catalog_pages,

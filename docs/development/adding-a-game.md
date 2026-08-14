@@ -236,14 +236,16 @@ on another or add a shared abstraction based only on expected compatibility.
 Registration alone is not always the *only* change needed, though. A pipeline
 module that has only ever been exercised by one engine can carry that engine's
 unstated assumptions — invisible until a second real engine hits the same code
-path. Implementing `gen5_bw` found two: `pipeline/locations.py` unconditionally
+path. Implementing `gen5_bw` found two:
+`pipeline/extraction/locations/dispatcher.py` unconditionally
 required several Platinum-only Sinnoh mechanics (honey trees, Trophy Garden,
-Great Marsh, decorations, seals, Battle Frontier), and `pipeline/build_context.py`
+Great Marsh, decorations, seals, Battle Frontier), and `pipeline/build/context.py`
 eagerly required several ancillary Pokémon-enrichment datasets (learnsets,
 evolutions, machines, tutors, egg moves, pickup) that a new engine's first
 vertical slice may not have implemented yet. Both needed a small, targeted fix —
 gate the feature on whether the profile actually configures it (`"x" not in
-profile.layout` / `profile.parameters`, mirroring `pipeline/reference_names.py`'s
+profile.layout` / `profile.parameters`, mirroring
+`pipeline/extraction/reference_names.py`'s
 existing pattern), returning `None`/skipping cleanly rather than raising. Expect
 to audit pipeline modules your new engine's slice actually exercises for this
 kind of single-engine assumption, not just add the registry entry.
@@ -271,7 +273,8 @@ introduced it. Generation-specific binary intermediates belong in the engine.
 Trainer party formats require an engine translator under
 `src/romwiki/engines/<generation>/<family>/trainer_party.py`. Expose it through
 the engine registry's `EngineAdapter.trainer_party` concern and emit the shared
-contract from `schema/trainers.py`. The shared `pipeline/trainer_party.py` module
+contract from `schema/trainers.py`. The shared
+`pipeline/enrichment/trainer_party.py` module
 dispatches through that registry; it does not register engine implementations.
 Do not teach the shared trainer renderer about a generation's difficulty byte,
 PID algorithm, ability flags, or EV defaults. Preserve those raw inputs under

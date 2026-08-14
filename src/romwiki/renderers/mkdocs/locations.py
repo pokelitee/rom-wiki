@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.relationships import RelationshipIndex
+from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.locations_encounter_map import (
     render_encounter_map_location_pages,
 )

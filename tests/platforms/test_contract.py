@@ -18,8 +18,8 @@ from romwiki.engines.registry import (
     register_engine,
     unregister_engine,
 )
-from romwiki.pipeline.identify import InspectionResult, inspect_rom
-from romwiki.pipeline.personal import extract_personal_dataset
+from romwiki.pipeline.extraction.identify import InspectionResult, inspect_rom
+from romwiki.pipeline.extraction.personal import extract_personal_dataset
 from romwiki.platforms.registry import (
     PlatformAdapter,
     register_platform,

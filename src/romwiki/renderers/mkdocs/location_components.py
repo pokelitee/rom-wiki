@@ -4,7 +4,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.pipeline.location_sections import location_reference_label
+from romwiki.pipeline.semantics.location_sections import location_reference_label
 from romwiki.renderers.mkdocs.components import (
     badge_requirement,
     display_name,

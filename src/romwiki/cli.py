@@ -11,57 +11,44 @@ from pathlib import Path
 from time import perf_counter
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.build_context import GameBuildContext
-from romwiki.pipeline.comparisons import write_comparison_dataset
-from romwiki.pipeline.egg_moves import (
-    extract_egg_move_dataset,
-    write_egg_move_dataset,
-)
-from romwiki.pipeline.encounters import (
-    extract_encounter_dataset,
-    write_encounter_dataset,
-)
-from romwiki.pipeline.enrich import (
-    write_enriched_dataset,
-)
-from romwiki.pipeline.evolutions import (
-    extract_evolution_dataset,
-    write_evolution_dataset,
-)
-from romwiki.pipeline.game_build import GameBuildWorkflow
-from romwiki.pipeline.identify import InspectionResult, inspect_rom
-from romwiki.pipeline.items import (
-    extract_item_dataset,
-    write_item_dataset,
-)
-from romwiki.pipeline.learnsets import extract_learnset_dataset, write_learnset_dataset
-from romwiki.pipeline.locations import extract_location_dataset, write_location_dataset
-from romwiki.pipeline.machines import extract_machine_dataset, write_machine_dataset
-from romwiki.pipeline.manifest import create_manifest, write_manifest
-from romwiki.pipeline.marts import extract_mart_dataset
-from romwiki.pipeline.moves import extract_move_dataset, write_move_dataset
-from romwiki.pipeline.personal import extract_personal_dataset, write_personal_dataset
-from romwiki.pipeline.pickup import extract_pickup_dataset, write_pickup_dataset
-from romwiki.pipeline.regeneration_state import (
+from romwiki.pipeline.build.context import GameBuildContext
+from romwiki.pipeline.build.manifest import create_manifest, write_manifest
+from romwiki.pipeline.build.regeneration import (
     can_reuse_generation,
     regeneration_fingerprint,
     write_regeneration_state,
 )
-from romwiki.pipeline.relationships import (
-    RelationshipIndex,
-    build_relationship_index,
-)
-from romwiki.pipeline.sections import (
+from romwiki.pipeline.build.sections import (
     DATASET_KINDS,
     describe_section_mismatch,
     enabled_dataset_kinds,
 )
-from romwiki.pipeline.static_encounters import extract_static_encounter_dataset
-from romwiki.pipeline.trades import extract_npc_trade_dataset
-from romwiki.pipeline.trainers import extract_trainer_dataset, write_trainer_dataset
-from romwiki.pipeline.tutors import extract_tutor_dataset, write_tutor_dataset
-from romwiki.pipeline.type_charts import build_type_dataset
-from romwiki.pipeline.version_merge import (
+from romwiki.pipeline.build.workflow import GameBuildWorkflow
+from romwiki.pipeline.enrichment.type_charts import build_type_dataset
+from romwiki.pipeline.extraction.egg_moves import extract_egg_move_dataset
+from romwiki.pipeline.extraction.encounters import extract_encounter_dataset
+from romwiki.pipeline.extraction.evolutions import extract_evolution_dataset
+from romwiki.pipeline.extraction.identify import InspectionResult, inspect_rom
+from romwiki.pipeline.extraction.items import extract_item_dataset
+from romwiki.pipeline.extraction.learnsets import extract_learnset_dataset
+from romwiki.pipeline.extraction.locations.dispatcher import extract_location_dataset
+from romwiki.pipeline.extraction.machines import extract_machine_dataset
+from romwiki.pipeline.extraction.marts import extract_mart_dataset
+from romwiki.pipeline.extraction.moves import extract_move_dataset
+from romwiki.pipeline.extraction.personal import extract_personal_dataset
+from romwiki.pipeline.extraction.pickup import extract_pickup_dataset
+from romwiki.pipeline.extraction.static_encounters import (
+    extract_static_encounter_dataset,
+)
+from romwiki.pipeline.extraction.trades import extract_npc_trade_dataset
+from romwiki.pipeline.extraction.trainers.dispatcher import extract_trainer_dataset
+from romwiki.pipeline.extraction.tutors import extract_tutor_dataset
+from romwiki.pipeline.io import write_dataset
+from romwiki.pipeline.transforms.relationships import (
+    RelationshipIndex,
+    build_relationship_index,
+)
+from romwiki.pipeline.transforms.version_merge import (
     merge_version_family_comparisons,
     merge_version_family_datasets,
 )
@@ -774,21 +761,21 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         output = args.output or (
             Path("build/data") / dataset["game"] / "pokemon" / "personal.json"
         )
-        write_personal_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} personal records: {output}")
     elif args.command == "extract-encounters":
         dataset = extract_encounter_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "encounters" / "raw.json"
         )
-        write_encounter_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} encounter records: {output}")
     elif args.command == "extract-trainers":
         dataset = extract_trainer_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "trainers" / "raw.json"
         )
-        write_trainer_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} trainer records: {output}")
     elif args.command == "extract-locations":
         profile = result.match.profile
@@ -820,35 +807,35 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         output = args.output or (
             Path("build/data") / dataset["game"] / "locations" / "raw.json"
         )
-        write_location_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} location records: {output}")
     elif args.command == "extract-moves":
         dataset = extract_move_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "moves" / "raw.json"
         )
-        write_move_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} move records: {output}")
     elif args.command == "extract-items":
         dataset = extract_item_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "items" / "raw.json"
         )
-        write_item_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} item records: {output}")
     elif args.command == "extract-learnsets":
         dataset = extract_learnset_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "pokemon" / "learnsets.json"
         )
-        write_learnset_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} learnsets: {output}")
     elif args.command == "extract-egg-moves":
         dataset = extract_egg_move_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "pokemon" / "egg-moves.json"
         )
-        write_egg_move_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(
             f"Wrote {dataset['record_count']} egg move sets with "
             f"{dataset['move_reference_count']} move references: {output}"
@@ -858,21 +845,21 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         output = args.output or (
             Path("build/data") / dataset["game"] / "pokemon" / "evolutions.json"
         )
-        write_evolution_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} evolution records: {output}")
     elif args.command == "extract-machines":
         dataset = extract_machine_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "machines" / "raw.json"
         )
-        write_machine_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} machine records: {output}")
     elif args.command == "extract-tutors":
         dataset = extract_tutor_dataset(result)
         output = args.output or (
             Path("build/data") / dataset["game"] / "tutors" / "raw.json"
         )
-        write_tutor_dataset(dataset, output)
+        write_dataset(dataset, output)
         print(
             f"Wrote {dataset['record_count']} shard tutor records, "
             f"{dataset['special_record_count']} special tutor records, and "
@@ -886,7 +873,7 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         output = args.output or (
             Path("build/data") / dataset["game"] / "pickup" / "raw.json"
         )
-        write_pickup_dataset(dataset, output)
+        write_dataset(dataset, output)
         if "level_ranges" in dataset:
             slot_count = sum(
                 len(level_range["slots"]) for level_range in dataset["level_ranges"]
@@ -1829,10 +1816,10 @@ def _write_dataset_build(
     type_dataset: dict | None = None,
     only_pages: frozenset[str] | None = None,
 ) -> None:
-    write_enriched_dataset(dataset, data_output)
+    write_dataset(dataset, data_output)
     if comparison is not None:
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
-        write_comparison_dataset(comparison, comparison_output)
+        write_dataset(comparison, comparison_output)
     write_public_dataset(wiki_output.parent, kind, dataset, comparison)
     renderer = {
         "pokemon": render_pokemon_pages,
@@ -1886,7 +1873,7 @@ def _write_type_build(
     wiki_root: Path,
 ) -> None:
     data_output = _dataset_output(data_root, "types")
-    write_enriched_dataset(dataset, data_output)
+    write_dataset(dataset, data_output)
     write_public_dataset(wiki_root, "types", dataset, None)
     page_count = render_type_chart(dataset, wiki_root / "types")
     _LOG.info("Wrote %s types: %s", len(dataset["records"]), data_output)

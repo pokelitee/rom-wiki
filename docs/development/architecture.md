@@ -129,14 +129,15 @@ documentation.
 When an engine stores a semantic value indirectly, its engine package also owns
 the translator for that encoding. For example,
 `engines/gen4/dppt/trainer_party.py` translates Gen IV trainer-party records into
-the shared party contract. `pipeline/trainer_party.py` dispatches by the explicit
+the shared party contract. `pipeline/enrichment/trainer_party.py` dispatches by the explicit
 `engine` field on the raw dataset; it must not accumulate generation-specific
 branches itself.
 
-Trainer dataset extraction follows the same boundary. `pipeline/trainers.py` is
+Trainer dataset extraction follows the same boundary.
+`pipeline/extraction/trainers/dispatcher.py` is
 the semantic dispatcher, with class-gender and battle-mode entry modules owning
 the two declared storage strategies. Their shared ROM-reading support lives in
-`pipeline/trainer_extraction_support.py`; battle-family resolution remains in the
+`pipeline/extraction/trainers/support.py`; battle-family resolution remains in the
 engine layer where format-specific rules are declared.
 
 ### Pipelines and normalized schemas
@@ -150,15 +151,24 @@ dataset uses the shared envelope validated by `schema/datasets.py`: a
 `schema_version`, game and engine identifiers, semantic dataset name, record count,
 source metadata, and record-level provenance where appropriate.
 
+Pipeline modules are grouped by lifecycle: `extraction/` turns ROM storage into
+raw normalized datasets, `enrichment/` resolves cross-dataset facts, `transforms/`
+compares and relates normalized datasets, and `build/` owns orchestration and cache
+state. `semantics/` owns stable identities and labels shared across lifecycle
+stages. Location and trainer strategies are nested beneath their extraction
+dispatchers. Shared dataset serialization lives in `pipeline/io.py`. Schema and
+renderer packages remain flat because their files map directly to public dataset
+concepts and rendered sections. Pipeline tests mirror these ownership boundaries.
+
 Simple extractors construct those required fields through `dataset_envelope()` and
 then add only dataset-specific summaries. Companion joins keep mechanic-specific
 identity, shape, ordering, and reference validation in the enrichment module that
 owns the resulting dataset.
 
 Enrichment entry points are grouped by normalized dataset: Pokémon, encounters,
-moves, and trainers have focused modules, while `pipeline/enrich.py` remains a
-small compatibility facade. Shared ROM-derived name and entity-reference helpers
-live in neutral enrichment modules rather than being duplicated by each dataset.
+moves, and trainers have focused modules. Callers import the owning module directly;
+there is no compatibility facade. Shared ROM-derived name and entity-reference
+helpers live in neutral enrichment modules rather than being duplicated.
 
 Enriched datasets also carry a normalized `features` list derived from the engine
 adapter and exact profile configuration. Renderers use this contract to distinguish
@@ -198,7 +208,7 @@ profile offset versus a binary prefix. Registry validation checks the parser or
 locator members required by each declaration before extraction begins.
 
 Conditional special encounters retain their versioned serialized shape, but shared
-consumers traverse them through `pipeline/special_encounters.py`. That semantic
+consumers traverse them through `pipeline/enrichment/special_encounters.py`. That semantic
 view supplies method, condition, slots, and display grouping without requiring
 renderers or relationship indexes to inspect an engine-family marker.
 
@@ -260,7 +270,7 @@ runtime Easy/Normal/Challenge selection and level presentation.
 
 Exact trainer rewards use a shared normalized contract while retaining
 generation-specific decoding. Engine parsers expose the stored multiplier and its
-provenance; `pipeline/trainer_rewards.py` calculates a payout only when every
+provenance; `pipeline/enrichment/trainer_rewards.py` calculates a payout only when every
 required input is exact. AI battle items, post-victory items, and prize money are
 separate concepts throughout extraction and rendering. An unsupported or
 incomplete payout is omitted rather than estimated.
@@ -273,7 +283,7 @@ the same pattern, joining normalized mechanics with item references from Pokémo
 trainers, locations, shops, gifts, trades, and evolutions.
 
 Cross-dataset reverse links used only for presentation are built once per full or
-version-family build by `pipeline/relationships.py`. Its focused
+version-family build by `pipeline/transforms/relationships.py`. Its focused
 `RelationshipIndex` covers Pokémon encounters, acquisition sources and trainer
 appearances; move learners; and location-to-encounter variants. It preserves stable
 IDs, forms, versions, deterministic ordering, and deduplication before a renderer
@@ -301,7 +311,7 @@ their named audit fields.
 Type effectiveness follows a separate engine/profile contract. Each data-driven
 profile must explicitly select a chart registered by its engine. A hack may declare
 additional types and validated sparse matchup overrides; it cannot silently inherit
-its parent's chart selection. `pipeline/type_charts.py` validates the complete
+its parent's chart selection. `pipeline/enrichment/type_charts.py` validates the complete
 effective matrix, represents multipliers exactly, emits the normalized public
 `types` dataset, and provides the single defensive calculator reused by Pokémon
 pages. Generation-specific registrations point to immutable chart-family data, so
@@ -465,13 +475,14 @@ But a pipeline
 module that has only ever run against one engine can still carry that engine's
 unstated assumptions, invisible until a second real engine exercises the same
 code path. Implementing `gen5_bw` (alongside `gen4_dppt`) found two:
-`pipeline/locations.py` unconditionally required several Platinum-only Sinnoh
+`pipeline/extraction/locations/dispatcher.py` unconditionally required several
+Platinum-only Sinnoh
 mechanics (honey trees, Trophy Garden, Great Marsh, decorations, seals, Battle
-Frontier), and `pipeline/build_context.py` eagerly required several ancillary
+Frontier), and `pipeline/build/context.py` eagerly required several ancillary
 Pokémon-enrichment datasets (learnsets, evolutions, machines, tutors, egg
 moves, pickup) that don't exist for an engine's first vertical slice. Both were
 small, targeted fixes — gate the feature on whether the profile actually
-configures it, mirroring the pattern `pipeline/reference_names.py` already used
+configures it, mirroring `pipeline/extraction/reference_names.py`
 — not a redesign. Treat this as expected, cheap-to-fix generalization work when
 adding a second engine, not evidence the registry boundary is wrong.
 

@@ -13,7 +13,7 @@ from contextlib import suppress
 from functools import cache
 from pathlib import Path, PurePosixPath
 
-from romwiki.pipeline.cache_fingerprint import (
+from romwiki.pipeline.build.fingerprint import (
     GENERATION_EXTRACTOR_MODULES,
     extraction_source_files,
     profile_fingerprint,
@@ -53,7 +53,7 @@ SNAPSHOT_SCHEMA_VERSION = 2
 DIRECTORY_SNAPSHOT_SCHEMA_VERSION = 3
 _NON_GENERATION_SOURCES = {
     "cli.py",
-    "pipeline/regeneration_state.py",
+    "pipeline/build/regeneration.py",
     "sites/audit.py",
     "sites/build.py",
     "sites/build_state.py",
@@ -591,7 +591,7 @@ def _site_source_fingerprint(catalog: SiteCatalog, site: SiteDefinition) -> str:
                     source_root / value
                     for value in extraction_source_files(
                         profile.engine,
-                        f"romwiki.pipeline.{module}",
+                        module,
                     )
                 )
     paths.add(site.config_path.parent / "game.toml")

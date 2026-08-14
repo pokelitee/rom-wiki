@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.pipeline.relationships import (
+from romwiki.pipeline.transforms.relationships import (
     AcquisitionReference,
     TrainerAppearance,
     WildEncounterReference,

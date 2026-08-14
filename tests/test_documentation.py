@@ -17,7 +17,7 @@ class DocumentationTests(unittest.TestCase):
         )
 
         self.assertIn("`EngineAdapter.trainer_party`", guide)
-        self.assertNotIn("Register it in\n`pipeline/trainer_party.py`", guide)
+        self.assertIn("`pipeline/enrichment/trainer_party.py`", guide)
 
     def test_engine_data_source_partials_have_explicit_consumers(self) -> None:
         consumers = {

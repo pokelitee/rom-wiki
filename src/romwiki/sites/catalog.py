@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.sections import DATASET_KINDS, enabled_dataset_kinds
+from romwiki.pipeline.build.sections import DATASET_KINDS, enabled_dataset_kinds
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.util.errors import SiteError
 

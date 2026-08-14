@@ -3,12 +3,15 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 
-build/
-dist/
-site/
+/build/
+/dist/
+/site/
+sites/**/build/
+sites/**/site/
 .romwiki/
 .local/
 

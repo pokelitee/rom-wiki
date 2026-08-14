@@ -5,11 +5,11 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.comparisons import (
+from romwiki.pipeline.transforms.comparisons import (
     comparison_by_key,
     normalize_comparison_value,
 )
-from romwiki.pipeline.relationships import RelationshipIndex
+from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import write_text
 from romwiki.renderers.mkdocs.components import (
     display_name,
