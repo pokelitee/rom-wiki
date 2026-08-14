@@ -93,30 +93,6 @@ from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
 from romwiki.util.logging import configure_logging, timed_operation
 
 _LOG = logging.getLogger("romwiki")
-_LEGACY_COMMANDS = {
-    "manifest": ("inspect", "--manifest-output"),
-    "extract-personal": ("extract", "personal"),
-    "extract-encounters": ("extract", "encounters"),
-    "extract-trainers": ("extract", "trainers"),
-    "extract-locations": ("extract", "locations"),
-    "extract-moves": ("extract", "moves"),
-    "extract-items": ("extract", "items"),
-    "extract-learnsets": ("extract", "learnsets"),
-    "extract-egg-moves": ("extract", "egg-moves"),
-    "extract-evolutions": ("extract", "evolutions"),
-    "extract-machines": ("extract", "machines"),
-    "extract-tutors": ("extract", "tutors"),
-    "extract-pickup": ("extract", "pickup"),
-    "build-pokemon": ("build", "pokemon"),
-    "build-encounters": ("build", "encounters"),
-    "build-trainers": ("build", "trainers"),
-    "build-locations": ("build", "locations"),
-    "build-moves": ("build", "moves"),
-    "build-items": ("build", "items"),
-    "build-game": ("build", "game"),
-    "build-version-family": ("build", "family"),
-    "build-version-pair": ("build", "family"),
-}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -548,44 +524,9 @@ def _add_site_parser(
     _add_site_root_argument(restore_parser)
 
 
-def _normalize_legacy_argv(
-    argv: Sequence[str],
-) -> tuple[tuple[str, ...], str | None]:
-    values = list(argv)
-    command_index = next(
-        (
-            index
-            for index, value in enumerate(values)
-            if value not in {"-v", "--verbose", "-q", "--quiet"}
-        ),
-        None,
-    )
-    if command_index is None:
-        return tuple(values), None
-    command = values[command_index]
-    if command == "manifest":
-        values[command_index] = "inspect"
-        if "--output" in values:
-            values = [
-                "--manifest-output" if value == "--output" else value
-                for value in values
-            ]
-        else:
-            values.extend(("--manifest-output", "build/data/manifest.json"))
-        return tuple(values), command
-    replacement = _LEGACY_COMMANDS.get(command)
-    if replacement is None:
-        return tuple(values), None
-    values[command_index : command_index + 1] = replacement
-    return tuple(values), command
-
-
 def main(argv: Sequence[str] | None = None) -> int:
-    raw_argv = tuple(sys.argv[1:] if argv is None else argv)
-    normalized_argv, legacy_command = _normalize_legacy_argv(raw_argv)
-    args = build_parser().parse_args(normalized_argv)
+    args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
     configure_logging(verbose=args.verbose, quiet=args.quiet)
-    _warn_legacy_command(legacy_command)
     _normalize_command(args)
     try:
         result = _inspect_command_input(args)
@@ -594,15 +535,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     except RomWikiError as error:
         _LOG.error("%s", error)
         return 2
-
-
-def _warn_legacy_command(legacy_command: str | None) -> None:
-    if legacy_command is not None:
-        _LOG.warning(
-            "Command %s is deprecated; use %s",
-            legacy_command,
-            " ".join(_LEGACY_COMMANDS.get(legacy_command, ("inspect",))),
-        )
 
 
 def _normalize_command(args: argparse.Namespace) -> None:
@@ -619,7 +551,7 @@ def _normalize_command(args: argparse.Namespace) -> None:
 def _inspect_command_input(args: argparse.Namespace) -> InspectionResult | None:
     # Commands that need an inspection all register input arguments through
     # `_add_input_arguments`, keeping this check aligned with parser construction.
-    if not hasattr(args, "rom_override"):
+    if not hasattr(args, "rom"):
         return None
     input_rom = _resolve_input_rom(args)
     _LOG.info("ROM input: %s", input_rom)
@@ -892,14 +824,7 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
 
 def _add_input_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "input_rom",
-        type=Path,
-        nargs="?",
-        help="path to a locally supplied ROM image (legacy positional form)",
-    )
-    parser.add_argument(
         "--rom",
-        dest="rom_override",
         type=Path,
         help="explicit ROM path; overrides the selected local game path",
     )
@@ -1007,7 +932,7 @@ def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
         if not resolved.is_file():
             raise LocalConfigError(f"Base ROM image does not exist: {resolved}")
         return resolved
-    if args.input_rom is not None or args.rom_override is not None:
+    if args.rom is not None:
         raise LocalConfigError(
             "Explicit ROM builds require --base-rom, or --hack-only to skip comparison"
         )
@@ -1486,8 +1411,7 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
             continue
         if len(game.profiles) == 1:
             build_args = argparse.Namespace(
-                input_rom=None,
-                rom_override=None,
+                rom=None,
                 game=game.profiles[0],
                 base=False,
                 games_config=args.games_config,
@@ -1922,11 +1846,8 @@ def _comparison_workflow_kind(kind: str) -> str:
 
 
 def _resolve_input_rom(args: argparse.Namespace) -> Path:
-    if args.input_rom is not None and args.rom_override is not None:
-        raise LocalConfigError("Specify a positional ROM path or --rom, not both")
-    explicit = args.rom_override or args.input_rom
-    if explicit is not None:
-        resolved = explicit.resolve()
+    if args.rom is not None:
+        resolved = args.rom.resolve()
         if not resolved.is_file():
             raise LocalConfigError(f"ROM image does not exist: {resolved}")
         return resolved

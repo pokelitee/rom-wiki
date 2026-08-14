@@ -469,8 +469,7 @@ with its corresponding clean base and merges those results with
 comparisons wherever their values differ. Every registration must define a
 base or none may do so; a partially configured family comparison is rejected.
 `--site-id` is required, preventing a new family from accidentally overwriting an
-existing site. The deprecated `build-version-pair` spelling remains temporarily
-available but follows the same explicit-site rule.
+existing site.
 
 Same-key records whose current values differ retain all complete records under
 `version_variants`. Only dataset kinds registered as variant-capable may contain

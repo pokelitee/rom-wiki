@@ -32,7 +32,7 @@ Committed profiles describe how to identify and decode an image, but never conta
 machine-specific ROM paths. The ignored `.local/games.toml` registry associates a
 game ID with `patched_rom` and optional `base_rom` paths. Relative paths resolve
 from the registry's directory. CLI commands accept `--game` to select the patched
-path and `--base` to select the clean baseline; explicit and legacy positional ROM
+path and `--base` to select the clean baseline; explicit ROM
 paths remain supported.
 
 Path registration and format support are separate. The registry validates that the

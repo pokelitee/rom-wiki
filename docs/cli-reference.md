@@ -28,17 +28,15 @@ messages consistently use `started`, `completed in`, and `failed after` wording.
 
 ## ROM inputs
 
-Commands that operate on one ROM accept three input forms:
+Commands that operate on one ROM accept a configured game or explicit path:
 
 ```console
 romwiki inspect --game renegade-platinum
 romwiki inspect --rom "D:\Games\patched.nds"
-romwiki inspect "D:\Games\patched.nds"
 ```
 
 `--game` resolves a path from `.local/games.toml`. `--rom` is an explicit
-one-command override. The positional path is retained for compatibility.
-Conflicting input forms are rejected.
+one-command override.
 
 Use `--base` with `--game` to select that registration's clean base image:
 
@@ -285,22 +283,3 @@ snapshot` in the monolithic format.
 Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
 because it guarantees generation, site building, and auditing succeeded before
 the snapshot is replaced.
-
-## Compatibility commands
-
-The previous flat command spellings remain accepted temporarily and emit a
-deprecation warning:
-
-```text
-extract-personal       -> extract personal
-extract-<kind>         -> extract <kind>
-build-pokemon          -> build pokemon
-build-<section>        -> build <section>
-build-game             -> build game
-build-version-family   -> build family
-build-version-pair     -> build family
-manifest               -> inspect --manifest-output
-```
-
-The deprecated `build-version-pair` spelling follows the same rule as
-`build family`: every version family must provide `--site-id` explicitly.

@@ -12,7 +12,6 @@ from romwiki.cli import (
     _current_relationship_datasets,
     _dataset_output,
     _load_comparisons,
-    _normalize_legacy_argv,
     _profile_wiki_root,
     _report_site_audit,
     _resolve_build_baseline,
@@ -44,7 +43,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class MainErrorHandlingTests(unittest.TestCase):
     def test_a_rom_wiki_error_is_reported_and_exits_nonzero(self) -> None:
-        exit_code = main(["inspect", "/no/such/rom.nds"])
+        exit_code = main(["inspect", "--rom", "/no/such/rom.nds"])
 
         self.assertEqual(exit_code, 2)
 
@@ -113,40 +112,6 @@ class MainErrorHandlingTests(unittest.TestCase):
             set(subparsers.choices),
             {"inspect", "extract", "build", "regenerate", "baseline", "site"},
         )
-
-    def test_legacy_commands_are_normalized_without_exposing_them(self) -> None:
-        normalized, command = _normalize_legacy_argv(
-            ["build-game", "--game", "renegade-platinum"]
-        )
-        manifest, manifest_command = _normalize_legacy_argv(
-            ["manifest", "game.nds", "--output", "manifest.json"]
-        )
-        default_manifest, _ = _normalize_legacy_argv(["manifest", "game.nds"])
-        pair, pair_command = _normalize_legacy_argv(
-            ["build-version-pair", "--games", "black-us", "white-us"]
-        )
-
-        self.assertEqual(
-            normalized,
-            ("build", "game", "--game", "renegade-platinum"),
-        )
-        self.assertEqual(command, "build-game")
-        self.assertEqual(
-            manifest,
-            (
-                "inspect",
-                "game.nds",
-                "--manifest-output",
-                "manifest.json",
-            ),
-        )
-        self.assertEqual(manifest_command, "manifest")
-        self.assertEqual(
-            default_manifest[-2:],
-            ("--manifest-output", "build/data/manifest.json"),
-        )
-        self.assertNotIn("--site-id", pair)
-        self.assertEqual(pair_command, "build-version-pair")
 
     def test_version_family_parser_accepts_three_games_and_labels(self) -> None:
         args = build_parser().parse_args(
@@ -222,7 +187,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         if not rom_path.is_file():
             self.skipTest("local ROM fixture is not available in this environment")
 
-        exit_code = main(["inspect", str(rom_path), "--json"])
+        exit_code = main(["inspect", "--rom", str(rom_path), "--json"])
 
         self.assertEqual(exit_code, 0)
 
@@ -557,23 +522,13 @@ base_rom = "base.nds"
             self.assertEqual(_resolve_input_rom(patched_args), patched.resolve())
             self.assertEqual(_resolve_input_rom(base_args), base.resolve())
 
-    def test_preserves_positional_input_and_supports_explicit_override(self) -> None:
+    def test_resolves_explicit_rom(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             rom = Path(directory) / "explicit.nds"
             rom.touch()
-            positional = build_parser().parse_args(["inspect", str(rom)])
-            optional = build_parser().parse_args(["inspect", "--rom", str(rom)])
+            args = build_parser().parse_args(["inspect", "--rom", str(rom)])
 
-            self.assertEqual(_resolve_input_rom(positional), rom.resolve())
-            self.assertEqual(_resolve_input_rom(optional), rom.resolve())
-
-    def test_rejects_conflicting_explicit_inputs(self) -> None:
-        args = build_parser().parse_args(
-            ["inspect", "positional.nds", "--rom", "override.nds"]
-        )
-
-        with self.assertRaisesRegex(LocalConfigError, "not both"):
-            _resolve_input_rom(args)
+            self.assertEqual(_resolve_input_rom(args), rom.resolve())
 
     def test_configured_build_uses_base_rom_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -620,9 +575,9 @@ base_rom = "base.nds"
         with tempfile.TemporaryDirectory() as directory:
             rom = Path(directory) / "hack.nds"
             rom.touch()
-            args = build_parser().parse_args(["build", "moves", str(rom)])
+            args = build_parser().parse_args(["build", "moves", "--rom", str(rom)])
             hack_only = build_parser().parse_args(
-                ["build", "moves", str(rom), "--hack-only"]
+                ["build", "moves", "--rom", str(rom), "--hack-only"]
             )
 
             with self.assertRaisesRegex(LocalConfigError, "require --base-rom"):
