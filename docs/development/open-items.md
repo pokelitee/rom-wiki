@@ -56,6 +56,13 @@ unanchored byte scans cannot improve confidence.
 
 - **BW roaming Tornadus and Thundurus** — kept explicitly unsupported rather
   than derived from a published offset that points into code.
+- **Generation V location section labels** — decoded map headers provide a
+  broad display name and stable header identity, but no floor/room label. Warps
+  already carry `destination_section_name` when an explicit profile mapping is
+  available; no verified BW/B2W2 mapping is currently configured, so the
+  renderer shows the section as unavailable rather than deriving one from map
+  IDs or duplicate names. Completing this requires a reviewed per-header source,
+  not more binary parsing.
 
 ## 3. Release validation
 

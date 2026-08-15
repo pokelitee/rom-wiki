@@ -26,6 +26,29 @@ Engine-specific encodings are translated before enrichment; enrichment resolves
 cross-dataset identities and optional reference media without interpreting binary
 mechanics.
 
+## Repository layout
+
+The top-level directories follow their owning layer:
+
+```text
+config/                 local-registry examples
+profiles/               committed ROM and hack identification contracts
+src/romwiki/            extraction, normalization, rendering, and site tooling
+tests/                   source-aligned automated coverage
+sites/games/            per-game configuration and authored wiki content
+sites/portal/           catalog landing site
+sites/shared/           common frontend and reusable publication partials
+sites/generated-wiki/   deterministic generated-page snapshot archives
+docs/development/       contributor documentation
+```
+
+`sites/shared/overrides/` owns the frontend templates and assets, while
+`sites/shared/partials/genN/` owns publication prose reused by games with the same
+generation and engine-family formats. ROM- or hack-specific provenance remains in
+each game's `wiki/data-sources.md`. Generated pages, build artifacts, caches, and
+local ROM registrations remain ignored working state except for the explicit
+archives under `sites/generated-wiki/`.
+
 ## Local input registry
 
 Committed profiles describe how to identify and decode an image, but never contain
@@ -330,13 +353,13 @@ default sprite for compact cards plus every available front/back, normal/shiny,
 and gender variant for detail-page galleries. Pokémon records also keep a
 deliberately small `reference` object containing descriptive species metadata.
 
-The same `reference` pattern extends to abilities, moves, and items: the ROM
-stores their names, ROM-native mechanics, and assignments, but never a
-human-readable description of what they do, so `PokeDBGeneration.ability_reference`
-/ `move_reference` / `item_reference` (keyed by ROM ID for abilities/moves, by
-resolved slug for items, since their ROM item IDs don't align with PokéDB's) are
-the sole source for effect text and Pokédex-style flavor-text quotes, matched to
-a profile's `base_game` version where PokéDB carries per-version text. Trainer
+The same `reference` pattern extends to abilities, moves, and items. The ROM
+stores their names, ROM-native mechanics, assignments, and—when a profile
+declares the relevant message member—display descriptions. PokéDB supplies
+structured effect text, fallback flavor text, and icons through
+`ability_reference` / `move_reference` / `item_reference` (keyed by ROM ID for
+abilities/moves and by resolved slug for items). A decoded ROM description
+replaces only `flavor_text`; it never replaces structured reference metadata. Trainer
 party members carry a Pokémon sprite and, when applicable, a held-item icon
 through the same lookups. Item page slugs remain derived from the ROM display
 name and stable ROM ID. A separate reference-slug resolver may expand known
@@ -368,8 +391,10 @@ catalog builds those wikis and the portal into one GitHub Pages artifact while
 preserving stable per-game URLs.
 
 All sites inherit their Material configuration and design system from
-`sites/shared/`. A repository-local MkDocs hook loads the site catalog and exposes
-the current site plus every published game to the shared templates. The portal and
+`sites/shared/`. Reusable engine-family data-source prose lives under its
+generation-grouped `partials/` subdirectory and is included only by explicit game
+consumers. A repository-local MkDocs hook loads the site catalog and exposes the
+current site plus every published game to the shared templates. The portal and
 game selector are therefore generated from site descriptors rather than a second
 maintained game list.
 

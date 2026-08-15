@@ -34,7 +34,7 @@ from romwiki.renderers.mkdocs.moves import (
     _relationship_learner_table,
     _tutor_compatibility,
 )
-from romwiki.renderers.mkdocs.pokemon import _reference_entry
+from romwiki.renderers.mkdocs.pokemon import _reference_entries, _reference_entry
 from romwiki.renderers.mkdocs.references import EntityReference, ReferenceIndex
 
 
@@ -75,6 +75,23 @@ class DisplayNameTests(unittest.TestCase):
         )
 
         self.assertIn("<figcaption>ROM Pokédex</figcaption>", rendered)
+
+    def test_reference_descriptions_render_version_tabs(self) -> None:
+        record = {
+            "reference_variants": {
+                "black": {"flavor_text": "Black entry."},
+                "white": {"flavor_text": "White entry."},
+            }
+        }
+
+        rendered = reference_description(record, "Missing")
+        pokemon_rendered = _reference_entries(record)
+
+        for lines in (rendered, pokemon_rendered):
+            self.assertIn('=== "Black"', lines)
+            self.assertIn('=== "White"', lines)
+            self.assertTrue(any("Black entry." in line for line in lines))
+            self.assertTrue(any("White entry." in line for line in lines))
 
     def test_title_cases_regular_slug(self) -> None:
         self.assertEqual(display_name("evolution-stone"), "Evolution Stone")

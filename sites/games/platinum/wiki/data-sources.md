@@ -29,7 +29,7 @@ The sections below describe the shared Generation IV DPPt-engine record
 formats and decoding techniques; this page adds this specific release's own
 verified facts and configuration on top.
 
---8<-- "gen4-dppt-data-sources.md"
+--8<-- "gen4/dppt-data-sources.md"
 
 ## Roaming Pokémon
 

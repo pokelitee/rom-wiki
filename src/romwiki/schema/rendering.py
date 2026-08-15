@@ -10,6 +10,8 @@ class RenderReference(TypedDict, total=False):
     short_effect: str
     effect: str
     flavor_text: str
+    flavor_text_label: str
+    flavor_text_source: str
     version: str
     metadata: dict[str, Any]
 
@@ -25,6 +27,7 @@ class RenderProvenance(TypedDict, total=False):
 class VersionedRenderRecord(TypedDict, total=False):
     versions: list[str]
     version_variants: dict[str, dict[str, Any]]
+    reference_variants: dict[str, RenderReference | None]
     reference: RenderReference
     provenance: RenderProvenance
 
@@ -78,3 +81,5 @@ class RenderDataset[RecordT: VersionedRenderRecord](TypedDict, total=False):
     source: Required[dict[str, Any]]
     records: Required[list[RecordT]]
     name_source: dict[str, Any] | None
+    description_source: dict[str, Any] | None
+    description_sources: dict[str, dict[str, Any]]

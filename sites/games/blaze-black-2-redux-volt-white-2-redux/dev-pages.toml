@@ -25,7 +25,8 @@ items = [
     "master-ball",
     "potion",
     "ice-stone",
-    "link-cable",
+    "link-cable-110",
+    "link-cable-262",
 ]
 encounters = [
     "map-000",

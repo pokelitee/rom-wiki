@@ -45,6 +45,60 @@ class VersionMergeTests(unittest.TestCase):
         with self.assertRaisesRegex(DataSourceError, "does not support"):
             merge_version_family_datasets({"black": black, "white": white})
 
+    def test_preserves_version_specific_reference_prose(self) -> None:
+        black = _dataset(
+            "pokemon",
+            "black-us",
+            [
+                _pokemon(
+                    1,
+                    "Bulbasaur",
+                    reference={"flavor_text": "Black entry."},
+                )
+            ],
+        )
+        white = _dataset(
+            "pokemon",
+            "white-us",
+            [
+                _pokemon(
+                    1,
+                    "Bulbasaur",
+                    reference={"flavor_text": "White entry."},
+                )
+            ],
+        )
+
+        record = merge_version_family_datasets({"black": black, "white": white})[
+            "records"
+        ][0]
+
+        self.assertEqual(
+            {
+                version: reference["flavor_text"]
+                for version, reference in record["reference_variants"].items()
+            },
+            {"black": "Black entry.", "white": "White entry."},
+        )
+
+    def test_does_not_variant_identical_reference_prose(self) -> None:
+        black = _dataset(
+            "pokemon",
+            "black-us",
+            [_pokemon(1, "Bulbasaur", reference={"flavor_text": "Shared."})],
+        )
+        white = _dataset(
+            "pokemon",
+            "white-us",
+            [_pokemon(1, "Bulbasaur", reference={"flavor_text": "Shared."})],
+        )
+
+        record = merge_version_family_datasets({"black": black, "white": white})[
+            "records"
+        ][0]
+
+        self.assertNotIn("reference_variants", record)
+
     def test_merges_version_specific_trades_on_an_otherwise_shared_location(
         self,
     ) -> None:

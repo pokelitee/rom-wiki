@@ -60,6 +60,11 @@ def merge_version_family_datasets(
         }
         record = dict(next(iter(variants.values())))
         record["versions"] = list(variants)
+        reference_variants = {
+            version: value.get("reference") for version, value in variants.items()
+        }
+        if not _reference_prose_equal(reference_variants.values()):
+            record["reference_variants"] = reference_variants
         locations_with_versioned_trades = (
             _merge_location_trade_variants(variants) if kind == "locations" else None
         )
@@ -87,6 +92,20 @@ def merge_version_family_datasets(
     if kind == "trainers":
         merged["battle_families"] = _merge_trainer_battle_families(datasets)
     return merged
+
+
+def _reference_prose_equal(references: Iterable[object]) -> bool:
+    fields = ("short_effect", "effect", "flavor_text")
+    values = iter(references)
+    first = next(values)
+
+    def prose(reference: object) -> tuple[object, ...]:
+        if not isinstance(reference, Mapping):
+            return (None,) * len(fields)
+        return tuple(reference.get(field) for field in fields)
+
+    expected = prose(first)
+    return all(prose(reference) == expected for reference in values)
 
 
 def _merge_trainer_battle_families(

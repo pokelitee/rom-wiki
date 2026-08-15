@@ -28,4 +28,4 @@ Black and White use the Generation V Black/White engine (`gen5_bw`).
 The sections below describe the shared Generation V Black/White engine record
 formats and decoding techniques.
 
---8<-- "gen5-bw-data-sources.md"
+--8<-- "gen5/bw-data-sources.md"

@@ -372,6 +372,11 @@ sites/games/<game-id>/
 Register the profile in `game.toml`, choose a stable URL slug, and document the
 exact input version and extraction limitations in `data-sources.md`.
 
+Keep ROM- and hack-specific provenance on that game page. If multiple sites use
+the same engine-family formats, put the reusable public explanation under
+`sites/shared/partials/genN/` and include it from each explicit consumer. Keep
+frontend templates and assets in `sites/shared/overrides/`.
+
 Every game descriptor also provides the portal and shared frontend metadata:
 
 ```toml

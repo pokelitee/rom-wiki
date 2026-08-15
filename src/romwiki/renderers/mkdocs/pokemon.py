@@ -261,14 +261,13 @@ def _render_record(
     level_up_moves = record.get("level_up_moves", [])
     egg_moves = record.get("egg_moves", [])
     evolutions = record.get("evolutions", [])
-    reference = record.get("reference") or {}
     baseline_stats = _comparison_base_stats(change, stats)
     lines = [
         f"# {record['name']}",
         "",
         *version_availability_note(record),
         *pokemon_summary(record),
-        *_reference_entry(reference),
+        *_reference_entries(record),
         *_sprite_gallery(record),
         "## Base stats",
         "",
@@ -1178,6 +1177,23 @@ def _reference_entry(reference: dict[str, Any]) -> list[str]:
         f"{display_name(version)} Pokédex" if version else "Pokédex"
     )
     return pokedex_quote(text, version_label)
+
+
+def _reference_entries(record: dict[str, Any]) -> list[str]:
+    variants = record.get("reference_variants")
+    if not isinstance(variants, dict) or not variants:
+        return _reference_entry(record.get("reference") or {})
+    contents = [
+        (display_name(str(version)), _reference_entry(reference or {}))
+        for version, reference in variants.items()
+    ]
+    if all(content == contents[0][1] for _, content in contents):
+        return contents[0][1]
+    lines: list[str] = []
+    for label, content in contents:
+        lines.extend([f'=== "{label}"', ""])
+        lines.extend(f"    {line}" if line else "" for line in content)
+    return lines
 
 
 def _ev_yield(yields: dict[str, int]) -> str:

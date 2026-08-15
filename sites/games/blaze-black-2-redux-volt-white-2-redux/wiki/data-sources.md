@@ -65,4 +65,4 @@ the normal generic fallback.
 The sections below describe the shared Generation V Black 2/White 2 engine
 record formats and decoding techniques.
 
---8<-- "gen5-b2w2-data-sources.md"
+--8<-- "gen5/b2w2-data-sources.md"

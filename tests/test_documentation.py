@@ -21,15 +21,19 @@ class DocumentationTests(unittest.TestCase):
 
     def test_engine_data_source_partials_have_explicit_consumers(self) -> None:
         consumers = {
-            "gen4-dppt-data-sources.md": {
+            "gen4/dppt-data-sources.md": {
                 "platinum",
                 "renegade-platinum",
             },
-            "gen5-bw-data-sources.md": {
+            "gen4/hgss-data-sources.md": {
+                "heart-gold-soul-silver",
+                "sacred-gold-storm-silver",
+            },
+            "gen5/bw-data-sources.md": {
                 "black-white",
                 "blaze-black-volt-white",
             },
-            "gen5-b2w2-data-sources.md": {
+            "gen5/b2w2-data-sources.md": {
                 "black-2-white-2",
                 "blaze-black-2-volt-white-2",
                 "blaze-black-2-redux-volt-white-2-redux",
@@ -40,9 +44,16 @@ class DocumentationTests(unittest.TestCase):
             for path in (REPOSITORY_ROOT / "sites/games").glob("*/wiki/data-sources.md")
         }
 
+        partials_root = REPOSITORY_ROOT / "sites/shared/partials"
+        self.assertEqual(
+            {
+                path.relative_to(partials_root).as_posix()
+                for path in partials_root.rglob("*.md")
+            },
+            set(consumers),
+        )
         for partial_name, expected_consumers in consumers.items():
-            partial = REPOSITORY_ROOT / "sites/shared/partials" / partial_name
-            self.assertTrue(partial.is_file())
+            partial = partials_root / partial_name
             partial_text = partial.read_text(encoding="utf-8")
             for heading in (
                 "## Pokémon species data",
@@ -61,9 +72,11 @@ class DocumentationTests(unittest.TestCase):
             with self.subTest(partial=partial_name):
                 self.assertEqual(actual_consumers, expected_consumers)
 
-        self.assertFalse(
-            (REPOSITORY_ROOT / "sites/shared/partials/gen4-data-sources.md").exists()
-        )
+        for unused_placeholder in (
+            "sites/shared/assets/.gitkeep",
+            "sites/shared/templates/.gitkeep",
+        ):
+            self.assertFalse((REPOSITORY_ROOT / unused_placeholder).exists())
 
     def test_published_game_overviews_follow_the_documentation_contract(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
@@ -111,10 +124,10 @@ class DocumentationTests(unittest.TestCase):
 
     def test_generation_five_coverage_notes_match_supported_links(self) -> None:
         shared_bw_notes = (
-            REPOSITORY_ROOT / "sites/shared/partials/gen5-bw-data-sources.md"
+            REPOSITORY_ROOT / "sites/shared/partials/gen5/bw-data-sources.md"
         ).read_text(encoding="utf-8")
         shared_b2w2_notes = (
-            REPOSITORY_ROOT / "sites/shared/partials/gen5-b2w2-data-sources.md"
+            REPOSITORY_ROOT / "sites/shared/partials/gen5/b2w2-data-sources.md"
         ).read_text(encoding="utf-8")
 
         for stale_claim in (
@@ -147,7 +160,7 @@ class DocumentationTests(unittest.TestCase):
                 REPOSITORY_ROOT / f"sites/games/{site_id}/wiki/data-sources.md"
             ).read_text(encoding="utf-8")
             with self.subTest(site=site_id):
-                self.assertIn('--8<-- "gen5-b2w2-data-sources.md"', notes)
+                self.assertIn('--8<-- "gen5/b2w2-data-sources.md"', notes)
                 self.assertNotIn("## Known coverage limitations", notes)
                 self.assertNotIn("Curtis/Yancy repeat trades", notes)
 

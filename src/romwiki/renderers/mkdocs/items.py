@@ -18,6 +18,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     badge_requirement,
+    description_table_source,
     display_name,
     fact_grid,
     markdown_table,
@@ -66,6 +67,7 @@ def render_item_pages(
         for record in dataset["records"]
     ]
     name_source = dataset.get("source", {}).get("item_names")
+    description_source = dataset.get("description_sources", {}).get("item_descriptions")
     output_root.mkdir(parents=True, exist_ok=True)
     filenames = {
         "index.md",
@@ -95,6 +97,7 @@ def render_item_pages(
                     comparison.get("baseline") if comparison else None,
                     references,
                     name_source,
+                    description_source,
                 ),
             )
             page_count += 1
@@ -196,6 +199,7 @@ def _render_record(
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
     name_source: dict[str, Any] | None = None,
+    description_source: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"items/{record['slug']}.md"
     mechanics = []
@@ -281,11 +285,16 @@ def _render_record(
                 rom_record_source(
                     record["provenance"]["archive"], record["provenance"]["member"]
                 ),
-                "The name, item-data member mapping, mechanics, and references are exact "
-                "ROM facts. Numeric effect IDs are retained when their behavior is "
-                "implemented by game code rather than the item record. Effect "
-                "description, flavor text, and icon come from PokéDB / PokéAPI "
-                "reference data.",
+                "The name, item-data member mapping, mechanics, and relationships are "
+                "exact ROM facts. Numeric effect IDs are retained when their behavior "
+                "is implemented by game code rather than the item record. Structured "
+                "effect text and the icon come from PokéDB / PokéAPI reference data."
+                + (
+                    " The displayed description comes from the ROM message table."
+                    if (record.get("reference") or {}).get("flavor_text_source")
+                    == "rom"
+                    else " Flavor text also comes from that reference data."
+                ),
                 *(
                     [
                         name_table_source(
@@ -293,6 +302,17 @@ def _render_record(
                         )
                     ]
                     if name_source is not None
+                    else []
+                ),
+                *(
+                    [
+                        description_table_source(
+                            "Item",
+                            description_source["archive"],
+                            description_source["member"],
+                        )
+                    ]
+                    if description_source is not None
                     else []
                 ),
                 *reference_source_link(record),

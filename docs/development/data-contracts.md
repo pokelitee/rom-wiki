@@ -94,3 +94,8 @@ Battle-family conditions describe runtime selection among trainer records. The
 two axes are not interchangeable: sibling merging requires matching family
 capabilities and rules, while exact trainer records remain the units compared and
 indexed by Pokémon appearances, items, locations, and other backlinks.
+
+Reference prose is presentation metadata rather than a mechanical record
+difference. When sibling ROMs provide different effect or flavor text, merging
+retains it under `reference_variants` and renderers show version content tabs.
+Identical prose remains one shared reference object.

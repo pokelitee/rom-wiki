@@ -34,7 +34,7 @@ release, since a hack patches table contents rather than the engine's own
 record layouts); this page adds Renegade Platinum's own specific facts and
 deltas from the base game on top.
 
---8<-- "gen4-dppt-data-sources.md"
+--8<-- "gen4/dppt-data-sources.md"
 
 ## Renegade Platinum-specific changes
 

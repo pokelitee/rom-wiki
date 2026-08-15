@@ -116,10 +116,9 @@ class PokeDBGeneration:
     ) -> dict[str, Any] | None:
         """Return version-aware ability effect text, if PokéDB has it.
 
-        Ability behavior is never inferred from the extracted records (only
-        the name and per-species assignment are read from the ROM); the ROM's
-        own description text banks are not yet extracted, so this supplies
-        the displayed effect text and describes the base game.
+        Ability behavior is never inferred from the extracted records. This
+        supplies structured effect text and fallback flavor text for the base
+        game; enrichment may replace the flavor text with a decoded ROM bank.
         """
         reference = self.abilities_reference.get(ability_id)
         if reference is None:
@@ -166,10 +165,9 @@ class PokeDBGeneration:
     def item_reference(self, slug: str, version: str | None) -> dict[str, Any] | None:
         """Return item effect text and icon, if PokéDB has it.
 
-        Item mechanics (price, pocket, hold effects, etc.) are exact ROM
-        facts; the human-readable description lives in ROM message banks not
-        yet extracted, so this supplies the displayed text and describes the
-        base game.
+        Item mechanics (price, pocket, hold effects, etc.) are exact ROM facts.
+        This supplies structured effect text, an icon, and fallback flavor text;
+        enrichment may replace the flavor text with a decoded ROM bank.
         """
         reference = self.items_reference.get(slug)
         if reference is None:
@@ -212,10 +210,9 @@ class PokeDBGeneration:
         """Return version-aware move effect text, if PokéDB has it.
 
         Battle mechanics (power, accuracy, PP, flags, etc.) are exact ROM
-        facts; the move records carry only an opaque effect ID and the
-        human-readable description lives in ROM message banks not yet
-        extracted, so this supplies the displayed text and describes the
-        base game.
+        facts; the move records carry only an opaque effect ID. This supplies
+        structured effect text and fallback flavor text for the base game;
+        enrichment may replace the flavor text with a decoded ROM bank.
         """
         reference = self.moves_reference.get(move_id)
         if reference is None:

@@ -10,6 +10,11 @@ styles.
 and Markdown extensions. Each site inherits that file and points at
 `sites/shared/overrides/` for templates and assets.
 
+The subdirectories have separate responsibilities: `overrides/` is frontend code,
+while `partials/genN/` groups publication prose reused by explicit game consumers.
+Game-specific provenance and limitations remain in the corresponding
+`sites/games/<game-id>/wiki/data-sources.md` page.
+
 Material instant navigation is intentionally disabled. The combined artifact is
 made up of independently built MkDocs applications, each with its own theme
 metadata, JavaScript state, and search index. Crossing a wiki boundary must load
@@ -340,8 +345,8 @@ encounter tables, Pokémon appearance tables, change overviews, and record
 navigation. Section labels and typed record identities remain separate table
 fields rather than being appended to that name.
 
-Genus, measurements, and a version-matched Pokédex entry may come from PokéDB.
-These are labeled reference content. Stat, type, ability, training, breeding,
+Genus and measurements may come from PokéDB. Pokédex prose comes from a decoded
+ROM message bank when configured and otherwise falls back to PokéDB. Stat, type, ability, training, breeding,
 evolution, held-item, and learnset values shown for the hack remain ROM-derived.
 
 Raw HTML links use final directory URLs because MkDocs does not rewrite `.md` paths

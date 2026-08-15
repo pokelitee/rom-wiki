@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+from mkdocs.config import load_config
 
 from romwiki.sites import SiteCatalog
 from romwiki.sites.dev_pages import DevPages
@@ -54,6 +57,27 @@ class DevPagesTests(unittest.TestCase):
                 expected = set(site.game.generated_sections) & _DETAIL_SECTIONS
                 self.assertEqual(set(pages.sections), expected)
                 self.assertTrue(all(pages.sections.values()))
+
+    def test_all_game_dev_configs_load_their_page_manifest(self) -> None:
+        for manifest in sorted(_GAME_SITES.glob("*/dev-pages.toml")):
+            with self.subTest(manifest=manifest):
+                config = load_config(
+                    config_file=str(manifest.with_name("mkdocs.dev.yml"))
+                )
+                self.assertEqual(config.extra.get("romwiki_dev_pages"), manifest.name)
+                self.assertEqual(config.validation.links.not_found, logging.DEBUG)
+
+    def test_selected_detail_pages_exist_in_the_generated_source_tree(self) -> None:
+        for manifest in sorted(_GAME_SITES.glob("*/dev-pages.toml")):
+            pages = DevPages.load(manifest)
+            with self.subTest(manifest=manifest):
+                missing = sorted(
+                    f"{section}/{slug}.md"
+                    for section, slugs in pages.sections.items()
+                    for slug in slugs
+                    if not (manifest.parent / "wiki" / section / f"{slug}.md").is_file()
+                )
+                self.assertEqual(missing, [])
 
     def test_filters_only_configured_section_detail_pages(self) -> None:
         pages = DevPages.load(_MANIFEST)

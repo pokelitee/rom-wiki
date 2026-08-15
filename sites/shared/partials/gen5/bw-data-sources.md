@@ -319,9 +319,11 @@ remain cautious navigation only. Rematch/story coverage is partial rather than
 being inferred from record adjacency or party composition.
 
 Real map locations and script references are now attached to trainers, closing
-what used to be this section's one remaining gap. Two literal-fact
-mechanisms, both cross-verified against real Black ROM data, resolve every
-trainer battle trigger without a full script-engine disassembly:
+what used to be this section's one remaining gap. Two literal-fact mechanisms,
+both cross-verified against real Black ROM data, resolve every trigger that
+stores a literal trainer ID in these formats without a full script-engine
+disassembly. Runtime trainer-variable producers remain the explicit
+partial-coverage case described below:
 
 - **Sight-triggered battles**: each map's overworld NPC placements
   (`a/1/2/5`, one member per map header) carry the trainer ID directly on
@@ -349,7 +351,7 @@ trainer battle trigger without a full script-engine disassembly:
   independently verified Cheren, Bianca, and N families already contain.
   Requiring the win check alone left every one of those battles unlinked.
   Black and Blaze Black agree exactly on the set, and each newly resolved
-  battle lands on the map its curated family already names — the Nuvema Town
+  battle lands on the expected map — the Nuvema Town
   opening battles in Nuvema Town, the Route 5, Route 8, and Route 2 rival
   battles on those routes, and the Nuvema Town rematch on its own later map.
 
@@ -366,7 +368,7 @@ A script may stage more than one such battle -- Nuvema Town holds both rivals'
 opening battles, sharing the starter variable -- so a group is closed when an
 index repeats, which is exactly where the next battle site begins. Groups are
 only published when at least two indices each guard a distinct literal battle.
-Black and Blaze Black derive the same fourteen groups with the same
+Black and Blaze Black derive the same fifteen groups with the same
 index-to-record mapping, so a hack that renumbers or relocates these battles is
 described from its own ROM.
 

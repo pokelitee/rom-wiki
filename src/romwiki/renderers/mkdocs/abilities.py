@@ -17,6 +17,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 from romwiki.renderers.mkdocs.components import (
     HIDDEN_ABILITY_MARKER,
     MarkdownColumn,
+    description_table_source,
     empty_state,
     markdown_table,
     markdown_table_from_cells,
@@ -58,6 +59,7 @@ def render_ability_pages(
 ) -> int:
     records = dataset["records"]
     name_source = dataset.get("name_source")
+    description_source = dataset.get("description_source")
     output_root.mkdir(parents=True, exist_ok=True)
     filenames = {
         "index.md",
@@ -88,6 +90,7 @@ def render_ability_pages(
                     comparison.get("baseline") if comparison else None,
                     references,
                     name_source,
+                    description_source,
                 ),
             )
             page_count += 1
@@ -155,6 +158,7 @@ def _render_record(
     baseline_name: str | None = None,
     references: ReferenceIndex | None = None,
     name_source: dict[str, Any] | None = None,
+    description_source: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"abilities/{record['slug']}.md"
     lines = [
@@ -195,8 +199,14 @@ def _render_record(
         provenance_section(
             [
                 "The ability name and Pokémon assignments are exact ROM facts. Ability "
-                "behavior is never inferred from the ROM or the name; effect and "
-                "flavor text come from PokéDB / PokéAPI reference data.",
+                "behavior is never inferred from the name; structured effect text "
+                "comes from PokéDB / PokéAPI reference data."
+                + (
+                    " The displayed description comes from the ROM message table."
+                    if (record.get("reference") or {}).get("flavor_text_source")
+                    == "rom"
+                    else " Flavor text also comes from that reference data."
+                ),
                 *(
                     [
                         name_table_source(
@@ -204,6 +214,17 @@ def _render_record(
                         )
                     ]
                     if name_source is not None
+                    else []
+                ),
+                *(
+                    [
+                        description_table_source(
+                            "Ability",
+                            description_source["archive"],
+                            description_source["member"],
+                        )
+                    ]
+                    if description_source is not None
                     else []
                 ),
                 *reference_source_link(record),

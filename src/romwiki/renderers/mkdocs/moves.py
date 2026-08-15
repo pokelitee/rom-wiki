@@ -22,6 +22,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
+    description_table_source,
     display_name,
     empty_state,
     escape_table_cell,
@@ -84,6 +85,7 @@ def render_move_pages(
     catalog_records = []
     page_count = 0
     name_source = dataset.get("name_sources", {}).get("move_names")
+    description_source = dataset.get("description_sources", {}).get("move_descriptions")
     dataset_features = frozenset(dataset.get("features", ("move-tutors", "egg-moves")))
     for index, record in enumerate(public_records):
         change = record_comparison(comparison, record["move_id"])
@@ -105,6 +107,7 @@ def render_move_pages(
                     references,
                     dataset_features,
                     relationships,
+                    description_source,
                 ),
             )
             page_count += 1
@@ -192,6 +195,7 @@ def _render_record(
     references: ReferenceIndex | None = None,
     features: frozenset[str] = frozenset({"move-tutors", "egg-moves"}),
     relationships: RelationshipIndex | None = None,
+    description_source: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"moves/{record['slug']}.md"
     source_url = source_file.removesuffix(".md") + "/"
@@ -289,11 +293,16 @@ def _render_record(
                 ),
                 "Effect, target, and flag IDs are shown in their native engine "
                 "representation.",
-                "The move record stores only an opaque effect ID rather than a "
-                "description; the Effect section above (including its "
-                "supplementary battle-mechanic facts and Pokédex quote) comes from "
-                "PokéDB / PokéAPI reference data and describes the base game — a "
-                "hack that changes this move's effect ID may behave differently.",
+                "The move record stores an opaque effect ID rather than structured "
+                "effect semantics. Structured effect text above comes from PokéDB / "
+                "PokéAPI and describes the base game — a hack that changes this "
+                "move's effect ID may behave differently."
+                + (
+                    " The displayed description comes from the ROM message table."
+                    if (record.get("reference") or {}).get("flavor_text_source")
+                    == "rom"
+                    else " Flavor text also comes from the reference data."
+                ),
                 *(
                     [
                         name_table_source(
@@ -301,6 +310,17 @@ def _render_record(
                         )
                     ]
                     if name_source is not None
+                    else []
+                ),
+                *(
+                    [
+                        description_table_source(
+                            "Move",
+                            description_source["archive"],
+                            description_source["member"],
+                        )
+                    ]
+                    if description_source is not None
                     else []
                 ),
                 *reference_source_link(record),

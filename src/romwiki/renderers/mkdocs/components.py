@@ -707,7 +707,28 @@ def reference_type_cell(
 
 
 def reference_description(record: dict[str, Any], empty_message: str) -> list[str]:
-    reference = record.get("reference") or {}
+    variants = record.get("reference_variants")
+    if isinstance(variants, Mapping) and variants:
+        contents = [
+            (
+                display_name(str(version)),
+                _reference_description(reference or {}, empty_message),
+            )
+            for version, reference in variants.items()
+        ]
+        if all(content == contents[0][1] for _, content in contents):
+            return contents[0][1]
+        lines: list[str] = []
+        for label, content in contents:
+            lines.extend([f'=== "{label}"', ""])
+            lines.extend(f"    {line}" if line else "" for line in content)
+        return lines
+    return _reference_description(record.get("reference") or {}, empty_message)
+
+
+def _reference_description(
+    reference: Mapping[str, Any], empty_message: str
+) -> list[str]:
     short_effect = reference.get("short_effect")
     effect = reference.get("effect")
     flavor_text = reference.get("flavor_text")
@@ -793,6 +814,12 @@ def rom_record_source(archive: str, member: int | str, *, label: str = "Source")
 def name_table_source(label: str, archive: str, member: int) -> str:
     """The shared "<Label> name source: ROM message table ..." sentence."""
     return f"{label} name source: ROM message table `{archive}` member `{member}`."
+
+
+def description_table_source(label: str, archive: str, member: int) -> str:
+    return (
+        f"{label} description source: ROM message table `{archive}` member `{member}`."
+    )
 
 
 def shop_price(price: int | None, currency: str) -> str:
