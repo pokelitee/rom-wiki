@@ -26,9 +26,12 @@ def regeneration_fingerprint(
     current: Sequence[Any],
     baselines: Sequence[Any | None],
     pokedb_root: Path,
+    *,
+    dev: bool = False,
 ) -> str:
     digest = hashlib.sha256()
     digest.update(_FINGERPRINT_SCHEMA_VERSION)
+    digest.update(b"dev" if dev else b"production")
     values = []
     engines: set[str] = set()
     for result in (*current, *(value for value in baselines if value is not None)):
@@ -37,6 +40,8 @@ def regeneration_fingerprint(
         values.append((result.image.hashes.sha256, profile_fingerprint(profile)))
     digest.update(json.dumps(values, sort_keys=True).encode())
     paths: set[Path] = {site.config_path.parent / "game.toml"}
+    if dev:
+        paths.add(site.config_path.parent / "dev-pages.toml")
     package_root = root / "src" / "romwiki"
     for directory in (
         package_root / "pipeline",

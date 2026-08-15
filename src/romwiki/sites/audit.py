@@ -430,6 +430,7 @@ def audit_site(
     cache_path: Path | None = None,
     refresh_cache: bool = False,
     expected_files: set[str] | None = None,
+    ignore_missing_links: bool = False,
 ) -> SiteAuditReport:
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
@@ -519,7 +520,9 @@ def audit_site(
             issue = _validate_link(
                 page, href, line, parsed, existing_files, base_path=base_path
             )
-            if issue is not None:
+            if issue is not None and not (
+                ignore_missing_links and issue.code == "link-target"
+            ):
                 errors.append(issue)
             if link_count % _LINK_PROGRESS_INTERVAL == 0:
                 _LOG.info(

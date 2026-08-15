@@ -188,6 +188,19 @@ indexes slower and less reliable.
 
 ## Development preview
 
+Regenerate every site's representative Markdown pages after changing extraction,
+enrichment, or renderers:
+
+```console
+romwiki generate --all --dev
+```
+
+Build the static development artifact without starting a server:
+
+```console
+romwiki site build --all --dev
+```
+
 Use the combined development server when changing shared templates, styles, or
 behavior across the portal and game sites:
 

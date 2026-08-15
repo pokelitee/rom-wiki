@@ -54,6 +54,21 @@ class SiteAuditTests(unittest.TestCase):
             ["published-markdown-link"],
         )
 
+    def test_development_audit_ignores_only_missing_link_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_page(
+                root / "index.html",
+                '<a href="filtered/">Filtered</a><a href="detail.md">Markdown</a>',
+            )
+
+            report = audit_site(root, ignore_missing_links=True)
+
+        self.assertEqual(
+            [issue.code for issue in report.errors],
+            ["published-markdown-link"],
+        )
+
     def test_accepts_accessible_pages_and_valid_local_links(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

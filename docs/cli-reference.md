@@ -170,6 +170,23 @@ romwiki build family --games black-us white-us --versions black white --site-id 
 If any registration defines `base_rom`, every registration in the family must
 define one so comparisons can be merged consistently.
 
+## Generate
+
+`generate` is the catalog-driven ROM-to-data-and-Markdown workflow. It reads each
+site's `game.toml` and automatically dispatches a single-profile or version-family
+build:
+
+```console
+romwiki generate renegade-platinum
+romwiki generate black-white --dev
+romwiki generate --all --dev
+```
+
+`--dev` retains complete datasets and catalog indexes while rendering only the
+representative detail pages declared by each site's `dev-pages.toml`. Valid
+extraction caches are reused. Use `--refresh` to replace extraction caches or
+`--clean` to bypass unchanged-generation reuse.
+
 ## Regenerate
 
 `regenerate` is the complete catalog-driven workflow:
@@ -178,6 +195,7 @@ define one so comparisons can be merged consistently.
 romwiki regenerate platinum renegade-platinum
 romwiki regenerate --all
 romwiki regenerate heart-gold-soul-silver --incremental
+romwiki regenerate --all --dev
 ```
 
 It:
@@ -195,6 +213,10 @@ audited generated content:
 ```console
 romwiki regenerate --all --refresh --snapshot
 ```
+
+Development regeneration uses each site's `dev-pages.toml` and `mkdocs.dev.yml`,
+defaults to `build/mkdocs-dev/`, and performs an audit that permits links to
+intentionally filtered detail pages. `--dev` cannot be combined with `--snapshot`.
 
 Complete regeneration safely reuses metadata-verified generation and build source
 state by default. The complete workflow verifies the exact output path set, hashes
@@ -244,10 +266,17 @@ Build one or every published site:
 
 ```console
 romwiki site build renegade-platinum --output dist
+romwiki site build renegade-platinum --dev
+romwiki site build --all --dev
 romwiki site build renegade-platinum --output dist --incremental
 romwiki site build renegade-platinum --output dist --reuse-unchanged
 romwiki site build --all --output dist
 ```
+
+Without an explicit `--output`, production builds use `dist/` and development
+builds use `build/mkdocs-dev/`. `site build --dev` uses the lightweight MkDocs
+configurations but does not regenerate ROM data or Markdown; run `generate --dev`
+first when renderer output has changed.
 
 Serve a focused selection or every published site with live reload:
 

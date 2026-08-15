@@ -148,6 +148,14 @@ Build a sibling-version family into one configured site:
 romwiki build family --games black-us white-us --versions black white --site-id black-white
 ```
 
+For normal catalog-driven work, generate one or every configured game site without
+manually repeating its profiles and version labels:
+
+```console
+romwiki generate renegade-platinum --dev
+romwiki generate --all --dev
+```
+
 Manage baseline caches explicitly when needed:
 
 ```console
@@ -164,6 +172,7 @@ List, build, preview, and audit the site catalog:
 
 ```console
 romwiki site list
+romwiki site build --all --dev
 romwiki site serve --all --dev
 romwiki site build --all --output dist
 romwiki site audit dist

@@ -110,8 +110,41 @@ class MainErrorHandlingTests(unittest.TestCase):
 
         self.assertEqual(
             set(subparsers.choices),
-            {"inspect", "extract", "build", "regenerate", "baseline", "site"},
+            {
+                "inspect",
+                "extract",
+                "build",
+                "generate",
+                "regenerate",
+                "baseline",
+                "site",
+            },
         )
+
+    def test_generate_all_dev_is_catalog_driven(self) -> None:
+        with patch("romwiki.cli._run_generation") as generate:
+            exit_code = main(["generate", "--all", "--dev"])
+
+        self.assertEqual(exit_code, 0)
+        args = generate.call_args.args[0]
+        self.assertTrue(args.regenerate_all)
+        self.assertTrue(args.dev)
+
+    def test_dev_site_build_uses_the_dev_default_output(self) -> None:
+        catalog = object()
+        built = SimpleNamespace(
+            id="platinum",
+            output_path=lambda output: output / "platinum",
+        )
+        with (
+            patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
+            patch("romwiki.cli.build_sites", return_value=(built,)) as build,
+        ):
+            exit_code = main(["site", "build", "--all", "--dev"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(build.call_args.args[1], Path("build/mkdocs-dev"))
+        self.assertTrue(build.call_args.kwargs["dev"])
 
     def test_version_family_parser_accepts_three_games_and_labels(self) -> None:
         args = build_parser().parse_args(
@@ -698,6 +731,7 @@ patched_rom = "roms/white-us.nds"
                 data_root=root / "data",
                 output=root / "dist",
                 refresh=True,
+                dev=True,
                 snapshot=False,
                 snapshot_output=root / "snapshot.tar.gz",
                 max_page_kb=512,
@@ -735,18 +769,18 @@ patched_rom = "roms/white-us.nds"
                 patch(
                     "romwiki.cli.regeneration_fingerprint",
                     return_value="fingerprint",
-                ),
+                ) as fingerprint,
                 patch("romwiki.cli.can_reuse_generation", return_value=False),
                 patch("romwiki.cli.write_regeneration_state"),
                 patch(
                     "romwiki.cli.build_sites",
                     return_value=catalog.published(),
-                ),
+                ) as build_all_sites,
                 patch(
                     "romwiki.cli.combined_artifact_files",
                     return_value={"index.html"},
                 ),
-                patch("romwiki.cli.audit_site", return_value=report),
+                patch("romwiki.cli.audit_site", return_value=report) as audit,
                 self.assertLogs("romwiki", level="INFO") as logs,
             ):
                 _run_regeneration(args)
@@ -760,18 +794,23 @@ patched_rom = "roms/white-us.nds"
                 root / "sites" / "platinum" / "wiki",
             )
             self.assertTrue(single_args.hack_only)
+            self.assertTrue(single_args.dev)
             family_args = build_family.call_args.args[0]
             self.assertEqual(family_args.games, ["black-us", "white-us"])
             self.assertEqual(family_args.versions, ["black", "white"])
             self.assertEqual(family_args.site_id, "black-white")
             self.assertTrue(family_args.refresh_cache)
+            self.assertTrue(family_args.dev)
             self.assertEqual(
                 set(build_family.call_args.kwargs["workflows"]),
                 {"black", "white"},
             )
+            self.assertTrue(fingerprint.call_args.kwargs["dev"])
+            self.assertTrue(build_all_sites.call_args.kwargs["dev"])
+            self.assertTrue(audit.call_args.kwargs["ignore_missing_links"])
             messages = "\n".join(logs.output)
-            self.assertIn("Regeneration preflight [1/2]: platinum", messages)
-            self.assertIn("Regeneration preflight [2/2]: black-white", messages)
+            self.assertIn("Generation preflight [1/2]: platinum", messages)
+            self.assertIn("Generation preflight [2/2]: black-white", messages)
             self.assertIn("Generation [1/2] platinum: checking inputs", messages)
             self.assertIn("Generation [2/2] black-white: checking inputs", messages)
             self.assertIn("Complete regeneration completed in", messages)
@@ -793,6 +832,17 @@ patched_rom = "roms/white-us.nds"
         )
 
         with self.assertRaisesRegex(SiteError, "cannot be combined"):
+            _run_regeneration(args)
+
+    def test_snapshot_rejects_development_regeneration(self) -> None:
+        args = SimpleNamespace(
+            snapshot=True,
+            regenerate_all=True,
+            incremental=False,
+            dev=True,
+        )
+
+        with self.assertRaisesRegex(SiteError, "cannot be combined with --dev"):
             _run_regeneration(args)
 
     def test_site_audit_warnings_are_summarized_by_default(self) -> None:

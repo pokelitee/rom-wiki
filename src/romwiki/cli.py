@@ -118,6 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_inspect_parser(subparsers)
     _add_extract_parser(subparsers)
     _add_build_parser(subparsers)
+    _add_generate_parser(subparsers)
     _add_regenerate_parser(subparsers)
     _add_baseline_parser(subparsers)
     _add_site_parser(subparsers)
@@ -324,7 +325,9 @@ def _add_regenerate_parser(
     )
     regenerate_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
     regenerate_parser.add_argument(
-        "--output", type=Path, default=Path("dist"), help="artifact output directory"
+        "--output",
+        type=Path,
+        help="artifact output directory (default: dist, or build/mkdocs-dev with --dev)",
     )
     regenerate_parser.add_argument(
         "--refresh",
@@ -354,8 +357,50 @@ def _add_regenerate_parser(
     regenerate_parser.add_argument("--max-page-kb", type=int, default=512)
     regenerate_parser.add_argument("--max-images", type=int, default=150)
     regenerate_parser.add_argument("--base-url")
+    _add_dev_argument(regenerate_parser)
     _add_jobs_argument(regenerate_parser)
     _add_site_root_argument(regenerate_parser)
+
+
+def _add_generate_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    generate_parser = subparsers.add_parser(
+        "generate",
+        help="generate data and Markdown for catalog game sites",
+    )
+    generate_parser.add_argument("site_ids", nargs="*", help="game site identifiers")
+    generate_parser.add_argument(
+        "--all",
+        action="store_true",
+        dest="generate_all",
+        help="generate every published data-driven game site",
+    )
+    generate_parser.add_argument(
+        "--games-config", type=Path, default=Path(".local/games.toml")
+    )
+    generate_parser.add_argument(
+        "--profiles-dir", type=Path, default=Path("profiles")
+    )
+    generate_parser.add_argument(
+        "--pokedb-root",
+        type=Path,
+        default=Path("../pokedb/.output"),
+        help="directory containing gen<N> PokéDB outputs",
+    )
+    generate_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
+    generate_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="replace current-ROM and clean-baseline extraction caches",
+    )
+    generate_parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="ignore generation reuse state and render selected content again",
+    )
+    _add_dev_argument(generate_parser)
+    _add_site_root_argument(generate_parser)
 
 
 def _add_baseline_parser(
@@ -422,7 +467,9 @@ def _add_site_parser(
         "--all", action="store_true", dest="build_all", help="build published sites"
     )
     build_site_parser.add_argument(
-        "--output", type=Path, default=Path("dist"), help="artifact output directory"
+        "--output",
+        type=Path,
+        help="artifact output directory (default: dist, or build/mkdocs-dev with --dev)",
     )
     build_site_parser.add_argument(
         "--incremental",
@@ -433,6 +480,10 @@ def _add_site_parser(
         "--reuse-unchanged",
         action="store_true",
         help="skip verified unchanged sites and clean-build changed sites",
+    )
+    _add_dev_argument(
+        build_site_parser,
+        help_text="use lightweight development MkDocs configurations",
     )
     _add_jobs_argument(build_site_parser)
     _add_site_root_argument(build_site_parser)
@@ -546,6 +597,8 @@ def _normalize_command(args: argparse.Namespace) -> None:
             if args.build_command == "family"
             else f"build-{args.build_command}"
         )
+    elif args.command == "generate":
+        args.regenerate_all = args.generate_all
 
 
 def _inspect_command_input(args: argparse.Namespace) -> InspectionResult | None:
@@ -581,6 +634,8 @@ def _dispatch_command(
             _run_version_family_build(args)
     elif args.command == "regenerate":
         _run_regeneration(args)
+    elif args.command == "generate":
+        _run_generation(args)
     elif args.command == "baseline":
         with timed_operation(_LOG, "Baseline build"):
             _run_baseline_build(args)
@@ -611,12 +666,14 @@ def _run_site_command(args: argparse.Namespace) -> None:
         )
     elif args.site_command == "build":
         catalog = SiteCatalog.load(args.root)
+        output = _site_output(args.output, dev=args.dev)
         with timed_operation(_LOG, "Site builds"):
             built = build_sites(
                 catalog,
-                args.output,
+                output,
                 site_ids=args.site_ids,
                 build_all=args.build_all,
+                dev=args.dev,
                 jobs=args.jobs,
                 incremental=args.incremental,
                 reuse_unchanged=args.reuse_unchanged,
@@ -626,7 +683,7 @@ def _run_site_command(args: argparse.Namespace) -> None:
             _LOG.info(
                 "Built %s: %s",
                 site.id,
-                site.output_path(args.output.resolve()),
+                site.output_path(output.resolve()),
             )
     elif args.site_command == "serve":
         catalog = SiteCatalog.load(args.root)
@@ -869,11 +926,14 @@ def _add_comparison_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _add_dev_argument(parser: argparse.ArgumentParser) -> None:
+def _add_dev_argument(
+    parser: argparse.ArgumentParser, *, help_text: str | None = None
+) -> None:
     parser.add_argument(
         "--dev",
         action="store_true",
-        help=(
+        help=help_text
+        or (
             "only render the representative detail pages in the game's "
             "dev-pages.toml, keeping full catalog data; speeds up local "
             "iteration on renderer changes"
@@ -1286,11 +1346,22 @@ def _run_regeneration(args: argparse.Namespace) -> None:
         _run_regeneration_steps(args)
 
 
-def _run_regeneration_steps(args: argparse.Namespace) -> None:
-    if args.snapshot and not args.regenerate_all:
+def _run_generation(args: argparse.Namespace) -> None:
+    with timed_operation(_LOG, "Catalog generation"):
+        _run_regeneration_steps(args, build_artifact=False)
+
+
+def _run_regeneration_steps(
+    args: argparse.Namespace, *, build_artifact: bool = True
+) -> None:
+    dev = getattr(args, "dev", False)
+    snapshot = getattr(args, "snapshot", False)
+    if snapshot and not args.regenerate_all:
         raise SiteError("--snapshot requires --all")
-    if args.snapshot and getattr(args, "incremental", False):
+    if snapshot and getattr(args, "incremental", False):
         raise SiteError("--snapshot cannot be combined with --incremental")
+    if snapshot and dev:
+        raise SiteError("--snapshot cannot be combined with --dev")
     if getattr(args, "clean", False) and getattr(args, "incremental", False):
         raise SiteError("--clean cannot be combined with --incremental")
 
@@ -1304,6 +1375,13 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
         for site in selected
         if site.kind == "game" and site.game is not None and site.game.data_driven
     )
+    if not build_artifact:
+        unsupported = [site.id for site in selected if site not in data_sites]
+        if unsupported and not args.regenerate_all:
+            raise SiteError(
+                "Generation requires data-driven game sites: "
+                + ", ".join(unsupported)
+            )
     registry = LocalGameRegistry.load(args.games_config) if data_sites else None
     profiles = (
         _regeneration_profiles(catalog, args.profiles_dir) if data_sites else None
@@ -1321,12 +1399,12 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
         ]
     ] = []
     preflight_started = perf_counter()
-    _LOG.info("Regeneration preflight: %s sites", f"{len(data_sites):,}")
+    _LOG.info("Generation preflight: %s sites", f"{len(data_sites):,}")
     for site_number, site in enumerate(data_sites, start=1):
         assert site.game is not None
         assert profiles is not None
         _LOG.info(
-            "Regeneration preflight [%s/%s]: %s",
+            "Generation preflight [%s/%s]: %s",
             site_number,
             len(data_sites),
             site.id,
@@ -1378,7 +1456,7 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
         prepared.append((site, paths, tuple(current), tuple(baselines), pokedb))
 
     _LOG.info(
-        "Regeneration preflight completed in %.1fs for %s sites",
+        "Generation preflight completed in %.1fs for %s sites",
         perf_counter() - preflight_started,
         f"{len(prepared):,}",
     )
@@ -1399,6 +1477,7 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
             current,
             baselines,
             args.pokedb_root / f"gen{game.generation}",
+            dev=dev,
         )
         if not getattr(args, "clean", False) and can_reuse_generation(
             state_path, input_fingerprint, site
@@ -1420,7 +1499,7 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
                 hack_only=paths[0].base_rom is None,
                 refresh_baseline=args.refresh,
                 refresh_cache=args.refresh,
-                dev=False,
+                dev=dev,
                 pokedb=args.pokedb_root / f"gen{game.generation}",
                 data_root=args.data_root,
                 wiki_root=site.config_path.parent / "wiki",
@@ -1447,7 +1526,7 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
                 wiki_root=site.config_path.parent / "wiki",
                 refresh_baseline=args.refresh,
                 refresh_cache=args.refresh,
-                dev=False,
+                dev=dev,
             )
             workflows = {
                 version: GameBuildWorkflow(
@@ -1480,12 +1559,18 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
     pokedb = None
     workflow = workflows = None
 
+    if not build_artifact:
+        return
+
+    output = _site_output(args.output, dev=dev)
+
     with timed_operation(_LOG, "Site builds"):
         built = build_sites(
             catalog,
-            args.output,
+            output,
             site_ids=args.site_ids,
             build_all=args.regenerate_all,
+            dev=dev,
             jobs=args.jobs,
             incremental=getattr(args, "incremental", False),
             reuse_unchanged=not getattr(args, "clean", False),
@@ -1494,11 +1579,11 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
             site_url=os.environ.get("ROMWIKI_SITE_URL"),
         )
     for site in built:
-        _LOG.info("Built %s: %s", site.id, site.output_path(args.output.resolve()))
+        _LOG.info("Built %s: %s", site.id, site.output_path(output.resolve()))
     expected_files = (
         combined_artifact_files(
             catalog,
-            args.output,
+            output,
             args.root / ".romwiki" / "build-state",
         )
         if args.regenerate_all
@@ -1507,7 +1592,7 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
 
     with timed_operation(_LOG, "Site audit"):
         report = audit_site(
-            args.output,
+            output,
             max_html_bytes=args.max_page_kb * 1024,
             max_images_per_page=args.max_images,
             base_url=args.base_url,
@@ -1515,10 +1600,11 @@ def _run_regeneration_steps(args: argparse.Namespace) -> None:
             cache_path=args.root / ".romwiki" / "audit-cache.sqlite3",
             refresh_cache=getattr(args, "clean", False),
             expected_files=expected_files,
+            ignore_missing_links=dev,
         )
     _report_site_audit(report)
 
-    if args.snapshot:
+    if snapshot:
         with timed_operation(_LOG, "Generated wiki snapshot"):
             count = create_generated_wiki_snapshot(
                 args.root,
@@ -1877,6 +1963,12 @@ def _add_jobs_argument(parser: argparse.ArgumentParser) -> None:
             "(default: one per CPU; 1 disables parallelism)"
         ),
     )
+
+
+def _site_output(configured: Path | None, *, dev: bool) -> Path:
+    if configured is not None:
+        return configured
+    return Path("build/mkdocs-dev" if dev else "dist")
 
 
 def _print_sites(
