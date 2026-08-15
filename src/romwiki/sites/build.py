@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
@@ -281,23 +281,7 @@ def _build_site(
             staging = Path(directory)
             command = _build_command(site, staging, dev=dev, clean=True)
             _run_site_build(site, command, command_runner)
-            for relative in file_path_inventory(
-                output_path, excluded_top_level=excluded
-            ):
-                (output_path / relative).unlink()
-            for path in sorted(
-                (item for item in output_path.rglob("*") if item.is_dir()),
-                key=lambda item: len(item.parts),
-                reverse=True,
-            ):
-                inside_nested_site = any(
-                    path.is_relative_to(output_path / slug) for slug in excluded
-                )
-                if path != output_path and not inside_nested_site:
-                    with suppress(OSError):
-                        path.rmdir()
-            for source in staging.iterdir():
-                source.replace(output_path / source.name)
+            _publish_staged_root(staging, output_path, excluded_top_level=excluded)
     else:
         command = _build_command(site, resolved_output, dev=dev, clean=clean)
         _run_site_build(site, command, command_runner)
@@ -326,6 +310,36 @@ def _run_site_build(
 ) -> None:
     with timed_operation(_LOG, f"MkDocs build for {site.id}"):
         command_runner(command)
+
+
+def _publish_staged_root(
+    staging: Path,
+    output: Path,
+    *,
+    excluded_top_level: frozenset[str],
+) -> None:
+    """Copy root-site files so Windows applies the artifact directory's ACL."""
+
+    current_path = output
+    try:
+        for relative in file_path_inventory(
+            output, excluded_top_level=excluded_top_level
+        ):
+            current_path = output / relative
+            current_path.unlink()
+
+        for source in sorted(staging.rglob("*")):
+            relative = source.relative_to(staging)
+            current_path = output / relative
+            if source.is_dir():
+                current_path.mkdir(parents=True, exist_ok=True)
+            else:
+                current_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, current_path)
+    except OSError as error:
+        raise SiteError(
+            f"Could not publish the root site artifact at {current_path}: {error}"
+        ) from error
 
 
 def _site_config_path(site: SiteDefinition, *, dev: bool) -> Path:

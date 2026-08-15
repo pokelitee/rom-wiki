@@ -498,6 +498,77 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertTrue(root_finished)
         self.assertFalse(overlapped_with_root)
 
+    def test_root_site_reuses_existing_asset_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            portal_root = root / "sites" / "portal"
+            game_root = root / "sites" / "games" / "example"
+            portal_root.mkdir(parents=True)
+            game_root.mkdir(parents=True)
+            portal_config = portal_root / "mkdocs.yml"
+            game_config = game_root / "mkdocs.yml"
+            portal_config.write_text("site_name: Portal\n", encoding="utf-8")
+            game_config.write_text("site_name: Example\n", encoding="utf-8")
+            portal = SiteDefinition(
+                "portal",
+                "Portal",
+                "portal",
+                "",
+                True,
+                0,
+                portal_config,
+                "Portal",
+                "portal",
+            )
+            game = SiteDefinition(
+                "example",
+                "Example",
+                "game",
+                "example",
+                True,
+                1,
+                game_config,
+                "Example",
+                "platinum",
+                GameMetadata((), (), False, 4, "platinum", "nds", "NDS", "Test"),
+            )
+            catalog = SiteCatalog(root, (portal, game))
+            output = root / "dist"
+            old_asset = output / "assets" / "javascripts" / "old.js"
+            old_asset.parent.mkdir(parents=True)
+            old_asset.write_text("old", encoding="utf-8")
+            (output / "stale.html").write_text("stale", encoding="utf-8")
+            nested_page = output / game.slug / "index.html"
+            nested_page.parent.mkdir()
+            nested_page.write_text("game", encoding="utf-8")
+
+            def build(command: Sequence[str]) -> None:
+                destination = Path(command[-1])
+                asset = destination / "assets" / "javascripts" / "new.js"
+                asset.parent.mkdir(parents=True)
+                asset.write_text("new", encoding="utf-8")
+                (destination / "index.html").write_text("portal", encoding="utf-8")
+
+            # The former implementation required every old portal directory to
+            # be removable before moving the staged directory into its place.
+            with patch.object(Path, "rmdir", side_effect=PermissionError("in use")):
+                build_sites(
+                    catalog,
+                    output,
+                    site_ids=(portal.id,),
+                    runner=build,
+                )
+
+            self.assertFalse(old_asset.exists())
+            self.assertFalse((output / "stale.html").exists())
+            self.assertEqual(
+                (output / "assets" / "javascripts" / "new.js").read_text(
+                    encoding="utf-8"
+                ),
+                "new",
+            )
+            self.assertEqual(nested_page.read_text(encoding="utf-8"), "game")
+
     def test_a_failing_site_build_propagates_and_awaits_siblings(self) -> None:
         catalog = SiteCatalog.load(REPOSITORY_ROOT)
         lock = threading.Lock()
