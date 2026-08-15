@@ -421,16 +421,15 @@ section already uses for its own Union Room warps.
 
 Field items (Item Balls and hidden items found via the Dowsing MCHN) are now
 decoded too. Visible items are overworld NPCs using one specific, shared
-sprite ID (the item-ball graphic) whose own `scriptUsed` field is a flat
-`7000 + item_id` offset -- verified against the real ROM: that sprite is by
-far the most common NPC sprite in the game, and every one of its
-`scriptUsed - 7000` values resolves to a real, coherent pickup item, never
-a garbage slot. Hidden items work the same way through a different section
-of the same overworld-objects record ("furniture" entries) with a
-`scriptUsed >= 8000` band, resolving to real, well-known real Black/White
-hidden items (Odd Keystone, the four Drives, Adamant Orb, fossils scattered
-near Desert Resort/Relic Castle). Furniture's own `x` coordinate turned out
-to need one extra step: unlike every other overworld record's plain
+sprite ID (the item-ball graphic). Their `scriptUsed` values in the 7000 band
+select functions in the ROM's shared Item Ball script member; those functions
+store the actual item ID as a literal. Hidden-item furniture uses the equivalent
+8000-band selector and shared hidden-item script member. This indirection is
+important: treating the selector as an item ID produces plausible-looking but
+incorrect items and eventually lands in unnamed item slots. The extractor joins
+each map object to its selected function and reads the literal, so hack-edited
+pickup scripts are honored automatically. Furniture's own `x` coordinate needs
+one extra step: unlike every other overworld record's plain
 integers, it's stored in 16.16 fixed point, caught by comparing a hidden
 item's huge raw `x` value against its own map's NPCs' coordinates (dividing
 by 65536 landed in the exact same magnitude range, across five unrelated
@@ -439,8 +438,8 @@ real maps).
 Presence in an overworld record does not by itself prove that a pickup remains
 reachable after a hack changes the map or scripts. Location pages therefore
 identify these rows as ROM item-event records and warn on origin coordinates or
-unnamed item slots rather than silently presenting suspicious leftovers as
-confirmed obtainable pickups.
+an intentionally unnamed item literal rather than silently presenting suspicious
+leftovers as confirmed obtainable pickups.
 
 Static (gift/single) Pokémon encounters are cross-referenced to their real map
 locations through both dedicated map scripts and overworld common-script
@@ -478,12 +477,16 @@ supported ROM scripts do not invoke it.
 
 ## Text and names
 
-Pokémon, ability, move, and item display names are decoded directly from each
-ROM's own text archive at `a/0/0/2`, rather than from PokéDB. Each name table is a
-member of that archive (Pokémon names at member 70, ability names at 182, move
-names at 203, item names at 54, map names at 89); type names have no ROM text
-table in this generation (Generation V added no new types over Generation IV)
-and remain a built-in engine constant instead.
+Pokémon, ability, move, and item display names and descriptions are decoded
+directly from each ROM's own text archive at `a/0/0/2`, rather than copied from
+PokéDB. Black/White use members 235 or 236 for their version-specific Pokédex,
+183 for ability descriptions, 202 for move descriptions, and 53 for item
+descriptions. Black 2/White 2 use members 442, 375, 402, and 63 respectively.
+Every table is checked against its engine-specific entry count before use, and
+derived hacks read the same banks from their own patched ROM. PokéDB still
+supplies structured effects, sprites, and other metadata that these prose banks
+do not contain. Type names have no ROM text table in this generation and remain
+a built-in engine constant.
 
 One control code needed extra handling: some messages contain
 runtime-substituted text (e.g. "[RIVAL]'s House") marked by 0xF000 followed

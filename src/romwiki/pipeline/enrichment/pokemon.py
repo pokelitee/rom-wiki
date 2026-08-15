@@ -20,7 +20,11 @@ from romwiki.pipeline.enrichment.names import (
     resolve_pokemon_names,
     resolve_type_names,
 )
-from romwiki.pipeline.enrichment.references import item_reference, move_name
+from romwiki.pipeline.enrichment.references import (
+    item_reference,
+    move_name,
+    with_rom_description,
+)
 from romwiki.schema.versions import POKEMON_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -53,6 +57,15 @@ def enrich_personal_dataset(
     ability_names = resolve_ability_names(engine, dataset)
     item_names = resolve_item_names(engine, dataset)
     pokemon_names = resolve_pokemon_names(engine, dataset)
+    pokemon_descriptions = dataset.get("pokemon_descriptions")
+    expected_description_count = getattr(engine, "POKEMON_DESCRIPTION_COUNT", None)
+    if pokemon_descriptions is not None and (
+        not isinstance(pokemon_descriptions, list)
+        or len(pokemon_descriptions) != expected_description_count
+    ):
+        raise DataSourceError(
+            f"Expected exactly {expected_description_count} ROM-derived Pokémon descriptions"
+        )
 
     learnsets = _validate_learnsets(engine, learnset_dataset, dataset["game"])
     evolutions = _validate_evolutions(engine, evolution_dataset, dataset["game"])
@@ -92,6 +105,7 @@ def enrich_personal_dataset(
                 ability_names,
                 item_names,
                 pokemon_names,
+                pokemon_descriptions,
                 sprite_version,
                 reference_version,
             )
@@ -135,6 +149,10 @@ def enrich_personal_dataset(
         enriched["name_sources"] = dataset["name_sources"]
     if "ability_names" in dataset:
         enriched["ability_names"] = dataset["ability_names"]
+    if "ability_descriptions" in dataset:
+        enriched["ability_descriptions"] = dataset["ability_descriptions"]
+    if dataset.get("description_sources"):
+        enriched["description_sources"] = dataset["description_sources"]
     return enriched
 
 
@@ -186,6 +204,7 @@ def _enrich_record(
     ability_names: list[str] | None,
     item_names: list[str] | None,
     pokemon_names: list[str] | None,
+    pokemon_descriptions: list[str] | None,
     sprite_version: str | None,
     reference_version: str | None,
 ) -> dict[str, Any]:
@@ -269,7 +288,17 @@ def _enrich_record(
         "portrait": portrait,
         "cry": cry,
         "sprites": sprites,
-        "reference": reference_data,
+        "reference": with_rom_description(
+            reference_data,
+            (
+                pokemon_descriptions[identity["national_dex_id"]]
+                if pokemon_descriptions is not None
+                and isinstance(identity["national_dex_id"], int)
+                and identity["national_dex_id"] < len(pokemon_descriptions)
+                else None
+            ),
+            label="ROM Pokédex",
+        ),
         "base_stats": source["base_stats"],
         "types": (
             []

@@ -1,32 +1,16 @@
 # Open Items
 
-Remaining work for the trainer-relationship effort. Passing tests do not make
-partially decoded ROM mechanics complete: every semantic label must come from a
-verified engine or profile selector. Names, adjacent IDs, levels, and party
-similarity may identify candidates but must never assign a label.
+This is the remaining selector-decoding work after the cross-engine coverage
+pass. Scope is not limited to one title or a fixed set of axes: starter, story,
+partner, rematch, version, season, and difficulty variants are all in scope when
+the ROM selector can be proven. Names, adjacent IDs, levels, and party similarity
+may identify research candidates but never publish a label.
 
-## Scope
-
-The pursued relationship axes are **Starter, Difficulty, Version, and Season**.
-
-`rematch_stage` and `story_stage` are not extended. Coverage already decoded and
-verified is kept and still renders — DPPT's Vs. Seeker table (80 families over
-232 exact records), BW's Nuvema Town rival rematch, B2W2's Pokémon League
-first-clear and rematch records — but no further rematch selector is pursued.
-Records whose selector is unknown stay unrelated rather than asserted.
-
-This is a deliberate bound. Rematch selection is expressed differently in every
-engine — a table in DPPT, a phone state machine in HGSS, script dispatch for the
-Battleground — so chasing it is open-ended per game, while the four pursued axes
-are comparatively uniform. It closes the DPPT Gym/Elite Four, HGSS phone-rematch,
-and BW rematch-selector items, and removes the only reason to decode HGSS's
-script opcode table.
-
-## 1. Open
+## 1. Open but bounded
 
 ### B2W2 difficulty level-offset band table
 
-The only open item on a pursued axis, and its value is narrow. The
+The only bounded binary lookup still open, and its value is narrow. The
 Normal/Challenge differences for the verified dispatch pairs are already stored
 in the ROM records — Challenge Gym records carry an extra party member at
 identical levels, and League rematch Challenge records are +1 level. The missing
@@ -47,25 +31,31 @@ Three anchored approaches failed; none should be repeated without a new idea:
 
 The missing anchor is the code that applies the adjustment, reachable from the
 save-data difficulty flag or from trainer-party load rather than another data
-scan. Accepting this as a limitation is reasonable given the payoff.
+scan. Leave it unresolved until one of those routines provides a code anchor;
+the known party records and runtime behavior are already documented.
 
-## 2. Accepted limitations
+### Runtime trainer selectors
 
-- **`rematch_stage`** — not pursued; see Scope. Existing verified coverage is
-  kept.
-- **`story_stage`** — not pursued. Its surface is every story-gated branch in
-  every field script rather than one table, so there is no bounded completion
-  criterion. DPPT declares it `unresolved`; HGSS, BW, and B2W2 keep `partial`
-  because they emit stages from curated lists. All four carry a note.
+- **DPPT partner and special rival battles** — the Spear Pillar partner battle,
+  weekend rematch 1, starter demonstration, Pokémon League rival rematch, and
+  Dawn/Lucas partner variants have no literal trainer target under the complete
+  field-script scan. Their runtime trainer-variable producer is not decoded.
+- **HGSS phone rematches** — the phone state machine/table is not decoded. The
+  starter-selected Silver branches are decoded independently across the script
+  archive.
+- **BW non-starter runtime dispatch** — starter-selected Cheren/Bianca families
+  are decoded from branches. Other trainer-variable producers remain open.
+- **B2W2 story dispatch** — verified contract families are published, but the
+  complete script selector that would replace the contract lists is not decoded.
+
+These are worthwhile only when work begins from a new code anchor: the producer
+of the trainer variable or state-table lookup. Repeating name/ID clustering or
+unanchored byte scans cannot improve confidence.
+
+## 2. Not currently recoverable as structured ROM facts
+
 - **BW roaming Tornadus and Thundurus** — kept explicitly unsupported rather
   than derived from a published offset that points into code.
-- **Generation V reference prose** — Pokédex, move, ability, and item
-  description banks are not decoded; version-matched PokéDB prose remains the
-  documented fallback. Structured mechanics still come from the ROM.
-- **DPPT groups with no ROM evidence** — the Spear Pillar partner battle,
-  weekend rematch 1, the starter demonstration, and the Pokémon League rival
-  rematch have no literal battle command anywhere in the scripts. Previously
-  asserted by a hardcoded table, now unpublished.
 
 ## 3. Release validation
 

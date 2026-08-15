@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 # `a/1/2/5`: one member per map header (`layout.map_headers`'s own record
@@ -174,44 +175,84 @@ def parse_overworld_warps(data: bytes) -> tuple[Gen5OverworldWarp, ...]:
     return tuple(warps)
 
 
-# Visible field items are NPC objects using one specific, shared sprite ID
-# (the item-ball graphic) whose `script_used` is a flat `7000 + item_id`
-# offset -- verified against the real Black ROM: sprite 110 is by far the
-# most common NPC sprite in the game (274 uses, next-most-common is 92),
-# and every one of its `script_used - 7000` values resolves to a real,
-# coherent field-pickup item (Hyper Potion, Fire Stone, Full Restore, HP Up,
-# evolution stones, vitamins, berries -- exactly what routes actually give
-# you), never a garbage/unnamed slot.
+# Visible field items are NPC objects using the item-ball sprite. Their
+# `script_used` value selects a function in the shared item-ball script member;
+# it is not itself an item ID. Hidden furniture uses the equivalent hidden-item
+# script member. Each selected function stores the actual item as a literal.
 _VISIBLE_ITEM_SPRITE = 110
 _VISIBLE_ITEM_SCRIPT_BASE = 7000
-
-# Hidden items (found via the Dowsing MCHN) are furniture entries whose
-# `script_used` is a flat `8000 + item_id` offset -- verified the same way:
-# every real furniture entry with `script_used >= 8000` resolves to a real,
-# well-known hidden-item fact (Odd Keystone, the four Drives, Adamant Orb,
-# the fossils hidden around Desert Resort/Relic Castle -- all real,
-# well-documented Black/White hidden items).
 _HIDDEN_ITEM_SCRIPT_BASE = 8000
+_SCRIPT_LIST_TERMINATOR = 0xFD13
+_VISIBLE_ITEM_SET_COMMAND = 0x28
+_VISIBLE_ITEM_VARIABLE = 0x800C
+_HIDDEN_ITEM_SET_COMMAND = 0x2A
+_HIDDEN_ITEM_VARIABLE = 0x8000
 
 
-def resolve_visible_item_id(npc: Gen5OverworldNPC, *, item_count: int) -> int | None:
+def _parse_field_item_script_table(
+    data: bytes, *, set_command: int, variable: int
+) -> tuple[int | None, ...]:
+    """Decode item literals while preserving their shared-script indices."""
+    if len(data) < 4:
+        return ()
+    first_function = 4 + struct.unpack_from("<I", data)[0]
+    entries: list[int | None] = []
+    offset = 0
+    while offset + 4 <= len(data) and offset < first_function:
+        if struct.unpack_from("<H", data, offset)[0] == _SCRIPT_LIST_TERMINATOR:
+            break
+        function = offset + 4 + struct.unpack_from("<I", data, offset)[0]
+        if function + 8 > len(data):
+            entries.append(None)
+        else:
+            command, work, item_id = struct.unpack_from("<HHH", data, function + 2)
+            entries.append(
+                item_id if (command, work) == (set_command, variable) else None
+            )
+        offset += 4
+    return tuple(entries)
+
+
+def parse_visible_item_script_table(data: bytes) -> tuple[int | None, ...]:
+    return _parse_field_item_script_table(
+        data, set_command=_VISIBLE_ITEM_SET_COMMAND, variable=_VISIBLE_ITEM_VARIABLE
+    )
+
+
+def parse_hidden_item_script_table(data: bytes) -> tuple[int | None, ...]:
+    return _parse_field_item_script_table(
+        data, set_command=_HIDDEN_ITEM_SET_COMMAND, variable=_HIDDEN_ITEM_VARIABLE
+    )
+
+
+def resolve_visible_item_id(
+    npc: Gen5OverworldNPC,
+    *,
+    item_count: int,
+    item_ids: Sequence[int | None] = (),
+) -> int | None:
     """Resolve a field NPC to the item it represents, if it's an item ball."""
     if npc.sprite != _VISIBLE_ITEM_SPRITE:
         return None
-    item_id = npc.script_used - _VISIBLE_ITEM_SCRIPT_BASE
-    if not 0 < item_id < item_count:
+    index = npc.script_used - _VISIBLE_ITEM_SCRIPT_BASE - 1
+    if not 0 <= index < len(item_ids):
         return None
-    return item_id
+    item_id = item_ids[index]
+    return item_id if item_id is not None and 0 < item_id < item_count else None
 
 
 def resolve_hidden_item_id(
-    furniture: Gen5OverworldFurniture, *, item_count: int
+    furniture: Gen5OverworldFurniture,
+    *,
+    item_count: int,
+    item_ids: Sequence[int | None] = (),
 ) -> int | None:
     """Resolve a furniture entry to the hidden item it represents, if any."""
-    item_id = furniture.script_used - _HIDDEN_ITEM_SCRIPT_BASE
-    if not 0 < item_id < item_count:
+    index = furniture.script_used - _HIDDEN_ITEM_SCRIPT_BASE - 1
+    if not 0 <= index < len(item_ids):
         return None
-    return item_id
+    item_id = item_ids[index]
+    return item_id if item_id is not None and 0 < item_id < item_count else None
 
 
 def resolve_common_script_trainer_id(

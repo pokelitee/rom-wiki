@@ -150,20 +150,17 @@ def resolve_trainer_variants(
             "rematch_stage": {
                 "status": "partial",
                 "note": (
-                    "The Vs. Seeker rematch table is decoded and fully enumerated. Rematch is not a pursued axis: the supported "
-                    "relationship set is Starter, Difficulty, Version, and Season, "
-                    "so existing rematch coverage is kept as-is and is not "
-                    "extended. Records outside it stay unrelated rather than "
-                    "asserted."
+                    "The Vs. Seeker table is decoded and fully enumerated. Other "
+                    "rematches selected at runtime remain unrelated until their "
+                    "selector is decoded."
                 ),
             },
             "story_stage": {
-                "status": "unresolved",
+                "status": "partial",
                 "note": (
-                    "Story staging exists — the rival is fought repeatedly — but no "
-                    "selector for it has been decoded, and its surface is every "
-                    "story-gated branch in every field script rather than one table. "
-                    "It is deliberately not pursued, so no story stage is asserted."
+                    "Starter-selected rival branches are decoded across the complete "
+                    "field-script archive. Runtime-selected battles, including "
+                    "unresolved partner variants, remain unrelated."
                 ),
             },
             "sibling_version": {"status": "unsupported"},

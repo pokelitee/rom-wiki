@@ -4,9 +4,11 @@ import struct
 import unittest
 
 from romwiki.engines.gen5.bw.overworld import (
+    parse_hidden_item_script_table,
     parse_overworld_furniture,
     parse_overworld_npcs,
     parse_overworld_warps,
+    parse_visible_item_script_table,
     resolve_common_script_member,
     resolve_common_script_trainer_id,
     resolve_hidden_item_id,
@@ -86,19 +88,29 @@ class Gen5OverworldTests(unittest.TestCase):
 
 
 class Gen5OverworldItemTests(unittest.TestCase):
-    def test_resolves_a_real_visible_item_ball(self) -> None:
-        # Real Black ROM fact: sprite 110 is the item-ball graphic, and
-        # scriptUsed 7171 at Striaton City resolves to item 171 (Qualot
-        # Berry) -- see overworld.py's module docstring for the full
-        # cross-check (274 real sprite-110 NPCs, every one resolving to a
-        # real, coherent field-pickup item).
+    def test_resolves_visible_item_ball_through_shared_script_index(self) -> None:
         header = bytes((0, 0, 0, 0, 0, 1, 0, 0))  # 0 furniture, 1 NPC
         data = header + _npc_record(
             script_used=7171, sight_range=0, x=774, y=605, z=0, sprite=110
         )
         npc = parse_overworld_npcs(data)[0]
 
-        self.assertEqual(resolve_visible_item_id(npc, item_count=627), 171)
+        item_ids = (None,) * 170 + (3,)
+        self.assertEqual(
+            resolve_visible_item_id(npc, item_count=627, item_ids=item_ids), 3
+        )
+
+    def test_decodes_visible_and_hidden_item_script_literals(self) -> None:
+        visible_function = struct.pack("<HHHH", 0x2E, 0x28, 0x800C, 93)
+        hidden_function = struct.pack("<HHHH", 0x2E, 0x2A, 0x8000, 580)
+        pointer = struct.pack("<I", 0)
+
+        self.assertEqual(
+            parse_visible_item_script_table(pointer + visible_function), (93,)
+        )
+        self.assertEqual(
+            parse_hidden_item_script_table(pointer + hidden_function), (580,)
+        )
 
     def test_does_not_resolve_a_non_item_ball_sprite(self) -> None:
         header = bytes((0, 0, 0, 0, 0, 1, 0, 0))
@@ -107,7 +119,9 @@ class Gen5OverworldItemTests(unittest.TestCase):
         )
         npc = parse_overworld_npcs(data)[0]
 
-        self.assertIsNone(resolve_visible_item_id(npc, item_count=627))
+        self.assertIsNone(
+            resolve_visible_item_id(npc, item_count=627, item_ids=(None,) * 170 + (3,))
+        )
 
     def test_does_not_resolve_a_local_script_index_even_with_the_item_sprite(
         self,
@@ -118,12 +132,11 @@ class Gen5OverworldItemTests(unittest.TestCase):
         )
         npc = parse_overworld_npcs(data)[0]
 
-        self.assertIsNone(resolve_visible_item_id(npc, item_count=627))
+        self.assertIsNone(resolve_visible_item_id(npc, item_count=627, item_ids=(93,)))
 
     def test_parses_furniture_and_scales_its_fixed_point_x(self) -> None:
-        # Real Black ROM fact: Striaton City's hidden Master Ball furniture
-        # entry stores x as 49938432, which is exactly 762 * 65536 -- see
-        # overworld.py's module docstring for the cross-map verification.
+        # Real Black ROM coordinates: the furniture entry stores x as
+        # 49938432, exactly 762 * 65536.
         header = bytes((0, 0, 0, 0, 1, 0, 0, 0))  # 1 furniture, no NPCs/warps
         furniture_record = (
             struct.pack("<h", 8001)
@@ -142,7 +155,10 @@ class Gen5OverworldItemTests(unittest.TestCase):
         self.assertEqual(
             (furniture[0].x, furniture[0].y, furniture[0].z), (762, 582, 0)
         )
-        self.assertEqual(resolve_hidden_item_id(furniture[0], item_count=627), 1)
+        self.assertEqual(
+            resolve_hidden_item_id(furniture[0], item_count=627, item_ids=(580,)),
+            580,
+        )
 
     def test_does_not_resolve_a_furniture_entry_below_the_hidden_item_band(
         self,
@@ -158,7 +174,9 @@ class Gen5OverworldItemTests(unittest.TestCase):
         )
         furniture = parse_overworld_furniture(header + furniture_record)
 
-        self.assertIsNone(resolve_hidden_item_id(furniture[0], item_count=627))
+        self.assertIsNone(
+            resolve_hidden_item_id(furniture[0], item_count=627, item_ids=(580,))
+        )
 
     def test_empty_map_has_no_furniture(self) -> None:
         self.assertEqual(parse_overworld_furniture(b""), ())

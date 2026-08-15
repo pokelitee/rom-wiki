@@ -23,6 +23,7 @@ from .constants import (
     PERSONAL_INTERNAL_MEMBERS,
     PERSONAL_RECORD_COUNT,
     PERSONAL_TRANSFORMATION_MEMBERS,
+    POKEMON_DESCRIPTION_COUNT,
     POKEMON_NAME_COUNT,
     TRAINER_COSMETIC_FORM_LABELS,
     TRAINER_FORM_SLUGS,
@@ -64,9 +65,11 @@ from .marts import (
 from .messages import parse_english_message_archive
 from .moves import parse_move_record
 from .overworld import (
+    parse_hidden_item_script_table,
     parse_overworld_furniture,
     parse_overworld_npcs,
     parse_overworld_warps,
+    parse_visible_item_script_table,
     resolve_common_script_member,
     resolve_common_script_trainer_id,
     resolve_hidden_item_id,
@@ -187,6 +190,7 @@ __all__ = [
     "PERSONAL_INTERNAL_MEMBERS",
     "PERSONAL_RECORD_COUNT",
     "PERSONAL_TRANSFORMATION_MEMBERS",
+    "POKEMON_DESCRIPTION_COUNT",
     "POKEMON_NAME_COUNT",
     "TRAINER_COSMETIC_FORM_LABELS",
     "TRAINER_FORM_SLUGS",
@@ -219,8 +223,10 @@ __all__ = [
     "parse_map_matrix",
     "parse_move_record",
     "parse_overworld_furniture",
+    "parse_hidden_item_script_table",
     "parse_overworld_npcs",
     "parse_overworld_warps",
+    "parse_visible_item_script_table",
     "parse_personal_record",
     "parse_npc_trade_record",
     "parse_pickup_table",

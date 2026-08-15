@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.enrichment.references import with_rom_description
 from romwiki.schema.versions import ITEMS_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -297,6 +298,19 @@ def build_item_dataset(
     reference_version: str | None = None,
 ) -> dict[str, Any]:
     game = item_dataset.get("game")
+    descriptions = item_dataset.get("item_descriptions")
+    if descriptions is not None:
+        expected_description_count = get_engine(
+            item_dataset["engine"]
+        ).enrich.ITEM_NAME_COUNT
+        if (
+            not isinstance(descriptions, list)
+            or len(descriptions) != expected_description_count
+        ):
+            raise DataSourceError(
+                f"Expected exactly {expected_description_count} ROM-derived item "
+                "descriptions"
+            )
     for label, dataset in (
         ("PokÃ©mon", pokemon_dataset),
         ("trainer", trainer_dataset),
@@ -362,7 +376,10 @@ def build_item_dataset(
             {
                 **source,
                 "slug": slug,
-                "reference": pokedb.item_reference(reference_slug, reference_version),
+                "reference": with_rom_description(
+                    pokedb.item_reference(reference_slug, reference_version),
+                    descriptions[item_id] if descriptions is not None else None,
+                ),
                 "wild_held_by": relation.get("wild_held_by", []),
                 "trainer_held_by": relation.get("trainer_held_by", []),
                 "trainer_battle_items": relation.get("trainer_battle_items", []),
@@ -383,7 +400,7 @@ def build_item_dataset(
     slugs = [record["slug"] for record in records]
     if len(slugs) != len(set(slugs)):
         raise DataSourceError("ROM item names do not produce unique page slugs")
-    return {
+    enriched = {
         "schema_version": ITEMS_ENRICHED_SCHEMA_VERSION,
         "game": game,
         "engine": item_dataset.get("engine", pokemon_dataset.get("engine", "unknown")),
@@ -402,6 +419,9 @@ def build_item_dataset(
         },
         "records": records,
     }
+    if item_dataset.get("description_sources"):
+        enriched["description_sources"] = item_dataset["description_sources"]
+    return enriched
 
 
 def _item_is_referenced(record: dict[str, Any]) -> bool:

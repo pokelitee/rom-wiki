@@ -20,6 +20,7 @@ from romwiki.renderers.mkdocs.components import (
     provenance_section,
     record_nav_link,
     record_navigation,
+    reference_description,
     summary_section_link,
     tutor_requirement,
     type_badges,
@@ -33,6 +34,7 @@ from romwiki.renderers.mkdocs.moves import (
     _relationship_learner_table,
     _tutor_compatibility,
 )
+from romwiki.renderers.mkdocs.pokemon import _reference_entry
 from romwiki.renderers.mkdocs.references import EntityReference, ReferenceIndex
 
 
@@ -49,6 +51,30 @@ class DisplayNameTests(unittest.TestCase):
         for value, expected in expected_names.items():
             with self.subTest(value=value):
                 self.assertEqual(display_name(value), expected)
+
+    def test_reference_description_uses_rom_source_label(self) -> None:
+        rendered = reference_description(
+            {
+                "reference": {
+                    "flavor_text": "Exact ROM text.",
+                    "flavor_text_label": "ROM description",
+                }
+            },
+            "Missing",
+        )
+
+        self.assertIn("<blockquote>Exact ROM text.</blockquote>", rendered)
+        self.assertIn("<figcaption>ROM description</figcaption>", rendered)
+
+    def test_pokemon_reference_uses_rom_pokedex_label(self) -> None:
+        rendered = _reference_entry(
+            {
+                "flavor_text": "Exact species text.",
+                "flavor_text_label": "ROM Pokédex",
+            }
+        )
+
+        self.assertIn("<figcaption>ROM Pokédex</figcaption>", rendered)
 
     def test_title_cases_regular_slug(self) -> None:
         self.assertEqual(display_name("evolution-stone"), "Evolution Stone")

@@ -194,6 +194,9 @@ MOVE_NAME_COUNT = 560
 ABILITY_NAME_COUNT = 165
 ITEM_NAME_COUNT = 627
 POKEMON_NAME_COUNT = 652
+# The two version-specific Pokédex banks contain the placeholder plus all
+# 649 species. Egg labels are names, not Pokédex species.
+POKEMON_DESCRIPTION_COUNT = 650
 
 # Move data archive `a/0/2/1` (a different table from the move *names* text
 # above): confirmed empirically against a real Black ROM to hold 560 members

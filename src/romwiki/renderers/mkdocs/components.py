@@ -722,7 +722,7 @@ def reference_description(record: dict[str, Any], empty_message: str) -> list[st
             lines.append(f"<p>{escape(' '.join(effect.split()))}</p>")
         lines.append("")
     if flavor_text:
-        version_label = (
+        version_label = reference.get("flavor_text_label") or (
             f"{display_name(reference['version'])} Pokédex"
             if reference.get("version")
             else "Pokédex"

@@ -4,7 +4,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
-from romwiki.pipeline.extraction.reference_names import extract_reference_names
+from romwiki.pipeline.extraction.reference_names import (
+    extract_reference_descriptions,
+    extract_reference_names,
+)
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import MOVES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
@@ -26,6 +29,9 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
     reference_names = extract_reference_names(profile, filesystem)
+    reference_descriptions = extract_reference_descriptions(
+        profile, filesystem, fields={"move_descriptions"}
+    )
     records = [
         engine.parse_move_record(
             archive.read(member.index),
@@ -45,5 +51,6 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
             "archive": archive_path,
         },
         **reference_names,
+        **reference_descriptions,
         "records": records,
     }

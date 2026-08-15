@@ -12,6 +12,7 @@ rom_versions = [0]
 chart = "gen5"
 
 [parameters]
+pokemon_descriptions_member = 236
 npc_trades_unused = [0, 2, 7, 8, 9, 10, 11, 12]
 
 [[hashes]]

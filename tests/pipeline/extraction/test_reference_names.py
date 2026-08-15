@@ -1,15 +1,38 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from romwiki.pipeline.extraction.reference_names import extract_reference_names
+from romwiki.pipeline.extraction.reference_names import (
+    extract_reference_descriptions,
+    extract_reference_names,
+)
 from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import DataSourceError
 
 
 class ReferenceNameTests(unittest.TestCase):
+    def test_extracts_configured_description_table_with_provenance(self) -> None:
+        profile = replace(_profile(), engine="gen5_bw")
+        profile.parameters.clear()
+        profile.parameters["item_descriptions_member"] = 53
+        archive = Mock()
+        descriptions = tuple(f"Description {index}" for index in range(627))
+
+        with patch(
+            "romwiki.engines.gen5.bw.parse_english_message_archive",
+            return_value=descriptions,
+        ):
+            result = extract_reference_descriptions(profile, Mock(), archive)
+
+        self.assertEqual(result["item_descriptions"], list(descriptions))
+        self.assertEqual(
+            result["description_sources"]["item_descriptions"],
+            {"archive": "messages.narc", "member": 53},
+        )
+
     def test_extracts_configured_rom_name_tables_with_provenance(self) -> None:
         profile = _profile()
         archive = Mock()

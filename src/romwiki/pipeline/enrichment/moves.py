@@ -20,7 +20,7 @@ from romwiki.pipeline.enrichment.names import (
     resolve_pokemon_names,
     resolve_type_names,
 )
-from romwiki.pipeline.enrichment.references import move_name
+from romwiki.pipeline.enrichment.references import move_name, with_rom_description
 from romwiki.schema.versions import MOVES_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -47,6 +47,14 @@ def enrich_move_dataset(
     type_names = resolve_type_names(engine, dataset, type_names)
     move_names = resolve_move_names(engine, dataset, move_names)
     pokemon_names = resolve_pokemon_names(engine, dataset)
+    descriptions = dataset.get("move_descriptions")
+    if descriptions is not None and (
+        not isinstance(descriptions, list)
+        or len(descriptions) != engine.MOVE_NAME_COUNT
+    ):
+        raise DataSourceError(
+            f"Expected exactly {engine.MOVE_NAME_COUNT} ROM-derived move descriptions"
+        )
 
     machines = validate_machines(engine, machine_dataset, dataset["game"])
     machines_by_move: dict[int, list[dict[str, Any]]] = {}
@@ -99,10 +107,13 @@ def enrich_move_dataset(
                 "replaces": (
                     replaced_move(expected_id, slug, pokedb) if public else None
                 ),
-                "reference": (
-                    pokedb.move_reference(expected_id, reference_version)
-                    if public
-                    else None
+                "reference": with_rom_description(
+                    (
+                        pokedb.move_reference(expected_id, reference_version)
+                        if public
+                        else None
+                    ),
+                    descriptions[expected_id] if descriptions is not None else None,
                 ),
                 "public": public,
                 "damage_class": named_id(
@@ -138,4 +149,6 @@ def enrich_move_dataset(
         ]
     if dataset.get("name_sources"):
         enriched["name_sources"] = dataset["name_sources"]
+    if dataset.get("description_sources"):
+        enriched["description_sources"] = dataset["description_sources"]
     return enriched

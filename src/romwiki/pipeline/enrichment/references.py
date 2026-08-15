@@ -8,6 +8,22 @@ from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug
 
 
+def with_rom_description(
+    reference: dict[str, Any] | None,
+    description: str | None,
+    *,
+    label: str = "ROM description",
+) -> dict[str, Any] | None:
+    """Prefer the exact in-ROM prose while retaining structured reference data."""
+    if not description or not description.strip():
+        return reference
+    enriched = dict(reference or {})
+    enriched["flavor_text"] = description
+    enriched["flavor_text_label"] = label
+    enriched["flavor_text_source"] = "rom"
+    return enriched
+
+
 def item_reference(
     item_id: int,
     pokedb: PokeDBGeneration,

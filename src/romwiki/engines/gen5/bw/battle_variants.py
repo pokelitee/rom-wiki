@@ -145,21 +145,16 @@ def resolve_trainer_variants(
             "rematch_stage": {
                 "status": "partial",
                 "note": (
-                    "The Nuvema Town rival rematch is verified. Rematch is not a pursued axis: the supported "
-                    "relationship set is Starter, Difficulty, Version, and Season, "
-                    "so existing rematch coverage is kept as-is and is not "
-                    "extended. Records outside it stay unrelated rather than "
-                    "asserted."
+                    "The Nuvema Town rival rematch is verified. Other runtime-selected "
+                    "rematches stay unrelated until their selector is decoded."
                 ),
             },
             "story_stage": {
                 "status": "partial",
                 "note": (
-                    "Stages come from this engine's curated battle list, not a "
-                    "decoded selector. Story stage is a neutral axis that never "
-                    "names a public label, and its surface is every story-gated "
-                    "branch in every field script rather than one table, so it is "
-                    "deliberately not pursued further."
+                    "Starter-selected rival branches are decoded across the field "
+                    "scripts. Other runtime-selected story stages stay unrelated "
+                    "until their selector is decoded."
                 ),
             },
             "sibling_version": {"status": "verified"},

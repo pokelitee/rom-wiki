@@ -102,6 +102,8 @@ GEN5_MACHINE_COUNT = 101
 # B2W2 retains the 649 species names, adds 35 Pokéstar Studios actor names,
 # and keeps the placeholder plus two trailing Egg entries.
 POKEMON_NAME_COUNT = 687
+# The shared Pokédex bank includes the 650 base entries plus forme/actor text.
+POKEMON_DESCRIPTION_COUNT = 733
 ITEM_NAME_COUNT = 639
 
 GEN5_ITEM_FIELD_USE_NAMES = (

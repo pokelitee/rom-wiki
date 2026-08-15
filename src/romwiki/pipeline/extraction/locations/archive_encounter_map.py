@@ -280,11 +280,30 @@ def _build_archive_location_records(
     catalogs: _ArchiveLocationCatalogs,
 ) -> tuple[list[dict[str, Any]], list[int]]:
     headers_by_id = {header.header_id: header for header in source.headers}
+    try:
+        visible_member = source.profile.parameters["item_balls_script_member"]
+        hidden_member = source.profile.parameters["hidden_items_script_member"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {source.profile.id!r} is missing field-item metadata: {error.args[0]}"
+        ) from error
+    visible_item_ids = source.engine.parse_visible_item_script_table(
+        source.scripts.read(visible_member)
+    )
+    hidden_item_ids = source.engine.parse_hidden_item_script_table(
+        source.scripts.read(hidden_member)
+    )
     records = []
     unsupported_shop_selectors = []
     for header in source.headers:
         record, unsupported_selectors = _build_archive_location_record(
-            source, relationships, catalogs, headers_by_id, header
+            source,
+            relationships,
+            catalogs,
+            headers_by_id,
+            header,
+            visible_item_ids,
+            hidden_item_ids,
         )
         records.append(record)
         unsupported_shop_selectors.extend(unsupported_selectors)
@@ -297,6 +316,8 @@ def _build_archive_location_record(
     catalogs: _ArchiveLocationCatalogs,
     headers_by_id: dict[int, Any],
     header: Any,
+    visible_item_ids: tuple[int | None, ...],
+    hidden_item_ids: tuple[int | None, ...],
 ) -> tuple[dict[str, Any], list[int]]:
     section_name, section_name_source = resolve_location_section(
         source.profile,
@@ -306,7 +327,13 @@ def _build_archive_location_record(
     script_file_id = source.script_file_ids[header.header_id]
     overworld_data = _read_overworld_data(source, header.header_id)
     items = (
-        _extract_gen5_field_items(source.engine, overworld_data, catalogs)
+        _extract_gen5_field_items(
+            source.engine,
+            overworld_data,
+            catalogs,
+            visible_item_ids=visible_item_ids,
+            hidden_item_ids=hidden_item_ids,
+        )
         if overworld_data is not None
         else []
     )
@@ -366,10 +393,15 @@ def _extract_gen5_field_items(
     engine: Any,
     overworld_data: bytes,
     catalogs: _ArchiveLocationCatalogs,
+    *,
+    visible_item_ids: tuple[int | None, ...],
+    hidden_item_ids: tuple[int | None, ...],
 ) -> list[LocationItem]:
     items = []
     for npc in engine.parse_overworld_npcs(overworld_data):
-        item_id = engine.resolve_visible_item_id(npc, item_count=catalogs.item_count)
+        item_id = engine.resolve_visible_item_id(
+            npc, item_count=catalogs.item_count, item_ids=visible_item_ids
+        )
         if item_id is None or item_id not in catalogs.item_names_by_id:
             continue
         items.append(
@@ -386,7 +418,7 @@ def _extract_gen5_field_items(
         )
     for furniture in engine.parse_overworld_furniture(overworld_data):
         item_id = engine.resolve_hidden_item_id(
-            furniture, item_count=catalogs.item_count
+            furniture, item_count=catalogs.item_count, item_ids=hidden_item_ids
         )
         if item_id is None or item_id not in catalogs.item_names_by_id:
             continue

@@ -6,6 +6,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import read_code_binary
+from romwiki.pipeline.extraction.reference_names import extract_reference_descriptions
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.versions import (
     ITEMS_RAW_SCHEMA_VERSION,
@@ -47,6 +48,9 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         allow_truncated=profile.parameters.get("messages_allow_truncated", False),
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    reference_descriptions = extract_reference_descriptions(
+        profile, filesystem, messages, fields={"item_descriptions"}
+    )
 
     type_names: tuple[str, ...] = ()
     if type_names_member is not None:
@@ -231,5 +235,6 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
         "record_count": len(records),
         "public_record_count": sum(record["public"] for record in records),
         "source": source,
+        **reference_descriptions,
         "records": records,
     }

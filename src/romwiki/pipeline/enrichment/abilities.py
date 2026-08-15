@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.enrichment.references import with_rom_description
 from romwiki.schema.versions import ABILITIES_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -25,6 +26,13 @@ def build_ability_dataset(
     if not isinstance(ability_names, list) or len(ability_names) != expected_count:
         raise DataSourceError(
             f"Expected exactly {expected_count} ROM-derived ability names"
+        )
+    descriptions = pokemon_dataset.get("ability_descriptions")
+    if descriptions is not None and (
+        not isinstance(descriptions, list) or len(descriptions) != expected_count
+    ):
+        raise DataSourceError(
+            f"Expected exactly {expected_count} ROM-derived ability descriptions"
         )
 
     pokemon_by_ability: dict[int, list[dict[str, Any]]] = {}
@@ -82,7 +90,10 @@ def build_ability_dataset(
                 "ability_id": ability_id,
                 "slug": slug,
                 "name": ability_names[ability_id],
-                "reference": pokedb.ability_reference(ability_id, reference_version),
+                "reference": with_rom_description(
+                    pokedb.ability_reference(ability_id, reference_version),
+                    descriptions[ability_id] if descriptions is not None else None,
+                ),
                 "pokemon": pokemon_by_ability.get(ability_id, []),
                 "pickup": pickup,
             }
@@ -96,5 +107,8 @@ def build_ability_dataset(
         "assigned_record_count": sum(bool(record["pokemon"]) for record in records),
         "source": pokemon_dataset["source"],
         "name_source": pokemon_dataset.get("name_sources", {}).get("ability_names"),
+        "description_source": pokemon_dataset.get("description_sources", {}).get(
+            "ability_descriptions"
+        ),
         "records": records,
     }

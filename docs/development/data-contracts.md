@@ -40,7 +40,11 @@ decompresses and parses each archive and verifies its checksum, so publication
 cannot silently ship missing or corrupt data.
 
 The archives never contain ROM or patch bytes. External reference fields remain
-labeled as PokéDB-derived; exact mechanics and comparisons remain ROM-derived.
+labeled as PokéDB-derived. When a profile declares a decoded ROM description
+bank, its exact prose replaces only the reference object's `flavor_text` and is
+labeled with `flavor_text_source = "rom"`; structured effects, sprites, and other
+reference metadata remain PokéDB-derived. Exact mechanics and comparisons remain
+ROM-derived.
 
 The normalized `types` archive records the selected generation chart and its shared
 chart family, attacking and defending type identities, exact multipliers, game
@@ -69,15 +73,12 @@ which passes them to the resolver as `selector_data` and records their location
 under `source`. Profiles own the offsets, so a hack that moves or rewrites a
 selector declares its own without changing engine code.
 
-**Starter, Difficulty, Version, and Season are the pursued axes.** New decoding
-effort goes to those four; `rematch_stage` and `story_stage` are not extended.
-Rematch coverage that is already decoded and verified — notably DPPT's Vs. Seeker
-table — is kept and still renders, because deleting exact ROM data to tidy a
-taxonomy loses information for no gain. What stops is the search for more of it:
-records whose selector is unknown stay unrelated rather than asserted. This bounds
-the per-engine decoding work, which was otherwise open-ended, since rematch
-selection is expressed differently in every engine while the four pursued axes
-are comparatively uniform.
+Selector coverage is engine-wide rather than title- or axis-limited. Starter,
+difficulty, version, season, rematch, story, and partner relationships may all be
+published when their ROM selector is decoded. Records whose selector is unknown
+stay unrelated rather than being grouped by names, adjacent IDs, levels, or party
+similarity. Runtime selectors without a code or table anchor remain explicit
+capability gaps rather than an excuse to publish inferred relationships.
 
 The public renderer names only Starter, Difficulty, Season, Rematch, and Version.
 Story-stage-only and other neutral relationships render as `Variant N`. The

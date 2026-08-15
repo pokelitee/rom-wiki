@@ -1174,7 +1174,9 @@ def _reference_entry(reference: dict[str, Any]) -> list[str]:
     if not isinstance(text, str) or not text.strip():
         return []
     version = reference.get("flavor_text_version") or reference.get("version")
-    version_label = f"{display_name(version)} Pokédex" if version else "Pokédex"
+    version_label = reference.get("flavor_text_label") or (
+        f"{display_name(version)} Pokédex" if version else "Pokédex"
+    )
     return pokedex_quote(text, version_label)
 
 
