@@ -13,6 +13,7 @@ _MATRIX_ID_OFFSET = 4
 _SCRIPT_FILE_OFFSET = 6
 _TEXT_FILE_OFFSET = 10
 _WILD_SET_OFFSET = 20
+_OVERWORLD_FILE_OFFSET = 22
 _NAME_INDEX_OFFSET = 26
 _NULL_WILD_SET = 0xFFFF
 
@@ -59,6 +60,9 @@ def parse_map_header_table(
         )
         name_index = data[base + _NAME_INDEX_OFFSET]
         matrix_id = struct.unpack_from("<H", data, base + _MATRIX_ID_OFFSET)[0]
+        overworld_file_id = struct.unpack_from(
+            "<H", data, base + _OVERWORLD_FILE_OFFSET
+        )[0]
         if name_index >= len(map_names):
             raise InvalidRomError(
                 f"Gen V map header {header_id} references missing map name {name_index}"
@@ -72,6 +76,7 @@ def parse_map_header_table(
                     None if wild_set == (_NULL_WILD_SET & wild_set_mask) else wild_set
                 ),
                 matrix_id=matrix_id,
+                overworld_file_id=overworld_file_id,
                 provenance=RecordProvenance(
                     source="rom", archive=archive_path, member=header_id
                 ),

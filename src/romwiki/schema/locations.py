@@ -208,6 +208,9 @@ class EncounterMapLocation:
     # `_MATRIX_ID_OFFSET` docstring for how this was found and verified.
     matrix_id: int
     provenance: RecordProvenance
+    # The archive member containing this header's overworld objects. This is
+    # identical to the header ID in BW, but is independently indexed in B2W2.
+    overworld_file_id: int | None = None
     internal_name: str | None = None
     section_name: str | None = None
     section_name_source: dict[str, str] | None = None

@@ -4,9 +4,10 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-# `a/1/2/5`: one member per map header (`layout.map_headers`'s own record
-# index, confirmed 1:1 -- see below), holding that map's furniture/NPC/warp/
-# trigger placements. Record layout adopted from
+# `a/1/2/5`: one member per overworld event set, holding that map's
+# furniture/NPC/warp/trigger placements. BW happens to use header IDs as
+# member IDs; B2W2 stores a separate member index in each map header. Record
+# layout adopted from
 # FrostFalcon/FrostsGen5Editor's `OverworldObjectsNARC.cs` and verified
 # against real Black ROM data: for three different maps, the highest
 # `scriptUsed` value among that map's own NPCs (1-indexed) exactly matched

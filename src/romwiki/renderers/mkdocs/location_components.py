@@ -67,6 +67,10 @@ def append_items(
                 "still be unreachable or intentionally disabled by a hack's map or "
                 "scripts; suspicious raw coordinates are called out below."
             ),
+            (
+                "This section covers item balls and hidden field items, not NPC "
+                "gifts, bundled rewards, or other script-awarded items."
+            ),
             "",
             "| Kind | Item | ID | Position |",
             "| ---- | ---- | -: | -------- |",
@@ -432,7 +436,7 @@ def append_connections(
 ) -> None:
     if not connections:
         return
-    lines.extend(["## Outdoor connections", ""])
+    rows = []
     for connection in connections:
         directions = ", ".join(connection["directions"])
         destination = ROUTES.markdown_link(
@@ -448,11 +452,22 @@ def append_connections(
             ),
             source_file,
         )
-        lines.append(
-            f"- {directions}: {destination} "
-            f"(`{connection['destination_internal_name']}`)"
+        rows.append(
+            f"| {directions.title()} | {destination} | "
+            f"`{connection['destination_internal_name']}` |"
         )
-    lines.append("")
+    lines.extend(
+        markdown_section(
+            "Outdoor connections",
+            markdown_table(
+                [
+                    "| Direction | To | Map ID |",
+                    "| --------- | -- | ------ |",
+                ],
+                rows,
+            ),
+        )
+    )
 
 
 def entity_link(

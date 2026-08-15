@@ -325,7 +325,7 @@ def _build_archive_location_record(
         internal_name=None,
     )
     script_file_id = source.script_file_ids[header.header_id]
-    overworld_data = _read_overworld_data(source, header.header_id)
+    overworld_data = _read_overworld_data(source, header)
     items = (
         _extract_gen5_field_items(
             source.engine,
@@ -378,15 +378,14 @@ def _build_archive_location_record(
     )
 
 
-def _read_overworld_data(
-    source: _ArchiveLocationSource, header_id: int
-) -> bytes | None:
+def _read_overworld_data(source: _ArchiveLocationSource, header: Any) -> bytes | None:
+    overworld_file_id = header.overworld_file_id
     if (
-        header_id >= len(source.overworld_objects.members)
-        or header_id in source.unused_overworld_members
+        overworld_file_id >= len(source.overworld_objects.members)
+        or overworld_file_id in source.unused_overworld_members
     ):
         return None
-    return source.overworld_objects.read(header_id)
+    return source.overworld_objects.read(overworld_file_id)
 
 
 def _extract_gen5_field_items(
@@ -613,9 +612,7 @@ def _extract_gen5_location_warps(
         )
         destination_warp_count = len(
             source.engine.parse_overworld_warps(
-                source.overworld_objects.read(destination.header_id)
-                if destination.header_id not in source.unused_overworld_members
-                else b""
+                _read_overworld_data(source, destination) or b""
             )
         )
         destination_indexed = getattr(source.engine, "WARP_DESTINATION_INDEXED", True)
@@ -770,11 +767,11 @@ def _resolve_gen5_script_locations(
     for header in headers:
         owners[script_file_ids[header.header_id]].add(header.header_id)
         if (
-            header.header_id >= len(overworld_objects.members)
-            or header.header_id in unused_overworld_members
+            header.overworld_file_id >= len(overworld_objects.members)
+            or header.overworld_file_id in unused_overworld_members
         ):
             continue
-        overworld = overworld_objects.read(header.header_id)
+        overworld = overworld_objects.read(header.overworld_file_id)
         references = [npc.script_used for npc in engine.parse_overworld_npcs(overworld)]
         references.extend(
             furniture.script_used

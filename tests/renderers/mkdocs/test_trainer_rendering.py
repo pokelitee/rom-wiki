@@ -487,8 +487,11 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn("Tackle", page)
         self.assertIn("Growl", page)
         self.assertIn(
-            "Derived from the Pokémon's level-up learnset at this level.", page
+            '<abbr class="rw-inline-note" title="Derived from the Pokémon\'s '
+            'level-up learnset at this level.">*</abbr>',
+            page,
         )
+        self.assertNotIn("rw-party-card__default-moves", page)
 
     def test_renders_available_party_attributes_compactly(self) -> None:
         member = _party_member([])

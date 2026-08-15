@@ -225,13 +225,16 @@ def _extract_battle_mode_trainer_locations(
 
     for header in headers:
         header_id = header.header_id
+        overworld_file_id = header.overworld_file_id
         internal_name = f"map_{header_id}"
 
         if (
-            header_id < len(overworld_objects.members)
-            and header_id not in unused_overworld_members
+            overworld_file_id < len(overworld_objects.members)
+            and overworld_file_id not in unused_overworld_members
         ):
-            npcs = engine.parse_overworld_npcs(overworld_objects.read(header_id))
+            npcs = engine.parse_overworld_npcs(
+                overworld_objects.read(overworld_file_id)
+            )
             for npc in npcs:
                 trainer_id = engine.resolve_common_script_trainer_id(
                     npc.script_used, trainer_count=trainer_count
@@ -244,7 +247,7 @@ def _extract_battle_mode_trainer_locations(
                         internal_name=internal_name,
                         location_name_id=header_id,
                         name=header.name,
-                        event_file_id=header_id,
+                        event_file_id=overworld_file_id,
                         object_index=npc.index,
                         object_local_id=npc.index,
                         script_id=npc.script_used,

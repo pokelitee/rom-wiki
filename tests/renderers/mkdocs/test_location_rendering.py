@@ -711,6 +711,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertNotIn("C03GYM0101", page.split("## Outdoor connections")[0])
         self.assertIn("header-344.md", page)
         self.assertIn("[Route 203](header-344.md)", page)
+        self.assertIn("| Direction | To | Map ID |", page)
         self.assertIn("## Roaming activations", page)
         self.assertIn("Darkrai", page)
         self.assertIn("| 2 | `51@0x140` |", page)

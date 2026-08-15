@@ -266,6 +266,12 @@ against real Black ROM data (e.g. area 3 correctly resolves to "Icirrus
 City"). Decoding that map-name text table required fixing a real bug in this
 project's message decoder first -- see Text and names below.
 
+The same header also selects its overworld-event archive member. Black and
+White happen to keep that member index equal to the map-header ID, while Black
+2 and White 2 index it independently. Using the header ID for the sequels
+attaches trainers, warps, and field items to unrelated locations, so extraction
+always follows the explicit member index stored in the ROM.
+
 These relationships are published in both directions. Each location page links
 the encounter variant used by that map header, including the applicable season
 and game version, while each encounter page links back to every matching map
@@ -442,6 +448,11 @@ reachable after a hack changes the map or scripts. Location pages therefore
 identify these rows as ROM item-event records and warn on origin coordinates or
 an intentionally unnamed item literal rather than silently presenting suspicious
 leftovers as confirmed obtainable pickups.
+
+This field-item dataset is narrower than a hack's complete item-location guide.
+NPC gifts, multi-item rewards, and other script-awarded items are not currently
+included, so those guides remain the authority for complete obtainability lists
+and quantities.
 
 Static (gift/single) Pokémon encounters are cross-referenced to their real map
 locations through both dedicated map scripts and overworld common-script

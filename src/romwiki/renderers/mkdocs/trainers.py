@@ -755,18 +755,19 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             lines.append('<h4 class="rw-party-card__section-title">Stats</h4>')
             lines.extend(stat_table)
             lines.append("</section>")
+        moves_heading = "Moves"
+        if member["moves_source"] == "level-up" and member["moves"]:
+            moves_heading += (
+                '<abbr class="rw-inline-note" title="Derived from the Pokémon\'s '
+                'level-up learnset at this level.">*</abbr>'
+            )
         lines.extend(
             [
                 '<section class="rw-party-card__section">',
-                '<h4 class="rw-party-card__section-title">Moves</h4>',
+                f'<h4 class="rw-party-card__section-title">{moves_heading}</h4>',
             ]
         )
         if member["moves_source"] == "explicit" or member["moves"]:
-            if member["moves_source"] == "level-up":
-                lines.append(
-                    '<p class="rw-party-card__default-moves">Derived from the '
-                    "Pokémon's level-up learnset at this level.</p>"
-                )
             move_label = escape(f"{pokemon['name']} moves", quote=True)
             lines.append(f'<ol class="rw-party-card__moves" aria-label="{move_label}">')
             for move_index, move in enumerate(member["moves"], start=1):

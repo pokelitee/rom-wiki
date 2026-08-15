@@ -164,8 +164,17 @@
   border-bottom: none;
   cursor: help;
 }
+.md-typeset abbr.rw-inline-note {
+  margin-left: .1em;
+  color: var(--rw-accent);
+  font-weight: 800;
+  border-bottom: none;
+  cursor: help;
+}
 .md-typeset abbr.rw-hidden-ability:hover,
-.md-typeset abbr.rw-hidden-ability:focus-visible {
+.md-typeset abbr.rw-hidden-ability:focus-visible,
+.md-typeset abbr.rw-inline-note:hover,
+.md-typeset abbr.rw-inline-note:focus-visible {
   color: var(--md-primary-fg-color);
 }
 .md-typeset dl.rw-summary__facts {

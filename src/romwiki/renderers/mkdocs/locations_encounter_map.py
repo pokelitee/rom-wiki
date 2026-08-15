@@ -213,6 +213,16 @@ def _render_encounter_map_location(
                         *(
                             (
                                 (
+                                    "Overworld event member",
+                                    f"`{record['overworld_file_id']}`",
+                                ),
+                            )
+                            if record.get("overworld_file_id") is not None
+                            else ()
+                        ),
+                        *(
+                            (
+                                (
                                     "Wild encounter table index",
                                     f"`{record['encounter_map_index']}`",
                                 ),

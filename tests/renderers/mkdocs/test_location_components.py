@@ -48,6 +48,7 @@ class LocationComponentContractTests(unittest.TestCase):
         )
 
         page = "\n".join(lines)
+        self.assertIn("not NPC gifts, bundled rewards", page)
         self.assertIn('!!! warning "Suspicious ROM item records"', page)
         self.assertIn("Potion (event 7)", page)
 

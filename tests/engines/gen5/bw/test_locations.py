@@ -21,6 +21,7 @@ def _map_header(
     script_file: int = 0,
     text_file: int = 0,
     matrix_id: int = 0,
+    overworld_file_id: int = 0,
 ) -> bytes:
     record = bytearray(48)
     record[26] = name_index
@@ -28,6 +29,7 @@ def _map_header(
     struct.pack_into("<H", record, 6, script_file)
     struct.pack_into("<H", record, 10, text_file)
     struct.pack_into("<H", record, 4, matrix_id)
+    struct.pack_into("<H", record, 22, overworld_file_id)
     return bytes(record)
 
 
@@ -120,6 +122,18 @@ class Gen5LocationsTests(unittest.TestCase):
 
         self.assertEqual(headers[0].matrix_id, 0)
         self.assertEqual(headers[1].matrix_id, 39)
+
+    def test_parses_each_header_s_own_overworld_file_index(self) -> None:
+        data = _map_header(
+            name_index=0, wild_set=5, overworld_file_id=560
+        ) + _map_header(name_index=1, wild_set=6, overworld_file_id=352)
+
+        headers = parse_map_header_table(
+            data, map_names=_MAP_NAMES, archive_path="maps.narc"
+        )
+
+        self.assertEqual(headers[0].overworld_file_id, 560)
+        self.assertEqual(headers[1].overworld_file_id, 352)
 
 
 if __name__ == "__main__":

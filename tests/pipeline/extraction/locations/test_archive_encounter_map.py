@@ -30,8 +30,8 @@ class Gen5ScriptLocationTests(unittest.TestCase):
             resolve_common_script_member=resolve_common_script_member,
         )
         headers = (
-            SimpleNamespace(header_id=0),
-            SimpleNamespace(header_id=1),
+            SimpleNamespace(header_id=0, overworld_file_id=1),
+            SimpleNamespace(header_id=1, overworld_file_id=0),
         )
 
         owners = _resolve_gen5_script_locations(
