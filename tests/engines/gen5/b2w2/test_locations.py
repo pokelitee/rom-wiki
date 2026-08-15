@@ -36,6 +36,7 @@ class Gen5B2W2LocationsTests(unittest.TestCase):
         locations = adapter.locations
 
         self.assertIs(locations.parse_map_header_table, parse_map_header_table)
+        self.assertIs(adapter.encounters.parse_wild_map_names, parse_wild_map_names)
         self.assertTrue(callable(locations.parse_english_message_archive))
         self.assertEqual(adapter.trades.NPC_TRADE_INTERACTION_BY_ID[0], "xtransceiver")
         self.assertTrue(callable(adapter.trades.parse_npc_trade_record))

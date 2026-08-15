@@ -85,6 +85,17 @@ class Gen5EncounterTests(unittest.TestCase):
         self.assertEqual(slot.species_id, 550)
         self.assertEqual(slot.form_id, 1)
 
+    def test_land_slots_ignore_the_unused_maximum_level_byte(self) -> None:
+        data = _make_block(
+            {"doubles_grass": 3},
+            {"doubles_grass": [(577, 0, 27, 25)]},
+        )
+
+        area = parse_encounter_entry(data, map_index=106, archive_path="wild.narc")[0]
+
+        self.assertEqual(area.doubles_grass.slots[0].minimum_level, 27)
+        self.assertEqual(area.doubles_grass.slots[0].maximum_level, 27)
+
     def test_rejects_wrong_size(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_encounter_entry(b"short", map_index=0, archive_path="wild.narc")

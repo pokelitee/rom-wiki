@@ -145,6 +145,58 @@ class EncounterEnrichmentTests(unittest.TestCase):
 
 
 class Gen5EncounterEnrichmentTests(unittest.TestCase):
+    def test_resolves_wild_forms_without_treating_unknown_operands_as_forms(
+        self,
+    ) -> None:
+        data = bytearray(232)
+        data[0] = 20
+        for slot_index in range(12):
+            base = 8 + slot_index * 4
+            species_id = 550 if slot_index == 0 else 1
+            form_id = 1
+            data[base : base + 2] = (species_id | form_id << 11).to_bytes(2, "little")
+            data[base + 2] = 10
+            data[base + 3] = 10
+        (area,) = parse_encounter_entry(
+            bytes(data), map_index=0, archive_path="wild_pokemon.narc"
+        )
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={
+                1: {"id": 1, "name": "bulbasaur", "species": "bulbasaur"},
+                550: {
+                    "id": 550,
+                    "name": "basculin-red-striped",
+                    "species": "basculin",
+                },
+            },
+            pokemon_by_name={
+                "basculin-blue-striped": {
+                    "id": 10016,
+                    "name": "basculin-blue-striped",
+                    "species": "basculin",
+                }
+            },
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+
+        enriched = enrich_encounter_dataset(
+            {
+                "game": "test",
+                "engine": "gen5_b2w2",
+                "source": {"archive": "wild_pokemon.narc"},
+                "records": [area.to_dict()],
+            },
+            pokedb,
+        )
+
+        slots = enriched["records"][0]["grass_cave"]["slots"]
+        self.assertEqual(slots[0]["pokemon"]["slug"], "basculin-blue-striped")
+        self.assertEqual(slots[0]["pokemon"]["name"], "Basculin Blue Striped")
+        self.assertEqual(slots[1]["pokemon"]["slug"], "bulbasaur")
+        self.assertEqual(slots[1]["pokemon"]["name"], "Bulbasaur")
+
     def test_enriches_species_and_renders_an_active_area(self) -> None:
         data = bytearray(232)
         data[0] = 20  # grass_cave rate
@@ -185,7 +237,7 @@ class Gen5EncounterEnrichmentTests(unittest.TestCase):
         slot = record["grass_cave"]["slots"][0]
         self.assertEqual(slot["pokemon"]["name"], "Bulbasaur")
         self.assertEqual(slot["minimum_level"], 3)
-        self.assertEqual(slot["maximum_level"], 5)
+        self.assertEqual(slot["maximum_level"], 3)
         self.assertFalse(record["doubles_grass"]["rate"])
 
         comparison = {

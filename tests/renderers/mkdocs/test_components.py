@@ -271,6 +271,8 @@ class DisclosureAndNavigationContractTests(unittest.TestCase):
         self.assertEqual(
             lines,
             [
+                "---",
+                "",
                 '<details class="rw-source-details" markdown="1">',
                 "<summary>Data provenance</summary>",
                 "",

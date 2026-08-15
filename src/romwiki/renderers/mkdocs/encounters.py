@@ -25,6 +25,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
+    content_tabs,
     display_name,
     markdown_table,
     markdown_table_from_cells,
@@ -36,6 +37,7 @@ from romwiki.renderers.mkdocs.components import (
     sprite_with_link,
     summary_section,
     summary_section_link,
+    tab_contents_identical,
     table_sprite_cell,
     version_variant_records,
 )
@@ -58,6 +60,7 @@ _SEASONAL_METHOD_LABELS = {
     "fishing_spots": "Fishing Spots",
 }
 _SEASONS = ("spring", "summer", "autumn", "winter")
+_TAB_LABEL_SEPARATOR = " \N{MIDDLE DOT} "
 _ENCOUNTER_SLOT_COLUMNS = (
     MarkdownColumn("Pokémon"),
     MarkdownColumn("Type"),
@@ -887,18 +890,6 @@ def _render_seasonal_area(
         *_seasonal_area_summary(records, locations),
     ]
     _append_seasonal_locations(lines, locations, source_file)
-    seasonal = len(records) > 1 or record.get("season") is not None
-    if any(
-        version_variant_records(seasonal_record)[0][0] is not None
-        for seasonal_record in records
-    ):
-        lines.extend(
-            [
-                '!!! info "Version differences"',
-                "    Encounter tables differ between the sibling versions.",
-                "",
-            ]
-        )
     for key, label in _SEASONAL_METHOD_LABELS.items():
         if not any(
             version_record[key]["rate"]
@@ -928,11 +919,20 @@ def _render_seasonal_area(
                     for value in (version, seasonal_record.get("season"))
                     if value is not None
                 ]
-                method_contents.append((" · ".join(tab_parts) or "All", content))
-        if len(method_contents) == 1 or _all_tab_content_identical(method_contents):
+                method_contents.append(
+                    (_TAB_LABEL_SEPARATOR.join(tab_parts) or "All", content)
+                )
+        if len(method_contents) == 1 or tab_contents_identical(method_contents):
             lines.extend(method_contents[0][1])
         else:
-            _append_content_tabs(lines, method_contents)
+            lines.extend(content_tabs(method_contents))
+    _append_same_name_encounters(
+        lines,
+        record,
+        same_name_groups,
+        locations_by_route,
+        source_file,
+    )
     comparisons = [
         (
             seasonal_record,
@@ -944,27 +944,43 @@ def _render_seasonal_area(
         lines.extend(["## Hack changes", ""])
         change_contents: list[tuple[str, list[str]]] = []
         for seasonal_record, change in comparisons:
-            content = comparison_section(
-                change,
-                baseline_name,
-                source_file,
-                references,
-                heading_level=None,
-            )
+            version_comparisons = (change or {}).get("version_comparisons")
+            if version_comparisons:
+                for version, version_change in version_comparisons.items():
+                    label = _TAB_LABEL_SEPARATOR.join(
+                        display_name(value)
+                        for value in (version, seasonal_record.get("season"))
+                        if value is not None
+                    )
+                    change_contents.append(
+                        (
+                            label,
+                            comparison_section(
+                                version_change,
+                                version_change.get("baseline") or baseline_name,
+                                source_file,
+                                references,
+                                heading_level=None,
+                            ),
+                        )
+                    )
+                continue
             change_contents.append(
-                (display_name(seasonal_record.get("season") or "all"), content)
+                (
+                    display_name(seasonal_record.get("season") or "all"),
+                    comparison_section(
+                        change,
+                        baseline_name,
+                        source_file,
+                        references,
+                        heading_level=None,
+                    ),
+                )
             )
-        if not seasonal or _all_tab_content_identical(change_contents):
+        if len(change_contents) == 1 or tab_contents_identical(change_contents):
             lines.extend(change_contents[0][1])
         else:
-            _append_content_tabs(lines, change_contents)
-    _append_same_name_encounters(
-        lines,
-        record,
-        same_name_groups,
-        locations_by_route,
-        source_file,
-    )
+            lines.extend(content_tabs(change_contents))
     lines.extend(
         provenance_section(
             [
@@ -998,18 +1014,6 @@ def _render_seasonal_area(
         lines, record, previous, following, locations_by_route
     )
     return "\n".join(lines)
-
-
-def _all_tab_content_identical(contents: list[tuple[str, list[str]]]) -> bool:
-    return bool(contents) and all(content == contents[0][1] for _, content in contents)
-
-
-def _append_content_tabs(
-    lines: list[str], contents: list[tuple[str, list[str]]]
-) -> None:
-    for label, content in contents:
-        lines.extend([f'=== "{label}"', ""])
-        lines.extend(f"    {line}" if line else "" for line in content)
 
 
 def _seasonal_area_summary(

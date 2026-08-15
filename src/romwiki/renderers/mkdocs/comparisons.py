@@ -12,6 +12,7 @@ from romwiki.pipeline.transforms.comparisons import (
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import write_text
 from romwiki.renderers.mkdocs.components import (
+    content_tabs,
     display_name,
     empty_state,
     escape_table_cell,
@@ -74,24 +75,22 @@ def comparison_section(
             if heading_level is not None
             else []
         )
-        for version, version_entry in version_comparisons.items():
-            version_label = escape_markdown(display_name(version))
-            lines.extend(
+        lines.extend(
+            content_tabs(
                 [
                     (
-                        f"{'#' * (heading_level + 1)} {version_label}"
-                        if heading_level is not None
-                        else f"**{version_label}**"
-                    ),
-                    "",
-                    *_comparison_body(
-                        version_entry,
-                        version_entry.get("baseline") or baseline_name,
-                        source_file,
-                        references,
-                    ),
+                        display_name(version),
+                        _comparison_body(
+                            version_entry,
+                            version_entry.get("baseline") or baseline_name,
+                            source_file,
+                            references,
+                        ),
+                    )
+                    for version, version_entry in version_comparisons.items()
                 ]
             )
+        )
         return lines
     return [
         *(
@@ -351,6 +350,15 @@ def _format_change(
             return specialized
     if kind == "abilities" and change.get("field") == "pokemon":
         return _format_ability_pokemon_change(before, after, source_url, references)
+    if kind == "trainers" and change.get("field") == "battle_mode":
+        labels = ("Single", "Double", "Triple", "Rotation")
+        old_label = (
+            labels[before] if isinstance(before, int) and 0 <= before < 4 else before
+        )
+        new_label = (
+            labels[after] if isinstance(after, int) and 0 <= after < 4 else after
+        )
+        return _format_value_change(old_label, new_label)
     if kind == "trainers" and change.get("field") in {"locations", "script_references"}:
         return _format_trainer_location_change(before, after, source_url, references)
     return _format_value_change(before, after, kind=kind, field=change.get("field"))

@@ -97,6 +97,29 @@ TRAINER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {
     (618, 5): "Form 5",
 }
 
+# Darmanitan's Zen Mode has no independently obtainable PokéDB record, so
+# wild encounters label it below while retaining the base-form reference.
+ENCOUNTER_FORM_SLUGS = {
+    key: slug for key, slug in TRAINER_FORM_SLUGS.items() if key != (555, 1)
+}
+ENCOUNTER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {
+    **TRAINER_COSMETIC_FORM_LABELS,
+    (351, 1): "Sunny Form",
+    (351, 2): "Rainy Form",
+    (351, 3): "Snowy Form",
+    (421, 1): "Sunshine Form",
+    (555, 1): "Zen Mode",
+    **{
+        (585, form_id): season
+        for form_id, season in enumerate(("Summer", "Autumn", "Winter"), 1)
+    },
+    **{
+        (586, form_id): season
+        for form_id, season in enumerate(("Summer", "Autumn", "Winter"), 1)
+    },
+    (648, 1): "Pirouette Forme",
+}
+
 GEN5_MACHINE_COUNT = 101
 
 # B2W2 retains the 649 species names, adds 35 Pokéstar Studios actor names,

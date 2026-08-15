@@ -112,7 +112,10 @@ def _parse_block(
                     species_id=species_id,
                     form_id=form_id,
                     minimum_level=data[base + 2],
-                    maximum_level=data[base + 3],
+                    # Land encounters use one exact level. Their fourth byte
+                    # is ignored by the game and may retain stale data after
+                    # editing; only water and fishing methods use a range.
+                    maximum_level=(data[base + 2] if index < 3 else data[base + 3]),
                 )
             )
         methods[name] = SeasonalEncounterMethod(rate=rate, slots=tuple(slots))

@@ -45,10 +45,10 @@ export const CATALOGS = {
   },
   trainers: {
     searchPlaceholder: "Search trainers, locations, or party Pokémon",
-    filters: [{ key: "class_name", label: "Class", control: "combobox" }, { key: "locations", label: "Location", control: "combobox" }, { key: "pokemon", label: "Party Pokémon", control: "combobox" }, { key: "double_battle", label: "Battle format" }],
+    filters: [{ key: "class_name", label: "Class", control: "combobox" }, { key: "locations", label: "Location", control: "combobox" }, { key: "pokemon", label: "Party Pokémon", control: "combobox" }, { key: "battle_format", label: "Battle format" }],
     ranges: [{ key: "level", label: "Party level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
     sorts: [["label", "Name"], ["route_id", "ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"], ["party_size", "Party size"]],
-    columns: [["Trainer", recordLink], ["ID", routeId], ["Location", (record) => record.location_refs?.length ? referenceList(record.location_refs) : text("Unlinked")], ["Party", trainerPartySummary], ["Format", (record) => text(record.double_battle ? "Double" : "Single")]],
+    columns: [["Trainer", recordLink], ["ID", routeId], ["Location", (record) => record.location_refs?.length ? referenceList(record.location_refs) : text("Unlinked")], ["Party", trainerPartySummary], ["Format", (record) => text(title(record.battle_format))]],
   },
   locations: {
     searchPlaceholder: "Search location or internal map name",

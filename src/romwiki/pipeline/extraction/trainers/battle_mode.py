@@ -76,6 +76,7 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
         locations_by_trainer,
         script_references_by_trainer,
         location_source,
+        difficulty_branch_families,
     ) = _extract_battle_mode_trainer_locations(
         engine, platform, result, filesystem, trainer_count=len(parsed_records) + 1
     )
@@ -102,6 +103,7 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
         key: value
         for key, value in (
             ("starter_branch_families", starter_families),
+            ("difficulty_branch_families", difficulty_branch_families),
             ("starter_species", starter_species),
             ("species_names", reference_names.get("pokemon_names")),
         )
@@ -150,6 +152,7 @@ def _extract_battle_mode_trainer_locations(
     dict[int, list[TrainerLocation]],
     dict[int, list[TrainerScriptReference]],
     dict[str, Any],
+    tuple[Any, ...],
 ]:
     """Resolve Gen5 trainer battle triggers' map locations.
 
@@ -178,7 +181,7 @@ def _extract_battle_mode_trainer_locations(
     if any(name not in profile.layout for name in required_layout) or (
         "map_names_member" not in profile.parameters
     ):
-        return {}, {}, {}
+        return {}, {}, {}, ()
     map_headers_path = profile.layout["map_headers"]
     scripts_path = profile.layout["scripts"]
     overworld_objects_path = profile.layout["overworld_objects"]
@@ -222,6 +225,10 @@ def _extract_battle_mode_trainer_locations(
     locations: dict[int, list[TrainerLocation]] = {}
     script_references: dict[int, list[TrainerScriptReference]] = {}
     script_command_cache: dict[int, tuple[Any, ...]] = {}
+    difficulty_branch_families = []
+    parse_difficulty_branches = getattr(
+        engine, "parse_difficulty_branch_families", None
+    )
 
     for header in headers:
         header_id = header.header_id
@@ -262,9 +269,18 @@ def _extract_battle_mode_trainer_locations(
         if script_file_id >= len(scripts.members):
             continue
         if script_file_id not in script_command_cache:
+            script_data = scripts.read(script_file_id)
             script_command_cache[script_file_id] = engine.parse_trainer_battle_commands(
-                scripts.read(script_file_id), trainer_count=trainer_count
+                script_data, trainer_count=trainer_count
             )
+            if parse_difficulty_branches is not None:
+                difficulty_branch_families.extend(
+                    parse_difficulty_branches(
+                        script_data,
+                        script_file_id=script_file_id,
+                        trainer_count=trainer_count,
+                    )
+                )
         for command in script_command_cache[script_file_id]:
             for opponent_slot, trainer_id in enumerate(command.trainer_ids, start=1):
                 script_references.setdefault(trainer_id, []).append(
@@ -292,4 +308,5 @@ def _extract_battle_mode_trainer_locations(
                 "literal_ids_only": True,
             },
         },
+        tuple(difficulty_branch_families),
     )

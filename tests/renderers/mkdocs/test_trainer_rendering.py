@@ -9,43 +9,13 @@ from romwiki.renderers.mkdocs.trainers import (
     _group_ai_battle_items,
     _party_cards,
     _party_gender,
-    _trainer_location_coverage_notice,
     _trainer_provenance,
     _trainer_summary,
-    _trainer_variant_coverage_notice,
     _variant_tab_label,
 )
 
 
 class TrainerRenderingTests(unittest.TestCase):
-    def test_summarizes_unlinked_active_trainer_records(self) -> None:
-        notice = _trainer_location_coverage_notice(
-            [
-                {"party": [{}], "locations": [], "script_references": []},
-                {"party": [{}], "locations": [{}], "script_references": []},
-                {"party": [], "locations": [], "script_references": []},
-            ]
-        )
-
-        self.assertIn("1 active trainer record", notice)
-        self.assertIn("facilities, dynamic dispatch, and unused records", notice)
-
-    def test_warns_when_trainer_variant_grouping_is_incomplete(self) -> None:
-        notice = _trainer_variant_coverage_notice(
-            {
-                "starter_choice": {"status": "verified", "note": "Complete."},
-                "story_stage": {
-                    "status": "unresolved",
-                    "note": "The selector has not been decoded.",
-                },
-            }
-        )
-
-        self.assertIn("Trainer variant coverage is not exhaustive", notice)
-        self.assertIn("Story Stage (unresolved)", notice)
-        self.assertIn("selector has not been decoded", notice)
-        self.assertNotIn("Starter Choice", notice)
-
     def test_uses_only_named_public_axes_and_generic_fallback(self) -> None:
         self.assertEqual(
             _variant_tab_label(
@@ -230,14 +200,16 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertNotIn("<details", page)
         self.assertIn("does not establish that they represent the same character", page)
         self.assertIn("`trainer-0019`", page)
-        self.assertIn("Route 204", page)
+        self.assertIn("[Route 204](../locations/header-019.md)", page)
         self.assertIn("[Staravia](../pokemon/staravia.md)", page)
         self.assertIn("[Machop](../pokemon/machop.md)", page)
         self.assertNotIn("more", page)
 
-    def test_renders_difficulty_parties_without_mechanics_prose(self) -> None:
+    def test_renders_each_difficulty_variant_with_its_own_battle_details(self) -> None:
         normal = _related_trainer(156, "Aspertia City", 13, "Lillipup")
         challenge = _related_trainer(764, "Aspertia City", 14, "Lillipup")
+        normal.update({"battle_mode": 0, "double_battle": False, "ai_flags": 7})
+        challenge.update({"battle_mode": 2, "double_battle": True, "ai_flags": 0xB7})
         family = {
             "id": "gym-cheren",
             "label": "Cheren Gym battle",
@@ -279,8 +251,11 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn('=== "Easy"', page)
         self.assertIn('=== "Normal"', page)
         self.assertIn('=== "Challenge"', page)
-        self.assertNotIn("Difficulty behavior", page)
-        self.assertNotIn("displayed level", page)
+        self.assertIn("Single battle", page)
+        self.assertIn("Triple battle", page)
+        self.assertIn("0x000000B7", page)
+        self.assertIn("Stored ROM levels", page)
+        self.assertIn("may adjust the displayed level by difficulty", page)
 
     def test_collapses_large_same_name_groups(self) -> None:
         current = _related_trainer(1, "Route 201", 5, "Bidoof")
@@ -601,7 +576,7 @@ def _related_trainer(
         "trainer_id": trainer_id,
         "class_name": "Ace Trainer",
         "name": "Sam",
-        "locations": [{"name": location}],
+        "locations": [{"header_id": trainer_id, "name": location}],
         "script_references": [],
         "party": [
             {

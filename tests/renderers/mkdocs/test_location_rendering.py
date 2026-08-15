@@ -11,6 +11,45 @@ from romwiki.renderers.mkdocs.references import ReferenceIndex
 
 
 class LocationRenderingTests(unittest.TestCase):
+    def test_renders_encounter_map_hack_changes_immediately_before_provenance(
+        self,
+    ) -> None:
+        record = {
+            "header_id": 6,
+            "name": "Route 1",
+            "encounter_map_index": None,
+            "matrix_id": 1,
+            "provenance": {"archive": "a/0/1/2", "member": 6},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        dataset = {"game": "test", "engine": "gen5_bw", "records": [record]}
+        comparison = {
+            "baseline": "black-us",
+            "records": [
+                {
+                    "key": 6,
+                    "status": "changed",
+                    "changes": [{"label": "Matrix ID", "before": 0, "after": 1}],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output, comparison=comparison)
+            page = (output / "header-006.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        provenance_divider = page.index("\n---\n\n<details")
+        self.assertLess(page.index("## Hack changes"), provenance_divider)
+        self.assertLess(provenance_divider, page.index("Data provenance"))
+        self.assertEqual(catalog["records"][0]["change_status"], "changed")
+
     def test_links_hgss_location_to_nonseasonal_encounter_area(self) -> None:
         record = {
             "header_id": 7,

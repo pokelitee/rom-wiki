@@ -2,6 +2,8 @@
 
 from .battle_variants import resolve_trainer_variants
 from .constants import (
+    ENCOUNTER_COSMETIC_FORM_LABELS,
+    ENCOUNTER_FORM_SLUGS,
     GEN5_BASE_SPECIES_COUNT,
     GEN5_ITEM_FIELD_USE_NAMES,
     GEN5_MACHINE_COUNT,
@@ -16,6 +18,7 @@ from .constants import (
     TRAINER_COSMETIC_FORM_LABELS,
     TRAINER_FORM_SLUGS,
 )
+from .difficulty_branches import parse_difficulty_branch_families
 from .disassembler import disassemble_function, parse_function_offsets
 from .locations import (
     COMMON_SCRIPT_MEMBER_BASE,
@@ -69,6 +72,8 @@ __all__ = [
     "BASE_SPECIES_COUNT",
     "CHECK_TRAINER_BATTLE_WON",
     "COMMON_SCRIPT_MEMBER_BASE",
+    "ENCOUNTER_COSMETIC_FORM_LABELS",
+    "ENCOUNTER_FORM_SLUGS",
     "FORM_MEMBERS",
     "GEN5_BASE_SPECIES_COUNT",
     "GEN5_ITEM_FIELD_USE_NAMES",
@@ -108,6 +113,7 @@ __all__ = [
     "parse_overworld_npcs",
     "parse_function_offsets",
     "parse_archive_shop_catalog",
+    "parse_difficulty_branch_families",
     "parse_tutor_compatibility_record",
     "parse_tutor_move_table",
     "parse_trainer_battle_commands",

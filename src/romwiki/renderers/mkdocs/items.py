@@ -18,6 +18,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     badge_requirement,
+    content_tabs,
     description_table_source,
     display_name,
     fact_grid,
@@ -521,14 +522,17 @@ def _append_gifts_and_trades(
     )
     if gifts_and_trades_differ:
         lines.extend(["## Gifts and trades", ""])
+        tabs: list[tuple[str, list[str]]] = []
         for version, version_record in version_records:
             assert version is not None
-            lines.extend([f"### {display_name(version)}", ""])
+            content: list[str] = []
             values = _gift_trade_values(version_record)
             if values:
-                _append_gift_trade_table(lines, values, source_file, references)
+                _append_gift_trade_table(content, values, source_file, references)
             else:
-                lines.extend(["No gift or trade references.", ""])
+                content.extend(["No gift or trade references.", ""])
+            tabs.append((display_name(version), content))
+        lines.extend(content_tabs(tabs))
         return
 
     values = _gift_trade_values(record)

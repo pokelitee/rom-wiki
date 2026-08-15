@@ -20,6 +20,9 @@ OPCODE_TABLE = {
     0x177: ("CallWildBattleEnd", ()),
     # Shiny/form-aware wild battle: species, level, form, result variable.
     0x297: ("CallWildBattleEx", (2, 2, 2, 2)),
+    # Writes the current Easy/Normal/Challenge mode to a work variable; the
+    # following stack comparison tests the result against mode value 2.
+    0x2AF: ("GameGetDifficulty", (2,)),
     # Two actor-position commands in the Latias/Latios script.
     0x2BE: ("ActorMoveToGPosEx", (2, 2, 2, 2, 2, 2, 2)),
     # Special Zorua gift: destination, species, level, and three attributes.

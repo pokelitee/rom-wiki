@@ -766,6 +766,7 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         print(f"Wrote {dataset['record_count']} trainer records: {output}")
     elif args.command == "extract-locations":
         profile = result.match.profile
+        engine = get_engine(profile.engine)
         dataset = extract_location_dataset(
             result,
             trainer_dataset=(
@@ -787,7 +788,8 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
             ),
             trade_dataset=(
                 extract_npc_trade_dataset(result)
-                if "npc_trades" in profile.layout
+                if "detached-npc-trades" in engine.capabilities
+                and "npc_trades" in profile.layout
                 else None
             ),
         )

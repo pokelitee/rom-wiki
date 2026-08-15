@@ -127,6 +127,23 @@ class DatasetComparisonTests(unittest.TestCase):
         self.assertEqual(comparison["counts"]["changed"], 1)
         self.assertEqual(comparison["records"][0]["changes"][0]["field"], "party")
 
+    def test_compares_gen5_battle_modes_even_when_both_are_multi_battles(self) -> None:
+        comparison = compare_datasets(
+            _dataset(
+                "trainers",
+                "hack",
+                [{"trainer_id": 1, "battle_mode": 2, "double_battle": True}],
+            ),
+            _dataset(
+                "trainers",
+                "base",
+                [{"trainer_id": 1, "battle_mode": 1, "double_battle": True}],
+            ),
+        )
+
+        self.assertEqual(comparison["counts"]["changed"], 1)
+        self.assertEqual(comparison["records"][0]["changes"][0]["field"], "battle_mode")
+
     def test_nested_reference_names_do_not_create_mechanical_changes(self) -> None:
         baseline = _dataset(
             "pokemon",

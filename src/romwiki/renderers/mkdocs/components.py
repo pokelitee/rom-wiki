@@ -310,6 +310,19 @@ def version_variant_records(
     return ((None, record),)
 
 
+def content_tabs(contents: Iterable[tuple[str, Iterable[str]]]) -> list[str]:
+    """Render consistently indented Material for MkDocs content tabs."""
+    lines: list[str] = []
+    for label, content in contents:
+        lines.extend([f'=== "{escape(label, quote=True)}"', ""])
+        lines.extend(f"    {line}" if line else "" for line in content)
+    return lines
+
+
+def tab_contents_identical(contents: list[tuple[str, list[str]]]) -> bool:
+    return bool(contents) and all(content == contents[0][1] for _, content in contents)
+
+
 def ability_link(value: dict[str, Any], source_url: str) -> str:
     """Render one Pokémon's ability as a link, marking hidden ones.
 
@@ -716,13 +729,9 @@ def reference_description(record: dict[str, Any], empty_message: str) -> list[st
             )
             for version, reference in variants.items()
         ]
-        if all(content == contents[0][1] for _, content in contents):
+        if tab_contents_identical(contents):
             return contents[0][1]
-        lines: list[str] = []
-        for label, content in contents:
-            lines.extend([f'=== "{label}"', ""])
-            lines.extend(f"    {line}" if line else "" for line in content)
-        return lines
+        return content_tabs(contents)
     return _reference_description(record.get("reference") or {}, empty_message)
 
 
@@ -777,6 +786,8 @@ def provenance_section(
     body: list[str], *, summary: str = "Data provenance"
 ) -> list[str]:
     return [
+        "---",
+        "",
         '<details class="rw-source-details" markdown="1">',
         f"<summary>{escape(summary)}</summary>",
         "",

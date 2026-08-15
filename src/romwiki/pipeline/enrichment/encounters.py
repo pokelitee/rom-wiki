@@ -276,7 +276,12 @@ def enrich_seasonal_encounter_area(
                     **slot,
                     "chance": chances[index],
                     "pokemon": _encounter_pokemon(
-                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                        slot["species_id"],
+                        pokedb,
+                        sprite_version,
+                        pokemon_names,
+                        form_id=slot.get("form_id", 0),
+                        engine=engine,
                     ),
                 }
                 for index, slot in enumerate(source[name]["slots"])
@@ -331,14 +336,38 @@ def _encounter_pokemon(
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
+    *,
+    form_id: int = 0,
+    engine: Any | None = None,
 ) -> dict[str, Any] | None:
     if species_id in {None, 0}:
         return None
-    reference = pokedb.pokemon_for_id(species_id)
+    form_slug = (
+        getattr(engine, "ENCOUNTER_FORM_SLUGS", {}).get((species_id, form_id))
+        if form_id
+        else None
+    )
+    form_label = (
+        getattr(engine, "ENCOUNTER_COSMETIC_FORM_LABELS", {}).get((species_id, form_id))
+        if form_id
+        else None
+    )
+    reference = (
+        pokedb.pokemon_for_name(form_slug)
+        if form_slug is not None
+        else pokedb.pokemon_for_id(species_id)
+    )
+    name = (
+        title_case_slug(reference["name"])
+        if form_slug is not None
+        else pokemon_display_name(species_id, reference["name"], pokemon_names)
+    )
+    if form_label is not None:
+        name += f" ({form_label})"
     return {
         "id": species_id,
         "slug": reference["name"],
-        "name": pokemon_display_name(species_id, reference["name"], pokemon_names),
+        "name": name,
         "sprite": pokedb.pokemon_sprite(reference, sprite_version),
     }
 

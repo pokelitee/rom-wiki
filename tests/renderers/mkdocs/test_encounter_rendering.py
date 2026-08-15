@@ -242,16 +242,43 @@ class EncounterRenderingTests(unittest.TestCase):
             "slots": [_seasonal_slot(133, 0, 5, 5, 100, eevee)],
         }
         record["version_variants"] = {"black": black, "white": white}
+        comparison = {
+            "baseline": "black-white",
+            "records": [
+                {
+                    "key": 2,
+                    "status": "changed",
+                    "changes": [],
+                    "version_comparisons": {
+                        version: {
+                            "status": "changed",
+                            "changes": [
+                                {
+                                    "label": "Encounter rate",
+                                    "before": 10,
+                                    "after": 20 if version == "black" else 30,
+                                }
+                            ],
+                        }
+                        for version in ("black", "white")
+                    },
+                }
+            ],
+        }
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            render_encounter_pages(_dataset("encounters", [record]), output)
+            render_encounter_pages(
+                _dataset("encounters", [record]), output, comparison=comparison
+            )
             page = (output / "map-002.md").read_text(encoding="utf-8")
 
-        self.assertIn('=== "Black · Spring"', page)
-        self.assertIn('=== "White · Spring"', page)
+        self.assertEqual(page.count('=== "Black · Spring"'), 2)
+        self.assertEqual(page.count('=== "White · Spring"'), 2)
         self.assertNotIn("**Black**", page)
         self.assertNotIn("**White**", page)
+        provenance_divider = page.index("\n---\n\n<details")
+        self.assertLess(page.index("## Hack changes"), provenance_divider)
 
     def test_omits_tabs_for_a_method_unchanged_across_seasons(self) -> None:
         pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}

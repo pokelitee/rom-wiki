@@ -87,6 +87,29 @@ class ComparisonRenderingTests(unittest.TestCase):
         self.assertIn('40<span class="rw-diff-arrow">→</span>60', value)
         self.assertNotIn("| Field | Change |", value)
 
+    def test_labels_gen5_battle_mode_changes(self) -> None:
+        value = "\n".join(
+            comparison_section(
+                {
+                    "kind": "trainers",
+                    "status": "changed",
+                    "changes": [
+                        {
+                            "field": "battle_mode",
+                            "label": "Battle mode",
+                            "before": 1,
+                            "after": 2,
+                        }
+                    ],
+                },
+                "Base",
+            )
+        )
+
+        self.assertIn("Double", value)
+        self.assertIn("Triple", value)
+        self.assertNotIn(">1<", value)
+
     def test_renders_version_specific_comparisons(self) -> None:
         value = "\n".join(
             comparison_section(
@@ -116,9 +139,9 @@ class ComparisonRenderingTests(unittest.TestCase):
             )
         )
 
-        self.assertIn("### Blaze Black", value)
+        self.assertIn('=== "Blaze Black"', value)
         self.assertIn("Compared with **black-us**", value)
-        self.assertIn("### Volt White", value)
+        self.assertIn('=== "Volt White"', value)
         self.assertIn("Verified unchanged from **white-us**", value)
 
     def test_complex_changes_render_only_summary_list_deltas(self) -> None:

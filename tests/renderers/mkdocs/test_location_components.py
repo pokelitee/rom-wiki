@@ -6,12 +6,36 @@ import markdown
 
 from romwiki.renderers.mkdocs.location_components import (
     append_items,
+    append_trainers,
     append_warps,
     item_event_coverage_notice,
 )
 
 
 class LocationComponentContractTests(unittest.TestCase):
+    def test_renders_trainers_as_a_compact_reference_table(self) -> None:
+        lines: list[str] = []
+
+        append_trainers(
+            lines,
+            [
+                {
+                    "trainer_id": 246,
+                    "class_name": "Leader",
+                    "name": "Roark",
+                    "source": "map-script",
+                }
+            ],
+            "locations/header-045.md",
+        )
+
+        page = "\n".join(lines)
+        self.assertIn("| Trainer | ID | Trigger |", page)
+        self.assertIn(
+            "| [Leader Roark](../trainers/trainer-0246.md) | `trainer-0246` | Map Script |",
+            page,
+        )
+
     def test_summarizes_unresolved_item_events_for_the_location_index(self) -> None:
         notice = item_event_coverage_notice(
             [

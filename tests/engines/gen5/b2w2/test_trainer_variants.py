@@ -5,6 +5,7 @@ import unittest
 from romwiki.engines.gen5.b2w2.battle_variants import (
     resolve_trainer_variants,
 )
+from romwiki.engines.gen5.b2w2.difficulty_branches import DifficultyBranchFamily
 from romwiki.engines.gen5.b2w2.trainers import (
     resolve_common_script_trainer_id,
     trainer_name_index,
@@ -40,40 +41,29 @@ class B2W2TrainerVariantTests(unittest.TestCase):
     def test_retains_the_zero_entry_in_the_trainer_name_table(self) -> None:
         self.assertEqual(trainer_name_index(155), 155)
 
-    def test_relates_elite_four_and_champion_difficulty_records(self) -> None:
-        trainer_ids = {
-            38,
-            39,
-            40,
-            41,
-            143,
-            144,
-            145,
-            146,
-            341,
-            536,
-            *range(772, 782),
-        }
+    def test_relates_decoded_difficulty_records_without_known_ids(self) -> None:
         contract = resolve_trainer_variants(
             "black-2-us",
             {"trainer_variant_contract": "b2w2-retail-v1"},
-            [{"trainer_id": trainer_id} for trainer_id in trainer_ids],
+            [
+                {"trainer_id": 38, "class_name": "Elite Four", "name": "Shauntal"},
+                {"trainer_id": 772, "class_name": "Elite Four", "name": "Shauntal"},
+            ],
+            selector_data={
+                "difficulty_branch_families": (
+                    DifficultyBranchFamily(280, 269, (38,), (772,)),
+                )
+            },
         )
 
-        families = {family["id"]: family for family in contract["battle_families"]}
-        shauntal = families["pokemon-league-shauntal"]
+        family = contract["battle_families"][0]
         self.assertEqual(
-            [variant["trainer_id"] for variant in shauntal["variants"]],
-            [38, 38, 772, 143, 143, 777],
+            [variant["trainer_id"] for variant in family["variants"]],
+            [38, 38, 772],
         )
-        self.assertEqual(shauntal["variants"][-1]["conditions"][1]["value"], "rematch")
-        iris = families["pokemon-league-iris"]
-        self.assertEqual(
-            [variant["trainer_id"] for variant in iris["variants"]],
-            [341, 341, 776, 536, 536, 781],
-        )
+        self.assertIn("script-0280", family["id"])
 
-    def test_redux_relates_biancas_documented_difficulty_teams(self) -> None:
+    def test_redux_relates_biancas_decoded_difficulty_teams(self) -> None:
         contract = resolve_trainer_variants(
             "blaze-black-2-redux",
             {
@@ -81,11 +71,19 @@ class B2W2TrainerVariantTests(unittest.TestCase):
                     "blaze-black-2-redux-volt-white-2-redux-v1.4.1"
                 )
             },
-            [{"trainer_id": 4}, {"trainer_id": 852}],
+            [
+                {"trainer_id": 4, "class_name": "Trainer", "name": "Bianca"},
+                {"trainer_id": 852, "class_name": "Trainer", "name": "Bianca"},
+            ],
+            selector_data={
+                "difficulty_branch_families": (
+                    DifficultyBranchFamily(1062, 239, (4,), (852,)),
+                )
+            },
         )
 
         family = contract["battle_families"][0]
-        self.assertEqual(family["id"], "bianca-reversal-mountain")
+        self.assertEqual(family["id"], "difficulty-script-1062-00ef")
         self.assertEqual(
             [variant["trainer_id"] for variant in family["variants"]], [4, 4, 852]
         )

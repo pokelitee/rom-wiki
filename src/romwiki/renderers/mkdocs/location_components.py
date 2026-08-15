@@ -24,6 +24,11 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
 )
 
+LOCATION_CATALOG_DESCRIPTION = (
+    "Map headers, items, shops, trades, connections, encounters, and trainers "
+    "extracted from the ROM."
+)
+
 
 def location_filename(header_id: int) -> str:
     return f"header-{header_id:03}.md"
@@ -198,16 +203,12 @@ def append_trainers(
 ) -> None:
     if not trainers:
         return
-    lines.extend(["## Trainers", ""])
+    rows = []
     for trainer in trainers:
         label = " ".join(
             value for value in (trainer["class_name"], trainer["name"]) if value
         )
-        source = (
-            "overworld object"
-            if trainer["source"] == "overworld-object"
-            else "map script"
-        )
+        source = display_name(trainer["source"])
         link = ROUTES.markdown_link(
             entity_reference(
                 "trainer",
@@ -217,8 +218,19 @@ def append_trainers(
             ),
             source_file,
         )
-        lines.append(f"- {link} ({source})")
-    lines.append("")
+        rows.append(f"| {link} | `trainer-{trainer['trainer_id']:04}` | {source} |")
+    lines.extend(
+        markdown_section(
+            "Trainers",
+            markdown_table(
+                [
+                    "| Trainer | ID | Trigger |",
+                    "| ------- | -- | ------- |",
+                ],
+                rows,
+            ),
+        )
+    )
 
 
 def append_static_encounters(

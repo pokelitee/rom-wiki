@@ -30,6 +30,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section_link,
 )
 from romwiki.renderers.mkdocs.location_components import (
+    LOCATION_CATALOG_DESCRIPTION,
     append_connections,
     append_items,
     append_npc_trades,
@@ -173,8 +174,7 @@ def render_event_map_location_pages(
         output_root / "index.md",
         catalog_index(
             "Locations",
-            "Map headers, items, shops, trades, connections, encounters, and trainers extracted from the ROM."
-            + item_event_coverage_notice(records),
+            LOCATION_CATALOG_DESCRIPTION + item_event_coverage_notice(records),
             "locations",
             fallback_links,
         ),

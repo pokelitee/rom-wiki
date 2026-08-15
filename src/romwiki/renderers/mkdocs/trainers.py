@@ -20,6 +20,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 from romwiki.renderers.mkdocs.components import (
     ability_link,
     class_badge,
+    content_tabs,
     display_name,
     provenance_fact_table,
     provenance_section,
@@ -197,65 +198,16 @@ def render_trainer_pages(
             )
         )
     write_catalog(output_root, "trainers", catalog_records)
-    coverage_notice = _trainer_variant_coverage_notice(
-        dataset.get("trainer_variant_support", {})
-    )
-    location_notice = _trainer_location_coverage_notice(records)
     write_text(
         output_root / "index.md",
         catalog_index(
             "Trainers",
-            "Trainer parties and battle settings extracted directly from the ROM."
-            + coverage_notice
-            + location_notice,
+            "Trainer parties and battle settings extracted directly from the ROM.",
             "trainers",
             fallback_links,
         ),
     )
     return page_count
-
-
-def _trainer_variant_coverage_notice(support: object) -> str:
-    if not isinstance(support, dict):
-        return ""
-    incomplete = [
-        (mechanic.replace("_", " ").title(), declaration)
-        for mechanic, declaration in support.items()
-        if isinstance(declaration, dict)
-        and declaration.get("status") in {"partial", "unresolved"}
-    ]
-    if not incomplete:
-        return ""
-    lines = [
-        "",
-        "",
-        '!!! warning "Trainer variant coverage is not exhaustive"',
-        "    Exact trainer records remain available independently, but records are "
-        "only grouped when their selecting mechanic has been verified.",
-    ]
-    for label, declaration in incomplete:
-        note = str(declaration.get("note") or "No complete selector is available.")
-        lines.append(f"    **{label} ({declaration['status']}):** {note}")
-    return "\n".join(lines)
-
-
-def _trainer_location_coverage_notice(records: list[dict[str, Any]]) -> str:
-    unlinked_count = sum(
-        bool(record.get("party"))
-        and not record.get("locations")
-        and not record.get("script_references")
-        for record in records
-    )
-    if not unlinked_count:
-        return ""
-    noun = "record" if unlinked_count == 1 else "records"
-    return (
-        "\n\n"
-        '!!! info "Trainer location coverage"\n'
-        f"    {unlinked_count} active trainer {noun} have no literal overworld "
-        "or script link. This can include facilities, dynamic dispatch, and "
-        "unused records; their parties remain available as Unlinked entries."
-    )
 
 
 def _catalog_record(
@@ -313,6 +265,7 @@ def _catalog_record(
                 for reference in location_refs
             ],
             "linked": linked,
+            "battle_format": _battle_format_value(record),
             "double_battle": record["double_battle"],
             "party_size": len(record["party"]),
             "min_level": min(levels),
@@ -356,6 +309,7 @@ def _render_trainer(
         records_by_id or {},
         source_file,
         source_url,
+        features=features,
     )
     _append_ai_battle_items(lines, grouped_ai_items, source_file)
     _append_locations(lines, record["locations"], source_file)
@@ -523,6 +477,19 @@ _BATTLE_MODE_LABELS = {
     2: "Triple battle",
     3: "Rotation battle",
 }
+_BATTLE_MODE_VALUES = {
+    0: "single",
+    1: "double",
+    2: "triple",
+    3: "rotation",
+}
+
+
+def _battle_format_value(record: dict[str, Any]) -> str:
+    if "battle_mode" in record:
+        mode = record["battle_mode"]
+        return _BATTLE_MODE_VALUES.get(mode, f"mode-{mode}")
+    return "double" if record["double_battle"] else "single"
 
 
 def _battle_format_label(record: dict[str, Any]) -> str:
@@ -822,6 +789,8 @@ def _append_party(
     records_by_id: dict[int, dict[str, Any]],
     source_file: str,
     source_url: str,
+    *,
+    features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
 ) -> None:
     lines.extend(["## Party", ""])
     families = {family["id"]: family for family, _variant in memberships}
@@ -829,7 +798,7 @@ def _append_party(
         lines.extend(_party_cards(record["party"], source_url))
         return
 
-    tabs: list[tuple[str, dict[str, Any]]] = []
+    tabs: list[tuple[str, dict[str, Any], bool]] = []
     for family in sorted(families.values(), key=lambda value: value["order"]):
         variants = sorted(
             family["variants"],
@@ -842,24 +811,41 @@ def _append_party(
             candidate = records_by_id.get(variant["trainer_id"])
             if candidate is None or not candidate.get("party"):
                 continue
-            tabs.append((_variant_tab_label(variant, len(tabs) + 1), candidate))
+            is_difficulty = any(
+                condition["kind"] == "difficulty-mode"
+                for condition in variant["conditions"]
+            )
+            tabs.append(
+                (
+                    _variant_tab_label(variant, len(tabs) + 1),
+                    candidate,
+                    is_difficulty,
+                )
+            )
 
     prepared_tabs: list[tuple[str, dict[str, Any], list[str]]] = []
     seen_labels: dict[str, int] = {}
-    for label, candidate in tabs:
+    for label, candidate, is_difficulty in tabs:
         seen_labels[label] = seen_labels.get(label, 0) + 1
         tab_label = (
             label if seen_labels[label] == 1 else f"{label} ({seen_labels[label]})"
         )
-        prepared_tabs.append(
-            (tab_label, candidate, _party_cards(candidate["party"], source_url))
-        )
+        presentation = [
+            *_variant_battle_details(
+                candidate,
+                source_url,
+                is_difficulty=is_difficulty,
+                features=features,
+            ),
+            *_party_cards(candidate["party"], source_url),
+        ]
+        prepared_tabs.append((tab_label, candidate, presentation))
 
     if prepared_tabs and all(
-        party == prepared_tabs[0][2] for _, _, party in prepared_tabs
+        presentation == prepared_tabs[0][2] for _, _, presentation in prepared_tabs
     ):
         selection_links = []
-        for tab_label, candidate, _party in prepared_tabs:
+        for tab_label, candidate, _presentation in prepared_tabs:
             route_id = f"trainer-{candidate['trainer_id']:04}"
             selection_links.append(
                 ROUTES.markdown_link(
@@ -876,7 +862,8 @@ def _append_party(
         lines.extend(prepared_tabs[0][2])
         return
 
-    for tab_label, candidate, party in prepared_tabs:
+    tabs = []
+    for tab_label, candidate, presentation in prepared_tabs:
         route_id = f"trainer-{candidate['trainer_id']:04}"
         record_link = ROUTES.markdown_link(
             entity_reference(
@@ -887,13 +874,75 @@ def _append_party(
             ),
             source_file,
         )
-        content = [
-            f"Exact record: {record_link}",
-            "",
-            *party,
+        tabs.append((tab_label, [f"Exact record: {record_link}", "", *presentation]))
+    lines.extend(content_tabs(tabs))
+
+
+def _variant_battle_details(
+    record: dict[str, Any],
+    source_url: str,
+    *,
+    is_difficulty: bool,
+    features: frozenset[str],
+) -> list[str]:
+    facts = []
+    if "battle_mode" in record or "double_battle" in record:
+        facts.append(
+            f"<div><dt>Battle format</dt><dd>{_battle_format_label(record)}</dd></div>"
+        )
+    facts.extend(
+        [
+            f"<div><dt>Party size</dt><dd>{len(record['party'])}</dd></div>",
+            f"<div><dt>Level range</dt><dd>{_trainer_level_range(record)}</dd></div>",
         ]
-        lines.extend([f'=== "{tab_label}"', ""])
-        lines.extend(f"    {line}" if line else "" for line in content)
+    )
+    ai_flags = record.get("ai_flags")
+    if isinstance(ai_flags, int):
+        facts.append(
+            f"<div><dt>AI flags</dt><dd><code>0x{ai_flags:08X}</code></dd></div>"
+        )
+    grouped_items = _group_ai_battle_items(record)
+    ai_items = (
+        ", ".join(_ai_item_link(grouped, source_url) for grouped in grouped_items)
+        or '<span class="rw-summary__empty">None</span>'
+    )
+    facts.append(f"<div><dt>AI items</dt><dd>{ai_items}</dd></div>")
+    base_prize_money = record.get("base_prize_money")
+    if base_prize_money:
+        facts.append(
+            "<div><dt>Base prize money</dt><dd>"
+            f"&#8381;{base_prize_money['amount']:,}</dd></div>"
+        )
+    if POST_BATTLE_HEALING in features:
+        result = (
+            "Heals the player's party"
+            if record.get("healer")
+            else '<span class="rw-summary__empty">No healing</span>'
+        )
+        facts.append(f"<div><dt>After victory</dt><dd>{result}</dd></div>")
+    if VICTORY_ITEMS in features:
+        victory_item = record.get("victory_item")
+        if victory_item:
+            result = ROUTES.html_link(
+                entity_reference(
+                    "item",
+                    victory_item["id"],
+                    victory_item["name"],
+                    victory_item.get("slug"),
+                ),
+                source_url,
+            )
+        else:
+            result = '<span class="rw-summary__empty">None</span>'
+        facts.append(f"<div><dt>Victory item</dt><dd>{result}</dd></div>")
+    if is_difficulty:
+        facts.append(
+            "<div><dt>Level basis</dt><dd>Stored ROM levels"
+            '<abbr class="rw-inline-note" title="B2W2 may adjust the displayed '
+            "level by difficulty after loading the party; stats still use the "
+            'stored level.">*</abbr></dd></div>'
+        )
+    return summary_section("rw-trainer-variant-summary", facts)
 
 
 def _variant_tab_label(variant: dict[str, Any], generic_number: int) -> str:
@@ -1124,7 +1173,7 @@ def _append_same_name_trainers(
             source_file,
         )
         route_id = f"trainer-{trainer_id:04}"
-        locations = _location_names(candidate)
+        locations = _location_links(candidate, source_file)
         lines.append(
             f"| {trainer_link} | `{route_id}` | {' / '.join(locations) or 'Unlinked'} | "
             f"{_trainer_level_range(candidate)} | "
@@ -1147,3 +1196,24 @@ def _location_names(record: dict[str, Any]) -> list[str]:
     return list(
         dict.fromkeys(location["name"] for location in _combined_locations(record))
     )
+
+
+def _location_links(record: dict[str, Any], source_file: str) -> list[str]:
+    links = []
+    seen = set()
+    for location in _combined_locations(record):
+        header_id = location.get("header_id")
+        identity = (header_id, location["name"])
+        if identity in seen:
+            continue
+        seen.add(identity)
+        if not isinstance(header_id, int):
+            links.append(location["name"])
+            continue
+        links.append(
+            ROUTES.markdown_link(
+                entity_reference("location", header_id, location["name"], header_id),
+                source_file,
+            )
+        )
+    return links

@@ -70,6 +70,10 @@ does not occur in HGSS and no unique HGSS table reference is established. The
 phone-rematch state machines and some alternate trainer-battle command shapes
 also remain undecoded.
 
+Trainer records without a verified literal overworld or script reference remain
+listed as Unlinked. Their exact parties are still published; no location or
+variant relationship is inferred from names, nearby IDs, or party composition.
+
 ## Locations
 
 The event archive at `a/0/3/2`, matrix archive at `a/0/4/1`, and 540 packed ARM9

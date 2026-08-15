@@ -118,6 +118,7 @@ _FIELDS = {
         "name",
         "class_id",
         "class_name",
+        "battle_mode",
         "battle_type",
         "double_battle",
         "ai_flags",

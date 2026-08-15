@@ -91,6 +91,28 @@ TRAINER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {
     (423, 1): "East Sea",
 }
 
+# Wild slots use the same form operand as trainer parties. Forms backed by a
+# public PokéDB record can use its sprite; cosmetic and battle-only forms
+# retain the base record and add only their in-game form label.
+ENCOUNTER_FORM_SLUGS = dict(TRAINER_FORM_SLUGS)
+ENCOUNTER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {
+    **TRAINER_COSMETIC_FORM_LABELS,
+    (351, 1): "Sunny Form",
+    (351, 2): "Rainy Form",
+    (351, 3): "Snowy Form",
+    (421, 1): "Sunshine Form",
+    (555, 1): "Zen Mode",
+    **{
+        (585, form_id): season
+        for form_id, season in enumerate(("Summer", "Autumn", "Winter"), 1)
+    },
+    **{
+        (586, form_id): season
+        for form_id, season in enumerate(("Summer", "Autumn", "Winter"), 1)
+    },
+    (648, 1): "Pirouette Forme",
+}
+
 # TM01-95, HM01-06 (Gen5Constants.tmCount / hmCount, Ajarmar/universal-pokemon-randomizer-zx).
 GEN5_TM_COUNT = 95
 GEN5_HM_COUNT = 6

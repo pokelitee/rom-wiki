@@ -26,6 +26,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     class_badge,
+    content_tabs,
     display_name,
     effectiveness_value,
     empty_state,
@@ -44,6 +45,7 @@ from romwiki.renderers.mkdocs.components import (
     rom_record_source,
     sprite_with_link,
     stat_list,
+    tab_contents_identical,
     tutor_requirement,
     type_badges,
     version_availability_note,
@@ -1187,13 +1189,9 @@ def _reference_entries(record: dict[str, Any]) -> list[str]:
         (display_name(str(version)), _reference_entry(reference or {}))
         for version, reference in variants.items()
     ]
-    if all(content == contents[0][1] for _, content in contents):
+    if tab_contents_identical(contents):
         return contents[0][1]
-    lines: list[str] = []
-    for label, content in contents:
-        lines.extend([f'=== "{label}"', ""])
-        lines.extend(f"    {line}" if line else "" for line in content)
-    return lines
+    return content_tabs(contents)
 
 
 def _ev_yield(yields: dict[str, int]) -> str:

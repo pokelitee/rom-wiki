@@ -561,9 +561,9 @@ class MinimalItemDatasetTests(unittest.TestCase):
             page = (output / "leftovers.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
-        self.assertIn("### Blaze Black", page)
+        self.assertIn('=== "Blaze Black"', page)
         self.assertIn("No gift or trade references.", page)
-        self.assertIn("### Volt White", page)
+        self.assertIn('=== "Volt White"', page)
         self.assertIn("Blueeye", page)
         self.assertIn("Kyle", catalog["records"][0]["locations"])
 

@@ -19,6 +19,7 @@ from romwiki.cli import (
     _resolve_pokedb_path,
     _run_full_game_build,
     _run_regeneration,
+    _run_rom_command,
     _run_section_build,
     _run_version_family_build,
     _site_wiki_root,
@@ -223,6 +224,33 @@ class MainErrorHandlingTests(unittest.TestCase):
         exit_code = main(["inspect", "--rom", str(rom_path), "--json"])
 
         self.assertEqual(exit_code, 0)
+
+    def test_dppt_location_extraction_uses_integrated_trade_records(self) -> None:
+        profile = SimpleNamespace(
+            id="platinum-us",
+            engine="gen4_dppt",
+            layout={"npc_trades": "trades.narc"},
+            parameters={},
+        )
+        result = SimpleNamespace(match=SimpleNamespace(profile=profile))
+        args = SimpleNamespace(
+            command="extract-locations", output=Path("locations.json")
+        )
+        locations = {"game": profile.id, "record_count": 1, "records": [{}]}
+
+        with (
+            patch("romwiki.cli.extract_item_dataset", return_value={"records": []}),
+            patch("romwiki.cli.extract_npc_trade_dataset") as extract_trades,
+            patch(
+                "romwiki.cli.extract_location_dataset", return_value=locations
+            ) as extract_locations,
+            patch("romwiki.cli.write_dataset"),
+            patch("builtins.print"),
+        ):
+            _run_rom_command(args, result)
+
+        extract_trades.assert_not_called()
+        self.assertIsNone(extract_locations.call_args.kwargs["trade_dataset"])
 
 
 class VersionFamilyInputTests(unittest.TestCase):

@@ -14,6 +14,11 @@ from romwiki.renderers.mkdocs.catalog import (
     write_catalog,
     write_text,
 )
+from romwiki.renderers.mkdocs.comparisons import (
+    add_change_status,
+    comparison_section,
+    record_comparison,
+)
 from romwiki.renderers.mkdocs.components import (
     display_name,
     escape_table_cell,
@@ -23,6 +28,7 @@ from romwiki.renderers.mkdocs.components import (
     summary_section,
 )
 from romwiki.renderers.mkdocs.location_components import (
+    LOCATION_CATALOG_DESCRIPTION,
     append_connections,
     append_items,
     append_npc_trades,
@@ -47,6 +53,7 @@ from romwiki.schema.rendering import LocationRenderRecord, RenderDataset
 def render_encounter_map_location_pages(
     dataset: RenderDataset[LocationRenderRecord],
     output_root: Path,
+    comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
     relationships: RelationshipIndex | None = None,
     *,
@@ -82,6 +89,7 @@ def render_encounter_map_location_pages(
     for record in sorted_records:
         same_name_groups.setdefault(record["name"], []).append(record)
     for index, record in enumerate(sorted_records):
+        change = record_comparison(comparison, record["header_id"])
         filename = location_filename(record["header_id"])
         encounters = (
             relationships.location_encounters.get(record["header_id"], ())
@@ -97,6 +105,8 @@ def render_encounter_map_location_pages(
                 output_root / filename,
                 _render_encounter_map_location(
                     record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
                     previous,
                     following,
                     references,
@@ -121,36 +131,38 @@ def render_encounter_map_location_pages(
             )
         )
         catalog_records.append(
-            {
-                "id": record["header_id"],
-                "route_id": route_id,
-                "label": record["name"],
-                "location_name": record["name"],
-                "section_name": record.get("section_name"),
-                "url": route_id + "/",
-                "features": [
-                    *(["encounters"] if encounters else []),
-                    *(["trainers"] if record["trainers"] else []),
-                    *(["warps"] if record["warps"] else []),
-                    *(["static-encounters"] if record["static_encounters"] else []),
-                    *(["connections"] if record["connections"] else []),
-                    *(["items"] if record["items"] else []),
-                    *(["shops"] if record.get("shops") else []),
-                    *(["trades"] if record.get("npc_trades") else []),
-                ],
-                "search_text": (
-                    f"{record['name']} {record.get('section_name') or ''} "
-                    f"{record.get('internal_name') or ''} {route_id}".lower()
-                ),
-            }
+            add_change_status(
+                {
+                    "id": record["header_id"],
+                    "route_id": route_id,
+                    "label": record["name"],
+                    "location_name": record["name"],
+                    "section_name": record.get("section_name"),
+                    "url": route_id + "/",
+                    "features": [
+                        *(["encounters"] if encounters else []),
+                        *(["trainers"] if record["trainers"] else []),
+                        *(["warps"] if record["warps"] else []),
+                        *(["static-encounters"] if record["static_encounters"] else []),
+                        *(["connections"] if record["connections"] else []),
+                        *(["items"] if record["items"] else []),
+                        *(["shops"] if record.get("shops") else []),
+                        *(["trades"] if record.get("npc_trades") else []),
+                    ],
+                    "search_text": (
+                        f"{record['name']} {record.get('section_name') or ''} "
+                        f"{record.get('internal_name') or ''} {route_id}".lower()
+                    ),
+                },
+                change,
+            )
         )
     write_catalog(output_root, "locations", catalog_records)
     write_text(
         output_root / "index.md",
         catalog_index(
             "Locations",
-            "Map header names and wild-encounter cross-references extracted "
-            "from the ROM." + item_event_coverage_notice(records),
+            LOCATION_CATALOG_DESCRIPTION + item_event_coverage_notice(records),
             "locations",
             fallback_links,
         ),
@@ -160,6 +172,8 @@ def render_encounter_map_location_pages(
 
 def _render_encounter_map_location(
     record: dict[str, Any],
+    change: dict[str, Any] | None,
+    baseline_name: str | None,
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
     references: ReferenceIndex | None = None,
@@ -187,16 +201,17 @@ def _render_encounter_map_location(
     if encounters:
         lines.extend(["## Wild encounters", ""])
         _append_encounter_variants(lines, encounters, source_file, record["name"])
-    _append_same_name_locations(lines, record, same_name_records or [], source_file)
-    append_connections(lines, record["connections"], source_file, location_labels)
-    append_trainers(lines, record["trainers"], source_file)
-    append_warps(lines, record["warps"], source_file, location_labels)
     append_items(lines, record["items"], source_file, references)
     append_shops(lines, record.get("shops", []), source_file, references)
     append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
     append_static_encounters(
         lines, record["static_encounters"], source_file, references
     )
+    append_trainers(lines, record["trainers"], source_file)
+    append_warps(lines, record["warps"], source_file, location_labels)
+    append_connections(lines, record["connections"], source_file, location_labels)
+    _append_same_name_locations(lines, record, same_name_records or [], source_file)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(
         provenance_section(
             [

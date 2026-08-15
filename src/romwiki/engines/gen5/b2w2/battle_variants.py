@@ -27,23 +27,6 @@ _STARTERS = (
     ("tepig", "Player chose Tepig"),
     ("oshawott", "Player chose Oshawott"),
 )
-_GYMS = (
-    ("cheren", "Cheren Gym battle", 156, 764),
-    ("roxie", "Roxie Gym battle", 157, 765),
-    ("burgh", "Burgh Gym battle", 154, 766),
-    ("elesa", "Elesa Gym battle", 153, 767),
-    ("clay", "Clay Gym battle", 158, 768),
-    ("skyla", "Skyla Gym battle", 155, 769),
-    ("drayden", "Drayden Gym battle", 159, 770),
-    ("marlon", "Marlon Gym battle", 160, 771),
-)
-_POKEMON_LEAGUE = (
-    ("shauntal", "Shauntal Pokémon League battle", 38, 772, 143, 777),
-    ("grimsley", "Grimsley Pokémon League battle", 40, 773, 145, 778),
-    ("marshal", "Marshal Pokémon League battle", 39, 774, 144, 779),
-    ("caitlin", "Caitlin Pokémon League battle", 41, 775, 146, 780),
-    ("iris", "Iris Pokémon League battle", 341, 776, 536, 781),
-)
 
 
 def _rival_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]:
@@ -103,185 +86,92 @@ def _rival_families(profile_id: str, available: set[object]) -> list[dict[str, A
     return families
 
 
-def _difficulty_families(
-    profile_id: str, available: set[object]
+def _decoded_difficulty_families(
+    profile_id: str,
+    records: Sequence[Mapping[str, Any]],
+    selector_data: Mapping[str, Any] | None,
 ) -> list[dict[str, Any]]:
+    decoded = (selector_data or {}).get("difficulty_branch_families") or ()
+    records_by_id = {record.get("trainer_id"): record for record in records}
     families = []
-    for order, (stage, label, normal_id, challenge_id) in enumerate(_GYMS, start=100):
-        if normal_id not in available or challenge_id not in available:
+    seen_dispatches: set[tuple[tuple[int, ...], tuple[int, ...]]] = set()
+    for branch in decoded:
+        normal_ids = tuple(branch.normal_trainer_ids)
+        challenge_ids = tuple(branch.challenge_trainer_ids)
+        dispatch = (normal_ids, challenge_ids)
+        if dispatch in seen_dispatches:
             continue
-        families.append(
-            {
-                "id": f"gym-{stage}",
-                "label": label,
-                "order": order,
-                "provenance": {
-                    "source": "B2W2 difficulty-mode trainer dispatch",
-                    "reference": f"{profile_id}:difficulty:{stage}",
-                    "verification": (
-                        "Normal/Easy and Challenge dispatch targets were checked against "
-                        "the exact trainer archives for this profile contract."
-                    ),
-                },
-                "variants": [
-                    {
-                        "trainer_id": normal_id,
-                        "order": 0,
-                        "conditions": [
-                            {
-                                "kind": "difficulty-mode",
-                                "value": "easy",
-                                "label": "Easy Mode",
-                            },
-                            {
-                                "kind": "story-stage",
-                                "value": stage,
-                                "label": label,
-                            },
-                        ],
-                    },
-                    {
-                        "trainer_id": normal_id,
-                        "order": 1,
-                        "conditions": [
-                            {
-                                "kind": "difficulty-mode",
-                                "value": "normal",
-                                "label": "Normal Mode",
-                            },
-                            {
-                                "kind": "story-stage",
-                                "value": stage,
-                                "label": label,
-                            },
-                        ],
-                    },
-                    {
-                        "trainer_id": challenge_id,
-                        "order": 2,
-                        "conditions": [
-                            {
-                                "kind": "difficulty-mode",
-                                "value": "challenge",
-                                "label": "Challenge Mode",
-                            },
-                            {
-                                "kind": "story-stage",
-                                "value": stage,
-                                "label": label,
-                            },
-                        ],
-                    },
-                ],
-            }
-        )
-    return families
-
-
-def _pokemon_league_difficulty_families(
-    profile_id: str, available: set[object]
-) -> list[dict[str, Any]]:
-    families = []
-    stages = (
-        ("first-clear", "First Pokémon League clear", 0, 1),
-        ("rematch", "Pokémon League rematch", 2, 3),
-    )
-    for order, (member, label, *trainer_ids) in enumerate(_POKEMON_LEAGUE, start=200):
-        if not all(trainer_id in available for trainer_id in trainer_ids):
-            continue
-        variants = []
-        variant_order = 0
-        for stage, stage_label, normal_offset, challenge_offset in stages:
-            normal_id = trainer_ids[normal_offset]
-            challenge_id = trainer_ids[challenge_offset]
-            for mode, trainer_id in (
-                ("easy", normal_id),
-                ("normal", normal_id),
-                ("challenge", challenge_id),
-            ):
-                variants.append(
-                    {
-                        "trainer_id": trainer_id,
-                        "order": variant_order,
-                        "conditions": [
-                            {
-                                "kind": "difficulty-mode",
-                                "value": mode,
-                                "label": f"{mode.title()} Mode",
-                            },
-                            {
-                                "kind": "rematch-stage",
-                                "value": stage,
-                                "label": stage_label,
-                            },
-                        ],
-                    }
-                )
-                variant_order += 1
-        families.append(
-            {
-                "id": f"pokemon-league-{member}",
-                "label": label,
-                "order": order,
-                "provenance": {
-                    "source": "B2W2 difficulty-mode Pokémon League dispatch",
-                    "reference": f"{profile_id}:difficulty:pokemon-league:{member}",
-                    "verification": (
-                        "Easy/Normal and Challenge first-clear and rematch rosters "
-                        "were matched to the exact trainer archive records for this "
-                        "profile contract."
-                    ),
-                },
-                "variants": variants,
-            }
-        )
-    return families
-
-
-def _profile_difficulty_families(
-    profile_id: str, contract: object, available: set[object]
-) -> list[dict[str, Any]]:
-    if contract != "blaze-black-2-redux-volt-white-2-redux-v1.4.1" or not {
-        4,
-        852,
-    }.issubset(available):
-        return []
-    return [
-        {
-            "id": "bianca-reversal-mountain",
-            "label": "Bianca Reversal Mountain battle",
-            "order": 300,
-            "provenance": {
-                "source": "Redux creator trainer documentation and ROM records",
-                "reference": f"{profile_id}:difficulty:bianca:reversal-mountain",
-                "verification": (
-                    "The documented Easy/Normal and Challenge teams were matched "
-                    "to exact Redux trainer records 4 and 852."
-                ),
-            },
-            "variants": [
+        seen_dispatches.add(dispatch)
+        for slot, (normal_id, challenge_id) in enumerate(
+            zip(normal_ids, challenge_ids, strict=True), start=1
+        ):
+            normal = records_by_id.get(normal_id)
+            challenge = records_by_id.get(challenge_id)
+            if normal is None or challenge is None or normal_id == challenge_id:
+                continue
+            label = _difficulty_family_label(normal, challenge)
+            suffix = f"-slot-{slot}" if len(normal_ids) > 1 else ""
+            family_id = (
+                f"difficulty-script-{branch.script_file_id:04d}-"
+                f"{branch.position:04x}{suffix}"
+            )
+            families.append(
                 {
-                    "trainer_id": trainer_id,
-                    "order": order,
-                    "conditions": [
+                    "id": family_id,
+                    "label": label,
+                    "order": 100 + len(families),
+                    "provenance": {
+                        "source": "B2W2 ROM field-script difficulty branch",
+                        "reference": (
+                            f"{profile_id}:script:{branch.script_file_id}:"
+                            f"0x{branch.position:X}{suffix}"
+                        ),
+                        "verification": (
+                            "The script reads the current difficulty mode, compares "
+                            "it with Challenge Mode, and branches to these exact "
+                            "trainer records."
+                        ),
+                    },
+                    "variants": [
                         {
-                            "kind": "difficulty-mode",
-                            "value": mode,
-                            "label": f"{mode.title()} Mode",
-                        },
-                        {
-                            "kind": "story-stage",
-                            "value": "reversal-mountain",
-                            "label": "Reversal Mountain",
-                        },
+                            "trainer_id": trainer_id,
+                            "order": order,
+                            "conditions": [
+                                {
+                                    "kind": "difficulty-mode",
+                                    "value": mode,
+                                    "label": f"{mode.title()} Mode",
+                                }
+                            ],
+                        }
+                        for order, (mode, trainer_id) in enumerate(
+                            (
+                                ("easy", normal_id),
+                                ("normal", normal_id),
+                                ("challenge", challenge_id),
+                            )
+                        )
                     ],
                 }
-                for order, (mode, trainer_id) in enumerate(
-                    (("easy", 4), ("normal", 4), ("challenge", 852))
-                )
-            ],
-        }
-    ]
+            )
+    return families
+
+
+def _difficulty_family_label(
+    normal: Mapping[str, Any], challenge: Mapping[str, Any]
+) -> str:
+    normal_label = _trainer_label(normal)
+    challenge_label = _trainer_label(challenge)
+    if normal_label == challenge_label:
+        return f"{normal_label} difficulty battle"
+    return f"{normal_label} / {challenge_label} difficulty battle"
+
+
+def _trainer_label(record: Mapping[str, Any]) -> str:
+    label = " ".join(
+        str(value) for value in (record.get("class_name"), record.get("name")) if value
+    )
+    return label or f"Trainer {record['trainer_id']}"
 
 
 def _n_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]:
@@ -379,17 +269,17 @@ def resolve_trainer_variants(
     *,
     selector_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    del selector_data  # This engine's selectors are decoded from records alone.
     contract = parameters.get("trainer_variant_contract")
     if contract not in _CONTRACTS:
         raise ProfileError(
             f"Profile {profile_id!r} must select a verified B2W2 trainer variant contract"
         )
     available = {record.get("trainer_id") for record in records}
+    difficulty_families = _decoded_difficulty_families(
+        profile_id, records, selector_data
+    )
     families = _rival_families(profile_id, available)
-    families.extend(_difficulty_families(profile_id, available))
-    families.extend(_pokemon_league_difficulty_families(profile_id, available))
-    families.extend(_profile_difficulty_families(profile_id, contract, available))
+    families.extend(difficulty_families)
     families.extend(_n_families(profile_id, available))
     return {
         "trainer_variant_support": {
@@ -397,8 +287,9 @@ def resolve_trainer_variants(
             "difficulty_mode": {
                 "status": "partial",
                 "note": (
-                    "Gym party dispatch and the stored-level/stat bug are verified. "
-                    "The engine's complete level-offset band table remains unresolved."
+                    "Literal field-script difficulty dispatch is decoded from the ROM. "
+                    "Indirect selectors and the complete runtime level-offset table "
+                    "remain unresolved."
                 ),
                 "runtime": {
                     "easy_party": "normal-record",
@@ -408,23 +299,22 @@ def resolve_trainer_variants(
                     "stat_level": "stored-record-level",
                     "iv_strength_field": "independent-party-byte",
                     "level_adjustment_scope": "all-trainer-battles",
-                    "party_variant_scope": "verified-dispatch-only",
+                    "party_variant_scope": "decoded-field-script-dispatch",
                 },
             },
             "rematch_stage": {
                 "status": "partial",
                 "note": (
-                    "Pokemon League first-clear and rematch records are verified. "
-                    "Other runtime-selected rematches stay unrelated until their "
-                    "selector is decoded."
+                    "Difficulty-selected Pokémon League records are decoded. Other "
+                    "runtime-selected rematches stay unrelated until their selector "
+                    "is decoded."
                 ),
             },
             "story_stage": {
                 "status": "partial",
                 "note": (
-                    "Published stages come from the verified contract battle list. "
-                    "The complete field-script selector is not decoded, so unlisted "
-                    "runtime-selected stages remain unrelated."
+                    "Literal field-script selectors are decoded without inferring "
+                    "relationships from trainer names or record adjacency."
                 ),
             },
             "sibling_version": {"status": "verified"},

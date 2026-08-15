@@ -33,6 +33,7 @@ def render_location_pages(
         return render_encounter_map_location_pages(
             dataset,
             output_root,
+            comparison,
             references,
             relationships,
             only_pages=only_pages,
