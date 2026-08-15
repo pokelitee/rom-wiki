@@ -54,6 +54,24 @@ unanchored byte scans cannot improve confidence.
 
 ## 2. Not currently recoverable as structured ROM facts
 
+- **HGSS Safari Zone block encounters** — `FieldSystem_GenerateSafariEncounter`
+  proves that the runtime loads ten slots by saved area, encounter method, and
+  time of day. `safari_zone.c` proves the six-area save layout, placed block
+  objects, and per-area age state. The missing anchor is
+  `SafariZoneAreaSet_LoadAreaEncounters`: its joins from area, block categories,
+  area age, and method to the ROM encounter tables are not yet decompiled into a
+  complete layout that can be validated independently in retail and hacks.
+- **HGSS static encounters, gifts, and eggs** — the retail decomp proves that
+  `ScrCmd_GiveMon` consumes species, level, held item, form, ability, and result
+  operands through `ScriptGetVar`, while `ScrCmd_GiveEgg` consumes species and
+  gift-location offset. The command-table indices, control-flow-safe HGSS script
+  decoder, and ownership of called/common scripts are still missing. Those are
+  required before literal operands can be distinguished from variables and data.
+- **HGSS specialty-shop placement** — the inventory catalog is decoded, but no
+  verified HGSS shop-command index and selector operand contract has been joined
+  to each map header's script member. Resume from the command dispatch entry for
+  the mart-opening handler; do not map inventories from shop names.
+
 - **BW roaming Tornadus and Thundurus** — kept explicitly unsupported rather
   than derived from a published offset that points into code.
 - **Generation V location section labels** — decoded map headers provide a
@@ -88,6 +106,16 @@ Gold/Storm Silver, Black/White, Blaze Black/Volt White, Black 2/White 2, Blaze
 Black 2/Volt White 2, and Blaze Black 2 Redux/Volt White 2 Redux.
 
 Snapshot generation is not deployment.
+
+## Appendix: bounded Generation V script awards
+
+Reachable `ItemAdd` commands are published only when item ID and quantity are
+literal validated operands. Dedicated script ownership comes directly from map
+headers; common-script ownership comes from verified NPC/furniture callers, and
+all callers are retained. Commands using work variables are deliberately skipped
+because their producers and repeatability conditions are not yet normalized.
+The current extractor therefore adds exact script facts without claiming a
+complete NPC-gift or item-obtainability guide.
 
 ## Appendix: HGSS script decoding
 

@@ -78,6 +78,22 @@ Encounter members are joined to real location names through map headers. The
 same encounter member can therefore appear under multiple maps without being
 duplicated or assigned a guessed location.
 
+Hidden Grottos use their separate `a/2/7/3` archive. Each 220-byte member is
+decoded independently for the profile's version half: three Pokémon pools store
+species, minimum and maximum levels, female percentages, and forms, followed by
+four visible-item pools and four hidden-item pools. The exterior map relationship
+comes from furniture dispatch IDs `10795` through `10814`, which resolve all 20
+archive members exactly once; archive order or location names are not used to
+guess ownership. Pool and group weights are engine rules rather than fields
+stored alongside each slot.
+
+Daily Pokémon swarms come from an 18-record table in decompressed ARM9 overlay
+36. Each
+8-byte record stores a map-header ID, species ID, minimum and maximum level, and
+zero padding. Black 2- and White 2-based profiles carry their own reviewed table
+offset, so version-specific species are extracted independently and merge into
+version tabs. The encoded header ID provides the location relationship directly.
+
 ## Trainers
 
 Trainer headers come from `a/0/9/1` and parties from `a/0/9/2`. The shared
@@ -157,7 +173,11 @@ low twelve bits form the archive index and `0xFFF` is null.
 The location pipeline joins headers with overworld objects (`a/1/2/6`), map
 matrices (`a/0/0/9`), field scripts (`a/0/5/6`), and ROM text. Location pages
 publish bidirectional wild-encounter links, trainers, warps, outdoor matrix
-connections, visible and hidden items, static encounters, trades, and shops.
+connections, visible and hidden items, literal script-awarded items, static
+encounters, trades, and shops. Script awards are reachable `ItemAdd` commands
+whose item ID and quantity are both validated literals; they retain script member
+and byte offset and are rendered separately from pickups. Variable-driven reward
+shapes remain unavailable.
 Common-script references use the sequel's own member-number mapping rather
 than Black/White's mapping.
 
@@ -176,18 +196,11 @@ decoded, so those prose fields use version-matched PokéDB reference text while
 structured mechanics remain ROM-derived. Outcomes controlled by save data or
 runtime randomness are not presented as fixed ROM facts.
 
-Hidden Grottos are not part of the standard wild-encounter archive described
-above. Their separate B2W2 tables in `a/2/7/3` contain version-specific Pokémon,
-level, gender, form, and item pools and are not decoded yet, so Hidden Grotto
-encounters are currently absent rather than folded into ordinary route tables.
-
-Daily Pokémon swarms are also selected outside the standard area records. Their
-route/species override table is not decoded yet, so the published seasonal
-tables do not include the active swarm replacement. The standard archive does
-cover all seven ordinary methods, including dark grass, rustling grass or dust
-clouds, rippling-water Surf, and rippling-water fishing. Scripted static
-encounters, gifts, and trades are published separately on location and Pokémon
-pages.
+Hidden Grottos and daily swarms remain separate from ordinary seasonal area
+tables. The standard archive covers all seven ordinary methods, including dark
+grass, rustling grass or dust clouds, rippling-water Surf, and rippling-water
+fishing. Scripted static encounters, gifts, and trades are published separately
+on location and Pokémon pages.
 
 Tornadus and Thundurus are not roaming encounters in Black 2 or White 2. The
 executable-code limitation documented for those roamers applies only to the

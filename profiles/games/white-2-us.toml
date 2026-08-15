@@ -12,6 +12,8 @@ rom_versions = [0]
 chart = "gen5"
 
 [parameters]
+hidden_grotto_version_group = 0
+swarm_table_offset = 0x50BF0
 npc_trades_unused = [24]
 tutor_move_offset = 0x5152C
 

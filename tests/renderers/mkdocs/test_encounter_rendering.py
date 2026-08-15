@@ -11,6 +11,112 @@ from romwiki.renderers.mkdocs.encounters import _season_version_tabs
 
 
 class EncounterRenderingTests(unittest.TestCase):
+    def test_renders_version_specific_daily_swarm(self) -> None:
+        black = {
+            "area_id": 194,
+            "source_type": "daily-swarm",
+            "header_id": 331,
+            "species_id": 311,
+            "minimum_level": 40,
+            "maximum_level": 55,
+            "table_offset": 0x50C0C,
+            "name": "Route 6",
+            "active": True,
+            "location": {"header_id": 331, "name": "Route 6"},
+            "pokemon": {"id": 311, "slug": "plusle", "name": "Plusle"},
+            "provenance": {"archive": "overlay36", "member": 2},
+        }
+        record = {
+            **black,
+            "versions": ["black-2", "white-2"],
+            "version_variants": {
+                "black-2": black,
+                "white-2": {
+                    **black,
+                    "species_id": 312,
+                    "table_offset": 0x50C00,
+                    "pokemon": {"id": 312, "slug": "minun", "name": "Minun"},
+                    "provenance": {"archive": "overlay36", "member": 2},
+                },
+            },
+        }
+        dataset = {
+            "game": "test",
+            "engine": "gen5_b2w2",
+            "dataset": "wild_encounters",
+            "records": [record],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            page = (output / "daily-swarm-331.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertIn("Plusle", page)
+        self.assertIn("Minun", page)
+        self.assertIn("40\u201355", page)
+        self.assertEqual(catalog["records"][0]["methods"], ["Daily Swarm"])
+
+    def test_renders_hidden_grotto_pokemon_and_item_pools(self) -> None:
+        record = {
+            "area_id": 174,
+            "source_type": "hidden-grotto",
+            "grotto_id": 0,
+            "name": "Floccesy Ranch",
+            "active": True,
+            "location": {
+                "header_id": 445,
+                "internal_name": "map_445",
+                "name": "Floccesy Ranch",
+            },
+            "pokemon": [
+                {
+                    "species_id": 206,
+                    "form_id": 0,
+                    "minimum_level": 10,
+                    "maximum_level": 15,
+                    "female_percentage": 30,
+                    "pool_chance": 1,
+                    "group": 0,
+                    "pokemon": {
+                        "id": 206,
+                        "slug": "dunsparce",
+                        "name": "Dunsparce",
+                        "sprite": None,
+                    },
+                }
+            ],
+            "visible_items": [
+                {
+                    "item_id": 82,
+                    "pool_chance": 1,
+                    "group": 0,
+                    "item": {"id": 82, "slug": "fire-stone", "name": "Fire Stone"},
+                }
+            ],
+            "hidden_items": [],
+            "provenance": {"source": "rom", "archive": "a/2/7/3", "member": 0},
+        }
+        dataset = {
+            "game": "test",
+            "engine": "gen5_b2w2",
+            "dataset": "wild_encounters",
+            "records": [record],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            page = (output / "hidden-grotto-00.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertIn("# Floccesy Ranch Hidden Grotto", page)
+        self.assertIn("| 10\u201315 | 30% | 1% | A |", page)
+        self.assertIn("[Fire Stone](../items/fire-stone.md)", page)
+        self.assertIn("exact ROM record from `a/2/7/3` member `0`", page)
+        self.assertEqual(catalog["records"][0]["methods"], ["Hidden Grotto"])
+
     def test_nests_versions_inside_season_tabs(self) -> None:
         lines = _season_version_tabs(
             [

@@ -51,6 +51,15 @@ Rock Smash, and three rod tables; Hoenn and Sinnoh radio species; land and surf
 swarms; and the optional night-fishing and fishing-swarm replacements. Slot
 weights are taken from the engine's selection routines.
 
+Headbutt encounters come from `a/2/5/2`, whose 540 members are indexed directly
+by map header. An active member stores common, rare, and secret six-slot pools,
+followed by six-coordinate tree groups terminated by `(-1, -1)`. The engine's
+verified Headbutt slot weights are applied by slot position. Empty members are
+validated as four-byte zero records, while active record sizes, species, levels,
+group counts, terminators, and inactive pools are checked before publication.
+HeartGold, SoulSilver, Sacred Gold, and Storm Silver each decode their own
+archive rather than sharing retail records.
+
 ## Trainers
 
 Trainer records (`a/0/5/5`) and parties (`a/0/5/6`) contain 738 members. Member 0
@@ -85,10 +94,17 @@ Event objects link trainer IDs to map headers through HGSS's verified
 `script_id - 3000 + 1` convention. Visible and hidden item events are decoded
 from each ROM rather than copied between retail and hack profiles.
 
-Static encounters, gifts and eggs, Headbutt tree tables, and Safari Zone block
-configuration remain explicit limitations. Their files or some retail offsets are
-known, but their complete HGSS semantics and hack-safe map associations are not
-decoded into normalized contracts.
+Safari Zone block encounters remain unavailable. The runtime is known to select
+a saved six-area layout and load ten slots by area, method, time of day, placed
+block objects, and area age, but the loader that joins those selectors to its ROM
+tables is not yet decompiled into a complete, hack-safe record contract.
+
+Static encounters, gifts, and eggs also remain unavailable. The retail engine's
+`GiveMon` and `GiveEgg` operand semantics are known, but their HGSS command-table
+indices, a control-flow-safe script walker, and ownership for called/shared
+scripts have not all been established across the supported retail and hack
+profiles. Publishing literal-looking halfwords without those anchors would
+produce false acquisitions.
 
 ## Text and names
 

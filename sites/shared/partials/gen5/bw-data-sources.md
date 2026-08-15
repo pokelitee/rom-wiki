@@ -449,10 +449,13 @@ identify these rows as ROM item-event records and warn on origin coordinates or
 an intentionally unnamed item literal rather than silently presenting suspicious
 leftovers as confirmed obtainable pickups.
 
-This field-item dataset is narrower than a hack's complete item-location guide.
-NPC gifts, multi-item rewards, and other script-awarded items are not currently
-included, so those guides remain the authority for complete obtainability lists
-and quantities.
+Script-awarded items are kept separate from field pickups. The control-flow-aware
+field-script disassembler accepts reachable `ItemAdd` commands only when both
+item ID and quantity are literal and valid. The same dedicated/common-script
+caller graph used by static encounters assigns every proven map owner, including
+all callers of a shared script. Variable-driven rewards and commands whose item
+or quantity is produced at runtime remain unavailable, so this is intentionally
+not a complete obtainability guide.
 
 Static (gift/single) Pokémon encounters are cross-referenced to their real map
 locations through both dedicated map scripts and overworld common-script

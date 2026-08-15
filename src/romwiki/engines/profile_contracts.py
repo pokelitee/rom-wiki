@@ -134,8 +134,16 @@ GEN5_BW_PROFILE_CONTRACT = EngineProfileContract(
 )
 
 GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
-    required_layout=_GEN5_LAYOUT | {"shop_items"},
-    required_parameters=_GEN5_PARAMETERS | {"tutor_move_offset", "tutor_overlay_id"},
+    required_layout=_GEN5_LAYOUT | {"hidden_grottos", "shop_items"},
+    required_parameters=_GEN5_PARAMETERS
+    | {
+        "hidden_grotto_version_group",
+        "swarm_overlay_id",
+        "swarm_record_count",
+        "swarm_table_offset",
+        "tutor_move_offset",
+        "tutor_overlay_id",
+    },
     optional_parameters=frozenset(
         {
             "encounters_allow_trailing_data",
@@ -242,6 +250,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
         {
             "egg_moves",
             "encounters",
+            "headbutt_encounters",
             "events",
             "evolutions",
             "item_data",

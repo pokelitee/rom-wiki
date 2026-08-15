@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 from typing import Any
 
 from romwiki.engines.registry import get_engine
@@ -61,6 +61,15 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
         ).to_dict()
         for record in parsed_records
     ]
+    records.extend(
+        _extract_headbutt_encounters(
+            result,
+            engine,
+            platform,
+            filesystem,
+            first_area_id=len(records),
+        )
+    )
     return {
         "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
@@ -75,6 +84,66 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
         **reference_names,
         "records": records,
     }
+
+
+def _extract_headbutt_encounters(
+    result: InspectionResult,
+    engine: Any,
+    platform: Any,
+    filesystem: Any,
+    *,
+    first_area_id: int,
+) -> list[dict[str, Any]]:
+    profile = result.match.profile
+    archive_path = profile.layout.get("headbutt_encounters")
+    if archive_path is None:
+        return []
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    map_header_count = profile.parameters["map_header_count"]
+    if len(archive.members) != map_header_count:
+        raise InvalidRomError(
+            f"Headbutt archive has {len(archive.members)} members, expected "
+            f"{map_header_count}"
+        )
+
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["messages"]),
+        allow_truncated=profile.parameters.get("messages_allow_truncated", False),
+    )
+    headers, location_names = resolve_map_headers(
+        engine,
+        read_code_binary(platform, result.image, engine),
+        filesystem,
+        messages,
+        map_names_path=profile.layout["map_names"],
+        table_offset=profile.parameters["map_header_offset"],
+        count=map_header_count,
+        location_names_member=profile.parameters["location_names_member"],
+    )
+    records = []
+    for member in archive.members:
+        encounter = engine.parse_headbutt_record(
+            archive.read(member.index),
+            header_id=member.index,
+            archive_path=archive_path,
+            species_count=engine.POKEMON_NAME_COUNT,
+        )
+        if encounter is None:
+            continue
+        header = headers[member.index]
+        records.append(
+            {
+                "area_id": first_area_id + len(records),
+                "source_type": "headbutt",
+                **asdict(encounter),
+                "location": {
+                    "header_id": header.header_id,
+                    "internal_name": header.internal_name,
+                    "name": location_names[header.location_name_id],
+                },
+            }
+        )
+    return records
 
 
 def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -120,6 +189,24 @@ def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, A
         ).to_dict()
         for index, area in enumerate(areas)
     ]
+    records.extend(
+        _extract_hidden_grottos(
+            result,
+            engine,
+            platform,
+            filesystem,
+            first_area_id=len(records),
+        )
+    )
+    records.extend(
+        _extract_swarms(
+            result,
+            engine,
+            platform,
+            filesystem,
+            first_area_id=len(records),
+        )
+    )
     return {
         "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
         "game": profile.id,
@@ -171,6 +258,182 @@ def _extract_seasonal_wild_map_names(
             "map_names": {"archive": messages_path, "member": map_names_member},
         }
     }
+
+
+def _extract_hidden_grottos(
+    result: InspectionResult,
+    engine: Any,
+    platform: Any,
+    filesystem: Any,
+    *,
+    first_area_id: int,
+) -> list[dict[str, Any]]:
+    profile = result.match.profile
+    archive_path = profile.layout.get("hidden_grottos")
+    if archive_path is None:
+        return []
+    version_group = profile.parameters.get("hidden_grotto_version_group")
+    if not isinstance(version_group, int):
+        raise ProfileError(
+            f"Profile {profile.id} does not define a Hidden Grotto version group"
+        )
+
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    if len(archive.members) != 20:
+        raise InvalidRomError(
+            f"Hidden Grotto archive has {len(archive.members)} members, expected 20"
+        )
+    map_headers_path = profile.layout["map_headers"]
+    map_headers = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["messages"])
+    )
+    map_names = engine.parse_english_message_archive(
+        messages.read(profile.parameters["map_names_member"])
+    )
+    headers = engine.parse_map_header_table(
+        map_headers.read(0),
+        map_names=tuple(map_names),
+        archive_path=map_headers_path,
+    )
+    overworlds = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["overworld_objects"]),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "field_archives_allow_incorrect_data_block_size", False
+        ),
+        allow_trailing_data=profile.parameters.get(
+            "field_archives_allow_trailing_data", False
+        ),
+    )
+    unused = frozenset(profile.parameters.get("overworld_objects_unused", ()))
+    owners: dict[int, set[int]] = {}
+    for header in headers:
+        member = header.overworld_file_id
+        if member is None or member >= len(overworlds.members) or member in unused:
+            continue
+        for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
+            grotto_id = engine.hidden_grotto_id_for_dispatch(furniture.script_used)
+            if grotto_id is not None:
+                owners.setdefault(grotto_id, set()).add(header.header_id)
+    expected = set(range(len(archive.members)))
+    if set(owners) != expected:
+        missing = sorted(expected - set(owners))
+        extra = sorted(set(owners) - expected)
+        raise InvalidRomError(
+            f"Hidden Grotto dispatch mapping is incomplete (missing={missing}, "
+            f"extra={extra})"
+        )
+    ambiguous = {key: sorted(value) for key, value in owners.items() if len(value) != 1}
+    if ambiguous:
+        raise InvalidRomError(
+            f"Hidden Grotto dispatch mapping is ambiguous: {ambiguous}"
+        )
+
+    records = []
+    valid_forms = frozenset(
+        {*engine.ENCOUNTER_FORM_SLUGS, *engine.ENCOUNTER_COSMETIC_FORM_LABELS}
+    )
+    for grotto_id in range(len(archive.members)):
+        grotto = engine.parse_hidden_grotto_record(
+            archive.read(grotto_id),
+            grotto_id=grotto_id,
+            archive_path=archive_path,
+            version_group=version_group,
+            species_count=engine.POKEMON_NAME_COUNT,
+            item_count=engine.ITEM_NAME_COUNT,
+            valid_forms=valid_forms,
+        )
+        header_id = next(iter(owners[grotto_id]))
+        header = headers[header_id]
+        records.append(
+            {
+                "area_id": first_area_id + grotto_id,
+                "source_type": "hidden-grotto",
+                **asdict(grotto),
+                "location": {
+                    "header_id": header.header_id,
+                    "internal_name": header.internal_name,
+                    "name": header.name,
+                },
+            }
+        )
+    return records
+
+
+def _extract_swarms(
+    result: InspectionResult,
+    engine: Any,
+    platform: Any,
+    filesystem: Any,
+    *,
+    first_area_id: int,
+) -> list[dict[str, Any]]:
+    profile = result.match.profile
+    required = ("swarm_overlay_id", "swarm_table_offset", "swarm_record_count")
+    if not all(name in profile.parameters for name in required):
+        return []
+    overlay_id = profile.parameters["swarm_overlay_id"]
+    table_offset = profile.parameters["swarm_table_offset"]
+    record_count = profile.parameters["swarm_record_count"]
+    overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
+    table_size = record_count * engine.SWARM_RECORD_SIZE
+    table_end = table_offset + table_size
+    if not 0 <= table_offset <= table_end <= len(overlay_data):
+        raise InvalidRomError(
+            f"Swarm table 0x{table_offset:X}-0x{table_end:X} extends past "
+            f"overlay {overlay_id}"
+        )
+
+    map_headers_path = profile.layout["map_headers"]
+    map_headers = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["messages"])
+    )
+    map_names = engine.parse_english_message_archive(
+        messages.read(profile.parameters["map_names_member"])
+    )
+    headers = engine.parse_map_header_table(
+        map_headers.read(0),
+        map_names=tuple(map_names),
+        archive_path=map_headers_path,
+    )
+    swarms = engine.parse_swarm_table(
+        overlay_data[table_offset:table_end],
+        record_count=record_count,
+        archive_path=f"overlay{overlay.id}",
+        table_offset=table_offset,
+        map_header_count=len(headers),
+        species_count=engine.POKEMON_NAME_COUNT,
+    )
+    return [
+        {
+            "area_id": first_area_id + index,
+            "source_type": "daily-swarm",
+            **asdict(swarm),
+            "location": {
+                "header_id": headers[swarm.header_id].header_id,
+                "internal_name": headers[swarm.header_id].internal_name,
+                "name": headers[swarm.header_id].name,
+            },
+        }
+        for index, swarm in enumerate(swarms)
+    ]
 
 
 def _extract_encounter_locations(

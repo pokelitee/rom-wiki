@@ -83,6 +83,7 @@ from .encounters import (
     HGSS_WATER_SLOT_CHANCES,
     parse_encounter_record,
 )
+from .headbutt import HEADBUTT_SLOT_CHANCES, parse_headbutt_record
 from .map_headers import MAP_HEADER_SIZE, parse_map_headers
 from .marts import parse_shop_catalog
 from .pickup import (
@@ -153,6 +154,7 @@ __all__ = [
     "EGG_GROUP_NAMES",
     "FORM_MEMBERS",
     "GROWTH_RATE_NAMES",
+    "HEADBUTT_SLOT_CHANCES",
     "INTERNAL_MEMBERS",
     "ITEM_NAME_COUNT",
     "MACHINE_COUNT",
@@ -192,6 +194,7 @@ __all__ = [
     "MAP_HEADER_SIZE",
     "parse_egg_move_table",
     "parse_encounter_record",
+    "parse_headbutt_record",
     "parse_evolution_record",
     "parse_item_record",
     "find_item_archive_members",

@@ -57,6 +57,12 @@ Calculated base prize money is serialized only when all generation-specific inpu
 are exact, and the stored multiplier retains its ROM provenance. Unsupported or
 unresolved payouts are absent rather than represented by an estimate.
 
+Location data keeps coordinate-bearing `items` (visible and hidden map events)
+separate from `script_awarded_items`. A script award records item ID, quantity,
+script member, command offset, and command identity; it has no invented map
+coordinates. Reverse item relationships preserve the distinction through their
+normalized `kind` value.
+
 Trainer datasets also carry an independently versioned `battle_families` list
 and `trainer_variant_support` capability map. A family is a relationship over
 exact `trainer_id` records, never a replacement trainer. Every variant has a

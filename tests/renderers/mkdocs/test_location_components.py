@@ -6,6 +6,7 @@ import markdown
 
 from romwiki.renderers.mkdocs.location_components import (
     append_items,
+    append_script_awarded_items,
     append_trainers,
     append_warps,
     item_event_coverage_notice,
@@ -13,6 +14,27 @@ from romwiki.renderers.mkdocs.location_components import (
 
 
 class LocationComponentContractTests(unittest.TestCase):
+    def test_renders_script_awarded_items_separately(self) -> None:
+        lines: list[str] = []
+        append_script_awarded_items(
+            lines,
+            [
+                {
+                    "item_id": 17,
+                    "name": "Potion",
+                    "quantity": 2,
+                    "script_file_id": 7,
+                    "command_offset": 12,
+                }
+            ],
+            "locations/header-001.md",
+            None,
+        )
+
+        page = "\n".join(lines)
+        self.assertIn("## Script-awarded items", page)
+        self.assertIn("Potion</span> | 17 | 2 | 7 | 0xC |", page)
+
     def test_renders_trainers_as_a_compact_reference_table(self) -> None:
         lines: list[str] = []
 

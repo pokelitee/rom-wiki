@@ -1,5 +1,7 @@
 """Pokémon Black 2 and White 2 engine-specific record support."""
 
+from romwiki.engines.gen5.script_items import find_script_awarded_items
+
 from .battle_variants import resolve_trainer_variants
 from .constants import (
     ENCOUNTER_COSMETIC_FORM_LABELS,
@@ -20,6 +22,12 @@ from .constants import (
 )
 from .difficulty_branches import parse_difficulty_branch_families
 from .disassembler import disassemble_function, parse_function_offsets
+from .hidden_grottos import (
+    HIDDEN_GROTTO_DISPATCH_BASE,
+    HIDDEN_GROTTO_RECORD_SIZE,
+    hidden_grotto_id_for_dispatch,
+    parse_hidden_grotto_record,
+)
 from .locations import (
     COMMON_SCRIPT_MEMBER_BASE,
     NPC_TRADE_INTERACTION_BY_ID,
@@ -39,6 +47,7 @@ from .marts import (
 )
 from .personal import parse_personal_record
 from .static_encounters import discover_static_encounters, find_fossil_revival_script
+from .swarms import SWARM_RECORD_SIZE, SwarmEncounter, parse_swarm_table
 from .trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
@@ -75,6 +84,8 @@ __all__ = [
     "ENCOUNTER_COSMETIC_FORM_LABELS",
     "ENCOUNTER_FORM_SLUGS",
     "FORM_MEMBERS",
+    "HIDDEN_GROTTO_DISPATCH_BASE",
+    "HIDDEN_GROTTO_RECORD_SIZE",
     "GEN5_BASE_SPECIES_COUNT",
     "GEN5_ITEM_FIELD_USE_NAMES",
     "GEN5_MACHINE_COUNT",
@@ -91,6 +102,8 @@ __all__ = [
     "PERSONAL_TRANSFORMATION_MEMBERS",
     "POKEMON_DESCRIPTION_COUNT",
     "POKEMON_NAME_COUNT",
+    "SWARM_RECORD_SIZE",
+    "SwarmEncounter",
     "SHOP_SELECTOR_TO_INVENTORY_ID",
     "START_TRAINER_BATTLE",
     "TUTOR_COMPATIBILITY_OFFSET",
@@ -105,8 +118,11 @@ __all__ = [
     "derive_trainer_party_attributes",
     "resolve_trainer_variants",
     "find_fossil_revival_script",
+    "find_script_awarded_items",
+    "hidden_grotto_id_for_dispatch",
     "disassemble_function",
     "parse_personal_record",
+    "parse_hidden_grotto_record",
     "parse_map_header_script_files",
     "parse_map_header_text_files",
     "parse_map_header_table",
@@ -124,5 +140,6 @@ __all__ = [
     "trainer_name_index",
     "resolve_location_special_vendors",
     "resolve_special_vendor",
+    "parse_swarm_table",
     "normalize_trainer_party_member",
 ]

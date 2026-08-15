@@ -269,6 +269,34 @@ def _wild_encounters(
                 "locations": encounter_locations,
                 "versions": versions,
             }
+            if record.get("source_type") == "hidden-grotto":
+                for slot in record.get("pokemon", []):
+                    _add_wild_reference(
+                        result,
+                        aliases,
+                        slot,
+                        "Hidden Grotto",
+                        f"{slot['pool_chance']}% pool; group {chr(ord('A') + slot['group'])}",
+                        common,
+                    )
+                continue
+            if record.get("source_type") == "daily-swarm":
+                _add_wild_reference(
+                    result, aliases, record, "Daily Swarm", None, common
+                )
+                continue
+            if record.get("source_type") == "headbutt":
+                for kind, slots in record.get("pools", {}).items():
+                    for slot in slots:
+                        _add_wild_reference(
+                            result,
+                            aliases,
+                            slot,
+                            f"Headbutt ({kind.title()} trees)",
+                            None,
+                            common,
+                        )
+                continue
             for key, label in _ENCOUNTER_METHODS:
                 if key == "walking" and record.get("walking_variants"):
                     continue
@@ -342,6 +370,9 @@ def _encounter_locations(
     location_index: Mapping[tuple[str, int], tuple[tuple[int, str], ...]],
 ) -> tuple[tuple[int | None, str], ...]:
     values: list[tuple[int | None, str]] = []
+    location = record.get("location")
+    if isinstance(location, Mapping) and isinstance(location.get("name"), str):
+        values.append((location.get("header_id"), location["name"]))
     locations = record.get("locations")
     if isinstance(locations, list):
         values.extend(
@@ -684,11 +715,42 @@ def _location_encounters(
     )
     for merged_record in encounters:
         for versions, record in _record_variants(merged_record):
+            if record.get("source_type") in {
+                "hidden-grotto",
+                "daily-swarm",
+                "headbutt",
+            }:
+                continue
             map_index = record.get("map_index", record.get("area_id"))
             if isinstance(map_index, int):
                 by_map_index[map_index].append((versions, record))
 
     result: dict[int, list[LocationEncounterReference]] = defaultdict(list)
+    for merged_record in encounters:
+        for versions, record in _record_variants(merged_record):
+            if record.get("source_type") not in {
+                "hidden-grotto",
+                "daily-swarm",
+                "headbutt",
+            }:
+                continue
+            location = record.get("location")
+            if not isinstance(location, Mapping):
+                continue
+            header_id = location.get("header_id")
+            source_id = record.get("grotto_id", header_id)
+            if not isinstance(header_id, int) or not isinstance(source_id, int):
+                continue
+            result[header_id].append(
+                LocationEncounterReference(
+                    header_id=header_id,
+                    area_id=record["area_id"],
+                    map_index=source_id,
+                    season=None,
+                    encounter_route_key=encounter_route_key(record),
+                    versions=versions,
+                )
+            )
     unmatched = []
     for location in locations:
         map_index = location.get("encounter_map_index")

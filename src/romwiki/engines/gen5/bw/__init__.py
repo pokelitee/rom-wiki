@@ -2,6 +2,7 @@ from romwiki.engines.gen5.script_disassembler import (
     disassemble_function,
     parse_function_offsets,
 )
+from romwiki.engines.gen5.script_items import find_script_awarded_items
 
 from .battle_variants import resolve_trainer_variants
 from .constants import (
@@ -218,6 +219,7 @@ __all__ = [
     "parse_evolution_record",
     "parse_fossil_revival_table",
     "parse_function_offsets",
+    "find_script_awarded_items",
     "parse_item_record",
     "parse_level_up_learnset",
     "parse_machine_move_table",

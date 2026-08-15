@@ -306,6 +306,7 @@ class GameBuildContext:
                     self.pokemon(),
                     self.trainers(),
                     self.locations(),
+                    encounter_dataset=self.encounters(),
                     trade_dataset=self.trades(),
                     mart_dataset=self.marts_raw(),
                     reference_version=self.profile.base_game,

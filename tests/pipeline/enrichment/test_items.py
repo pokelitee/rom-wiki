@@ -13,6 +13,45 @@ from romwiki.sources import PokeDBGeneration
 
 
 class ItemDatasetTests(unittest.TestCase):
+    def test_preserves_script_award_location_and_quantity(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {},
+            "records": [{**_gen5_item_record(), "item_id": 234}],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        locations = {
+            "game": "test",
+            "source": {},
+            "records": [
+                {
+                    "header_id": 67,
+                    "name": "Gear Station",
+                    "script_awarded_items": [
+                        {
+                            "item_id": 234,
+                            "quantity": 2,
+                            "script_file_id": 9,
+                            "command_offset": 44,
+                        }
+                    ],
+                }
+            ],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={234: "leftovers"},
+        )
+
+        record = build_item_dataset(raw, pokedb, pokemon, None, locations)["records"][0]
+
+        self.assertEqual(record["locations"][0]["kind"], "script-awarded")
+        self.assertEqual(record["locations"][0]["quantity"], 2)
+        self.assertIsNone(record["locations"][0]["x"])
+
     def test_preserves_relationship_source_order_and_deduplicates_trainer_items(
         self,
     ) -> None:

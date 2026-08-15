@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.enrichment.names import resolve_pokemon_names
+from romwiki.pipeline.enrichment.names import resolve_item_names, resolve_pokemon_names
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
 from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
 from romwiki.schema.versions import ENCOUNTERS_ENRICHED_SCHEMA_VERSION
@@ -24,6 +24,7 @@ def enrich_encounter_dataset(
     adapter = get_engine(dataset["engine"])
     engine = adapter.enrich
     pokemon_names = resolve_pokemon_names(engine, dataset)
+    item_names = resolve_item_names(engine, dataset)
     enrich_area = (
         enrich_seasonal_encounter_area
         if adapter.formats.encounters == "seasonal"
@@ -34,9 +35,60 @@ def enrich_encounter_dataset(
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
-        records.append(
-            enrich_area(engine, source, pokedb, sprite_version, pokemon_names)
-        )
+        if source.get("source_type") == "hidden-grotto":
+            records.append(
+                _enrich_hidden_grotto(
+                    engine,
+                    source,
+                    pokedb,
+                    sprite_version,
+                    pokemon_names,
+                    item_names,
+                )
+            )
+        elif source.get("source_type") == "daily-swarm":
+            pokemon = _encounter_pokemon(
+                source["species_id"],
+                pokedb,
+                sprite_version,
+                pokemon_names,
+            )
+            records.append(
+                {
+                    **source,
+                    "name": source["location"]["name"],
+                    "active": True,
+                    "pokemon": pokemon,
+                }
+            )
+        elif source.get("source_type") == "headbutt":
+            records.append(
+                {
+                    **source,
+                    "name": source["location"]["name"],
+                    "locations": [source["location"]],
+                    "active": True,
+                    "pools": {
+                        kind: [
+                            {
+                                **slot,
+                                "pokemon": _encounter_pokemon(
+                                    slot["species_id"],
+                                    pokedb,
+                                    sprite_version,
+                                    pokemon_names,
+                                ),
+                            }
+                            for slot in slots
+                        ]
+                        for kind, slots in source["pools"].items()
+                    },
+                }
+            )
+        else:
+            records.append(
+                enrich_area(engine, source, pokedb, sprite_version, pokemon_names)
+            )
     return {
         "schema_version": ENCOUNTERS_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
@@ -308,6 +360,51 @@ def enrich_seasonal_encounter_area(
         "active": active,
         **methods,
         "provenance": source["provenance"],
+    }
+
+
+def _enrich_hidden_grotto(
+    engine: Any,
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None,
+    pokemon_names: list[str] | None,
+    item_names: list[str] | None,
+) -> dict[str, Any]:
+    if item_names is None:
+        raise DataSourceError("Hidden Grotto enrichment requires ROM item names")
+
+    def enrich_item(slot: dict[str, Any]) -> dict[str, Any]:
+        item_id = slot["item_id"]
+        if not 0 < item_id < len(item_names):
+            raise DataSourceError(f"Hidden Grotto item ID does not exist: {item_id}")
+        name = item_names[item_id]
+        return {
+            **slot,
+            "item": {"id": item_id, "name": name, "slug": pokedb.item_slug(name)},
+        }
+
+    pokemon = [
+        {
+            **slot,
+            "pokemon": _encounter_pokemon(
+                slot["species_id"],
+                pokedb,
+                sprite_version,
+                pokemon_names,
+                form_id=slot["form_id"],
+                engine=engine,
+            ),
+        }
+        for slot in source["pokemon"]
+    ]
+    return {
+        **source,
+        "name": source["location"]["name"],
+        "active": True,
+        "pokemon": pokemon,
+        "visible_items": [enrich_item(slot) for slot in source["visible_items"]],
+        "hidden_items": [enrich_item(slot) for slot in source["hidden_items"]],
     }
 
 

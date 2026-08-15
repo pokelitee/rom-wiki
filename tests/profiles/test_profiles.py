@@ -64,6 +64,7 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "evolutions": "a/0/3/4",
                 "egg_moves": "a/2/2/9",
                 "encounters": "a/0/3/7",
+                "headbutt_encounters": "a/2/5/2",
                 "events": "a/0/3/2",
                 "map_matrices": "a/0/4/1",
                 "map_names": "fielddata/maptable/mapname.bin",
@@ -302,6 +303,9 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black_2.layout["encounters"], "a/1/2/7")
         self.assertEqual(black_2.parameters["pokemon_names_member"], 90)
         self.assertEqual(black_2.parameters["move_names_member"], 403)
+        self.assertEqual(black_2.layout["hidden_grottos"], "a/2/7/3")
+        self.assertEqual(black_2.parameters["hidden_grotto_version_group"], 1)
+        self.assertEqual(black_2.parameters["swarm_table_offset"], 0x50BFC)
         self.assertNotIn("static_pokemon", black_2.parameters)
         self.assertNotIn("static_pokemon_egg_indices", black_2.parameters)
         self.assertEqual(
@@ -315,6 +319,8 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(white_2.engine, "gen5_b2w2")
         self.assertEqual(white_2.game_codes, ("IRDO",))
         self.assertEqual(white_2.hashes[0].algorithm, "sha256")
+        self.assertEqual(white_2.parameters["hidden_grotto_version_group"], 0)
+        self.assertEqual(white_2.parameters["swarm_table_offset"], 0x50BF0)
         self.assertNotIn("static_pokemon", white_2.parameters)
         self.assertNotIn("static_pokemon_egg_indices", white_2.parameters)
         self.assertEqual(white_2.sprite_version, "black-white")

@@ -49,6 +49,16 @@ class LocationItem:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationScriptAwardedItem:
+    item_id: int
+    name: str
+    quantity: int
+    script_file_id: int
+    command_offset: int
+    command: str
+
+
+@dataclass(frozen=True, slots=True)
 class LocationShopItem:
     item_id: int
     name: str
@@ -219,6 +229,7 @@ class EncounterMapLocation:
     static_encounters: tuple[LocationStaticEncounter, ...] = ()
     connections: tuple[LocationConnection, ...] = ()
     items: tuple[LocationItem, ...] = ()
+    script_awarded_items: tuple[LocationScriptAwardedItem, ...] = ()
     shops: tuple[LocationShop, ...] = ()
     npc_trades: tuple[dict[str, Any], ...] = ()
 

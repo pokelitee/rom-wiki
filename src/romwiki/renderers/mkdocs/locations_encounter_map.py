@@ -32,6 +32,7 @@ from romwiki.renderers.mkdocs.location_components import (
     append_connections,
     append_items,
     append_npc_trades,
+    append_script_awarded_items,
     append_shops,
     append_static_encounters,
     append_trainers,
@@ -146,6 +147,11 @@ def render_encounter_map_location_pages(
                         *(["static-encounters"] if record["static_encounters"] else []),
                         *(["connections"] if record["connections"] else []),
                         *(["items"] if record["items"] else []),
+                        *(
+                            ["script-awarded-items"]
+                            if record.get("script_awarded_items")
+                            else []
+                        ),
                         *(["shops"] if record.get("shops") else []),
                         *(["trades"] if record.get("npc_trades") else []),
                     ],
@@ -202,6 +208,9 @@ def _render_encounter_map_location(
         lines.extend(["## Wild encounters", ""])
         _append_encounter_variants(lines, encounters, source_file, record["name"])
     append_items(lines, record["items"], source_file, references)
+    append_script_awarded_items(
+        lines, record.get("script_awarded_items", []), source_file, references
+    )
     append_shops(lines, record.get("shops", []), source_file, references)
     append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
     append_static_encounters(
@@ -253,7 +262,8 @@ def _render_encounter_map_location(
                 "The display name, wild-encounter cross-reference, real "
                 "trainers (both sight-triggered and scripted), real warps, "
                 "real outdoor connections, and real field items (visible and "
-                "hidden) are decoded. Static encounters are listed when the "
+                "hidden) are decoded. Literal script-awarded items remain a "
+                "separate source. Static encounters are listed when the "
                 "profile supplies verified script offsets. "
                 "Script-linked shops are decoded from their real local "
                 "dispatcher functions.",

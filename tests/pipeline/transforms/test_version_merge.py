@@ -154,6 +154,34 @@ class VersionMergeTests(unittest.TestCase):
             {"red": 100, "blue": 200, "yellow": 300},
         )
 
+    def test_keeps_version_specific_daily_swarm_species(self) -> None:
+        shared = {
+            "area_id": 194,
+            "active": True,
+            "name": "Route 6",
+            "source_type": "daily-swarm",
+            "header_id": 331,
+            "minimum_level": 40,
+            "maximum_level": 55,
+        }
+        black = _dataset(
+            "wild_encounters",
+            "black-2-us",
+            [{**shared, "species_id": 311, "pokemon": {"name": "Plusle"}}],
+        )
+        white = _dataset(
+            "wild_encounters",
+            "white-2-us",
+            [{**shared, "species_id": 312, "pokemon": {"name": "Minun"}}],
+        )
+
+        record = merge_version_family_datasets({"black-2": black, "white-2": white})[
+            "records"
+        ][0]
+
+        self.assertEqual(record["version_variants"]["black-2"]["species_id"], 311)
+        self.assertEqual(record["version_variants"]["white-2"]["species_id"], 312)
+
     def test_rejects_mismatched_dataset_kinds(self) -> None:
         black = _dataset("pokemon", "black-us", [_pokemon(1, "Bulbasaur")])
         white = _dataset("items", "white-us", [])

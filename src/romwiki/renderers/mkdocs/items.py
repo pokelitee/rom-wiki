@@ -385,13 +385,20 @@ def _append_locations(
                 (
                     f"| {_location_link(value, source_file)} "
                     f"| {_location_section(value)} | {_map_header(value)} "
-                    f"| {value['kind'].title()} | ({value['x']}, {value['z']}) |"
+                    f"| {display_name(value['kind'])} | "
+                    f"{_item_position(value)} |"
                 )
                 for value in record["locations"]
             ],
             "",
         ]
     )
+
+
+def _item_position(value: dict[str, Any]) -> str:
+    x = value.get("x")
+    z = value.get("z")
+    return f"({x}, {z})" if isinstance(x, int) and isinstance(z, int) else "â€”"
 
 
 def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) -> None:

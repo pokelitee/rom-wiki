@@ -107,6 +107,36 @@ def append_items(
         )
 
 
+def append_script_awarded_items(
+    lines: list[str],
+    items: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not items:
+        return
+    lines.extend(
+        [
+            "## Script-awarded items",
+            "",
+            "These items are added by reachable field-script commands owned by this map.",
+            "",
+            "| Item | ID | Quantity | Script member | Command offset |",
+            "| ---- | -: | -------: | ------------: | -------------: |",
+        ]
+    )
+    for item in items:
+        item_link = entity_link(
+            "item", item["item_id"], item["name"], source_file, references
+        )
+        lines.append(
+            f"| {sprite_with_link(entity_sprite('item', item['item_id'], references), item_link)} "
+            f"| {item['item_id']} | {item['quantity']} | {item['script_file_id']} "
+            f"| 0x{item['command_offset']:X} |"
+        )
+    lines.append("")
+
+
 def item_event_coverage_notice(records: list[dict[str, Any]]) -> str:
     suspicious_count = sum(
         1

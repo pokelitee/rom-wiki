@@ -15,6 +15,7 @@ from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     LocationConnection,
     LocationItem,
+    LocationScriptAwardedItem,
     LocationShop,
     LocationShopItem,
     LocationStaticEncounter,
@@ -98,6 +99,7 @@ class _ArchiveLocationRelationships:
     trainers_by_header: dict[int, list[Any]]
     static_encounters_by_header: dict[int, list[LocationStaticEncounter]]
     npc_trades_by_header: dict[int, list[dict[str, Any]]]
+    script_awarded_items_by_header: dict[int, list[LocationScriptAwardedItem]]
     connections_by_header: dict[int, list[LocationConnection]]
 
 
@@ -248,6 +250,12 @@ def _collect_archive_location_relationships(
             trade_dataset,
             item_dataset,
         ),
+        script_awarded_items_by_header=_extract_gen5_script_awarded_items(
+            source.engine,
+            source.scripts,
+            script_headers,
+            item_dataset,
+        ),
         connections_by_header=_extract_encounter_map_connections(
             source.engine, source.headers, source.map_matrices
         ),
@@ -369,6 +377,9 @@ def _build_archive_location_record(
                 relationships.connections_by_header.get(header.header_id, ())
             ),
             items=tuple(items),
+            script_awarded_items=tuple(
+                relationships.script_awarded_items_by_header.get(header.header_id, ())
+            ),
             shops=tuple(shops),
             npc_trades=tuple(
                 relationships.npc_trades_by_header.get(header.header_id, ())
@@ -656,6 +667,9 @@ def _build_archive_location_envelope(
         "trainer_reference_count": sum(len(record["trainers"]) for record in records),
         "warp_reference_count": sum(len(record["warps"]) for record in records),
         "item_reference_count": sum(len(record["items"]) for record in records),
+        "script_awarded_item_reference_count": sum(
+            len(record["script_awarded_items"]) for record in records
+        ),
         "shop_reference_count": sum(len(record["shops"]) for record in records),
         "npc_trade_reference_count": sum(
             len(record["npc_trades"]) for record in records
@@ -789,6 +803,47 @@ def _resolve_gen5_script_locations(
         for member, header_ids in owners.items()
         if header_ids
     }
+
+
+def _extract_gen5_script_awarded_items(
+    engine: Any,
+    scripts: Any,
+    script_headers: dict[int, tuple[int, ...]],
+    item_dataset: dict[str, Any] | None,
+) -> dict[int, list[LocationScriptAwardedItem]]:
+    item_names = {
+        record["item_id"]: record["name"]
+        for record in (item_dataset or {}).get("records", ())
+    }
+    if not item_names:
+        return {}
+    item_count = max(item_names) + 1
+    references: dict[int, list[LocationScriptAwardedItem]] = defaultdict(list)
+    seen: set[tuple[int, int, int]] = set()
+    for member, header_ids in script_headers.items():
+        for award in engine.find_script_awarded_items(
+            scripts.read(member), item_count=item_count
+        ):
+            if award.item_id not in item_names:
+                continue
+            for header_id in header_ids:
+                identity = (header_id, member, award.command_offset)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                references[header_id].append(
+                    LocationScriptAwardedItem(
+                        item_id=award.item_id,
+                        name=item_names[award.item_id],
+                        quantity=award.quantity,
+                        script_file_id=member,
+                        command_offset=award.command_offset,
+                        command=award.command,
+                    )
+                )
+    for values in references.values():
+        values.sort(key=lambda item: (item.script_file_id, item.command_offset))
+    return references
 
 
 def _extract_gen5_npc_trade_references(

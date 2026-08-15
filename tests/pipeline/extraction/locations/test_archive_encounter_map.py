@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from romwiki.engines.gen5.bw.overworld import resolve_common_script_member
 from romwiki.pipeline.extraction.locations.archive_encounter_map import (
+    _extract_gen5_script_awarded_items,
     _resolve_gen5_script_locations,
 )
 from romwiki.pipeline.transforms.relationships import build_relationship_index
@@ -20,6 +21,28 @@ class _Archive:
 
 
 class Gen5ScriptLocationTests(unittest.TestCase):
+    def test_links_script_awards_to_each_proven_script_owner(self) -> None:
+        award = SimpleNamespace(
+            item_id=17,
+            quantity=2,
+            command_offset=12,
+            command="ItemAdd",
+        )
+        engine = SimpleNamespace(
+            find_script_awarded_items=lambda _data, item_count: (award,)
+        )
+
+        references = _extract_gen5_script_awarded_items(
+            engine,
+            _Archive(20),
+            {7: (3, 9)},
+            {"records": [{"item_id": 17, "name": "Potion"}]},
+        )
+
+        self.assertEqual(set(references), {3, 9})
+        self.assertEqual(references[3][0].quantity, 2)
+        self.assertEqual(references[9][0].script_file_id, 7)
+
     def test_preserves_dedicated_and_multiple_common_script_callers(self) -> None:
         references = {0: (10435, 999), 1: (10435,)}
         engine = SimpleNamespace(

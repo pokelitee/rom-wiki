@@ -147,6 +147,21 @@ def _collect_location_relationships(
                     "z": item["z"],
                 },
             )
+        for item in location.get("script_awarded_items", []):
+            _add_relationship(
+                relationships,
+                item["item_id"],
+                "locations",
+                {
+                    **location_reference,
+                    "kind": "script-awarded",
+                    "quantity": item["quantity"],
+                    "script_file_id": item["script_file_id"],
+                    "command_offset": item["command_offset"],
+                    "x": None,
+                    "z": None,
+                },
+            )
         for shop in location.get("shops", []):
             if not shop.get("dynamic") and shop.get("inventory_id") is not None:
                 linked_shop_ids.add(shop["inventory_id"])
@@ -217,6 +232,46 @@ def _collect_location_relationships(
         linked_trade_ids,
         fossil_locations_by_species,
     )
+
+
+def _collect_hidden_grotto_relationships(
+    encounter_dataset: dict[str, Any] | None,
+) -> ItemRelationships:
+    relationships: ItemRelationships = {}
+    for merged_record in (encounter_dataset or {}).get("records", []):
+        variants = merged_record.get("version_variants") or {None: merged_record}
+        for version, record in variants.items():
+            if record.get("source_type") != "hidden-grotto":
+                continue
+            location = record["location"]
+            common = {
+                "header_id": location["header_id"],
+                "name": location["name"],
+                "internal_name": location["internal_name"],
+                "section_name": None,
+                "x": None,
+                "z": None,
+                "encounter_route_key": f"hidden-grotto-{record['grotto_id']:02}",
+            }
+            if version is not None:
+                common["versions"] = [version]
+            for key, kind in (
+                ("visible_items", "hidden-grotto-visible"),
+                ("hidden_items", "hidden-grotto-hidden"),
+            ):
+                for slot in record[key]:
+                    _add_relationship(
+                        relationships,
+                        slot["item_id"],
+                        "locations",
+                        {
+                            **common,
+                            "kind": kind,
+                            "pool_chance": slot["pool_chance"],
+                            "group": slot["group"],
+                        },
+                    )
+    return relationships
 
 
 def _collect_detached_trade_relationships(
@@ -293,6 +348,7 @@ def build_item_dataset(
     trainer_dataset: dict[str, Any] | None,
     location_dataset: dict[str, Any] | None,
     *,
+    encounter_dataset: dict[str, Any] | None = None,
     trade_dataset: dict[str, Any] | None = None,
     mart_dataset: dict[str, Any] | None = None,
     reference_version: str | None = None,
@@ -315,6 +371,7 @@ def build_item_dataset(
         ("PokÃ©mon", pokemon_dataset),
         ("trainer", trainer_dataset),
         ("location", location_dataset),
+        ("encounter", encounter_dataset),
         ("trade", trade_dataset),
         ("mart", mart_dataset),
     ):
@@ -341,6 +398,9 @@ def build_item_dataset(
         linked_trade_ids,
     )
     mart_relationships = _collect_mart_relationships(mart_dataset, linked_shop_ids)
+    hidden_grotto_relationships = _collect_hidden_grotto_relationships(
+        encounter_dataset
+    )
 
     relationships: ItemRelationships = {}
     for collected in (
@@ -349,6 +409,7 @@ def build_item_dataset(
         location_relationships,
         trade_relationships,
         mart_relationships,
+        hidden_grotto_relationships,
     ):
         _merge_relationships(relationships, collected)
 
