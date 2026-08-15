@@ -379,9 +379,7 @@ def _add_generate_parser(
     generate_parser.add_argument(
         "--games-config", type=Path, default=Path(".local/games.toml")
     )
-    generate_parser.add_argument(
-        "--profiles-dir", type=Path, default=Path("profiles")
-    )
+    generate_parser.add_argument("--profiles-dir", type=Path, default=Path("profiles"))
     generate_parser.add_argument(
         "--pokedb-root",
         type=Path,
@@ -1379,8 +1377,7 @@ def _run_regeneration_steps(
         unsupported = [site.id for site in selected if site not in data_sites]
         if unsupported and not args.regenerate_all:
             raise SiteError(
-                "Generation requires data-driven game sites: "
-                + ", ".join(unsupported)
+                "Generation requires data-driven game sites: " + ", ".join(unsupported)
             )
     registry = LocalGameRegistry.load(args.games_config) if data_sites else None
     profiles = (

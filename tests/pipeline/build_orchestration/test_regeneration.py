@@ -28,9 +28,7 @@ class RegenerationStateTests(unittest.TestCase):
                 match=SimpleNamespace(
                     profile=SimpleNamespace(engine="test", id="game")
                 ),
-                image=SimpleNamespace(
-                    hashes=SimpleNamespace(sha256="rom")
-                ),
+                image=SimpleNamespace(hashes=SimpleNamespace(sha256="rom")),
             )
 
             with (
@@ -47,7 +45,9 @@ class RegenerationStateTests(unittest.TestCase):
                 development = regeneration_fingerprint(
                     root, site, (result,), (), root, dev=True
                 )
-                manifest.write_text('[pages]\npokemon = ["bulbasaur"]\n', encoding="utf-8")
+                manifest.write_text(
+                    '[pages]\npokemon = ["bulbasaur"]\n', encoding="utf-8"
+                )
                 changed = regeneration_fingerprint(
                     root, site, (result,), (), root, dev=True
                 )
