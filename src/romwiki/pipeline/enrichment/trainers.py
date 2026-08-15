@@ -341,10 +341,21 @@ def _trainer_ability(
             for ability in abilities
             if isinstance(ability, dict) and ability.get("name")
         ]
-        identities = {(ability.get("id"), ability.get("name")) for ability in possible}
+        unique = []
+        seen = set()
+        for ability in possible:
+            identity = (ability.get("id"), ability.get("name"))
+            if identity not in seen:
+                seen.add(identity)
+                unique.append(ability)
+        identities = {(ability.get("id"), ability.get("name")) for ability in unique}
         if len(identities) != 1:
-            return None
-        ability = possible[0]
+            return {
+                "slot": 0,
+                "source": value["source"],
+                "possibilities": unique,
+            }
+        ability = unique[0]
         return {**ability, "slot": 0, "source": value["source"]}
     if not 1 <= slot <= len(abilities):
         raise DataSourceError(f"Trainer ability slot {slot} is out of range")

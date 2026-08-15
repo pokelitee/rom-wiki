@@ -60,7 +60,6 @@ _SEASONAL_METHOD_LABELS = {
     "fishing_spots": "Fishing Spots",
 }
 _SEASONS = ("spring", "summer", "autumn", "winter")
-_TAB_LABEL_SEPARATOR = " \N{MIDDLE DOT} "
 _ENCOUNTER_SLOT_COLUMNS = (
     MarkdownColumn("Pokémon"),
     MarkdownColumn("Type"),
@@ -898,7 +897,7 @@ def _render_seasonal_area(
         ):
             continue
         lines.extend([f"## {label}", ""])
-        method_contents: list[tuple[str, list[str]]] = []
+        method_contents: list[tuple[str | None, str | None, list[str]]] = []
         for seasonal_record in records:
             for version, version_record in version_variant_records(seasonal_record):
                 content: list[str] = []
@@ -914,18 +913,10 @@ def _render_seasonal_area(
                     )
                 else:
                     content.extend(["No encounters.", ""])
-                tab_parts = [
-                    display_name(value)
-                    for value in (version, seasonal_record.get("season"))
-                    if value is not None
-                ]
                 method_contents.append(
-                    (_TAB_LABEL_SEPARATOR.join(tab_parts) or "All", content)
+                    (version, seasonal_record.get("season"), content)
                 )
-        if len(method_contents) == 1 or tab_contents_identical(method_contents):
-            lines.extend(method_contents[0][1])
-        else:
-            lines.extend(content_tabs(method_contents))
+        lines.extend(_season_version_tabs(method_contents))
     _append_same_name_encounters(
         lines,
         record,
@@ -942,19 +933,15 @@ def _render_seasonal_area(
     ]
     if any(change is not None for _, change in comparisons):
         lines.extend(["## Hack changes", ""])
-        change_contents: list[tuple[str, list[str]]] = []
+        change_contents: list[tuple[str | None, str | None, list[str]]] = []
         for seasonal_record, change in comparisons:
             version_comparisons = (change or {}).get("version_comparisons")
             if version_comparisons:
                 for version, version_change in version_comparisons.items():
-                    label = _TAB_LABEL_SEPARATOR.join(
-                        display_name(value)
-                        for value in (version, seasonal_record.get("season"))
-                        if value is not None
-                    )
                     change_contents.append(
                         (
-                            label,
+                            version,
+                            seasonal_record.get("season"),
                             comparison_section(
                                 version_change,
                                 version_change.get("baseline") or baseline_name,
@@ -967,7 +954,8 @@ def _render_seasonal_area(
                 continue
             change_contents.append(
                 (
-                    display_name(seasonal_record.get("season") or "all"),
+                    None,
+                    seasonal_record.get("season"),
                     comparison_section(
                         change,
                         baseline_name,
@@ -977,10 +965,7 @@ def _render_seasonal_area(
                     ),
                 )
             )
-        if len(change_contents) == 1 or tab_contents_identical(change_contents):
-            lines.extend(change_contents[0][1])
-        else:
-            lines.extend(content_tabs(change_contents))
+        lines.extend(_season_version_tabs(change_contents))
     lines.extend(
         provenance_section(
             [
@@ -1014,6 +999,34 @@ def _render_seasonal_area(
         lines, record, previous, following, locations_by_route
     )
     return "\n".join(lines)
+
+
+def _season_version_tabs(
+    contents: list[tuple[str | None, str | None, list[str]]],
+) -> list[str]:
+    """Nest version tabs inside seasonal tabs without redundant dimensions."""
+    if not contents:
+        return []
+
+    by_season: dict[str | None, list[tuple[str, list[str]]]] = {}
+    for version, season, content in contents:
+        by_season.setdefault(season, []).append(
+            (display_name(version or "all"), content)
+        )
+
+    season_contents = [
+        (display_name(season or "all"), _render_tab_dimension(version_contents))
+        for season, version_contents in by_season.items()
+    ]
+    if set(by_season) == {None}:
+        return season_contents[0][1]
+    return _render_tab_dimension(season_contents)
+
+
+def _render_tab_dimension(contents: list[tuple[str, list[str]]]) -> list[str]:
+    if len(contents) == 1 or tab_contents_identical(contents):
+        return contents[0][1]
+    return content_tabs(contents)
 
 
 def _seasonal_area_summary(

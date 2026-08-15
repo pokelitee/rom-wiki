@@ -1166,7 +1166,7 @@ def _move_cells(
     move_type = type_badges([move["type"]])
     damage_class = class_badge(move["damage_class"])
     power = move["power"] if move["power"] else "—"
-    accuracy = "Always hits" if move["accuracy"] in {0, 101} else f"{move['accuracy']}%"
+    accuracy = "—" if move["accuracy"] in {0, 101} else f"{move['accuracy']}%"
     return f"{move_type} | {damage_class} | {power} | {accuracy} | {move['pp']}"
 
 

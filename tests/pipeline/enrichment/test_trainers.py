@@ -354,6 +354,31 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
         )
         self.assertEqual(trainer["party"][0]["source_fields"]["ability_slot"], 0)
 
+        sand_stream = {
+            "id": 45,
+            "name": "Sand Stream",
+            "slug": "sand-stream",
+            "is_hidden": False,
+        }
+        pokemon_record["abilities"] = [levitate, sand_stream]
+        trainer = enrich_trainer_record(
+            source,
+            pokedb,
+            None,
+            None,
+            engine="gen5_b2w2",
+            pokemon_records={330: pokemon_record},
+        )
+
+        self.assertEqual(
+            trainer["party"][0]["ability"],
+            {
+                "slot": 0,
+                "source": "engine-default",
+                "possibilities": [levitate, sand_stream],
+            },
+        )
+
     def test_resolves_internal_trainer_species_from_game_data(self) -> None:
         pokedb = PokeDBGeneration(
             pokemon_by_id={},

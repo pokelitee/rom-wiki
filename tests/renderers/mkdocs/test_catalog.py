@@ -79,7 +79,7 @@ class CatalogPresentationTests(unittest.TestCase):
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
 
         self.assertIn('["Base price", (record)', text)
-        self.assertIn('"Always hits"', text)
+        self.assertIn('record.accuracy ? `${record.accuracy}%` : "—"', text)
         self.assertIn('sorts: [["label", "Area"]', text)
         self.assertIn(
             '{ key: "availability_methods", label: "Availability", multi: true }',

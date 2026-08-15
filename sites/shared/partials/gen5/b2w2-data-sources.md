@@ -133,11 +133,8 @@ known level/stat bug. Retail, original Blaze Black 2/Volt White 2, and Redux
 declare separate profile contracts; their exact normal and Challenge archive
 records were checked independently. The complete executable level-offset band
 table is still unresolved, so difficulty coverage remains partial and no numeric
-per-record display level is guessed. Redux's creator documentation independently
-confirms shared Easy/Normal parties, Challenge-only teams, and the level/stat
-limitation:
-[Pokémon Trainer Changes](https://smilingzero.github.io/BlazeBlack2ReduxWiki/genTrainerChange/).
-Redux's documented Reversal Mountain Bianca teams are also related explicitly:
+per-record display level is guessed. Redux's Reversal Mountain Bianca teams are
+also related explicitly from their decoded field-script selector:
 Easy/Normal use trainer record 4 and Challenge uses record 852. Other apparent
 same-name or three-record runs remain ungrouped unless their runtime selector is
 independently verified.
@@ -147,11 +144,8 @@ the Zekrom record in Black 2-based versions and the Reshiram record in White
 2-based versions. Later rematches select records 782 through 785 for spring,
 summer, autumn, and winter respectively. Retail research documents both rules,
 and the exact parties were checked in each supported retail, original-hack, and
-Redux ROM contract. Redux's creator documentation independently lists the
-version tabs and four seasonal teams:
-[Other Important Trainers](https://smilingzero.github.io/BlazeBlack2ReduxWiki/postgame/otherimportanttrainers/).
-These are rendered as two tab families rather than one six-record
-same-name group.
+Redux ROM contract. These are rendered as two tab families rather than one
+six-record same-name group.
 
 ## Locations
 
@@ -181,6 +175,19 @@ The ROM's Pokédex and move, ability, and item description banks are not yet
 decoded, so those prose fields use version-matched PokéDB reference text while
 structured mechanics remain ROM-derived. Outcomes controlled by save data or
 runtime randomness are not presented as fixed ROM facts.
+
+Hidden Grottos are not part of the standard wild-encounter archive described
+above. Their separate B2W2 tables in `a/2/7/3` contain version-specific Pokémon,
+level, gender, form, and item pools and are not decoded yet, so Hidden Grotto
+encounters are currently absent rather than folded into ordinary route tables.
+
+Daily Pokémon swarms are also selected outside the standard area records. Their
+route/species override table is not decoded yet, so the published seasonal
+tables do not include the active swarm replacement. The standard archive does
+cover all seven ordinary methods, including dark grass, rustling grass or dust
+clouds, rippling-water Surf, and rippling-water fishing. Scripted static
+encounters, gifts, and trades are published separately on location and Pokémon
+pages.
 
 Tornadus and Thundurus are not roaming encounters in Black 2 or White 2. The
 executable-code limitation documented for those roamers applies only to the

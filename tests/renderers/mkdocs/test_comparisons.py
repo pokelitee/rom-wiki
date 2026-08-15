@@ -110,6 +110,41 @@ class ComparisonRenderingTests(unittest.TestCase):
         self.assertIn("Triple", value)
         self.assertNotIn(">1<", value)
 
+    def test_links_pokemon_in_trainer_party_changes(self) -> None:
+        references = ReferenceIndex(
+            [entity_reference("pokemon", 25, "Pikachu", "pikachu")]
+        )
+        value = "\n".join(
+            comparison_section(
+                {
+                    "kind": "trainers",
+                    "status": "changed",
+                    "changes": [
+                        {
+                            "field": "party",
+                            "label": "Party",
+                            "before": [],
+                            "after": [
+                                {
+                                    "level": 20,
+                                    "pokemon": {
+                                        "id": 25,
+                                        "name": "Pikachu",
+                                        "slug": "pikachu",
+                                    },
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "Base",
+                "trainers/trainer-0001.md",
+                references,
+            )
+        )
+
+        self.assertIn('href="../../pokemon/pikachu/">Pikachu</a> — Lv. 20', value)
+
     def test_renders_version_specific_comparisons(self) -> None:
         value = "\n".join(
             comparison_section(

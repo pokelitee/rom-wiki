@@ -361,7 +361,14 @@ def _format_change(
         return _format_value_change(old_label, new_label)
     if kind == "trainers" and change.get("field") in {"locations", "script_references"}:
         return _format_trainer_location_change(before, after, source_url, references)
-    return _format_value_change(before, after, kind=kind, field=change.get("field"))
+    return _format_value_change(
+        before,
+        after,
+        kind=kind,
+        field=change.get("field"),
+        source_url=source_url,
+        references=references,
+    )
 
 
 def _format_value_change(
@@ -370,6 +377,8 @@ def _format_value_change(
     *,
     kind: str | None = None,
     field: str | None = None,
+    source_url: str = "",
+    references: ReferenceIndex | None = None,
 ) -> str:
     """Shared recursive formatter for a single field's before/after values.
 
@@ -383,9 +392,22 @@ def _format_value_change(
     if named_reference is not None:
         return named_reference
     if isinstance(old_value, dict) and isinstance(new_value, dict):
-        return _format_mapping_change(old_value, new_value, kind=kind)
+        return _format_mapping_change(
+            old_value,
+            new_value,
+            kind=kind,
+            source_url=source_url,
+            references=references,
+        )
     if isinstance(old_value, list) and isinstance(new_value, list):
-        return _format_list_change(old_value, new_value, kind=kind, field=field)
+        return _format_list_change(
+            old_value,
+            new_value,
+            kind=kind,
+            field=field,
+            source_url=source_url,
+            references=references,
+        )
     return _diff(_format_value(old_value), _format_value(new_value))
 
 
@@ -430,11 +452,18 @@ def _format_list_change(
     *,
     kind: str | None = None,
     field: str | None = None,
+    source_url: str = "",
+    references: ReferenceIndex | None = None,
 ) -> str:
     keyed_before = _keyed_records(before)
     keyed_after = _keyed_records(after)
     if keyed_before is not None and keyed_after is not None:
-        return _format_keyed_list_change(keyed_before, keyed_after)
+        return _format_keyed_list_change(
+            keyed_before,
+            keyed_after,
+            source_url=source_url,
+            references=references,
+        )
     before_values = {
         _canonical(normalize_comparison_value(item, kind=kind, field=field)): item
         for item in before
@@ -447,10 +476,18 @@ def _format_list_change(
     added = [after_values[key] for key in after_values.keys() - before_values.keys()]
     if not removed and not added:
         return f"Order changed ({len(before)} entries)"
-    return _format_set_delta(removed, added)
+    return _format_set_delta(
+        removed, added, source_url=source_url, references=references
+    )
 
 
-def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
+def _format_set_delta(
+    removed: list[Any],
+    added: list[Any],
+    *,
+    source_url: str = "",
+    references: ReferenceIndex | None = None,
+) -> str:
     groups = []
     for label, values in (("removed", removed), ("added", added)):
         if values:
@@ -459,7 +496,9 @@ def _format_set_delta(removed: list[Any], added: list[Any]) -> str:
                     f"entry {label}",
                     f"entries {label}",
                     [
-                        _format_value_summary(value)
+                        _format_value_summary(
+                            value, source_url=source_url, references=references
+                        )
                         for value in sorted(values, key=_canonical)
                     ],
                 )
@@ -494,18 +533,24 @@ def _format_keyed_list_change(
     after: dict[Any, dict[str, Any]],
     *,
     nested: bool = False,
+    source_url: str = "",
+    references: ReferenceIndex | None = None,
 ) -> str:
     changed, removed, added = [], [], []
     for key in sorted(set(before) | set(after), key=str):
         old, new = before.get(key), after.get(key)
         if old is None:
-            added.append(_format_value_summary(new))
+            added.append(
+                _format_value_summary(new, source_url=source_url, references=references)
+            )
         elif new is None:
-            removed.append(_format_value_summary(old))
+            removed.append(
+                _format_value_summary(old, source_url=source_url, references=references)
+            )
         elif old != new:
             changed.append(
-                f"{_format_value_summary(new)}: "
-                f"{_format_mapping_change(old, new, nested=True)}"
+                f"{_format_value_summary(new, source_url=source_url, references=references)}: "
+                f"{_format_mapping_change(old, new, nested=True, source_url=source_url, references=references)}"
             )
     groups = [
         ("entry changed", "entries changed", changed),
@@ -517,7 +562,12 @@ def _format_keyed_list_change(
     return _format_change_groups(groups)
 
 
-def _format_value_summary(value: Any) -> str:
+def _format_value_summary(
+    value: Any,
+    *,
+    source_url: str = "",
+    references: ReferenceIndex | None = None,
+) -> str:
     """Render a per-item change-list value without a raw JSON dump.
 
     Every candidate here already has a readable label (from
@@ -527,6 +577,22 @@ def _format_value_summary(value: Any) -> str:
     alternative and no detail page to link to instead.
     """
     if isinstance(value, dict):
+        pokemon = value.get("pokemon")
+        if isinstance(pokemon, dict) and pokemon.get("name"):
+            return _reference_html(
+                pokemon, "pokemon", source_url, references
+            ) + _level_suffix(value)
+        move = value.get("move")
+        if isinstance(move, dict) and move.get("name"):
+            return _reference_html(
+                move, "move", source_url, references
+            ) + _level_suffix(value)
+        target = value.get("target")
+        if isinstance(target, dict) and target.get("name"):
+            method = value.get("method")
+            method_name = method.get("name") if isinstance(method, dict) else method
+            suffix = f" — {escape(str(method_name))}" if method_name else ""
+            return _reference_html(target, "pokemon", source_url, references) + suffix
         return escape_table_cell(_mapping_summary(value))
     return _format_value(value)
 
@@ -857,6 +923,8 @@ def _format_mapping_change(
     *,
     kind: str | None = None,
     nested: bool = False,
+    source_url: str = "",
+    references: ReferenceIndex | None = None,
 ) -> str:
     lines = []
     for key in sorted(before.keys() | after.keys()):
@@ -870,12 +938,30 @@ def _format_mapping_change(
             keyed_after = _keyed_records(new_value)
             if keyed_before is not None and keyed_after is not None:
                 value = _format_keyed_list_change(
-                    keyed_before, keyed_after, nested=nested
+                    keyed_before,
+                    keyed_after,
+                    nested=nested,
+                    source_url=source_url,
+                    references=references,
                 )
             else:
-                value = _format_value_change(old_value, new_value, kind=kind, field=key)
+                value = _format_value_change(
+                    old_value,
+                    new_value,
+                    kind=kind,
+                    field=key,
+                    source_url=source_url,
+                    references=references,
+                )
         else:
-            value = _format_value_change(old_value, new_value, kind=kind, field=key)
+            value = _format_value_change(
+                old_value,
+                new_value,
+                kind=kind,
+                field=key,
+                source_url=source_url,
+                references=references,
+            )
         lines.append(f"{label}: {value}")
     return _format_lines(lines, True) if not nested else _format_plain_lines(lines)
 

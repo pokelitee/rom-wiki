@@ -7,9 +7,52 @@ from pathlib import Path
 
 from romwiki.pipeline.transforms.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_encounter_pages
+from romwiki.renderers.mkdocs.encounters import _season_version_tabs
 
 
 class EncounterRenderingTests(unittest.TestCase):
+    def test_nests_versions_inside_season_tabs(self) -> None:
+        lines = _season_version_tabs(
+            [
+                ("black", "spring", ["Black spring"]),
+                ("black", "winter", ["Black winter"]),
+                ("white", "spring", ["White spring"]),
+                ("white", "winter", ["White winter"]),
+            ]
+        )
+
+        self.assertEqual(lines.count('=== "Spring"'), 1)
+        self.assertEqual(lines.count('=== "Winter"'), 1)
+        self.assertEqual(lines.count('    === "Black"'), 2)
+        self.assertEqual(lines.count('    === "White"'), 2)
+        self.assertIn("        Black spring", lines)
+
+    def test_catalog_keeps_pokemon_correlated_with_encounter_methods(self) -> None:
+        pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
+        eevee = {"id": 133, "slug": "eevee", "name": "Eevee", "sprite": None}
+        record = _encounter_record(2, 2, "spring", "Map 002")
+        record["grass_cave"] = {
+            "rate": 20,
+            "slots": [_seasonal_slot(25, 0, 5, 5, 100, pikachu)],
+        }
+        record["surfing"] = {
+            "rate": 10,
+            "slots": [_seasonal_slot(133, 0, 15, 20, 100, eevee)],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(_dataset("encounters", [record]), output)
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        entry = catalog["records"][0]
+        self.assertEqual(entry["methods"], ["Grass/Cave", "Surfing"])
+        self.assertEqual(
+            entry["method_pokemon"],
+            {"Grass/Cave": ["Pikachu"], "Surfing": ["Eevee"]},
+        )
+        self.assertEqual((entry["min_level"], entry["max_level"]), (5, 20))
+
     def test_aggregates_nonadjacent_slots_by_species_and_form(self) -> None:
         gastrodon = {
             "id": 423,
@@ -273,8 +316,9 @@ class EncounterRenderingTests(unittest.TestCase):
             )
             page = (output / "map-002.md").read_text(encoding="utf-8")
 
-        self.assertEqual(page.count('=== "Black · Spring"'), 2)
-        self.assertEqual(page.count('=== "White · Spring"'), 2)
+        self.assertEqual(page.count('=== "Black"'), 2)
+        self.assertEqual(page.count('=== "White"'), 2)
+        self.assertNotIn("· Spring", page)
         self.assertNotIn("**Black**", page)
         self.assertNotIn("**White**", page)
         provenance_divider = page.index("\n---\n\n<details")

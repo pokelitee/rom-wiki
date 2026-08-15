@@ -173,6 +173,8 @@ class DocumentationTests(unittest.TestCase):
             "Curtis/Yancy trades",
             "published as Xtransceiver",
             "not roaming encounters",
+            "Hidden Grottos",
+            "Daily Pokémon swarms",
         ):
             self.assertIn(supported_scope, shared_b2w2_notes)
 

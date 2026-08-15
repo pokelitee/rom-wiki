@@ -535,6 +535,26 @@ class TrainerRenderingTests(unittest.TestCase):
             page,
         )
 
+    def test_renders_engine_selected_ability_possibilities(self) -> None:
+        member = _party_member([])
+        member["ability"] = {
+            "slot": 0,
+            "source": "engine-default",
+            "possibilities": [
+                {"id": 1, "name": "Stench", "slug": "stench"},
+                {"id": 106, "name": "Aftermath", "slug": "aftermath"},
+            ],
+        }
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0099/"))
+
+        self.assertIn("<dt>Ability</dt>", page)
+        self.assertNotIn("Engine-selected", page)
+        self.assertNotIn("(Stench", page)
+        self.assertIn('href="../../abilities/stench/">Stench</a>', page)
+        self.assertIn("</a> / <a", page)
+        self.assertIn('href="../../abilities/aftermath/">Aftermath</a>', page)
+
 
 def _party_member(moves: list[str]) -> dict[str, object]:
     return {

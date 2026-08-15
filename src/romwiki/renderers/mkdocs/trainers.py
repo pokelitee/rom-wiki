@@ -671,12 +671,7 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             if pokemon_sprite and pokemon_sprite.get("url")
             else ""
         )
-        ability = member.get("ability")
-        ability_link_html = (
-            ability_link(ability, source_url)
-            if ability and ability.get("name")
-            else None
-        )
+        ability_link_html = _party_ability(member.get("ability"), source_url)
         details = []
         pokemon_types = pokemon.get("types", [])
         nature = member.get("nature")
@@ -780,6 +775,24 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
         lines.append("</article>")
     lines.extend(["</div>", ""])
     return lines
+
+
+def _party_ability(ability: dict[str, Any] | None, source_url: str) -> str | None:
+    if not ability:
+        return None
+    if ability.get("name"):
+        return ability_link(ability, source_url)
+    possibilities = ability.get("possibilities")
+    if not isinstance(possibilities, list) or not possibilities:
+        return None
+    links = [
+        ability_link(possibility, source_url)
+        for possibility in possibilities
+        if isinstance(possibility, dict) and possibility.get("name")
+    ]
+    if not links:
+        return None
+    return " / ".join(links)
 
 
 def _append_party(
