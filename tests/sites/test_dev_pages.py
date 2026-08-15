@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import tarfile
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -13,6 +14,7 @@ from romwiki.util.errors import SiteError
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 _GAME_SITES = _REPOSITORY_ROOT / "sites" / "games"
+_GENERATED_WIKI_SNAPSHOTS = _REPOSITORY_ROOT / "sites" / "generated-wiki"
 _MANIFEST = _GAME_SITES / "renegade-platinum" / "dev-pages.toml"
 _DETAIL_SECTIONS = {
     "pokemon",
@@ -67,15 +69,20 @@ class DevPagesTests(unittest.TestCase):
                 self.assertEqual(config.extra.get("romwiki_dev_pages"), manifest.name)
                 self.assertEqual(config.validation.links.not_found, logging.DEBUG)
 
-    def test_selected_detail_pages_exist_in_the_generated_source_tree(self) -> None:
+    def test_selected_detail_pages_exist_in_the_committed_snapshot(self) -> None:
         for manifest in sorted(_GAME_SITES.glob("*/dev-pages.toml")):
             pages = DevPages.load(manifest)
+            site_id = manifest.parent.name
+            snapshot = _GENERATED_WIKI_SNAPSHOTS / f"{site_id}.tar.gz"
             with self.subTest(manifest=manifest):
+                with tarfile.open(snapshot, mode="r:gz") as archive:
+                    archived_paths = {member.name for member in archive}
+                wiki_prefix = f"sites/games/{site_id}/wiki"
                 missing = sorted(
                     f"{section}/{slug}.md"
                     for section, slugs in pages.sections.items()
                     for slug in slugs
-                    if not (manifest.parent / "wiki" / section / f"{slug}.md").is_file()
+                    if f"{wiki_prefix}/{section}/{slug}.md" not in archived_paths
                 )
                 self.assertEqual(missing, [])
 
