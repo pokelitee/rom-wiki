@@ -16,6 +16,7 @@ from .constants import (
     PERSONAL_PLACEHOLDER_RECORD_SIZE,
     PERSONAL_RECORD_SIZE,
 )
+from .machines import machine_id_for_table_index
 
 # Field offsets below are PersonalInfo5BW's (PKHeX.Core/PersonalInfo/Info/
 # PersonalInfo5BW.cs), confirmed against a real Black ROM record (species 1,
@@ -50,10 +51,16 @@ def parse_personal_record(
     ev_mask = struct.unpack_from("<H", data, 0x0A)[0]
     tmhm_bits = int.from_bytes(data[0x28:0x35], "little")
     machine_masks = tuple((tmhm_bits >> (32 * word)) & 0xFFFFFFFF for word in range(4))
+    # The bitmap is indexed by each machine's physical ARM9 table position
+    # (0-based `table_index`), not the published, contiguous machine_id --
+    # translate each set bit through the same mapping `machines.py` uses to
+    # assign machine_id, so compatibility lookups land on the right machine.
     machine_ids = tuple(
-        machine_id
-        for machine_id in range(1, GEN5_MACHINE_COUNT + 1)
-        if machine_masks[(machine_id - 1) // 32] & (1 << ((machine_id - 1) % 32))
+        sorted(
+            machine_id_for_table_index(table_index)
+            for table_index in range(GEN5_MACHINE_COUNT)
+            if machine_masks[table_index // 32] & (1 << (table_index % 32))
+        )
     )
     return PokemonPersonalData(
         species_id=species_id,

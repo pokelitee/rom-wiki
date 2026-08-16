@@ -33,6 +33,7 @@ from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     content_tabs,
     display_name,
+    level_range,
     markdown_table,
     markdown_table_from_cells,
     provenance_fact_table,
@@ -806,7 +807,7 @@ def _append_walking(
                         _pokemon_link(slot["pokemon"], source_file),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
-                    _level_range(slot["minimum_level"], slot["maximum_level"]),
+                    level_range(slot["minimum_level"], slot["maximum_level"]),
                     f"{slot['chance']}%",
                 )
                 for slot in slots
@@ -836,7 +837,7 @@ def _append_water(
                         _pokemon_link(slot["pokemon"], source_file),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
-                    _level_range(slot["minimum_level"], slot["maximum_level"]),
+                    level_range(slot["minimum_level"], slot["maximum_level"]),
                     f"{slot['chance']}%",
                 )
                 for slot in slots
@@ -880,9 +881,7 @@ def _append_special(
                                 _pokemon_link(entry["pokemon"], source_file),
                             ),
                             _slot_type_cell(entry["pokemon"], references),
-                            _level_range(
-                                entry["minimum_level"], entry["maximum_level"]
-                            ),
+                            level_range(entry["minimum_level"], entry["maximum_level"]),
                             f"{entry['chance']}%",
                         )
                         for entry in entries
@@ -933,10 +932,6 @@ def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
     if pokemon is None:
         return "None"
     return ROUTES.markdown_link(_pokemon_reference(pokemon), source_file)
-
-
-def _level_range(minimum: int, maximum: int) -> str:
-    return str(minimum) if minimum == maximum else f"{minimum}–{maximum}"
 
 
 def _render_seasonal_encounter_pages(
@@ -1513,7 +1508,7 @@ def _append_seasonal_method(
                         _pokemon_link(slot["pokemon"], source_file),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
-                    _level_range(slot["minimum_level"], slot["maximum_level"]),
+                    level_range(slot["minimum_level"], slot["maximum_level"]),
                     f"{slot['chance']}%",
                 )
                 for slot in slots

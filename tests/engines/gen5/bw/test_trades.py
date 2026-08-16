@@ -30,6 +30,10 @@ class Gen5NpcTradeTests(unittest.TestCase):
     def test_decodes_a_real_trade(self) -> None:
         # Real Black ROM trade 6: "Eeks" the Rotom (species 479) for a
         # Ditto (species 132), from OT "Lillian" (ID 54673), no held item.
+        # Raw storage order is HP/Attack/Defense/Speed/Sp.Atk/Sp.Def; this
+        # record's raw 31 is the sixth stored value (Sp.Def), which the
+        # parser reorders to the fifth position (Sp.Def) in normalized
+        # display order (HP/Attack/Defense/Sp.Atk/Sp.Def/Speed).
         data = _trade_record(
             offered_species_id=479,
             ivs=(20, 20, 20, 20, 20, 31),
@@ -52,9 +56,31 @@ class Gen5NpcTradeTests(unittest.TestCase):
         self.assertEqual(trade.nickname, "Eeks")
         self.assertEqual(trade.ot_name, "Lillian")
         self.assertIsNone(trade.held_item_id)
-        self.assertEqual(trade.ivs, (20, 20, 20, 20, 20, 31))
+        self.assertEqual(trade.ivs, (20, 20, 20, 20, 31, 20))
         self.assertEqual(trade.provenance.archive, "trades.narc")
         self.assertEqual(trade.provenance.member, 6)
+
+    def test_reorders_raw_stat_storage_to_normalized_display_order(self) -> None:
+        # Distinct value per stat to unambiguously verify the reorder,
+        # unlike the other fixtures here which reuse repeated values.
+        data = _trade_record(
+            offered_species_id=1,
+            ivs=(1, 2, 3, 4, 5, 6),  # raw: HP,Atk,Def,Speed,SpAtk,SpDef
+            ot_id=0,
+            held_item_id=0,
+            requested_species_id=1,
+        )
+
+        trade = parse_npc_trade_record(
+            data,
+            trade_id=0,
+            nickname="x",
+            ot_name="y",
+            archive_path="trades.narc",
+        )
+
+        # Display: HP,Atk,Def,SpAtk,SpDef,Speed
+        self.assertEqual(trade.ivs, (1, 2, 3, 5, 6, 4))
 
     def test_decodes_a_trade_with_a_held_item(self) -> None:
         # Real Black ROM trade 5: "Gorge" the Munchlax holding a Leftovers

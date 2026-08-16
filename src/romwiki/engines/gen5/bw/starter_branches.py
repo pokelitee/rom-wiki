@@ -8,17 +8,18 @@ from romwiki.engines.gen5.script_disassembler import (
     Gen5Instruction,
     disassemble_script,
 )
+from romwiki.engines.gen5.script_opcode_table import (
+    STACK_CMP,
+    STACK_CMP_EQUAL,
+    STACK_PUSH,
+    STACK_PUSH_CONST,
+    VM_JUMP_IF,
+)
 from romwiki.util.errors import InvalidRomError
 
 #: The stack-comparison idiom BW uses to branch on the player's starter:
 #: push a variable, push a constant, compare for equality, then jump past the
 #: guarded block when it does not match.
-STACK_PUSH = 0x0009
-STACK_PUSH_CONST = 0x0008
-STACK_CMP = 0x0011
-STACK_CMP_EQUAL = 1
-VM_JUMP_IF = 0x001F
-VM_JUMP = 0x001E
 CALL_TRAINER_BATTLE = 0x0085
 
 #: Starters are stored as species halfwords, one per starter index.

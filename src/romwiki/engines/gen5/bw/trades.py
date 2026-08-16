@@ -39,7 +39,13 @@ def parse_npc_trade_record(
         )
     offered_species_id = struct.unpack_from("<I", data, _OFFERED_SPECIES_OFFSET)[0]
     offered_forme_id = struct.unpack_from("<I", data, _OFFERED_FORME_OFFSET)[0]
-    ivs = struct.unpack_from("<6I", data, _IVS_OFFSET)
+    # Raw storage order is HP/Attack/Defense/Speed/Sp.Atk/Sp.Def -- the same
+    # core-series Pokemon party-data convention Generation IV's trade records
+    # use (see gen4/dppt/trades.py's identical reorder), where Speed and the
+    # special stats trade places relative to the normalized display order
+    # this project publishes (schema/trades.py's NpcTrade.ivs).
+    raw_ivs = struct.unpack_from("<6I", data, _IVS_OFFSET)
+    ivs = raw_ivs[:3] + raw_ivs[4:] + raw_ivs[3:4]
     ot_id = struct.unpack_from("<H", data, _OT_ID_OFFSET)[0]
     held_item_id = struct.unpack_from("<I", data, _HELD_ITEM_OFFSET)[0]
     requested_species_id = struct.unpack_from("<I", data, _REQUESTED_SPECIES_OFFSET)[0]

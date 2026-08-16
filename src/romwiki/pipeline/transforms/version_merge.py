@@ -152,6 +152,38 @@ def _family_without_provenance(family: object) -> object:
     return {key: value for key, value in family.items() if key != "provenance"}
 
 
+# Every NpcTrade field (schema/trades.py) except `trade_id` (compared
+# separately, as identity) and `provenance` (legitimately differs per
+# ROM/version -- it's where the record was extracted from, not what it is).
+_TRADE_IDENTITY_FIELDS = (
+    "nickname",
+    "ot_name",
+    "ot_id",
+    "offered_species_id",
+    "offered_forme_id",
+    "requested_species_id",
+    "held_item_id",
+    "ivs",
+    "interaction",
+)
+
+
+def _same_trade(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    """Compare two trade records for identity across sibling versions.
+
+    Field-by-field with `.get()` so a value simply being absent compares
+    equal to it being explicitly `None` (an extraction-shape nuance the rest
+    of this module tolerates via `records_semantically_equal`) -- but
+    unlike that helper, every trade-identifying field is compared, not just
+    the narrower subset `comparisons.py`'s `_FIELDS["trades"]` tracks for
+    base-vs-hack diff pages. A trade differing only in nickname, OT info, or
+    IVs is a different trade, not an extraction quirk.
+    """
+    return all(
+        first.get(field) == second.get(field) for field in _TRADE_IDENTITY_FIELDS
+    )
+
+
 def _merge_location_trade_variants(
     variants: Mapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
@@ -172,12 +204,8 @@ def _merge_location_trade_variants(
                 (
                     candidate
                     for candidate in trades
-                    if {
-                        key: item
-                        for key, item in candidate.items()
-                        if key != "versions"
-                    }
-                    == trade
+                    if candidate["trade_id"] == trade["trade_id"]
+                    and _same_trade(candidate, trade)
                 ),
                 None,
             )
@@ -243,7 +271,7 @@ def merge_version_family_comparisons(
             record["status"] = _combined_status(
                 {entry["status"] for entry in entries.values()}
             )
-            record["changes"] = _combined_changes(entries.values())
+            record["changes"] = _combined_changes(entries.items())
             record["detail_available"] = any(
                 entry.get("detail_available") for entry in entries.values()
             )
@@ -298,14 +326,46 @@ def _combined_status(statuses: set[str]) -> str:
 
 
 def _combined_changes(
-    entries: Iterable[dict[str, Any]],
+    entries: Iterable[tuple[str, dict[str, Any]]],
 ) -> list[dict[str, Any]]:
-    changes = []
-    fields = set()
-    for entry in entries:
+    """Combine each version's field-level changes into one flat list.
+
+    A field that changed to the same value in every version that touched it
+    keeps a single entry. A field that changed to a *different* value in at
+    least one version keeps one entry per distinct value, each labeled with
+    the version(s) it came from -- rather than silently keeping only the
+    first version's value and discarding the differing ones. The full detail
+    also lives in `version_comparisons`, but the flat `changes` list a
+    renderer reads directly should not misrepresent one version's value as
+    universal.
+    """
+    by_field: dict[Any, list[tuple[str, dict[str, Any]]]] = {}
+    for version, entry in entries:
         for change in entry.get("changes", []):
             field = change.get("field", change.get("label"))
-            if field not in fields:
-                fields.add(field)
-                changes.append(change)
+            by_field.setdefault(field, []).append((version, change))
+    changes = []
+    for versioned_changes in by_field.values():
+        changes.extend(_combine_field_variants(versioned_changes))
     return changes
+
+
+def _combine_field_variants(
+    versioned_changes: list[tuple[str, dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    variants: list[tuple[Any, Any, dict[str, Any], list[str]]] = []
+    for version, change in versioned_changes:
+        before, after = change.get("before"), change.get("after")
+        for existing_before, existing_after, _, versions in variants:
+            if existing_before == before and existing_after == after:
+                versions.append(version)
+                break
+        else:
+            variants.append((before, after, change, [version]))
+    if len(variants) == 1:
+        return [variants[0][2]]
+    label = versioned_changes[0][1].get("label")
+    return [
+        {**change, "label": f"{label} ({'/'.join(versions)})"}
+        for _, _, change, versions in variants
+    ]

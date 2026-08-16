@@ -36,8 +36,9 @@ class Gen5B2W2PersonalDataTests(unittest.TestCase):
         data[0x12:0x1B] = bytes((0, 120, 90, 5, 15, 15, 22, 0, 128))
         data[0x21] = 4
         struct.pack_into("<H", data, 0x22, 270)
-        data[0x28] = 1
-        data[0x34] = 1 << 4
+        data[0x28] = 1  # table position 0: TM01 -> machine_id 1
+        data[0x33] = 1 << 4  # table position 92: HM01 -> machine_id 96
+        data[0x34] = 1 << 4  # table position 100: TM95 -> machine_id 95
         data[0x3C:0x4C] = b"\xff" * 16
 
         record = parse_personal_record(
@@ -50,7 +51,10 @@ class Gen5B2W2PersonalDataTests(unittest.TestCase):
         self.assertEqual(record.ev_yields.special_defense, 3)
         self.assertEqual(record.wild_held_items.dark_grass, 3)
         self.assertEqual(record.ability_ids, (22, 0, 128))
-        self.assertEqual(record.machine_ids, (1, 101))
+        # Bits are indexed by physical ARM9 table position, which interleaves
+        # TM01-92, HM01-06, then TM93-95 -- distinct from the contiguous
+        # published machine_id (TM01-95 = 1-95, HM01-06 = 96-101).
+        self.assertEqual(record.machine_ids, (1, 95, 96))
         self.assertEqual(record.provenance.member, 708)
 
     def test_rejects_a_bw_sized_record(self) -> None:

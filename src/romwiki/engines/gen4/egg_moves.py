@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen4.constants import MAX_MOVE_ID
+from romwiki.engines.gen4.personal import GEN4_BASE_SPECIES_COUNT
 from romwiki.schema import OverlayEggMoveSet
 from romwiki.util.errors import InvalidRomError
 
 EGG_MOVE_TABLE_TERMINATOR = 0xFFFF
 EGG_MOVE_SPECIES_MARKER_BASE = 20000
-GEN4_MAX_SPECIES_ID = 493
-GEN4_MAX_MOVE_ID = 467
 
 
 def parse_egg_move_table(
@@ -34,7 +34,7 @@ def parse_egg_move_table(
         if (
             EGG_MOVE_SPECIES_MARKER_BASE
             < value
-            <= (EGG_MOVE_SPECIES_MARKER_BASE + GEN4_MAX_SPECIES_ID)
+            <= (EGG_MOVE_SPECIES_MARKER_BASE + GEN4_BASE_SPECIES_COUNT)
         ):
             next_species_id = value - EGG_MOVE_SPECIES_MARKER_BASE
             if species_id is not None:
@@ -50,7 +50,7 @@ def parse_egg_move_table(
 
         if species_id is None:
             raise InvalidRomError("Gen IV egg move table does not start with a species")
-        if not 1 <= value <= GEN4_MAX_MOVE_ID:
+        if not 1 <= value <= MAX_MOVE_ID:
             raise InvalidRomError(f"Gen IV egg move table has invalid move ID {value}")
         # Retail HGSS contains literal repeated move IDs in a few species' sets.
         # Preserve them as stored; presentation can de-duplicate if appropriate.

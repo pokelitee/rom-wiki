@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen4.constants import MAX_MOVE_ID
 from romwiki.schema import BattlePointTutorMove, TutorCompatibility
 from romwiki.util.errors import InvalidRomError
 
@@ -25,7 +26,7 @@ def parse_tutor_move_table(data: bytes) -> tuple[BattlePointTutorMove, ...]:
         move_id, packed_cost = struct.unpack_from("<HH", data, index * 4)
         battle_point_cost = packed_cost & 0xFF
         location_id = packed_cost >> 8
-        if not 1 <= move_id <= 467:
+        if not 1 <= move_id <= MAX_MOVE_ID:
             raise InvalidRomError(
                 f"HGSS tutor {index + 1} has invalid move ID {move_id}"
             )

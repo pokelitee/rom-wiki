@@ -8,7 +8,10 @@ from unittest.mock import patch
 
 from romwiki.pipeline.transforms.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_encounter_pages
-from romwiki.renderers.mkdocs.encounters import _encounter_catalog_url, _season_version_tabs
+from romwiki.renderers.mkdocs.encounters import (
+    _encounter_catalog_url,
+    _season_version_tabs,
+)
 from romwiki.util.errors import SiteError
 
 
@@ -19,12 +22,14 @@ class EncounterRenderingTests(unittest.TestCase):
         # own error taxonomy, not a bare ValueError escaping the CLI's
         # RomWikiError boundary as a raw traceback.
         record = _encounter_record(999, 999, None, "Nowhere")
-        with patch(
-            "romwiki.renderers.mkdocs.encounters.ROUTES.published_href",
-            return_value=None,
+        with (
+            patch(
+                "romwiki.renderers.mkdocs.encounters.ROUTES.published_href",
+                return_value=None,
+            ),
+            self.assertRaises(SiteError),
         ):
-            with self.assertRaises(SiteError):
-                _encounter_catalog_url(record)
+            _encounter_catalog_url(record)
 
     def test_routes_version_specific_daily_swarm_to_location(self) -> None:
         black = {

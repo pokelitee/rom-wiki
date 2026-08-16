@@ -10,6 +10,21 @@ bytes (not adopted on faith).
 
 from __future__ import annotations
 
+# The "compare a stack value to a constant, then branch" VM idiom BW's own
+# trainer-branch detectors (starter selection, difficulty-conditioned
+# battles) look for by scanning raw, undissassembled bytes -- so they need
+# these as plain opcode numbers, not names resolved through OPCODE_TABLE by
+# the disassembler. Named here once so `bw/scripts.py` and
+# `bw/starter_branches.py` share one definition instead of two independently
+# hand-copied ones. Values match this file's own OPCODE_TABLE entries below.
+STACK_PUSH_CONST = 0x8
+STACK_PUSH = 0x9
+STACK_CMP = 0x11
+STACK_CMP_EQUAL = 1  # not an opcode: the StackCmp "equal" condition operand
+VM_JUMP = 0x1E
+VM_JUMP_IF = 0x1F
+WORK_SET_CONST = 0x28
+
 # opcode -> (name, parameter byte-widths)
 OPCODE_TABLE: dict[int, tuple[str, tuple[int, ...]]] = {
     0x0: ("VMNop", ()),

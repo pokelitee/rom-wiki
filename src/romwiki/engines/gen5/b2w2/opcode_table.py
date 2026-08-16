@@ -14,6 +14,11 @@ from __future__ import annotations
 
 from romwiki.engines.gen5.script_opcode_table import OPCODE_TABLE as BASE_OPCODE_TABLE
 
+#: Named here so `difficulty_branches.py`'s byte-pattern scan (which runs
+#: before disassembly can resolve the opcode to its name) doesn't hand-copy
+#: this table's own entry as a bare literal.
+GAME_GET_DIFFICULTY = 0x2AF
+
 OPCODE_TABLE = {
     **BASE_OPCODE_TABLE,
     0x174: ("CallWildBattle", (2, 2, 2)),

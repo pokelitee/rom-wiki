@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen4.personal import GEN4_BASE_SPECIES_COUNT
 from romwiki.schema import NpcTrade, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
@@ -23,18 +24,19 @@ def parse_npc_trade_record(
         )
 
     offered_species_id = struct.unpack_from("<I", data, 0)[0]
-    ivs = struct.unpack_from("<6I", data, 4)
+    raw_ivs = struct.unpack_from("<6I", data, 4)
+    ivs = raw_ivs[:3] + raw_ivs[4:] + raw_ivs[3:4]
     ot_id = struct.unpack_from("<H", data, 0x20)[0]
     held_item_id = struct.unpack_from("<I", data, 0x3C)[0]
     requested_species_id = struct.unpack_from("<I", data, 0x4C)[0]
     trailing_padding = struct.unpack_from("<I", data, 0x50)[0]
 
-    if not 1 <= offered_species_id <= 493:
+    if not 1 <= offered_species_id <= GEN4_BASE_SPECIES_COUNT:
         raise InvalidRomError(
             f"HGSS NPC trade {trade_id} has invalid offered species "
             f"{offered_species_id}"
         )
-    if not 1 <= requested_species_id <= 493:
+    if not 1 <= requested_species_id <= GEN4_BASE_SPECIES_COUNT:
         raise InvalidRomError(
             f"HGSS NPC trade {trade_id} has invalid requested species "
             f"{requested_species_id}"

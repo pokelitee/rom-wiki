@@ -4,7 +4,7 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.script_table import parse_script_table
+from romwiki.engines.gen4.script_table import SCRIPT_COMMAND_COUNT, parse_script_table
 
 #: Reads the player's starter species into a script variable.
 GET_STARTER_SPECIES = 0x00DE
@@ -16,8 +16,6 @@ GET_STARTER_SPECIES = 0x00DE
 
 COMPARE_VAR_TO_VALUE = 0x0011
 GOTO_IF = 0x001C
-
-_SCRIPT_COMMAND_COUNT = 0x033A
 
 # `GotoIf` is opcode(2) + condition(1) + relative offset(4). Relative offsets
 # are measured from the end of their own field, the same convention the script
@@ -201,7 +199,7 @@ def _literal_battles(
     for offset in range(code_offset, len(data) - 7):
         if struct.unpack_from("<H", data, offset)[0] != battle_opcode:
             continue
-        if struct.unpack_from("<H", data, offset + 6)[0] >= _SCRIPT_COMMAND_COUNT:
+        if struct.unpack_from("<H", data, offset + 6)[0] >= SCRIPT_COMMAND_COUNT:
             continue
         trainer_id = struct.unpack_from("<H", data, offset + 2)[0]
         if 0 < trainer_id < trainer_count:

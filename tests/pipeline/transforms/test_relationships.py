@@ -332,6 +332,7 @@ class RelationshipIndexTests(unittest.TestCase):
             {
                 "area_id": 174,
                 "source_type": "hidden-grotto",
+                "grotto_id": 3,
                 "name": "Route 1",
                 "location": {"header_id": 6, "name": "Route 1"},
             },

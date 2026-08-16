@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import DataSourceError
 
 
 class PokeDBSpriteTests(unittest.TestCase):
@@ -277,6 +281,142 @@ class PokeDBSpriteTests(unittest.TestCase):
         self.assertNotIn("base_stats", result)
         self.assertNotIn("types", result)
         self.assertNotIn("abilities", result)
+
+
+def _write_json(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def _write_minimal_pokedb(root: Path) -> None:
+    _write_json(
+        root / "pokemon" / "default" / "1.json",
+        {"id": 1, "name": "bulbasaur", "species": "bulbasaur"},
+    )
+    _write_json(
+        root / "pokemon" / "variant" / "10091.json",
+        {"id": 10091, "name": "venusaur-mega", "species": "venusaur"},
+    )
+    _write_json(root / "ability" / "1.json", {"id": 1, "name": "stench"})
+    _write_json(root / "item" / "1.json", {"id": 1, "name": "master-ball"})
+    _write_json(root / "move" / "1.json", {"id": 1, "name": "pound"})
+
+
+class PokeDBLoadTests(unittest.TestCase):
+    def test_loads_a_well_formed_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+
+            pokedb = PokeDBGeneration.load(root)
+
+            self.assertEqual(pokedb.pokemon_for_id(1)["species"], "bulbasaur")
+            self.assertEqual(pokedb.pokemon_for_name("venusaur-mega")["id"], 10091)
+            self.assertEqual(pokedb.pokemon_for_species("bulbasaur")["id"], 1)
+            self.assertEqual(pokedb.ability_name(1), "stench")
+            self.assertEqual(pokedb.item_name(1), "master-ball")
+            self.assertEqual(pokedb.move_name(1), "pound")
+
+    def test_rejects_a_missing_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(DataSourceError, "does not exist"):
+                PokeDBGeneration.load(root)
+
+    def test_rejects_an_empty_resource_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+            for path in (root / "ability").glob("*.json"):
+                path.unlink()
+
+            with self.assertRaisesRegex(DataSourceError, "no JSON objects"):
+                PokeDBGeneration.load(root)
+
+    def test_rejects_invalid_json(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+            (root / "ability" / "broken.json").write_text("not json", encoding="utf-8")
+
+            with self.assertRaisesRegex(DataSourceError, "Invalid PokéDB JSON"):
+                PokeDBGeneration.load(root)
+
+    def test_rejects_an_object_missing_its_id(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+            _write_json(root / "ability" / "2.json", {"name": "no-id"})
+
+            with self.assertRaisesRegex(DataSourceError, "Invalid PokéDB object"):
+                PokeDBGeneration.load(root)
+
+    def test_rejects_duplicate_default_pokemon_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+            _write_json(
+                root / "pokemon" / "default" / "1-dup.json",
+                {"id": 1, "name": "bulbasaur-dup", "species": "bulbasaur-dup"},
+            )
+
+            with self.assertRaisesRegex(DataSourceError, "IDs must be unique"):
+                PokeDBGeneration.load(root)
+
+    def test_rejects_duplicate_resource_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+            _write_json(
+                root / "ability" / "1-dup.json", {"id": 1, "name": "stench-dup"}
+            )
+
+            with self.assertRaisesRegex(DataSourceError, "ability IDs must be unique"):
+                PokeDBGeneration.load(root)
+
+
+class PokeDBLookupMissTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+
+    def test_raises_for_an_unknown_pokemon_id(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "Pokémon ID does not exist"):
+            self.pokedb.pokemon_for_id(999)
+
+    def test_raises_for_an_unknown_pokemon_name(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "Pokémon does not exist"):
+            self.pokedb.pokemon_for_name("missingno")
+
+    def test_raises_for_an_unknown_species(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "species does not exist"):
+            self.pokedb.pokemon_for_species("missingno")
+
+    def test_raises_for_an_unknown_ability_id(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "ability ID does not exist"):
+            self.pokedb.ability_name(999)
+
+    def test_ability_id_zero_means_no_ability(self) -> None:
+        self.assertIsNone(self.pokedb.ability_name(0))
+
+    def test_raises_for_an_unknown_item_id(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "item ID does not exist"):
+            self.pokedb.item_name(999)
+
+    def test_item_id_zero_means_no_item(self) -> None:
+        self.assertIsNone(self.pokedb.item_name(0))
+
+    def test_raises_for_an_unknown_move_id(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "move ID does not exist"):
+            self.pokedb.move_name(999)
+
+    def test_move_id_zero_means_no_move(self) -> None:
+        self.assertIsNone(self.pokedb.move_name(0))
 
 
 if __name__ == "__main__":

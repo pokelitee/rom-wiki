@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen4.constants import MAX_MOVE_ID
 from romwiki.schema import Machine
 from romwiki.util.errors import InvalidRomError
 
@@ -33,7 +34,7 @@ def parse_machine_move_table(
         )
     machines = []
     for index, (move_id,) in enumerate(struct.iter_unpack("<H", data)):
-        if not 1 <= move_id <= 467:
+        if not 1 <= move_id <= MAX_MOVE_ID:
             raise InvalidRomError(
                 f"Gen IV machine {index + 1} has invalid move ID {move_id}"
             )

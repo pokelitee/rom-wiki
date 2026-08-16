@@ -93,6 +93,7 @@ from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
 from romwiki.util.logging import configure_logging, timed_operation
 
 _LOG = logging.getLogger("romwiki")
+DEFAULT_DATA_ROOT = Path("build/data")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -237,7 +238,7 @@ def _add_build_parser(
     build_game_parser.add_argument(
         "--data-root",
         type=Path,
-        default=Path("build/data"),
+        default=DEFAULT_DATA_ROOT,
         help="generated data root (default: build/data)",
     )
     build_game_parser.add_argument(
@@ -280,7 +281,7 @@ def _add_build_parser(
     family_parser.add_argument(
         "--data-root",
         type=Path,
-        default=Path("build/data"),
+        default=DEFAULT_DATA_ROOT,
         help="generated data root (default: build/data)",
     )
     family_parser.add_argument(
@@ -323,7 +324,7 @@ def _add_regenerate_parser(
         default=Path("../pokedb/.output"),
         help="directory containing gen<N> PokéDB outputs",
     )
-    regenerate_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
+    regenerate_parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
     regenerate_parser.add_argument(
         "--output",
         type=Path,
@@ -386,7 +387,7 @@ def _add_generate_parser(
         default=Path("../pokedb/.output"),
         help="directory containing gen<N> PokéDB outputs",
     )
-    generate_parser.add_argument("--data-root", type=Path, default=Path("build/data"))
+    generate_parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
     generate_parser.add_argument(
         "--refresh",
         action="store_true",
@@ -428,7 +429,7 @@ def _add_baseline_parser(
     baseline_build_parser.add_argument(
         "--data-root",
         type=Path,
-        default=Path("build/data"),
+        default=DEFAULT_DATA_ROOT,
         help="generated data root (default: build/data)",
     )
     baseline_build_parser.add_argument(
@@ -746,21 +747,21 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
     elif args.command == "extract-personal":
         dataset = extract_personal_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "pokemon" / "personal.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "pokemon" / "personal.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} personal records: {output}")
     elif args.command == "extract-encounters":
         dataset = extract_encounter_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "encounters" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "encounters" / "raw.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} encounter records: {output}")
     elif args.command == "extract-trainers":
         dataset = extract_trainer_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "trainers" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "trainers" / "raw.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} trainer records: {output}")
@@ -794,35 +795,35 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
             ),
         )
         output = args.output or (
-            Path("build/data") / dataset["game"] / "locations" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "locations" / "raw.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} location records: {output}")
     elif args.command == "extract-moves":
         dataset = extract_move_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "moves" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "moves" / "raw.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} move records: {output}")
     elif args.command == "extract-items":
         dataset = extract_item_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "items" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "items" / "raw.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} item records: {output}")
     elif args.command == "extract-learnsets":
         dataset = extract_learnset_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "pokemon" / "learnsets.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "pokemon" / "learnsets.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} learnsets: {output}")
     elif args.command == "extract-egg-moves":
         dataset = extract_egg_move_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "pokemon" / "egg-moves.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "pokemon" / "egg-moves.json"
         )
         write_dataset(dataset, output)
         print(
@@ -832,21 +833,21 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
     elif args.command == "extract-evolutions":
         dataset = extract_evolution_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "pokemon" / "evolutions.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "pokemon" / "evolutions.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} evolution records: {output}")
     elif args.command == "extract-machines":
         dataset = extract_machine_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "machines" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "machines" / "raw.json"
         )
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} machine records: {output}")
     elif args.command == "extract-tutors":
         dataset = extract_tutor_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "tutors" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "tutors" / "raw.json"
         )
         write_dataset(dataset, output)
         print(
@@ -860,7 +861,7 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
     elif args.command == "extract-pickup":
         dataset = extract_pickup_dataset(result)
         output = args.output or (
-            Path("build/data") / dataset["game"] / "pickup" / "raw.json"
+            DEFAULT_DATA_ROOT / dataset["game"] / "pickup" / "raw.json"
         )
         write_dataset(dataset, output)
         if "level_ranges" in dataset:
@@ -968,7 +969,7 @@ def _create_build_workflow(
         if baseline_path is not None
         else None
     )
-    data_root = getattr(args, "data_root", Path("build/data"))
+    data_root = getattr(args, "data_root", DEFAULT_DATA_ROOT)
     return GameBuildWorkflow(
         result,
         pokedb,
@@ -1035,7 +1036,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     data_root = (
         args.data_output.parent.parent
         if args.data_output is not None
-        else Path("build/data") / game
+        else DEFAULT_DATA_ROOT / game
     )
     comparisons = _load_comparisons(data_root / "comparisons")
     # An engine's Abilities section needs ROM-decoded ability names with no

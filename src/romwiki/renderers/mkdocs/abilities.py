@@ -235,6 +235,26 @@ def _render_record(
     return "\n".join(lines)
 
 
+def _pickup_pool_rows(
+    items: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> list[str]:
+    return markdown_table_from_cells(
+        _ITEM_COLUMNS,
+        (
+            (
+                sprite_with_link(
+                    reference_sprite_cell("item", item["item_id"], references),
+                    _item_link(item, source_file, references),
+                ),
+                str(item["item_id"]),
+            )
+            for item in items
+        ),
+    )
+
+
 def _pickup_section(
     pickup: dict[str, Any] | None,
     source_file: str,
@@ -280,37 +300,9 @@ def _pickup_section(
         for tier, rate in enumerate(pickup["common_rate"])
     )
     lines.extend(["", "**Common pool:**", ""])
-    lines.extend(
-        markdown_table_from_cells(
-            _ITEM_COLUMNS,
-            (
-                (
-                    sprite_with_link(
-                        reference_sprite_cell("item", item["item_id"], references),
-                        _item_link(item, source_file, references),
-                    ),
-                    str(item["item_id"]),
-                )
-                for item in pickup["common_items"]
-            ),
-        )
-    )
+    lines.extend(_pickup_pool_rows(pickup["common_items"], source_file, references))
     lines.extend(["**Rare pool** (the remaining chance):", ""])
-    lines.extend(
-        markdown_table_from_cells(
-            _ITEM_COLUMNS,
-            (
-                (
-                    sprite_with_link(
-                        reference_sprite_cell("item", item["item_id"], references),
-                        _item_link(item, source_file, references),
-                    ),
-                    str(item["item_id"]),
-                )
-                for item in pickup["rare_items"]
-            ),
-        )
-    )
+    lines.extend(_pickup_pool_rows(pickup["rare_items"], source_file, references))
     return lines
 
 

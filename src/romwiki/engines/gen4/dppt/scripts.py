@@ -4,6 +4,9 @@ import struct
 from dataclasses import dataclass
 
 from romwiki.engines.gen4.script_table import (
+    SCRIPT_COMMAND_COUNT as SCRIPT_COMMAND_COUNT,
+)
+from romwiki.engines.gen4.script_table import (
     SCRIPT_TABLE_END as SCRIPT_TABLE_END,
 )
 from romwiki.engines.gen4.script_table import (
@@ -22,7 +25,6 @@ PLATINUM_ROAMING_SLOT_COUNT = 5
 TRAINER_OBJECT_SCRIPT_START = 3000
 TRAINER_OBJECT_SCRIPT_END = 3999
 TRAINER_OBJECT_ID_OFFSET = 1
-_SCRIPT_COMMAND_COUNT = 0x033A
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,7 +81,7 @@ def parse_trainer_battle_commands(
     for offset in range(code_offset, len(data) - 7):
         if data[offset : offset + 2] != signature:
             continue
-        if struct.unpack_from("<H", data, offset + 6)[0] >= _SCRIPT_COMMAND_COUNT:
+        if struct.unpack_from("<H", data, offset + 6)[0] >= SCRIPT_COMMAND_COUNT:
             continue
         first_trainer, second_trainer = struct.unpack_from("<HH", data, offset + 2)
         if not 0 < first_trainer < trainer_count:
@@ -172,7 +174,7 @@ def parse_roaming_activation_commands(
         if slot >= PLATINUM_ROAMING_SLOT_COUNT:
             continue
         following_opcode = struct.unpack_from("<H", data, offset + 3)[0]
-        if following_opcode >= _SCRIPT_COMMAND_COUNT:
+        if following_opcode >= SCRIPT_COMMAND_COUNT:
             continue
         commands.append(Gen4RoamingActivationCommand(offset=offset, slot=slot))
     return tuple(commands)

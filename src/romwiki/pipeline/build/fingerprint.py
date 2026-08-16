@@ -38,7 +38,9 @@ def extraction_source_fingerprint(
     cache_key: str,
 ) -> str:
     """Hash the local code used by one engine/dataset extraction path."""
-    return combined_extraction_source_fingerprint(engine_id, (extractor_module,), cache_key)
+    return combined_extraction_source_fingerprint(
+        engine_id, (extractor_module,), cache_key
+    )
 
 
 @cache

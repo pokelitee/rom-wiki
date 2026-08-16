@@ -554,6 +554,30 @@ def _format_chance(value: float) -> str:
     return f"{text}%"
 
 
+def _bonus_species_rows(
+    entries: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> list[tuple[str, str, str]]:
+    return [
+        (
+            sprite_with_link(
+                entity_sprite("pokemon", entry["species_id"], references),
+                entity_link(
+                    "pokemon",
+                    entry["species_id"],
+                    entry["name"],
+                    source_file,
+                    references,
+                ),
+            ),
+            reference_type_cell("pokemon", entry["species_id"], references),
+            _format_chance(entry["chance"]),
+        )
+        for entry in _merge_bonus_species(entries)
+    ]
+
+
 def _append_honey_tree(
     lines: list[str],
     honey_tree: dict[str, Any] | None,
@@ -579,23 +603,7 @@ def _append_honey_tree(
         ("Uncommon", "uncommon"),
         ("Rare", "rare"),
     ):
-        rows = [
-            (
-                sprite_with_link(
-                    entity_sprite("pokemon", entry["species_id"], references),
-                    entity_link(
-                        "pokemon",
-                        entry["species_id"],
-                        entry["name"],
-                        source_file,
-                        references,
-                    ),
-                ),
-                reference_type_cell("pokemon", entry["species_id"], references),
-                _format_chance(entry["chance"]),
-            )
-            for entry in _merge_bonus_species(honey_tree[key])
-        ]
+        rows = _bonus_species_rows(honey_tree[key], source_file, references)
         lines.extend([f"**{label}:**", ""])
         lines.extend(markdown_table_from_cells(_POKEMON_TYPE_CHANCE_COLUMNS, rows))
 
@@ -637,23 +645,7 @@ def _append_daily_encounter_pool(
         )
         groups = ((None, pool["species"]),)
     for group_label, entries in groups:
-        rows = [
-            (
-                sprite_with_link(
-                    entity_sprite("pokemon", entry["species_id"], references),
-                    entity_link(
-                        "pokemon",
-                        entry["species_id"],
-                        entry["name"],
-                        source_file,
-                        references,
-                    ),
-                ),
-                reference_type_cell("pokemon", entry["species_id"], references),
-                _format_chance(entry["chance"]),
-            )
-            for entry in _merge_bonus_species(entries)
-        ]
+        rows = _bonus_species_rows(entries, source_file, references)
         if group_label:
             lines.extend([f"**{group_label}:**", ""])
         lines.extend(markdown_table_from_cells(_POKEMON_TYPE_CHANCE_COLUMNS, rows))

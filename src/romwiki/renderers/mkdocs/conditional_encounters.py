@@ -12,6 +12,7 @@ from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     content_tabs,
     display_name,
+    level_range,
     markdown_table_from_cells,
     reference_type_cell,
     rom_record_source,
@@ -65,7 +66,7 @@ def append_headbutt_encounters(
                         (
                             _pokemon_cell(slot["pokemon"], source_file),
                             _type_cell(slot["pokemon"], references),
-                            _level_range(slot["minimum_level"], slot["maximum_level"]),
+                            level_range(slot["minimum_level"], slot["maximum_level"]),
                             f"{slot['chance']}%",
                         )
                         for slot in value["pools"][kind]
@@ -125,9 +126,7 @@ def append_daily_swarm(
                         (
                             _pokemon_cell(value["pokemon"], source_file),
                             _type_cell(value["pokemon"], references),
-                            _level_range(
-                                value["minimum_level"], value["maximum_level"]
-                            ),
+                            level_range(value["minimum_level"], value["maximum_level"]),
                         ),
                     ),
                 ),
@@ -172,7 +171,7 @@ def append_hidden_grotto(
                     (
                         _pokemon_cell(slot["pokemon"], source_file),
                         _type_cell(slot["pokemon"], references),
-                        _level_range(slot["minimum_level"], slot["maximum_level"]),
+                        level_range(slot["minimum_level"], slot["maximum_level"]),
                         f"{slot['female_percentage']}%",
                         f"{slot['pool_chance']}%",
                         chr(ord("A") + slot["group"]),
@@ -373,10 +372,6 @@ def _pokemon_cell(pokemon: dict[str, Any], source_file: str) -> str:
 
 def _type_cell(pokemon: dict[str, Any], references: ReferenceIndex | None) -> str:
     return reference_type_cell("pokemon", pokemon.get("id"), references)
-
-
-def _level_range(minimum: int, maximum: int) -> str:
-    return str(minimum) if minimum == maximum else f"{minimum}–{maximum}"
 
 
 def _safari_slot_cell(slot: dict[str, Any], source_file: str) -> str:

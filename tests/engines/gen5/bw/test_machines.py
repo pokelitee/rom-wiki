@@ -3,27 +3,38 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.machines import machine_name, parse_machine_move_table
+from romwiki.engines.gen5.bw.machines import (
+    machine_id_for_table_index,
+    machine_name,
+    parse_machine_move_table,
+)
 from romwiki.util.errors import InvalidRomError
 
 
 class Gen5MachineTests(unittest.TestCase):
-    def test_names_tm_block_one(self) -> None:
+    def test_names_tms(self) -> None:
         self.assertEqual(machine_name(1), "TM01")
         self.assertEqual(machine_name(92), "TM92")
+        self.assertEqual(machine_name(93), "TM93")
+        self.assertEqual(machine_name(95), "TM95")
 
     def test_names_hms(self) -> None:
-        self.assertEqual(machine_name(93), "HM01")
-        self.assertEqual(machine_name(98), "HM06")
-
-    def test_names_tm_block_two(self) -> None:
-        # The real ARM9 table interleaves a final TM93-95 block after the
-        # HMs, unlike Generation IV's simple contiguous TM-then-HM layout.
-        self.assertEqual(machine_name(99), "TM93")
-        self.assertEqual(machine_name(101), "TM95")
+        self.assertEqual(machine_name(96), "HM01")
+        self.assertEqual(machine_name(101), "HM06")
 
     def test_falls_back_beyond_known_range(self) -> None:
         self.assertEqual(machine_name(102), "MACHINE102")
+
+    def test_maps_physical_table_position_to_published_machine_id(self) -> None:
+        # Physical ARM9 table/bitmap order: TM01-92 (index 0-91), HM01-06
+        # (index 92-97), TM93-95 (index 98-100) -- distinct from the
+        # contiguous published numbering (TM01-95 = 1-95, HM01-06 = 96-101).
+        self.assertEqual(machine_id_for_table_index(0), 1)  # TM01
+        self.assertEqual(machine_id_for_table_index(91), 92)  # TM92
+        self.assertEqual(machine_id_for_table_index(92), 96)  # HM01
+        self.assertEqual(machine_id_for_table_index(97), 101)  # HM06
+        self.assertEqual(machine_id_for_table_index(98), 93)  # TM93
+        self.assertEqual(machine_id_for_table_index(100), 95)  # TM95
 
     def test_parses_the_three_table_blocks(self) -> None:
         # Real Black ROM values: TM01=Hone Claws (468), TM92=Trick Room (433),
@@ -35,6 +46,9 @@ class Gen5MachineTests(unittest.TestCase):
         machines = parse_machine_move_table(data)
 
         self.assertEqual(len(machines), 101)
+        self.assertEqual(
+            tuple(machine.machine_id for machine in machines), tuple(range(1, 102))
+        )
         self.assertEqual(
             (
                 machines[0].kind,
@@ -58,36 +72,40 @@ class Gen5MachineTests(unittest.TestCase):
                 machines[92].kind,
                 machines[92].number,
                 machines[92].move_id,
+                machines[92].table_index,
                 machines[92].item_id,
             ),
-            ("hm", 1, 15, 420),
+            ("tm", 93, 528, 98, 618),
         )
         self.assertEqual(
             (
-                machines[97].kind,
-                machines[97].number,
-                machines[97].move_id,
-                machines[97].item_id,
+                machines[94].kind,
+                machines[94].number,
+                machines[94].move_id,
+                machines[94].table_index,
+                machines[94].item_id,
             ),
-            ("hm", 6, 291, 425),
+            ("tm", 95, 555, 100, 620),
         )
         self.assertEqual(
             (
-                machines[98].kind,
-                machines[98].number,
-                machines[98].move_id,
-                machines[98].item_id,
+                machines[95].kind,
+                machines[95].number,
+                machines[95].move_id,
+                machines[95].table_index,
+                machines[95].item_id,
             ),
-            ("tm", 93, 528, 618),
+            ("hm", 1, 15, 92, 420),
         )
         self.assertEqual(
             (
                 machines[100].kind,
                 machines[100].number,
                 machines[100].move_id,
+                machines[100].table_index,
                 machines[100].item_id,
             ),
-            ("tm", 95, 555, 620),
+            ("hm", 6, 291, 97, 425),
         )
 
     def test_rejects_wrong_size(self) -> None:

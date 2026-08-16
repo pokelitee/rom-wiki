@@ -34,6 +34,7 @@ from romwiki.renderers.mkdocs.components import (
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
+    EntityReference,
     ReferenceIndex,
     entity_reference,
     unique_references,
@@ -336,14 +337,14 @@ def _ai_item_identity(item: dict[str, Any]) -> int | str:
     return item.get("id", item.get("slug", item["name"]))
 
 
-def _ai_item_link(grouped: dict[str, Any], source_url: str) -> str:
-    item = grouped["item"]
-    link = ROUTES.html_link(
-        entity_reference(
-            "item", _ai_item_identity(item), item["name"], item.get("slug")
-        ),
-        source_url,
+def _ai_item_reference(item: dict[str, Any]) -> EntityReference:
+    return entity_reference(
+        "item", _ai_item_identity(item), item["name"], item.get("slug")
     )
+
+
+def _ai_item_link(grouped: dict[str, Any], source_url: str) -> str:
+    link = ROUTES.html_link(_ai_item_reference(grouped["item"]), source_url)
     quantity = f" ×{grouped['quantity']}" if grouped["quantity"] > 1 else ""
     return f"{link}{quantity}"
 
@@ -365,15 +366,7 @@ def _append_ai_battle_items(
     )
     for grouped in grouped_items:
         item = grouped["item"]
-        item_link = ROUTES.markdown_link(
-            entity_reference(
-                "item",
-                _ai_item_identity(item),
-                item["name"],
-                item.get("slug"),
-            ),
-            source_file,
-        )
+        item_link = ROUTES.markdown_link(_ai_item_reference(item), source_file)
         lines.append(
             f"| {sprite_with_link(table_sprite_cell(item.get('sprite_url')), item_link)} | "
             f"{grouped['quantity']} |"

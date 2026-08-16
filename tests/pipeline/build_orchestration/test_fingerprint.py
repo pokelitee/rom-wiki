@@ -4,8 +4,8 @@ import unittest
 
 from romwiki.pipeline.build.fingerprint import (
     combined_extraction_source_fingerprint,
-    extraction_source_fingerprint,
     extraction_source_files,
+    extraction_source_fingerprint,
 )
 
 

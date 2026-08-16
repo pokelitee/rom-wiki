@@ -643,7 +643,7 @@ def _format_pokemon_change(
         return _format_machine_compatibility(before, after, source_url, references)
     if field == "egg_moves":
         return _format_compatibility(
-            before, after, _move_identity, source_url, references
+            before, after, _record_identity, source_url, references
         )
     if field == "tutor_moves":
         return _format_compatibility(
@@ -699,10 +699,7 @@ def _format_ability_pokemon_change(
             added,
         ),
     ]
-    groups = [group for group in groups if group[2]]
-    if not groups:
-        return "Order changed"
-    return _format_change_groups(groups)
+    return _finalize_change_groups(groups)
 
 
 def _format_held_items_change(
@@ -771,10 +768,7 @@ def _format_trainer_location_change(
         ("location removed", "locations removed", removed),
         ("location added", "locations added", added),
     ]
-    groups = [group for group in groups if group[2]]
-    if not groups:
-        return "Order changed"
-    return _format_change_groups(groups)
+    return _finalize_change_groups(groups)
 
 
 def _trainer_location_identity(value: dict[str, Any]) -> Any:
@@ -873,10 +867,7 @@ def _format_level_up_moves(
         ("move removed", "moves removed", removed),
         ("move added", "moves added", added),
     ]
-    groups = [group for group in groups if group[2]]
-    if not groups:
-        return "Order changed"
-    return _format_change_groups(groups)
+    return _finalize_change_groups(groups)
 
 
 def _format_evolutions(
@@ -916,10 +907,7 @@ def _format_evolutions(
         ("evolution removed", "evolutions removed", removed),
         ("evolution added", "evolutions added", added),
     ]
-    groups = [group for group in groups if group[2]]
-    if not groups:
-        return "Order changed"
-    return _format_change_groups(groups)
+    return _finalize_change_groups(groups)
 
 
 def _level_moves_by_id(moves: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -1033,6 +1021,18 @@ def _format_change_groups(
     return "".join(parts) or "No changes"
 
 
+def _finalize_change_groups(groups: list[tuple[str, str, list[str]]]) -> str:
+    """Render the changed/removed/added buckets a per-field diff formatter
+    built, or report an unchanged-but-reordered collection when every
+    bucket ended up empty (every key matched, nothing to report, but the
+    two lists weren't `==` -- the only way to reach here with no changes).
+    """
+    groups = [group for group in groups if group[2]]
+    if not groups:
+        return "Order changed"
+    return _format_change_groups(groups)
+
+
 def _format_plain_change_groups(
     groups: list[tuple[str, str, list[str]]],
 ) -> str:
@@ -1091,10 +1091,6 @@ def _reference_id(value: dict[str, Any] | None) -> Any:
     return value.get("id") if value else None
 
 
-def _machine_identity(value: dict[str, Any]) -> Any:
-    return value.get("id")
-
-
 def _machine_label(
     value: dict[str, Any],
     source_url: str,
@@ -1111,8 +1107,8 @@ def _format_machine_compatibility(
     source_url: str,
     references: ReferenceIndex | None,
 ) -> str:
-    previous = {_machine_identity(item): item for item in before}
-    current = {_machine_identity(item): item for item in after}
+    previous = {_record_identity(item): item for item in before}
+    current = {_record_identity(item): item for item in after}
     lines = []
     for key in sorted(set(previous) | set(current)):
         old = previous.get(key)
@@ -1127,7 +1123,7 @@ def _format_machine_compatibility(
     return _format_lines(lines, True)
 
 
-def _move_identity(value: dict[str, Any]) -> Any:
+def _record_identity(value: dict[str, Any]) -> Any:
     return value.get("id")
 
 

@@ -841,6 +841,10 @@ def shop_price(price: int | None, currency: str) -> str:
     return f"{price:,} {currency.upper()}"
 
 
+def level_range(minimum: int, maximum: int) -> str:
+    return str(minimum) if minimum == maximum else f"{minimum}–{maximum}"
+
+
 def badge_requirement(badges: int | None) -> str:
     if badges is None:
         return "Always"

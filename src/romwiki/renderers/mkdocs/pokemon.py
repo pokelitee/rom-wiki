@@ -74,6 +74,8 @@ _CATALOG_AVAILABILITY_METHOD_ORDER = (
 _CATALOG_AVAILABILITY_METHODS = frozenset(_CATALOG_AVAILABILITY_METHOD_ORDER)
 _NO_KNOWN_DIRECT_SOURCE = "no-known-direct-source"
 _DEFAULT_LEARNSET_FEATURES = frozenset({MOVE_TUTORS, EGG_MOVES})
+_MOVE_DETAIL_HEADER_ROW = "Move | Type | Class | Power | Accuracy | PP"
+_MOVE_DETAIL_DIVIDER_ROW = "---- | ---- | ----- | ----: | -------: | -:"
 
 
 def render_pokemon_pages(
@@ -802,8 +804,8 @@ def _append_level_up_moves(
         return
     lines.extend(
         [
-            "| Level | Move | Type | Class | Power | Accuracy | PP |",
-            "| ----: | ---- | ---- | ----- | ----: | -------: | -: |",
+            f"| Level | {_MOVE_DETAIL_HEADER_ROW} |",
+            f"| ----: | {_MOVE_DETAIL_DIVIDER_ROW} |",
             *[
                 (
                     f"| {entry['level']} | "
@@ -827,8 +829,8 @@ def _append_machines(
     if machines and all("move" in machine for machine in machines):
         lines.extend(
             [
-                "| Machine | Move | Type | Class | Power | Accuracy | PP |",
-                "| ------- | ---- | ---- | ----- | ----: | -------: | -: |",
+                f"| Machine | {_MOVE_DETAIL_HEADER_ROW} |",
+                f"| ------- | {_MOVE_DETAIL_DIVIDER_ROW} |",
                 *[
                     (
                         f"| {machine_markdown_link(machine, source_file, references)} | "
@@ -866,8 +868,8 @@ def _append_tutor_moves(
         return
     lines.extend(
         [
-            "| Move | Type | Class | Power | Accuracy | PP | Location | Requirement |",
-            "| ---- | ---- | ----- | ----: | -------: | -: | -------- | ----------- |",
+            f"| {_MOVE_DETAIL_HEADER_ROW} | Location | Requirement |",
+            f"| {_MOVE_DETAIL_DIVIDER_ROW} | -------- | ----------- |",
             *[
                 (
                     f"| {_record_link('move', tutor['move'], source_file)} | "
@@ -909,8 +911,8 @@ def _append_egg_moves(
         return
     lines.extend(
         [
-            "| Move | Type | Class | Power | Accuracy | PP |",
-            "| ---- | ---- | ----- | ----: | -------: | -: |",
+            f"| {_MOVE_DETAIL_HEADER_ROW} |",
+            f"| {_MOVE_DETAIL_DIVIDER_ROW} |",
             *[
                 f"| {_record_link('move', move, source_file)} | "
                 f"{_move_cells(move, move_lookup)} |"

@@ -106,5 +106,7 @@ def _extract_from_archive(
         },
         records=records,
     )
-    envelope["move_reference_count"] = sum(len(record["move_ids"]) for record in records)
+    envelope["move_reference_count"] = sum(
+        len(record["move_ids"]) for record in records
+    )
     return envelope

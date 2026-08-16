@@ -13,6 +13,17 @@ _LCRNG_MULTIPLIER = 0x41C64E6D
 _LCRNG_INCREMENT = 0x6073
 
 
+def _fixed_iv_from_difficulty(difficulty_value: int) -> int:
+    """Scale a trainer's difficulty value to the 0-31 IV range it encodes.
+
+    A plain difficulty byte (0-255) always scales to a valid IV. Callers that
+    combine it with a high byte can get a result above 31, which isn't a
+    valid fixed IV -- that's the caller's signal to fall back to RNG-derived
+    IVs instead.
+    """
+    return difficulty_value * 31 // 255
+
+
 def normalize_trainer_party_member(
     member: Mapping[str, Any], has_custom_moves: bool
 ) -> NormalizedTrainerPokemon:
@@ -29,7 +40,7 @@ def normalize_trainer_party_member(
     if not isinstance(difficulty_high, int) or not 0 <= difficulty_high <= 255:
         raise DataSourceError("Gen IV trainer difficulty high byte must be a byte")
     difficulty_value = difficulty | (difficulty_high << 8)
-    iv = difficulty_value * 31 // 255
+    iv = _fixed_iv_from_difficulty(difficulty_value)
     move_ids = list(member["move_ids"]) if has_custom_moves else []
     return {
         "species_id": member["species_id"],
@@ -127,7 +138,7 @@ def _trainer_personality(
 
 
 def _trainer_ivs(difficulty: int, rng_seed: int) -> dict[str, Any]:
-    iv = difficulty * 31 // 255
+    iv = _fixed_iv_from_difficulty(difficulty)
     if iv <= 31:
         return {"source": "derived", "values": dict.fromkeys(_STATS, iv)}
     # Pokémon creation consumes two RNG calls before regenerating an invalid

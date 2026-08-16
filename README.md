@@ -164,7 +164,7 @@ romwiki baseline build --game renegade-platinum --scope pokemon moves
 ```
 
 See [CLI reference](docs/cli-reference.md) for every command, input-selection
-rule, output option, and compatibility alias.
+rule, and output option.
 
 ## Site development
 

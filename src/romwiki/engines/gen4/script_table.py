@@ -13,6 +13,11 @@ from romwiki.util.errors import InvalidRomError
 
 SCRIPT_TABLE_END = 0xFD13
 
+#: Upper bound (exclusive) on this generation's script opcode space, used by
+#: both engine leaves to sanity-check a "does this look like a real
+#: follow-on opcode" heuristic during byte-pattern script scanning.
+SCRIPT_COMMAND_COUNT = 0x033A
+
 
 def parse_script_table(data: bytes) -> int:
     cursor = 0

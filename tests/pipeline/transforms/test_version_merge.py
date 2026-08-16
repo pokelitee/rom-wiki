@@ -135,6 +135,114 @@ class VersionMergeTests(unittest.TestCase):
             [(0, ["black"]), (1, ["white"])],
         )
 
+    def test_merges_the_same_trade_despite_a_none_vs_missing_field_nuance(
+        self,
+    ) -> None:
+        # The same trade slot, extracted identically in both versions except
+        # one side has an explicit `held_item_id: None` where the other
+        # simply omits the key -- an extraction-shape nuance the rest of
+        # this module tolerates via records_semantically_equal, but which a
+        # strict raw dict `==` would treat as two different trades.
+        black = _dataset(
+            "locations",
+            "black-us",
+            [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [
+                        {
+                            "trade_id": 0,
+                            "nickname": "Lillil",
+                            "offered_species_id": 1,
+                            "held_item_id": None,
+                        }
+                    ],
+                }
+            ],
+        )
+        white = _dataset(
+            "locations",
+            "white-us",
+            [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [
+                        {
+                            "trade_id": 0,
+                            "nickname": "Lillil",
+                            "offered_species_id": 1,
+                        }
+                    ],
+                }
+            ],
+        )
+
+        record = merge_version_family_datasets({"black": black, "white": white})[
+            "records"
+        ][0]
+
+        self.assertEqual(
+            [(trade["trade_id"], trade["versions"]) for trade in record["npc_trades"]],
+            [(0, ["black", "white"])],
+        )
+
+    def test_keeps_trades_with_the_same_id_separate_when_details_differ(
+        self,
+    ) -> None:
+        # Same trade_id and species, but a different nickname/IVs -- this is
+        # a genuinely different trade per version, not a mergeable one. A
+        # comparison scoped to only the fields comparisons.py tracks for
+        # base-vs-hack diff pages (species/item/formes) would wrongly treat
+        # these as the same trade and silently drop one version's nickname
+        # and IVs.
+        black = _dataset(
+            "locations",
+            "black-us",
+            [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [
+                        {
+                            "trade_id": 0,
+                            "nickname": "Lillil",
+                            "offered_species_id": 1,
+                            "ivs": (31, 31, 31, 31, 31, 31),
+                        }
+                    ],
+                }
+            ],
+        )
+        white = _dataset(
+            "locations",
+            "white-us",
+            [
+                {
+                    "header_id": 23,
+                    "name": "Nacrene City",
+                    "npc_trades": [
+                        {
+                            "trade_id": 0,
+                            "nickname": "Mondo",
+                            "offered_species_id": 1,
+                            "ivs": (0, 0, 0, 0, 0, 0),
+                        }
+                    ],
+                }
+            ],
+        )
+
+        record = merge_version_family_datasets({"black": black, "white": white})[
+            "records"
+        ][0]
+
+        self.assertEqual(
+            [(trade["nickname"], trade["versions"]) for trade in record["npc_trades"]],
+            [("Lillil", ["black"]), ("Mondo", ["white"])],
+        )
+
     def test_merges_renderable_variants_for_three_versions(self) -> None:
         datasets = {
             "red": _dataset("items", "red", [_item(1, 100)]),
@@ -239,6 +347,59 @@ class VersionMergeTests(unittest.TestCase):
         self.assertEqual(
             records[2]["version_comparisons"]["volt-white"]["baseline"],
             "white-us",
+        )
+
+    def test_keeps_every_versions_differing_value_for_the_same_changed_field(
+        self,
+    ) -> None:
+        # Both versions change the same field, but to different values --
+        # the flat `changes` list must not silently keep only one version's
+        # before/after and drop the other.
+        black = _comparison(
+            "items",
+            "blaze-black",
+            "black-us",
+            [
+                {
+                    "kind": "items",
+                    "key": 1,
+                    "status": "changed",
+                    "label": "Item 1",
+                    "slug": "item-1",
+                    "detail_available": True,
+                    "changes": [
+                        {"field": "price", "label": "Price", "before": 10, "after": 20}
+                    ],
+                }
+            ],
+        )
+        white = _comparison(
+            "items",
+            "volt-white",
+            "white-us",
+            [
+                {
+                    "kind": "items",
+                    "key": 1,
+                    "status": "changed",
+                    "label": "Item 1",
+                    "slug": "item-1",
+                    "detail_available": True,
+                    "changes": [
+                        {"field": "price", "label": "Price", "before": 10, "after": 15}
+                    ],
+                }
+            ],
+        )
+
+        merged = merge_version_family_comparisons(
+            {"blaze-black": black, "volt-white": white}
+        )
+        record = merged["records"][0]
+
+        self.assertEqual(
+            [(change["label"], change["after"]) for change in record["changes"]],
+            [("Price (blaze-black)", 20), ("Price (volt-white)", 15)],
         )
 
     def test_rejects_mismatched_comparison_kinds(self) -> None:

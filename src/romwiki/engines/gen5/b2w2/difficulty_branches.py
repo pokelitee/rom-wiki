@@ -4,9 +4,9 @@ import struct
 from dataclasses import dataclass
 
 from .disassembler import Gen5Instruction, disassemble_function
+from .opcode_table import GAME_GET_DIFFICULTY
 
-_GAME_GET_DIFFICULTY = 0x2AF
-_DIFFICULTY_SELECTOR_PREFIX = struct.pack("<H", _GAME_GET_DIFFICULTY)
+_DIFFICULTY_SELECTOR_PREFIX = struct.pack("<H", GAME_GET_DIFFICULTY)
 _SELECTOR_NAMES = (
     "GameGetDifficulty",
     "StackPush",

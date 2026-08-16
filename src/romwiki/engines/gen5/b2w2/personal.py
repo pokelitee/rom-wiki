@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen5.machines import machine_id_for_table_index
 from romwiki.schema import (
     PokemonPersonalData,
     RecordProvenance,
@@ -42,10 +43,17 @@ def parse_personal_record(
         egg_group_ids = (egg_group_ids[0], egg_group_ids[0])
     tmhm_bits = int.from_bytes(data[0x28:0x35], "little")
     machine_masks = tuple((tmhm_bits >> (32 * word)) & 0xFFFFFFFF for word in range(4))
+    # The bitmap is indexed by each machine's physical ARM9 table position
+    # (0-based `table_index`), not the published, contiguous machine_id --
+    # translate each set bit through the shared gen5 mapping (B2W2 uses the
+    # same physical machine table layout as BW), so compatibility lookups
+    # land on the right machine.
     machine_ids = tuple(
-        machine_id
-        for machine_id in range(1, GEN5_MACHINE_COUNT + 1)
-        if machine_masks[(machine_id - 1) // 32] & (1 << ((machine_id - 1) % 32))
+        sorted(
+            machine_id_for_table_index(table_index)
+            for table_index in range(GEN5_MACHINE_COUNT)
+            if machine_masks[table_index // 32] & (1 << (table_index % 32))
+        )
     )
     return PokemonPersonalData(
         species_id=species_id,

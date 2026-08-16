@@ -55,4 +55,19 @@ def validate_dataset_envelope(
     if invalid:
         fields = ", ".join(invalid)
         raise DataSourceError(f"Invalid {context} dataset envelope fields: {fields}")
+    # Not every dataset kind carries a `records` list (a handful of pickup
+    # datasets report a single logical record through kind-specific fields
+    # like `tables`/`level_ranges` instead), so this only validates the
+    # field when present -- but where it is present, it must actually be a
+    # list whose length matches the envelope's own declared `record_count`,
+    # catching a corrupted or stale payload rather than trusting the count.
+    if "records" in dataset:
+        records = dataset["records"]
+        if not isinstance(records, list):
+            raise DataSourceError(f"Invalid {context} dataset envelope fields: records")
+        if len(records) != dataset["record_count"]:
+            raise DataSourceError(
+                f"{context} dataset record_count ({dataset['record_count']}) does not "
+                f"match its records list ({len(records)})"
+            )
     return dataset  # type: ignore[return-value]

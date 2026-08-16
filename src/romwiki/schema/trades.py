@@ -22,9 +22,8 @@ class NpcTrade:
     offered_forme_id: int
     requested_species_id: int
     held_item_id: int | None
-    # Raw ROM storage order. The specific per-stat mapping has not been
-    # independently verified for every engine, so
-    # it's kept as a plain tuple rather than labeled per stat.
+    # Normalized display order: HP, Attack, Defense, Special Attack,
+    # Special Defense, Speed.
     ivs: tuple[int, int, int, int, int, int]
     provenance: RecordProvenance
     interaction: str = "fixed-location"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from romwiki.engines.registry import get_engine
@@ -9,6 +10,23 @@ from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import MARTS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
+
+
+def _shop_records(
+    shops: Sequence[Any], item_names: Sequence[str]
+) -> list[dict[str, Any]]:
+    return [
+        {
+            **{
+                key: value for key, value in shop.to_dict().items() if key != "item_ids"
+            },
+            "items": [
+                {"item_id": item_id, "name": item_names[item_id]}
+                for item_id in shop.item_ids
+            ],
+        }
+        for shop in shops
+    ]
 
 
 def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -42,18 +60,7 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
         overlay_data,
         archive_path=f"overlay{shop_item_overlay_id}",
     )
-    records = [
-        {
-            **{
-                key: value for key, value in shop.to_dict().items() if key != "item_ids"
-            },
-            "items": [
-                {"item_id": item_id, "name": item_names[item_id]}
-                for item_id in shop.item_ids
-            ],
-        }
-        for shop in shops
-    ]
+    records = _shop_records(shops, item_names)
     return dataset_envelope(
         schema_version=MARTS_RAW_SCHEMA_VERSION,
         game=profile.id,
@@ -96,18 +103,7 @@ def _extract_arm9_marts(result: InspectionResult) -> dict[str, Any]:
         archive_path="arm9",
         item_count=len(item_names),
     )
-    records = [
-        {
-            **{
-                key: value for key, value in shop.to_dict().items() if key != "item_ids"
-            },
-            "items": [
-                {"item_id": item_id, "name": item_names[item_id]}
-                for item_id in shop.item_ids
-            ],
-        }
-        for shop in shops
-    ]
+    records = _shop_records(shops, item_names)
     return dataset_envelope(
         schema_version=MARTS_RAW_SCHEMA_VERSION,
         game=profile.id,
@@ -146,18 +142,7 @@ def _extract_archive_marts(result: InspectionResult) -> dict[str, Any]:
         tuple(shops.read(index) for index in range(len(shops.members))),
         archive_path=shop_path,
     )
-    records = [
-        {
-            **{
-                key: value for key, value in shop.to_dict().items() if key != "item_ids"
-            },
-            "items": [
-                {"item_id": item_id, "name": item_names[item_id]}
-                for item_id in shop.item_ids
-            ],
-        }
-        for shop in catalog
-    ]
+    records = _shop_records(catalog, item_names)
     return dataset_envelope(
         schema_version=MARTS_RAW_SCHEMA_VERSION,
         game=profile.id,

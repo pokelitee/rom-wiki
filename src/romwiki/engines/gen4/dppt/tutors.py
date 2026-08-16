@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen4.constants import MAX_MOVE_ID
+from romwiki.engines.gen4.personal import GEN4_BASE_SPECIES_COUNT
 from romwiki.schema import (
     ShardCosts,
     SpecialTutorMove,
@@ -31,7 +33,7 @@ def parse_tutor_move_table(data: bytes, *, tutor_count: int) -> tuple[TutorMove,
         move_id, red, blue, yellow, green = struct.unpack_from("<H4B", data, offset)
         padding = data[offset + 6 : offset + 8]
         location_id = struct.unpack_from("<I", data, offset + 8)[0]
-        if not 1 <= move_id <= 467:
+        if not 1 <= move_id <= MAX_MOVE_ID:
             raise InvalidRomError(
                 f"Gen IV tutor {index + 1} has invalid move ID {move_id}"
             )
@@ -120,7 +122,7 @@ def parse_special_tutor_move(
         or next_opcode != GO_TO
     ):
         raise InvalidRomError("Gen IV special tutor command has an invalid signature")
-    if not 1 <= move_id <= 467:
+    if not 1 <= move_id <= MAX_MOVE_ID:
         raise InvalidRomError(f"Gen IV special tutor has invalid move ID {move_id}")
     if eligibility_kind not in {"species", "type"}:
         raise InvalidRomError("Gen IV special tutor has an unknown eligibility rule")
@@ -165,7 +167,7 @@ def parse_special_tutor_species(
             or variable != SPECIAL_TUTOR_SPECIES_VAR
             or branch_opcode != GO_TO_IF
             or condition != 1
-            or not 1 <= species_id <= 493
+            or not 1 <= species_id <= GEN4_BASE_SPECIES_COUNT
         ):
             raise InvalidRomError(
                 f"Gen IV special tutor species comparison {index} is invalid"

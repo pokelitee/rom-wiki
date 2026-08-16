@@ -15,7 +15,7 @@ class EncounterIdentityTests(unittest.TestCase):
             (
                 {
                     "source_type": EncounterSourceType.HEADBUTT.value,
-                    "header_id": 9,
+                    "location": {"header_id": 9},
                 },
                 "headbutt-009",
                 "header-009#headbutt-encounters",
@@ -32,7 +32,7 @@ class EncounterIdentityTests(unittest.TestCase):
             (
                 {
                     "source_type": EncounterSourceType.DAILY_SWARM.value,
-                    "header_id": 331,
+                    "location": {"header_id": 331},
                 },
                 "daily-swarm-331",
                 "header-331#daily-swarm",
@@ -58,7 +58,60 @@ class EncounterIdentityTests(unittest.TestCase):
             conditional_encounter_key(
                 {
                     "source_type": EncounterSourceType.DAILY_SWARM.value,
-                    "header_id": "331",
+                    "location": {"header_id": "331"},
+                }
+            )
+
+    def test_rejects_a_catalog_identifier_missing_its_location(self) -> None:
+        # Real extracted headbutt/daily-swarm/grotto records always nest
+        # header_id under "location" (extraction/encounters.py); a record
+        # with a top-level header_id instead is malformed, not a
+        # differently-shaped valid record.
+        with self.assertRaisesRegex(ValueError, "missing its location"):
+            conditional_encounter_key(
+                {
+                    "source_type": EncounterSourceType.HEADBUTT.value,
+                    "header_id": 9,
+                }
+            )
+
+    def test_rejects_a_malformed_route_identifier_instead_of_falling_back(
+        self,
+    ) -> None:
+        # A route key silently computed from map_index/area_id for a record
+        # whose source_type claims to be a conditional source would mismatch
+        # the anchor-style key conditional_encounter_key computed for the
+        # same record -- this must raise instead of silently degrading.
+        with self.assertRaisesRegex(ValueError, "header_id must be an integer"):
+            encounter_route_key(
+                {
+                    "source_type": EncounterSourceType.DAILY_SWARM.value,
+                    "location": {"header_id": "331"},
+                    "area_id": 42,
+                }
+            )
+        with self.assertRaisesRegex(ValueError, "grotto_id must be an integer"):
+            encounter_route_key(
+                {
+                    "source_type": EncounterSourceType.HIDDEN_GROTTO.value,
+                    "location": {"header_id": 331},
+                    "area_id": 42,
+                }
+            )
+        with self.assertRaisesRegex(ValueError, "missing its location"):
+            encounter_route_key(
+                {
+                    "source_type": EncounterSourceType.HIDDEN_GROTTO.value,
+                    "grotto_id": 3,
+                    "area_id": 42,
+                }
+            )
+        with self.assertRaisesRegex(ValueError, "missing its area name"):
+            encounter_route_key(
+                {
+                    "source_type": EncounterSourceType.SAFARI_ZONE.value,
+                    "safari_area_id": 4,
+                    "area_id": 42,
                 }
             )
 

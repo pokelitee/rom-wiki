@@ -4,7 +4,15 @@ import struct
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.script_opcode_table import OPCODE_TABLE
+from romwiki.engines.gen5.script_opcode_table import (
+    OPCODE_TABLE,
+    STACK_CMP,
+    STACK_CMP_EQUAL,
+    STACK_PUSH,
+    STACK_PUSH_CONST,
+    VM_JUMP_IF,
+    WORK_SET_CONST,
+)
 from romwiki.util.errors import InvalidRomError
 
 # Gen V field-script opcodes needed to locate literal trainer-battle triggers.
@@ -130,12 +138,6 @@ def parse_trainer_battle_commands(
 _FOSSIL_ITEM_VAR = 32802
 _FOSSIL_SPECIES_VAR = 32803
 FOSSIL_SPECIES_VARIABLE = _FOSSIL_SPECIES_VAR
-_STACK_PUSH = 0x9
-_STACK_PUSH_CONST = 0x8
-_STACK_CMP = 0x11
-_STACK_CMP_EQUAL = 1
-_VM_JUMP_IF = 0x1F
-_WORK_SET_CONST = 0x28
 _FOSSIL_PATTERN_LENGTH = 25
 
 
@@ -153,20 +155,20 @@ def parse_fossil_revival_table(data: bytes) -> tuple[Gen5FossilRevival, ...]:
     """
     revivals = []
     for offset in range(0, len(data) - _FOSSIL_PATTERN_LENGTH + 1):
-        if struct.unpack_from("<H", data, offset)[0] != _STACK_PUSH:
+        if struct.unpack_from("<H", data, offset)[0] != STACK_PUSH:
             continue
         if struct.unpack_from("<H", data, offset + 2)[0] != _FOSSIL_ITEM_VAR:
             continue
-        if struct.unpack_from("<H", data, offset + 4)[0] != _STACK_PUSH_CONST:
+        if struct.unpack_from("<H", data, offset + 4)[0] != STACK_PUSH_CONST:
             continue
         item_id = struct.unpack_from("<H", data, offset + 6)[0]
-        if struct.unpack_from("<H", data, offset + 8)[0] != _STACK_CMP:
+        if struct.unpack_from("<H", data, offset + 8)[0] != STACK_CMP:
             continue
-        if struct.unpack_from("<H", data, offset + 10)[0] != _STACK_CMP_EQUAL:
+        if struct.unpack_from("<H", data, offset + 10)[0] != STACK_CMP_EQUAL:
             continue
-        if struct.unpack_from("<H", data, offset + 12)[0] != _VM_JUMP_IF:
+        if struct.unpack_from("<H", data, offset + 12)[0] != VM_JUMP_IF:
             continue
-        if struct.unpack_from("<H", data, offset + 19)[0] != _WORK_SET_CONST:
+        if struct.unpack_from("<H", data, offset + 19)[0] != WORK_SET_CONST:
             continue
         if struct.unpack_from("<H", data, offset + 21)[0] != _FOSSIL_SPECIES_VAR:
             continue

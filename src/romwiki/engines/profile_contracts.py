@@ -38,6 +38,7 @@ class EngineProfileContract:
             set(parameters),
             self.required_parameters,
         )
+        self._require_int_like_parameters(profile_id, parameters)
         if self.reject_unknown:
             self._reject_unknown(
                 profile_id,
@@ -64,6 +65,34 @@ class EngineProfileContract:
             raise ProfileError(
                 f"Profile {profile_id!r} is missing required {label}: "
                 f"{', '.join(missing)}"
+            )
+
+    @staticmethod
+    def _require_int_like_parameters(
+        profile_id: str, parameters: Mapping[str, Any]
+    ) -> None:
+        """Catch a numeric ROM offset/count/ID parameter written as some
+        other type in a profile TOML (e.g. a quoted string), which would
+        otherwise only surface later as an unclear TypeError deep in
+        extraction code.
+
+        Scoped to names ending in `_offset`/`_count`/`_id` -- by this
+        project's own naming convention, every parameter with one of these
+        suffixes across all four profile contracts is genuinely int-typed
+        (verified against every extraction module that reads one); this
+        does not attempt to type-check parameters outside that convention
+        (locators, contract IDs, exclusion lists, and similar).
+        """
+        invalid = sorted(
+            name
+            for name, value in parameters.items()
+            if name.endswith(("_offset", "_count", "_id"))
+            and (not isinstance(value, int) or isinstance(value, bool))
+        )
+        if invalid:
+            raise ProfileError(
+                f"Profile {profile_id!r} has non-integer values for parameters: "
+                f"{', '.join(invalid)}"
             )
 
     @staticmethod
