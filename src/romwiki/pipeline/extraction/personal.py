@@ -9,6 +9,7 @@ from romwiki.pipeline.extraction.reference_names import (
     extract_reference_names,
 )
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import POKEMON_PERSONAL_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
@@ -53,17 +54,17 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
         ).to_dict()
         for member in members
     ]
-    return {
-        "schema_version": POKEMON_PERSONAL_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "pokemon_personal",
-        "record_count": len(records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=POKEMON_PERSONAL_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="pokemon_personal",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
         },
-        **reference_names,
-        **reference_descriptions,
-        "records": records,
-    }
+        records=records,
+    )
+    envelope.update(reference_names)
+    envelope.update(reference_descriptions)
+    return envelope

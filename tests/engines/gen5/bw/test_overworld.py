@@ -71,6 +71,16 @@ class Gen5OverworldTests(unittest.TestCase):
         self.assertEqual(parse_overworld_npcs(b""), ())
         self.assertEqual(parse_overworld_npcs(bytes(8)), ())
 
+    def test_stops_at_a_truncated_npc_record_instead_of_raising(self) -> None:
+        header = bytes((0, 0, 0, 0, 0, 2, 0, 0))  # 0 furniture, header claims 2 NPCs
+        npc0 = _npc_record(script_used=4, sight_range=0, x=12, y=3, z=1)
+        data = header + npc0 + npc0[:10]  # second record cut short
+
+        npcs = parse_overworld_npcs(data)
+
+        self.assertEqual(len(npcs), 1)
+        self.assertEqual(npcs[0].script_used, 4)
+
     def test_resolves_real_banded_trainer_ids(self) -> None:
         # Real Black ROM facts: script member 155's NPCs include scriptUsed
         # 3026..3034 and 7040..7048, resolving to real, sequential, sensible
@@ -182,6 +192,23 @@ class Gen5OverworldItemTests(unittest.TestCase):
         self.assertEqual(parse_overworld_furniture(b""), ())
         self.assertEqual(parse_overworld_furniture(bytes(8)), ())
 
+    def test_stops_at_a_truncated_furniture_record_instead_of_raising(self) -> None:
+        header = bytes((0, 0, 0, 0, 2, 0, 0, 0))  # header claims 2 furniture entries
+        furniture_record = (
+            struct.pack("<h", 8001)
+            + bytes(4)
+            + struct.pack("<i", 762 * 65536)
+            + bytes(2)
+            + struct.pack("<i", 582)
+            + struct.pack("<i", 0)
+        )
+        data = header + furniture_record + furniture_record[:10]  # second cut short
+
+        furniture = parse_overworld_furniture(data)
+
+        self.assertEqual(len(furniture), 1)
+        self.assertEqual(furniture[0].script_used, 8001)
+
 
 def _warp_record(*, dest_header: int, dest_warp: int, x: int, y: int, z: int) -> bytes:
     return (
@@ -225,6 +252,16 @@ class Gen5OverworldWarpTests(unittest.TestCase):
     def test_empty_map_has_no_warps(self) -> None:
         self.assertEqual(parse_overworld_warps(b""), ())
         self.assertEqual(parse_overworld_warps(bytes(8)), ())
+
+    def test_stops_at_a_truncated_warp_record_instead_of_raising(self) -> None:
+        header = bytes((0, 0, 0, 0, 0, 0, 2, 0))  # header claims 2 warps
+        warp = _warp_record(dest_header=6, dest_warp=5, x=184, y=0, z=696)
+        data = header + warp + warp[:10]  # second warp cut short
+
+        warps = parse_overworld_warps(data)
+
+        self.assertEqual(len(warps), 1)
+        self.assertEqual(warps[0].destination_header_id, 6)
 
 
 if __name__ == "__main__":

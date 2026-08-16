@@ -5,6 +5,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
@@ -45,13 +46,12 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
         ).to_dict()
         for member in archive.members[: adapter.personal.PERSONAL_RECORD_COUNT]
     ]
-    return {
-        "schema_version": POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "evolutions",
-        "record_count": len(records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="evolutions",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
             "item_names": {
@@ -59,6 +59,7 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
                 "member": item_names_member,
             },
         },
-        "item_names": list(item_names),
-        "records": records,
-    }
+        records=records,
+    )
+    envelope["item_names"] = list(item_names)
+    return envelope

@@ -11,9 +11,9 @@ def enrich_npc_trade_dataset(
     pokemon_dataset: dict[str, Any],
     location_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Resolve detached trade species to the game's public PokÃ©mon records."""
+    """Resolve detached trade species to the game's public Pokémon records."""
     if dataset.get("game") != pokemon_dataset.get("game"):
-        raise DataSourceError("Trade and PokÃ©mon datasets must be for the same game")
+        raise DataSourceError("Trade and Pokémon datasets must be for the same game")
     engine = get_engine(str(dataset["engine"])).enrich
     pokemon_by_species = {
         record["national_dex_id"]: record

@@ -24,19 +24,9 @@ def disassemble_script(data: bytes) -> tuple[Gen5Instruction, ...]:
     return _disassemble_script(data, opcode_table=OPCODE_TABLE)
 
 
-def find_calls(data: bytes, start: int, opcode: int) -> tuple[Gen5Instruction, ...]:
-    instructions = disassemble_function(data, start)
-    return tuple(
-        instruction
-        for instruction in sorted(instructions.values(), key=lambda value: value.offset)
-        if instruction.opcode == opcode
-    )
-
-
 __all__ = [
     "Gen5Instruction",
     "disassemble_function",
     "disassemble_script",
-    "find_calls",
     "parse_function_offsets",
 ]

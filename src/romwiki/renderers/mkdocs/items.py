@@ -398,7 +398,7 @@ def _append_locations(
 def _item_position(value: dict[str, Any]) -> str:
     x = value.get("x")
     z = value.get("z")
-    return f"({x}, {z})" if isinstance(x, int) and isinstance(z, int) else "â€”"
+    return f"({x}, {z})" if isinstance(x, int) and isinstance(z, int) else "—"
 
 
 def _append_shops(lines: list[str], record: dict[str, Any], source_file: str) -> None:

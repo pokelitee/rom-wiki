@@ -9,6 +9,7 @@ from romwiki.pipeline.extraction.map_headers import (
     read_code_binary,
 )
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 
@@ -73,28 +74,28 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         result,
         start_tutor_id=len(tutors) + 1,
     )
-    return {
-        "schema_version": TUTORS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "move_tutors",
-        "record_count": len(tutors),
-        "compatibility_record_count": len(compatibility),
-        "special_record_count": len(special_tutors),
-        "special_compatibility_record_count": len(special_compatibility),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=TUTORS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="move_tutors",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay.id,
             "file_id": overlay.file_id,
             "move_offset": parameters["tutor_move_offset"],
             "compatibility_offset": parameters["tutor_compatibility_offset"],
         },
-        "location_names": location_names,
-        "records": [{**tutor.to_dict(), "kind": "shard"} for tutor in tutors],
-        "compatibility": [record.to_dict() for record in compatibility],
-        "special_records": special_tutors,
-        "special_compatibility": special_compatibility,
-    }
+        records=[{**tutor.to_dict(), "kind": "shard"} for tutor in tutors],
+    )
+    envelope["compatibility_record_count"] = len(compatibility)
+    envelope["special_record_count"] = len(special_tutors)
+    envelope["special_compatibility_record_count"] = len(special_compatibility)
+    envelope["location_names"] = location_names
+    envelope["compatibility"] = [record.to_dict() for record in compatibility]
+    envelope["special_records"] = special_tutors
+    envelope["special_compatibility"] = special_compatibility
+    return envelope
 
 
 def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
@@ -125,28 +126,28 @@ def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
         form_member_start=form_members[0],
         form_count=len(form_members),
     )
-    return {
-        "schema_version": TUTORS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "move_tutors",
-        "record_count": len(tutors),
-        "compatibility_record_count": len(compatibility),
-        "special_record_count": 0,
-        "special_compatibility_record_count": 0,
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=TUTORS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="move_tutors",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay.id,
             "file_id": overlay.file_id,
             "move_offset": move_offset,
             "compatibility_archive": compatibility_path,
         },
-        "location_names": list(engine.TUTOR_LOCATION_NAMES),
-        "records": [{**record.to_dict(), "kind": "battle-points"} for record in tutors],
-        "compatibility": [record.to_dict() for record in compatibility],
-        "special_records": [],
-        "special_compatibility": [],
-    }
+        records=[{**record.to_dict(), "kind": "battle-points"} for record in tutors],
+    )
+    envelope["compatibility_record_count"] = len(compatibility)
+    envelope["special_record_count"] = 0
+    envelope["special_compatibility_record_count"] = 0
+    envelope["location_names"] = list(engine.TUTOR_LOCATION_NAMES)
+    envelope["compatibility"] = [record.to_dict() for record in compatibility]
+    envelope["special_records"] = []
+    envelope["special_compatibility"] = []
+    return envelope
 
 
 def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]:
@@ -182,16 +183,12 @@ def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]
                 personal.read(member), personal_member=member
             ).to_dict()
         )
-    return {
-        "schema_version": TUTORS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "move_tutors",
-        "record_count": len(records),
-        "compatibility_record_count": len(compatibility),
-        "special_record_count": 0,
-        "special_compatibility_record_count": 0,
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=TUTORS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="move_tutors",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay.id,
             "file_id": overlay.file_id,
@@ -199,12 +196,16 @@ def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]
             "compatibility_archive": personal_path,
             "compatibility_offset": engine.TUTOR_COMPATIBILITY_OFFSET,
         },
-        "location_names": list(engine.TUTOR_LOCATION_NAMES),
-        "records": records,
-        "compatibility": compatibility,
-        "special_records": [],
-        "special_compatibility": [],
-    }
+        records=records,
+    )
+    envelope["compatibility_record_count"] = len(compatibility)
+    envelope["special_record_count"] = 0
+    envelope["special_compatibility_record_count"] = 0
+    envelope["location_names"] = list(engine.TUTOR_LOCATION_NAMES)
+    envelope["compatibility"] = compatibility
+    envelope["special_records"] = []
+    envelope["special_compatibility"] = []
+    return envelope
 
 
 def _slice_overlay(data: bytes, offset: int, size: int, label: str) -> bytes:

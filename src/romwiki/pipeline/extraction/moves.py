@@ -9,6 +9,7 @@ from romwiki.pipeline.extraction.reference_names import (
     extract_reference_names,
 )
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import MOVES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
@@ -40,17 +41,17 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
         ).to_dict()
         for member in archive.members
     ]
-    return {
-        "schema_version": MOVES_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "moves",
-        "record_count": len(records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=MOVES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="moves",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
         },
-        **reference_names,
-        **reference_descriptions,
-        "records": records,
-    }
+        records=records,
+    )
+    envelope.update(reference_names)
+    envelope.update(reference_descriptions)
+    return envelope

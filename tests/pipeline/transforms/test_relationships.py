@@ -352,6 +352,33 @@ class RelationshipIndexTests(unittest.TestCase):
             ["hidden-grotto", "daily-swarm"],
         )
 
+    def test_indexes_map_owned_conditional_encounters_without_a_locations_dataset(
+        self,
+    ) -> None:
+        # build-encounters supports omitting the locations dataset entirely;
+        # map-owned conditional encounters (headbutt/grotto/swarm) still
+        # carry their own header_id, so this must not crash trying to look
+        # up a location record that was never supplied.
+        records = [
+            {
+                "area_id": 194,
+                "source_type": "daily-swarm",
+                "name": "Route 1",
+                "location": {"header_id": 6, "name": "Route 1"},
+            }
+        ]
+
+        index = build_relationship_index(_datasets(encounters=records))
+
+        self.assertEqual(
+            [
+                record["source_type"]
+                for record in index.location_conditional_encounters[6]
+            ],
+            ["daily-swarm"],
+        )
+        self.assertEqual(index.encounter_locations, {})
+
     def test_indexes_safari_pokemon_with_anchored_area_routes(self) -> None:
         safari = {
             "area_id": 300,

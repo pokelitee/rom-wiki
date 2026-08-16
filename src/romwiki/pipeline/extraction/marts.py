@@ -6,6 +6,7 @@ from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import read_code_binary
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import MARTS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
@@ -53,13 +54,12 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
         }
         for shop in shops
     ]
-    return {
-        "schema_version": MARTS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "marts",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=MARTS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="marts",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "shop_item_overlay": {
                 "id": shop_item_overlay_id,
@@ -67,8 +67,8 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
             },
             "item_names": {"archive": messages_path, "member": item_names_member},
         },
-        "records": records,
-    }
+        records=records,
+    )
 
 
 def _extract_arm9_marts(result: InspectionResult) -> dict[str, Any]:
@@ -108,19 +108,18 @@ def _extract_arm9_marts(result: InspectionResult) -> dict[str, Any]:
         }
         for shop in shops
     ]
-    return {
-        "schema_version": MARTS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "marts",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=MARTS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="marts",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "shop_catalog": {"archive": "arm9", "locator": locator.hex()},
             "item_names": {"archive": messages_path, "member": item_names_member},
         },
-        "records": records,
-    }
+        records=records,
+    )
 
 
 def _extract_archive_marts(result: InspectionResult) -> dict[str, Any]:
@@ -159,16 +158,15 @@ def _extract_archive_marts(result: InspectionResult) -> dict[str, Any]:
         }
         for shop in catalog
     ]
-    return {
-        "schema_version": MARTS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "marts",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=MARTS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="marts",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "shop_items": {"archive": shop_path},
             "item_names": {"archive": messages_path, "member": item_names_member},
         },
-        "records": records,
-    }
+        records=records,
+    )

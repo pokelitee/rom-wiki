@@ -35,18 +35,6 @@ _RAW_HTML_MARKDOWN_LINK = re.compile(
     re.IGNORECASE,
 )
 
-GENERATED_WIKI_SECTIONS = (
-    "pokemon",
-    "abilities",
-    "items",
-    "moves",
-    "encounters",
-    "trainers",
-    "locations",
-    "types",
-    "changes",
-    "data",
-)
 REQUIRED_WIKI_SECTIONS = DEFAULT_GENERATED_SECTIONS
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
 SNAPSHOT_SCHEMA_VERSION = 2

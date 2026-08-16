@@ -30,7 +30,6 @@ from romwiki.engines.gen4.events import (
     Gen4WarpEvent,
     parse_map_events,
     parse_object_events,
-    parse_warp_events,
     resolve_hidden_item_id,
     resolve_visible_item_id,
 )
@@ -389,7 +388,6 @@ __all__ = [
     "Gen4WarpEvent",
     "parse_map_events",
     "parse_object_events",
-    "parse_warp_events",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",
     "Gen4TrainerBattleCommand",

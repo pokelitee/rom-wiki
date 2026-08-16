@@ -144,10 +144,6 @@ def parse_object_events(
     return parse_map_events(data, event_file_id=event_file_id).objects
 
 
-def parse_warp_events(data: bytes, *, event_file_id: int) -> tuple[Gen4WarpEvent, ...]:
-    return parse_map_events(data, event_file_id=event_file_id).warps
-
-
 def resolve_visible_item_id(event: Gen4ObjectEvent, *, item_count: int) -> int | None:
     item_id = event.script_id - VISIBLE_ITEM_SCRIPT_BASE
     if event.graphics_id != ITEM_BALL_GRAPHICS_ID or not 0 < item_id < item_count:

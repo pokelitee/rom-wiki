@@ -949,7 +949,14 @@ def _freeze_encounter_locations(
     }
     values: dict[int | str, list[EncounterLocationReference]] = defaultdict(list)
     for header_id, encounters in location_encounters.items():
-        location_name, section_name = location_details[header_id]
+        details = location_details.get(header_id)
+        if details is None:
+            # No locations dataset was supplied for this build (build
+            # encounters supports that); without a location record there's
+            # no display name to attach, so these encounters just don't get
+            # a location cross-reference rather than crashing the build.
+            continue
+        location_name, section_name = details
         for encounter in encounters:
             values[encounter.encounter_route_key].append(
                 EncounterLocationReference(

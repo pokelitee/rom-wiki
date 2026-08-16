@@ -12,10 +12,6 @@ class NarcMember:
     start: int
     end: int
 
-    @property
-    def size(self) -> int:
-        return self.end - self.start
-
 
 class NarcArchive:
     def __init__(self, data: bytes, members: tuple[NarcMember, ...]) -> None:

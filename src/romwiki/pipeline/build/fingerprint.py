@@ -38,11 +38,28 @@ def extraction_source_fingerprint(
     cache_key: str,
 ) -> str:
     """Hash the local code used by one engine/dataset extraction path."""
+    return combined_extraction_source_fingerprint(engine_id, (extractor_module,), cache_key)
+
+
+@cache
+def combined_extraction_source_fingerprint(
+    engine_id: str,
+    extractor_modules: tuple[str, ...],
+    cache_key: str,
+) -> str:
+    """Hash the local code used by an extraction path that also embeds one or
+    more other extractors' output as data rather than importing it (e.g.
+    locations embedding trainers/items/static-encounters/marts/trades) --
+    invalidated by a change to any of those extractors too, not just the
+    primary one's own import closure."""
     digest = hashlib.sha256()
     digest.update(f"v{_FINGERPRINT_FORMAT_VERSION}\0{cache_key}\0".encode())
     digest.update(_engine_descriptor(engine_id))
     digest.update(b"\0")
-    for relative_path in extraction_source_files(engine_id, extractor_module):
+    relative_paths: set[str] = set()
+    for extractor_module in extractor_modules:
+        relative_paths.update(extraction_source_files(engine_id, extractor_module))
+    for relative_path in sorted(relative_paths):
         path = _PACKAGE_ROOT / relative_path
         digest.update(relative_path.encode("utf-8"))
         digest.update(b"\0")

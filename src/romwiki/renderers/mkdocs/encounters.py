@@ -59,6 +59,7 @@ from romwiki.renderers.mkdocs.references import (
     unique_references,
 )
 from romwiki.schema.rendering import EncounterRenderRecord, RenderDataset
+from romwiki.util.errors import SiteError
 
 # Display labels for the seasonal encounter-method keys emitted by supporting engines.
 _SEASONAL_METHOD_LABELS = {
@@ -407,7 +408,7 @@ def _encounter_catalog_url(record: dict[str, Any]) -> str:
     )
     href = ROUTES.published_href(reference, "encounters/")
     if href is None:
-        raise ValueError(f"Encounter record {record['area_id']} has no route")
+        raise SiteError(f"Encounter record {record['area_id']} has no route")
     return href
 
 
@@ -1478,7 +1479,7 @@ def _append_seasonal_locations(
             source_file,
         )
         versions = (
-            " / ".join(display_name(version) for version in location.versions) or "â€”"
+            " / ".join(display_name(version) for version in location.versions) or "—"
         )
         lines.append(
             f"| {link} | {location.section_name or '—'} | "

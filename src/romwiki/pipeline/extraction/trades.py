@@ -5,6 +5,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import NPC_TRADES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
 
@@ -55,16 +56,15 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
             member.index, record["interaction"]
         )
         records.append(record)
-    return {
-        "schema_version": NPC_TRADES_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "trades",
-        "record_count": len(records),
-        "source": {
+    return dataset_envelope(
+        schema_version=NPC_TRADES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="trades",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": trades_path,
             "trade_names": {"archive": messages_path, "member": trade_names_member},
         },
-        "records": records,
-    }
+        records=records,
+    )

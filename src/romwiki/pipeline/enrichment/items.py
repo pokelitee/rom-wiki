@@ -372,7 +372,7 @@ def build_item_dataset(
                 "descriptions"
             )
     for label, dataset in (
-        ("PokÃ©mon", pokemon_dataset),
+        ("Pokémon", pokemon_dataset),
         ("trainer", trainer_dataset),
         ("location", location_dataset),
         ("encounter", encounter_dataset),

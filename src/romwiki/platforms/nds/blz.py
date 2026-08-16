@@ -63,6 +63,8 @@ def blz_decompress(data: bytes) -> bytes:
         if pak_len <= hdr_len:
             raise InvalidRomError("BLZ data has a bad length")
         enc_len = _read_masked_u32(pak, pak_len - 8) & 0x00FFFFFF
+        if not hdr_len <= enc_len <= pak_len:
+            raise InvalidRomError("BLZ data has a bad encoded length")
         dec_len = pak_len - enc_len
         comp_len = enc_len - hdr_len
         raw_len = dec_len + enc_len + inc_len
@@ -84,19 +86,19 @@ def blz_decompress(data: bytes) -> bytes:
         mask >>= _BLZ_SHIFT
         if mask == 0:
             if p == pak_end:
-                break
+                raise InvalidRomError("BLZ data ends before its decoded length")
             flags = pak[p]
             p += 1
             mask = _BLZ_MASK
         if (flags & mask) == 0:
             if p == pak_end:
-                break
+                raise InvalidRomError("BLZ data ends before its decoded length")
             raw[r] = pak[p]
             r += 1
             p += 1
         else:
             if p + 1 >= pak_end:
-                break
+                raise InvalidRomError("BLZ data ends before its decoded length")
             pos = pak[p] << 8
             p += 1
             pos |= pak[p]
@@ -105,6 +107,8 @@ def blz_decompress(data: bytes) -> bytes:
             if r + length > raw_end:
                 length = raw_end - r
             pos = (pos & 0xFFF) + 3
+            if pos > r:
+                raise InvalidRomError("BLZ data has an out-of-range back-reference")
             for _ in range(length):
                 raw[r] = raw[r - pos]
                 r += 1

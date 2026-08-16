@@ -8,7 +8,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.build.fingerprint import (
-    extraction_source_fingerprint,
+    combined_extraction_source_fingerprint,
     profile_fingerprint,
 )
 from romwiki.pipeline.build.sections import dataset_enabled, enabled_dataset_kinds
@@ -159,7 +159,18 @@ class GameBuildContext:
                 mart_dataset=self.marts_raw(),
                 trade_dataset=self.trades_raw(),
             ),
-            source=extract_location_dataset,
+            # The location record embeds these datasets' own output (trainer
+            # rosters, static encounters, shop/trade details), not just what
+            # extract_location_dataset's own module imports -- so its cache
+            # must invalidate when any of them changes too.
+            source=(
+                extract_location_dataset,
+                extract_trainer_dataset,
+                extract_static_encounter_dataset,
+                extract_item_dataset,
+                extract_mart_dataset,
+                extract_npc_trade_dataset,
+            ),
         )
 
     # Also mandatory (see the comment above moves_raw/encounters_raw) --
@@ -325,7 +336,7 @@ class GameBuildContext:
         key: str,
         extractor: Callable[[InspectionResult], dict[str, Any]],
         *,
-        source: Callable[..., Any] | None = None,
+        source: Callable[..., Any] | tuple[Callable[..., Any], ...] | None = None,
     ) -> dict[str, Any]:
         if key in self._values:
             return self._values[key]
@@ -417,14 +428,17 @@ class GameBuildContext:
             "rom_sha256": self.result.image.hashes.sha256,
         }
 
-    def _source_fingerprint(self, key: str, source: Callable[..., Any]) -> str:
+    def _source_fingerprint(
+        self, key: str, source: Callable[..., Any] | tuple[Callable[..., Any], ...]
+    ) -> str:
         override = self._source_fingerprint_override
         if isinstance(override, str):
             return override
         if override is not None:
             return override[key]
-        return extraction_source_fingerprint(
+        sources = source if isinstance(source, tuple) else (source,)
+        return combined_extraction_source_fingerprint(
             self.profile.engine,
-            source.__module__,
+            tuple(one.__module__ for one in sources),
             key,
         )

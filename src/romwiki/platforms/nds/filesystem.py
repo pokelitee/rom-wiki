@@ -83,11 +83,6 @@ class NintendoDSFileSystem:
             raise InvalidRomError(f"ROM file is truncated: {entry.display_path}")
         return data
 
-    def read_magic(self, file: NintendoDSFile, length: int = 4) -> bytes:
-        with self.image_path.open("rb") as stream:
-            stream.seek(file.start)
-            return stream.read(min(length, file.size))
-
 
 def _parse_filename_table(data: bytes, file_count: int) -> dict[int, PurePosixPath]:
     if len(data) < 8:

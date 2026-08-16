@@ -8,6 +8,7 @@ from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import read_code_binary
 from romwiki.pipeline.extraction.reference_names import extract_reference_descriptions
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import (
     ITEMS_RAW_SCHEMA_VERSION,
 )
@@ -227,14 +228,14 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
 
         records.append(record)
 
-    return {
-        "schema_version": ITEMS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "items",
-        "record_count": len(records),
-        "public_record_count": sum(record["public"] for record in records),
-        "source": source,
-        **reference_descriptions,
-        "records": records,
-    }
+    envelope = dataset_envelope(
+        schema_version=ITEMS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="items",
+        source=source,
+        records=records,
+    )
+    envelope["public_record_count"] = sum(record["public"] for record in records)
+    envelope.update(reference_descriptions)
+    return envelope

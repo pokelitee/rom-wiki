@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.pipeline.build.fingerprint import extraction_source_files
+from romwiki.pipeline.build.fingerprint import (
+    combined_extraction_source_fingerprint,
+    extraction_source_fingerprint,
+    extraction_source_files,
+)
 
 
 class ExtractionSourceFilesTests(unittest.TestCase):
@@ -64,6 +68,65 @@ class ExtractionSourceFilesTests(unittest.TestCase):
 
         self.assertIn("pipeline/extraction/trainers/class_gender.py", class_gender)
         self.assertIn("pipeline/extraction/trainers/battle_mode.py", battle_mode)
+
+
+class CombinedExtractionSourceFingerprintTests(unittest.TestCase):
+    def test_matches_the_single_module_fingerprint_for_one_source(self) -> None:
+        single = extraction_source_fingerprint(
+            "gen4_hgss", "romwiki.pipeline.extraction.moves", "moves/raw"
+        )
+        combined = combined_extraction_source_fingerprint(
+            "gen4_hgss", ("romwiki.pipeline.extraction.moves",), "moves/raw"
+        )
+
+        self.assertEqual(single, combined)
+
+    def test_changes_when_an_embedded_datasets_extractor_module_is_added(self) -> None:
+        # locations/raw embeds trainer/static-encounter/item/mart/trade
+        # datasets as data, not as imports of the location dispatcher's own
+        # module -- so the combined fingerprint covering all of them must
+        # differ from the location-only fingerprint, or a fix to one of
+        # those extractors would silently leave the cached location dataset
+        # stale under --incremental.
+        location_only = combined_extraction_source_fingerprint(
+            "gen4_hgss",
+            ("romwiki.pipeline.extraction.locations.dispatcher",),
+            "locations/raw",
+        )
+        with_embedded_datasets = combined_extraction_source_fingerprint(
+            "gen4_hgss",
+            (
+                "romwiki.pipeline.extraction.locations.dispatcher",
+                "romwiki.pipeline.extraction.trainers.dispatcher",
+                "romwiki.pipeline.extraction.static_encounters",
+                "romwiki.pipeline.extraction.items",
+                "romwiki.pipeline.extraction.marts",
+                "romwiki.pipeline.extraction.trades",
+            ),
+            "locations/raw",
+        )
+
+        self.assertNotEqual(location_only, with_embedded_datasets)
+
+    def test_is_independent_of_module_order(self) -> None:
+        forward = combined_extraction_source_fingerprint(
+            "gen4_hgss",
+            (
+                "romwiki.pipeline.extraction.locations.dispatcher",
+                "romwiki.pipeline.extraction.trainers.dispatcher",
+            ),
+            "locations/raw",
+        )
+        reversed_order = combined_extraction_source_fingerprint(
+            "gen4_hgss",
+            (
+                "romwiki.pipeline.extraction.trainers.dispatcher",
+                "romwiki.pipeline.extraction.locations.dispatcher",
+            ),
+            "locations/raw",
+        )
+
+        self.assertEqual(forward, reversed_order)
 
 
 if __name__ == "__main__":

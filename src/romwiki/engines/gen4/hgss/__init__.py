@@ -20,7 +20,6 @@ from romwiki.engines.gen4.egg_moves import parse_egg_move_table
 from romwiki.engines.gen4.events import (
     parse_map_events,
     parse_object_events,
-    parse_warp_events,
     resolve_hidden_item_id,
     resolve_visible_item_id,
 )
@@ -209,7 +208,6 @@ __all__ = [
     "parse_shop_catalog",
     "parse_map_events",
     "parse_object_events",
-    "parse_warp_events",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",
     "parse_trainer_class_genders",

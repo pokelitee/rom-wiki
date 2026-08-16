@@ -609,6 +609,23 @@ base_rom = "base.nds"
 
             self.assertEqual(_resolve_build_baseline(args), base.resolve())
 
+    def test_configured_build_reports_a_stale_base_rom_path_clearly(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            patched = root / "patched.nds"
+            patched.touch()
+            config = root / "games.toml"
+            config.write_text(
+                "[games.test]\npatched_rom='patched.nds'\nbase_rom='missing-base.nds'\n",
+                encoding="utf-8",
+            )
+            args = build_parser().parse_args(
+                ["build", "game", "--game", "test", "--games-config", str(config)]
+            )
+
+            with self.assertRaisesRegex(LocalConfigError, "does not exist"):
+                _resolve_build_baseline(args)
+
     def test_configured_retail_build_without_base_is_standalone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

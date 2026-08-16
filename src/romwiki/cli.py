@@ -1001,7 +1001,9 @@ def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
             "Comparative builds require --game or --base-rom; use --hack-only to opt out"
         )
     paths = LocalGameRegistry.load(args.games_config).get(args.game)
-    return paths.base_rom
+    if paths.base_rom is None:
+        return None
+    return paths.rom(base=True)
 
 
 def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> None:

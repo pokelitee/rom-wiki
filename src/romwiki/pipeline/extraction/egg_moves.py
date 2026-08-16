@@ -5,6 +5,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
@@ -38,21 +39,21 @@ def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).egg_moves
     overlay, data = platform.read_overlay(result.image, overlay_id)
     records = engine.parse_egg_move_table(data, table_offset=table_offset)
-    return {
-        "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "egg_moves",
-        "record_count": len(records),
-        "move_reference_count": sum(len(record.move_ids) for record in records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="egg_moves",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "overlay_id": overlay.id,
             "overlay_file_id": overlay.file_id,
             "table_offset": table_offset,
         },
-        "records": [record.to_dict() for record in records],
-    }
+        records=[record.to_dict() for record in records],
+    )
+    envelope["move_reference_count"] = sum(len(record.move_ids) for record in records)
+    return envelope
 
 
 def _extract_from_archive(
@@ -70,20 +71,22 @@ def _extract_from_archive(
                 f"Profile {profile.id} egg move table archive must contain one member"
             )
         records = engine.parse_egg_move_table(archive.read(0), table_offset=0)
-        return {
-            "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
-            "game": profile.id,
-            "engine": profile.engine,
-            "dataset": "egg_moves",
-            "record_count": len(records),
-            "move_reference_count": sum(len(record.move_ids) for record in records),
-            "source": {
+        envelope = dataset_envelope(
+            schema_version=POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
+            game=profile.id,
+            engine=profile.engine,
+            dataset="egg_moves",
+            source={
                 "rom_sha256": result.image.hashes.sha256,
                 "archive": archive_path,
                 "member": 0,
             },
-            "records": [record.to_dict() for record in records],
-        }
+            records=[record.to_dict() for record in records],
+        )
+        envelope["move_reference_count"] = sum(
+            len(record.move_ids) for record in records
+        )
+        return envelope
     records = [
         engine.parse_egg_move_set(
             archive.read(member.index),
@@ -92,16 +95,16 @@ def _extract_from_archive(
         ).to_dict()
         for member in archive.members
     ]
-    return {
-        "schema_version": POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "egg_moves",
-        "record_count": len(records),
-        "move_reference_count": sum(len(record["move_ids"]) for record in records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="egg_moves",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
         },
-        "records": records,
-    }
+        records=records,
+    )
+    envelope["move_reference_count"] = sum(len(record["move_ids"]) for record in records)
+    return envelope

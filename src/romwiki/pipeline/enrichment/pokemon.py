@@ -160,7 +160,7 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
     """Attach each battle-only transformation record's stats/types to its
     base species' record as `battle_forms`, e.g. Castform's page gains its
     real Sunny/Rainy/Snowy stat blocks even though those transformations
-    have no PokÃƒÂ©DB reference page or public record of their own.
+    have no PokéDB reference page or public record of their own.
     """
     transformation_members = getattr(engine, "TRANSFORMATION_MEMBERS", {})
     if not transformation_members:
@@ -550,7 +550,7 @@ def _enrich_compatible_machines(
             machine = machines[machine_id]
         except KeyError as error:
             raise DataSourceError(
-                f"PokÃƒÂ©mon compatibility references unknown machine ID {machine_id}"
+                f"Pokémon compatibility references unknown machine ID {machine_id}"
             ) from error
         slug = move_name(machine["move_id"], pokedb, move_names)
         if slug is None:

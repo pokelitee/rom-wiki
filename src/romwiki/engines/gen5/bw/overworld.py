@@ -73,6 +73,8 @@ def parse_overworld_npcs(data: bytes) -> tuple[Gen5OverworldNPC, ...]:
     pos = _HEADER_SIZE + furniture_count * 20
     npcs = []
     for index in range(npc_count):
+        if pos + _NPC_RECORD_SIZE > len(data):
+            break
         values = struct.unpack_from(f"<{len(_NPC_FIELD_NAMES)}h", data, pos)
         fields = dict(zip(_NPC_FIELD_NAMES, values, strict=True))
         npcs.append(
@@ -119,6 +121,8 @@ def parse_overworld_furniture(data: bytes) -> tuple[Gen5OverworldFurniture, ...]
     pos = _HEADER_SIZE
     items = []
     for index in range(furniture_count):
+        if pos + _FURNITURE_RECORD_SIZE > len(data):
+            break
         script_used = struct.unpack_from("<h", data, pos)[0]
         x = struct.unpack_from("<i", data, pos + 6)[0] // _FURNITURE_X_FIXED_POINT_SCALE
         y = struct.unpack_from("<i", data, pos + 12)[0]
@@ -160,6 +164,8 @@ def parse_overworld_warps(data: bytes) -> tuple[Gen5OverworldWarp, ...]:
     pos = _HEADER_SIZE + furniture_count * 20 + npc_count * _NPC_RECORD_SIZE
     warps = []
     for index in range(warp_count):
+        if pos + _WARP_RECORD_SIZE > len(data):
+            break
         dest_header, dest_warp = struct.unpack_from("<hh", data, pos)
         x, y, z = struct.unpack_from("<hhh", data, pos + 8)
         warps.append(

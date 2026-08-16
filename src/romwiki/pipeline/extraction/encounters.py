@@ -12,6 +12,7 @@ from romwiki.pipeline.extraction.map_headers import (
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
 from romwiki.pipeline.semantics.encounter_identity import EncounterSourceType
 from romwiki.platforms.registry import get_platform
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.encounters import EncounterLocation
 from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
@@ -80,20 +81,20 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
             first_area_id=len(records),
         )
     )
-    return {
-        "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "wild_encounters",
-        "record_count": len(records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=ENCOUNTERS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="wild_encounters",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
             **location_source,
         },
-        **reference_names,
-        "records": records,
-    }
+        records=records,
+    )
+    envelope.update(reference_names)
+    return envelope
 
 
 def _extract_headbutt_encounters(
@@ -252,20 +253,20 @@ def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, A
             first_area_id=len(records),
         )
     )
-    return {
-        "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "wild_encounters",
-        "record_count": len(records),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=ENCOUNTERS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="wild_encounters",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "archive": archive_path,
             **location_source,
         },
-        **reference_names,
-        "records": records,
-    }
+        records=records,
+    )
+    envelope.update(reference_names)
+    return envelope
 
 
 def _extract_seasonal_wild_map_names(

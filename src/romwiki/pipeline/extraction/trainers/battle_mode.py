@@ -13,6 +13,7 @@ from romwiki.pipeline.extraction.trainers.support import (
 )
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
+from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import (
     TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
     TRAINERS_RAW_SCHEMA_VERSION,
@@ -112,23 +113,12 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
     variant_contract = resolve_trainer_variants(
         engine, profile.id, profile.parameters, records, selector_data or None
     )
-    return {
-        "schema_version": TRAINERS_RAW_SCHEMA_VERSION,
-        "game": profile.id,
-        "engine": profile.engine,
-        "dataset": "trainers",
-        "battle_family_schema_version": TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
-        **variant_contract,
-        "record_count": len(records),
-        "linked_record_count": sum(
-            bool(record["locations"] or record["script_references"])
-            for record in records
-        ),
-        "location_reference_count": sum(len(record["locations"]) for record in records),
-        "script_reference_count": sum(
-            len(record["script_references"]) for record in records
-        ),
-        "source": {
+    envelope = dataset_envelope(
+        schema_version=TRAINERS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="trainers",
+        source={
             "rom_sha256": result.image.hashes.sha256,
             "trainer_archive": trainer_path,
             "party_archive": party_path,
@@ -136,9 +126,21 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
             "trainer_classes": {"archive": messages_path, "member": classes_member},
             **location_source,
         },
-        **reference_names,
-        "records": records,
-    }
+        records=records,
+    )
+    envelope["battle_family_schema_version"] = TRAINER_BATTLE_FAMILY_SCHEMA_VERSION
+    envelope.update(variant_contract)
+    envelope["linked_record_count"] = sum(
+        bool(record["locations"] or record["script_references"]) for record in records
+    )
+    envelope["location_reference_count"] = sum(
+        len(record["locations"]) for record in records
+    )
+    envelope["script_reference_count"] = sum(
+        len(record["script_references"]) for record in records
+    )
+    envelope.update(reference_names)
+    return envelope
 
 
 def _extract_battle_mode_trainer_locations(
