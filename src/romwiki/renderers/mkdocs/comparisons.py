@@ -102,6 +102,34 @@ def comparison_section(
     ]
 
 
+def grouped_comparison_section(
+    entries: list[tuple[str, dict[str, Any] | None]],
+    baseline_name: str | None,
+    source_file: str = "",
+    references: ReferenceIndex | None = None,
+) -> list[str]:
+    available = [(label, entry) for label, entry in entries if entry is not None]
+    if not available:
+        return []
+    if len(available) == 1:
+        return comparison_section(
+            available[0][1], baseline_name, source_file, references
+        )
+    lines = ["## Hack changes", ""]
+    for label, entry in available:
+        lines.extend([f"### {label}", ""])
+        lines.extend(
+            comparison_section(
+                entry,
+                baseline_name,
+                source_file,
+                references,
+                heading_level=None,
+            )
+        )
+    return lines
+
+
 def _comparison_body(
     entry: dict[str, Any],
     baseline_name: str | None,

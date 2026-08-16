@@ -20,8 +20,10 @@ the public dataset exposes 513 nonzero item IDs without inventing records.
 The in-game trade archive at `a/1/1/2` publishes 11 actual NPC exchanges. Shuckie
 and Kenya are excluded because their records are gift-like static Pokémon rather
 than trades. A unique executable signature resolves 27 supported specialty shops
-with 141 item entries. Shop map placement remains unavailable because the
-corresponding HGSS script commands have not been decoded.
+with 141 item entries. Shop map placement remains unavailable. The mart handlers
+and dispatch entries are identified, but a two-halfword opcode/selector scan also
+matches operands and embedded data; a reachable HGSS instruction decoder is
+still required before selectors can be joined to map headers.
 
 Pickup uses two uniquely located tables in decompressed battle overlay 12. Its 18
 common and 11 rare items expand into ten exact level bands whose probabilities
@@ -59,6 +61,22 @@ validated as four-byte zero records, while active record sizes, species, levels,
 group counts, terminators, and inactive pools are checked before publication.
 HeartGold, SoulSilver, Sacred Gold, and Storm Silver each decode their own
 archive rather than sharing retail records.
+Because each active member is owned by an exact map header, Headbutt tables are
+shown as an anchored section on that map's location page. The normalized
+Headbutt records remain separate from ordinary wild-encounter records.
+
+Safari Zone encounters come from `a/2/3/0`, with one member for each of the 12
+named areas. Every member starts with five block-encounter counts, then stores
+ten base slots for morning, day, and night for Grass, Surf, and all three rods.
+Each block-conditioned record stores the same three time-of-day outcomes plus
+up to two `(block category, count)` requirements. Exact member sizes, header and
+slot padding, species, levels, block categories, and requirement pairs are
+validated independently in all four supported profiles. The two requirements
+are preserved as stored; the pages do not invent replacement priority that is
+not encoded in the archive.
+Safari areas are not assigned to fixed map headers: the player can place the 12
+areas dynamically. They are therefore presented together on one anchored Safari
+Zone encounter page rather than attached to guessed location pages.
 
 ## Trainers
 
@@ -94,17 +112,12 @@ Event objects link trainer IDs to map headers through HGSS's verified
 `script_id - 3000 + 1` convention. Visible and hidden item events are decoded
 from each ROM rather than copied between retail and hack profiles.
 
-Safari Zone block encounters remain unavailable. The runtime is known to select
-a saved six-area layout and load ten slots by area, method, time of day, placed
-block objects, and area age, but the loader that joins those selectors to its ROM
-tables is not yet decompiled into a complete, hack-safe record contract.
-
-Static encounters, gifts, and eggs also remain unavailable. The retail engine's
-`GiveMon` and `GiveEgg` operand semantics are known, but their HGSS command-table
-indices, a control-flow-safe script walker, and ownership for called/shared
-scripts have not all been established across the supported retail and hack
-profiles. Publishing literal-looking halfwords without those anchors would
-produce false acquisitions.
+Static encounters, gifts, and eggs remain unavailable. The ARM9 dispatch and
+matching handlers prove the operand contracts for literal `WildBattle`,
+`GiveMon`, and `GiveEgg` commands, but an opcode/operand scan cannot prove that a
+match begins at a reachable instruction. The existing inferred HGSS walker is
+not accurate enough for publication, and common-script callers, variable-backed
+operands, and specialized paths such as `GiveTogepiEgg` remain unresolved.
 
 ## Text and names
 

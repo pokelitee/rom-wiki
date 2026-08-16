@@ -321,6 +321,70 @@ class RelationshipIndexTests(unittest.TestCase):
         self.assertEqual(reverse[0].header_id, 6)
         self.assertEqual(reverse[0].versions, ("black", "white"))
 
+    def test_indexes_map_owned_conditional_encounters_by_header(self) -> None:
+        records = [
+            {
+                "area_id": 194,
+                "source_type": "daily-swarm",
+                "name": "Route 1",
+                "location": {"header_id": 6, "name": "Route 1"},
+            },
+            {
+                "area_id": 174,
+                "source_type": "hidden-grotto",
+                "name": "Route 1",
+                "location": {"header_id": 6, "name": "Route 1"},
+            },
+        ]
+
+        index = build_relationship_index(
+            _datasets(
+                encounters=records,
+                locations=[{"header_id": 6, "name": "Route 1"}],
+            )
+        )
+
+        self.assertEqual(
+            [
+                record["source_type"]
+                for record in index.location_conditional_encounters[6]
+            ],
+            ["hidden-grotto", "daily-swarm"],
+        )
+
+    def test_indexes_safari_pokemon_with_anchored_area_routes(self) -> None:
+        safari = {
+            "area_id": 300,
+            "source_type": "safari-zone",
+            "safari_area_id": 0,
+            "area_name": "Plains",
+            "name": "Plains",
+            "methods": {
+                "grass": {
+                    "base_pools": {
+                        "morning": [
+                            {
+                                "species_id": 1,
+                                "level": 17,
+                                "pokemon": {"id": 1, "slug": "bulbasaur"},
+                            }
+                        ]
+                    },
+                    "block_encounters": [],
+                }
+            },
+        }
+
+        index = build_relationship_index(
+            _datasets(pokemon=[_pokemon(1, "bulbasaur")], encounters=[safari])
+        )
+
+        reference = index.pokemon_wild_encounters["bulbasaur"][0]
+        self.assertEqual(reference.encounter_route_key, "safari-zone#plains")
+        self.assertEqual(
+            (reference.method, reference.condition), ("Grass", "morning; base pool")
+        )
+
     def test_omits_absent_optional_datasets(self) -> None:
         index = build_relationship_index(
             {

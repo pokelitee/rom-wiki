@@ -11,7 +11,7 @@ from romwiki.renderers.mkdocs.encounters import _season_version_tabs
 
 
 class EncounterRenderingTests(unittest.TestCase):
-    def test_renders_version_specific_daily_swarm(self) -> None:
+    def test_routes_version_specific_daily_swarm_to_location(self) -> None:
         black = {
             "area_id": 194,
             "source_type": "daily-swarm",
@@ -50,15 +50,16 @@ class EncounterRenderingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             render_encounter_pages(dataset, output)
-            page = (output / "daily-swarm-331.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
-        self.assertIn("Plusle", page)
-        self.assertIn("Minun", page)
-        self.assertIn("40\u201355", page)
+        self.assertFalse((output / "daily-swarm-331.md").exists())
         self.assertEqual(catalog["records"][0]["methods"], ["Daily Swarm"])
+        self.assertEqual(
+            catalog["records"][0]["url"],
+            "../locations/header-331/#daily-swarm",
+        )
 
-    def test_renders_hidden_grotto_pokemon_and_item_pools(self) -> None:
+    def test_routes_hidden_grotto_to_location(self) -> None:
         record = {
             "area_id": 174,
             "source_type": "hidden-grotto",
@@ -108,14 +109,14 @@ class EncounterRenderingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             render_encounter_pages(dataset, output)
-            page = (output / "hidden-grotto-00.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
-        self.assertIn("# Floccesy Ranch Hidden Grotto", page)
-        self.assertIn("| 10\u201315 | 30% | 1% | A |", page)
-        self.assertIn("[Fire Stone](../items/fire-stone.md)", page)
-        self.assertIn("exact ROM record from `a/2/7/3` member `0`", page)
+        self.assertFalse((output / "hidden-grotto-00.md").exists())
         self.assertEqual(catalog["records"][0]["methods"], ["Hidden Grotto"])
+        self.assertEqual(
+            catalog["records"][0]["url"],
+            "../locations/header-445/#hidden-grotto-00",
+        )
 
     def test_nests_versions_inside_season_tabs(self) -> None:
         lines = _season_version_tabs(
@@ -132,6 +133,67 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(lines.count('    === "Black"'), 2)
         self.assertEqual(lines.count('    === "White"'), 2)
         self.assertIn("        Black spring", lines)
+
+    def test_renders_safari_base_and_block_encounters(self) -> None:
+        pikachu = {
+            "species_id": 25,
+            "level": 12,
+            "pokemon": {"id": 25, "slug": "pikachu", "name": "Pikachu"},
+        }
+        eevee = {
+            "species_id": 133,
+            "level": 18,
+            "pokemon": {"id": 133, "slug": "eevee", "name": "Eevee"},
+        }
+        method = {
+            "base_pools": {
+                time: [pikachu] * 10 for time in ("morning", "day", "night")
+            },
+            "block_encounters": [
+                {
+                    "index": 0,
+                    "requirements": [
+                        {"block_type": "plains", "count": 3},
+                        {"block_type": "forest", "count": 5},
+                    ],
+                    "times": dict.fromkeys(("morning", "day", "night"), eevee),
+                }
+            ],
+        }
+        record = {
+            "area_id": 202,
+            "source_type": "safari-zone",
+            "safari_area_id": 0,
+            "area_name": "Plains",
+            "name": "Safari Zone — Plains",
+            "active": True,
+            "locations": [],
+            "methods": dict.fromkeys(("grass", "surf"), method),
+            "provenance": {"archive": "a/2/3/0", "member": 0},
+        }
+        dataset = {
+            "game": "heartgold-us",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [record],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            page = (output / "safari-zone.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertIn("# Safari Zone encounters", page)
+        self.assertIn("## Plains { #plains }", page)
+        self.assertIn("3 Plains, 5 Forest", page)
+        self.assertIn("[Eevee](../pokemon/eevee.md) (Lv. 18)", page)
+        self.assertEqual(catalog["records"][0]["methods"], ["Grass", "Surf"])
+        self.assertEqual(
+            catalog["records"][0]["method_pokemon"],
+            {"Grass": ["Pikachu", "Eevee"], "Surf": ["Pikachu", "Eevee"]},
+        )
+        self.assertEqual(catalog["records"][0]["url"], "safari-zone/#plains")
 
     def test_catalog_keeps_pokemon_correlated_with_encounter_methods(self) -> None:
         pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}

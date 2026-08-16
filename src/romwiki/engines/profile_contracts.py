@@ -138,6 +138,8 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
     required_parameters=_GEN5_PARAMETERS
     | {
         "hidden_grotto_version_group",
+        "hidden_grotto_dispatch_base",
+        "hidden_grotto_record_count",
         "swarm_overlay_id",
         "swarm_record_count",
         "swarm_table_offset",
@@ -251,6 +253,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "egg_moves",
             "encounters",
             "headbutt_encounters",
+            "safari_encounters",
             "events",
             "evolutions",
             "item_data",

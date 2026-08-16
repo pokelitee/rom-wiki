@@ -19,6 +19,7 @@ def render_location_pages(
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
     relationships: RelationshipIndex | None = None,
+    encounter_comparison: dict[str, Any] | None = None,
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
@@ -36,6 +37,7 @@ def render_location_pages(
             comparison,
             references,
             relationships,
+            encounter_comparison,
             only_pages=only_pages,
         )
     return render_event_map_location_pages(
@@ -44,5 +46,6 @@ def render_location_pages(
         comparison,
         references,
         relationships,
+        encounter_comparison,
         only_pages=only_pages,
     )

@@ -4,7 +4,6 @@ import struct
 import unittest
 
 from romwiki.engines.gen5.b2w2.hidden_grottos import (
-    HIDDEN_GROTTO_DISPATCH_BASE,
     hidden_grotto_id_for_dispatch,
     parse_hidden_grotto_record,
 )
@@ -88,16 +87,17 @@ class HiddenGrottoTests(unittest.TestCase):
             )
 
     def test_resolves_only_the_verified_dispatch_band(self) -> None:
-        self.assertEqual(hidden_grotto_id_for_dispatch(HIDDEN_GROTTO_DISPATCH_BASE), 0)
-        self.assertEqual(
-            hidden_grotto_id_for_dispatch(HIDDEN_GROTTO_DISPATCH_BASE + 19), 19
-        )
-        self.assertIsNone(
-            hidden_grotto_id_for_dispatch(HIDDEN_GROTTO_DISPATCH_BASE - 1)
-        )
-        self.assertIsNone(
-            hidden_grotto_id_for_dispatch(HIDDEN_GROTTO_DISPATCH_BASE + 20)
-        )
+        dispatch_base = 10795
+
+        def resolve(value: int) -> int | None:
+            return hidden_grotto_id_for_dispatch(
+                value, dispatch_base=dispatch_base, grotto_count=20
+            )
+
+        self.assertEqual(resolve(dispatch_base), 0)
+        self.assertEqual(resolve(dispatch_base + 19), 19)
+        self.assertIsNone(resolve(dispatch_base - 1))
+        self.assertIsNone(resolve(dispatch_base + 20))
 
 
 if __name__ == "__main__":

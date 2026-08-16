@@ -23,7 +23,6 @@ from .constants import (
 from .difficulty_branches import parse_difficulty_branch_families
 from .disassembler import disassemble_function, parse_function_offsets
 from .hidden_grottos import (
-    HIDDEN_GROTTO_DISPATCH_BASE,
     HIDDEN_GROTTO_RECORD_SIZE,
     hidden_grotto_id_for_dispatch,
     parse_hidden_grotto_record,
@@ -84,7 +83,6 @@ __all__ = [
     "ENCOUNTER_COSMETIC_FORM_LABELS",
     "ENCOUNTER_FORM_SLUGS",
     "FORM_MEMBERS",
-    "HIDDEN_GROTTO_DISPATCH_BASE",
     "HIDDEN_GROTTO_RECORD_SIZE",
     "GEN5_BASE_SPECIES_COUNT",
     "GEN5_ITEM_FIELD_USE_NAMES",

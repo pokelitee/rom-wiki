@@ -179,6 +179,8 @@ def entity_reference(
 
 def encounter_route_kind(route_key: int | str) -> str:
     """Select the route family for a normalized encounter page identity."""
+    if isinstance(route_key, str) and route_key.startswith("header-"):
+        return "encounter_location"
     return "encounter_variant" if isinstance(route_key, str) else "encounter"
 
 
@@ -253,6 +255,17 @@ def _slug_route(section: str) -> RouteDefinition:
     )
 
 
+def _anchored_slug_route(section: str) -> RouteDefinition:
+    def target(key: int | str, suffix: str) -> str:
+        path, separator, fragment = str(key).partition("#")
+        return f"{section}/{path}{suffix}" + (f"#{fragment}" if separator else "")
+
+    return RouteDefinition(
+        markdown=lambda key: target(key, ".md"),
+        published=lambda key: target(key, "/"),
+    )
+
+
 def _relative_href(target: str, source: str, *, trailing_slash: bool) -> str:
     path, separator, fragment = target.partition("#")
     href = posixpath.relpath(path.rstrip("/"), source)
@@ -281,7 +294,8 @@ ROUTES = RouteResolver(
             markdown=lambda key: f"encounters/area-{int(key):03}.md",
             published=lambda key: f"encounters/area-{int(key):03}/",
         ),
-        "encounter_variant": _slug_route("encounters"),
+        "encounter_variant": _anchored_slug_route("encounters"),
+        "encounter_location": _anchored_slug_route("locations"),
     }
 )
 

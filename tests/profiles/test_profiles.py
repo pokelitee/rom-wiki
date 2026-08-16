@@ -53,6 +53,12 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(soulsilver.sprite_version, "heartgold-soulsilver")
         self.assertEqual(sacred_gold.sprite_version, "heartgold-soulsilver")
         self.assertEqual(storm_silver.sprite_version, "heartgold-soulsilver")
+        self.assertTrue(
+            all(
+                profile.layout["safari_encounters"] == "a/2/3/0"
+                for profile in (heartgold, soulsilver, sacred_gold, storm_silver)
+            )
+        )
         self.assertEqual(
             heartgold.layout,
             {
@@ -65,6 +71,7 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "egg_moves": "a/2/2/9",
                 "encounters": "a/0/3/7",
                 "headbutt_encounters": "a/2/5/2",
+                "safari_encounters": "a/2/3/0",
                 "events": "a/0/3/2",
                 "map_matrices": "a/0/4/1",
                 "map_names": "fielddata/maptable/mapname.bin",
@@ -305,6 +312,8 @@ class ProfileRepositoryTests(unittest.TestCase):
         self.assertEqual(black_2.parameters["move_names_member"], 403)
         self.assertEqual(black_2.layout["hidden_grottos"], "a/2/7/3")
         self.assertEqual(black_2.parameters["hidden_grotto_version_group"], 1)
+        self.assertEqual(black_2.parameters["hidden_grotto_dispatch_base"], 10795)
+        self.assertEqual(black_2.parameters["hidden_grotto_record_count"], 20)
         self.assertEqual(black_2.parameters["swarm_table_offset"], 0x50BFC)
         self.assertNotIn("static_pokemon", black_2.parameters)
         self.assertNotIn("static_pokemon_egg_indices", black_2.parameters)

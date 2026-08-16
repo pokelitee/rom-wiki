@@ -1120,6 +1120,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             reference_index=reference_index,
             relationship_index=relationship_index,
             type_dataset=type_dataset,
+            related_comparisons=comparisons,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
         if build.comparison is not None:
@@ -1153,7 +1154,11 @@ def _run_full_game_build(
     type_dataset = build_type_dataset(workflow.current.profile)
     prune_public_datasets(wiki_root, {*builds, "types"}, game)
     _write_type_build(type_dataset, data_root, wiki_root)
-    comparisons = {}
+    comparisons = {
+        kind: build.comparison
+        for kind, build in builds.items()
+        if build.comparison is not None
+    }
     for kind, build in builds.items():
         _write_dataset_build(
             kind,
@@ -1165,10 +1170,9 @@ def _run_full_game_build(
             reference_index=reference_index,
             relationship_index=relationship_index,
             type_dataset=type_dataset,
+            related_comparisons=comparisons,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
-        if build.comparison is not None:
-            comparisons[kind] = build.comparison
     if not comparisons:
         comparison_root = data_root / "comparisons"
         if comparison_root.is_dir():
@@ -1328,6 +1332,7 @@ def _run_version_family_build(
             reference_index=reference_index,
             relationship_index=relationship_index,
             type_dataset=type_dataset,
+            related_comparisons=merged_comparisons,
             only_pages=dev_pages.pages_for(kind) if dev_pages else None,
         )
     if merged_comparisons:
@@ -1823,6 +1828,7 @@ def _write_dataset_build(
     reference_index: ReferenceIndex | None = None,
     relationship_index: RelationshipIndex | None = None,
     type_dataset: dict | None = None,
+    related_comparisons: Mapping[str, dict] | None = None,
     only_pages: frozenset[str] | None = None,
 ) -> None:
     write_dataset(dataset, data_output)
@@ -1850,7 +1856,17 @@ def _write_dataset_build(
             type_dataset,
             only_pages=only_pages,
         )
-    elif kind in {"moves", "items", "encounters", "trainers", "locations"}:
+    elif kind == "locations":
+        page_count = renderer(
+            dataset,
+            wiki_output,
+            comparison,
+            reference_index,
+            relationship_index,
+            (related_comparisons or {}).get("encounters"),
+            only_pages=only_pages,
+        )
+    elif kind in {"moves", "items", "encounters", "trainers"}:
         page_count = renderer(
             dataset,
             wiki_output,

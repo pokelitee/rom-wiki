@@ -95,6 +95,13 @@ intact in normalized downloads and comparisons. Typed public routes
 (`trainer-NNNN`, `header-NNN`, and `map-NNN`) are distinct from raw numeric IDs
 and native names such as `map_191`.
 
+Map-owned conditional encounter sources retain their own records and comparison
+identities, but their public routes may target stable anchors on `header-NNN`
+location pages. Sources without a fixed map owner may instead share an anchored
+collection page, as HGSS Safari Zone areas do. Catalog entries and PokÃ©mon or
+item backlinks use those same typed anchored routes; presentation placement
+never merges conditional pools into ordinary wild slots.
+
 `version_variants` describe different values stored in sibling ROM datasets.
 Battle-family conditions describe runtime selection among trainer records. The
 two axes are not interchangeable: sibling merging requires matching family

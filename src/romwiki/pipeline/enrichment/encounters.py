@@ -5,7 +5,10 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.names import resolve_item_names, resolve_pokemon_names
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
-from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
+from romwiki.pipeline.semantics.encounter_identity import (
+    EncounterSourceType,
+    encounter_route_key,
+)
 from romwiki.schema.versions import ENCOUNTERS_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -35,7 +38,7 @@ def enrich_encounter_dataset(
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
-        if source.get("source_type") == "hidden-grotto":
+        if source.get("source_type") == EncounterSourceType.HIDDEN_GROTTO:
             records.append(
                 _enrich_hidden_grotto(
                     engine,
@@ -46,7 +49,7 @@ def enrich_encounter_dataset(
                     item_names,
                 )
             )
-        elif source.get("source_type") == "daily-swarm":
+        elif source.get("source_type") == EncounterSourceType.DAILY_SWARM:
             pokemon = _encounter_pokemon(
                 source["species_id"],
                 pokedb,
@@ -61,7 +64,7 @@ def enrich_encounter_dataset(
                     "pokemon": pokemon,
                 }
             )
-        elif source.get("source_type") == "headbutt":
+        elif source.get("source_type") == EncounterSourceType.HEADBUTT:
             records.append(
                 {
                     **source,
@@ -82,6 +85,55 @@ def enrich_encounter_dataset(
                             for slot in slots
                         ]
                         for kind, slots in source["pools"].items()
+                    },
+                }
+            )
+        elif source.get("source_type") == EncounterSourceType.SAFARI_ZONE:
+            records.append(
+                {
+                    **source,
+                    "name": f"Safari Zone — {source['area_name']}",
+                    "locations": [],
+                    "active": True,
+                    "methods": {
+                        method_name: {
+                            "base_pools": {
+                                time_name: [
+                                    {
+                                        **slot,
+                                        "pokemon": _encounter_pokemon(
+                                            slot["species_id"],
+                                            pokedb,
+                                            sprite_version,
+                                            pokemon_names,
+                                        ),
+                                    }
+                                    for slot in slots
+                                ]
+                                for time_name, slots in method["base_pools"].items()
+                            },
+                            "block_encounters": [
+                                {
+                                    **encounter,
+                                    "times": {
+                                        time_name: {
+                                            **slot,
+                                            "pokemon": _encounter_pokemon(
+                                                slot["species_id"],
+                                                pokedb,
+                                                sprite_version,
+                                                pokemon_names,
+                                            ),
+                                        }
+                                        for time_name, slot in encounter[
+                                            "times"
+                                        ].items()
+                                    },
+                                }
+                                for encounter in method["block_encounters"]
+                            ],
+                        }
+                        for method_name, method in source["methods"].items()
                     },
                 }
             )

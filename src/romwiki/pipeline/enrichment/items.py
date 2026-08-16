@@ -5,6 +5,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.references import with_rom_description
+from romwiki.pipeline.semantics.encounter_identity import (
+    EncounterSourceType,
+    encounter_route_key,
+)
 from romwiki.schema.versions import ITEMS_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -241,7 +245,7 @@ def _collect_hidden_grotto_relationships(
     for merged_record in (encounter_dataset or {}).get("records", []):
         variants = merged_record.get("version_variants") or {None: merged_record}
         for version, record in variants.items():
-            if record.get("source_type") != "hidden-grotto":
+            if record.get("source_type") != EncounterSourceType.HIDDEN_GROTTO:
                 continue
             location = record["location"]
             common = {
@@ -251,7 +255,7 @@ def _collect_hidden_grotto_relationships(
                 "section_name": None,
                 "x": None,
                 "z": None,
-                "encounter_route_key": f"hidden-grotto-{record['grotto_id']:02}",
+                "encounter_route_key": encounter_route_key(record),
             }
             if version is not None:
                 common["versions"] = [version]

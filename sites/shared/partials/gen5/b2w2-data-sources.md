@@ -84,8 +84,12 @@ species, minimum and maximum levels, female percentages, and forms, followed by
 four visible-item pools and four hidden-item pools. The exterior map relationship
 comes from furniture dispatch IDs `10795` through `10814`, which resolve all 20
 archive members exactly once; archive order or location names are not used to
-guess ownership. Pool and group weights are engine rules rather than fields
+guess ownership. The reviewed dispatch base and member count are profile
+contracts, so variants must opt into that exact band. Pool and group weights are engine rules rather than fields
 stored alongside each slot.
+Each verified exterior-map relationship is also used to show the Grotto as an
+anchored section on its owning location page; it does not turn the Grotto pool
+into ordinary grass or cave slots.
 
 Daily Pokémon swarms come from an 18-record table in decompressed ARM9 overlay
 36. Each
@@ -93,6 +97,8 @@ Daily Pokémon swarms come from an 18-record table in decompressed ARM9 overlay
 zero padding. Black 2- and White 2-based profiles carry their own reviewed table
 offset, so version-specific species are extracted independently and merge into
 version tabs. The encoded header ID provides the location relationship directly.
+The resulting swarm override is shown as an anchored section on that location
+page while remaining a distinct normalized conditional encounter source.
 
 ## Trainers
 
@@ -196,8 +202,9 @@ decoded, so those prose fields use version-matched PokéDB reference text while
 structured mechanics remain ROM-derived. Outcomes controlled by save data or
 runtime randomness are not presented as fixed ROM facts.
 
-Hidden Grottos and daily swarms remain separate from ordinary seasonal area
-tables. The standard archive covers all seven ordinary methods, including dark
+Hidden Grottos and daily swarms remain separate normalized sources from ordinary
+seasonal area tables even though their tables are presented on their verified
+location pages. The standard archive covers all seven ordinary methods, including dark
 grass, rustling grass or dust clouds, rippling-water Surf, and rippling-water
 fishing. Scripted static encounters, gifts, and trades are published separately
 on location and Pokémon pages.

@@ -10,6 +10,7 @@ from romwiki.pipeline.extraction.map_headers import (
     resolve_map_headers,
 )
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
+from romwiki.pipeline.semantics.encounter_identity import EncounterSourceType
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.encounters import EncounterLocation
 from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
@@ -63,6 +64,15 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
     ]
     records.extend(
         _extract_headbutt_encounters(
+            result,
+            engine,
+            platform,
+            filesystem,
+            first_area_id=len(records),
+        )
+    )
+    records.extend(
+        _extract_safari_encounters(
             result,
             engine,
             platform,
@@ -134,7 +144,7 @@ def _extract_headbutt_encounters(
         records.append(
             {
                 "area_id": first_area_id + len(records),
-                "source_type": "headbutt",
+                "source_type": EncounterSourceType.HEADBUTT.value,
                 **asdict(encounter),
                 "location": {
                     "header_id": header.header_id,
@@ -144,6 +154,41 @@ def _extract_headbutt_encounters(
             }
         )
     return records
+
+
+def _extract_safari_encounters(
+    result: InspectionResult,
+    engine: Any,
+    platform: Any,
+    filesystem: Any,
+    *,
+    first_area_id: int,
+) -> list[dict[str, Any]]:
+    profile = result.match.profile
+    archive_path = profile.layout.get("safari_encounters")
+    if archive_path is None:
+        return []
+    archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
+    if len(archive.members) != len(engine.SAFARI_AREA_NAMES):
+        raise InvalidRomError(
+            f"Safari Zone archive has {len(archive.members)} members, expected "
+            f"{len(engine.SAFARI_AREA_NAMES)}"
+        )
+    return [
+        {
+            "area_id": first_area_id + member.index,
+            "source_type": EncounterSourceType.SAFARI_ZONE.value,
+            **asdict(
+                engine.parse_safari_encounter_record(
+                    archive.read(member.index),
+                    safari_area_id=member.index,
+                    archive_path=archive_path,
+                    species_count=engine.POKEMON_NAME_COUNT,
+                )
+            ),
+        }
+        for member in archive.members
+    ]
 
 
 def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -279,9 +324,11 @@ def _extract_hidden_grottos(
         )
 
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
-    if len(archive.members) != 20:
+    grotto_count = profile.parameters["hidden_grotto_record_count"]
+    if len(archive.members) != grotto_count:
         raise InvalidRomError(
-            f"Hidden Grotto archive has {len(archive.members)} members, expected 20"
+            f"Hidden Grotto archive has {len(archive.members)} members, expected "
+            f"{grotto_count}"
         )
     map_headers_path = profile.layout["map_headers"]
     map_headers = platform.archive_cls.from_bytes(
@@ -320,7 +367,11 @@ def _extract_hidden_grottos(
         if member is None or member >= len(overworlds.members) or member in unused:
             continue
         for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
-            grotto_id = engine.hidden_grotto_id_for_dispatch(furniture.script_used)
+            grotto_id = engine.hidden_grotto_id_for_dispatch(
+                furniture.script_used,
+                dispatch_base=profile.parameters["hidden_grotto_dispatch_base"],
+                grotto_count=grotto_count,
+            )
             if grotto_id is not None:
                 owners.setdefault(grotto_id, set()).add(header.header_id)
     expected = set(range(len(archive.members)))
@@ -356,7 +407,7 @@ def _extract_hidden_grottos(
         records.append(
             {
                 "area_id": first_area_id + grotto_id,
-                "source_type": "hidden-grotto",
+                "source_type": EncounterSourceType.HIDDEN_GROTTO.value,
                 **asdict(grotto),
                 "location": {
                     "header_id": header.header_id,
@@ -424,7 +475,7 @@ def _extract_swarms(
     return [
         {
             "area_id": first_area_id + index,
-            "source_type": "daily-swarm",
+            "source_type": EncounterSourceType.DAILY_SWARM.value,
             **asdict(swarm),
             "location": {
                 "header_id": headers[swarm.header_id].header_id,

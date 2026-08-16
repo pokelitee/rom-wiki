@@ -54,23 +54,21 @@ unanchored byte scans cannot improve confidence.
 
 ## 2. Not currently recoverable as structured ROM facts
 
-- **HGSS Safari Zone block encounters** — `FieldSystem_GenerateSafariEncounter`
-  proves that the runtime loads ten slots by saved area, encounter method, and
-  time of day. `safari_zone.c` proves the six-area save layout, placed block
-  objects, and per-area age state. The missing anchor is
-  `SafariZoneAreaSet_LoadAreaEncounters`: its joins from area, block categories,
-  area age, and method to the ROM encounter tables are not yet decompiled into a
-  complete layout that can be validated independently in retail and hacks.
-- **HGSS static encounters, gifts, and eggs** — the retail decomp proves that
-  `ScrCmd_GiveMon` consumes species, level, held item, form, ability, and result
-  operands through `ScriptGetVar`, while `ScrCmd_GiveEgg` consumes species and
-  gift-location offset. The command-table indices, control-flow-safe HGSS script
-  decoder, and ownership of called/common scripts are still missing. Those are
-  required before literal operands can be distinguished from variables and data.
+- **HGSS static encounters, gifts, and eggs** — the ARM9 command dispatch and
+  matching handlers prove the operand contracts for `WildBattle`, `GiveMon`, and
+  `GiveEgg`, and direct map headers prove ownership of dedicated script members.
+  However, scanning for an opcode plus valid literal operands and a plausible
+  following opcode does not prove that the bytes begin at a reachable command.
+  The existing inferred HGSS walker is only 90.8% accurate against Platinum's
+  known battle sites, so these acquisitions remain unpublished. Resume with a
+  complete, reachable instruction decoder; then add variable-produced operands,
+  common-script callers, and specialized handlers such as `GiveTogepiEgg`.
 - **HGSS specialty-shop placement** — the inventory catalog is decoded, but no
-  verified HGSS shop-command index and selector operand contract has been joined
-  to each map header's script member. Resume from the command dispatch entry for
-  the mart-opening handler; do not map inventories from shop names.
+  shop is attached to a map. ARM9 dispatch identifies the mart-opening handlers,
+  but the short opcode/selector signature also occurs inside operands and data;
+  requiring only a valid following halfword produced false dispatch candidates.
+  Resume with a reachable HGSS instruction decoder and then join its selector to
+  the catalog. Do not map inventories from shop or location names.
 
 - **BW roaming Tornadus and Thundurus** — kept explicitly unsupported rather
   than derived from a published offset that points into code.
@@ -122,7 +120,7 @@ complete NPC-gift or item-obtainability guide.
 Retained because it is hard-won, not because it is scheduled. It is no longer
 needed for starter branches — those turned out to require only one opcode, not
 the whole table — but it is the groundwork for any future attempt at HGSS's
-script-only battle locations.
+script-only trainer-battle locations.
 
 - **Command dispatch tables are located** by scanning for long runs of
   word-aligned pointers into loaded code: Platinum at `arm9+0x0EAC58` (840

@@ -89,6 +89,183 @@ class LocationRenderingTests(unittest.TestCase):
             page,
         )
 
+    def test_embeds_headbutt_encounters_and_combines_comparisons(self) -> None:
+        location = {
+            "header_id": 9,
+            "name": "Route 1",
+            "encounter_map_index": None,
+            "matrix_id": 0,
+            "provenance": {"archive": "arm9", "member": 9},
+            "trainers": [],
+            "warps": [],
+            "static_encounters": [],
+            "connections": [],
+            "items": [],
+            "shops": [],
+        }
+        pokemon = {"id": 163, "slug": "hoothoot", "name": "Hoothoot"}
+        headbutt = {
+            "area_id": 142,
+            "source_type": "headbutt",
+            "header_id": 9,
+            "name": "Route 1",
+            "active": True,
+            "location": {"header_id": 9, "name": "Route 1"},
+            "pools": {
+                "common": [
+                    {
+                        "species_id": 163,
+                        "minimum_level": 2,
+                        "maximum_level": 3,
+                        "chance": 50,
+                        "pokemon": pokemon,
+                    }
+                ],
+                "rare": [],
+                "secret": [],
+            },
+            "tree_groups": [{"group": 0, "kind": "regular", "coordinates": [[4, 8]]}],
+            "provenance": {"archive": "a/2/5/2", "member": 9},
+        }
+        dataset = {
+            "game": "heartgold-us",
+            "engine": "gen4_hgss",
+            "records": [location],
+        }
+        relationships = build_relationship_index(
+            {
+                "locations": dataset,
+                "encounters": {"game": "heartgold-us", "records": [headbutt]},
+            }
+        )
+        location_comparison = {
+            "baseline": "heartgold-us",
+            "records": [{"key": 9, "status": "unchanged", "changes": []}],
+        }
+        encounter_comparison = {
+            "baseline": "heartgold-us",
+            "records": [{"key": 142, "status": "unchanged", "changes": []}],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(
+                dataset,
+                output,
+                comparison=location_comparison,
+                relationships=relationships,
+                encounter_comparison=encounter_comparison,
+            )
+            page = (output / "header-009.md").read_text(encoding="utf-8")
+
+        self.assertIn("### Headbutt encounters { #headbutt-encounters }", page)
+        self.assertIn("### Headbutt encounters", page)
+        self.assertIn("[Hoothoot](../pokemon/hoothoot.md)", page)
+        self.assertEqual(page.count("## Hack changes"), 1)
+        self.assertIn("### Location", page)
+        self.assertIn("### Headbutt encounters", page)
+        self.assertLess(page.index("## Hack changes"), page.index("Data provenance"))
+
+    def test_embeds_hidden_grotto_and_daily_swarm_on_event_map(self) -> None:
+        location = {
+            "header_id": 445,
+            "internal_name": "map_445",
+            "location_name_id": 7,
+            "name": "Floccesy Ranch",
+            "matrix_id": 0,
+            "area_data_id": 2,
+            "level_script_id": 12,
+            "text_archive_id": 433,
+            "day_music_id": 1103,
+            "night_music_id": 1119,
+            "weather_id": 0,
+            "camera_id": 3,
+            "map_flags": 0,
+            "event_file_id": None,
+            "encounter_id": None,
+            "encounter_map_index": None,
+            "items": [],
+            "shops": [],
+            "pokemon_gifts": [],
+            "npc_trades": [],
+            "static_encounters": [],
+            "roaming_activations": [],
+            "trainers": [],
+            "warps": [],
+            "connections": [],
+            "provenance": {"archive": "a/0/1/2", "member": 445},
+        }
+        pokemon = {
+            "id": 206,
+            "slug": "dunsparce",
+            "name": "Dunsparce",
+            "sprite": None,
+        }
+        common = {
+            "active": True,
+            "location": {"header_id": 445, "name": "Floccesy Ranch"},
+        }
+        grotto = {
+            **common,
+            "area_id": 174,
+            "source_type": "hidden-grotto",
+            "grotto_id": 0,
+            "name": "Floccesy Ranch",
+            "pokemon": [
+                {
+                    "species_id": 206,
+                    "minimum_level": 10,
+                    "maximum_level": 15,
+                    "female_percentage": 30,
+                    "pool_chance": 1,
+                    "group": 0,
+                    "pokemon": pokemon,
+                }
+            ],
+            "visible_items": [
+                {
+                    "item_id": 82,
+                    "pool_chance": 1,
+                    "group": 0,
+                    "item": {"id": 82, "slug": "fire-stone", "name": "Fire Stone"},
+                }
+            ],
+            "hidden_items": [],
+            "provenance": {"archive": "a/2/7/3", "member": 0},
+        }
+        swarm = {
+            **common,
+            "area_id": 194,
+            "source_type": "daily-swarm",
+            "header_id": 445,
+            "name": "Floccesy Ranch",
+            "species_id": 206,
+            "minimum_level": 40,
+            "maximum_level": 55,
+            "table_offset": 0x50C0C,
+            "pokemon": pokemon,
+            "provenance": {"archive": "overlay36", "member": 2},
+        }
+        dataset = {"game": "test", "engine": "gen5_b2w2", "records": [location]}
+        relationships = build_relationship_index(
+            {
+                "locations": dataset,
+                "encounters": {"game": "test", "records": [grotto, swarm]},
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_location_pages(dataset, output, relationships=relationships)
+            page = (output / "header-445.md").read_text(encoding="utf-8")
+
+        self.assertIn("### Hidden Grotto { #hidden-grotto-00 }", page)
+        self.assertIn("### Hidden Grotto", page)
+        self.assertIn("[Fire Stone](../items/fire-stone.md)", page)
+        self.assertIn("### Daily Swarm { #daily-swarm }", page)
+        self.assertIn("### Daily Swarm", page)
+        self.assertIn("40–55", page)
+
     def test_links_gen5_location_to_all_seasonal_encounter_variants(self) -> None:
         record = {
             "header_id": 6,

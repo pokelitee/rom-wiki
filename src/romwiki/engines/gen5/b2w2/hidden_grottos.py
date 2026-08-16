@@ -11,7 +11,6 @@ HIDDEN_GROTTO_POKEMON_GROUP_SIZE = 26
 HIDDEN_GROTTO_GROUP_COUNT = 4
 HIDDEN_GROTTO_VERSION_GROUP_COUNT = 3
 HIDDEN_GROTTO_ITEM_OFFSET = 156
-HIDDEN_GROTTO_DISPATCH_BASE = 10795
 
 _POKEMON_POOL_CHANCES = (1, 4, 15)
 _ITEM_POOL_CHANCES = (1, 4, 10, 25)
@@ -133,9 +132,11 @@ def parse_hidden_grotto_record(
     )
 
 
-def hidden_grotto_id_for_dispatch(script_used: int) -> int | None:
-    grotto_id = script_used - HIDDEN_GROTTO_DISPATCH_BASE
-    return grotto_id if 0 <= grotto_id < 20 else None
+def hidden_grotto_id_for_dispatch(
+    script_used: int, *, dispatch_base: int, grotto_count: int
+) -> int | None:
+    grotto_id = script_used - dispatch_base
+    return grotto_id if 0 <= grotto_id < grotto_count else None
 
 
 def _parse_item_slots(
@@ -159,7 +160,6 @@ def _parse_item_slots(
 
 
 __all__ = [
-    "HIDDEN_GROTTO_DISPATCH_BASE",
     "HIDDEN_GROTTO_RECORD_SIZE",
     "HiddenGrotto",
     "HiddenGrottoItemSlot",

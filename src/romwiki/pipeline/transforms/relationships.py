@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
-from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
+from romwiki.pipeline.semantics.encounter_identity import (
+    CONDITIONAL_ENCOUNTER_SOURCES,
+    MAP_OWNED_CONDITIONAL_SOURCES,
+    EncounterSourceType,
+    encounter_route_key,
+)
 from romwiki.pipeline.semantics.location_sections import location_reference_label
 from romwiki.util.errors import DataSourceError
 
@@ -100,6 +105,9 @@ class RelationshipIndex:
     location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]]
     encounter_locations: Mapping[int | str, tuple[EncounterLocationReference, ...]]
     location_labels: Mapping[int, str] = field(default_factory=dict)
+    location_conditional_encounters: Mapping[int, tuple[dict[str, Any], ...]] = field(
+        default_factory=dict
+    )
 
 
 def build_relationship_index(
@@ -148,7 +156,29 @@ def build_relationship_index(
             location["header_id"]: _location_display_name(location)
             for location in location_records
         },
+        location_conditional_encounters=_location_conditional_encounters(
+            encounter_records
+        ),
     )
+
+
+def _location_conditional_encounters(
+    records: list[dict[str, Any]],
+) -> dict[int, tuple[dict[str, Any], ...]]:
+    values: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        if record.get("source_type") not in MAP_OWNED_CONDITIONAL_SOURCES:
+            continue
+        location = record.get("location")
+        if not isinstance(location, Mapping):
+            continue
+        header_id = location.get("header_id")
+        if isinstance(header_id, int):
+            values[header_id].append(record)
+    return {
+        header_id: tuple(sorted(entries, key=lambda entry: entry["area_id"]))
+        for header_id, entries in sorted(values.items())
+    }
 
 
 def _validate_datasets(datasets: Mapping[str, dict[str, Any]]) -> None:
@@ -247,6 +277,14 @@ _ENCOUNTER_METHODS = (
     ("fishing_spots", "Fishing spots"),
 )
 
+_SAFARI_METHOD_LABELS = {
+    "grass": "Grass",
+    "surf": "Surf",
+    "old-rod": "Old Rod",
+    "good-rod": "Good Rod",
+    "super-rod": "Super Rod",
+}
+
 
 def _wild_encounters(
     records: list[dict[str, Any]],
@@ -269,7 +307,7 @@ def _wild_encounters(
                 "locations": encounter_locations,
                 "versions": versions,
             }
-            if record.get("source_type") == "hidden-grotto":
+            if record.get("source_type") == EncounterSourceType.HIDDEN_GROTTO:
                 for slot in record.get("pokemon", []):
                     _add_wild_reference(
                         result,
@@ -280,12 +318,12 @@ def _wild_encounters(
                         common,
                     )
                 continue
-            if record.get("source_type") == "daily-swarm":
+            if record.get("source_type") == EncounterSourceType.DAILY_SWARM:
                 _add_wild_reference(
                     result, aliases, record, "Daily Swarm", None, common
                 )
                 continue
-            if record.get("source_type") == "headbutt":
+            if record.get("source_type") == EncounterSourceType.HEADBUTT:
                 for kind, slots in record.get("pools", {}).items():
                     for slot in slots:
                         _add_wild_reference(
@@ -297,6 +335,9 @@ def _wild_encounters(
                             common,
                         )
                 continue
+            if record.get("source_type") == EncounterSourceType.SAFARI_ZONE:
+                _add_safari_references(result, aliases, record, common)
+                continue
             for key, label in _ENCOUNTER_METHODS:
                 if key == "walking" and record.get("walking_variants"):
                     continue
@@ -307,6 +348,31 @@ def _wild_encounters(
                     _add_wild_reference(result, aliases, slot, label, None, common)
             _add_conditional_special_encounters(result, aliases, record, common)
     return result
+
+
+def _add_safari_references(
+    result: dict[str, list[WildEncounterReference]],
+    aliases: Mapping[int | str, str],
+    record: Mapping[str, Any],
+    common: dict[str, Any],
+) -> None:
+    for method_name, method in record.get("methods", {}).items():
+        label = _SAFARI_METHOD_LABELS.get(method_name, method_name)
+        for time_name, slots in method.get("base_pools", {}).items():
+            for slot in slots:
+                _add_wild_reference(
+                    result, aliases, slot, label, f"{time_name}; base pool", common
+                )
+        for encounter in method.get("block_encounters", []):
+            requirements = ", ".join(
+                f"{value['count']} {value['block_type']}"
+                for value in encounter.get("requirements", [])
+            )
+            for time_name, slot in encounter.get("times", {}).items():
+                condition = (
+                    f"{time_name}; {requirements}" if requirements else time_name
+                )
+                _add_wild_reference(result, aliases, slot, label, condition, common)
 
 
 def _add_conditional_special_encounters(
@@ -715,11 +781,7 @@ def _location_encounters(
     )
     for merged_record in encounters:
         for versions, record in _record_variants(merged_record):
-            if record.get("source_type") in {
-                "hidden-grotto",
-                "daily-swarm",
-                "headbutt",
-            }:
+            if record.get("source_type") in CONDITIONAL_ENCOUNTER_SOURCES:
                 continue
             map_index = record.get("map_index", record.get("area_id"))
             if isinstance(map_index, int):
@@ -728,11 +790,7 @@ def _location_encounters(
     result: dict[int, list[LocationEncounterReference]] = defaultdict(list)
     for merged_record in encounters:
         for versions, record in _record_variants(merged_record):
-            if record.get("source_type") not in {
-                "hidden-grotto",
-                "daily-swarm",
-                "headbutt",
-            }:
+            if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES:
                 continue
             location = record.get("location")
             if not isinstance(location, Mapping):

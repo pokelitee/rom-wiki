@@ -13,6 +13,52 @@ from romwiki.sources import PokeDBGeneration
 
 
 class ItemDatasetTests(unittest.TestCase):
+    def test_links_hidden_grotto_items_to_the_location_anchor(self) -> None:
+        raw = {
+            "game": "test",
+            "source": {},
+            "records": [{**_gen5_item_record(), "item_id": 82}],
+        }
+        pokemon = {"game": "test", "source": {}, "records": []}
+        encounters = {
+            "game": "test",
+            "records": [
+                {
+                    "area_id": 174,
+                    "source_type": "hidden-grotto",
+                    "grotto_id": 0,
+                    "location": {
+                        "header_id": 445,
+                        "name": "Floccesy Ranch",
+                        "internal_name": "map_445",
+                    },
+                    "visible_items": [{"item_id": 82, "pool_chance": 1, "group": 0}],
+                    "hidden_items": [],
+                }
+            ],
+        }
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={82: "fire-stone"},
+        )
+
+        record = build_item_dataset(
+            raw,
+            pokedb,
+            pokemon,
+            None,
+            None,
+            encounter_dataset=encounters,
+        )["records"][0]
+
+        self.assertEqual(
+            record["locations"][0]["encounter_route_key"],
+            "header-445#hidden-grotto-00",
+        )
+
     def test_preserves_script_award_location_and_quantity(self) -> None:
         raw = {
             "game": "test",

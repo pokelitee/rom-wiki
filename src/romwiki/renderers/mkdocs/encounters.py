@@ -7,7 +7,12 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
-from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
+from romwiki.pipeline.semantics.encounter_identity import (
+    SAFARI_ZONE_ROUTE,
+    EncounterSourceType,
+    conditional_encounter_key,
+    encounter_route_key,
+)
 from romwiki.pipeline.transforms.relationships import (
     EncounterLocationReference,
     RelationshipIndex,
@@ -21,6 +26,7 @@ from romwiki.renderers.mkdocs.catalog import (
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_section,
+    grouped_comparison_section,
     record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
@@ -41,9 +47,14 @@ from romwiki.renderers.mkdocs.components import (
     table_sprite_cell,
     version_variant_records,
 )
+from romwiki.renderers.mkdocs.conditional_encounters import (
+    append_safari_area,
+    safari_provenance,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    encounter_route_kind,
     entity_reference,
     unique_references,
 )
@@ -94,9 +105,21 @@ def render_encounter_pages(
         )
     records = [record for record in dataset["records"] if record["active"]]
     headbutt_records = [
-        record for record in records if record.get("source_type") == "headbutt"
+        record
+        for record in records
+        if record.get("source_type") == EncounterSourceType.HEADBUTT
     ]
-    records = [record for record in records if record.get("source_type") != "headbutt"]
+    safari_records = [
+        record
+        for record in records
+        if record.get("source_type") == EncounterSourceType.SAFARI_ZONE
+    ]
+    records = [
+        record
+        for record in records
+        if record.get("source_type")
+        not in {EncounterSourceType.HEADBUTT, EncounterSourceType.SAFARI_ZONE}
+    ]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -108,11 +131,9 @@ def render_encounter_pages(
                 if only_pages is None or f"area-{record['area_id']:03}" in only_pages
             ),
             *(
-                f"headbutt-{record['header_id']:03}.md"
-                for record in headbutt_records
-                if only_pages is None
-                or f"headbutt-{record['header_id']:03}" in only_pages
-                or f"area-{record['area_id']:03}" in only_pages
+                (f"{SAFARI_ZONE_ROUTE}.md",)
+                if safari_records and _safari_page_selected(safari_records, only_pages)
+                else ()
             ),
         },
     )
@@ -198,28 +219,59 @@ def render_encounter_pages(
                 )
             )
     for record in headbutt_records:
-        route_id = f"headbutt-{record['header_id']:03}"
-        if (
-            only_pages is None
-            or route_id in only_pages
-            or f"area-{record['area_id']:03}" in only_pages
-        ):
-            write_text(
-                output_root / f"{route_id}.md",
-                _render_headbutt(record, references),
-            )
-            page_count += 1
+        route_id = conditional_encounter_key(record)
         label = f"{record['name']} Headbutt"
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "encounter_variant", record["area_id"], label, route_id
+                    encounter_route_kind(encounter_route_key(record)),
+                    record["area_id"],
+                    label,
+                    encounter_route_key(record),
                 ),
                 "encounters/index.md",
             )
         )
-        catalog_records.append(_headbutt_catalog_record(record, route_id + "/"))
+        catalog_records.append(
+            _headbutt_catalog_record(
+                record, _encounter_catalog_url(record), route_id=route_id
+            )
+        )
+    if safari_records and _safari_page_selected(safari_records, only_pages):
+        write_text(
+            output_root / f"{SAFARI_ZONE_ROUTE}.md",
+            _render_safari_zone_page(
+                safari_records,
+                comparison,
+                comparison.get("baseline") if comparison else None,
+                references,
+            ),
+        )
+        page_count += 1
+    for record in safari_records:
+        route_id = conditional_encounter_key(record)
+        change = record_comparison(comparison, record["area_id"])
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    encounter_route_kind(encounter_route_key(record)),
+                    record["area_id"],
+                    record["name"],
+                    encounter_route_key(record),
+                ),
+                "encounters/index.md",
+            )
+        )
+        catalog_records.append(
+            _safari_catalog_record(
+                record,
+                _encounter_catalog_url(record),
+                change,
+                route_id=route_id,
+            )
+        )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
         output_root / "index.md",
@@ -233,7 +285,9 @@ def render_encounter_pages(
     return page_count
 
 
-def _headbutt_catalog_record(record: dict[str, Any], filename: str) -> dict[str, Any]:
+def _headbutt_catalog_record(
+    record: dict[str, Any], filename: str, *, route_id: str
+) -> dict[str, Any]:
     variants = [value for _, value in version_variant_records(record)]
     slots = [
         slot for value in variants for pool in value["pools"].values() for slot in pool
@@ -246,7 +300,7 @@ def _headbutt_catalog_record(record: dict[str, Any], filename: str) -> dict[str,
     ]
     return {
         "id": record["area_id"],
-        "route_id": filename.removesuffix("/"),
+        "route_id": route_id,
         "label": f"{record['name']} Headbutt",
         "url": filename,
         "locations": [record["location"]["name"]],
@@ -266,75 +320,143 @@ def _headbutt_catalog_record(record: dict[str, Any], filename: str) -> dict[str,
     }
 
 
-def _render_headbutt(
-    record: dict[str, Any], references: ReferenceIndex | None = None
-) -> str:
-    route_id = f"headbutt-{record['header_id']:03}"
-    source_file = f"encounters/{route_id}.md"
-    lines = [f"# {record['name']} Headbutt encounters", ""]
-    tabs = []
-    for version, value in version_variant_records(record):
-        content = []
-        for kind in ("common", "rare", "secret"):
-            content.extend([f"## {display_name(kind)} trees", ""])
-            if not value["pools"][kind]:
-                content.extend(["—", ""])
-                continue
-            content.extend(
-                markdown_table_from_cells(
-                    _ENCOUNTER_SLOT_COLUMNS,
-                    (
-                        (
-                            sprite_with_link(
-                                table_sprite_cell(slot["pokemon"].get("sprite")),
-                                _pokemon_link(slot["pokemon"], source_file),
-                            ),
-                            _slot_type_cell(slot["pokemon"], references),
-                            _level_range(slot["minimum_level"], slot["maximum_level"]),
-                            f"{slot['chance']}%",
-                        )
-                        for slot in value["pools"][kind]
-                    ),
-                )
-            )
-        content.extend(["## Tree groups", ""])
-        content.extend(
-            markdown_table_from_cells(
-                (
-                    MarkdownColumn("Group", "right"),
-                    MarkdownColumn("Kind"),
-                    MarkdownColumn("Coordinates"),
-                ),
-                (
-                    (
-                        str(group["group"]),
-                        display_name(group["kind"]),
-                        ", ".join(f"({x}, {z})" for x, z in group["coordinates"]),
-                    )
-                    for group in value["tree_groups"]
-                ),
-            )
-        )
-        tabs.append((display_name(version) if version else "Encounter data", content))
-    lines.extend(tabs[0][1] if len(tabs) == 1 else content_tabs(tabs))
-    provenances = {
-        (value["provenance"]["archive"], value["provenance"]["member"])
+def _safari_slots(record: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        slot
         for _, value in version_variant_records(record)
-    }
-    lines.extend(
-        provenance_section(
-            [
-                *(
-                    rom_record_source(archive, member)
-                    for archive, member in sorted(provenances)
-                ),
-                "Each member is keyed directly by map header ID and stores all "
-                "three slot pools plus six coordinates per regular or secret tree group.",
-                "Which regular tree uses the common or rare pool depends on the "
-                "trainer ID and tree group; secret groups always use the secret pool.",
-            ]
+        for method in value["methods"].values()
+        for slot in (
+            *(slot for pool in method["base_pools"].values() for slot in pool),
+            *(
+                slot
+                for encounter in method["block_encounters"]
+                for slot in encounter["times"].values()
+            ),
+        )
+    ]
+
+
+def _safari_catalog_record(
+    record: dict[str, Any],
+    filename: str,
+    change: dict[str, Any] | None,
+    *,
+    route_id: str,
+) -> dict[str, Any]:
+    slots = _safari_slots(record)
+    names = list(dict.fromkeys(slot["pokemon"]["name"] for slot in slots))
+    methods = [
+        display_name(method)
+        for method in next(iter(version_variant_records(record)))[1]["methods"]
+    ]
+    return add_change_status(
+        {
+            "id": record["area_id"],
+            "route_id": route_id,
+            "label": record["name"],
+            "url": filename,
+            "locations": ["Safari Zone"],
+            "methods": methods,
+            "pokemon": names,
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "encounters/")
+                for reference in unique_references(
+                    _pokemon_reference(slot["pokemon"]) for slot in slots
+                )
+            ],
+            "method_pokemon": {
+                display_name(method_name): list(
+                    dict.fromkeys(
+                        slot["pokemon"]["name"]
+                        for _, value in version_variant_records(record)
+                        for slot in (
+                            *(
+                                slot
+                                for pool in value["methods"][method_name][
+                                    "base_pools"
+                                ].values()
+                                for slot in pool
+                            ),
+                            *(
+                                slot
+                                for encounter in value["methods"][method_name][
+                                    "block_encounters"
+                                ]
+                                for slot in encounter["times"].values()
+                            ),
+                        )
+                    )
+                )
+                for method_name in next(iter(version_variant_records(record)))[1][
+                    "methods"
+                ]
+            },
+            "min_level": min(slot["level"] for slot in slots),
+            "max_level": max(slot["level"] for slot in slots),
+            "referenced": False,
+            "search_text": " ".join((record["name"], *names, *methods)).lower(),
+        },
+        change,
+    )
+
+
+def _encounter_catalog_url(record: dict[str, Any]) -> str:
+    route_key = encounter_route_key(record)
+    reference = entity_reference(
+        encounter_route_kind(route_key), record["area_id"], record["name"], route_key
+    )
+    href = ROUTES.published_href(reference, "encounters/")
+    if href is None:
+        raise ValueError(f"Encounter record {record['area_id']} has no route")
+    return href
+
+
+def _safari_page_selected(
+    records: list[dict[str, Any]], only_pages: frozenset[str] | None
+) -> bool:
+    return (
+        only_pages is None
+        or SAFARI_ZONE_ROUTE in only_pages
+        or any(
+            conditional_encounter_key(record) in only_pages
+            or f"area-{record['area_id']:03}" in only_pages
+            for record in records
         )
     )
+
+
+def _render_safari_zone_page(
+    records: list[dict[str, Any]],
+    comparison: dict[str, Any] | None,
+    baseline_name: str | None,
+    references: ReferenceIndex | None,
+) -> str:
+    source_file = f"encounters/{SAFARI_ZONE_ROUTE}.md"
+    lines = [
+        "# Safari Zone encounters",
+        "",
+        "Safari area types can be moved among the zone's physical positions. "
+        "The sections below therefore describe area configurations rather than "
+        "assigning them to fixed map headers.",
+        "",
+    ]
+    for record in records:
+        append_safari_area(lines, record, source_file)
+    lines.extend(
+        grouped_comparison_section(
+            [
+                (
+                    record["area_name"],
+                    record_comparison(comparison, record["area_id"]),
+                )
+                for record in records
+            ],
+            baseline_name,
+            source_file,
+            references,
+        )
+    )
+    lines.extend(provenance_section(safari_provenance(records)))
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -829,17 +951,21 @@ def _render_seasonal_encounter_pages(
     hidden_grottos = [
         record
         for record in active_records
-        if record.get("source_type") == "hidden-grotto"
+        if record.get("source_type") == EncounterSourceType.HIDDEN_GROTTO
     ]
     daily_swarms = [
         record
         for record in active_records
-        if record.get("source_type") == "daily-swarm"
+        if record.get("source_type") == EncounterSourceType.DAILY_SWARM
     ]
     active_records = [
         record
         for record in active_records
-        if record.get("source_type") not in {"hidden-grotto", "daily-swarm"}
+        if record.get("source_type")
+        not in {
+            EncounterSourceType.HIDDEN_GROTTO,
+            EncounterSourceType.DAILY_SWARM,
+        }
     ]
     grouped: dict[int, list[dict[str, Any]]] = {}
     for record in active_records:
@@ -857,20 +983,6 @@ def _render_seasonal_encounter_pages(
                 f"{encounter_route_key(records[0])}.md"
                 for records in groups
                 if _seasonal_page_selected(records, only_pages)
-            ),
-            *(
-                f"hidden-grotto-{record['grotto_id']:02}.md"
-                for record in hidden_grottos
-                if only_pages is None
-                or f"hidden-grotto-{record['grotto_id']:02}" in only_pages
-                or f"area-{record['area_id']:03}" in only_pages
-            ),
-            *(
-                f"daily-swarm-{record['header_id']:03}.md"
-                for record in daily_swarms
-                if only_pages is None
-                or f"daily-swarm-{record['header_id']:03}" in only_pages
-                or f"area-{record['area_id']:03}" in only_pages
             ),
         },
     )
@@ -935,58 +1047,43 @@ def _render_seasonal_encounter_pages(
             )
         )
     for record in hidden_grottos:
-        route_id = f"hidden-grotto-{record['grotto_id']:02}"
-        filename = f"{route_id}.md"
-        if (
-            only_pages is None
-            or route_id in only_pages
-            or f"area-{record['area_id']:03}" in only_pages
-        ):
-            write_text(
-                output_root / filename,
-                _render_hidden_grotto(
-                    record,
-                    record_comparison(comparison, record["area_id"]),
-                    comparison.get("baseline") if comparison else None,
-                    references,
-                ),
-            )
-            page_count += 1
+        route_id = conditional_encounter_key(record)
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "encounter_variant", record["area_id"], record["name"], route_id
+                    encounter_route_kind(encounter_route_key(record)),
+                    record["area_id"],
+                    record["name"],
+                    encounter_route_key(record),
                 ),
                 "encounters/index.md",
             )
         )
-        catalog_records.append(_hidden_grotto_catalog_record(record, route_id + "/"))
-    for record in daily_swarms:
-        route_id = f"daily-swarm-{record['header_id']:03}"
-        if (
-            only_pages is None
-            or route_id in only_pages
-            or f"area-{record['area_id']:03}" in only_pages
-        ):
-            write_text(
-                output_root / f"{route_id}.md",
-                _render_daily_swarm(record, references),
+        catalog_records.append(
+            _hidden_grotto_catalog_record(
+                record, _encounter_catalog_url(record), route_id=route_id
             )
-            page_count += 1
+        )
+    for record in daily_swarms:
+        route_id = conditional_encounter_key(record)
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
                 entity_reference(
-                    "encounter_variant",
+                    encounter_route_kind(encounter_route_key(record)),
                     record["area_id"],
                     f"{record['name']} Daily Swarm",
-                    route_id,
+                    encounter_route_key(record),
                 ),
                 "encounters/index.md",
             )
         )
-        catalog_records.append(_daily_swarm_catalog_record(record, route_id + "/"))
+        catalog_records.append(
+            _daily_swarm_catalog_record(
+                record, _encounter_catalog_url(record), route_id=route_id
+            )
+        )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
         output_root / "index.md",
@@ -1001,7 +1098,7 @@ def _render_seasonal_encounter_pages(
 
 
 def _daily_swarm_catalog_record(
-    record: dict[str, Any], filename: str
+    record: dict[str, Any], filename: str, *, route_id: str
 ) -> dict[str, Any]:
     variants = [value for _, value in version_variant_records(record)]
     pokemon = [value["pokemon"] for value in variants]
@@ -1013,7 +1110,7 @@ def _daily_swarm_catalog_record(
     ]
     return {
         "id": record["area_id"],
-        "route_id": filename.removesuffix("/"),
+        "route_id": route_id,
         "label": f"{record['name']} Daily Swarm",
         "url": filename,
         "locations": [record["location"]["name"]],
@@ -1033,61 +1130,8 @@ def _daily_swarm_catalog_record(
     }
 
 
-def _render_daily_swarm(
-    record: dict[str, Any], references: ReferenceIndex | None = None
-) -> str:
-    route_id = f"daily-swarm-{record['header_id']:03}"
-    source_file = f"encounters/{route_id}.md"
-    lines = [f"# {record['name']} Daily Swarm", ""]
-    tabs = []
-    for version, value in version_variant_records(record):
-        tabs.append(
-            (
-                display_name(version) if version else "Encounter data",
-                markdown_table_from_cells(
-                    (
-                        MarkdownColumn("PokÃƒÂ©mon"),
-                        MarkdownColumn("Type"),
-                        MarkdownColumn("Levels", "right"),
-                    ),
-                    (
-                        (
-                            sprite_with_link(
-                                table_sprite_cell(value["pokemon"].get("sprite")),
-                                _pokemon_link(value["pokemon"], source_file),
-                            ),
-                            _slot_type_cell(value["pokemon"], references),
-                            _level_range(
-                                value["minimum_level"], value["maximum_level"]
-                            ),
-                        ),
-                    ),
-                ),
-            )
-        )
-    lines.extend(tabs[0][1] if len(tabs) == 1 else content_tabs(tabs))
-    sources = {
-        (value["provenance"]["archive"], value["table_offset"])
-        for _, value in version_variant_records(record)
-    }
-    lines.extend(
-        provenance_section(
-            [
-                *(
-                    f"Source: exact ROM table record in `{archive}` at offset "
-                    f"`0x{offset:X}`."
-                    for archive, offset in sorted(sources)
-                ),
-                "The table stores the map header, species, and level range for "
-                "each daily swarm; the location relationship uses that header ID.",
-            ]
-        )
-    )
-    return "\n".join(lines).rstrip() + "\n"
-
-
 def _hidden_grotto_catalog_record(
-    record: dict[str, Any], filename: str
+    record: dict[str, Any], filename: str, *, route_id: str
 ) -> dict[str, Any]:
     variants = [value for _, value in version_variant_records(record)]
     pokemon = [slot["pokemon"] for value in variants for slot in value["pokemon"]]
@@ -1101,7 +1145,6 @@ def _hidden_grotto_catalog_record(
     location_names = list(
         dict.fromkeys(value["location"]["name"] for value in variants)
     )
-    route_id = filename.removesuffix("/")
     return {
         "id": record["area_id"],
         "route_id": route_id,
@@ -1124,116 +1167,6 @@ def _hidden_grotto_catalog_record(
             (record["name"], route_id, *location_names, *names)
         ).lower(),
     }
-
-
-def _render_hidden_grotto(
-    record: dict[str, Any],
-    change: dict[str, Any] | None,
-    baseline_name: str | None,
-    references: ReferenceIndex | None,
-) -> str:
-    route_id = f"hidden-grotto-{record['grotto_id']:02}"
-    source_file = f"encounters/{route_id}.md"
-    lines = [
-        f"# {record['name']} Hidden Grotto",
-        "",
-        "The ROM chooses one of four groups independently from the listed pool. "
-        "Pool chance and group chance are kept separate.",
-        "",
-    ]
-    tabs = []
-    for version, value in version_variant_records(record):
-        content = ["## PokÃ©mon", ""]
-        content.extend(
-            markdown_table_from_cells(
-                (
-                    MarkdownColumn("PokÃ©mon"),
-                    MarkdownColumn("Type"),
-                    MarkdownColumn("Levels", "right"),
-                    MarkdownColumn("Female", "right"),
-                    MarkdownColumn("Pool", "right"),
-                    MarkdownColumn("Group"),
-                ),
-                (
-                    (
-                        sprite_with_link(
-                            table_sprite_cell(slot["pokemon"].get("sprite")),
-                            _pokemon_link(slot["pokemon"], source_file),
-                        ),
-                        _slot_type_cell(slot["pokemon"], references),
-                        _level_range(slot["minimum_level"], slot["maximum_level"]),
-                        f"{slot['female_percentage']}%",
-                        f"{slot['pool_chance']}%",
-                        chr(ord("A") + slot["group"]),
-                    )
-                    for slot in value["pokemon"]
-                ),
-            )
-        )
-        for key, heading in (
-            ("visible_items", "Visible items"),
-            ("hidden_items", "Hidden items"),
-        ):
-            content.extend([f"## {heading}", ""])
-            content.extend(
-                markdown_table_from_cells(
-                    (
-                        MarkdownColumn("Item"),
-                        MarkdownColumn("Pool", "right"),
-                        MarkdownColumn("Group"),
-                    ),
-                    (
-                        (
-                            ROUTES.markdown_link(
-                                entity_reference(
-                                    "item",
-                                    slot["item"]["id"],
-                                    slot["item"]["name"],
-                                    slot["item"]["slug"],
-                                ),
-                                source_file,
-                            ),
-                            f"{slot['pool_chance']}%",
-                            chr(ord("A") + slot["group"]),
-                        )
-                        for slot in value[key]
-                    ),
-                )
-            )
-        tabs.append((display_name(version) if version else "Encounter data", content))
-    if len(tabs) == 1:
-        lines.extend(tabs[0][1])
-    else:
-        lines.extend(content_tabs(tabs))
-    if change is not None:
-        lines.extend(
-            comparison_section(
-                change,
-                baseline_name,
-                source_file=source_file,
-                references=references,
-            )
-        )
-    provenances = {
-        (value["provenance"]["archive"], value["provenance"]["member"])
-        for _, value in version_variant_records(record)
-    }
-    lines.extend(
-        provenance_section(
-            [
-                *(
-                    rom_record_source(archive, member)
-                    for archive, member in sorted(provenances)
-                ),
-                "PokÃ©mon, levels, female percentages, forms, and item IDs are "
-                "stored in the Hidden Grotto record. Pool and four-way group "
-                "chances are engine selection rules applied by slot position.",
-                "The location relationship comes from the exterior map's ROM "
-                "furniture dispatch ID, not from the archive member's name or order.",
-            ]
-        )
-    )
-    return "\n".join(lines).rstrip() + "\n"
 
 
 def _seasonal_page_selected(

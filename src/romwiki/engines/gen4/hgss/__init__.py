@@ -97,6 +97,7 @@ from .pickup import (
     parse_pickup_item_table,
     pickup_level_range_item_ids,
 )
+from .safari import SAFARI_AREA_NAMES, parse_safari_encounter_record
 from .trades import NPC_TRADE_RECORD_SIZE, parse_npc_trade_record
 from .tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,
@@ -192,9 +193,11 @@ __all__ = [
     "MACHINE_TABLE_LOCATOR",
     "GEN4_TM_COUNT",
     "MAP_HEADER_SIZE",
+    "SAFARI_AREA_NAMES",
     "parse_egg_move_table",
     "parse_encounter_record",
     "parse_headbutt_record",
+    "parse_safari_encounter_record",
     "parse_evolution_record",
     "parse_item_record",
     "find_item_archive_members",
