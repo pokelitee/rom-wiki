@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
 from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError
 
@@ -324,7 +325,11 @@ def compare_datasets(
             "key": key,
             "status": status,
             "label": _record_label(kind, record),
-            "slug": record.get("slug"),
+            "slug": (
+                encounter_route_key(record)
+                if kind == "wild_encounters"
+                else record.get("slug")
+            ),
             "detail_available": after is not None and _has_detail_page(kind, after),
             "changes": changes,
         }

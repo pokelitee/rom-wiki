@@ -1148,7 +1148,7 @@ def _reference_html(
             kind,
             identifier,
             name,
-            value.get("slug"),
+            value.get("page_slug", value.get("slug")),
             index=references,
         ),
         source_url,

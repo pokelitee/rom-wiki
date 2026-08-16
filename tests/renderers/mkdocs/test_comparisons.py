@@ -145,6 +145,40 @@ class ComparisonRenderingTests(unittest.TestCase):
 
         self.assertIn('href="../../pokemon/pikachu/">Pikachu</a> — Lv. 20', value)
 
+    def test_does_not_link_trainer_party_pokemon_without_a_page(self) -> None:
+        value = "\n".join(
+            comparison_section(
+                {
+                    "kind": "trainers",
+                    "status": "changed",
+                    "changes": [
+                        {
+                            "field": "party",
+                            "label": "Party",
+                            "before": [],
+                            "after": [
+                                {
+                                    "level": 20,
+                                    "pokemon": {
+                                        "id": 653,
+                                        "name": "Pokestar Studios 3",
+                                        "slug": "pokestar-studios-3",
+                                        "page_slug": None,
+                                    },
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "Base",
+                "items/leftovers.md",
+                None,
+            )
+        )
+
+        self.assertNotIn("<a ", value)
+        self.assertIn("Pokestar Studios 3", value)
+
     def test_renders_version_specific_comparisons(self) -> None:
         value = "\n".join(
             comparison_section(

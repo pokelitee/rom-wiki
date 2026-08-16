@@ -249,6 +249,26 @@ class DatasetComparisonTests(unittest.TestCase):
         self.assertEqual(change["field"], "grass_cave")
         self.assertEqual(change["label"], "Grass/Cave")
 
+    def test_conditional_wild_encounters_get_a_location_anchored_slug(self) -> None:
+        baseline = {
+            "area_id": 174,
+            "source_type": "hidden-grotto",
+            "grotto_id": 0,
+            "location": {"header_id": 445, "name": "Floccesy Ranch"},
+            "name": "Floccesy Ranch",
+            "active": True,
+            "pokemon": [{"species_id": 77}],
+        }
+        current = {**baseline, "pokemon": [{"species_id": 228}]}
+
+        comparison = compare_datasets(
+            _dataset("wild_encounters", "hack", [current]),
+            _dataset("wild_encounters", "base", [baseline]),
+        )
+
+        record = comparison["records"][0]
+        self.assertEqual(record["slug"], "header-445#hidden-grotto-00")
+
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:
     return {
