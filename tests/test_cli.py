@@ -23,6 +23,7 @@ from romwiki.cli import (
     _run_section_build,
     _run_version_family_build,
     _site_wiki_root,
+    _validate_regeneration_flags,
     _version_family_inputs,
     _version_family_uses_baselines,
     build_parser,
@@ -167,6 +168,83 @@ class MainErrorHandlingTests(unittest.TestCase):
 
         self.assertEqual(args.games, ["red", "blue", "yellow"])
         self.assertEqual(args.versions, ["red-hack", "blue-hack", "yellow-hack"])
+
+    def test_validate_regeneration_flags_returns_dev_and_snapshot(self) -> None:
+        args = SimpleNamespace(
+            dev=True,
+            snapshot=False,
+            regenerate_all=True,
+            incremental=False,
+            clean=False,
+        )
+
+        self.assertEqual(_validate_regeneration_flags(args), (True, False))
+
+    def test_validate_regeneration_flags_defaults_missing_attributes_to_false(
+        self,
+    ) -> None:
+        # generate's args.Namespace has no snapshot/incremental/clean/dev
+        # attributes at all (only regenerate registers them) -- this must
+        # not raise AttributeError for that shape.
+        args = SimpleNamespace(regenerate_all=True)
+
+        self.assertEqual(_validate_regeneration_flags(args), (False, False))
+
+    def test_validate_regeneration_flags_rejects_snapshot_without_all(self) -> None:
+        args = SimpleNamespace(
+            dev=False,
+            snapshot=True,
+            regenerate_all=False,
+            incremental=False,
+            clean=False,
+        )
+
+        with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
+            _validate_regeneration_flags(args)
+
+    def test_validate_regeneration_flags_rejects_snapshot_with_incremental(
+        self,
+    ) -> None:
+        args = SimpleNamespace(
+            dev=False,
+            snapshot=True,
+            regenerate_all=True,
+            incremental=True,
+            clean=False,
+        )
+
+        with self.assertRaisesRegex(
+            SiteError, "--snapshot cannot be combined with --incremental"
+        ):
+            _validate_regeneration_flags(args)
+
+    def test_validate_regeneration_flags_rejects_snapshot_with_dev(self) -> None:
+        args = SimpleNamespace(
+            dev=True,
+            snapshot=True,
+            regenerate_all=True,
+            incremental=False,
+            clean=False,
+        )
+
+        with self.assertRaisesRegex(
+            SiteError, "--snapshot cannot be combined with --dev"
+        ):
+            _validate_regeneration_flags(args)
+
+    def test_validate_regeneration_flags_rejects_clean_with_incremental(self) -> None:
+        args = SimpleNamespace(
+            dev=False,
+            snapshot=False,
+            regenerate_all=True,
+            incremental=True,
+            clean=True,
+        )
+
+        with self.assertRaisesRegex(
+            SiteError, "--clean cannot be combined with --incremental"
+        ):
+            _validate_regeneration_flags(args)
 
     def test_regenerate_parser_exposes_complete_workflow_options(self) -> None:
         args = build_parser().parse_args(

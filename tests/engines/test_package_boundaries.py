@@ -18,7 +18,7 @@ SEMANTIC_DISPATCH_PATHS = (
     SOURCE_ROOT / "renderers" / "mkdocs" / "locations.py",
 )
 NORMALIZED_ENCOUNTER_CONSUMERS = (
-    SOURCE_ROOT / "pipeline" / "transforms" / "relationships.py",
+    *sorted((SOURCE_ROOT / "pipeline" / "transforms" / "relationships").glob("*.py")),
     SOURCE_ROOT / "pipeline" / "enrichment" / "special_encounters.py",
     SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
 )

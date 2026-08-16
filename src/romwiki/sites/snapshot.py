@@ -70,60 +70,14 @@ def create_generated_wiki_snapshot(
     files = _generated_files(catalog)
     _LOG.info("Snapshot: discovered %s generated files", f"{len(files):,}")
     resolved_output = output.resolve()
-    resolved_output.parent.mkdir(parents=True, exist_ok=True)
-
-    temporary_path: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="wb",
-            prefix=f".{resolved_output.name}.",
-            suffix=".tmp",
-            dir=resolved_output.parent,
-            delete=False,
-        ) as raw_stream:
-            temporary_path = Path(raw_stream.name)
-            with (
-                gzip.GzipFile(
-                    filename="",
-                    mode="wb",
-                    fileobj=raw_stream,
-                    mtime=0,
-                ) as gzip_stream,
-                tarfile.open(fileobj=gzip_stream, mode="w") as archive,
-            ):
-                manifest = json.dumps(
-                    {
-                        "schema_version": SNAPSHOT_SCHEMA_VERSION,
-                        "file_count": len(files),
-                        "source_fingerprint": _source_fingerprint(resolved_root),
-                    },
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode("utf-8")
-                manifest_info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
-                manifest_info.size = len(manifest)
-                manifest_info.mode = 0o644
-                manifest_info.mtime = 0
-                archive.addfile(manifest_info, io.BytesIO(manifest))
-                for file_number, path in enumerate(files, start=1):
-                    relative = path.relative_to(resolved_root).as_posix()
-                    data = path.read_bytes()
-                    _validate_generated_link_context(path, data, resolved_root)
-                    info = tarfile.TarInfo(relative)
-                    info.size = len(data)
-                    info.mode = 0o644
-                    info.mtime = 0
-                    archive.addfile(info, io.BytesIO(data))
-                    if file_number % _SNAPSHOT_PROGRESS_INTERVAL == 0:
-                        _LOG.info(
-                            "Snapshot archived %s/%s files",
-                            f"{file_number:,}",
-                            f"{len(files):,}",
-                        )
-        temporary_path.replace(resolved_output)
-    finally:
-        if temporary_path is not None and temporary_path.exists():
-            temporary_path.unlink()
+    manifest = {
+        "schema_version": SNAPSHOT_SCHEMA_VERSION,
+        "file_count": len(files),
+        "source_fingerprint": _source_fingerprint(resolved_root),
+    }
+    _write_generated_archive(
+        resolved_output, resolved_root, files, manifest, log_progress=True
+    )
     return len(files)
 
 
@@ -153,21 +107,7 @@ def restore_generated_wiki_snapshot(
             for member in archive:
                 if member.name == SNAPSHOT_MANIFEST:
                     continue
-                if not member.isfile():
-                    raise SiteError(
-                        f"Generated wiki snapshot contains non-file entry: {member.name}"
-                    )
-                relative = PurePosixPath(member.name)
-                if (
-                    relative.is_absolute()
-                    or ".." in relative.parts
-                    or not any(
-                        relative.is_relative_to(prefix) for prefix in allowed_prefixes
-                    )
-                ):
-                    raise SiteError(
-                        f"Generated wiki snapshot contains invalid path: {member.name}"
-                    )
+                relative = _validate_snapshot_member_path(member, allowed_prefixes)
                 source = archive.extractfile(member)
                 if source is None:
                     raise SiteError(
@@ -284,45 +224,80 @@ def _create_snapshot_directory(
 def _write_site_archive(
     root: Path, output: Path, site_id: str, files: list[Path], source_fingerprint: str
 ) -> None:
-    temporary = output.with_suffix(".tmp")
+    manifest = {
+        "schema_version": DIRECTORY_SNAPSHOT_SCHEMA_VERSION,
+        "site": site_id,
+        "file_count": len(files),
+        "source_fingerprint": source_fingerprint,
+    }
+    _write_generated_archive(output, root, files, manifest)
+
+
+def _write_generated_archive(
+    output: Path,
+    root: Path,
+    files: list[Path],
+    manifest: dict[str, object],
+    *,
+    log_progress: bool = False,
+) -> None:
+    """Write a deterministic tar.gz archive of `files` (paths under `root`),
+    with `manifest` (JSON-encoded) as its first entry under
+    `SNAPSHOT_MANIFEST`, atomically replacing `output`.
+
+    Every entry -- including the manifest -- is written with a fixed
+    mode/mtime, so the archive's bytes depend only on file content, not on
+    when or on what platform it was built.
+    """
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
     try:
-        with (
-            temporary.open("wb") as raw,
-            gzip.GzipFile(
-                filename="",
-                mode="wb",
-                fileobj=raw,
-                mtime=0,
-            ) as zipped,
-            tarfile.open(fileobj=zipped, mode="w") as archive,
-        ):
-            manifest = json.dumps(
-                {
-                    "schema_version": DIRECTORY_SNAPSHOT_SCHEMA_VERSION,
-                    "site": site_id,
-                    "file_count": len(files),
-                    "source_fingerprint": source_fingerprint,
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode()
-            info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
-            info.size = len(manifest)
-            info.mode = 0o644
-            info.mtime = 0
-            archive.addfile(info, io.BytesIO(manifest))
-            for path in files:
-                data = path.read_bytes()
-                _validate_generated_link_context(path, data, root)
-                info = tarfile.TarInfo(path.relative_to(root).as_posix())
-                info.size = len(data)
-                info.mode = 0o644
-                info.mtime = 0
-                archive.addfile(info, io.BytesIO(data))
-        temporary.replace(output)
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{output.name}.",
+            suffix=".tmp",
+            dir=output.parent,
+            delete=False,
+        ) as raw_stream:
+            temporary_path = Path(raw_stream.name)
+            with (
+                gzip.GzipFile(
+                    filename="",
+                    mode="wb",
+                    fileobj=raw_stream,
+                    mtime=0,
+                ) as gzip_stream,
+                tarfile.open(fileobj=gzip_stream, mode="w") as archive,
+            ):
+                manifest_bytes = json.dumps(
+                    manifest,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                manifest_info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
+                manifest_info.size = len(manifest_bytes)
+                manifest_info.mode = 0o644
+                manifest_info.mtime = 0
+                archive.addfile(manifest_info, io.BytesIO(manifest_bytes))
+                for file_number, path in enumerate(files, start=1):
+                    relative = path.relative_to(root).as_posix()
+                    data = path.read_bytes()
+                    _validate_generated_link_context(path, data, root)
+                    info = tarfile.TarInfo(relative)
+                    info.size = len(data)
+                    info.mode = 0o644
+                    info.mtime = 0
+                    archive.addfile(info, io.BytesIO(data))
+                    if log_progress and file_number % _SNAPSHOT_PROGRESS_INTERVAL == 0:
+                        _LOG.info(
+                            "Snapshot archived %s/%s files",
+                            f"{file_number:,}",
+                            f"{len(files):,}",
+                        )
+        temporary_path.replace(output)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
 
 
 def _metadata_fingerprint(root: Path, files: list[Path]) -> str:
@@ -462,19 +437,10 @@ def _restore_site_archive(
         members = [member for member in archive if member.name != SNAPSHOT_MANIFEST]
         targets: set[PurePosixPath] = set()
         for member in members:
-            relative = PurePosixPath(member.name)
-            if (
-                not member.isfile()
-                or relative.is_absolute()
-                or ".." in relative.parts
-                or not any(relative.is_relative_to(prefix) for prefix in allowed)
-            ):
-                raise SiteError(
-                    f"Generated snapshot contains invalid path: {member.name}"
-                )
+            relative = _validate_snapshot_member_path(member, allowed)
             if relative in targets:
                 raise SiteError(
-                    f"Generated snapshot contains duplicate path: {member.name}"
+                    f"Generated wiki snapshot contains duplicate path: {member.name}"
                 )
             targets.add(relative)
         for prefix in allowed:
@@ -651,6 +617,27 @@ def _allowed_prefixes(catalog: SiteCatalog) -> tuple[PurePosixPath, ...]:
         for section in (*site.game.generated_sections, "changes"):
             prefixes.append(PurePosixPath(site_root.as_posix()) / "wiki" / section)
     return tuple(prefixes)
+
+
+def _validate_snapshot_member_path(
+    member: tarfile.TarInfo, allowed_prefixes: tuple[PurePosixPath, ...]
+) -> PurePosixPath:
+    """Validate a snapshot archive member is a regular file inside one of
+    the allowed generated-section prefixes, with no path-traversal
+    potential, returning its validated relative path.
+    """
+    if not member.isfile():
+        raise SiteError(
+            f"Generated wiki snapshot contains non-file entry: {member.name}"
+        )
+    relative = PurePosixPath(member.name)
+    if (
+        relative.is_absolute()
+        or ".." in relative.parts
+        or not any(relative.is_relative_to(prefix) for prefix in allowed_prefixes)
+    ):
+        raise SiteError(f"Generated wiki snapshot contains invalid path: {member.name}")
+    return relative
 
 
 def _validate_generated_link_context(path: Path, data: bytes, root: Path) -> None:

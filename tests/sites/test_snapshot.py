@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import tarfile
@@ -48,6 +49,48 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(SiteError, "unsupported manifest"):
+                restore_generated_wiki_snapshot(root, snapshot)
+
+    def test_directory_restore_rejects_paths_outside_generated_sections(self) -> None:
+        # The single-archive and per-site-directory restore paths share one
+        # path-traversal validator; this proves the directory path actually
+        # calls it too, not just the single-archive path covered by
+        # test_restore_rejects_paths_outside_generated_sections above.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            snapshot = root / "snapshot"
+            create_generated_wiki_snapshot(root, snapshot)
+            outer_manifest_path = snapshot / "manifest.json"
+            outer_manifest = json.loads(outer_manifest_path.read_text(encoding="utf-8"))
+            entry = outer_manifest["sites"]["test-game"]
+            archive_path = snapshot / entry["archive"]
+
+            with tarfile.open(archive_path, "r:gz") as archive:
+                site_manifest_bytes = archive.extractfile(
+                    archive.getmember(SNAPSHOT_MANIFEST)
+                ).read()
+                members = {
+                    member.name: archive.extractfile(member).read()
+                    for member in archive
+                    if member.name != SNAPSHOT_MANIFEST
+                }
+            members["../unsafe.txt"] = b"unsafe"
+            with tarfile.open(archive_path, "w:gz") as archive:
+                manifest_info = tarfile.TarInfo(SNAPSHOT_MANIFEST)
+                manifest_info.size = len(site_manifest_bytes)
+                archive.addfile(manifest_info, io.BytesIO(site_manifest_bytes))
+                for name, data in members.items():
+                    info = tarfile.TarInfo(name)
+                    info.size = len(data)
+                    archive.addfile(info, io.BytesIO(data))
+
+            entry["archive_sha256"] = hashlib.sha256(
+                archive_path.read_bytes()
+            ).hexdigest()
+            outer_manifest_path.write_text(json.dumps(outer_manifest), encoding="utf-8")
+
+            with self.assertRaisesRegex(SiteError, "invalid path"):
                 restore_generated_wiki_snapshot(root, snapshot)
 
     def test_site_archive_manifest_must_match_the_outer_manifest(self) -> None:

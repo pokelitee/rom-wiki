@@ -1359,9 +1359,17 @@ def _run_generation(args: argparse.Namespace) -> None:
         _run_regeneration_steps(args, build_artifact=False)
 
 
-def _run_regeneration_steps(
-    args: argparse.Namespace, *, build_artifact: bool = True
-) -> None:
+_PreparedRegenerationSite = tuple[
+    SiteDefinition,
+    tuple[LocalGamePaths, ...],
+    tuple[InspectionResult, ...],
+    tuple[InspectionResult | None, ...],
+    PokeDBGeneration,
+]
+
+
+def _validate_regeneration_flags(args: argparse.Namespace) -> tuple[bool, bool]:
+    """Check flag combinations upfront, returning `(dev, snapshot)`."""
     dev = getattr(args, "dev", False)
     snapshot = getattr(args, "snapshot", False)
     if snapshot and not args.regenerate_all:
@@ -1372,8 +1380,15 @@ def _run_regeneration_steps(
         raise SiteError("--snapshot cannot be combined with --dev")
     if getattr(args, "clean", False) and getattr(args, "incremental", False):
         raise SiteError("--clean cannot be combined with --incremental")
+    return dev, snapshot
 
-    catalog = SiteCatalog.load(args.root)
+
+def _prepare_regeneration_sites(
+    args: argparse.Namespace, catalog: SiteCatalog, *, build_artifact: bool
+) -> list[_PreparedRegenerationSite]:
+    """Preflight every selected site: identify its ROMs/baselines against
+    their profiles before any (expensive) extraction begins.
+    """
     selected = catalog.select(
         args.site_ids,
         all_published=args.regenerate_all,
@@ -1396,15 +1411,7 @@ def _run_regeneration_steps(
     pokedb_generations: dict[Path, PokeDBGeneration] = {}
     inspections: dict[Path, InspectionResult] = {}
 
-    prepared: list[
-        tuple[
-            SiteDefinition,
-            tuple[LocalGamePaths, ...],
-            tuple[InspectionResult, ...],
-            tuple[InspectionResult | None, ...],
-            PokeDBGeneration,
-        ]
-    ] = []
+    prepared: list[_PreparedRegenerationSite] = []
     preflight_started = perf_counter()
     _LOG.info("Generation preflight: %s sites", f"{len(data_sites):,}")
     for site_number, site in enumerate(data_sites, start=1):
@@ -1467,8 +1474,16 @@ def _run_regeneration_steps(
         perf_counter() - preflight_started,
         f"{len(prepared):,}",
     )
-    workflow = None
-    workflows = None
+    return prepared
+
+
+def _generate_prepared_sites(
+    args: argparse.Namespace,
+    prepared: list[_PreparedRegenerationSite],
+    *,
+    dev: bool,
+) -> None:
+    """Extract, enrich, and render each preflighted site in turn."""
     for site_number, (site, paths, current, baselines, pokedb) in enumerate(
         prepared, start=1
     ):
@@ -1558,13 +1573,16 @@ def _run_regeneration_steps(
             perf_counter() - site_started,
         )
 
+
+def _run_regeneration_steps(
+    args: argparse.Namespace, *, build_artifact: bool = True
+) -> None:
+    dev, snapshot = _validate_regeneration_flags(args)
+    catalog = SiteCatalog.load(args.root)
+    prepared = _prepare_regeneration_sites(args, catalog, build_artifact=build_artifact)
+    _generate_prepared_sites(args, prepared, dev=dev)
     # Release extraction graphs before spawning the memory-heavy MkDocs workers.
     prepared.clear()
-    pokedb_generations.clear()
-    inspections.clear()
-    current = baselines = paths = ()
-    pokedb = None
-    workflow = workflows = None
 
     if not build_artifact:
         return
