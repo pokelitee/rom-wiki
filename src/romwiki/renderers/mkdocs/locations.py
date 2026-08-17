@@ -5,10 +5,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
-from romwiki.renderers.mkdocs.locations_encounter_map import (
+from romwiki.renderers.mkdocs.location_encounter_map import (
     render_encounter_map_location_pages,
 )
-from romwiki.renderers.mkdocs.locations_event_map import render_event_map_location_pages
+from romwiki.renderers.mkdocs.location_event_map import render_event_map_location_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.schema.rendering import LocationRenderRecord, RenderDataset
 

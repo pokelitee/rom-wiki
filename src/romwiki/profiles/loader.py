@@ -15,6 +15,8 @@ from romwiki.profiles.models import (
 )
 from romwiki.util.errors import ProfileError
 
+_SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
 
 class ProfileRepository:
     def __init__(self, profiles: tuple[GameProfile, ...]) -> None:
@@ -139,7 +141,7 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
         sprite_version = reference_data.get("sprite_version")
         if sprite_version is not None and (
             not isinstance(sprite_version, str)
-            or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", sprite_version) is None
+            or _SLUG_PATTERN.fullmatch(sprite_version) is None
         ):
             raise ProfileError(f"Invalid sprite version in {path}: {sprite_version}")
         semantics_data = data.get("semantics", {})
@@ -247,7 +249,7 @@ def _load_semantic_names(
         if (
             not 0 <= semantic_id <= maximum_id
             or not isinstance(name, str)
-            or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) is None
+            or _SLUG_PATTERN.fullmatch(name) is None
             or semantic_id in result
         ):
             raise ProfileError(f"Invalid {label} semantic in {path}: {raw_id} = {name}")
@@ -265,10 +267,10 @@ def _load_type_chart(value: object, path: Path) -> TypeChartConfig | None:
     overrides = value.get("overrides", {})
     if (
         not isinstance(chart, str)
-        or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", chart) is None
+        or _SLUG_PATTERN.fullmatch(chart) is None
         or not isinstance(additional_types, (list, tuple))
         or not all(
-            isinstance(name, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name)
+            isinstance(name, str) and _SLUG_PATTERN.fullmatch(name)
             for name in additional_types
         )
         or len(set(additional_types)) != len(additional_types)

@@ -25,7 +25,7 @@ from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 
 
-def _build_gen5_special_vendor_shop(
+def _build_special_vendor_shop(
     vendor: Any,
     item_names_by_id: dict[int, str],
     *,
@@ -223,7 +223,7 @@ def _collect_archive_location_relationships(
     trade_dataset: dict[str, Any] | None,
     item_dataset: dict[str, Any] | None,
 ) -> _ArchiveLocationRelationships:
-    script_headers = _resolve_gen5_script_locations(
+    script_headers = _resolve_script_locations(
         source.engine,
         source.headers,
         source.script_file_ids,
@@ -240,7 +240,7 @@ def _collect_archive_location_relationships(
             script_headers,
             static_encounter_dataset,
         ),
-        npc_trades_by_header=_extract_gen5_npc_trade_references(
+        npc_trades_by_header=_extract_npc_trade_references(
             source.engine,
             source.profile,
             source.messages,
@@ -250,7 +250,7 @@ def _collect_archive_location_relationships(
             trade_dataset,
             item_dataset,
         ),
-        script_awarded_items_by_header=_extract_gen5_script_awarded_items(
+        script_awarded_items_by_header=_extract_script_awarded_items(
             source.engine,
             source.scripts,
             script_headers,
@@ -335,7 +335,7 @@ def _build_archive_location_record(
     script_file_id = source.script_file_ids[header.header_id]
     overworld_data = _read_overworld_data(source, header)
     items = (
-        _extract_gen5_field_items(
+        _extract_field_items(
             source.engine,
             overworld_data,
             catalogs,
@@ -350,11 +350,11 @@ def _build_archive_location_record(
         seen_vendor_ids: set[str] = set()
         unsupported_shop_selectors: list[int] = []
     else:
-        shops, seen_vendor_ids, unsupported_shop_selectors = _extract_gen5_script_shops(
+        shops, seen_vendor_ids, unsupported_shop_selectors = _extract_script_shops(
             source, catalogs, script_file_id
         )
     shops.extend(
-        _extract_gen5_location_vendors(
+        _extract_location_vendors(
             source.engine,
             header.header_id,
             catalogs.item_names_by_id,
@@ -362,7 +362,7 @@ def _build_archive_location_record(
             seen_vendor_ids,
         )
     )
-    warps = _extract_gen5_location_warps(source, overworld_data, headers_by_id)
+    warps = _extract_location_warps(source, overworld_data, headers_by_id)
     return (
         replace(
             header,
@@ -399,7 +399,7 @@ def _read_overworld_data(source: _ArchiveLocationSource, header: Any) -> bytes |
     return source.overworld_objects.read(overworld_file_id)
 
 
-def _extract_gen5_field_items(
+def _extract_field_items(
     engine: Any,
     overworld_data: bytes,
     catalogs: _ArchiveLocationCatalogs,
@@ -447,7 +447,7 @@ def _extract_gen5_field_items(
     return items
 
 
-def _extract_gen5_script_shops(
+def _extract_script_shops(
     source: _ArchiveLocationSource,
     catalogs: _ArchiveLocationCatalogs,
     script_file_id: int,
@@ -475,7 +475,7 @@ def _extract_gen5_script_shops(
             catalog_shop = catalogs.shops_by_id.get(inventory_id)
             if catalog_shop is not None:
                 shops.append(
-                    _build_gen5_catalog_shop(
+                    _build_catalog_shop(
                         catalog_shop,
                         catalogs.item_prices_by_id,
                         inventory_id=inventory_id,
@@ -492,7 +492,7 @@ def _extract_gen5_script_shops(
                 or special_vendor.vendor_id not in seen_vendor_ids
             ):
                 shops.append(
-                    _build_gen5_special_vendor_shop(
+                    _build_special_vendor_shop(
                         special_vendor,
                         catalogs.item_names_by_id,
                         script_file_id=script_file_id,
@@ -527,7 +527,7 @@ def _extract_gen5_script_shops(
     return shops, seen_vendor_ids, unsupported_shop_selectors
 
 
-def _build_gen5_catalog_shop(
+def _build_catalog_shop(
     catalog_shop: dict[str, Any],
     item_prices_by_id: dict[int, int | None],
     *,
@@ -558,7 +558,7 @@ def _build_gen5_catalog_shop(
     )
 
 
-def _extract_gen5_location_vendors(
+def _extract_location_vendors(
     engine: Any,
     header_id: int,
     item_names_by_id: dict[int, str],
@@ -577,7 +577,7 @@ def _extract_gen5_location_vendors(
         ):
             continue
         shops.append(
-            _build_gen5_special_vendor_shop(
+            _build_special_vendor_shop(
                 special_vendor,
                 item_names_by_id,
                 script_file_id=script_file_id,
@@ -589,7 +589,7 @@ def _extract_gen5_location_vendors(
     return shops
 
 
-def _extract_gen5_location_warps(
+def _extract_location_warps(
     source: _ArchiveLocationSource,
     overworld_data: bytes | None,
     headers_by_id: dict[int, Any],
@@ -766,7 +766,7 @@ def _extract_encounter_map_connections(
     return result
 
 
-def _resolve_gen5_script_locations(
+def _resolve_script_locations(
     engine: Any,
     headers: tuple[Any, ...],
     script_file_ids: tuple[int, ...],
@@ -805,7 +805,7 @@ def _resolve_gen5_script_locations(
     }
 
 
-def _extract_gen5_script_awarded_items(
+def _extract_script_awarded_items(
     engine: Any,
     scripts: Any,
     script_headers: dict[int, tuple[int, ...]],
@@ -846,7 +846,7 @@ def _extract_gen5_script_awarded_items(
     return references
 
 
-def _extract_gen5_npc_trade_references(
+def _extract_npc_trade_references(
     engine: Any,
     profile: Any,
     messages: Any,

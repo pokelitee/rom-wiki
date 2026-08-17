@@ -24,8 +24,8 @@ from romwiki.sites.catalog import (
     SiteDefinition,
 )
 from romwiki.sites.data_exports import validate_public_data
-from romwiki.sites.inventory import inventory_fingerprint
 from romwiki.util.errors import SiteError
+from romwiki.util.inventory import inventory_fingerprint
 from romwiki.util.json_io import write_json_atomic
 
 _LOG = logging.getLogger("romwiki")
@@ -46,10 +46,10 @@ _NON_GENERATION_SOURCES = {
     "sites/build.py",
     "sites/build_state.py",
     "sites/catalog.py",
-    "sites/inventory.py",
     "sites/mkdocs_hooks.py",
     "sites/server.py",
     "sites/snapshot.py",
+    "util/inventory.py",
 }
 
 

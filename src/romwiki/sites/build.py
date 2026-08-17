@@ -19,8 +19,8 @@ from romwiki.sites.build_state import (
     write_site_build_state,
 )
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition, site_display_key
-from romwiki.sites.inventory import file_path_inventory, read_inventory_state
 from romwiki.util.errors import SiteError
+from romwiki.util.inventory import file_path_inventory, read_inventory_state
 from romwiki.util.logging import timed_operation
 
 CommandRunner = Callable[[Sequence[str]], None]

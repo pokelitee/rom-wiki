@@ -5,16 +5,31 @@ import json
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from romwiki.pipeline.build.fingerprint import (
     GENERATION_EXTRACTOR_MODULES,
     extraction_source_files,
     profile_fingerprint,
 )
-from romwiki.sites.catalog import SiteDefinition
-from romwiki.sites.inventory import file_metadata_inventory
+from romwiki.util.inventory import file_metadata_inventory
 from romwiki.util.json_io import write_json_atomic
+
+
+class _GameDefinition(Protocol):
+    generated_sections: tuple[str, ...]
+
+
+class _SiteDefinition(Protocol):
+    """Structural shape `regeneration.py` needs from `sites.catalog.SiteDefinition`.
+
+    Defined locally (rather than importing the real type) so this pipeline
+    module doesn't depend upward on the `sites` package that orchestrates it.
+    """
+
+    config_path: Path
+    game: _GameDefinition | None
+
 
 REGENERATION_STATE_SCHEMA_VERSION = 2
 _FINGERPRINT_SCHEMA_VERSION = b"2"
@@ -22,7 +37,7 @@ _FINGERPRINT_SCHEMA_VERSION = b"2"
 
 def regeneration_fingerprint(
     root: Path,
-    site: SiteDefinition,
+    site: _SiteDefinition,
     current: Sequence[Any],
     baselines: Sequence[Any | None],
     pokedb_root: Path,
@@ -74,7 +89,7 @@ def regeneration_fingerprint(
     return digest.hexdigest()
 
 
-def generated_inventory(site: SiteDefinition) -> dict[str, str]:
+def generated_inventory(site: _SiteDefinition) -> dict[str, str]:
     assert site.game is not None
     wiki_root = site.config_path.parent / "wiki"
     inventory: dict[str, str] = {}
@@ -89,7 +104,7 @@ def generated_inventory(site: SiteDefinition) -> dict[str, str]:
     return inventory
 
 
-def can_reuse_generation(path: Path, fingerprint: str, site: SiteDefinition) -> bool:
+def can_reuse_generation(path: Path, fingerprint: str, site: _SiteDefinition) -> bool:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
@@ -103,7 +118,7 @@ def can_reuse_generation(path: Path, fingerprint: str, site: SiteDefinition) -> 
 
 
 def write_regeneration_state(
-    path: Path, fingerprint: str, site: SiteDefinition
+    path: Path, fingerprint: str, site: _SiteDefinition
 ) -> None:
     write_json_atomic(
         path,

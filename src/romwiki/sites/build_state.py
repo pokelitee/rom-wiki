@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Protocol
 
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
-from romwiki.sites.inventory import file_metadata_inventory, file_path_inventory
 from romwiki.util.errors import SiteError
+from romwiki.util.inventory import file_metadata_inventory, file_path_inventory
 from romwiki.util.json_io import write_json_atomic
 
 BUILD_STATE_SCHEMA_VERSION = 2
