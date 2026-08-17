@@ -65,41 +65,75 @@ def comparison_section(
     references: ReferenceIndex | None = None,
     *,
     heading_level: int | None = 2,
+    details: bool = True,
 ) -> list[str]:
     if entry is None:
         return []
+    content = _comparison_content(entry, baseline_name, source_file, references)
+    if not details:
+        return content
+    return comparison_notes_section(content, [entry], heading_level=heading_level)
+
+
+def _comparison_content(
+    entry: dict[str, Any],
+    baseline_name: str | None,
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> list[str]:
     version_comparisons = entry.get("version_comparisons")
     if version_comparisons:
-        lines = (
-            [f"{'#' * heading_level} Hack changes", ""]
-            if heading_level is not None
-            else []
+        return content_tabs(
+            [
+                (
+                    display_name(version),
+                    _comparison_body(
+                        version_entry,
+                        version_entry.get("baseline") or baseline_name,
+                        source_file,
+                        references,
+                    ),
+                )
+                for version, version_entry in version_comparisons.items()
+            ]
         )
-        lines.extend(
-            content_tabs(
-                [
-                    (
-                        display_name(version),
-                        _comparison_body(
-                            version_entry,
-                            version_entry.get("baseline") or baseline_name,
-                            source_file,
-                            references,
-                        ),
-                    )
-                    for version, version_entry in version_comparisons.items()
-                ]
-            )
-        )
-        return lines
+    return _comparison_body(entry, baseline_name, source_file, references)
+
+
+def comparison_notes_section(
+    content: list[str],
+    entries: list[dict[str, Any]],
+    *,
+    heading_level: int | None = 2,
+) -> list[str]:
+    change_count = sum(
+        len(value.get("changes", ()))
+        for entry in entries
+        for value in _comparison_entries(entry)
+    )
+    summary = (
+        f"{change_count} {'field changed' if change_count == 1 else 'fields changed'}"
+        if change_count
+        else "Comparison notes"
+    )
     return [
         *(
             [f"{'#' * heading_level} Hack changes", ""]
             if heading_level is not None
             else []
         ),
-        *_comparison_body(entry, baseline_name, source_file, references),
+        '<details markdown="1">',
+        f"<summary>{summary}</summary>",
+        "",
+        *content,
+        "</details>",
+        "",
     ]
+
+
+def _comparison_entries(entry: dict[str, Any]) -> list[dict[str, Any]]:
+    versions = entry.get("version_comparisons")
+    return list(versions.values()) if versions else [entry]
 
 
 def grouped_comparison_section(
@@ -111,23 +145,15 @@ def grouped_comparison_section(
     available = [(label, entry) for label, entry in entries if entry is not None]
     if not available:
         return []
-    if len(available) == 1:
-        return comparison_section(
-            available[0][1], baseline_name, source_file, references
-        )
-    lines = ["## Hack changes", ""]
+    content: list[str] = []
     for label, entry in available:
-        lines.extend([f"### {label}", ""])
-        lines.extend(
-            comparison_section(
-                entry,
-                baseline_name,
-                source_file,
-                references,
-                heading_level=None,
-            )
+        content.extend([f"### {label}", ""])
+        content.extend(
+            _comparison_content(entry, baseline_name, source_file, references)
         )
-    return lines
+    return comparison_notes_section(
+        content, [entry for _, entry in available], heading_level=2
+    )
 
 
 def _comparison_body(
@@ -155,13 +181,8 @@ def _comparison_body(
             f"    This record exists in **{escape_markdown(baseline)}** but not in this hack.",
             "",
         ]
-    change_count = len(entry["changes"])
-    noun = "field changed" if change_count == 1 else "fields changed"
     lines = [
         f"Compared with **{escape_markdown(baseline)}**.",
-        "",
-        '<details markdown="1">',
-        f"<summary>{change_count} {noun}</summary>",
         "",
         '<div class="rw-changes">',
     ]
@@ -181,7 +202,7 @@ def _comparison_body(
                 "</section>",
             ]
         )
-    lines.extend(["</div>", "", "</details>", ""])
+    lines.extend(["</div>", ""])
     return lines
 
 

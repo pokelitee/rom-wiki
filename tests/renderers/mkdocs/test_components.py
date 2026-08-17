@@ -25,7 +25,7 @@ from romwiki.renderers.mkdocs.components import (
     tutor_requirement,
     type_badges,
 )
-from romwiki.renderers.mkdocs.items import _party_effects
+from romwiki.renderers.mkdocs.items import _append_pokemon, _party_effects
 from romwiki.renderers.mkdocs.moves import (
     _egg_move_learners,
     _pokemon_sprite_table,
@@ -470,6 +470,47 @@ class MoveReferenceSectionTests(unittest.TestCase):
         )[1].split("\n</script>", 1)[0]
         self.assertNotIn("</script>", payload)
         self.assertIn(r"\u003c/script\u003e", payload)
+
+
+class ItemPokemonTableTests(unittest.TestCase):
+    def test_small_tables_show_sprites_and_large_tables_paginate(self) -> None:
+        values = [
+            {
+                "member": index,
+                "name": f"Species {index}",
+                "slug": f"species-{index}",
+                "rarity": "common",
+            }
+            for index in range(1, 52)
+        ]
+        references = ReferenceIndex(
+            EntityReference(
+                "pokemon",
+                index,
+                f"Species {index}",
+                f"species-{index}",
+                f"https://example.test/sprites/{index}.png",
+                ({"name": "grass"},),
+            )
+            for index in range(1, 52)
+        )
+
+        small: list[str] = []
+        _append_pokemon(
+            small, {"wild_held_by": values[:50]}, "items/test.md", references
+        )
+        large: list[str] = []
+        _append_pokemon(
+            large, {"wild_held_by": values}, "items/test.md", references
+        )
+
+        self.assertIn("rw-table-sprite", "\n".join(small))
+        rendered = "\n".join(large)
+        self.assertIn("data-rw-learner-table", rendered)
+        self.assertIn('"page_param":"wild_held_by_page"', rendered)
+        self.assertIn('"sprite_url":"https://example.test/sprites/1.png"', rendered)
+        fallback = rendered.split("data-rw-learner-fallback", 1)[1]
+        self.assertNotIn("rw-table-sprite", fallback)
 
 
 class ItemPartyEffectTests(unittest.TestCase):

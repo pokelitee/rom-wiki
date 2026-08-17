@@ -7,6 +7,48 @@ from romwiki.util.errors import DataSourceError
 
 
 class RelationshipIndexTests(unittest.TestCase):
+    def test_merges_same_species_method_levels_and_chances(self) -> None:
+        index = build_relationship_index(
+            _datasets(
+                pokemon=[_pokemon(1, "bulbasaur")],
+                encounters=[
+                    {
+                        "area_id": 4,
+                        "name": "Route 204",
+                        "locations": [{"header_id": 204, "name": "Route 204"}],
+                        "walking": {
+                            "rate": 20,
+                            "slots": [
+                                {
+                                    "species_id": 1,
+                                    "pokemon": {"id": 1, "slug": "bulbasaur"},
+                                    "level": 5,
+                                    "chance": 20,
+                                },
+                                {
+                                    "species_id": 1,
+                                    "pokemon": {"id": 1, "slug": "bulbasaur"},
+                                    "level": 7,
+                                    "chance": 10,
+                                },
+                            ],
+                        },
+                    }
+                ],
+            )
+        )
+
+        references = index.pokemon_wild_encounters["bulbasaur"]
+        self.assertEqual(len(references), 1)
+        self.assertEqual(
+            (
+                references[0].minimum_level,
+                references[0].maximum_level,
+                references[0].chance,
+            ),
+            (5, 7, 30),
+        )
+
     def test_builds_gen4_wild_trainer_acquisition_and_learner_references(
         self,
     ) -> None:

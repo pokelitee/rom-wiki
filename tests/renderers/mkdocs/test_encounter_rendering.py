@@ -16,6 +16,31 @@ from romwiki.util.errors import SiteError
 
 
 class EncounterRenderingTests(unittest.TestCase):
+    def test_omits_headbutt_section_from_encounter_catalog(self) -> None:
+        dataset = {
+            "game": "test",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [
+                {
+                    "area_id": 142,
+                    "source_type": "headbutt",
+                    "name": "Route 1",
+                    "active": True,
+                    "location": {"header_id": 9, "name": "Route 1"},
+                    "pools": {"common": [], "rare": [], "secret": []},
+                    "tree_groups": [],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(catalog["records"], [])
+
     def test_raises_a_site_error_for_an_unroutable_catalog_record(self) -> None:
         # A malformed/inconsistent build state (the location engine hasn't
         # registered a route for this area) must surface as the project's
@@ -31,7 +56,7 @@ class EncounterRenderingTests(unittest.TestCase):
         ):
             _encounter_catalog_url(record)
 
-    def test_routes_version_specific_daily_swarm_to_location(self) -> None:
+    def test_omits_daily_swarm_section_from_encounter_catalog(self) -> None:
         black = {
             "area_id": 194,
             "source_type": "daily-swarm",
@@ -73,13 +98,9 @@ class EncounterRenderingTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertFalse((output / "daily-swarm-331.md").exists())
-        self.assertEqual(catalog["records"][0]["methods"], ["Daily Swarm"])
-        self.assertEqual(
-            catalog["records"][0]["url"],
-            "../locations/header-331/#daily-swarm",
-        )
+        self.assertEqual(catalog["records"], [])
 
-    def test_routes_hidden_grotto_to_location(self) -> None:
+    def test_omits_hidden_grotto_section_from_encounter_catalog(self) -> None:
         record = {
             "area_id": 174,
             "source_type": "hidden-grotto",
@@ -132,11 +153,7 @@ class EncounterRenderingTests(unittest.TestCase):
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertFalse((output / "hidden-grotto-00.md").exists())
-        self.assertEqual(catalog["records"][0]["methods"], ["Hidden Grotto"])
-        self.assertEqual(
-            catalog["records"][0]["url"],
-            "../locations/header-445/#hidden-grotto-00",
-        )
+        self.assertEqual(catalog["records"], [])
 
     def test_nests_versions_inside_season_tabs(self) -> None:
         lines = _season_version_tabs(

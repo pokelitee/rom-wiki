@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -44,19 +43,21 @@ from romwiki.renderers.mkdocs.components import (
     type_badges,
     version_availability_note,
 )
+from romwiki.renderers.mkdocs.paginated_tables import (
+    PAGINATED_TABLE_THRESHOLD,
+    paginated_table,
+    pokemon_cell,
+    pokemon_type_cell,
+    text_cell,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     entity_reference,
     escape_markdown,
     pokemon_record_link,
-    resolved_reference,
 )
 from romwiki.schema.rendering import MoveRenderRecord, RenderDataset
-
-_LEARNER_TABLE_SCHEMA_VERSION = 1
-_LEARNER_TABLE_PAGE_SIZE = 50
-_LEARNER_TABLE_PAGINATION_THRESHOLD = 50
 
 
 def render_move_pages(
@@ -533,7 +534,7 @@ def _relationship_learner_table(
             else "No machine-compatible Pokémon."
         )
     detail_heading = "Level" if detail == "level" else "Machine"
-    show_sprites = len(learners) <= _LEARNER_TABLE_PAGINATION_THRESHOLD
+    show_sprites = len(learners) <= PAGINATED_TABLE_THRESHOLD
     fallback_rows = []
     payload_rows = []
     for learner in learners:
@@ -556,12 +557,12 @@ def _relationship_learner_table(
         )
         payload_rows.append(
             [
-                _learner_pokemon_cell(pokemon, source_file, references),
-                _learner_text_cell(
+                pokemon_cell(pokemon, source_file, references),
+                text_cell(
                     display_name(learner.pokemon_form) if learner.pokemon_form else "—"
                 ),
-                _learner_text_cell(detail_value),
-                _learner_text_cell(_learner_version_text(learner.versions)),
+                text_cell(detail_value),
+                text_cell(_learner_version_text(learner.versions)),
             ]
         )
     header = [
@@ -571,7 +572,7 @@ def _relationship_learner_table(
     fallback = markdown_table(header, fallback_rows)
     if show_sprites:
         return fallback
-    return _paginated_learner_table(
+    return paginated_table(
         columns=["Pokémon", "Form", detail_heading, "Version"],
         rows=payload_rows,
         fallback=fallback,
@@ -688,7 +689,7 @@ def _pokemon_sprite_table(
 ) -> list[str]:
     if not pokemon:
         return empty_state(empty_message)
-    show_sprites = len(pokemon) <= _LEARNER_TABLE_PAGINATION_THRESHOLD
+    show_sprites = len(pokemon) <= PAGINATED_TABLE_THRESHOLD
     fallback = markdown_table(
         ["| Pokémon | Type |", "| ------- | ---- |"],
         [
@@ -701,12 +702,12 @@ def _pokemon_sprite_table(
     )
     if show_sprites:
         return fallback
-    return _paginated_learner_table(
+    return paginated_table(
         columns=["Pokémon", "Type"],
         rows=[
             [
-                _learner_pokemon_cell(value, source_file, references),
-                _learner_type_cell(value, references),
+                pokemon_cell(value, source_file, references),
+                pokemon_type_cell(value, references),
             ]
             for value in pokemon
         ],
@@ -714,89 +715,6 @@ def _pokemon_sprite_table(
         table_key=table_key,
         label=table_label,
     )
-
-
-def _paginated_learner_table(
-    *,
-    columns: list[str],
-    rows: list[list[dict[str, Any]]],
-    fallback: list[str],
-    table_key: str,
-    label: str,
-) -> list[str]:
-    payload = json.dumps(
-        {
-            "schema_version": _LEARNER_TABLE_SCHEMA_VERSION,
-            "label": label,
-            "page_param": f"{table_key}_page",
-            "page_size": _LEARNER_TABLE_PAGE_SIZE,
-            "columns": columns,
-            "rows": rows,
-        },
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
-    payload = (
-        payload.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
-    )
-    return [
-        '<div class="rw-learner-table" data-rw-learner-table markdown="1">',
-        '<div class="rw-learner-table__interactive" '
-        "data-rw-learner-interactive hidden></div>",
-        '<script type="application/json" data-rw-learner-data>',
-        payload,
-        "</script>",
-        '<div class="rw-learner-table__fallback" '
-        'data-rw-learner-fallback markdown="1">',
-        "",
-        *fallback,
-        "</div>",
-        "</div>",
-        "",
-    ]
-
-
-def _learner_pokemon_cell(
-    value: dict[str, Any],
-    source_file: str,
-    references: ReferenceIndex | None,
-) -> dict[str, Any]:
-    identifier = value.get("member", value.get("id", value.get("slug", value["name"])))
-    reference = resolved_reference(
-        "pokemon",
-        identifier,
-        value["name"],
-        value.get("slug"),
-        index=references,
-    )
-    return {
-        "kind": "pokemon",
-        "label": value["name"],
-        "url": ROUTES.published_href(reference, source_file.removesuffix(".md") + "/"),
-        "sprite_url": reference.sprite_url,
-    }
-
-
-def _learner_type_cell(
-    value: dict[str, Any], references: ReferenceIndex | None
-) -> dict[str, Any]:
-    identifier = value.get("member", value.get("id"))
-    types = (
-        references.types("pokemon", identifier)
-        if references is not None and identifier is not None
-        else None
-    )
-    return {
-        "kind": "types",
-        "values": [
-            {"name": str(type_["name"]), "label": display_name(str(type_["name"]))}
-            for type_ in types or ()
-        ],
-    }
-
-
-def _learner_text_cell(value: str) -> dict[str, str]:
-    return {"kind": "text", "value": value}
 
 
 def _pokemon_table_link(

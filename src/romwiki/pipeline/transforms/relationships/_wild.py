@@ -264,16 +264,14 @@ def _freeze_wild(
                 entry.area_name,
                 entry.encounter_route_key,
                 entry.method,
-                entry.minimum_level,
-                entry.maximum_level,
                 entry.condition,
                 entry.season,
                 entry.locations,
                 entry.versions,
             )
             existing = grouped.get(key)
-            if existing is None or existing.chance is None or entry.chance is None:
-                grouped.setdefault(key, entry)
+            if existing is None:
+                grouped[key] = entry
                 continue
             grouped[key] = WildEncounterReference(
                 pokemon_slug=entry.pokemon_slug,
@@ -281,9 +279,13 @@ def _freeze_wild(
                 area_name=entry.area_name,
                 encounter_route_key=entry.encounter_route_key,
                 method=entry.method,
-                minimum_level=entry.minimum_level,
-                maximum_level=entry.maximum_level,
-                chance=existing.chance + entry.chance,
+                minimum_level=_minimum(existing.minimum_level, entry.minimum_level),
+                maximum_level=_maximum(existing.maximum_level, entry.maximum_level),
+                chance=(
+                    existing.chance + entry.chance
+                    if existing.chance is not None and entry.chance is not None
+                    else None
+                ),
                 condition=entry.condition,
                 season=entry.season,
                 locations=entry.locations,
@@ -291,6 +293,16 @@ def _freeze_wild(
             )
         result[slug] = tuple(sorted(grouped.values(), key=_wild_sort_key))
     return result
+
+
+def _minimum(left: int | None, right: int | None) -> int | None:
+    values = [value for value in (left, right) if value is not None]
+    return min(values, default=None)
+
+
+def _maximum(left: int | None, right: int | None) -> int | None:
+    values = [value for value in (left, right) if value is not None]
+    return max(values, default=None)
 
 
 def _wild_sort_key(value: WildEncounterReference) -> tuple[Any, ...]:

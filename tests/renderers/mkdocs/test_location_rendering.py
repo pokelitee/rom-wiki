@@ -253,15 +253,37 @@ class LocationRenderingTests(unittest.TestCase):
                 "encounters": {"game": "test", "records": [grotto, swarm]},
             }
         )
+        references = ReferenceIndex.from_datasets(
+            {
+                "items": {
+                    "records": [
+                        {
+                            "item_id": 82,
+                            "name": "Fire Stone",
+                            "slug": "fire-stone",
+                            "reference": {
+                                "sprite_url": "https://example.test/fire-stone.png"
+                            },
+                        }
+                    ]
+                }
+            }
+        )
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            render_location_pages(dataset, output, relationships=relationships)
+            render_location_pages(
+                dataset,
+                output,
+                references=references,
+                relationships=relationships,
+            )
             page = (output / "header-445.md").read_text(encoding="utf-8")
 
         self.assertIn("### Hidden Grotto { #hidden-grotto-00 }", page)
         self.assertIn("### Hidden Grotto", page)
         self.assertIn("[Fire Stone](../items/fire-stone.md)", page)
+        self.assertIn('src="https://example.test/fire-stone.png"', page)
         self.assertIn("### Daily Swarm { #daily-swarm }", page)
         self.assertIn("### Daily Swarm", page)
         self.assertIn("40–55", page)

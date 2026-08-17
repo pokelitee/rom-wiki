@@ -25,6 +25,7 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
+    comparison_notes_section,
     comparison_section,
     grouped_comparison_section,
     record_comparison,
@@ -106,11 +107,6 @@ def render_encounter_pages(
             only_pages=only_pages,
         )
     records = [record for record in dataset["records"] if record["active"]]
-    headbutt_records = [
-        record
-        for record in records
-        if record.get("source_type") == EncounterSourceType.HEADBUTT
-    ]
     safari_records = [
         record
         for record in records
@@ -220,26 +216,6 @@ def render_encounter_pages(
                     record, filename.removesuffix(".md") + "/", False, change
                 )
             )
-    for record in headbutt_records:
-        route_id = conditional_encounter_key(record)
-        label = f"{record['name']} Headbutt"
-        fallback_links.append(
-            "- "
-            + ROUTES.markdown_link(
-                entity_reference(
-                    encounter_route_kind(encounter_route_key(record)),
-                    record["area_id"],
-                    label,
-                    encounter_route_key(record),
-                ),
-                "encounters/index.md",
-            )
-        )
-        catalog_records.append(
-            _headbutt_catalog_record(
-                record, _encounter_catalog_url(record), route_id=route_id
-            )
-        )
     if safari_records and _safari_page_selected(safari_records, only_pages):
         write_text(
             output_root / f"{SAFARI_ZONE_ROUTE}.md",
@@ -285,41 +261,6 @@ def render_encounter_pages(
         ),
     )
     return page_count
-
-
-def _headbutt_catalog_record(
-    record: dict[str, Any], filename: str, *, route_id: str
-) -> dict[str, Any]:
-    variants = [value for _, value in version_variant_records(record)]
-    slots = [
-        slot for value in variants for pool in value["pools"].values() for slot in pool
-    ]
-    names = list(dict.fromkeys(slot["pokemon"]["name"] for slot in slots))
-    levels = [
-        level
-        for slot in slots
-        for level in (slot["minimum_level"], slot["maximum_level"])
-    ]
-    return {
-        "id": record["area_id"],
-        "route_id": route_id,
-        "label": f"{record['name']} Headbutt",
-        "url": filename,
-        "locations": [record["location"]["name"]],
-        "methods": ["Headbutt"],
-        "pokemon": names,
-        "pokemon_refs": [
-            ROUTES.catalog_reference(reference, "encounters/")
-            for reference in unique_references(
-                _pokemon_reference(slot["pokemon"]) for slot in slots
-            )
-        ],
-        "method_pokemon": {"Headbutt": names},
-        "min_level": min(levels),
-        "max_level": max(levels),
-        "referenced": True,
-        "search_text": " ".join((record["name"], *names, "headbutt")).lower(),
-    }
 
 
 def _safari_slots(record: dict[str, Any]) -> list[dict[str, Any]]:
@@ -944,16 +885,6 @@ def _render_seasonal_encounter_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     active_records = [record for record in dataset["records"] if record["active"]]
-    hidden_grottos = [
-        record
-        for record in active_records
-        if record.get("source_type") == EncounterSourceType.HIDDEN_GROTTO
-    ]
-    daily_swarms = [
-        record
-        for record in active_records
-        if record.get("source_type") == EncounterSourceType.DAILY_SWARM
-    ]
     active_records = [
         record
         for record in active_records
@@ -1042,44 +973,6 @@ def _render_seasonal_encounter_pages(
                 locations,
             )
         )
-    for record in hidden_grottos:
-        route_id = conditional_encounter_key(record)
-        fallback_links.append(
-            "- "
-            + ROUTES.markdown_link(
-                entity_reference(
-                    encounter_route_kind(encounter_route_key(record)),
-                    record["area_id"],
-                    record["name"],
-                    encounter_route_key(record),
-                ),
-                "encounters/index.md",
-            )
-        )
-        catalog_records.append(
-            _hidden_grotto_catalog_record(
-                record, _encounter_catalog_url(record), route_id=route_id
-            )
-        )
-    for record in daily_swarms:
-        route_id = conditional_encounter_key(record)
-        fallback_links.append(
-            "- "
-            + ROUTES.markdown_link(
-                entity_reference(
-                    encounter_route_kind(encounter_route_key(record)),
-                    record["area_id"],
-                    f"{record['name']} Daily Swarm",
-                    encounter_route_key(record),
-                ),
-                "encounters/index.md",
-            )
-        )
-        catalog_records.append(
-            _daily_swarm_catalog_record(
-                record, _encounter_catalog_url(record), route_id=route_id
-            )
-        )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
         output_root / "index.md",
@@ -1091,78 +984,6 @@ def _render_seasonal_encounter_pages(
         ),
     )
     return page_count
-
-
-def _daily_swarm_catalog_record(
-    record: dict[str, Any], filename: str, *, route_id: str
-) -> dict[str, Any]:
-    variants = [value for _, value in version_variant_records(record)]
-    pokemon = [value["pokemon"] for value in variants]
-    names = list(dict.fromkeys(value["name"] for value in pokemon))
-    levels = [
-        level
-        for value in variants
-        for level in (value["minimum_level"], value["maximum_level"])
-    ]
-    return {
-        "id": record["area_id"],
-        "route_id": route_id,
-        "label": f"{record['name']} Daily Swarm",
-        "url": filename,
-        "locations": [record["location"]["name"]],
-        "methods": ["Daily Swarm"],
-        "pokemon": names,
-        "pokemon_refs": [
-            ROUTES.catalog_reference(reference, "encounters/")
-            for reference in unique_references(
-                _pokemon_reference(value) for value in pokemon
-            )
-        ],
-        "method_pokemon": {"Daily Swarm": names},
-        "min_level": min(levels),
-        "max_level": max(levels),
-        "referenced": True,
-        "search_text": " ".join((record["name"], *names, "daily swarm")).lower(),
-    }
-
-
-def _hidden_grotto_catalog_record(
-    record: dict[str, Any], filename: str, *, route_id: str
-) -> dict[str, Any]:
-    variants = [value for _, value in version_variant_records(record)]
-    pokemon = [slot["pokemon"] for value in variants for slot in value["pokemon"]]
-    levels = [
-        level
-        for value in variants
-        for slot in value["pokemon"]
-        for level in (slot["minimum_level"], slot["maximum_level"])
-    ]
-    names = list(dict.fromkeys(value["name"] for value in pokemon))
-    location_names = list(
-        dict.fromkeys(value["location"]["name"] for value in variants)
-    )
-    return {
-        "id": record["area_id"],
-        "route_id": route_id,
-        "label": record["name"],
-        "url": filename,
-        "locations": location_names,
-        "methods": ["Hidden Grotto"],
-        "pokemon": names,
-        "pokemon_refs": [
-            ROUTES.catalog_reference(reference, "encounters/")
-            for reference in unique_references(
-                _pokemon_reference(value) for value in pokemon
-            )
-        ],
-        "method_pokemon": {"Hidden Grotto": names},
-        "min_level": min(levels),
-        "max_level": max(levels),
-        "referenced": True,
-        "search_text": " ".join(
-            (record["name"], route_id, *location_names, *names)
-        ).lower(),
-    }
 
 
 def _seasonal_page_selected(
@@ -1318,7 +1139,6 @@ def _render_seasonal_area(
         for seasonal_record in records
     ]
     if any(change is not None for _, change in comparisons):
-        lines.extend(["## Hack changes", ""])
         change_contents: list[tuple[str | None, str | None, list[str]]] = []
         for seasonal_record, change in comparisons:
             version_comparisons = (change or {}).get("version_comparisons")
@@ -1334,6 +1154,7 @@ def _render_seasonal_area(
                                 source_file,
                                 references,
                                 heading_level=None,
+                                details=False,
                             ),
                         )
                     )
@@ -1348,10 +1169,16 @@ def _render_seasonal_area(
                         source_file,
                         references,
                         heading_level=None,
+                        details=False,
                     ),
                 )
             )
-        lines.extend(_season_version_tabs(change_contents))
+        lines.extend(
+            comparison_notes_section(
+                _season_version_tabs(change_contents),
+                [change for _, change in comparisons if change is not None],
+            )
+        )
     lines.extend(
         provenance_section(
             [

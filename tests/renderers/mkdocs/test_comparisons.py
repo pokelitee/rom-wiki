@@ -10,6 +10,7 @@ from romwiki.pipeline.transforms.relationships import (
 )
 from romwiki.renderers.mkdocs.comparisons import (
     comparison_section,
+    grouped_comparison_section,
     render_changes_pages,
 )
 from romwiki.renderers.mkdocs.references import ReferenceIndex, entity_reference
@@ -82,10 +83,33 @@ class ComparisonRenderingTests(unittest.TestCase):
         )
 
         self.assertIn("Verified unchanged", "\n".join(unchanged))
+        self.assertEqual(unchanged.count('<details markdown="1">'), 1)
         value = "\n".join(changed)
         self.assertIn('<p class="rw-change__field">Power</p>', value)
         self.assertIn('40<span class="rw-diff-arrow">→</span>60', value)
         self.assertNotIn("| Field | Change |", value)
+
+    def test_grouped_changes_share_one_notes_dropdown(self) -> None:
+        section = grouped_comparison_section(
+            [
+                ("Location", {"status": "unchanged", "changes": []}),
+                (
+                    "Headbutt encounters",
+                    {
+                        "status": "changed",
+                        "changes": [
+                            {"label": "PokÃ©mon", "before": "A", "after": "B"}
+                        ],
+                    },
+                ),
+            ],
+            "Base",
+        )
+
+        value = "\n".join(section)
+        self.assertEqual(value.count('<details markdown="1">'), 1)
+        self.assertIn("### Location", value)
+        self.assertIn("### Headbutt encounters", value)
 
     def test_labels_gen5_battle_mode_changes(self) -> None:
         value = "\n".join(

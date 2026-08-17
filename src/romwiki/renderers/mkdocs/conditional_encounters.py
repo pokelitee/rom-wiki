@@ -14,6 +14,7 @@ from romwiki.renderers.mkdocs.components import (
     display_name,
     level_range,
     markdown_table_from_cells,
+    reference_sprite_cell,
     reference_type_cell,
     rom_record_source,
     sprite_with_link,
@@ -194,14 +195,19 @@ def append_hidden_grotto(
                     ),
                     (
                         (
-                            ROUTES.markdown_link(
-                                entity_reference(
-                                    "item",
-                                    slot["item"]["id"],
-                                    slot["item"]["name"],
-                                    slot["item"]["slug"],
+                            sprite_with_link(
+                                reference_sprite_cell(
+                                    "item", slot["item"]["id"], references
                                 ),
-                                source_file,
+                                ROUTES.markdown_link(
+                                    entity_reference(
+                                        "item",
+                                        slot["item"]["id"],
+                                        slot["item"]["name"],
+                                        slot["item"]["slug"],
+                                    ),
+                                    source_file,
+                                ),
                             ),
                             f"{slot['pool_chance']}%",
                             chr(ord("A") + slot["group"]),

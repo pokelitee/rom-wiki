@@ -42,6 +42,13 @@ from romwiki.renderers.mkdocs.components import (
     with_resolved_location_labels,
     yes_no,
 )
+from romwiki.renderers.mkdocs.paginated_tables import (
+    PAGINATED_TABLE_THRESHOLD,
+    paginated_table,
+    pokemon_cell,
+    pokemon_type_cell,
+    text_cell,
+)
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
@@ -464,19 +471,50 @@ def _append_pokemon(
     if not record["wild_held_by"]:
         return
     lines.extend(["## Wild held by", ""])
+    values = record["wild_held_by"]
+    show_sprites = len(values) <= PAGINATED_TABLE_THRESHOLD
+    fallback = markdown_table(
+        ["| Pokémon | Type | Rarity |", "| ------- | ---- | ------ |"],
+        [
+            (
+                f"| {_wild_holder_link(value, source_file, references, show_sprites)} "
+                f"| {reference_type_cell('pokemon', value.get('member', value.get('id')), references)} "
+                f"| {value['rarity'].title()} |"
+            )
+            for value in values
+        ],
+    )
+    if show_sprites:
+        lines.extend(fallback)
+        return
     lines.extend(
-        markdown_table(
-            ["| Pokémon | Type | Rarity |", "| ------- | ---- | ------ |"],
-            [
-                (
-                    f"| {sprite_with_link(_pokemon_sprite_cell(value, references), pokemon_record_link(value, source_file))} "
-                    f"| {reference_type_cell('pokemon', value.get('member', value.get('id')), references)} "
-                    f"| {value['rarity'].title()} |"
-                )
-                for value in record["wild_held_by"]
+        paginated_table(
+            columns=["Pokémon", "Type", "Rarity"],
+            rows=[
+                [
+                    pokemon_cell(value, source_file, references),
+                    pokemon_type_cell(value, references),
+                    text_cell(value["rarity"].title()),
+                ]
+                for value in values
             ],
+            fallback=fallback,
+            table_key="wild_held_by",
+            label="Wild held-item assignments",
         )
     )
+
+
+def _wild_holder_link(
+    pokemon: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None,
+    show_sprite: bool,
+) -> str:
+    link = pokemon_record_link(pokemon, source_file)
+    if not show_sprite:
+        return link
+    return sprite_with_link(_pokemon_sprite_cell(pokemon, references), link)
 
 
 def _pokemon_sprite_cell(
