@@ -26,9 +26,8 @@ class Gen5MachineTests(unittest.TestCase):
         self.assertEqual(machine_name(102), "MACHINE102")
 
     def test_maps_physical_table_position_to_published_machine_id(self) -> None:
-        # Physical ARM9 table/bitmap order: TM01-92 (index 0-91), HM01-06
-        # (index 92-97), TM93-95 (index 98-100) -- distinct from the
-        # contiguous published numbering (TM01-95 = 1-95, HM01-06 = 96-101).
+        # Physical ARM9 move-table order: TM01-92 (index 0-91), HM01-06
+        # (index 92-97), TM93-95 (index 98-100).
         self.assertEqual(machine_id_for_table_index(0), 1)  # TM01
         self.assertEqual(machine_id_for_table_index(91), 92)  # TM92
         self.assertEqual(machine_id_for_table_index(92), 96)  # HM01

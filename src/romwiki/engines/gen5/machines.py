@@ -1,10 +1,8 @@
-"""TM/HM machine-numbering facts shared by both BW and B2W2.
+"""TM/HM machine-table numbering shared by both BW and B2W2.
 
-Both games' ARM9 machine table -- and every Pokemon's TM/HM compatibility
-bitmap, which is indexed by that same table's physical layout -- interleaves
-TM01-92, then HM01-06, then TM93-95. The published, contiguous numbering
-(TM01-95 -> 1-95, HM01-06 -> 96-101) is this project's own presentation
-choice, so any code translating between the two needs this mapping.
+Both games' ARM9 move table interleaves TM01-92, HM01-06, then TM93-95.
+Personal-data compatibility bitmaps instead use the published TM01-95,
+HM01-06 order and must not use this table-index mapping.
 """
 
 from __future__ import annotations
@@ -16,9 +14,7 @@ _BLOCK_TWO_START = GEN5_TM_BLOCK_ONE_COUNT + GEN5_HM_COUNT
 
 
 def machine_id_for_table_index(index: int) -> int:
-    """Map a machine's physical ARM9 table/bitmap position (0-based) to its
-    published, contiguous machine ID.
-    """
+    """Map a physical ARM9 move-table index to a contiguous machine ID."""
     if index < GEN5_TM_BLOCK_ONE_COUNT:
         return index + 1
     if index < _BLOCK_TWO_START:

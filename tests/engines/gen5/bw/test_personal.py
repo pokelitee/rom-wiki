@@ -17,9 +17,11 @@ class Gen5PersonalDataTests(unittest.TestCase):
         data[0x12:0x1B] = bytes((31, 20, 70, 3, 1, 7, 65, 0, 34))
         data[0x21] = 5 | (1 << 6)
         struct.pack_into("<H", data, 0x22, 64)
-        data[0x28] |= 1 << 0  # table position 0: TM01 -> machine_id 1
-        data[0x28 + 11] |= 1 << 4  # table position 92: HM01 -> machine_id 96
-        data[0x28 + 12] |= 1 << 4  # table position 100: TM95 -> machine_id 95
+        data[0x28] |= 1 << 0  # TM01
+        data[0x28 + 11] |= 1 << 5  # TM94
+        data[0x28 + 11] |= 1 << 6  # TM95
+        data[0x28 + 11] |= 1 << 7  # HM01
+        data[0x28 + 12] |= 1 << 4  # HM06
 
         record = parse_personal_record(
             bytes(data), species_id=1, archive_path="a/0/1/6"
@@ -43,12 +45,9 @@ class Gen5PersonalDataTests(unittest.TestCase):
         self.assertEqual(record.ability_ids, (65, 0, 34))
         self.assertTrue(record.flip_sprite)
         self.assertEqual(record.body_color_id, 5)
-        # Bits are indexed by physical ARM9 table position, which interleaves
-        # TM01-92, HM01-06, then TM93-95 -- distinct from the contiguous
-        # published machine_id (TM01-95 = 1-95, HM01-06 = 96-101). A bit set
-        # at the physical HM01/TM95 boundary must resolve to the correct
-        # published ID on each side of that boundary, not the raw bit index.
-        self.assertEqual(record.machine_ids, (1, 95, 96))
+        # Compatibility is already stored in published TM01-95, HM01-06
+        # order; the TM/HM boundary must not be remapped like the ARM9 table.
+        self.assertEqual(record.machine_ids, (1, 94, 95, 96, 101))
         self.assertEqual(record.provenance.member, 1)
         self.assertEqual(record.provenance.archive, "a/0/1/6")
 
