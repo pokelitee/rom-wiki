@@ -14,6 +14,7 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
+    encounter_record_comparison,
     grouped_comparison_section,
     record_comparison,
 )
@@ -285,7 +286,7 @@ def _render_location(
                 *(
                     (
                         conditional_encounter_label(encounter),
-                        record_comparison(encounter_comparison, encounter["area_id"]),
+                        encounter_record_comparison(encounter_comparison, encounter),
                     )
                     for encounter in conditional_encounters
                 ),

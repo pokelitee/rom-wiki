@@ -106,8 +106,10 @@ class ComparisonRenderingTests(unittest.TestCase):
 
         value = "\n".join(section)
         self.assertEqual(value.count('<details markdown="1">'), 1)
-        self.assertIn("### Location", value)
-        self.assertIn("### Headbutt encounters", value)
+        self.assertIn("**Location**", value)
+        self.assertIn("**Headbutt encounters**", value)
+        self.assertNotIn("### Location", value)
+        self.assertNotIn("### Headbutt encounters", value)
 
     def test_labels_gen5_battle_mode_changes(self) -> None:
         value = "\n".join(

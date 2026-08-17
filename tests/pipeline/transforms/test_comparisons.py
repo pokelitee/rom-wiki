@@ -267,7 +267,29 @@ class DatasetComparisonTests(unittest.TestCase):
         )
 
         record = comparison["records"][0]
+        self.assertEqual(record["key"], "header-445#hidden-grotto-00")
         self.assertEqual(record["slug"], "header-445#hidden-grotto-00")
+
+    def test_sorts_mixed_ordinary_and_conditional_encounter_identities(self) -> None:
+        ordinary = {"area_id": 1, "name": "Route 1", "active": True}
+        grotto = {
+            "area_id": 174,
+            "source_type": "hidden-grotto",
+            "grotto_id": 0,
+            "location": {"header_id": 445, "name": "Floccesy Ranch"},
+            "name": "Floccesy Ranch",
+            "active": True,
+        }
+
+        comparison = compare_datasets(
+            _dataset("wild_encounters", "hack", [ordinary, grotto]),
+            _dataset("wild_encounters", "base", [ordinary, grotto]),
+        )
+
+        self.assertEqual(
+            [record["key"] for record in comparison["records"]],
+            [1, "header-445#hidden-grotto-00"],
+        )
 
 
 def _dataset(kind: str, game: str, records: list[dict]) -> dict:

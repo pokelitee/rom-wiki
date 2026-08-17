@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
+from romwiki.pipeline.semantics.encounter_identity import (
+    CONDITIONAL_ENCOUNTER_SOURCES,
+    encounter_route_key,
+)
 from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError
 
@@ -301,12 +304,13 @@ def compare_datasets(
     kind = current.get("dataset")
     if kind != baseline.get("dataset") or kind not in RECORD_KEY_FIELDS:
         raise DataSourceError("Comparison datasets must have the same supported kind")
-    key_name = RECORD_KEY_FIELDS[kind]
-    current_records = records_by_key(current, key_name)
-    baseline_records = records_by_key(baseline, key_name)
+    current_records = records_by_identity(current, kind)
+    baseline_records = records_by_identity(baseline, kind)
     records = []
     counts = dict.fromkeys(("unchanged", "changed", "added", "removed"), 0)
-    for key in sorted(set(current_records) | set(baseline_records)):
+    for key in sorted(
+        set(current_records) | set(baseline_records), key=_record_identity_sort_key
+    ):
         after = current_records.get(key)
         before = baseline_records.get(key)
         if before is None:
@@ -370,6 +374,31 @@ def records_by_key(
     if len(result) != len(records):
         raise DataSourceError(f"Comparison keys must be unique: {key_name}")
     return result
+
+
+def record_identity(kind: str, record: dict[str, Any]) -> int | str:
+    if (
+        kind == "wild_encounters"
+        and record.get("source_type") in CONDITIONAL_ENCOUNTER_SOURCES
+    ):
+        return encounter_route_key(record)
+    return record[RECORD_KEY_FIELDS[kind]]
+
+
+def records_by_identity(
+    dataset: dict[str, Any], kind: str
+) -> dict[int | str, dict[str, Any]]:
+    records = dataset.get("records")
+    if not isinstance(records, list):
+        raise DataSourceError("Comparison dataset records must be a list")
+    result = {record_identity(kind, record): record for record in records}
+    if len(result) != len(records):
+        raise DataSourceError(f"Comparison identities must be unique: {kind}")
+    return result
+
+
+def _record_identity_sort_key(value: int | str) -> tuple[str, int | str]:
+    return type(value).__name__, value
 
 
 def records_semantically_equal(

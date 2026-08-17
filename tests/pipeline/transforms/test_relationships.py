@@ -394,6 +394,7 @@ class RelationshipIndexTests(unittest.TestCase):
             ],
             ["hidden-grotto", "daily-swarm"],
         )
+        self.assertNotIn(6, index.location_encounters)
 
     def test_indexes_map_owned_conditional_encounters_without_a_locations_dataset(
         self,

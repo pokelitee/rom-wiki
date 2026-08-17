@@ -8,6 +8,7 @@ from typing import Any
 from romwiki.pipeline.transforms.comparisons import (
     comparison_by_key,
     normalize_comparison_value,
+    record_identity,
 )
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import write_text
@@ -56,6 +57,12 @@ def record_comparison(
     comparison: dict[str, Any] | None, key: int | str
 ) -> dict[str, Any] | None:
     return comparison_by_key(comparison).get(key)
+
+
+def encounter_record_comparison(
+    comparison: dict[str, Any] | None, record: dict[str, Any]
+) -> dict[str, Any] | None:
+    return record_comparison(comparison, record_identity("wild_encounters", record))
 
 
 def comparison_section(
@@ -147,7 +154,7 @@ def grouped_comparison_section(
         return []
     content: list[str] = []
     for label, entry in available:
-        content.extend([f"### {label}", ""])
+        content.extend([f"**{escape_markdown(label)}**", ""])
         content.extend(
             _comparison_content(entry, baseline_name, source_file, references)
         )

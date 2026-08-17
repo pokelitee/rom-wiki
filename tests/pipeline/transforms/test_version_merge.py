@@ -268,7 +268,7 @@ class VersionMergeTests(unittest.TestCase):
             "active": True,
             "name": "Route 6",
             "source_type": "daily-swarm",
-            "header_id": 331,
+            "location": {"header_id": 331, "name": "Route 6"},
             "minimum_level": 40,
             "maximum_level": 55,
         }
@@ -289,6 +289,51 @@ class VersionMergeTests(unittest.TestCase):
 
         self.assertEqual(record["version_variants"]["black-2"]["species_id"], 311)
         self.assertEqual(record["version_variants"]["white-2"]["species_id"], 312)
+
+    def test_merges_daily_swarms_by_location_instead_of_table_position(self) -> None:
+        def swarm(area_id: int, header_id: int, species_id: int) -> dict:
+            return {
+                "area_id": area_id,
+                "active": True,
+                "name": f"Location {header_id}",
+                "source_type": "daily-swarm",
+                "location": {
+                    "header_id": header_id,
+                    "name": f"Location {header_id}",
+                },
+                "species_id": species_id,
+                "pokemon": {"name": f"Species {species_id}"},
+                "minimum_level": 40,
+                "maximum_level": 55,
+            }
+
+        black = _dataset(
+            "wild_encounters",
+            "black",
+            [swarm(205, 370, 1), swarm(206, 376, 2)],
+        )
+        white = _dataset(
+            "wild_encounters",
+            "white",
+            [swarm(205, 376, 3), swarm(206, 378, 4)],
+        )
+
+        records = merge_version_family_datasets({"black": black, "white": white})[
+            "records"
+        ]
+        shrine = next(
+            record for record in records if record["location"]["header_id"] == 376
+        )
+
+        self.assertEqual(shrine["versions"], ["black", "white"])
+        self.assertEqual(
+            {
+                version: variant["species_id"]
+                for version, variant in shrine["version_variants"].items()
+            },
+            {"black": 2, "white": 3},
+        )
+        self.assertEqual(len(records), 3)
 
     def test_rejects_mismatched_dataset_kinds(self) -> None:
         black = _dataset("pokemon", "black-us", [_pokemon(1, "Bulbasaur")])

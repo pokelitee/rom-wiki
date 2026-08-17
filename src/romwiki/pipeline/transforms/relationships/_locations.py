@@ -74,27 +74,6 @@ def _location_encounters(
                 by_map_index[map_index].append((versions, record))
 
     result: dict[int, list[LocationEncounterReference]] = defaultdict(list)
-    for merged_record in encounters:
-        for versions, record in _record_variants(merged_record):
-            if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES:
-                continue
-            location = record.get("location")
-            if not isinstance(location, Mapping):
-                continue
-            header_id = location.get("header_id")
-            source_id = record.get("grotto_id", header_id)
-            if not isinstance(header_id, int) or not isinstance(source_id, int):
-                continue
-            result[header_id].append(
-                LocationEncounterReference(
-                    header_id=header_id,
-                    area_id=record["area_id"],
-                    map_index=source_id,
-                    season=None,
-                    encounter_route_key=encounter_route_key(record),
-                    versions=versions,
-                )
-            )
     unmatched = []
     for location in locations:
         map_index = location.get("encounter_map_index")

@@ -6,7 +6,7 @@ from typing import Any
 from romwiki.pipeline.transforms.comparisons import (
     RECORD_KEY_FIELDS,
     comparison_by_key,
-    records_by_key,
+    records_by_identity,
     records_semantically_equal,
 )
 from romwiki.util.errors import DataSourceError
@@ -45,9 +45,8 @@ def merge_version_family_datasets(
             "Version-family trainer datasets must have matching variant capabilities"
         )
 
-    key_name = RECORD_KEY_FIELDS[kind]
     records = {
-        version: records_by_key(dataset, key_name)
+        version: records_by_identity(dataset, kind)
         for version, dataset in datasets.items()
     }
     keys = set().union(*(values.keys() for values in records.values()))

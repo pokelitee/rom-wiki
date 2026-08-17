@@ -27,8 +27,8 @@ from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
     comparison_notes_section,
     comparison_section,
+    encounter_record_comparison,
     grouped_comparison_section,
-    record_comparison,
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
@@ -143,7 +143,7 @@ def render_encounter_pages(
     name_counts = Counter(record["name"] for record in linked)
     sorted_linked = sorted(linked, key=lambda item: (item["name"], item["area_id"]))
     for index, record in enumerate(sorted_linked):
-        change = record_comparison(comparison, record["area_id"])
+        change = encounter_record_comparison(comparison, record)
         filename = f"area-{record['area_id']:03}.md"
         previous = sorted_linked[index - 1] if index else None
         following = sorted_linked[index + 1] if index + 1 < len(sorted_linked) else None
@@ -182,7 +182,7 @@ def render_encounter_pages(
         )
     if unlinked:
         for index, record in enumerate(unlinked):
-            change = record_comparison(comparison, record["area_id"])
+            change = encounter_record_comparison(comparison, record)
             filename = f"area-{record['area_id']:03}.md"
             previous = unlinked[index - 1] if index else None
             following = unlinked[index + 1] if index + 1 < len(unlinked) else None
@@ -229,7 +229,7 @@ def render_encounter_pages(
         page_count += 1
     for record in safari_records:
         route_id = conditional_encounter_key(record)
-        change = record_comparison(comparison, record["area_id"])
+        change = encounter_record_comparison(comparison, record)
         fallback_links.append(
             "- "
             + ROUTES.markdown_link(
@@ -390,7 +390,7 @@ def _render_safari_zone_page(
             [
                 (
                     record["area_name"],
-                    record_comparison(comparison, record["area_id"]),
+                    encounter_record_comparison(comparison, record),
                 )
                 for record in records
             ],
@@ -969,7 +969,7 @@ def _render_seasonal_encounter_pages(
             _seasonal_catalog_record(
                 group,
                 filename.removesuffix(".md") + "/",
-                record_comparison(comparison, record["area_id"]),
+                encounter_record_comparison(comparison, record),
                 locations,
             )
         )
@@ -1134,7 +1134,7 @@ def _render_seasonal_area(
     comparisons = [
         (
             seasonal_record,
-            record_comparison(comparison, seasonal_record["area_id"]),
+            encounter_record_comparison(comparison, seasonal_record),
         )
         for seasonal_record in records
     ]

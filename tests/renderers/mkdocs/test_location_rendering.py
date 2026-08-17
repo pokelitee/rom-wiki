@@ -144,7 +144,13 @@ class LocationRenderingTests(unittest.TestCase):
         }
         encounter_comparison = {
             "baseline": "heartgold-us",
-            "records": [{"key": 142, "status": "unchanged", "changes": []}],
+            "records": [
+                {
+                    "key": "header-009#headbutt-encounters",
+                    "status": "unchanged",
+                    "changes": [],
+                }
+            ],
         }
 
         with tempfile.TemporaryDirectory() as directory:
@@ -162,8 +168,9 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("### Headbutt encounters", page)
         self.assertIn("[Hoothoot](../pokemon/hoothoot.md)", page)
         self.assertEqual(page.count("## Hack changes"), 1)
-        self.assertIn("### Location", page)
-        self.assertIn("### Headbutt encounters", page)
+        self.assertIn("**Location**", page)
+        self.assertIn("**Headbutt encounters**", page)
+        self.assertNotIn("### Location\n", page)
         self.assertLess(page.index("## Hack changes"), page.index("Data provenance"))
 
     def test_embeds_hidden_grotto_and_daily_swarm_on_event_map(self) -> None:
@@ -287,6 +294,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("### Daily Swarm { #daily-swarm }", page)
         self.assertIn("### Daily Swarm", page)
         self.assertIn("40–55", page)
+        self.assertNotIn("header-445.md#daily-swarm", page)
 
     def test_links_gen5_location_to_all_seasonal_encounter_variants(self) -> None:
         record = {
