@@ -371,24 +371,6 @@ def _append_encounter_variants(
     source_file: str,
     location_name: str,
 ) -> None:
-    route_keys = list(dict.fromkeys(value.encounter_route_key for value in encounters))
-    if len(route_keys) == 1 and all(value.season is None for value in encounters):
-        encounter = encounters[0]
-        lines.extend(
-            [
-                ROUTES.markdown_link(
-                    entity_reference(
-                        encounter_route_kind(encounter.encounter_route_key),
-                        encounter.area_id,
-                        "View encounter table",
-                        encounter.encounter_route_key,
-                    ),
-                    source_file,
-                ),
-                "",
-            ]
-        )
-        return
     grouped: dict[int | str, list[LocationEncounterReference]] = {}
     for encounter in encounters:
         grouped.setdefault(encounter.encounter_route_key, []).append(encounter)

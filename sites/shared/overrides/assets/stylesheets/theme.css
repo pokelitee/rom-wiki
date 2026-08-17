@@ -3,6 +3,7 @@ html[data-romwiki-theme="portal"] {
   --rw-accent: #5267a8;
   --rw-accent-rgb: 82, 103, 168;
   --rw-accent-strong: #5267a8;
+  --rw-row-hover: rgba(var(--rw-accent-rgb), 0.045);
   --rw-on-accent: #ffffff;
   --rw-surface: #ffffff;
   --rw-surface-muted: #f5f6fa;
@@ -291,7 +292,7 @@ body[data-md-color-scheme="slate"] .rw-game-card[data-theme="black-2-white-2"] {
   white-space: nowrap;
 }
 .md-typeset table:not([class]) tr:hover {
-  background: rgba(var(--rw-accent-rgb), 0.045);
+  background: var(--rw-row-hover);
 }
 .md-typeset code {
   border-radius: 0.25rem;

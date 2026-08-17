@@ -137,7 +137,7 @@ html:not(.rw-js) .rw-catalog {
   border-bottom: 0;
 }
 .rw-catalog__table tbody tr:hover {
-  background: rgba(var(--rw-accent-rgb), .045);
+  background: var(--rw-row-hover);
 }
 .rw-catalog__pagination {
   display: flex;

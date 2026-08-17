@@ -2,6 +2,7 @@ import { title } from "../formatting.js";
 import {
   accessMethods,
   classBadge,
+  levelRange,
   numberOrDash,
   pokemonAvailability,
   pokemonName,
@@ -10,7 +11,6 @@ import {
   recordLink,
   routeId,
   text,
-  trainerPartySummary,
   typeBadge,
   typeList,
 } from "./renderers.js";
@@ -48,7 +48,7 @@ export const CATALOGS = {
     filters: [{ key: "class_name", label: "Class", control: "combobox" }, { key: "locations", label: "Location", control: "combobox" }, { key: "pokemon", label: "Party Pokémon", control: "combobox" }, { key: "battle_format", label: "Battle format" }],
     ranges: [{ key: "level", label: "Party level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
     sorts: [["label", "Name"], ["route_id", "ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"], ["party_size", "Party size"]],
-    columns: [["Trainer", recordLink], ["ID", routeId], ["Location", (record) => record.location_refs?.length ? referenceList(record.location_refs) : text("Unlinked")], ["Party", trainerPartySummary], ["Format", (record) => text(title(record.battle_format))]],
+    columns: [["Trainer", recordLink], ["ID", routeId], ["Location", (record) => record.location_refs?.length ? referenceList(record.location_refs) : text("Unlinked")], ["Party", (record) => referencePreviewList(record.pokemon_refs)], ["Levels", levelRange], ["Format", (record) => text(title(record.battle_format))]],
   },
   locations: {
     searchPlaceholder: "Search location or internal map name",
@@ -62,7 +62,7 @@ export const CATALOGS = {
     ranges: [{ key: "level", label: "Level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
     correlations: [{ left: "methods", right: "pokemon", path: "method_pokemon" }],
     sorts: [["label", "Area"], ["route_id", "ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
-    columns: [["Area", recordLink], ["ID", routeId], ["Methods", (record) => text(record.methods.map(title).join(", ") || "—")], ["Levels", (record) => text(record.min_level == null ? "—" : record.min_level === record.max_level ? record.min_level : `${record.min_level}–${record.max_level}`, "rw-catalog__number")], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
+    columns: [["Area", recordLink], ["ID", routeId], ["Methods", (record) => text(record.methods.map(title).join(", ") || "—")], ["Levels", levelRange], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
   },
 };
 

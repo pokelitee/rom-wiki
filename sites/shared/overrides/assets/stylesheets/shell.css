@@ -216,6 +216,11 @@
   transform: translateY(-2px);
   box-shadow: var(--rw-shadow);
 }
+.rw-game-card:focus-visible,
+.rw-section-card:focus-visible {
+  outline: .15rem solid var(--rw-accent);
+  outline-offset: .12rem;
+}
 .rw-game-card h4,
 .rw-section-card h3 {
   margin: .25rem 0 .35rem;

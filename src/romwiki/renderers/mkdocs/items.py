@@ -21,6 +21,7 @@ from romwiki.renderers.mkdocs.components import (
     content_tabs,
     description_table_source,
     display_name,
+    escape_table_cell,
     fact_grid,
     markdown_table,
     name_table_source,
@@ -530,7 +531,7 @@ def _append_trainers(
 ) -> None:
     values = (
         [
-            (value, f"Held by {value['pokemon']['name']}")
+            (value, f"Held by {escape_table_cell(value['pokemon']['name'])}")
             for value in record["trainer_held_by"]
         ]
         + [(value, "AI battle item") for value in record["trainer_battle_items"]]

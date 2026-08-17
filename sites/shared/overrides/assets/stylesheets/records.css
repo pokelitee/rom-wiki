@@ -425,7 +425,7 @@
   border-bottom: 0;
 }
 .md-typeset .rw-learner-table__table tbody tr:hover {
-  background: rgba(var(--rw-accent-rgb), .045);
+  background: var(--rw-row-hover);
 }
 .rw-learner-table__pagination {
   display: flex;

@@ -86,7 +86,10 @@ class CatalogPresentationTests(unittest.TestCase):
             text,
         )
         self.assertIn('["Availability", pokemonAvailability]', text)
-        self.assertIn('["Party", trainerPartySummary]', text)
+        self.assertIn(
+            '["Party", (record) => referencePreviewList(record.pokemon_refs)]', text
+        )
+        self.assertIn('["Levels", levelRange]', text)
         self.assertEqual(text.count('["ID", routeId]'), 2)
         self.assertEqual(text.count('["route_id", "ID"]'), 2)
         self.assertIn('["Map ID", routeId]', text)
@@ -117,8 +120,12 @@ class CatalogPresentationTests(unittest.TestCase):
 
     def test_encounter_ranges_collapse_equal_levels(self) -> None:
         text = CATALOG_CONFIG_JS.read_text(encoding="utf-8")
+        renderers = CATALOG_CONFIG_JS.with_name("renderers.js").read_text(
+            encoding="utf-8"
+        )
 
-        self.assertIn("record.min_level === record.max_level", text)
+        self.assertIn('["Levels", levelRange]', text)
+        self.assertIn("record.min_level === record.max_level", renderers)
 
     def test_pokemon_availability_lists_methods_without_minimum_level(self) -> None:
         renderers = CATALOG_CONFIG_JS.with_name("renderers.js").read_text(

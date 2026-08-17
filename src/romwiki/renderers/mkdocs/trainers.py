@@ -22,6 +22,7 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     content_tabs,
     display_name,
+    escape_table_cell,
     provenance_fact_table,
     provenance_section,
     record_navigation_for,
@@ -248,6 +249,15 @@ def _catalog_record(
             for location in _combined_locations(record)
         ]
     )
+    pokemon_refs = unique_references(
+        entity_reference(
+            "pokemon",
+            member["pokemon"].get("id", member["pokemon"]["slug"]),
+            member["pokemon"]["name"],
+            member["pokemon"].get("page_slug", member["pokemon"].get("slug")),
+        )
+        for member in record["party"]
+    )
     species = [member["name"] for member in party]
     label = _trainer_label(record)
     route_id = filename.removesuffix("/")
@@ -272,6 +282,10 @@ def _catalog_record(
             "min_level": min(levels),
             "max_level": max(levels),
             "pokemon": species,
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "trainers/")
+                for reference in pokemon_refs
+            ],
             "party": party,
             "search_text": " ".join(
                 (label, route_id, *location_names, *species)
@@ -1167,7 +1181,7 @@ def _append_same_name_trainers(
     lines.extend(
         [
             "| Trainer | ID | Location | Levels | Party |",
-            "| ------- | -- | -------- | ------ | ----- |",
+            "| ------- | -: | -------- | -----: | ----- |",
         ]
     )
     for candidate in related:
@@ -1214,7 +1228,7 @@ def _location_links(record: dict[str, Any], source_file: str) -> list[str]:
             continue
         seen.add(identity)
         if not isinstance(header_id, int):
-            links.append(location["name"])
+            links.append(escape_table_cell(location["name"]))
             continue
         links.append(
             ROUTES.markdown_link(

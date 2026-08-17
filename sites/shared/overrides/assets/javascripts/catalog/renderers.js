@@ -104,12 +104,16 @@ export function pokemonAvailability(record) {
     const locations = record.wild_location_count === 1 ? "location" : "locations";
     return `${label} (${count} ${locations})`;
   });
-  return text(methods.join(" \u00B7 "));
+  return text(methods.join(" · "));
 }
 
-export function trainerPartySummary(record) {
-  const level = record.min_level === record.max_level
-    ? `Lv. ${record.min_level}`
-    : `Lv. ${record.min_level}\u2013${record.max_level}`;
-  return text(`${level} \u00B7 ${record.party_size.toLocaleString()} Pokémon`);
+export function levelRange(record) {
+  return text(
+    record.min_level == null
+      ? "—"
+      : record.min_level === record.max_level
+        ? record.min_level
+        : `${record.min_level}–${record.max_level}`,
+    "rw-catalog__number",
+  );
 }

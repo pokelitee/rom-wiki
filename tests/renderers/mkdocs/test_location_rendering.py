@@ -85,7 +85,7 @@ class LocationRenderingTests(unittest.TestCase):
             page = (output / "header-007.md").read_text(encoding="utf-8")
 
         self.assertIn(
-            "[View encounter table](../encounters/area-028.md)",
+            "[Route 29](../encounters/area-028.md)",
             page,
         )
 
@@ -369,7 +369,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Black / White |", page)
         self.assertIn("Wild encounter table index | `3`", page)
         self.assertIn(
-            "[View encounter table](../encounters/map-004.md)",
+            "[Dreamyard](../encounters/map-004.md)",
             nonseasonal_page,
         )
         self.assertNotIn("| Season |", nonseasonal_page)

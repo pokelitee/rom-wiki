@@ -221,17 +221,20 @@ def _render_location(
     if record["encounter_id"] is not None or conditional_encounters:
         lines.extend(["## Wild encounters", ""])
         if record["encounter_id"] is not None:
+            link = ROUTES.markdown_link(
+                entity_reference(
+                    "encounter",
+                    record["encounter_id"],
+                    "View encounter table",
+                    record["encounter_id"],
+                ),
+                source_file,
+            )
             lines.extend(
                 [
-                    ROUTES.markdown_link(
-                        entity_reference(
-                            "encounter",
-                            record["encounter_id"],
-                            "View encounter table",
-                            record["encounter_id"],
-                        ),
-                        source_file,
-                    ),
+                    "| Encounter area | ID |",
+                    "| --------------- | -- |",
+                    f"| {link} | `area-{record['encounter_id']:03}` |",
                     "",
                 ]
             )

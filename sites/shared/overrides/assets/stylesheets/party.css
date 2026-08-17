@@ -197,6 +197,11 @@
   font-size: .63rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
+  transition: background-color .15s ease;
+}
+.rw-party-card__moves li:has(a:hover),
+.rw-party-card__moves li:has(a:focus-visible) {
+  background: var(--rw-row-hover);
 }
 .rw-party-card__move-name {
   min-width: 0;
