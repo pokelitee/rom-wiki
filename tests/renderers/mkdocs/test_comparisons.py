@@ -97,9 +97,7 @@ class ComparisonRenderingTests(unittest.TestCase):
                     "Headbutt encounters",
                     {
                         "status": "changed",
-                        "changes": [
-                            {"label": "PokÃ©mon", "before": "A", "after": "B"}
-                        ],
+                        "changes": [{"label": "PokÃ©mon", "before": "A", "after": "B"}],
                     },
                 ),
             ],

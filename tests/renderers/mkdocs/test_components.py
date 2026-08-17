@@ -500,9 +500,7 @@ class ItemPokemonTableTests(unittest.TestCase):
             small, {"wild_held_by": values[:50]}, "items/test.md", references
         )
         large: list[str] = []
-        _append_pokemon(
-            large, {"wild_held_by": values}, "items/test.md", references
-        )
+        _append_pokemon(large, {"wild_held_by": values}, "items/test.md", references)
 
         self.assertIn("rw-table-sprite", "\n".join(small))
         rendered = "\n".join(large)
