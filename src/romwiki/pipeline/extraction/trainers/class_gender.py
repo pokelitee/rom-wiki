@@ -13,6 +13,7 @@ from romwiki.pipeline.extraction.map_headers import (
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
 from romwiki.pipeline.extraction.trainers.support import (
     read_rematch_table,
+    read_staged_partner_battle_families,
     read_starter_branch_families,
     read_starter_species,
 )
@@ -146,6 +147,19 @@ def extract_class_gender_trainer_dataset(
         trainer_count=len(trainers.members),
         starter_species=starter_species,
     )
+    # Platinum's staged tag-battle partners follow the exact same
+    # starter-branch shape (see `dppt/tag_battles.py`), so they merge into
+    # the same selector list rather than needing their own resolver.
+    staged_partner_families = read_staged_partner_battle_families(
+        profile,
+        platform,
+        engine,
+        filesystem,
+        trainer_count=len(trainers.members),
+        starter_species=starter_species,
+    )
+    if staged_partner_families:
+        starter_families = (*(starter_families or ()), *staged_partner_families)
     selector_data = {
         key: value
         for key, value in (
@@ -325,9 +339,23 @@ def _extract_class_gender_trainer_locations(
                 f"{header.script_file_id}"
             )
         if header.script_file_id not in script_cache:
-            script_cache[header.script_file_id] = engine.parse_trainer_battle_commands(
-                scripts.read(header.script_file_id), trainer_count=trainer_count
+            script_data = scripts.read(header.script_file_id)
+            commands = list(
+                engine.parse_trainer_battle_commands(
+                    script_data, trainer_count=trainer_count
+                )
             )
+            # Optional: a second, differently-shaped battle command some
+            # profiles use (Platinum's tag battles) that the shared scanner
+            # above doesn't recognize. Its resolved trainer_ids may include
+            # a tag-battle partner alongside the two real opponents; that
+            # partner still genuinely appears at this location, even though
+            # labeling it an "opponent slot" below is an approximation this
+            # schema has no separate concept for.
+            tag_parse = getattr(engine, "parse_tag_battle_commands", None)
+            if tag_parse is not None:
+                commands.extend(tag_parse(script_data, trainer_count=trainer_count))
+            script_cache[header.script_file_id] = tuple(commands)
         for command in script_cache[header.script_file_id]:
             for opponent_slot, trainer_id in enumerate(command.trainer_ids, start=1):
                 script_references.setdefault(trainer_id, []).append(

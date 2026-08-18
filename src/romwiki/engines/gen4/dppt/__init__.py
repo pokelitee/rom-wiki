@@ -208,6 +208,11 @@ from .scripts import (
     parse_static_encounter_commands,
     parse_trainer_battle_commands,
 )
+from .tag_battles import (
+    START_TAG_BATTLE,
+    parse_staged_partner_battle_families,
+    parse_tag_battle_commands,
+)
 from .trades import (
     NPC_TRADE_RECORD_SIZE,
     Gen4NpcTrade,
@@ -295,6 +300,7 @@ __all__ = [
     "PICKUP_RARE_ITEM_COUNT",
     "POKEMON_NAME_COUNT",
     "ROAMING_SLOT_COUNT",
+    "START_TAG_BATTLE",
     "START_TRAINER_BATTLE",
     "TRAINER_OBJECT_ID_OFFSET",
     "TRAINER_OBJECT_SCRIPT_END",
@@ -398,6 +404,8 @@ __all__ = [
     "parse_script_table",
     "parse_static_encounter_commands",
     "parse_trainer_battle_commands",
+    "parse_tag_battle_commands",
+    "parse_staged_partner_battle_families",
     "MOVE_RECORD_SIZE",
     "parse_move_record",
     "LEARNSET_TERMINATOR",

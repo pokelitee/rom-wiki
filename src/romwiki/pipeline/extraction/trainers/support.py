@@ -55,6 +55,55 @@ def read_starter_branch_families(
     return tuple(families)
 
 
+def read_staged_partner_battle_families(
+    profile: Any,
+    platform: Any,
+    engine: Any,
+    filesystem: Any,
+    *,
+    trainer_count: int,
+    starter_species: tuple[int, ...] | None,
+) -> tuple[Any, ...]:
+    """Decode starter-staged tag-battle partners from the profile's own scripts.
+
+    Returns `()` when the engine has no such decoder (every engine besides
+    Platinum/Renegade Platinum today), so engines that don't have this
+    mechanism are unaffected. Shares `Gen4StarterBranchFamily`'s shape with
+    `read_starter_branch_families`, so its results merge into the same
+    `starter_branch_families` selector data with no separate rendering path.
+    """
+    parse = getattr(engine, "parse_staged_partner_battle_families", None)
+    scripts_path = profile.layout.get("scripts")
+    if parse is None or scripts_path is None or starter_species is None:
+        return ()
+
+    options = {"allow_truncated": True}
+    for parameter, option in (
+        (
+            "field_archives_allow_incorrect_data_block_size",
+            "allow_incorrect_data_block_size",
+        ),
+        ("field_archives_allow_trailing_data", "allow_trailing_data"),
+        ("events_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
+        ("scripts_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
+        ("scripts_allow_trailing_data", "allow_trailing_data"),
+    ):
+        if profile.parameters.get(parameter, False):
+            options[option] = True
+    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path), **options)
+    families = []
+    for member in scripts.members:
+        families.extend(
+            parse(
+                scripts.read(member.index),
+                script_file_id=member.index,
+                trainer_count=trainer_count,
+                starter_species=starter_species,
+            )
+        )
+    return tuple(families)
+
+
 def read_starter_species(
     profile: Any, platform: Any, engine: Any, result: InspectionResult
 ) -> tuple[int, ...] | None:
