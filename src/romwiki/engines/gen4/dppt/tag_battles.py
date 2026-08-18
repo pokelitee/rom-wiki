@@ -7,6 +7,7 @@ from romwiki.engines.gen4.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
+from romwiki.engines.gen4.script_opcode_table import OPCODE_TABLE
 from romwiki.engines.gen4.script_table import (
     SCRIPT_COMMAND_COUNT,
     Gen4TrainerBattleCommand,
@@ -21,7 +22,9 @@ from romwiki.engines.gen4.starter_branches import Gen4StarterBranchFamily
 # to extraction. Only 5 sites exist in the whole game.
 START_TAG_BATTLE = 0x02A0
 _CALL_OPCODE = 0x1A
-_CALL_WIDTH = 6  # opcode(2) + relative offset(4), per script_opcode_table.py
+# Derived from the shared table (opcode + its own param widths) rather than
+# hand-copied, so a correction there can't silently desync this offset math.
+_CALL_WIDTH = 2 + sum(OPCODE_TABLE[_CALL_OPCODE][1])
 _GET_STARTER_SPECIES = "GetPlayerStarterSpecies"
 _SET_VAR_FROM_VALUE = "SetVarFromValue"
 _COMPARE_VAR_TO_VALUE = "CompareVarToValue"
