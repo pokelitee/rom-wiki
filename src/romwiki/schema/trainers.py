@@ -358,3 +358,18 @@ class ClassGenderTrainer:
             result.pop("victory_money_multiplier")
         result["trailing_party_data"] = self.trailing_party_data.hex()
         return result
+
+
+# Some ROMs (confirmed in Black 2/White 2 and its hacks) reserve trainer IDs
+# that were never assigned a class, so the class-name text bank falls back to
+# this literal placeholder. Real trainers can have a blank display name (e.g.
+# rank-and-file grunts identified only by class), so blank name alone isn't a
+# safe signal -- the placeholder class name is what actually marks a record
+# as an unused stub.
+UNUSED_TRAINER_CLASS_NAME = "no data"
+
+
+def is_unused_trainer_slot(record: Mapping[str, Any]) -> bool:
+    """Report whether a trainer record is a reserved-but-never-filled-in slot."""
+
+    return record["class_name"].strip().lower() == UNUSED_TRAINER_CLASS_NAME

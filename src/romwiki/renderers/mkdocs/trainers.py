@@ -41,6 +41,7 @@ from romwiki.renderers.mkdocs.references import (
     unique_references,
 )
 from romwiki.schema.rendering import RenderDataset, TrainerRenderRecord
+from romwiki.schema.trainers import is_unused_trainer_slot
 
 _SAME_NAME_COLLAPSE_THRESHOLD = 5
 _DEFAULT_TRAINER_FEATURES = frozenset({POST_BATTLE_HEALING, VICTORY_ITEMS})
@@ -59,7 +60,7 @@ def render_trainer_pages(
     records = [
         with_resolved_location_labels(record, location_labels)
         for record in dataset["records"]
-        if record["party"]
+        if record["party"] and not is_unused_trainer_slot(record)
     ]
     records_by_id = {record["trainer_id"]: record for record in records}
     family_memberships: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = {}

@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from romwiki.schema.trainers import is_unused_trainer_slot
+
 from ._shared import _pokemon_slug, _record_versions
 
 
@@ -32,6 +34,8 @@ def _trainer_appearances(
 ) -> dict[str, list[TrainerAppearance]]:
     result: dict[str, list[TrainerAppearance]] = defaultdict(list)
     for record in records:
+        if is_unused_trainer_slot(record):
+            continue
         versions = _record_versions(record)
         locations = _trainer_locations(record)
         for position, member in enumerate(record.get("party", []), start=1):
