@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
@@ -77,6 +77,7 @@ def _header(
     encounter_id: int = _NULL_ENCOUNTER,
     event_file_id: int = _NULL_EVENT,
     matrix_id: int = 0,
+    script_file_id: int = 0,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         header_id=header_id,
@@ -85,6 +86,7 @@ def _header(
         encounter_id=encounter_id,
         event_file_id=event_file_id,
         matrix_id=matrix_id,
+        script_file_id=script_file_id,
     )
 
 
@@ -111,6 +113,7 @@ def _profile(**parameter_overrides) -> GameProfile:
             "encounters": "encounters.narc",
             "events": "events.narc",
             "map_matrices": "matrices.narc",
+            "scripts": "scripts.narc",
         },
         parameters=parameters,
     )
@@ -125,7 +128,9 @@ def _result(profile: GameProfile) -> InspectionResult:
     return InspectionResult(image=image, match=match)
 
 
-def _patched(engine, messages, encounters, events, matrices):
+def _patched(engine, messages, encounters, events, matrices, scripts=None):
+    if scripts is None:
+        scripts = _Archive(0, lambda i: b"")
     platform = SimpleNamespace(
         archive_cls=SimpleNamespace(
             from_bytes=lambda data, **kwargs: {
@@ -133,6 +138,7 @@ def _patched(engine, messages, encounters, events, matrices):
                 b"encounters.narc": encounters,
                 b"events.narc": events,
                 b"matrices.narc": matrices,
+                b"scripts.narc": scripts,
             }[data]
         ),
         filesystem_from_image=lambda image: SimpleNamespace(

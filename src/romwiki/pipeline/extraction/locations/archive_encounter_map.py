@@ -132,10 +132,12 @@ def extract_archive_encounter_map_location_dataset(
         item_dataset=item_dataset,
     )
     catalogs = _build_archive_location_catalogs(item_dataset, mart_dataset)
-    records, unsupported_shop_selectors = _build_archive_location_records(
-        source, relationships, catalogs
+    records, unsupported_shop_selectors, unresolved_visible_item_count = (
+        _build_archive_location_records(source, relationships, catalogs)
     )
-    return _build_archive_location_envelope(source, records, unsupported_shop_selectors)
+    return _build_archive_location_envelope(
+        source, records, unsupported_shop_selectors, unresolved_visible_item_count
+    )
 
 
 def _load_archive_location_source(
@@ -286,7 +288,7 @@ def _build_archive_location_records(
     source: _ArchiveLocationSource,
     relationships: _ArchiveLocationRelationships,
     catalogs: _ArchiveLocationCatalogs,
-) -> tuple[list[dict[str, Any]], list[int]]:
+) -> tuple[list[dict[str, Any]], list[int], int]:
     headers_by_id = {header.header_id: header for header in source.headers}
     try:
         visible_member = source.profile.parameters["item_balls_script_member"]
@@ -303,19 +305,23 @@ def _build_archive_location_records(
     )
     records = []
     unsupported_shop_selectors = []
+    unresolved_visible_item_count = 0
     for header in source.headers:
-        record, unsupported_selectors = _build_archive_location_record(
-            source,
-            relationships,
-            catalogs,
-            headers_by_id,
-            header,
-            visible_item_ids,
-            hidden_item_ids,
+        record, unsupported_selectors, header_unresolved_count = (
+            _build_archive_location_record(
+                source,
+                relationships,
+                catalogs,
+                headers_by_id,
+                header,
+                visible_item_ids,
+                hidden_item_ids,
+            )
         )
         records.append(record)
         unsupported_shop_selectors.extend(unsupported_selectors)
-    return records, unsupported_shop_selectors
+        unresolved_visible_item_count += header_unresolved_count
+    return records, unsupported_shop_selectors, unresolved_visible_item_count
 
 
 def _build_archive_location_record(
@@ -326,7 +332,7 @@ def _build_archive_location_record(
     header: Any,
     visible_item_ids: tuple[int | None, ...],
     hidden_item_ids: tuple[int | None, ...],
-) -> tuple[dict[str, Any], list[int]]:
+) -> tuple[dict[str, Any], list[int], int]:
     section_name, section_name_source = resolve_location_section(
         source.profile,
         header_id=header.header_id,
@@ -334,7 +340,7 @@ def _build_archive_location_record(
     )
     script_file_id = source.script_file_ids[header.header_id]
     overworld_data = _read_overworld_data(source, header)
-    items = (
+    items, unresolved_visible_item_count = (
         _extract_field_items(
             source.engine,
             overworld_data,
@@ -343,7 +349,7 @@ def _build_archive_location_record(
             hidden_item_ids=hidden_item_ids,
         )
         if overworld_data is not None
-        else []
+        else ([], 0)
     )
     if overworld_data is None:
         shops: list[LocationShop] = []
@@ -386,6 +392,7 @@ def _build_archive_location_record(
             ),
         ).to_dict(),
         unsupported_shop_selectors,
+        unresolved_visible_item_count,
     )
 
 
@@ -406,13 +413,17 @@ def _extract_field_items(
     *,
     visible_item_ids: tuple[int | None, ...],
     hidden_item_ids: tuple[int | None, ...],
-) -> list[LocationItem]:
+) -> tuple[list[LocationItem], int]:
     items = []
+    unresolved_visible_item_count = 0
+    is_visible_candidate = getattr(engine, "is_visible_item_candidate", None)
     for npc in engine.parse_overworld_npcs(overworld_data):
         item_id = engine.resolve_visible_item_id(
             npc, item_count=catalogs.item_count, item_ids=visible_item_ids
         )
         if item_id is None or item_id not in catalogs.item_names_by_id:
+            if is_visible_candidate is not None and is_visible_candidate(npc):
+                unresolved_visible_item_count += 1
             continue
         items.append(
             LocationItem(
@@ -444,7 +455,7 @@ def _extract_field_items(
                 hidden_flag=None,
             )
         )
-    return items
+    return items, unresolved_visible_item_count
 
 
 def _extract_script_shops(
@@ -654,6 +665,7 @@ def _build_archive_location_envelope(
     source: _ArchiveLocationSource,
     records: list[dict[str, Any]],
     unsupported_shop_selectors: list[int],
+    unresolved_visible_item_count: int,
 ) -> dict[str, Any]:
     return {
         "schema_version": LOCATIONS_RAW_SCHEMA_VERSION,
@@ -667,6 +679,7 @@ def _build_archive_location_envelope(
         "trainer_reference_count": sum(len(record["trainers"]) for record in records),
         "warp_reference_count": sum(len(record["warps"]) for record in records),
         "item_reference_count": sum(len(record["items"]) for record in records),
+        "unresolved_visible_item_count": unresolved_visible_item_count,
         "script_awarded_item_reference_count": sum(
             len(record["script_awarded_items"]) for record in records
         ),
@@ -967,19 +980,18 @@ def _extract_static_encounter_references(
         header_ids = script_headers.get(species_file, ())
         if not header_ids:
             continue
-        if record["level"] is None:
-            continue
         for header_id in header_ids:
             references[header_id].append(
                 LocationStaticEncounter(
                     species_id=record["species_id"],
                     name=pokemon_names[record["species_id"]],
                     level=record["level"],
+                    is_egg=record["is_egg"],
                     command=record.get("command") or "StaticPokemon",
                     script_file_id=species_file,
                     command_offset=species_offset,
                 )
             )
     for values in references.values():
-        values.sort(key=lambda item: (item.name, item.level))
+        values.sort(key=lambda item: (item.name, item.level or 0))
     return references

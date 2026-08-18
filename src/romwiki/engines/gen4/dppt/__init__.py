@@ -28,6 +28,8 @@ from romwiki.engines.gen4.events import (
     Gen4MapEvents,
     Gen4ObjectEvent,
     Gen4WarpEvent,
+    is_hidden_item_candidate,
+    is_visible_item_candidate,
     parse_map_events,
     parse_object_events,
     resolve_hidden_item_id,
@@ -193,6 +195,7 @@ from .rematch import (
     Gen4RematchChain,
     parse_rematch_table,
 )
+from .script_items import find_script_awarded_items
 from .scripts import (
     CHECK_WON_BATTLE,
     PLATINUM_ROAMING_SLOT_COUNT,
@@ -381,6 +384,7 @@ __all__ = [
     "GEN4_ITEM_POCKET_NAMES",
     "GEN4_ITEM_RECORD_SIZE",
     "find_item_archive_members",
+    "find_script_awarded_items",
     "parse_item_record",
     "parse_platinum_map_headers",
     "Gen4MapMatrix",
@@ -396,6 +400,8 @@ __all__ = [
     "parse_object_events",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",
+    "is_hidden_item_candidate",
+    "is_visible_item_candidate",
     "Gen4TrainerBattleCommand",
     "Gen4RoamingActivationCommand",
     "Gen4StaticEncounterCommand",

@@ -27,8 +27,15 @@ class HGSSEventTests(unittest.TestCase):
 
         self.assertEqual((len(events.backgrounds), len(events.objects)), (5, 1))
         self.assertEqual(len(events.warps), 3)
+        # script_id 8125 -> hidden-item table index 125, which real HeartGold
+        # data resolves to item 86 (TinyMushroom) through `sHiddenItemParam`,
+        # not the flat `script_id - 8000 = 125` a naive shortcut would give.
+        item_ids = (None,) * 125 + (86,)
         self.assertEqual(
-            resolve_hidden_item_id(events.backgrounds[0], item_count=537), 125
+            resolve_hidden_item_id(
+                events.backgrounds[0], item_count=537, item_ids=item_ids
+            ),
+            86,
         )
         self.assertEqual(
             (

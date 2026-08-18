@@ -185,11 +185,25 @@ low twelve bits form the archive index and `0xFFF` is null.
 The location pipeline joins headers with overworld objects (`a/1/2/6`), map
 matrices (`a/0/0/9`), field scripts (`a/0/5/6`), and ROM text. Location pages
 publish bidirectional wild-encounter links, trainers, warps, outdoor matrix
-connections, visible and hidden items, literal script-awarded items, static
-encounters, trades, and shops. Script awards are reachable `ItemAdd` commands
-whose item ID and quantity are both validated literals; they retain script member
-and byte offset and are rendered separately from pickups. Variable-driven reward
-shapes remain unavailable.
+connections, visible and hidden items, script-awarded items, static
+encounters, trades, and shops. An overworld object with the shared item-ball
+sprite whose `scriptUsed` doesn't resolve through the shared dispatch table
+(see Black/White's own notes for that mechanism, shared by this engine) is
+counted in the location dataset's own `unresolved_visible_item_count` rather
+than silently dropped.
+
+Script awards are reachable `ItemAdd` commands whose item ID and quantity are
+both validated literals, plus the indirect `WorkSet`+`WorkSet`+`RTCallGlobal`
+give-item convention some NPC gifts use instead -- this game shares Black/
+White's own confirmed target-ID set (`2805`, `2806`, `2807`, `2814`; see that
+profile's own notes), plus its own independent confirmation: `2814` against
+Strange House's Lunar Wing gift. They retain script member and byte offset
+and are rendered separately from pickups. Only `RTCallGlobal` target IDs
+verified against a real item grant are accepted, since the opcode is a
+general-purpose call reused by many unrelated global routines. Reward shapes
+that resolve their item or quantity some other way remain unavailable -- this
+is intentionally not a complete obtainability guide.
+
 Common-script references use the sequel's own member-number mapping rather
 than Black/White's mapping.
 

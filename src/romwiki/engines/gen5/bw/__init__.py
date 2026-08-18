@@ -68,6 +68,7 @@ from .marts import (
 from .messages import parse_english_message_archive
 from .moves import parse_move_record
 from .overworld import (
+    is_visible_item_candidate,
     parse_hidden_item_script_table,
     parse_overworld_furniture,
     parse_overworld_npcs,
@@ -245,6 +246,7 @@ __all__ = [
     "pickup_level_range_item_ids",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",
+    "is_visible_item_candidate",
     "SHOP_SELECTOR_TO_INVENTORY_ID",
     "STANDARD_SHOP_SELECTOR",
     "Gen5SpecialVendor",

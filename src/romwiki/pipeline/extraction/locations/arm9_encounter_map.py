@@ -5,6 +5,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.locations.helpers import (
+    EventMapItemScan,
     extract_event_map_connections,
     extract_event_map_items,
     extract_trainer_references,
@@ -13,6 +14,7 @@ from romwiki.pipeline.extraction.map_headers import (
     read_code_binary,
     resolve_map_headers,
 )
+from romwiki.pipeline.extraction.trainers.support import scripts_archive_options
 from romwiki.pipeline.semantics.location_sections import (
     resolve_location_section,
     validate_location_sections,
@@ -20,7 +22,7 @@ from romwiki.pipeline.semantics.location_sections import (
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     EncounterMapLocation,
-    LocationItem,
+    LocationScriptAwardedItem,
     LocationWarp,
     RecordProvenance,
 )
@@ -41,6 +43,7 @@ def extract_arm9_encounter_map_location_dataset(
         encounters_path = profile.layout["encounters"]
         events_path = profile.layout["events"]
         matrices_path = profile.layout["map_matrices"]
+        scripts_path = profile.layout["scripts"]
         count = profile.parameters["map_header_count"]
         table_offset = profile.parameters["map_header_offset"]
         location_names_member = profile.parameters["location_names_member"]
@@ -68,6 +71,9 @@ def extract_arm9_encounter_map_location_dataset(
         filesystem.read(events_path), **event_options
     )
     matrices = platform.archive_cls.from_bytes(filesystem.read(matrices_path))
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), **scripts_archive_options(profile)
+    )
     arm9_data = read_code_binary(platform, result.image, engine)
     headers, location_names = resolve_map_headers(
         engine,
@@ -98,8 +104,23 @@ def extract_arm9_encounter_map_location_dataset(
         record["name"] for record in (item_dataset or {}).get("records", ())
     ) or engine.parse_english_message_archive(messages.read(item_names_member))
     parsed_events: dict[int, Any] = {}
-    items_by_event: dict[int, tuple[LocationItem, ...]] = {}
+    items_by_event: dict[int, EventMapItemScan] = {}
     raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
+    empty_item_scan = EventMapItemScan(
+        items=(), unresolved_visible_count=0, unresolved_hidden_count=0
+    )
+    parse_item_ball_table = getattr(engine, "parse_item_ball_table", None)
+    visible_item_ids = (
+        parse_item_ball_table(scripts.read(engine.ITEM_BALL_TABLE_SCRIPT_MEMBER))
+        if parse_item_ball_table is not None
+        else None
+    )
+    parse_hidden_item_table = getattr(engine, "parse_hidden_item_table", None)
+    hidden_item_ids = (
+        parse_hidden_item_table(arm9_data, item_count=len(item_names))
+        if parse_hidden_item_table is not None
+        else None
+    )
     for header in headers:
         if header.event_file_id == null_event_id:
             raw_warps_by_header[header.header_id] = ()
@@ -115,13 +136,46 @@ def extract_arm9_encounter_map_location_dataset(
             )
             parsed_events[header.event_file_id] = parsed
             items_by_event[header.event_file_id] = (
-                extract_event_map_items(engine, parsed, item_names)
+                extract_event_map_items(
+                    engine,
+                    parsed,
+                    item_names,
+                    visible_item_ids=visible_item_ids,
+                    hidden_item_ids=hidden_item_ids,
+                )
                 if item_names
-                else ()
+                else empty_item_scan
             )
         raw_warps_by_header[header.header_id] = parsed_events[
             header.event_file_id
         ].warps
+    script_awarded_items_by_script: dict[
+        int, tuple[LocationScriptAwardedItem, ...]
+    ] = {}
+    find_script_awarded_items = getattr(engine, "find_script_awarded_items", None)
+    if find_script_awarded_items is not None:
+        for header in headers:
+            script_file_id = header.script_file_id
+            if script_file_id in script_awarded_items_by_script:
+                continue
+            if script_file_id >= len(scripts.members):
+                raise InvalidRomError(
+                    f"Map header {header.header_id} references missing script file "
+                    f"{script_file_id}"
+                )
+            script_awarded_items_by_script[script_file_id] = tuple(
+                LocationScriptAwardedItem(
+                    item_id=award.item_id,
+                    name=item_names[award.item_id],
+                    quantity=award.quantity,
+                    script_file_id=script_file_id,
+                    command_offset=award.command_offset,
+                    command=award.command,
+                )
+                for award in find_script_awarded_items(
+                    scripts.read(script_file_id), item_count=len(item_names)
+                )
+            )
     connections = extract_event_map_connections(
         engine, headers, matrices, location_names, matrix_void_header_ids
     )
@@ -209,7 +263,10 @@ def extract_arm9_encounter_map_location_dataset(
                 items=(
                     ()
                     if header.event_file_id == null_event_id
-                    else items_by_event[header.event_file_id]
+                    else items_by_event[header.event_file_id].items
+                ),
+                script_awarded_items=script_awarded_items_by_script.get(
+                    header.script_file_id, ()
                 ),
                 provenance=RecordProvenance(
                     source="rom", archive="arm9", member=header.header_id
@@ -230,12 +287,22 @@ def extract_arm9_encounter_map_location_dataset(
         "hidden_item_count": sum(
             item["kind"] == "hidden" for record in records for item in record["items"]
         ),
+        "unresolved_visible_item_count": sum(
+            scan.unresolved_visible_count for scan in items_by_event.values()
+        ),
+        "unresolved_hidden_item_count": sum(
+            scan.unresolved_hidden_count for scan in items_by_event.values()
+        ),
+        "script_awarded_item_reference_count": sum(
+            len(record["script_awarded_items"]) for record in records
+        ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,
             "map_headers": {"arm9_offset": table_offset, "count": count},
             "internal_names": map_names_path,
             "events_archive": events_path,
             "map_matrices_archive": matrices_path,
+            "scripts_archive": scripts_path,
             "location_names": {
                 "archive": messages_path,
                 "member": location_names_member,

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from romwiki.pipeline.extraction.identify import InspectionResult
@@ -13,13 +15,42 @@ from romwiki.schema import (
 from romwiki.util.errors import InvalidRomError
 
 
+@dataclass(frozen=True, slots=True)
+class EventMapItemScan:
+    items: tuple[LocationItem, ...]
+    # A visible/hidden item event whose shape (sprite/event type) marks it as
+    # a field pickup, but whose `script_id` didn't resolve to a real item --
+    # i.e. a real pickup the extractor found but couldn't identify, as
+    # opposed to an ordinary NPC/background event that was never a pickup at
+    # all. Surfaced in the dataset envelope so a gap like this is a number to
+    # notice rather than a silent, untraceable drop.
+    unresolved_visible_count: int
+    unresolved_hidden_count: int
+
+
 def extract_event_map_items(
-    engine: Any, events: Any, item_names: tuple[str, ...]
-) -> tuple[LocationItem, ...]:
+    engine: Any,
+    events: Any,
+    item_names: tuple[str, ...],
+    *,
+    visible_item_ids: Sequence[int | None] | None = None,
+    hidden_item_ids: Sequence[int | None] | None = None,
+) -> EventMapItemScan:
     items = []
+    unresolved_visible_count = 0
+    is_visible_candidate = getattr(engine, "is_visible_item_candidate", None)
+    is_hidden_candidate = getattr(engine, "is_hidden_item_candidate", None)
     for event in events.objects:
-        item_id = engine.resolve_visible_item_id(event, item_count=len(item_names))
+        item_id = (
+            engine.resolve_visible_item_id(
+                event, item_count=len(item_names), item_ids=visible_item_ids
+            )
+            if visible_item_ids is not None
+            else engine.resolve_visible_item_id(event, item_count=len(item_names))
+        )
         if item_id is None:
+            if is_visible_candidate is not None and is_visible_candidate(event):
+                unresolved_visible_count += 1
             continue
         items.append(
             LocationItem(
@@ -33,9 +64,18 @@ def extract_event_map_items(
                 hidden_flag=event.hidden_flag,
             )
         )
+    unresolved_hidden_count = 0
     for event in events.backgrounds:
-        item_id = engine.resolve_hidden_item_id(event, item_count=len(item_names))
+        item_id = (
+            engine.resolve_hidden_item_id(
+                event, item_count=len(item_names), item_ids=hidden_item_ids
+            )
+            if hidden_item_ids is not None
+            else engine.resolve_hidden_item_id(event, item_count=len(item_names))
+        )
         if item_id is None:
+            if is_hidden_candidate is not None and is_hidden_candidate(event):
+                unresolved_hidden_count += 1
             continue
         items.append(
             LocationItem(
@@ -49,7 +89,11 @@ def extract_event_map_items(
                 hidden_flag=None,
             )
         )
-    return tuple(items)
+    return EventMapItemScan(
+        items=tuple(items),
+        unresolved_visible_count=unresolved_visible_count,
+        unresolved_hidden_count=unresolved_hidden_count,
+    )
 
 
 def extract_event_map_connections(

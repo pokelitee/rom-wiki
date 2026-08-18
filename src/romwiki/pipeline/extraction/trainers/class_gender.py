@@ -16,6 +16,7 @@ from romwiki.pipeline.extraction.trainers.support import (
     read_staged_partner_battle_families,
     read_starter_branch_families,
     read_starter_species,
+    scripts_archive_options,
 )
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import TrainerLocation, TrainerScriptReference
@@ -279,7 +280,7 @@ def _extract_class_gender_trainer_locations(
     )
     scripts = (
         platform.archive_cls.from_bytes(
-            filesystem.read(scripts_path), allow_truncated=True
+            filesystem.read(scripts_path), **scripts_archive_options(profile)
         )
         if extract_script_references
         else None

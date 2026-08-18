@@ -15,6 +15,7 @@ learnsets_allow_incorrect_data_block_size = true
 evolutions_allow_truncated = true
 encounters_allow_truncated = true
 events_allow_incorrect_data_block_size = true
+scripts_allow_incorrect_data_block_size = true
 
 [[hashes]]
 algorithm = "sha256"

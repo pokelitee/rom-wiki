@@ -11,6 +11,14 @@ from .disassembler import Gen5Instruction, disassemble_script
 _FOSSIL_ITEM_VARIABLE = 32802
 _FOSSIL_SPECIES_VARIABLE = 32803
 
+# Kyurem's story-battle fusions with N's Reshiram/Zekrom -- the only
+# `CallWildBattleEx` calls that are genuinely uncatchable. Every other
+# non-zero form seen in this opcode (e.g. Therian Forme Tornadus/Thundurus,
+# Zen Mode Darmanitan) is a real, catchable/battleable encounter and must
+# not be excluded by a blanket form check.
+_KYUREM_SPECIES_ID = 646
+_UNCATCHABLE_STORY_FORMS = frozenset({(_KYUREM_SPECIES_ID, 1), (_KYUREM_SPECIES_ID, 2)})
+
 
 @dataclass(frozen=True, slots=True)
 class Gen5FossilRevival:
@@ -159,7 +167,7 @@ def _static_fact(
         is_egg = False
     elif instruction.name == "CallWildBattleEx":
         species_id, level, form, _result = instruction.params
-        if form != 0:
+        if (species_id, form) in _UNCATCHABLE_STORY_FORMS:
             return None
         is_egg = False
     elif instruction.name in {"PokePartyAdd", "PokePartyAddEx"}:

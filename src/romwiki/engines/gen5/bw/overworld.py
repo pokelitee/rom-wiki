@@ -241,6 +241,18 @@ def resolve_visible_item_id(
     return item_id if item_id is not None and 0 < item_id < item_count else None
 
 
+def is_visible_item_candidate(npc: Gen5OverworldNPC) -> bool:
+    """Whether this NPC's sprite marks it as an item ball at all.
+
+    Lets a caller tell "not an item ball" apart from "an item ball whose
+    `script_used` didn't resolve through the shared dispatch table" -- the
+    latter is worth counting, since it means a real field pickup (placed via
+    some other mechanism, e.g. a direct script-level item grant) went
+    unextracted.
+    """
+    return npc.sprite == _VISIBLE_ITEM_SPRITE
+
+
 def resolve_hidden_item_id(
     furniture: Gen5OverworldFurniture,
     *,

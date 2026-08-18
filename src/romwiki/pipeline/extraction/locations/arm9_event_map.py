@@ -7,6 +7,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.locations.helpers import (
+    EventMapItemScan,
     extract_event_map_connections,
     extract_event_map_items,
     extract_trainer_references,
@@ -31,6 +32,7 @@ from romwiki.schema import (
     LocationNpcTrade,
     LocationPokemonGift,
     LocationRoamingActivation,
+    LocationScriptAwardedItem,
     LocationShop,
     LocationShopItem,
     LocationStaticEncounter,
@@ -123,7 +125,7 @@ class _EventMapLoadedSource:
 
 @dataclass(frozen=True)
 class _EventMapRelationships:
-    items_by_event: dict[int, tuple[LocationItem, ...]]
+    items_by_event: dict[int, EventMapItemScan]
     raw_warps_by_header: dict[int, tuple[Any, ...]]
     raw_items_by_header: dict[int, tuple[LocationItem, ...]]
     connections: dict[int, list[Any]]
@@ -582,7 +584,7 @@ def _collect_event_map_relationships(
         source.filesystem.read(source.matrices_path)
     )
     events_by_id: dict[int, Any] = {}
-    items_by_event: dict[int, tuple[LocationItem, ...]] = {}
+    items_by_event: dict[int, EventMapItemScan] = {}
     raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
     raw_items_by_header: dict[int, tuple[LocationItem, ...]] = {}
     for header in source.headers:
@@ -606,7 +608,9 @@ def _collect_event_map_relationships(
                 source.names.item,
             )
         raw_warps_by_header[header.header_id] = events_by_id[header.event_file_id].warps
-        raw_items_by_header[header.header_id] = items_by_event[header.event_file_id]
+        raw_items_by_header[header.header_id] = items_by_event[
+            header.event_file_id
+        ].items
     return _EventMapRelationships(
         items_by_event=items_by_event,
         raw_warps_by_header=raw_warps_by_header,
@@ -645,16 +649,27 @@ def _build_event_map_location_envelope(
         "connection_count": sum(len(record["connections"]) for record in records),
         "visible_item_count": sum(
             item.kind == "visible"
-            for items in relationships.items_by_event.values()
-            for item in items
+            for scan in relationships.items_by_event.values()
+            for item in scan.items
         ),
         "hidden_item_count": sum(
             item.kind == "hidden"
-            for items in relationships.items_by_event.values()
-            for item in items
+            for scan in relationships.items_by_event.values()
+            for item in scan.items
+        ),
+        "unresolved_visible_item_count": sum(
+            scan.unresolved_visible_count
+            for scan in relationships.items_by_event.values()
+        ),
+        "unresolved_hidden_item_count": sum(
+            scan.unresolved_hidden_count
+            for scan in relationships.items_by_event.values()
         ),
         "location_item_reference_count": sum(
             len(record["items"]) for record in records
+        ),
+        "script_awarded_item_reference_count": sum(
+            len(record["script_awarded_items"]) for record in records
         ),
         "shop_count": sum(len(record["shops"]) for record in records),
         "shop_item_reference_count": sum(
@@ -677,6 +692,9 @@ def _build_event_map_location_records(
     shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
     gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
     npc_trades_by_script: dict[int, tuple[LocationNpcTrade, ...]] = {}
+    script_awarded_items_by_script: dict[
+        int, tuple[LocationScriptAwardedItem, ...]
+    ] = {}
     static_encounters_by_location: dict[
         tuple[int, int], tuple[LocationStaticEncounter, ...]
     ] = {}
@@ -749,6 +767,15 @@ def _build_event_map_location_records(
                     item_names=context.names.item,
                 )
             )
+        if header.script_file_id not in script_awarded_items_by_script:
+            script_awarded_items_by_script[header.script_file_id] = (
+                _extract_event_map_location_script_awarded_items(
+                    context.engine,
+                    script,
+                    script_file_id=header.script_file_id,
+                    item_names=context.names.item,
+                )
+            )
         static_key = (header.script_file_id, header.header_id)
         if static_key not in static_encounters_by_location:
             static_encounters_by_location[static_key] = (
@@ -774,6 +801,9 @@ def _build_event_map_location_records(
                 gifts=gifts_by_script[header.script_file_id],
                 static_encounters=static_encounters_by_location[static_key],
                 npc_trades=npc_trades_by_script[header.script_file_id],
+                script_awarded_items=script_awarded_items_by_script[
+                    header.script_file_id
+                ],
                 section_name=section_name,
                 section_name_source=section_name_source,
             )
@@ -846,6 +876,7 @@ def _build_event_map_location_record(
     gifts: tuple[LocationPokemonGift, ...],
     static_encounters: tuple[LocationStaticEncounter, ...],
     npc_trades: tuple[LocationNpcTrade, ...],
+    script_awarded_items: tuple[LocationScriptAwardedItem, ...],
     section_name: str,
     section_name_source: dict[str, Any],
 ) -> dict[str, Any]:
@@ -883,6 +914,7 @@ def _build_event_map_location_record(
         static_encounters=static_encounters,
         roaming_activations=context.roaming_by_script[header.script_file_id],
         npc_trades=npc_trades,
+        script_awarded_items=script_awarded_items,
         honey_tree=(
             features.honey_tree
             if header.header_id in features.honey_tree_header_ids
@@ -1096,6 +1128,7 @@ def _extract_event_map_location_static_encounters(
                 species_id=command.species_id,
                 name=pokemon_names[command.species_id],
                 level=command.level,
+                is_egg=False,
                 command=command.command,
                 script_file_id=script_file_id,
                 command_offset=command.offset,
@@ -1145,3 +1178,32 @@ def _extract_event_map_location_npc_trades(
             )
         )
     return tuple(trades)
+
+
+def _extract_event_map_location_script_awarded_items(
+    engine: Any,
+    script: bytes,
+    *,
+    script_file_id: int,
+    item_names: tuple[str, ...],
+) -> tuple[LocationScriptAwardedItem, ...]:
+    """Resolve items an NPC's own dialogue script hands over directly.
+
+    These never place an item-ball/hidden-item event on the map, so they are
+    otherwise invisible to `extract_event_map_items` (e.g. a species-
+    conditional gift from an "Item Fanatic"-style NPC).
+    """
+    find_awards = getattr(engine, "find_script_awarded_items", None)
+    if find_awards is None:
+        return ()
+    return tuple(
+        LocationScriptAwardedItem(
+            item_id=award.item_id,
+            name=item_names[award.item_id],
+            quantity=award.quantity,
+            script_file_id=script_file_id,
+            command_offset=award.command_offset,
+            command=award.command,
+        )
+        for award in find_awards(script, item_count=len(item_names))
+    )

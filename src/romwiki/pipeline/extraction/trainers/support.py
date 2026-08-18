@@ -5,6 +5,28 @@ from typing import Any
 from romwiki.pipeline.extraction.identify import InspectionResult
 
 
+def scripts_archive_options(profile: Any) -> dict[str, bool]:
+    """Build archive-tolerance kwargs for a profile's own scripts archive.
+
+    Hacks repack these archives loosely, and each engine family names the
+    tolerance differently, so both spellings are honoured.
+    """
+    options = {"allow_truncated": True}
+    for parameter, option in (
+        (
+            "field_archives_allow_incorrect_data_block_size",
+            "allow_incorrect_data_block_size",
+        ),
+        ("field_archives_allow_trailing_data", "allow_trailing_data"),
+        ("events_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
+        ("scripts_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
+        ("scripts_allow_trailing_data", "allow_trailing_data"),
+    ):
+        if profile.parameters.get(parameter, False):
+            options[option] = True
+    return options
+
+
 def read_starter_branch_families(
     profile: Any,
     platform: Any,
@@ -26,22 +48,9 @@ def read_starter_branch_families(
         # index or species against, so the scripts are not even read.
         return None
 
-    # Hacks repack these archives loosely, and each engine family names the
-    # tolerance differently, so both spellings are honoured.
-    options = {"allow_truncated": True}
-    for parameter, option in (
-        (
-            "field_archives_allow_incorrect_data_block_size",
-            "allow_incorrect_data_block_size",
-        ),
-        ("field_archives_allow_trailing_data", "allow_trailing_data"),
-        ("events_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
-        ("scripts_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
-        ("scripts_allow_trailing_data", "allow_trailing_data"),
-    ):
-        if profile.parameters.get(parameter, False):
-            options[option] = True
-    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path), **options)
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), **scripts_archive_options(profile)
+    )
     families = []
     for member in scripts.members:
         families.extend(
@@ -77,20 +86,9 @@ def read_staged_partner_battle_families(
     if parse is None or scripts_path is None or starter_species is None:
         return ()
 
-    options = {"allow_truncated": True}
-    for parameter, option in (
-        (
-            "field_archives_allow_incorrect_data_block_size",
-            "allow_incorrect_data_block_size",
-        ),
-        ("field_archives_allow_trailing_data", "allow_trailing_data"),
-        ("events_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
-        ("scripts_allow_incorrect_data_block_size", "allow_incorrect_data_block_size"),
-        ("scripts_allow_trailing_data", "allow_trailing_data"),
-    ):
-        if profile.parameters.get(parameter, False):
-            options[option] = True
-    scripts = platform.archive_cls.from_bytes(filesystem.read(scripts_path), **options)
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(scripts_path), **scripts_archive_options(profile)
+    )
     families = []
     for member in scripts.members:
         families.extend(

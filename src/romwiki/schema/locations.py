@@ -103,7 +103,8 @@ class LocationPokemonGift:
 class LocationStaticEncounter:
     species_id: int
     name: str
-    level: int
+    level: int | None
+    is_egg: bool
     command: str
     script_file_id: int
     command_offset: int
@@ -194,6 +195,7 @@ class EventMapLocation:
     static_encounters: tuple[LocationStaticEncounter, ...]
     roaming_activations: tuple[LocationRoamingActivation, ...]
     npc_trades: tuple[LocationNpcTrade, ...]
+    script_awarded_items: tuple[LocationScriptAwardedItem, ...]
     honey_tree: LocationHoneyTree | None
     daily_encounter_pool: LocationDailyEncounterPool | None
     game_corner_prizes: tuple[LocationGameCornerPrize, ...]

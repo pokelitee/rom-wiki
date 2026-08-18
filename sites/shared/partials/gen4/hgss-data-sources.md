@@ -119,7 +119,63 @@ existence are validated before publication.
 
 Event objects link trainer IDs to map headers through HGSS's verified
 `script_id - 3000 + 1` convention. Visible and hidden item events are decoded
-from each ROM rather than copied between retail and hack profiles.
+from each ROM rather than copied between retail and hack profiles. An
+item-ball/hidden-item event whose sprite or event type marks it as a pickup
+but whose `script_id` offset doesn't resolve to a real item is counted in the
+location dataset's own `unresolved_visible_item_count` and
+`unresolved_hidden_item_count` rather than silently dropped.
+
+Visible item-ball placements resolve through this engine's own shared
+dispatch table rather than the flat `script_id - 7000 = item ID` shortcut
+Generation IV's Platinum-based engine uses: `script_id` selects one of 256
+functions in one shared script member (verified against `pret/pokeheartgold`'s
+public decompilation of vanilla HeartGold/SoulSilver, `src/script_manager.c`'s
+`sScriptBankMapping` -- confirmed stable across retail HeartGold, SoulSilver,
+and the Sacred Gold/Storm Silver hacks, identical member index and size in
+all four), and each function stages the real item ID and quantity into two
+scratch variables before falling through to a shared give-item tail. This
+table is **not** an identity mapping: cross-checked function-by-function
+against `pret/pokeheartgold`'s own `std_itemball_*` naming constants (e.g.
+function 0 is `std_itemball_r29_potion` and decodes to item 17/Potion,
+function 4 is `std_itemball_r31_poke_ball` and decodes to item 4/Poké Ball --
+matched exactly for the first nine functions checked), the flat shortcut had
+been silently resolving the large majority of item-ball placements to the
+wrong item, across every HGSS-family profile including unmodified retail
+HeartGold/SoulSilver, undetected until this table was decoded and compared
+against it directly. Sacred Gold/Storm Silver additionally repurpose specific
+table entries for hack-added items (e.g. Woodland Ore, Serenade Orb), which
+were affected the same way. Every item-ball placement is now decoded through
+the real table.
+
+Hidden-item placements are a *different* mechanism from item balls, not a
+variant of the same one, and had the identical class of bug independently:
+the game's own field-script dispatch for hidden items (`script_id - 8000`)
+collapses to a single shared function reused by every hidden item, which
+itself reads the real item and quantity from a native ARM9 data table
+(`sHiddenItemParam` in `pret/pokeheartgold`'s decompilation) searched by
+index rather than a per-index script function -- so the flat
+`script_id - 8000 = item ID` shortcut was exactly as wrong here as it was for
+item balls, for the same reason. Located in each ROM by the table's own
+distinctive leading records rather than a per-profile offset, and decoded
+until a record fails basic structural validity. Verified against real ROM
+data: all 231 real HeartGold entries matched `pret/pokeheartgold`'s own
+decompiled table with zero mismatches, and Sacred Gold/Storm Silver's table
+is byte-for-byte identical to retail's (unlike item balls, this hack does not
+edit hidden items). Every hidden-item placement is now decoded through the
+real table.
+
+Script-awarded items are kept separate from field pickups: an NPC's own
+dialogue script can hand over an item directly, with no placed item-ball/
+hidden-item event on the map at all. This uses the same control-flow-aware
+`CallCommonScript` convention documented for the Platinum-based engine (see
+that profile's own notes), but under this engine's own confirmed target ID,
+`2033` (`std_give_item_verbose` in `pret/pokeheartgold`'s decompiled
+constants) -- verified against seven real NPC gifts across Sacred Gold
+(TM70 at Sprout Tower, TM35, TM24, TM13, TM29, Magma Stone, and Earth Plate),
+each at the map location its literal item/quantity operands point to.
+`CallCommonScript` target IDs are assigned independently per engine leaf
+(Platinum and HeartGold/SoulSilver do not share one ARM9 codebase), so this
+ID is not assumed to carry over to or from the Platinum-based engine.
 
 Static encounters, gifts, and eggs remain unavailable. The ARM9 dispatch and
 matching handlers prove the operand contracts for literal `WildBattle`,

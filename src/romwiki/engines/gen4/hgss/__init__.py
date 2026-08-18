@@ -20,8 +20,6 @@ from romwiki.engines.gen4.egg_moves import parse_egg_move_table
 from romwiki.engines.gen4.events import (
     parse_map_events,
     parse_object_events,
-    resolve_hidden_item_id,
-    resolve_visible_item_id,
 )
 from romwiki.engines.gen4.evolutions import parse_evolution_record
 from romwiki.engines.gen4.items import (
@@ -82,6 +80,15 @@ from .encounters import (
     HGSS_WATER_SLOT_CHANCES,
     parse_encounter_record,
 )
+from .events import (
+    ITEM_BALL_TABLE_SCRIPT_MEMBER,
+    is_hidden_item_candidate,
+    is_visible_item_candidate,
+    parse_hidden_item_table,
+    parse_item_ball_table,
+    resolve_hidden_item_id,
+    resolve_visible_item_id,
+)
 from .headbutt import HEADBUTT_SLOT_CHANCES, parse_headbutt_record
 from .map_headers import MAP_HEADER_SIZE, parse_map_headers
 from .marts import parse_shop_catalog
@@ -97,6 +104,7 @@ from .pickup import (
     pickup_level_range_item_ids,
 )
 from .safari import SAFARI_AREA_NAMES, parse_safari_encounter_record
+from .script_items import find_script_awarded_items
 from .scripts import (
     CHECK_WON_BATTLE,
     START_TRAINER_BATTLE,
@@ -219,6 +227,12 @@ __all__ = [
     "parse_object_events",
     "resolve_hidden_item_id",
     "resolve_visible_item_id",
+    "is_hidden_item_candidate",
+    "is_visible_item_candidate",
+    "ITEM_BALL_TABLE_SCRIPT_MEMBER",
+    "parse_item_ball_table",
+    "parse_hidden_item_table",
+    "find_script_awarded_items",
     "parse_trainer_class_genders",
     "parse_trainer_class_prize_multipliers",
     "parse_trainer_record",

@@ -333,6 +333,8 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "learnsets_allow_truncated",
             "messages_allow_truncated",
             "npc_trades_unused",
+            "scripts_allow_incorrect_data_block_size",
+            "scripts_allow_trailing_data",
             "trainer_archives_allow_truncated",
         }
     ),

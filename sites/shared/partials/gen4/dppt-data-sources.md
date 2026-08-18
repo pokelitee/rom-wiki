@@ -270,7 +270,29 @@ Presence in that event table does not by itself prove that a pickup is reachable
 a hack may leave an old event behind while changing the map or scripts. Location
 pages therefore identify the rows as ROM item-event records and warn on origin
 coordinates or unnamed item slots instead of silently presenting those records as
-confirmed obtainable pickups.
+confirmed obtainable pickups. An item-ball/hidden-item event whose sprite or event
+type marks it as a pickup but whose `script_id` offset doesn't resolve to a real
+item is counted in the location dataset's own `unresolved_visible_item_count` and
+`unresolved_hidden_item_count` rather than silently dropped.
+
+Script-awarded items are kept separate from field pickups: an NPC's own dialogue
+script can hand over an item directly, with no placed item-ball/hidden-item event
+on the map at all. The field-script disassembler accepts reachable `AddItem`
+commands whose item ID and quantity are both literal, and also a second,
+control-flow-aware convention some scripts use instead: an if/elif-style NPC
+(offering, say, a species-conditional held item, or a paid choice from a custom
+shop menu) sets the item register differently in each mutually exclusive branch
+before all of them converge on one shared `CallCommonScript` give-item call, so
+resolving this correctly means walking the script's own control flow forward
+from each literal item write to the call(s) it can actually reach, not just
+checking the instruction immediately before the call. Only `CallCommonScript`
+target IDs verified against a real item grant are accepted (confirmed for
+Renegade Platinum: `2044` for a direct NPC gift and `2016` for a paid shop
+purchase, verified exactly against Floaroma Town's "Item Fanatic" and two
+custom shops), since the opcode is a general-purpose call reused by many
+unrelated global routines. Reward shapes that resolve their item or quantity
+some other way remain unavailable, so this is intentionally not a complete
+obtainability guide.
 
 Several bonus-encounter categories specific to this generation are decoded
 from a separate archive (`arc/encdata_ex.narc`), not the main wild encounter

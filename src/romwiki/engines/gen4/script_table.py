@@ -26,7 +26,7 @@ class Gen4TrainerBattleCommand:
     trainer_ids: tuple[int, ...]
 
 
-def parse_script_table(data: bytes) -> int:
+def _parse_script_table_targets(data: bytes) -> tuple[int, ...]:
     cursor = 0
     targets = []
     table_end = len(data)
@@ -51,7 +51,16 @@ def parse_script_table(data: bytes) -> int:
         raise InvalidRomError("Gen IV script table does not end at its first script")
     if any(target < table_end or target >= len(data) for target in targets):
         raise InvalidRomError("Gen IV script table contains an invalid entry offset")
-    return table_end
+    return tuple(targets)
+
+
+def parse_script_table(data: bytes) -> int:
+    return min(_parse_script_table_targets(data))
+
+
+def parse_script_function_offsets(data: bytes) -> tuple[int, ...]:
+    """Return every function's start offset from a field script's own table."""
+    return _parse_script_table_targets(data)
 
 
 def parse_trainer_battle_commands(

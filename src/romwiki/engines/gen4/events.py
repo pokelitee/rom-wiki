@@ -151,6 +151,28 @@ def resolve_visible_item_id(event: Gen4ObjectEvent, *, item_count: int) -> int |
     return item_id
 
 
+def is_visible_item_candidate(event: Gen4ObjectEvent) -> bool:
+    """Whether this object looks like a real item-ball placement.
+
+    Lets a caller tell "not an item ball" apart from "an item ball whose
+    `script_id` didn't resolve to a real item" -- the latter is worth
+    counting, since it means a real field pickup went unextracted. The
+    item-ball sprite alone isn't a reliable signal: some ordinary NPCs and
+    static-encounter triggers reuse the same graphics ID for flavor (a
+    glinting/shining effect) while running a small local dialogue script,
+    not the flat `7000 + item_id` convention real item balls use -- verified
+    against Renegade Platinum, where five such NPCs (dialogue text, a random
+    static encounter) share this sprite with real item balls. Requiring
+    `script_id` to actually fall in the item-ball band excludes those
+    false positives without excluding any real pickup, since a genuine
+    item ball's `script_id` is always `>= VISIBLE_ITEM_SCRIPT_BASE`.
+    """
+    return (
+        event.graphics_id == ITEM_BALL_GRAPHICS_ID
+        and event.script_id >= VISIBLE_ITEM_SCRIPT_BASE
+    )
+
+
 def resolve_hidden_item_id(
     event: Gen4BackgroundEvent, *, item_count: int
 ) -> int | None:
@@ -158,6 +180,19 @@ def resolve_hidden_item_id(
     if event.event_type != HIDDEN_ITEM_EVENT_TYPE or not 0 < item_id < item_count:
         return None
     return item_id
+
+
+def is_hidden_item_candidate(event: Gen4BackgroundEvent) -> bool:
+    """Whether this background event looks like a real hidden-item placement.
+
+    Mirrors `is_visible_item_candidate`'s reasoning: the event type alone
+    isn't a reliable signal, so `script_id` must also fall in the
+    hidden-item band.
+    """
+    return (
+        event.event_type == HIDDEN_ITEM_EVENT_TYPE
+        and event.script_id >= HIDDEN_ITEM_SCRIPT_BASE
+    )
 
 
 def _read_count(data: bytes, position: int, event_file_id: int) -> tuple[int, int]:

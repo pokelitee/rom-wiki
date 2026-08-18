@@ -427,7 +427,7 @@ null-destination sentinel) -- these are shown as a "dynamic destination"
 rather than guessed at, the same concept Generation IV's own Locations
 section already uses for its own Union Room warps.
 
-Field items (Item Balls and hidden items found via the Dowsing MCHN) are now
+Field items (Item Balls and hidden items found via the Dowsing MCHN) are
 decoded too. Visible items are overworld NPCs using one specific, shared
 sprite ID (the item-ball graphic). Their `scriptUsed` values in the 7000 band
 select functions in the ROM's shared Item Ball script member; those functions
@@ -436,7 +436,14 @@ store the actual item ID as a literal. Hidden-item furniture uses the equivalent
 important: treating the selector as an item ID produces plausible-looking but
 incorrect items and eventually lands in unnamed item slots. The extractor joins
 each map object to its selected function and reads the literal, so hack-edited
-pickup scripts are honored automatically. Furniture's own `x` coordinate needs
+pickup scripts using this same shared-table convention are honored
+automatically -- but a hack is free to grant an item some other way (a
+custom NPC script calling a give-item routine directly, for example; see
+"Script-awarded items" below), and those aren't covered by this mechanism.
+An item-ball-sprite object whose `scriptUsed` doesn't resolve through the
+shared table is counted, not silently dropped, in the location dataset's own
+`unresolved_visible_item_count`, so a gap like this shows up as a number to
+check rather than a missing item nobody notices. Furniture's own `x` coordinate needs
 one extra step: unlike every other overworld record's plain
 integers, it's stored in 16.16 fixed point, caught by comparing a hidden
 item's huge raw `x` value against its own map's NPCs' coordinates (dividing
@@ -450,12 +457,25 @@ an intentionally unnamed item literal rather than silently presenting suspicious
 leftovers as confirmed obtainable pickups.
 
 Script-awarded items are kept separate from field pickups. The control-flow-aware
-field-script disassembler accepts reachable `ItemAdd` commands only when both
-item ID and quantity are literal and valid. The same dedicated/common-script
-caller graph used by static encounters assigns every proven map owner, including
-all callers of a shared script. Variable-driven rewards and commands whose item
-or quantity is produced at runtime remain unavailable, so this is intentionally
-not a complete obtainability guide.
+field-script disassembler accepts reachable `ItemAdd` commands whose item ID and
+quantity are literal, and also a second, indirect convention several NPC-dialogue
+gifts use instead: staging the item and quantity into two known scratch work
+variables and handing off to one of a confirmed set of global give-item
+routines (`RTCallGlobal` target IDs `2805`, `2806`, `2807`, and `2814`,
+verified against this game's own documented NPC gifts -- Choice Specs at
+Relic Castle, Life Orb at Chargestone Cave, and others). This ID set is
+deliberately narrow: `RTCallGlobal` is a general-purpose call to any of the
+engine's global subroutines, most of them unrelated to items and reusing the
+same two scratch registers for unrelated arguments by pure calling
+convention, so only target IDs verified against real item grants are
+accepted -- widening it to every `RTCallGlobal` call pulls in dozens of
+unrelated common scripts. The same dedicated/common-script caller graph used
+by static encounters assigns every proven map owner, including all callers of
+a shared script. Commands whose item or quantity is produced at runtime by
+some other mechanism remain unavailable, so this is intentionally not a
+complete obtainability guide -- some hack-added or vanilla gifts almost
+certainly use give-item routines outside the confirmed set above and are not
+yet recovered.
 
 Static (gift/single) Pokémon encounters are cross-referenced to their real map
 locations through both dedicated map scripts and overworld common-script
