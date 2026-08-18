@@ -1132,7 +1132,7 @@ def _append_trainer_appearances(
         location = (
             _availability_locations(appearance.locations, source_file)
             if appearance.linked
-            else "Unlinked"
+            else "—"
         )
         lines.append(
             f"| {trainer} | {appearance.party_position} | {appearance.level} | "

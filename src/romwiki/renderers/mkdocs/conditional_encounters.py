@@ -386,4 +386,6 @@ def _safari_slot_cell(slot: dict[str, Any], source_file: str) -> str:
         entity_reference("pokemon", pokemon["id"], pokemon["name"], pokemon["slug"]),
         source_file,
     )
-    return f"{link} (Lv. {slot['level']})"
+    return sprite_with_link(
+        table_sprite_cell(pokemon.get("sprite")), f"{link} (Lv. {slot['level']})"
+    )

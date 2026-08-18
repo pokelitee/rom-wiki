@@ -11,6 +11,7 @@ from typing import Any
 from romwiki.pipeline.semantics.encounter_identity import (
     CONDITIONAL_ENCOUNTER_SOURCES,
     MAP_OWNED_CONDITIONAL_SOURCES,
+    EncounterSourceType,
     encounter_route_key,
 )
 from romwiki.util.errors import DataSourceError
@@ -54,6 +55,33 @@ def _location_conditional_encounters(
         header_id: tuple(sorted(entries, key=lambda entry: entry["area_id"]))
         for header_id, entries in sorted(values.items())
     }
+
+
+def _safari_zone_headers(
+    locations: list[dict[str, Any]],
+    encounters: list[dict[str, Any]],
+    location_encounters: Mapping[int, tuple[LocationEncounterReference, ...]],
+) -> frozenset[int]:
+    """Physical maps that make up a Safari-Zone-style conditional area.
+
+    Matched only on the map header's own decoded display name plus the
+    absence of an ordinary wild-encounter table -- both literal ROM facts.
+    Deliberately does not attempt to say which area currently occupies which
+    map, since that assignment is player-configurable and not decoded.
+    """
+    zone_names = {
+        record["name"].split(" — ", 1)[0]
+        for record in encounters
+        if record.get("source_type") == EncounterSourceType.SAFARI_ZONE
+    }
+    if not zone_names:
+        return frozenset()
+    return frozenset(
+        location["header_id"]
+        for location in locations
+        if _location_display_name(location) in zone_names
+        and not location_encounters.get(location["header_id"])
+    )
 
 
 def _location_encounters(

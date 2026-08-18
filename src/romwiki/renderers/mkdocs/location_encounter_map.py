@@ -4,7 +4,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.semantics.encounter_identity import EncounterSourceType
+from romwiki.pipeline.semantics.encounter_identity import (
+    SAFARI_ZONE_ROUTE,
+    EncounterSourceType,
+)
 from romwiki.pipeline.transforms.relationships import (
     LocationEncounterReference,
     RelationshipIndex,
@@ -139,6 +142,9 @@ def render_encounter_map_location_pages(
                     encounter_comparison,
                     same_name_groups[record["name"]],
                     relationships.location_labels if relationships else None,
+                    record["header_id"] in relationships.location_safari_zone_headers
+                    if relationships
+                    else False,
                 ),
             )
             page_count += 1
@@ -217,6 +223,7 @@ def _render_encounter_map_location(
     encounter_comparison: dict[str, Any] | None = None,
     same_name_records: list[dict[str, Any]] | None = None,
     location_labels: Mapping[int, str] | None = None,
+    is_safari_zone_map: bool = False,
 ) -> str:
     source_file = f"locations/{location_filename(record['header_id'])}"
     facts = [f"<div><dt>Map header</dt><dd>header-{record['header_id']:03}</dd></div>"]
@@ -235,7 +242,27 @@ def _render_encounter_map_location(
         "",
         *summary_section("rw-location-summary", facts),
     ]
-    if encounters or conditional_encounters:
+    if is_safari_zone_map:
+        safari_link = ROUTES.markdown_link(
+            entity_reference(
+                "encounter_variant",
+                SAFARI_ZONE_ROUTE,
+                "Safari Zone encounters",
+                SAFARI_ZONE_ROUTE,
+            ),
+            source_file,
+        )
+        lines.extend(
+            [
+                "## Wild encounters",
+                "",
+                "This map is one of the Safari Zone's physical positions. Which "
+                f"area type currently occupies it is player-configurable; see "
+                f"{safari_link} for every area's encounter tables.",
+                "",
+            ]
+        )
+    elif encounters or conditional_encounters:
         lines.extend(["## Wild encounters", ""])
         if encounters:
             _append_encounter_variants(lines, encounters, source_file, record["name"])

@@ -555,7 +555,7 @@ def _trainer_disambiguator(record: dict[str, Any]) -> str:
 
 def _location_summary_value(record: dict[str, Any], location_names: list[str]) -> str:
     if not location_names:
-        return "Unlinked"
+        return '<span class="rw-summary__empty">—</span>'
     anchor = "locations" if record["locations"] else "scripted-battle-locations"
     return summary_section_link(" / ".join(location_names), anchor)
 
@@ -1196,7 +1196,7 @@ def _append_same_name_trainers(
         route_id = f"trainer-{trainer_id:04}"
         locations = _location_links(candidate, source_file)
         lines.append(
-            f"| {trainer_link} | `{route_id}` | {' / '.join(locations) or 'Unlinked'} | "
+            f"| {trainer_link} | `{route_id}` | {' / '.join(locations) or '—'} | "
             f"{_trainer_level_range(candidate)} | "
             f"{_linked_party(candidate, source_file)} |"
         )

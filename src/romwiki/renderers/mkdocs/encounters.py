@@ -224,6 +224,7 @@ def render_encounter_pages(
                 comparison,
                 comparison.get("baseline") if comparison else None,
                 references,
+                relationships,
             ),
         )
         page_count += 1
@@ -373,6 +374,7 @@ def _render_safari_zone_page(
     comparison: dict[str, Any] | None,
     baseline_name: str | None,
     references: ReferenceIndex | None,
+    relationships: RelationshipIndex | None = None,
 ) -> str:
     source_file = f"encounters/{SAFARI_ZONE_ROUTE}.md"
     lines = [
@@ -383,6 +385,17 @@ def _render_safari_zone_page(
         "assigning them to fixed map headers.",
         "",
     ]
+    header_links = _safari_physical_maps(records, relationships, source_file)
+    if header_links:
+        lines.extend(
+            [
+                f"These area types occupy {len(header_links)} physical maps: "
+                + " / ".join(header_links)
+                + ". Which map currently holds which area is player-configurable "
+                "and not decoded here.",
+                "",
+            ]
+        )
     for record in records:
         append_safari_area(lines, record, source_file)
     lines.extend(
@@ -401,6 +414,24 @@ def _render_safari_zone_page(
     )
     lines.extend(provenance_section(safari_provenance(records)))
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _safari_physical_maps(
+    records: list[dict[str, Any]],
+    relationships: RelationshipIndex | None,
+    source_file: str,
+) -> list[str]:
+    if not records or relationships is None:
+        return []
+    return [
+        ROUTES.markdown_link(
+            entity_reference(
+                "location", header_id, f"header-{header_id:03}", header_id
+            ),
+            source_file,
+        )
+        for header_id in sorted(relationships.location_safari_zone_headers)
+    ]
 
 
 def _catalog_record(

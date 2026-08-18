@@ -108,7 +108,7 @@ class PokemonTrainerAppearanceTests(unittest.TestCase):
         self.assertIn("[Ace Trainer Lee](../trainers/trainer-0020.md)", page)
         self.assertIn("[Miracle Seed](../items/miracle-seed.md)", page)
         self.assertIn("[Route 1](../locations/header-006.md)", page)
-        self.assertIn("| Unlinked | White |", page)
+        self.assertIn("| — | White |", page)
         self.assertIn("| 1 | 15 |", page)
         self.assertIn("| 2 | 15 |", page)
 

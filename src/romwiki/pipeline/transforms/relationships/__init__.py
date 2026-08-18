@@ -27,6 +27,7 @@ from ._locations import (
     _freeze_location_encounters,
     _location_conditional_encounters,
     _location_encounters,
+    _safari_zone_headers,
 )
 from ._shared import (
     _freeze,
@@ -63,6 +64,7 @@ class RelationshipIndex:
     location_conditional_encounters: Mapping[int, tuple[dict[str, Any], ...]] = field(
         default_factory=dict
     )
+    location_safari_zone_headers: frozenset[int] = frozenset()
 
 
 def build_relationship_index(
@@ -113,5 +115,8 @@ def build_relationship_index(
         },
         location_conditional_encounters=_location_conditional_encounters(
             encounter_records
+        ),
+        location_safari_zone_headers=_safari_zone_headers(
+            location_records, encounter_records, location_encounters
         ),
     )
