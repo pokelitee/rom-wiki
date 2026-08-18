@@ -162,7 +162,8 @@ class LocationNpcTrade:
     ot_gender: str
     language: str
     personality: int
-    unknown_values: tuple[int, ...]
+    contest_stats: tuple[int, ...]
+    unused_values: tuple[int, ...]
     script_file_id: int
     command_offset: int
 

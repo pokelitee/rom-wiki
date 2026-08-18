@@ -16,11 +16,11 @@ class B2W2TrainersTests(unittest.TestCase):
         self.assertEqual(trainer_name_index(1), 1)
         self.assertEqual(trainer_name_index(42), 42)
 
-    def test_does_not_apply_bws_common_script_arithmetic(self) -> None:
-        # BW's sight-triggered-battle band arithmetic was verified against
-        # real Black ROM data specifically; it must not be silently applied
-        # to B2W2, which has its own (undecoded) selector convention.
-        self.assertIsNone(resolve_common_script_trainer_id(3026, trainer_count=616))
+    def test_reuses_bws_common_script_arithmetic(self) -> None:
+        # Verified against real Black 2 ROM data: B2W2's sight-triggered
+        # NPCs use the same script_used band arithmetic as BW, unchanged.
+        self.assertEqual(resolve_common_script_trainer_id(3026, trainer_count=616), 26)
+        self.assertEqual(resolve_common_script_trainer_id(7048, trainer_count=616), 48)
         self.assertIsNone(resolve_common_script_trainer_id(0, trainer_count=616))
 
 

@@ -10,7 +10,13 @@ from romwiki.engines.gen4.script_table import (
     SCRIPT_TABLE_END as SCRIPT_TABLE_END,
 )
 from romwiki.engines.gen4.script_table import (
+    Gen4TrainerBattleCommand as Gen4TrainerBattleCommand,
+)
+from romwiki.engines.gen4.script_table import (
     parse_script_table as parse_script_table,
+)
+from romwiki.engines.gen4.script_table import (
+    parse_trainer_battle_commands as _parse_trainer_battle_commands,
 )
 
 START_TRAINER_BATTLE = 0x00E5
@@ -25,12 +31,6 @@ PLATINUM_ROAMING_SLOT_COUNT = 5
 TRAINER_OBJECT_SCRIPT_START = 3000
 TRAINER_OBJECT_SCRIPT_END = 3999
 TRAINER_OBJECT_ID_OFFSET = 1
-
-
-@dataclass(frozen=True, slots=True)
-class Gen4TrainerBattleCommand:
-    offset: int
-    trainer_ids: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,49 +52,16 @@ def parse_trainer_battle_commands(
 ) -> tuple[Gen4TrainerBattleCommand, ...]:
     """Find literal trainer battles whose operands and follow-on command validate.
 
-    A battle invocation is distinguished from values that merely equal the battle
-    opcode inside operands or embedded script data by requiring valid trainer
-    operands *and* a real script command immediately after the three-operand
-    command — the same "opcode signature plus validating follow-on command"
-    shape `parse_roaming_activation_commands` uses.
-
-    This deliberately does not require the follow-on to be `CheckWonBattle`.
-    Requiring it silently dropped whole battle categories that handle their own
-    result: the Elite Four's first and rematch battles are followed by `0x001B`
-    and the rival battles by `0x0016`, so neither was resolved at all. Across
-    every Platinum script file, every site with valid trainer operands is
-    followed by a real command and names a trainer that has a party, while the
-    neighbouring opcode values `0x00E4`, `0x00E6`, `0x00E7`, `0x0125`, and
-    `0x0033` yield at most one such site between them — the operand constraints,
-    not the specific follow-on, are what carry the selectivity. Renegade
-    Platinum shows the same shape with one additional follow-on command, which is
-    why the command is validated generically rather than against a fixed list.
-
-    Battles whose trainer ID is supplied through a script variable are still not
-    resolved here: variable IDs are at or above 0x8000 and so fail the trainer
-    range check.
+    Thin wrapper over the shared scan algorithm in `gen4.script_table` with
+    Platinum's own opcode. See that function's docstring for the full
+    verification rationale (Elite Four/rival follow-on categories, neighbouring
+    opcode selectivity, Renegade Platinum cross-check).
     """
-    code_offset = parse_script_table(data)
-    commands = []
-    signature = struct.pack("<H", START_TRAINER_BATTLE)
-
-    for offset in range(code_offset, len(data) - 7):
-        if data[offset : offset + 2] != signature:
-            continue
-        if struct.unpack_from("<H", data, offset + 6)[0] >= SCRIPT_COMMAND_COUNT:
-            continue
-        first_trainer, second_trainer = struct.unpack_from("<HH", data, offset + 2)
-        if not 0 < first_trainer < trainer_count:
-            continue
-        if second_trainer != 0 and not 0 < second_trainer < trainer_count:
-            continue
-        trainer_ids = (
-            (first_trainer, second_trainer) if second_trainer else (first_trainer,)
-        )
-        commands.append(
-            Gen4TrainerBattleCommand(offset=offset, trainer_ids=trainer_ids)
-        )
-    return tuple(commands)
+    return _parse_trainer_battle_commands(
+        data,
+        trainer_count=trainer_count,
+        start_trainer_battle_opcode=START_TRAINER_BATTLE,
+    )
 
 
 def parse_static_encounter_commands(

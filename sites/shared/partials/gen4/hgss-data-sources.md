@@ -76,7 +76,10 @@ are preserved as stored; the pages do not invent replacement priority that is
 not encoded in the archive.
 Safari areas are not assigned to fixed map headers: the player can place the 12
 areas dynamically. They are therefore presented together on one anchored Safari
-Zone encounter page rather than attached to guessed location pages.
+Zone encounter page rather than attached to guessed location pages. The
+zone's 14 physical maps (decoded, literal map-header facts) are cross-linked
+to that page and back, without claiming which area currently occupies which
+map.
 
 ## Trainers
 
@@ -94,12 +97,18 @@ retail HGSS and the supported Sacred Gold/Storm Silver profiles.
 
 Trainer-class payout multipliers remain unavailable because Platinum's locator
 does not occur in HGSS and no unique HGSS table reference is established. The
-phone-rematch state machines and some alternate trainer-battle command shapes
-also remain undecoded.
+phone-rematch state machines remain undecoded.
 
-Trainer records without a verified literal overworld or script reference remain
-listed as Unlinked. Their exact parties are still published; no location or
-variant relationship is inferred from names, nearby IDs, or party composition.
+Talk-triggered trainer battles are joined from literal `CallTrainerBattle`
+field-script commands, the same way as other Generation IV profiles, but
+using HGSS's own opcode (`0x00D5`, distinct from Platinum's `0x00E5`) rather
+than assuming Platinum's numbering carries over. This links every Gym
+Leader, Elite Four member, and the Champion to both their first battle and
+their Kanto Gym Leader Rematch Tour location.
+
+Trainer records without a verified literal overworld or script reference show
+no location. Their exact parties are still published; no location or variant
+relationship is inferred from names, nearby IDs, or party composition.
 
 ## Locations
 

@@ -4,6 +4,10 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from romwiki.engines.gen5.trainer_records import (
+    resolve_common_script_trainer_id as resolve_common_script_trainer_id,
+)
+
 # `a/1/2/5`: one member per overworld event set, holding that map's
 # furniture/NPC/warp/trigger placements. BW happens to use header IDs as
 # member IDs; B2W2 stores a separate member index in each map header. Record
@@ -38,17 +42,6 @@ _NPC_FIELD_NAMES = (
     "z",
 )
 
-# NPCs whose sight-triggered battle is dispatched through a shared/common
-# script reference their trainer with `script_used = band + trainer_id`,
-# where `band` is a multiple of 1000 (seen: 2000/3000/5000/7000 in the real
-# ROM). Verified against 18 real Black ROM trainer records this way (script
-# member 155 and 830's NPCs resolving to trainer IDs 26-34 and 40-48, both
-# consecutive runs with sensible ascending trainer classes/party sizes) --
-# not literal script-engine facts, but arithmetic on an already-decoded NPC
-# field, matching this project's "decode, don't guess" bar since every
-# resolved ID is checked against the real trainer table's own valid range.
-_COMMON_SCRIPT_BAND_SIZE = 1000
-_MIN_COMMON_SCRIPT_USED = _COMMON_SCRIPT_BAND_SIZE
 COMMON_SCRIPT_MEMBER_BASE = 442
 _COMMON_SCRIPT_REFERENCE_BASE = 10000
 
@@ -260,24 +253,6 @@ def resolve_hidden_item_id(
         return None
     item_id = item_ids[index]
     return item_id if item_id is not None and 0 < item_id < item_count else None
-
-
-def resolve_common_script_trainer_id(
-    script_used: int, *, trainer_count: int
-) -> int | None:
-    """Resolve a sight-triggered NPC's `script_used` to a literal trainer ID.
-
-    Returns `None` for local per-map script indices (`script_used` below the
-    common-script band) or for values that don't resolve to a real trainer
-    record, rather than guessing.
-    """
-    if script_used < _MIN_COMMON_SCRIPT_USED:
-        return None
-    band = (script_used // _COMMON_SCRIPT_BAND_SIZE) * _COMMON_SCRIPT_BAND_SIZE
-    trainer_id = script_used - band
-    if not 0 < trainer_id < trainer_count:
-        return None
-    return trainer_id
 
 
 def resolve_common_script_member(script_used: int, *, member_count: int) -> int | None:

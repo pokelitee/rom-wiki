@@ -39,9 +39,13 @@ class Gen4NpcTrade:
     held_item_id: int | None
     ot_gender: int
     language_id: int
-    # Undecoded engine values at record offsets 0x1C, 0x24-0x34, and 0x44,
-    # kept raw so hack edits stay auditable until their meaning is verified.
-    unknown_values: tuple[int, ...]
+    # Cool/Beauty/Cute/Smart/Tough contest condition values, offsets 0x24-0x34.
+    contest_stats: tuple[int, ...]
+    # Record offsets 0x1C and 0x44: confirmed genuinely unused fields, per
+    # pret/pokeplatinum's decompilation (`docs/datafiles/ingame_trades.md`,
+    # `unused1`/`unused2` on `NPCTradeMon`) -- kept raw so hack edits to those
+    # bytes stay auditable, not because their meaning is still unknown.
+    unused_values: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +57,16 @@ class Gen4NpcTradeCommand:
 def parse_npc_trade_record(
     data: bytes, *, species_count: int, item_count: int
 ) -> Gen4NpcTrade:
+    """Parse one `fld_trade.narc` record (`NPCTradeMon` in pret/pokeplatinum).
+
+    Field layout, names, and the two confirmed-unused offsets are taken
+    directly from pret/pokeplatinum's decompilation
+    (`docs/datafiles/ingame_trades.md`), cross-checked field-for-field
+    against real Platinum ROM data: that doc's own worked example matches
+    this ROM's trade record 0 exactly, including species (Abra), all six
+    IVs, `unused1=28`, OT ID, all-zero contest stats, personality, held
+    item, OT gender/language, and requested species (Machop).
+    """
     if len(data) != NPC_TRADE_RECORD_SIZE:
         raise InvalidRomError(
             f"Expected {NPC_TRADE_RECORD_SIZE} bytes for an NPC trade, got {len(data)}"
@@ -65,11 +79,11 @@ def parse_npc_trade_record(
     padding = struct.unpack_from("<H", data, 0x22)[0]
     if padding:
         raise InvalidRomError(f"NPC trade has nonzero padding: {padding}")
-    unknown_values = (
+    unused_values = (
         struct.unpack_from("<I", data, 0x1C)[0],
-        *struct.unpack_from("<5I", data, 0x24),
         struct.unpack_from("<I", data, 0x44)[0],
     )
+    contest_stats = struct.unpack_from("<5I", data, 0x24)
     personality = struct.unpack_from("<I", data, 0x38)[0]
     raw_held_item_id = struct.unpack_from("<I", data, 0x3C)[0]
     ot_gender = struct.unpack_from("<I", data, 0x40)[0]
@@ -102,7 +116,8 @@ def parse_npc_trade_record(
         held_item_id=raw_held_item_id or None,
         ot_gender=ot_gender,
         language_id=language_id,
-        unknown_values=unknown_values,
+        contest_stats=contest_stats,
+        unused_values=unused_values,
     )
 
 

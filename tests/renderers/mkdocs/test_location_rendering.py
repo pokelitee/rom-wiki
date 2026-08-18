@@ -586,6 +586,7 @@ class LocationRenderingTests(unittest.TestCase):
                     "held_item_id": None,
                     "held_item_name": None,
                     "ivs": [20, 20, 20, 20, 20, 20],
+                    "contest_stats": [0, 0, 0, 0, 0],
                     "ot_id": 39922,
                     "ot_name": "Lina",
                     "versions": ["black"],

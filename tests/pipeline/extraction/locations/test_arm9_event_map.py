@@ -81,7 +81,12 @@ class _Engine:
         return self.common_mart_items
 
     def parse_specialty_mart_inventories(
-        self, arm9_data, *, pointer_table_offset, inventory_count, load_address,
+        self,
+        arm9_data,
+        *,
+        pointer_table_offset,
+        inventory_count,
+        load_address,
         item_count,
     ):
         return self.specialty_mart_inventories
@@ -259,9 +264,7 @@ def _default_engine(headers, *, location_names=("Route 1",)) -> _Engine:
             b"trade-names": (),
         },
     )
-    engine.events_by_id = {
-        0: SimpleNamespace(warps=(), objects=(), backgrounds=())
-    }
+    engine.events_by_id = {0: SimpleNamespace(warps=(), objects=(), backgrounds=())}
     return engine
 
 
@@ -359,9 +362,7 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
         visible = SimpleNamespace(
             index=0, visible_item_id=1, x=1, z=2, y=0, hidden_flag=None
         )
-        hidden = SimpleNamespace(
-            index=1, hidden_item_id=1, x=3, z=4, y=0
-        )
+        hidden = SimpleNamespace(index=1, hidden_item_id=1, x=3, z=4, y=0)
         engine.events_by_id = {
             0: SimpleNamespace(warps=(), objects=(visible,), backgrounds=(hidden,))
         }
@@ -473,9 +474,7 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
     def test_roaming_activation_commands_resolve_species(self) -> None:
         headers = (_header(0, event_file_id=_NULL, script_file_id=0),)
         engine = _default_engine(headers)
-        engine.roaming_commands_by_script = {
-            0: (SimpleNamespace(slot=0, offset=10),)
-        }
+        engine.roaming_commands_by_script = {0: (SimpleNamespace(slot=0, offset=10),)}
         profile = _profile()
         archives = _default_archives(profile)
         result = _result(profile)
@@ -580,15 +579,9 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
     def test_pokemon_and_egg_gift_commands_are_sorted_by_offset(self) -> None:
         headers = (_header(0, event_file_id=_NULL, script_file_id=0),)
         engine = _default_engine(headers)
-        engine.egg_commands_by_script = {
-            0: (SimpleNamespace(species_id=1, offset=20),)
-        }
+        engine.egg_commands_by_script = {0: (SimpleNamespace(species_id=1, offset=20),)}
         engine.gift_commands_by_script = {
-            0: (
-                SimpleNamespace(
-                    species_id=1, level=5, held_item_id=1, offset=10
-                ),
-            )
+            0: (SimpleNamespace(species_id=1, level=5, held_item_id=1, offset=10),)
         }
         profile = _profile()
         archives = _default_archives(profile)
@@ -611,9 +604,7 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
         engine = _default_engine(headers)
         engine.static_commands_by_script = {
             0: (
-                SimpleNamespace(
-                    species_id=1, level=10, command="WildBattle", offset=7
-                ),
+                SimpleNamespace(species_id=1, level=10, command="WildBattle", offset=7),
             )
         }
         profile = _profile()
@@ -639,9 +630,7 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
         engine = _default_engine(headers)
         engine.static_commands_by_script = {
             0: (
-                SimpleNamespace(
-                    species_id=1, level=10, command="WildBattle", offset=7
-                ),
+                SimpleNamespace(species_id=1, level=10, command="WildBattle", offset=7),
             )
         }
         profile = _profile()
@@ -701,12 +690,11 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
                 ot_gender=0,
                 language_id=2,
                 personality=999,
-                unknown_values=(0, 0),
+                contest_stats=(0, 0, 0, 0, 0),
+                unused_values=(0, 0),
             ),
         )
-        engine.trade_commands_by_script = {
-            0: (SimpleNamespace(trade_id=0, offset=3),)
-        }
+        engine.trade_commands_by_script = {0: (SimpleNamespace(trade_id=0, offset=3),)}
         profile = _profile()
         archives = _default_archives(profile)
         archives[profile.layout["npc_trades"]] = _Archive(

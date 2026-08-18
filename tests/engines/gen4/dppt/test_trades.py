@@ -56,6 +56,8 @@ class Gen4NpcTradeTests(unittest.TestCase):
         self.assertEqual(trade.held_item_id, 246)
         self.assertEqual(trade.ot_gender, 1)
         self.assertEqual(trade.language_id, 2)
+        self.assertEqual(trade.contest_stats, (0, 0, 0, 0, 0))
+        self.assertEqual(trade.unused_values, (28, 50))
 
     def test_rejects_invalid_record_size(self) -> None:
         with self.assertRaisesRegex(InvalidRomError, "Expected 80 bytes"):

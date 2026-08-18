@@ -112,3 +112,41 @@ def parse_trainer_record(
             source="rom", archive=party_archive, member=trainer_id
         ),
     )
+
+
+# NPCs whose sight-triggered battle is dispatched through a shared/common
+# script reference their trainer with `script_used = band + trainer_id`,
+# where `band` is a multiple of 1000 (seen: 2000/3000/5000/7000 in the real
+# ROM). Verified against 18 real Black ROM trainer records this way (script
+# member 155 and 830's NPCs resolving to trainer IDs 26-34 and 40-48, both
+# consecutive runs with sensible ascending trainer classes/party sizes), and
+# re-verified unchanged against real Black 2 ROM data (662 of 813 B2W2
+# trainers resolve to a story-coherent location with this same arithmetic,
+# with every multi-location trainer explained by a legitimate rematch/shared
+# roaming-trainer script) -- not literal script-engine facts, but arithmetic
+# on an already-decoded NPC field, matching this project's "decode, don't
+# guess" bar since every resolved ID is checked against the real trainer
+# table's own valid range.
+_COMMON_SCRIPT_BAND_SIZE = 1000
+_MIN_COMMON_SCRIPT_USED = _COMMON_SCRIPT_BAND_SIZE
+
+
+def resolve_common_script_trainer_id(
+    script_used: int, *, trainer_count: int
+) -> int | None:
+    """Resolve a sight-triggered NPC's `script_used` to a literal trainer ID.
+
+    Shared by BW and B2W2 -- verified independently against both games' real
+    ROM data, not merely assumed to carry over.
+
+    Returns `None` for local per-map script indices (`script_used` below the
+    common-script band) or for values that don't resolve to a real trainer
+    record, rather than guessing.
+    """
+    if script_used < _MIN_COMMON_SCRIPT_USED:
+        return None
+    band = (script_used // _COMMON_SCRIPT_BAND_SIZE) * _COMMON_SCRIPT_BAND_SIZE
+    trainer_id = script_used - band
+    if not 0 < trainer_id < trainer_count:
+        return None
+    return trainer_id

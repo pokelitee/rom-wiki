@@ -321,12 +321,15 @@ def append_npc_trades(
         return
     show_nature = any(trade.get("nature") for trade in trades)
     show_versions = any(trade.get("versions") for trade in trades)
+    show_contest_stats = any(any(trade["contest_stats"]) for trade in trades)
     headers = ["Give", "Receive", "Nickname"]
     if show_versions:
         headers.append("Versions")
     if show_nature:
         headers.append("Nature")
     headers.extend(["Held item", "IVs", "OT"])
+    if show_contest_stats:
+        headers.append("Contest stats")
     lines.extend(
         [
             "## In-game trades",
@@ -402,6 +405,18 @@ def append_npc_trades(
         if show_nature:
             cells.append(trade.get("nature") or "—")
         cells.extend([held_item_cell, ivs, ot])
+        if show_contest_stats:
+            contest_names = ("Cool", "Beauty", "Cute", "Smart", "Tough")
+            cells.append(
+                " / ".join(
+                    f"{name} {value}"
+                    for name, value in zip(
+                        contest_names, trade["contest_stats"], strict=True
+                    )
+                    if value
+                )
+                or "—"
+            )
         lines.append("| " + " | ".join(cells) + " |")
     lines.append("")
 

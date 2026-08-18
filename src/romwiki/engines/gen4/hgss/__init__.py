@@ -97,6 +97,12 @@ from .pickup import (
     pickup_level_range_item_ids,
 )
 from .safari import SAFARI_AREA_NAMES, parse_safari_encounter_record
+from .scripts import (
+    CHECK_WON_BATTLE,
+    START_TRAINER_BATTLE,
+    Gen4TrainerBattleCommand,
+    parse_trainer_battle_commands,
+)
 from .trades import NPC_TRADE_RECORD_SIZE, parse_npc_trade_record
 from .tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,
@@ -136,7 +142,7 @@ FISHING_SLOT_CHANCES = HGSS_FISHING_SLOT_CHANCES
 ROCK_SMASH_SLOT_CHANCES = HGSS_ROCK_SMASH_SLOT_CHANCES
 FIRST_TRAINER_ID = 1
 TRAINER_LOCATION_EXTRACTION = True
-TRAINER_SCRIPT_REFERENCE_EXTRACTION = False
+TRAINER_SCRIPT_REFERENCE_EXTRACTION = True
 TRAINER_OBJECT_SCRIPT_START = 3000
 TRAINER_OBJECT_SCRIPT_END = 3999
 TRAINER_OBJECT_ID_OFFSET = 1
@@ -149,6 +155,7 @@ TRAINER_FORM_SLUGS = {**GEN4_TRAINER_FORM_SLUGS, (127, 1): "pinsir"}
 __all__ = [
     "ABILITY_NAME_COUNT",
     "BASE_SPECIES_COUNT",
+    "CHECK_WON_BATTLE",
     "COLOR_NAMES",
     "DAMAGE_CLASS_NAMES",
     "EGG_GROUP_NAMES",
@@ -193,6 +200,8 @@ __all__ = [
     "GEN4_TM_COUNT",
     "MAP_HEADER_SIZE",
     "SAFARI_AREA_NAMES",
+    "START_TRAINER_BATTLE",
+    "Gen4TrainerBattleCommand",
     "parse_egg_move_table",
     "parse_encounter_record",
     "parse_headbutt_record",
@@ -213,6 +222,7 @@ __all__ = [
     "parse_trainer_class_genders",
     "parse_trainer_class_prize_multipliers",
     "parse_trainer_record",
+    "parse_trainer_battle_commands",
     "parse_npc_trade_record",
     "parse_tutor_compatibility_table",
     "parse_tutor_move_table",
@@ -235,10 +245,17 @@ __all__ = [
 
 #: HeartGold/SoulSilver's trainer-battle command. This generation's two
 #: leaves share the branch idiom but not this opcode: Platinum uses
-#: 0x00E5, HGSS 0x00D5. Established by locating the curated Silver groups
-#: in their own scripts, where each trainer ID is preceded by 0x00D5, and
-#: the same compare/jump pair on variable 0x800C guards each branch.
-STARTER_BATTLE_OPCODE = 0x00D5
+#: 0x00E5, HGSS 0x00D5. Established two independent ways: (1) locating the
+#: curated Silver groups in their own scripts, where each trainer ID is
+#: preceded by 0x00D5, with the same compare/jump pair on variable 0x800C
+#: guarding each branch; (2) scanning every opcode value across the full
+#: script archive for the "valid trainer operand(s) plus a real follow-on
+#: command" shape (see `hgss.scripts`) and cross-checking hits against the
+#: already-decoded sight-triggered trainer set -- 0x00D5 produced 121 sites
+#: across 49 files, 98% of them new trainers, forming a roster that reads
+#: like the real game (all 8 Johto Gym Leaders in sequence, Silver's three
+#: story battles, Team Rocket's three Executives).
+STARTER_BATTLE_OPCODE = START_TRAINER_BATTLE
 
 
 def parse_starter_branch_families(

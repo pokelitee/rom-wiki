@@ -93,12 +93,16 @@ In-game trades are joined from literal `InitNPCTrade`/`StartNPCTrade` field
 command sequences and four fixed 80-byte records in
 `fielddata/pokemon_trade/fld_trade.narc`. Each record supplies the requested
 and offered species, six fixed IVs (reordered from the ROM's own raw field
-order to HP/Attack/Defense/Special Attack/Special Defense/Speed), a
-personality value whose value modulo 25 selects one of the 25 standard
-natures, held item, OT ID/gender/language, and a requested-species check.
-Nicknames and OT names come from message member 370, one nickname and one OT
-name per trade in the same fixed order as the records; the received Pokémon
-inherits the level of the Pokémon traded away rather than a stored level.
+order to HP/Attack/Defense/Special Attack/Special Defense/Speed), Cool,
+Beauty, Cute, Smart, and Tough contest stat values, a personality value whose
+value modulo 25 selects one of the 25 standard natures, held item, OT
+ID/gender/language, and a requested-species check. Two remaining record
+fields are confirmed genuinely unused rather than merely undecoded, matched
+field-for-field against pret/pokeplatinum's public decompilation of the same
+struct. Nicknames and OT names come from message member 370, one nickname
+and one OT name per trade in the same fixed order as the records; the
+received Pokémon inherits the level of the Pokémon traded away rather than a
+stored level.
 
 Pickup and Honey Gather's held-item tables come from four fixed arrays in
 ARM9 overlay 16 (18 common-tier entries, 11 rare-tier entries, and their own

@@ -13,17 +13,13 @@ from romwiki.engines.gen5.b2w2.scripts import (
 from romwiki.engines.gen5.trainer_records import (
     TRAINER_RECORD_SIZE,
     parse_trainer_record,
+    resolve_common_script_trainer_id,
 )
 
 
 def trainer_name_index(trainer_id: int) -> int:
     """Return B2W2's message index, whose table retains entry zero."""
     return trainer_id
-
-
-def resolve_common_script_trainer_id(script_used: int, *, trainer_count: int) -> None:
-    """Do not apply BW's Black-validated common-script arithmetic to B2W2."""
-    return None
 
 
 __all__ = [

@@ -35,8 +35,10 @@ class B2W2TrainerVariantTests(unittest.TestCase):
         )
         self.assertEqual(family["variants"][0]["conditions"][0]["value"], "snivy")
 
-    def test_does_not_inherit_the_bw_common_script_band_rule(self) -> None:
-        self.assertIsNone(resolve_common_script_trainer_id(2161, trainer_count=814))
+    def test_inherits_the_bw_common_script_band_rule(self) -> None:
+        # Verified against real Black 2 ROM data: B2W2 reuses BW's band
+        # arithmetic unchanged.
+        self.assertEqual(resolve_common_script_trainer_id(2161, trainer_count=814), 161)
 
     def test_retains_the_zero_entry_in_the_trainer_name_table(self) -> None:
         self.assertEqual(trainer_name_index(155), 155)

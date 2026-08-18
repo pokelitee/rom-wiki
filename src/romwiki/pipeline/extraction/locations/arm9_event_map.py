@@ -1138,7 +1138,8 @@ def _extract_event_map_location_npc_trades(
                 ot_gender="Female" if trade.ot_gender else "Male",
                 language=engine.trade_language_name(trade.language_id),
                 personality=trade.personality,
-                unknown_values=trade.unknown_values,
+                contest_stats=trade.contest_stats,
+                unused_values=trade.unused_values,
                 script_file_id=script_file_id,
                 command_offset=command.offset,
             )
