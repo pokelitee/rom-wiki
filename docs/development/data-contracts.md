@@ -27,6 +27,19 @@ Schema constants live in `src/romwiki/schema/versions.py`. Increment the affecte
 raw or enriched schema whenever a serialized field changes meaning, shape, or
 required presence. Do not invalidate unrelated datasets.
 
+Local orchestration and publication-tooling formats keep their own version
+constants beside their owning module instead of `schema/versions.py` — for
+example `sites/build_state.py`'s `BUILD_STATE_SCHEMA_VERSION`,
+`sites/snapshot.py`'s `SNAPSHOT_SCHEMA_VERSION` and
+`DIRECTORY_SNAPSHOT_SCHEMA_VERSION`, `sites/data_exports.py`'s
+`PUBLIC_DATA_MANIFEST_SCHEMA_VERSION`, and
+`pipeline/build/regeneration.py`'s `REGENERATION_STATE_SCHEMA_VERSION`. These
+version an ignored local cache, snapshot archive, or manifest shape, not a
+public dataset contract, so they change independently of the raw/enriched
+schemas above. A version constant for an actual dataset field, shape, or
+required presence belongs in `schema/versions.py` regardless of which module
+emits it.
+
 Sibling-version merging requires the same dataset kind, schema version, and
 feature contract on every side. Differing current records are retained only for
 dataset kinds whose renderers explicitly support version variants.

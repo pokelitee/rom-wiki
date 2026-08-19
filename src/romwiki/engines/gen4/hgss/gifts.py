@@ -49,7 +49,7 @@ def parse_pokemon_gift_commands(
     commands = []
     signature = struct.pack("<H", GIVE_POKEMON_COMMAND)
 
-    for offset in range(code_offset, len(data) - 14):
+    for offset in range(code_offset, len(data) - 13):
         if data[offset : offset + 2] != signature:
             continue
         species_id, level, _p2, _p3, _p4, output_variable = struct.unpack_from(
