@@ -105,17 +105,45 @@ unanchored byte scans cannot improve confidence.
   names.
 
 - **BW roaming Tornadus and Thundurus (species identity) — resolved.** The
-  published community offset pointed into code, not data, so it was
-  correctly rejected as a guess. What that code actually does was decoded
-  by hand instead (see `gen5/bw/__init__.py`'s module comment for the full
-  Thumb-instruction trace, verified byte-identical between Black (US) and
-  White (US)): Tornadus = species 641 (a literal pool constant), Thundurus
-  = species 642 (computed as Tornadus + 1 by the routine itself) — both
-  correct real National Dex numbers. What remains open is not the species
-  identity but *where this belongs in the schema*: Gen5's roaming mechanic
-  has no location-tied activation script the way DPPT's `roaming_activations`
-  does, so publishing this needs a deliberate schema decision, not more
-  binary parsing.
+  published community offset (`GetRoamerFlagOffsetStartOffset=0x95C4`,
+  overlay 10) pointed into code, not data, so it was correctly rejected as a
+  guess. What that code actually does was decoded by hand instead: a small
+  routine at overlay 10 file offset `0x95C4` (verified byte-identical between
+  Black (US) and White (US)) takes a species ID in `r0` and returns which
+  roamer it is:
+
+  ```text
+  +0x00  LDR  r1, [PC, #0x14]   ; r1 = literal pool word at +0x18 = 0x281
+  +0x02  CMP  r0, r1
+  +0x04  BEQ  +0x10             ; -> MOV r0, #1 ("Tornadus") ; BX LR
+  +0x06  ADD  r1, r1, #1        ; r1 = 0x282 (Tornadus id + 1)
+  +0x08  CMP  r0, r1
+  +0x0A  BNE  +0x0C             ; -> MOV r0, #2 (default) ; BX LR
+  +0x0C  MOV  r0, #0            ; ("Thundurus") ; BX LR
+  +0x18  .word 0x00000281       ; literal pool: 641 (Tornadus's real
+                                   National Dex number)
+  ```
+
+  This exactly matches the (independently written) code comment in
+  Ajarmar/universal-pokemon-randomizer-zx's
+  `Gen5RomHandler.applyBlackWhiteRoamerPatch` describing the routine's real
+  behavior ("returns 0 for Thundurus, 1 for Tornadus, and 2 for any other
+  species... computing Thundurus's ID as TornadusID + 1") — confirming both
+  the derivation above and that the tool's own patch never needed to guess
+  either ID; it only needed to short-circuit the "any other species" branch.
+  Tornadus = species 641 (a literal pool constant), Thundurus = species 642
+  (computed as Tornadus + 1 by the routine itself) — both correct, real
+  National Dex numbers, cross-checked against real-world knowledge, not read
+  from the tool's output.
+
+  What remains open is not the species identity but *where this belongs in
+  the schema*: Gen5's roaming mechanic has no location-tied activation script
+  the way DPPT's `roaming_activations` does (that field is populated from a
+  specific NPC/trigger script owning a map header; this routine is a generic
+  species-identity helper with no map-header ownership to attach to).
+  Publishing this fact needs a deliberate schema decision (e.g. a
+  location-less "roaming species" fact rather than a per-map record), not
+  more binary parsing.
 - **Generation V location section labels** — decoded map headers provide a
   broad display name and stable header identity, but no floor/room label. Warps
   already carry `destination_section_name` when an explicit profile mapping is

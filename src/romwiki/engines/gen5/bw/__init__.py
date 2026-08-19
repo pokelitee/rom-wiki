@@ -107,83 +107,13 @@ from .trainer_party import (
 )
 from .trainers import parse_trainer_record, trainer_name_index
 
-# EngineAdapter's shared attribute surface -- see docs/development/adding-a-game.md.
-# This engine currently implements the Pokémon personal-data, Items, Moves,
-# Learnsets, Evolutions, Egg moves, TM/HM machines, Wild encounters, Trainers,
-# Static encounters, Pickup, Marts, and Locations slices. Adding a
-# later slice should add the corresponding module and re-export here, the
-# same way these slices added personal.py/machines.py/items.py/moves.py/
-# learnsets.py/evolutions.py/egg_moves.py/encounters.py/trainers.py/
-# locations.py/static_encounters.py/pickup.py/constants.py.
 # Move tutors are not a gap to fill in: Ajarmar/universal-pokemon-randomizer-zx's
 # Gen5RomHandler.hasMoveTutors() returns true only for Black 2/White 2 --
 # tutors were introduced in the sequels and don't exist in this release at all.
-# Wild encounters attach real display names via `locations.py`'s small
-# fixed-record map header table (`a/0/1/2`) -- messages.py's `_VARIABLE_MARKER`
-# handling was needed first, since one (unused) entry in the map-name table
-# contains a runtime-substituted-text control code that used to make the
-# whole table fail to decode.
-# Locations combine the map header, matrix, overworld-object, and field-script
-# archives to resolve navigation, items, encounters, trainers, and shops.
-# Trainers' map-location/script-reference linking, previously blocked on
-# "this generation's script-engine
-# opcode table hasn't been researched," is now unblocked: scripts.py adopts
-# FrostFalcon/FrostsGen5Editor's BW1 field-script opcode table (an actively-
-# maintained community tool, cross-checked against real ROM bytes -- see
-# scripts.py's module docstring) to find literal `CallTrainerBattle`
-# invocations the same "opcode signature + validating follow-on command" way
-# gen4/dppt/scripts.py already finds Platinum's `StartTrainerBattle`, and
-# overworld.py resolves sight-triggered battles' trainer IDs directly from
-# the overworld NPC record's own `scriptUsed` field via a verified band
-# arithmetic (see overworld.py's module docstring). Both are literal-ID-only;
-# battles whose trainer can't be resolved to a real record are left unlinked
-# rather than guessed at.
-# Static (gift/single-Pokémon) encounters are discovered from reachable
-# `CallWildBattle`/`PokePartyAdd` instructions. Fossil choices use the same
-# validated comparison pattern as item enrichment, so BW profiles need no
-# per-encounter script addresses.
-# Roaming Pokémon (Thundurus/Tornadus) species identity -- resolved.
-# The unmodified retail ROM stores an ARM Thumb instruction, not a data
-# word, at the "species" offset the randomizer community's own ini config
-# lists (`GetRoamerFlagOffsetStartOffset=0x95C4`, overlay 10) -- so blindly
-# trusting that published offset as a literal would have been a guess. What
-# it actually points to was decoded by hand instead: a small routine at
-# overlay 10 file offset 0x95C4 (verified byte-identical between Black (US)
-# and White (US)) that takes a species ID in r0 and returns which roamer it
-# is. Manually disassembling its real Thumb instructions:
-#   +0x00  LDR  r1, [PC, #0x14]   ; r1 = literal pool word at +0x18 = 0x281
-#   +0x02  CMP  r0, r1
-#   +0x04  BEQ  +0x10             ; -> MOV r0, #1 ("Tornadus") ; BX LR
-#   +0x06  ADD  r1, r1, #1        ; r1 = 0x282 (Tornadus id + 1)
-#   +0x08  CMP  r0, r1
-#   +0x0A  BNE  +0x0C             ; -> MOV r0, #2 (default) ; BX LR
-#   +0x0C  MOV  r0, #0            ; ("Thundurus") ; BX LR
-#   +0x18  .word 0x00000281       ; literal pool: 641 (Tornadus's real
-#                                   National Dex number)
-# This exactly matches the (independently written) code comment in
-# Ajarmar/universal-pokemon-randomizer-zx's `Gen5RomHandler.applyBlackWhiteRoamerPatch`
-# describing the routine's real behavior ("returns 0 for Thundurus, 1 for
-# Tornadus, and 2 for any other species... computing Thundurus's ID as
-# TornadusID + 1") -- confirming both the derivation above and that the
-# tool's own patch never needed to guess either ID; it only needed to
-# short-circuit the "any other species" branch. Tornadus = 641, Thundurus =
-# 642 (641 + 1) -- both correct, real National Dex numbers, cross-checked
-# against real-world knowledge, not read from the tool's output.
 #
-# What's still open is not the species identity but *where this belongs in
-# the schema*: Gen5's roaming mechanic has no location-tied activation
-# script the way DPPT's `roaming_activations` does (that field is populated
-# from a specific NPC/trigger script owning a map header; this routine is a
-# generic species-identity helper with no map-header ownership to attach
-# to). Publishing this fact needs a deliberate schema decision (e.g. a
-# location-less "roaming species" fact rather than a per-map record), not
-# more binary parsing.
-# Pickup's item table (pickup.py) is found the same way the TM/HM move table
-# is (machines.py): a byte-pattern search in an overlay, since it has no
-# stable absolute offset across ROM builds -- no script-engine research
-# needed here either. The per-level-range percentages themselves aren't ROM
-# data, though; they're the same fixed engine formula Generation IV's own
-# Pickup already uses (`PICKUP_SLOT_CHANCES`).
+# Roaming Tornadus/Thundurus species identity is decoded (see
+# docs/development/open-items.md) but not yet wired into any dataset here;
+# publishing it needs a schema decision, not more binary parsing.
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
