@@ -205,7 +205,20 @@ that resolve their item or quantity some other way remain unavailable -- this
 is intentionally not a complete obtainability guide.
 
 Common-script references use the sequel's own member-number mapping rather
-than Black/White's mapping.
+than Black/White's mapping. This mapping is capped by the scripts archive's
+own real size (1290 members): overworld NPCs whose `scriptUsed` selects a
+member past that boundary (roughly 50 values across the game, clustered
+almost entirely at named minigame set-pieces -- Musical Theater, Pokéstar
+Studios, the Pokémon World Tournament, Gear Station) are not resolved by this
+mapping and are not investigated further, since they read as several
+unrelated per-minigame subsystems rather than one findable mechanism. One
+such NPC (a recurring "Happiness Rater" placed at Icirrus City and reused,
+via this same broken indirection, as an additional physical placement at a
+handful of other routes) was checked directly: its real reward script is
+Icirrus City's own dedicated script, already published under that location's
+`script_awarded_items` (King's Rock, Cleanse Tag, and Exp. Share, gated on
+party Pokémon happiness) -- so this specific feature's content is not
+missing, only its duplicate placements at the other routes are unlisted.
 
 ## Text and names
 

@@ -179,8 +179,14 @@ Real map locations and script triggers are resolved two ways: overworld
 object events carry the trainer ID directly in a fixed script-ID range
 (3000-3999, with a documented +1 offset between script ID and trainer ID),
 and scripted/talk-triggered battles are found by scanning each map's own
-script file for a literal `StartTrainerBattle` command immediately followed
-6 bytes later by a `CheckWonBattle` result check — the same
+script file for a literal `StartTrainerBattle` command whose operands are
+valid trainer IDs and whose follow-on command (6 bytes later) is any real
+script opcode — deliberately not a check for `CheckWonBattle` specifically,
+since requiring that exact opcode silently dropped whole battle categories
+that handle their own result differently (on Platinum, the Elite Four's
+battles are followed by `0x001B` and the rival battles by `0x0016`); the
+operand constraints, not a specific follow-on, are what keep the scan
+selective. This is the same
 "opcode-signature-plus-validating-follow-on-command" pattern this project's
 Generation V engine later adopted for its own equivalent trainer-battle scan.
 

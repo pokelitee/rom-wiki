@@ -105,15 +105,34 @@ Black 2/Volt White 2, and Blaze Black 2 Redux/Volt White 2 Redux.
 
 Snapshot generation is not deployment.
 
-## Appendix: bounded Generation V script awards
+## Appendix: bounded Generation V (and IV) script awards
 
-Reachable `ItemAdd` commands are published only when item ID and quantity are
+Reachable `ItemAdd` commands are published when item ID and quantity are
 literal validated operands. Dedicated script ownership comes directly from map
 headers; common-script ownership comes from verified NPC/furniture callers, and
-all callers are retained. Commands using work variables are deliberately skipped
-because their producers and repeatability conditions are not yet normalized.
-The current extractor therefore adds exact script facts without claiming a
-complete NPC-gift or item-obtainability guide.
+all callers are retained.
+
+Work-variable-driven grants are no longer categorically skipped: a second,
+control-flow-aware convention is now decoded too, where the item/quantity are
+staged into two known scratch registers before a shared give-item call
+(`RTCallGlobal` for Generation V, `CallCommonScript` for Generation IV). Only
+target IDs independently confirmed against a real, doc-matched item grant are
+accepted, since the opcode itself is a general-purpose call reused by many
+unrelated global routines — widening it to every call of that opcode produces
+mass false positives (verified: pulls in dozens of unrelated common scripts).
+Confirmed sets so far: Generation V's Black/White and Black 2/White 2 engines
+share `RTCallGlobal` targets `2805`, `2806`, `2807`, and `2814`; Generation IV's
+Platinum-based engine uses `CallCommonScript` targets `2016` and `2044`;
+HeartGold/SoulSilver's engine uses its own independently-assigned `2033`
+(confirmed distinct — Platinum and HeartGold/SoulSilver do not share one ARM9
+codebase, so a target ID confirmed for one is never assumed to carry over to
+the other). Grants that resolve their item/quantity through some other,
+unconfirmed mechanism remain unavailable. The current extractor therefore adds
+exact script facts without claiming a complete NPC-gift or item-obtainability
+guide — known real gaps remain (e.g. a still-unidentified vanilla Generation V
+mechanism behind a handful of items at Route 7 and elsewhere; a still-unlinked
+Sacred Gold/Storm Silver held-item dispatch table for its own hack-added
+items).
 
 ## Appendix: HGSS script decoding
 
@@ -135,11 +154,20 @@ script-only trainer-battle locations.
   battle sites, against 1% for handler-derived counts.
 - **Handler fingerprinting does not work** — only 6 of the 840/853 handlers are
   byte-identical between the games.
-- **HGSS's battle command is still unidentified, and alignment is not the
-  obstacle.** Over 166,313 aligned HGSS command positions, no opcode has the
-  right shape: the highest distinct operand counts are ~50 across 3,000–4,000
-  occurrences, while opcodes at 100% "operand is a valid trainer" have as few as
-  two distinct values and are therefore flags. Test first whether HGSS invokes
-  trainer battles from overworld trainer-sight events rather than from scripts
-  with literal IDs, which would explain all of the above and is consistent with
-  `TRAINER_SCRIPT_REFERENCE_EXTRACTION` already being `False` for this engine.
+- **HGSS's battle command resisted this byte-scanning approach specifically —
+  not proof the command itself was unreachable.** Over 166,313 aligned HGSS
+  command positions, no opcode had the right shape via this technique: the
+  highest distinct operand counts were ~50 across 3,000–4,000 occurrences,
+  while opcodes at 100% "operand is a valid trainer" had as few as two
+  distinct values and were therefore flags.
+
+**Resolved since, by a different route, not this walker:** cross-referencing
+against the already-decoded sight-triggered trainer set (not a byte scan)
+found HGSS's talk-triggered battle opcode directly — `0x00D5`, distinct from
+Platinum's `0x00E5` (see `gen4/hgss/scripts.py`'s own derivation and
+`gen4/hgss/__init__.py`'s two-independent-methods note). This is now decoded
+and published (see the HGSS site doc's own Trainers section). The
+script-walker/handler-fingerprinting groundwork above remains unused for this
+purpose and is retained only in case a future need for a general HGSS
+instruction decoder (e.g. HGSS specialty-shop map placement, still open
+above) revives it.

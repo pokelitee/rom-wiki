@@ -18,6 +18,7 @@ from romwiki.engines.gen4.constants import (
 )
 from romwiki.engines.gen4.egg_moves import parse_egg_move_table
 from romwiki.engines.gen4.events import (
+    is_trainer_object_candidate,
     parse_map_events,
     parse_object_events,
 )
@@ -229,6 +230,7 @@ __all__ = [
     "resolve_visible_item_id",
     "is_hidden_item_candidate",
     "is_visible_item_candidate",
+    "is_trainer_object_candidate",
     "ITEM_BALL_TABLE_SCRIPT_MEMBER",
     "parse_item_ball_table",
     "parse_hidden_item_table",

@@ -177,6 +177,18 @@ each at the map location its literal item/quantity operands point to.
 (Platinum and HeartGold/SoulSilver do not share one ARM9 codebase), so this
 ID is not assumed to carry over to or from the Platinum-based engine.
 
+Sacred Gold/Storm Silver's own "Covenant Orb" (documented as automatically
+awarded after completing any in-game trade) was checked for a native ARM9
+hook and none was found: the literal item ID never appears as a script-award
+operand anywhere in the script archive (checked with the same
+control-flow-aware scanner as the confirmed grants above), Sacred Gold's main
+ARM9 binary differs from vanilla HeartGold's in only a handful of small
+regions (data tables, not code, and none item-ID-shaped), and all 200 checked
+overlay IDs are byte-identical to vanilla HeartGold. This item's real grant
+mechanism, if any exists in this specific ROM build, is not reachable by any
+extraction method this project currently has, so it is not published as
+obtainable rather than guessed at.
+
 Static encounters, gifts, and eggs remain unavailable. The ARM9 dispatch and
 matching handlers prove the operand contracts for literal `WildBattle`,
 `GiveMon`, and `GiveEgg` commands, but an opcode/operand scan cannot prove that a

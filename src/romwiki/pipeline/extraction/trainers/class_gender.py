@@ -103,6 +103,7 @@ def extract_class_gender_trainer_dataset(
         locations_by_trainer,
         script_references_by_trainer,
         location_source,
+        unresolved_trainer_location_count,
     ) = _extract_class_gender_trainer_locations(
         engine,
         platform,
@@ -212,6 +213,7 @@ def extract_class_gender_trainer_dataset(
     envelope["location_reference_count"] = sum(
         len(record["locations"]) for record in records
     )
+    envelope["unresolved_trainer_location_count"] = unresolved_trainer_location_count
     envelope["script_reference_count"] = sum(
         len(record["script_references"]) for record in records
     )
@@ -232,11 +234,12 @@ def _extract_class_gender_trainer_locations(
     dict[int, list[TrainerLocation]],
     dict[int, list[TrainerScriptReference]],
     dict[str, Any],
+    int,
 ]:
     assert result.match is not None
     profile = result.match.profile
     if not getattr(engine, "TRAINER_LOCATION_EXTRACTION", True):
-        return {}, {}, {"trainer_locations": "unsupported"}
+        return {}, {}, {"trainer_locations": "unsupported"}, 0
     try:
         events_path = profile.layout["events"]
         scripts_path = profile.layout["scripts"]
@@ -289,6 +292,7 @@ def _extract_class_gender_trainer_locations(
     script_cache: dict[int, tuple[Any, ...]] = {}
     locations: dict[int, list[TrainerLocation]] = {}
     script_references: dict[int, list[TrainerScriptReference]] = {}
+    unresolved_trainer_location_count = 0
 
     for header in headers:
         objects: tuple[Any, ...] = ()
@@ -305,9 +309,14 @@ def _extract_class_gender_trainer_locations(
                 )
             objects = object_cache[header.event_file_id]
         for object_event in objects:
+            # `trainer_type != 0` is exactly `is_trainer_object_candidate`'s own
+            # check -- an object past this gate is already a confirmed
+            # candidate, so a script_id outside the trainer-object range below
+            # is a real unresolved trainer placement, not a shape mismatch.
             if object_event.trainer_type == 0:
                 continue
             if not script_start <= object_event.script_id <= script_end:
+                unresolved_trainer_location_count += 1
                 continue
             trainer_id = object_event.script_id - script_start + trainer_id_offset
             if not 0 <= trainer_id < trainer_count:
@@ -391,4 +400,5 @@ def _extract_class_gender_trainer_locations(
             if extract_script_references
             else "unsupported",
         },
+        unresolved_trainer_location_count,
     )

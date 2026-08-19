@@ -3,6 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from romwiki.engines.gen5.static_encounter_dedup import (
+    deduplicate_exact_paths,
+    deduplicate_wild_paths,
+)
 from romwiki.schema import RecordProvenance, StaticEncounter
 from romwiki.util.errors import InvalidRomError
 
@@ -90,8 +94,8 @@ def discover_static_encounters(
             else:
                 gifts.append((fact, member, instruction))
 
-    discovered = _deduplicate_wild_paths(wild)
-    discovered.extend(_deduplicate_exact_paths(gifts))
+    discovered = deduplicate_wild_paths(wild)
+    discovered.extend(deduplicate_exact_paths(gifts))
     discovered.extend(
         _discover_fossils(
             instructions_by_member,
@@ -115,48 +119,6 @@ def discover_static_encounters(
         )
         for encounter_id, (fact, member, instruction) in enumerate(discovered)
     )
-
-
-def _deduplicate_wild_paths(
-    candidates: list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]],
-) -> list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]]:
-    """Collapse lifecycle alternatives without losing distinct encounters."""
-    by_species_and_member: dict[
-        tuple[int, int], list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]]
-    ] = {}
-    for candidate in candidates:
-        by_species_and_member.setdefault((candidate[0][0], candidate[1]), []).append(
-            candidate
-        )
-
-    initial_paths = []
-    for paths in by_species_and_member.values():
-        # A one-time legendary can have initial and postgame levels in the same
-        # script. They are mutually exclusive lifecycle paths, not two catches.
-        initial_paths.append(min(paths, key=lambda value: value[0][1] or 0))
-    return _deduplicate_exact_paths(initial_paths)
-
-
-def _deduplicate_exact_paths(
-    candidates: list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]],
-) -> list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]]:
-    kept = []
-    seen_member_facts: set[tuple[tuple[int, int | None, bool], int]] = set()
-    seen_command_paths: set[
-        tuple[tuple[int, int | None, bool], int, str, tuple[int, ...]]
-    ] = set()
-    for candidate in candidates:
-        fact, member, instruction = candidate
-        member_fact = fact, member
-        command_path = fact, instruction.offset, instruction.name, instruction.params
-        if (
-            member_fact not in seen_member_facts
-            and command_path not in seen_command_paths
-        ):
-            kept.append(candidate)
-            seen_member_facts.add(member_fact)
-            seen_command_paths.add(command_path)
-    return kept
 
 
 def _static_fact(
