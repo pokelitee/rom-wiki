@@ -80,9 +80,7 @@ class Gen4HgssGiftTests(unittest.TestCase):
         )
 
     def test_ignores_unreachable_egg_gift(self) -> None:
-        body = struct.pack("<H", 0x0002) + struct.pack(
-            "<3H", 0x008A, 179, 0x800C
-        )
+        body = struct.pack("<H", 0x0002) + struct.pack("<3H", 0x008A, 179, 0x800C)
         self.assertEqual(
             parse_egg_gift_commands(make_script(body), species_count=494),
             (),

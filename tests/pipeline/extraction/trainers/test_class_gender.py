@@ -98,9 +98,7 @@ class ExtractClassGenderTrainerDatasetTests(unittest.TestCase):
             image=fixture.result.image, match=SimpleNamespace(profile=fixture.profile)
         )
         fixture.platform.read_overlay = Mock(return_value=(9, bytes(200)))
-        fixture.engine.parse_trainer_class_prize_multipliers = Mock(
-            return_value=(150,)
-        )
+        fixture.engine.parse_trainer_class_prize_multipliers = Mock(return_value=(150,))
 
         with fixture.patches():
             envelope = extract_class_gender_trainer_dataset(fixture.result)
@@ -150,9 +148,7 @@ class ExtractClassGenderTrainerDatasetTests(unittest.TestCase):
             trainer_type=1, script_id=150, index=0, local_id=0, x=0, y=0, z=0
         )
         fixture.events.read = Mock(return_value=b"EVENTDATA")
-        fixture.engine.parse_object_events = Mock(
-            return_value=(fixture.object_event,)
-        )
+        fixture.engine.parse_object_events = Mock(return_value=(fixture.object_event,))
 
         with (
             fixture.patches(),
@@ -194,9 +190,7 @@ class _Fixture:
             read=Mock(side_effect=lambda index: f"party-{index}".encode()),
         )
         self.messages = SimpleNamespace(
-            read=Mock(
-                side_effect=lambda member: {10: b"NAMES", 11: b"CLASSES"}[member]
-            )
+            read=Mock(side_effect=lambda member: {10: b"NAMES", 11: b"CLASSES"}[member])
         )
         self.events = SimpleNamespace(
             members=[SimpleNamespace(index=0)], read=Mock(return_value=b"EVENTDATA")

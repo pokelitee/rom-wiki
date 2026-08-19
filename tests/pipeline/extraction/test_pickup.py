@@ -111,9 +111,7 @@ class ExtractPickupDatasetTests(unittest.TestCase):
     def test_raises_for_an_engine_without_pickup_support(self) -> None:
         profile = _profile(parameters={"pickup_overlay_id": 1, "item_names_member": 2})
         _register_fake_platform()
-        _register_fake_engine(
-            pickup=SimpleNamespace(), pickup_format="none"
-        )
+        _register_fake_engine(pickup=SimpleNamespace(), pickup_format="none")
 
         with self.assertRaisesRegex(
             DataSourceError, "does not provide pickup extraction"
@@ -123,9 +121,7 @@ class ExtractPickupDatasetTests(unittest.TestCase):
     def test_split_table_raises_when_metadata_is_missing(self) -> None:
         profile = _profile(parameters={})
         _register_fake_platform()
-        _register_fake_engine(
-            pickup=SimpleNamespace(), pickup_format="split-table"
-        )
+        _register_fake_engine(pickup=SimpleNamespace(), pickup_format="split-table")
 
         with self.assertRaisesRegex(ProfileError, "is missing pickup metadata"):
             extract_pickup_dataset(_result(profile))
@@ -141,11 +137,12 @@ class ExtractPickupDatasetTests(unittest.TestCase):
                 "item_names_member": 7,
             }
         )
-        _register_fake_platform(
-            read_overlay=Mock(return_value=(5, b"overlaydata"))
-        )
+        _register_fake_platform(read_overlay=Mock(return_value=(5, b"overlaydata")))
         tables = SimpleNamespace(
-            common_item_ids=[0, 1], rare_item_ids=[2], common_rate=[10, 20], honey_gather_rate=[5]
+            common_item_ids=[0, 1],
+            rare_item_ids=[2],
+            common_rate=[10, 20],
+            honey_gather_rate=[5],
         )
         parse_pickup_tables = Mock(return_value=tables)
         _register_fake_engine(
@@ -192,12 +189,13 @@ class ExtractPickupDatasetTests(unittest.TestCase):
                 "pickup_common_item_count": 99,
             }
         )
-        _register_fake_platform(
-            read_overlay=Mock(return_value=(5, b"overlaydata"))
-        )
+        _register_fake_platform(read_overlay=Mock(return_value=(5, b"overlaydata")))
         parse_pickup_tables = Mock(
             return_value=SimpleNamespace(
-                common_item_ids=[], rare_item_ids=[], common_rate=[], honey_gather_rate=[]
+                common_item_ids=[],
+                rare_item_ids=[],
+                common_rate=[],
+                honey_gather_rate=[],
             )
         )
         _register_fake_engine(
@@ -219,9 +217,7 @@ class ExtractPickupDatasetTests(unittest.TestCase):
     def test_locator_tables_raises_when_metadata_is_missing(self) -> None:
         profile = _profile(parameters={})
         _register_fake_platform()
-        _register_fake_engine(
-            pickup=SimpleNamespace(), pickup_format="locator-tables"
-        )
+        _register_fake_engine(pickup=SimpleNamespace(), pickup_format="locator-tables")
 
         with self.assertRaisesRegex(ProfileError, "is missing pickup metadata"):
             extract_pickup_dataset(_result(profile))
@@ -286,9 +282,7 @@ class ExtractPickupDatasetTests(unittest.TestCase):
     def test_sliding_table_raises_when_metadata_is_missing(self) -> None:
         profile = _profile(parameters={})
         _register_fake_platform()
-        _register_fake_engine(
-            pickup=SimpleNamespace(), pickup_format="sliding-table"
-        )
+        _register_fake_engine(pickup=SimpleNamespace(), pickup_format="sliding-table")
 
         with self.assertRaisesRegex(ProfileError, "is missing pickup metadata"):
             extract_pickup_dataset(_result(profile))
@@ -307,7 +301,9 @@ class ExtractPickupDatasetTests(unittest.TestCase):
             ),
             pickup=SimpleNamespace(
                 PICKUP_TABLE_LOCATOR="cc",
-                parse_pickup_table=Mock(return_value=SimpleNamespace(item_ids=(0, 1, 2))),
+                parse_pickup_table=Mock(
+                    return_value=SimpleNamespace(item_ids=(0, 1, 2))
+                ),
                 PICKUP_LEVEL_RANGE_COUNT=1,
                 PICKUP_LEVEL_RANGE_SIZE=100,
                 pickup_level_range_item_ids=Mock(return_value=(0, 1, 2)),

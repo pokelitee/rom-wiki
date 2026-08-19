@@ -279,9 +279,7 @@ def extract_arm9_encounter_map_location_dataset(
                     scripts.read(script_file_id), item_count=len(item_names)
                 )
             )
-    static_encounters_by_script: dict[
-        int, tuple[LocationStaticEncounter, ...]
-    ] = {}
+    static_encounters_by_script: dict[int, tuple[LocationStaticEncounter, ...]] = {}
     parse_static_encounter_commands = getattr(
         engine, "parse_static_encounter_commands", None
     )

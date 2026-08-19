@@ -62,7 +62,9 @@ def _archive_set(species_id: int, move_ids=(3, 4, 5)) -> ArchiveEggMoveSet:
     return ArchiveEggMoveSet(
         species_id=species_id,
         move_ids=move_ids,
-        provenance=RecordProvenance(source="rom", archive="egg.narc", member=species_id),
+        provenance=RecordProvenance(
+            source="rom", archive="egg.narc", member=species_id
+        ),
     )
 
 
@@ -96,7 +98,9 @@ class ExtractEggMoveDatasetDispatchTests(unittest.TestCase):
 class ExtractFromOverlayTableTests(unittest.TestCase):
     def test_raises_profile_error_without_overlay_metadata(self) -> None:
         profile = _profile()
-        engine = _fake_engine(egg_moves_format="overlay-table", concern=SimpleNamespace())
+        engine = _fake_engine(
+            egg_moves_format="overlay-table", concern=SimpleNamespace()
+        )
 
         with (
             patch(
@@ -265,12 +269,12 @@ class ExtractFromSpeciesArchiveTests(unittest.TestCase):
         parse_egg_move_set.assert_any_call(
             b"member-1", species_id=1, archive_path="egg.narc"
         )
-        self.assertEqual(result["source"], {"rom_sha256": "romsha256", "archive": "egg.narc"})
+        self.assertEqual(
+            result["source"], {"rom_sha256": "romsha256", "archive": "egg.narc"}
+        )
         self.assertEqual(result["record_count"], 2)
         self.assertEqual(result["move_reference_count"], 2)
-        self.assertEqual(
-            [record["species_id"] for record in result["records"]], [0, 1]
-        )
+        self.assertEqual([record["species_id"] for record in result["records"]], [0, 1])
 
 
 if __name__ == "__main__":

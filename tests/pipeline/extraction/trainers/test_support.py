@@ -56,7 +56,8 @@ class ReadStarterBranchFamiliesTests(unittest.TestCase):
         )
         members = [SimpleNamespace(index=0), SimpleNamespace(index=1)]
         script_archive = SimpleNamespace(
-            members=members, read=Mock(side_effect=lambda index: f"script-{index}".encode())
+            members=members,
+            read=Mock(side_effect=lambda index: f"script-{index}".encode()),
         )
         archive_cls = Mock()
         archive_cls.from_bytes.return_value = script_archive
@@ -132,7 +133,8 @@ class ReadStarterSpeciesTests(unittest.TestCase):
         read_overlay_decompressed = Mock(return_value=(3, overlay_bytes))
         read_overlay = Mock(return_value=(3, overlay_bytes))
         platform = SimpleNamespace(
-            read_overlay_decompressed=read_overlay_decompressed, read_overlay=read_overlay
+            read_overlay_decompressed=read_overlay_decompressed,
+            read_overlay=read_overlay,
         )
         parse = Mock(return_value=(1, 4, 7))
         engine = SimpleNamespace(
@@ -161,7 +163,9 @@ class ReadStarterSpeciesTests(unittest.TestCase):
         )
         overlay_bytes = bytes(range(32))
         read_overlay = Mock(return_value=(3, overlay_bytes))
-        platform = SimpleNamespace(read_overlay_decompressed=None, read_overlay=read_overlay)
+        platform = SimpleNamespace(
+            read_overlay_decompressed=None, read_overlay=read_overlay
+        )
         parse = Mock(return_value=(1, 2))
         engine = SimpleNamespace(
             parse_starter_species=parse,

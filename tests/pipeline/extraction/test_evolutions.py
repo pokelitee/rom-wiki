@@ -36,7 +36,9 @@ class _FakeArchive:
         return bytes([index])
 
 
-def _register_fake_platform(evolutions_archive: _FakeArchive, messages_archive: Mock) -> Mock:
+def _register_fake_platform(
+    evolutions_archive: _FakeArchive, messages_archive: Mock
+) -> Mock:
     archive_cls = Mock()
     archive_cls.from_bytes.side_effect = [evolutions_archive, messages_archive]
     register_platform(
@@ -51,7 +53,9 @@ def _register_fake_platform(evolutions_archive: _FakeArchive, messages_archive: 
     return archive_cls
 
 
-def _register_fake_engine(evolutions: SimpleNamespace, personal_record_count: int) -> None:
+def _register_fake_engine(
+    evolutions: SimpleNamespace, personal_record_count: int
+) -> None:
     fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, SimpleNamespace())
     fields["evolutions"] = evolutions
     fields["personal"] = SimpleNamespace(PERSONAL_RECORD_COUNT=personal_record_count)
@@ -148,12 +152,12 @@ class ExtractEvolutionDatasetTests(unittest.TestCase):
 
         dataset = extract_evolution_dataset(_result(profile))
 
-        self.assertEqual(dataset["schema_version"], POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION)
+        self.assertEqual(
+            dataset["schema_version"], POKEMON_EVOLUTIONS_RAW_SCHEMA_VERSION
+        )
         self.assertEqual(dataset["dataset"], "evolutions")
         self.assertEqual(dataset["record_count"], 2)
-        self.assertEqual(
-            dataset["records"], [{"species_id": 0}, {"species_id": 1}]
-        )
+        self.assertEqual(dataset["records"], [{"species_id": 0}, {"species_id": 1}])
         self.assertEqual(dataset["item_names"], ["Fire Stone", "Water Stone"])
         self.assertEqual(
             dataset["source"],

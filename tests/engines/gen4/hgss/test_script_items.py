@@ -33,7 +33,9 @@ class Gen4HgssScriptItemTests(unittest.TestCase):
             + struct.pack("<H", 0x02)
         )
 
-        self.assertEqual(find_script_awarded_items(make_script(body), item_count=500), ())
+        self.assertEqual(
+            find_script_awarded_items(make_script(body), item_count=500), ()
+        )
 
     def test_ignores_variable_supplied_item_ids(self) -> None:
         body = (
@@ -43,7 +45,9 @@ class Gen4HgssScriptItemTests(unittest.TestCase):
             + struct.pack("<H", 0x02)
         )
 
-        self.assertEqual(find_script_awarded_items(make_script(body), item_count=500), ())
+        self.assertEqual(
+            find_script_awarded_items(make_script(body), item_count=500), ()
+        )
 
 
 if __name__ == "__main__":

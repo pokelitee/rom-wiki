@@ -107,10 +107,13 @@ class LocationDatasetDispatchTests(unittest.TestCase):
 
     def test_raises_for_an_unsupported_extraction_format(self) -> None:
         result = _result("gen4_dppt")
-        with patch(
-            "romwiki.pipeline.extraction.locations.dispatcher.get_engine",
-            return_value=SimpleFormatEngine("unsupported"),
-        ), self.assertRaisesRegex(DataSourceError, "unsupported"):
+        with (
+            patch(
+                "romwiki.pipeline.extraction.locations.dispatcher.get_engine",
+                return_value=SimpleFormatEngine("unsupported"),
+            ),
+            self.assertRaisesRegex(DataSourceError, "unsupported"),
+        ):
             extract_location_dataset(result)
 
 

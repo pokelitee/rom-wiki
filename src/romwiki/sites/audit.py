@@ -91,7 +91,10 @@ class _ParsedPage:
 
 def _parse_page(text: str, path: str) -> _ParsedPage:
     newlines = [match.start() for match in re.finditer("\n", text)]
-    line_at = lambda position: bisect_right(newlines, position) + 1
+
+    def line_at(position: int) -> int:
+        return bisect_right(newlines, position) + 1
+
     issues: list[SiteAuditIssue] = []
     ids: set[str] = set()
     for match in _ID.finditer(text):

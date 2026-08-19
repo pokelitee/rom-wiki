@@ -165,9 +165,7 @@ class LearnsetDatasetTests(unittest.TestCase):
 
         self.assertEqual(parse_learnset.call_count, 2)
         self.assertEqual(dataset["record_count"], 2)
-        self.assertEqual(
-            dataset["records"], [{"species_id": 0}, {"species_id": 1}]
-        )
+        self.assertEqual(dataset["records"], [{"species_id": 0}, {"species_id": 1}])
 
 
 def _profile() -> GameProfile:

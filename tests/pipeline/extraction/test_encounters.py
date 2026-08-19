@@ -69,7 +69,9 @@ def _archive(count: int, *, read=None) -> SimpleNamespace:
     )
 
 
-def _platform(archives: dict[bytes, SimpleNamespace], *, overlay=None) -> SimpleNamespace:
+def _platform(
+    archives: dict[bytes, SimpleNamespace], *, overlay=None
+) -> SimpleNamespace:
     archive_cls = Mock()
     archive_cls.from_bytes = Mock(side_effect=lambda data, **kwargs: archives[data])
     filesystem = SimpleNamespace(read=lambda path: path.encode())
@@ -97,7 +99,9 @@ def _location_header(
     )
 
 
-def _map_header(header_id: int, *, overworld_file_id: int | None = None) -> SimpleNamespace:
+def _map_header(
+    header_id: int, *, overworld_file_id: int | None = None
+) -> SimpleNamespace:
     return SimpleNamespace(
         header_id=header_id,
         internal_name=f"HEADER{header_id}",
@@ -140,7 +144,9 @@ def _seasonal_area(map_index: int, *, archive_path: str = "wild.narc", season=No
         surfing_spots=method,
         fishing=method,
         fishing_spots=method,
-        provenance=RecordProvenance(source="rom", archive=archive_path, member=map_index),
+        provenance=RecordProvenance(
+            source="rom", archive=archive_path, member=map_index
+        ),
     )
 
 
@@ -474,7 +480,8 @@ class ExtractSafariEncountersTests(unittest.TestCase):
         )
         self.assertEqual([record["area_id"] for record in records], [3, 4])
         self.assertEqual(
-            [record["source_type"] for record in records], ["safari-zone", "safari-zone"]
+            [record["source_type"] for record in records],
+            ["safari-zone", "safari-zone"],
         )
         self.assertEqual(
             [record["area_name"] for record in records], ["Plains", "Meadow"]
@@ -785,12 +792,14 @@ class ExtractHiddenGrottosTests(unittest.TestCase):
             hidden_grotto_id_for_dispatch=hidden_grotto_id_for_dispatch,
             parse_hidden_grotto_record=Mock(
                 side_effect=(
-                    lambda data, *, grotto_id, archive_path, version_group, species_count, item_count, valid_forms: HiddenGrotto(  # noqa: E501
-                        grotto_id=grotto_id,
-                        pokemon=(),
-                        visible_items=(),
-                        hidden_items=(),
-                        provenance=RecordProvenance("rom", archive_path, grotto_id),
+                    lambda data, *, grotto_id, archive_path, version_group, species_count, item_count, valid_forms: (
+                        HiddenGrotto(  # noqa: E501
+                            grotto_id=grotto_id,
+                            pokemon=(),
+                            visible_items=(),
+                            hidden_items=(),
+                            provenance=RecordProvenance("rom", archive_path, grotto_id),
+                        )
                     )
                 )
             ),
@@ -908,9 +917,7 @@ class ExtractSwarmsTests(unittest.TestCase):
             parse_swarm_table=Mock(return_value=(swarm,)),
         )
 
-        records = _extract_swarms(
-            result, engine, platform, filesystem, first_area_id=7
-        )
+        records = _extract_swarms(result, engine, platform, filesystem, first_area_id=7)
 
         self.assertEqual(len(records), 1)
         record = records[0]

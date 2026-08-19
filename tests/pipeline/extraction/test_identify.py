@@ -111,9 +111,7 @@ class InspectRomTests(unittest.TestCase):
         rom_path = self._write_rom("bad.rom", b"NOTFAKE")
         repository = ProfileRepository((_profile("0" * 64),))
 
-        with self.assertRaisesRegex(
-            InvalidRomError, "No registered platform accepts"
-        ):
+        with self.assertRaisesRegex(InvalidRomError, "No registered platform accepts"):
             inspect_rom(rom_path, Path("unused"), profiles=repository)
 
     def test_raises_for_a_missing_rom_file(self) -> None:

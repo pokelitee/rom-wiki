@@ -79,7 +79,14 @@ def _shop(shop_id: int, item_ids: tuple[int, ...], archive: str = "arm9") -> Sho
 class ShopRecordsTests(unittest.TestCase):
     def test_expands_item_ids_into_named_records_and_drops_the_raw_ids(self) -> None:
         shop = _shop(1, (2, 5))
-        item_names = ["Potion", "Antidote", "Burn Heal", "Ice Heal", "Awakening", "Full Heal"]
+        item_names = [
+            "Potion",
+            "Antidote",
+            "Burn Heal",
+            "Ice Heal",
+            "Awakening",
+            "Full Heal",
+        ]
 
         records = _shop_records([shop], item_names)
 

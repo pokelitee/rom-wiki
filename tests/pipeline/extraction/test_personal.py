@@ -117,7 +117,9 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         profile = _profile(layout={})
         _register_fake_platform(_FakeArchive(1))
         _register_fake_engine(
-            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1)
+            SimpleNamespace(
+                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1
+            )
         )
 
         with self.assertRaisesRegex(ProfileError, "does not define a personal archive"):
@@ -127,7 +129,9 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         profile = _profile()
         _register_fake_platform(_FakeArchive(5))
         _register_fake_engine(
-            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=3)
+            SimpleNamespace(
+                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=3
+            )
         )
 
         with (
@@ -165,7 +169,9 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         )
         _register_fake_platform(_FakeArchive(1))
         _register_fake_engine(
-            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1)
+            SimpleNamespace(
+                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1
+            )
         )
 
         with (
@@ -189,7 +195,9 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         profile = _profile()
         _register_fake_platform(_FakeArchive(1))
         _register_fake_engine(
-            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1)
+            SimpleNamespace(
+                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1
+            )
         )
 
         with (

@@ -36,7 +36,9 @@ class _FakeArchive:
         return bytes([index])
 
 
-def _register_fake_platform(trades_archive: _FakeArchive, messages_archive: Mock) -> None:
+def _register_fake_platform(
+    trades_archive: _FakeArchive, messages_archive: Mock
+) -> None:
     archive_cls = Mock()
     archive_cls.from_bytes.side_effect = [trades_archive, messages_archive]
     register_platform(
@@ -212,7 +214,9 @@ class ExtractNpcTradeDatasetTests(unittest.TestCase):
         _register_fake_platform(_FakeArchive(2), messages_archive)
         _register_fake_engine(
             SimpleNamespace(
-                parse_english_message_archive=Mock(return_value=("Nick1", "OT1", "Nick2")),
+                parse_english_message_archive=Mock(
+                    return_value=("Nick1", "OT1", "Nick2")
+                ),
                 parse_npc_trade_record=_parse_npc_trade_record,
             )
         )

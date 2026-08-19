@@ -34,8 +34,9 @@ class ExtractBattleModeTrainerDatasetTests(unittest.TestCase):
         fixture.trainers.members = [SimpleNamespace(index=0), SimpleNamespace(index=1)]
         fixture.parties.members = [SimpleNamespace(index=0)]
 
-        with fixture.patches(), self.assertRaisesRegex(
-            InvalidRomError, "different counts"
+        with (
+            fixture.patches(),
+            self.assertRaisesRegex(InvalidRomError, "different counts"),
         ):
             extract_battle_mode_trainer_dataset(fixture.result)
 

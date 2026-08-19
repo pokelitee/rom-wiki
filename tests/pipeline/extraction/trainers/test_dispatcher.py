@@ -20,7 +20,9 @@ class ExtractTrainerDatasetTests(unittest.TestCase):
     def test_dispatches_battle_mode_profiles_to_their_extractor(self) -> None:
         profile = _profile(engine="gen5_bw")
         result = InspectionResult(image=Mock(), match=SimpleNamespace(profile=profile))
-        engine_adapter = SimpleNamespace(formats=SimpleNamespace(trainers="battle-mode"))
+        engine_adapter = SimpleNamespace(
+            formats=SimpleNamespace(trainers="battle-mode")
+        )
 
         with (
             patch(
@@ -41,7 +43,9 @@ class ExtractTrainerDatasetTests(unittest.TestCase):
     def test_dispatches_class_gender_profiles_to_their_extractor(self) -> None:
         profile = _profile(engine="gen4_dppt")
         result = InspectionResult(image=Mock(), match=SimpleNamespace(profile=profile))
-        engine_adapter = SimpleNamespace(formats=SimpleNamespace(trainers="class-gender"))
+        engine_adapter = SimpleNamespace(
+            formats=SimpleNamespace(trainers="class-gender")
+        )
 
         with (
             patch(
@@ -62,7 +66,9 @@ class ExtractTrainerDatasetTests(unittest.TestCase):
     def test_rejects_an_unsupported_trainer_format(self) -> None:
         profile = _profile(engine="unknown")
         result = InspectionResult(image=Mock(), match=SimpleNamespace(profile=profile))
-        engine_adapter = SimpleNamespace(formats=SimpleNamespace(trainers="unsupported"))
+        engine_adapter = SimpleNamespace(
+            formats=SimpleNamespace(trainers="unsupported")
+        )
 
         with (
             patch(

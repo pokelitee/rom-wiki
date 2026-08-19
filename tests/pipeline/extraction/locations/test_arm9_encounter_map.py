@@ -61,9 +61,7 @@ class _Engine:
         }
         self._static_encounters_by_script = static_encounters_by_script
         if static_encounters_by_script is not None:
-            self.parse_static_encounter_commands = (
-                self._parse_static_encounter_commands
-            )
+            self.parse_static_encounter_commands = self._parse_static_encounter_commands
         self._mart_references_by_script = mart_references_by_script
         if mart_references_by_script is not None:
             self.parse_mart_dispatch_commands = self._parse_mart_dispatch_commands
@@ -75,9 +73,7 @@ class _Engine:
             self.parse_egg_gift_commands = self._parse_egg_gift_commands
         self._togepi_egg_gifts_by_script = togepi_egg_gifts_by_script
         if togepi_egg_gifts_by_script is not None:
-            self.parse_togepi_egg_gift_commands = (
-                self._parse_togepi_egg_gift_commands
-            )
+            self.parse_togepi_egg_gift_commands = self._parse_togepi_egg_gift_commands
 
     def _parse_static_encounter_commands(self, data, *, species_count):
         return self._static_encounters_by_script.get(data, ())

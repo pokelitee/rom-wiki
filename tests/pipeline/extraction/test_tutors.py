@@ -146,12 +146,8 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(dataset["compatibility_record_count"], 1)
         self.assertEqual(dataset["special_record_count"], 0)
         self.assertEqual(dataset["special_compatibility_record_count"], 0)
-        self.assertEqual(
-            dataset["location_names"], ["Route 212", "Survival Area"]
-        )
-        self.assertEqual(
-            dataset["compatibility"], [{"personal_member": 1}]
-        )
+        self.assertEqual(dataset["location_names"], ["Route 212", "Survival Area"])
+        self.assertEqual(dataset["compatibility"], [{"personal_member": 1}])
         self.assertEqual(
             dataset["source"],
             {
@@ -263,9 +259,7 @@ class OverlayArchiveTutorTests(unittest.TestCase):
             form_member_start=10,
             form_count=1,
         )
-        self.assertEqual(
-            dataset["records"], [{"tutor_id": 1, "kind": "battle-points"}]
-        )
+        self.assertEqual(dataset["records"], [{"tutor_id": 1, "kind": "battle-points"}])
         self.assertEqual(dataset["compatibility_record_count"], 1)
         self.assertEqual(dataset["special_record_count"], 0)
         self.assertEqual(dataset["compatibility"], [{"personal_member": 1}])
@@ -337,9 +331,7 @@ class PersonalArchiveTutorTests(unittest.TestCase):
         ):
             dataset = _extract_personal_archive_tutors(result)
 
-        self.assertEqual(
-            dataset["records"], [{"tutor_id": 1, "kind": "shard"}]
-        )
+        self.assertEqual(dataset["records"], [{"tutor_id": 1, "kind": "shard"}])
         self.assertEqual(dataset["compatibility_record_count"], 3)
         self.assertEqual(
             dataset["compatibility"],
@@ -389,15 +381,11 @@ class SpecialTutorTests(unittest.TestCase):
         )
         result = _result(profile)
 
-        with self.assertRaisesRegex(
-            ProfileError, "missing special tutor metadata"
-        ):
+        with self.assertRaisesRegex(ProfileError, "missing special tutor metadata"):
             _extract_special_tutors(Mock(), Mock(), result, start_tutor_id=1)
 
     def test_rejects_an_incomplete_definition(self) -> None:
-        profile, platform, engine = _special_tutor_fixture(
-            [{"script_member": 0}]
-        )
+        profile, platform, engine = _special_tutor_fixture([{"script_member": 0}])
         result = _result(profile)
 
         with (
@@ -443,9 +431,7 @@ class SpecialTutorTests(unittest.TestCase):
                 f"{MODULE}.parse_map_header_table",
                 return_value=(mismatched_header,),
             ),
-            self.assertRaisesRegex(
-                InvalidRomError, "does not reference script member"
-            ),
+            self.assertRaisesRegex(InvalidRomError, "does not reference script member"),
         ):
             _extract_special_tutors(engine, platform, result, start_tutor_id=1)
 
@@ -498,9 +484,7 @@ class SpecialTutorTests(unittest.TestCase):
         with (
             patch(f"{MODULE}.read_code_binary", return_value=b"arm9"),
             patch(f"{MODULE}.parse_map_header_table", return_value=(_header(),)),
-            self.assertRaisesRegex(
-                ProfileError, "Type-based special tutor definition"
-            ),
+            self.assertRaisesRegex(ProfileError, "Type-based special tutor definition"),
         ):
             _extract_special_tutors(engine, platform, result, start_tutor_id=1)
 
@@ -553,8 +537,10 @@ class SpecialTutorTests(unittest.TestCase):
         def type_ids(member: int) -> tuple[int, ...]:
             return {1: (9,), 2: (3,), 10: (9, 4)}[member]
 
-        engine.parse_personal_record.side_effect = lambda data, species_id, archive_path: (
-            SimpleNamespace(type_ids=type_ids(species_id))
+        engine.parse_personal_record.side_effect = (
+            lambda data, species_id, archive_path: SimpleNamespace(
+                type_ids=type_ids(species_id)
+            )
         )
 
         with (
@@ -611,9 +597,7 @@ def _type_definition(**overrides: object) -> dict[str, object]:
     return definition
 
 
-def _header(
-    *, script_file_id: int = 0, location_name_id: int = 0
-) -> SimpleNamespace:
+def _header(*, script_file_id: int = 0, location_name_id: int = 0) -> SimpleNamespace:
     return SimpleNamespace(
         script_file_id=script_file_id, location_name_id=location_name_id
     )

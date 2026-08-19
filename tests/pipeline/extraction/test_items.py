@@ -439,9 +439,7 @@ class ItemExtractionTests(unittest.TestCase):
                     (SimpleNamespace(item_id=1, species_id=138),),
                 ),
             ),
-            patch(
-                "romwiki.engines.gen5.bw.parse_item_record", side_effect=gen5_items
-            ),
+            patch("romwiki.engines.gen5.bw.parse_item_record", side_effect=gen5_items),
         ):
             dataset = extract_item_dataset(result)
 
@@ -460,7 +458,9 @@ class ItemExtractionTests(unittest.TestCase):
         )
         self.assertNotIn("type_names", dataset["source"])
         self.assertEqual(dataset["records"][1]["revives_into_species_id"], 138)
-        self.assertEqual(dataset["records"][1]["pocket"], {"id": 4, "name": "key-items"})
+        self.assertEqual(
+            dataset["records"][1]["pocket"], {"id": 4, "name": "key-items"}
+        )
         self.assertEqual(
             dataset["records"][1]["field_use"], {"id": 25, "name": "dowsing-machine"}
         )
