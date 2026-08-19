@@ -584,6 +584,41 @@ def markdown_table_from_cells(
     )
 
 
+def aggregate_slots(
+    slots: list[dict[str, Any]],
+    minimum_level_key: str,
+    maximum_level_key: str | None = None,
+) -> list[dict[str, Any]]:
+    """Aggregate rendered slots by exact species and form in one pass.
+
+    Fixed-size ROM slot arrays (walking/water encounter tables, Headbutt
+    pools) commonly repeat the same species across multiple slots at
+    different levels/chances; this merges those into one row with a summed
+    chance and widened level range.
+    """
+    merged: dict[tuple[Any, ...], dict[str, Any]] = {}
+    order: list[tuple[Any, ...]] = []
+    maximum_level_key = maximum_level_key or minimum_level_key
+    for slot in slots:
+        pokemon = slot.get("pokemon") or {}
+        key = (
+            slot.get("species_id", pokemon.get("id", pokemon.get("slug"))),
+            slot.get("form_id", pokemon.get("form_id", 0)),
+        )
+        minimum = slot[minimum_level_key]
+        maximum = slot[maximum_level_key]
+        if key not in merged:
+            merged[key] = dict(slot)
+            merged[key]["minimum_level"] = minimum
+            merged[key]["maximum_level"] = maximum
+            order.append(key)
+        else:
+            merged[key]["chance"] += slot["chance"]
+            merged[key]["minimum_level"] = min(merged[key]["minimum_level"], minimum)
+            merged[key]["maximum_level"] = max(merged[key]["maximum_level"], maximum)
+    return [merged[key] for key in order]
+
+
 def machine_markdown_link(
     machine: dict[str, Any],
     source_file: str,

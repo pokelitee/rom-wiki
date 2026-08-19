@@ -26,10 +26,10 @@ class PublicDataExportTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            write_public_dataset(root, "pokemon", dataset, None)
+            write_public_dataset(root, "pokemon", dataset)
             archive = root / "data/pokemon.json.gz"
             first = archive.read_bytes()
-            write_public_dataset(root, "pokemon", dataset, None)
+            write_public_dataset(root, "pokemon", dataset)
 
             self.assertEqual(archive.read_bytes(), first)
             with gzip.open(archive, "rt", encoding="utf-8") as stream:
@@ -46,7 +46,7 @@ class PublicDataExportTests(unittest.TestCase):
             hashlib.sha256(first).hexdigest(),
         )
 
-    def test_removes_stale_comparison_export(self) -> None:
+    def test_does_not_publish_comparison_exports(self) -> None:
         dataset = {
             "schema_version": 1,
             "game": "test-game",
@@ -54,23 +54,38 @@ class PublicDataExportTests(unittest.TestCase):
             "record_count": 0,
             "records": [],
         }
-        comparison = {
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_public_dataset(root, "moves", dataset)
+
+            self.assertFalse((root / "data/comparisons").exists())
+            manifest = json.loads(
+                (root / "data/manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(
+                all(
+                    not entry["path"].startswith("comparisons/")
+                    for entry in manifest["files"]
+                )
+            )
+
+    def test_removes_stale_comparison_export_directory(self) -> None:
+        dataset = {
             "schema_version": 1,
             "game": "test-game",
-            "dataset": "moves_comparison",
-            "kind": "moves",
+            "dataset": "moves",
             "record_count": 0,
             "records": [],
         }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            write_public_dataset(root, "moves", dataset, comparison)
-            comparison_path = root / "data/comparisons/moves.json.gz"
-            self.assertTrue(comparison_path.is_file())
+            stale_dir = root / "data/comparisons"
+            stale_dir.mkdir(parents=True)
+            (stale_dir / "moves.json.gz").write_bytes(b"stale")
 
-            write_public_dataset(root, "moves", dataset, None)
+            write_public_dataset(root, "moves", dataset)
 
-            self.assertFalse(comparison_path.exists())
+            self.assertFalse(stale_dir.exists())
 
     def test_complete_build_prunes_disabled_dataset_exports(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -86,7 +101,6 @@ class PublicDataExportTests(unittest.TestCase):
                         "record_count": 0,
                         "records": [],
                     },
-                    None,
                 )
 
             prune_public_datasets(
@@ -113,7 +127,7 @@ class PublicDataExportTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            write_public_dataset(root, "moves", dataset, None)
+            write_public_dataset(root, "moves", dataset)
             manifest_path = root / "data/manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["files"][0]["sha256"] = "0" * 64

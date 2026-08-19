@@ -8,6 +8,8 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
 from romwiki.pipeline.semantics.encounter_identity import (
+    CONDITIONAL_ENCOUNTER_SOURCES,
+    MAP_OWNED_CONDITIONAL_SOURCES,
     SAFARI_ZONE_ROUTE,
     EncounterSourceType,
     conditional_encounter_key,
@@ -31,6 +33,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
+    aggregate_slots,
     display_name,
     heading_anchor,
     level_range,
@@ -49,7 +52,12 @@ from romwiki.renderers.mkdocs.components import (
     version_variant_records,
 )
 from romwiki.renderers.mkdocs.conditional_encounters import (
+    append_daily_swarm,
+    append_headbutt_encounters,
+    append_hidden_grotto,
     append_safari_area,
+    conditional_encounter_label,
+    conditional_encounter_provenance,
     safari_provenance,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -111,11 +119,18 @@ def render_encounter_pages(
         for record in records
         if record.get("source_type") == EncounterSourceType.SAFARI_ZONE
     ]
+    conditional_records = sorted(
+        (
+            record
+            for record in records
+            if record.get("source_type") in MAP_OWNED_CONDITIONAL_SOURCES
+        ),
+        key=lambda item: (item.get("source_type"), item["area_id"]),
+    )
     records = [
         record
         for record in records
-        if record.get("source_type")
-        not in {EncounterSourceType.HEADBUTT, EncounterSourceType.SAFARI_ZONE}
+        if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES
     ]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -134,6 +149,11 @@ def render_encounter_pages(
                 )
                 if safari_records and _safari_page_selected(safari_records, only_pages)
                 else ()
+            ),
+            *(
+                f"{encounter_route_key(record)}.md"
+                for record in conditional_records
+                if _conditional_page_selected(record, only_pages)
             ),
         },
     )
@@ -260,6 +280,15 @@ def render_encounter_pages(
                 route_id=route_id,
             )
         )
+    page_count += _render_conditional_encounter_records(
+        conditional_records,
+        comparison,
+        references,
+        only_pages,
+        output_root,
+        fallback_links,
+        catalog_records,
+    )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
         output_root / "index.md",
@@ -377,6 +406,240 @@ def _safari_page_selected(
             for record in records
         )
     )
+
+
+def _conditional_page_selected(
+    record: dict[str, Any], only_pages: frozenset[str] | None
+) -> bool:
+    # area_id is assigned once across every encounter record in the dataset
+    # (ordinary and conditional alike -- see extraction/encounters.py's
+    # first_area_id accumulation), so this `area-NNN` form can't collide with
+    # an unrelated record; it just lets a dev-pages.toml entry select a
+    # conditional page by numeric ID instead of its route slug, the same
+    # convenience `_safari_page_selected` already offered.
+    return (
+        only_pages is None
+        or str(encounter_route_key(record)) in only_pages
+        or f"area-{record['area_id']:03}" in only_pages
+    )
+
+
+def _conditional_sibling(
+    records: list[dict[str, Any]], index: int, offset: int
+) -> dict[str, Any] | None:
+    """The adjacent same-source-type record for prev/next navigation.
+
+    `records` is sorted by `(source_type, area_id)`, so a same-source-type
+    neighbor is always adjacent when one exists.
+    """
+    neighbor_index = index + offset
+    if not 0 <= neighbor_index < len(records):
+        return None
+    neighbor = records[neighbor_index]
+    if neighbor.get("source_type") != records[index].get("source_type"):
+        return None
+    return neighbor
+
+
+def _render_conditional_encounter_records(
+    conditional_records: list[dict[str, Any]],
+    comparison: dict[str, Any] | None,
+    references: ReferenceIndex | None,
+    only_pages: frozenset[str] | None,
+    output_root: Path,
+    fallback_links: list[str],
+    catalog_records: list[dict[str, Any]],
+) -> int:
+    """Write each conditional encounter record's own page plus its catalog
+    entry and index fallback link. Shared by the ordinary and seasonal
+    render paths, which both attach the same map-owned conditional sources
+    (Headbutt/Hidden Grotto/Daily Swarm) the same way.
+    """
+    baseline_name = comparison.get("baseline") if comparison else None
+    page_count = 0
+    for index, record in enumerate(conditional_records):
+        change = encounter_record_comparison(comparison, record)
+        route_key = encounter_route_key(record)
+        filename = f"{route_key}.md"
+        previous = _conditional_sibling(conditional_records, index, -1)
+        following = _conditional_sibling(conditional_records, index, 1)
+        if _conditional_page_selected(record, only_pages):
+            write_text(
+                output_root / filename,
+                _render_conditional_encounter_page(
+                    record, comparison, baseline_name, references, previous, following
+                ),
+            )
+            page_count += 1
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    encounter_route_kind(route_key),
+                    record["area_id"],
+                    conditional_encounter_label(record),
+                    route_key,
+                ),
+                "encounters/index.md",
+            )
+        )
+        catalog_records.append(
+            _conditional_catalog_record(record, f"{route_key}/", change)
+        )
+    return page_count
+
+
+def _conditional_slots(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten a conditional encounter record's Pokémon slots across every
+    version variant, for building its catalog entry."""
+    source_type = record.get("source_type")
+    slots: list[dict[str, Any]] = []
+    for _, value in version_variant_records(record):
+        if source_type == EncounterSourceType.HEADBUTT:
+            for pool in value["pools"].values():
+                slots.extend(pool)
+        elif source_type == EncounterSourceType.HIDDEN_GROTTO:
+            slots.extend(value["pokemon"])
+        elif source_type == EncounterSourceType.DAILY_SWARM:
+            slots.append(value)
+    return slots
+
+
+def _conditional_slot_levels(slot: dict[str, Any]) -> tuple[int, int]:
+    if "level" in slot:
+        return slot["level"], slot["level"]
+    return slot["minimum_level"], slot["maximum_level"]
+
+
+def _conditional_catalog_record(
+    record: dict[str, Any],
+    filename: str,
+    change: dict[str, Any] | None,
+) -> dict[str, Any]:
+    slots = _conditional_slots(record)
+    names = list(dict.fromkeys(slot["pokemon"]["name"] for slot in slots))
+    location = record.get("location") or {}
+    location_name = location.get("name")
+    label = conditional_encounter_label(record)
+    route_id = filename.removesuffix("/")
+    levels = [_conditional_slot_levels(slot) for slot in slots]
+    return add_change_status(
+        {
+            "id": record["area_id"],
+            "route_id": route_id,
+            "label": label,
+            "url": filename,
+            "locations": [location_name] if location_name else [],
+            "methods": [],
+            "method_anchors": {},
+            "pokemon": names,
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "encounters/")
+                for reference in unique_references(
+                    _pokemon_reference(slot["pokemon"]) for slot in slots
+                )
+            ],
+            "method_pokemon": {},
+            "min_level": min((minimum for minimum, _ in levels), default=None),
+            "max_level": max((maximum for _, maximum in levels), default=None),
+            "referenced": True,
+            "search_text": " ".join(
+                (
+                    label,
+                    route_id,
+                    *((location_name,) if location_name else ()),
+                    *names,
+                )
+            ).lower(),
+        },
+        change,
+    )
+
+
+def _append_conditional_location(
+    lines: list[str], record: dict[str, Any], source_file: str
+) -> None:
+    location = record.get("location")
+    if not isinstance(location, dict):
+        return
+    reference = entity_reference(
+        "location", location["header_id"], location["name"], location["header_id"]
+    )
+    lines.extend(
+        [
+            "## Map headers",
+            "",
+            "| Location | Map ID | Internal ID |",
+            "| -------- | ------ | ----------- |",
+            f"| {ROUTES.markdown_link(reference, source_file)} "
+            f"| `header-{location['header_id']:03}` | `{location['internal_name']}` |",
+            "",
+        ]
+    )
+
+
+def _append_conditional_record_navigation(
+    lines: list[str],
+    record: dict[str, Any],
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> None:
+    route_key = encounter_route_key(record)
+    lines.extend(
+        record_navigation_for(
+            encounter_route_kind(route_key),
+            f"encounters/{route_key}/",
+            previous,
+            following,
+            aria_label="Wild encounter navigation",
+            identity=lambda value: value["area_id"],
+            route_key=encounter_route_key,
+            label=conditional_encounter_label,
+        )
+    )
+
+
+def _render_conditional_encounter_page(
+    record: dict[str, Any],
+    comparison: dict[str, Any] | None,
+    baseline_name: str | None,
+    references: ReferenceIndex | None,
+    previous: dict[str, Any] | None,
+    following: dict[str, Any] | None,
+) -> str:
+    route_key = encounter_route_key(record)
+    source_file = f"encounters/{route_key}.md"
+    lines: list[str] = []
+    source_type = record.get("source_type")
+    if source_type == EncounterSourceType.HEADBUTT:
+        append_headbutt_encounters(
+            lines, record, source_file, references, heading_level=1
+        )
+    elif source_type == EncounterSourceType.HIDDEN_GROTTO:
+        append_hidden_grotto(
+            lines,
+            record,
+            source_file,
+            references,
+            heading_level=1,
+            heading=conditional_encounter_label(record),
+        )
+    elif source_type == EncounterSourceType.DAILY_SWARM:
+        append_daily_swarm(lines, record, source_file, references, heading_level=1)
+    else:
+        raise SiteError(f"Unsupported conditional encounter source: {source_type!r}")
+    _append_conditional_location(lines, record, source_file)
+    lines.extend(
+        comparison_section(
+            encounter_record_comparison(comparison, record),
+            baseline_name,
+            source_file,
+            references,
+        )
+    )
+    lines.extend(provenance_section(conditional_encounter_provenance(record)))
+    _append_conditional_record_navigation(lines, record, previous, following)
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _render_safari_zone_index(
@@ -793,35 +1056,6 @@ def _append_locations(
     lines.append("")
 
 
-def _aggregate_slots(
-    slots: list[dict[str, Any]],
-    minimum_level_key: str,
-    maximum_level_key: str | None = None,
-) -> list[dict[str, Any]]:
-    """Aggregate rendered slots by exact species and form in one pass."""
-    merged: dict[tuple[Any, ...], dict[str, Any]] = {}
-    order: list[tuple[Any, ...]] = []
-    maximum_level_key = maximum_level_key or minimum_level_key
-    for slot in slots:
-        pokemon = slot.get("pokemon") or {}
-        key = (
-            slot.get("species_id", pokemon.get("id", pokemon.get("slug"))),
-            slot.get("form_id", pokemon.get("form_id", 0)),
-        )
-        minimum = slot[minimum_level_key]
-        maximum = slot[maximum_level_key]
-        if key not in merged:
-            merged[key] = dict(slot)
-            merged[key]["minimum_level"] = minimum
-            merged[key]["maximum_level"] = maximum
-            order.append(key)
-        else:
-            merged[key]["chance"] += slot["chance"]
-            merged[key]["minimum_level"] = min(merged[key]["minimum_level"], minimum)
-            merged[key]["maximum_level"] = max(merged[key]["maximum_level"], maximum)
-    return [merged[key] for key in order]
-
-
 def _append_walking(
     lines: list[str],
     method: dict[str, Any],
@@ -831,7 +1065,7 @@ def _append_walking(
 ) -> None:
     if not method["rate"]:
         return
-    slots = _aggregate_slots(method["slots"], "level")
+    slots = aggregate_slots(method["slots"], "level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         markdown_table_from_cells(
@@ -861,7 +1095,7 @@ def _append_water(
 ) -> None:
     if not method["rate"]:
         return
-    slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
+    slots = aggregate_slots(method["slots"], "minimum_level", "maximum_level")
     lines.extend([f"## {heading}", "", f"Encounter rate: {method['rate']}", ""])
     lines.extend(
         markdown_table_from_cells(
@@ -906,7 +1140,7 @@ def _append_special(
                 ]
             )
         if group.slotted:
-            entries = _aggregate_slots(list(group.slots), "level")
+            entries = aggregate_slots(list(group.slots), "level")
             lines.extend(
                 markdown_table_from_cells(
                     _ENCOUNTER_SLOT_COLUMNS,
@@ -980,14 +1214,18 @@ def _render_seasonal_encounter_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     active_records = [record for record in dataset["records"] if record["active"]]
+    conditional_records = sorted(
+        (
+            record
+            for record in active_records
+            if record.get("source_type") in MAP_OWNED_CONDITIONAL_SOURCES
+        ),
+        key=lambda item: (item.get("source_type"), item["area_id"]),
+    )
     active_records = [
         record
         for record in active_records
-        if record.get("source_type")
-        not in {
-            EncounterSourceType.HIDDEN_GROTTO,
-            EncounterSourceType.DAILY_SWARM,
-        }
+        if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES
     ]
     grouped: dict[int, list[dict[str, Any]]] = {}
     for record in active_records:
@@ -1005,6 +1243,11 @@ def _render_seasonal_encounter_pages(
                 f"{encounter_route_key(records[0])}.md"
                 for records in groups
                 if _seasonal_page_selected(records, only_pages)
+            ),
+            *(
+                f"{encounter_route_key(record)}.md"
+                for record in conditional_records
+                if _conditional_page_selected(record, only_pages)
             ),
         },
     )
@@ -1068,6 +1311,15 @@ def _render_seasonal_encounter_pages(
                 locations,
             )
         )
+    page_count += _render_conditional_encounter_records(
+        conditional_records,
+        comparison,
+        references,
+        only_pages,
+        output_root,
+        fallback_links,
+        catalog_records,
+    )
     write_catalog(output_root, "encounters", catalog_records)
     write_text(
         output_root / "index.md",
@@ -1393,7 +1645,7 @@ def _append_seasonal_method(
 ) -> None:
     if not method["rate"]:
         return
-    slots = _aggregate_slots(method["slots"], "minimum_level", "maximum_level")
+    slots = aggregate_slots(method["slots"], "minimum_level", "maximum_level")
     if heading_level is not None:
         lines.extend([f"{'#' * heading_level} {heading}", ""])
     lines.extend([f"Encounter rate: {method['rate']}", ""])

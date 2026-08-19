@@ -277,7 +277,7 @@ class DatasetComparisonTests(unittest.TestCase):
         self.assertEqual(change["field"], "grass_cave")
         self.assertEqual(change["label"], "Grass/Cave")
 
-    def test_conditional_wild_encounters_get_a_location_anchored_slug(self) -> None:
+    def test_conditional_wild_encounters_get_their_own_catalog_slug(self) -> None:
         baseline = {
             "area_id": 174,
             "source_type": "hidden-grotto",
@@ -295,8 +295,8 @@ class DatasetComparisonTests(unittest.TestCase):
         )
 
         record = comparison["records"][0]
-        self.assertEqual(record["key"], "header-445#hidden-grotto-00")
-        self.assertEqual(record["slug"], "header-445#hidden-grotto-00")
+        self.assertEqual(record["key"], "hidden-grotto-00")
+        self.assertEqual(record["slug"], "hidden-grotto-00")
 
     def test_sorts_mixed_ordinary_and_conditional_encounter_identities(self) -> None:
         ordinary = {"area_id": 1, "name": "Route 1", "active": True}
@@ -316,7 +316,7 @@ class DatasetComparisonTests(unittest.TestCase):
 
         self.assertEqual(
             [record["key"] for record in comparison["records"]],
-            [1, "header-445#hidden-grotto-00"],
+            [1, "hidden-grotto-00"],
         )
 
 

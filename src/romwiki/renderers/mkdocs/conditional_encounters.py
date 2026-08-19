@@ -10,6 +10,7 @@ from romwiki.pipeline.semantics.encounter_identity import (
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
+    aggregate_slots,
     display_name,
     level_range,
     markdown_table_from_cells,
@@ -69,7 +70,11 @@ def append_headbutt_encounters(
                                     ),
                                     f"{slot['chance']}%",
                                 )
-                                for slot in value["pools"][kind]
+                                for slot in aggregate_slots(
+                                    value["pools"][kind],
+                                    "minimum_level",
+                                    "maximum_level",
+                                )
                             ),
                         )
                         if value["pools"][kind]

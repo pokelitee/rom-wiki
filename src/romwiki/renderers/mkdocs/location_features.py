@@ -2,24 +2,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from romwiki.pipeline.semantics.encounter_identity import (
-    DAILY_SWARM_ANCHOR,
-    HEADBUTT_ANCHOR,
-    EncounterSourceType,
-    hidden_grotto_anchor,
-)
+from romwiki.pipeline.semantics.encounter_identity import EncounterSourceType
 
 FeatureRow = tuple[str, str, str, bool, int | str]
 """(catalog_key, summary_label, anchor, present, summary_value)."""
+
+_WILD_ENCOUNTERS_ANCHOR = "wild-encounters"
 
 
 def _conditional_encounter_rows(
     conditional_encounters: tuple[dict[str, Any], ...],
 ) -> list[FeatureRow]:
-    """Rows for the conditional wild-encounter kinds nested under a page's
-    "Wild encounters" section, so a reader can filter/link straight to a
-    Headbutt tree, Hidden Grotto, or Daily Swarm instead of only the general
-    "encounters" feature.
+    """Rows for the conditional wild-encounter kinds linked from a page's
+    "Wild encounters" section, so a reader can tell at a glance that a
+    Headbutt tree, Hidden Grotto, or Daily Swarm exists here instead of only
+    the general "encounters" feature. Each kind now has its own page under
+    the encounters section (like ordinary methods and Safari Zone already
+    do), so these rows link to the page's own "Wild encounters" section
+    rather than to a same-page anchor.
     """
     grottoes = [
         encounter
@@ -38,15 +38,21 @@ def _conditional_encounter_rows(
         (
             "hidden grotto",
             "Hidden Grotto",
-            hidden_grotto_anchor(grottoes[0]["grotto_id"]) if grottoes else "",
+            _WILD_ENCOUNTERS_ANCHOR,
             bool(grottoes),
             len(grottoes),
         ),
-        ("daily swarm", "Daily Swarm", DAILY_SWARM_ANCHOR, has_swarm, "Yes"),
+        (
+            "daily swarm",
+            "Daily Swarm",
+            _WILD_ENCOUNTERS_ANCHOR,
+            has_swarm,
+            "Yes",
+        ),
         (
             "headbutt encounters",
             "Headbutt encounters",
-            HEADBUTT_ANCHOR,
+            _WILD_ENCOUNTERS_ANCHOR,
             has_headbutt,
             "Yes",
         ),

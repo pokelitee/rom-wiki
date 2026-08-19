@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.semantics.encounter_identity import EncounterSourceType
+from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -32,8 +32,6 @@ from romwiki.renderers.mkdocs.components import (
     summary_section_link,
 )
 from romwiki.renderers.mkdocs.conditional_encounters import (
-    append_daily_swarm,
-    append_hidden_grotto,
     conditional_encounter_label,
     conditional_encounter_provenance,
 )
@@ -58,6 +56,7 @@ from romwiki.renderers.mkdocs.location_features import event_map_feature_rows
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
+    encounter_route_kind,
     entity_reference,
     escape_markdown,
 )
@@ -226,28 +225,21 @@ def _render_location(
                     "",
                 ]
             )
-        grotto_count = sum(
-            encounter.get("source_type") == EncounterSourceType.HIDDEN_GROTTO
-            for encounter in conditional_encounters
-        )
-        for encounter in conditional_encounters:
-            if encounter.get("source_type") == EncounterSourceType.HIDDEN_GROTTO:
-                append_hidden_grotto(
-                    lines,
-                    encounter,
-                    source_file,
-                    references,
-                    heading_level=3,
-                    heading=(
-                        f"Hidden Grotto {encounter['grotto_id']:02}"
-                        if grotto_count > 1
-                        else "Hidden Grotto"
+        if conditional_encounters:
+            lines.extend(["| Encounter area | ID |", "| -------------- | -- |"])
+            for encounter in conditional_encounters:
+                route_key = encounter_route_key(encounter)
+                link = ROUTES.markdown_link(
+                    entity_reference(
+                        encounter_route_kind(route_key),
+                        encounter["area_id"],
+                        conditional_encounter_label(encounter),
+                        route_key,
                     ),
+                    source_file,
                 )
-            elif encounter.get("source_type") == EncounterSourceType.DAILY_SWARM:
-                append_daily_swarm(
-                    lines, encounter, source_file, references, heading_level=3
-                )
+                lines.append(f"| {link} | `{route_key}` |")
+            lines.append("")
     append_items(lines, record.get("items", []), source_file, references)
     append_shops(lines, record.get("shops", []), source_file, references)
     append_pokemon_gifts(

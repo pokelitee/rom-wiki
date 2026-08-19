@@ -89,7 +89,7 @@ class LocationRenderingTests(unittest.TestCase):
             page,
         )
 
-    def test_embeds_headbutt_encounters_and_combines_comparisons(self) -> None:
+    def test_links_headbutt_encounters_and_combines_comparisons(self) -> None:
         location = {
             "header_id": 9,
             "name": "Route 1",
@@ -146,7 +146,7 @@ class LocationRenderingTests(unittest.TestCase):
             "baseline": "heartgold-us",
             "records": [
                 {
-                    "key": "header-009#headbutt-encounters",
+                    "key": "headbutt-009",
                     "status": "unchanged",
                     "changes": [],
                 }
@@ -165,22 +165,23 @@ class LocationRenderingTests(unittest.TestCase):
             page = (output / "header-009.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
-        self.assertIn("### Headbutt encounters { #headbutt-encounters }", page)
-        self.assertIn("### Headbutt encounters", page)
-        self.assertIn("[Hoothoot](../pokemon/hoothoot.md)", page)
+        # The full Headbutt table now lives on its own encounters/ page; the
+        # location page only links to it.
+        self.assertIn("[Headbutt encounters](../encounters/headbutt-009.md)", page)
+        self.assertNotIn("[Hoothoot](../pokemon/hoothoot.md)", page)
         self.assertEqual(page.count("## Hack changes"), 1)
         self.assertIn("**Location**", page)
         self.assertIn("**Headbutt encounters**", page)
         self.assertNotIn("### Location\n", page)
         self.assertLess(page.index("## Hack changes"), page.index("Data provenance"))
-        self.assertIn('<a href="#headbutt-encounters">Yes</a>', page)
+        self.assertIn('<a href="#wild-encounters">Yes</a>', page)
         self.assertIn("headbutt encounters", catalog["records"][0]["features"])
         self.assertEqual(
             catalog["records"][0]["feature_anchors"]["headbutt encounters"],
-            "headbutt-encounters",
+            "wild-encounters",
         )
 
-    def test_embeds_hidden_grotto_and_daily_swarm_on_event_map(self) -> None:
+    def test_links_hidden_grotto_and_daily_swarm_on_event_map(self) -> None:
         location = {
             "header_id": 445,
             "internal_name": "map_445",
@@ -295,21 +296,22 @@ class LocationRenderingTests(unittest.TestCase):
             page = (output / "header-445.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
-        self.assertIn("### Hidden Grotto { #hidden-grotto-00 }", page)
-        self.assertIn("### Hidden Grotto", page)
-        self.assertIn("[Fire Stone](../items/fire-stone.md)", page)
-        self.assertIn('src="https://example.test/fire-stone.png"', page)
-        self.assertIn("### Daily Swarm { #daily-swarm }", page)
-        self.assertIn("### Daily Swarm", page)
-        self.assertIn("40–55", page)
+        # The full tables now live on their own encounters/ pages; the
+        # location page only links to them.
+        self.assertIn(
+            "[Hidden Grotto 00](../encounters/hidden-grotto-00.md)", page
+        )
+        self.assertIn("[Daily Swarm](../encounters/daily-swarm-445.md)", page)
+        self.assertNotIn("[Fire Stone](../items/fire-stone.md)", page)
+        self.assertNotIn("40–55", page)
         self.assertNotIn("header-445.md#daily-swarm", page)
-        self.assertIn('<a href="#hidden-grotto-00">1</a>', page)
-        self.assertIn('<a href="#daily-swarm">Yes</a>', page)
+        self.assertIn('<a href="#wild-encounters">1</a>', page)
+        self.assertIn('<a href="#wild-encounters">Yes</a>', page)
         entry = catalog["records"][0]
         self.assertIn("hidden grotto", entry["features"])
         self.assertIn("daily swarm", entry["features"])
-        self.assertEqual(entry["feature_anchors"]["hidden grotto"], "hidden-grotto-00")
-        self.assertEqual(entry["feature_anchors"]["daily swarm"], "daily-swarm")
+        self.assertEqual(entry["feature_anchors"]["hidden grotto"], "wild-encounters")
+        self.assertEqual(entry["feature_anchors"]["daily swarm"], "wild-encounters")
 
     def test_links_gen5_location_to_all_seasonal_encounter_variants(self) -> None:
         record = {

@@ -8,7 +8,8 @@ ROM Wiki has three publication layers with different responsibilities:
   filters and static fallback. It is not a bulk-data API.
 - `data/*.json.gz` contains the complete normalized datasets used by renderers,
   including ROM facts, provenance, relationships, and PokéDB reference objects.
-  Comparative sites also publish `data/comparisons/*.json.gz`.
+  Comparison/diff data is not published here; it's changelog data, not part of
+  the dataset itself.
 
 The in-memory `RelationshipIndex` is not a fourth publication layer. It derives
 reverse references needed by pages and catalogs from normalized datasets once per
@@ -108,12 +109,13 @@ intact in normalized downloads and comparisons. Typed public routes
 (`trainer-NNNN`, `header-NNN`, and `map-NNN`) are distinct from raw numeric IDs
 and native names such as `map_191`.
 
-Map-owned conditional encounter sources retain their own records and comparison
-identities, but their public routes may target stable anchors on `header-NNN`
-location pages. Sources without a fixed map owner may instead share an anchored
-collection page, as HGSS Safari Zone areas do. Catalog entries and PokÃ©mon or
-item backlinks use those same typed anchored routes; presentation placement
-never merges conditional pools into ordinary wild slots.
+Conditional encounter sources (Headbutt, Hidden Grotto, Daily Swarm, Safari
+Zone) each render their own page under the encounters section, keyed by their
+own catalog identity rather than an anchor on the owning `header-NNN` location
+page. The owning location page links to that page instead of embedding its
+table. Catalog entries and Pokémon or item backlinks use those same typed
+routes; presentation placement never merges conditional pools into ordinary
+wild slots.
 
 `version_variants` describe different values stored in sibling ROM datasets.
 Battle-family conditions describe runtime selection among trainer records. The

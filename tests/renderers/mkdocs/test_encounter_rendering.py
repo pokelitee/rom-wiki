@@ -16,7 +16,7 @@ from romwiki.util.errors import SiteError
 
 
 class EncounterRenderingTests(unittest.TestCase):
-    def test_omits_headbutt_section_from_encounter_catalog(self) -> None:
+    def test_includes_headbutt_as_its_own_encounter_page(self) -> None:
         dataset = {
             "game": "test",
             "engine": "gen4_hgss",
@@ -27,9 +27,14 @@ class EncounterRenderingTests(unittest.TestCase):
                     "source_type": "headbutt",
                     "name": "Route 1",
                     "active": True,
-                    "location": {"header_id": 9, "name": "Route 1"},
+                    "location": {
+                        "header_id": 9,
+                        "internal_name": "map_009",
+                        "name": "Route 1",
+                    },
                     "pools": {"common": [], "rare": [], "secret": []},
                     "tree_groups": [],
+                    "provenance": {"source": "rom", "archive": "a/2/5/2", "member": 9},
                 }
             ],
         }
@@ -38,8 +43,12 @@ class EncounterRenderingTests(unittest.TestCase):
             output = Path(directory)
             render_encounter_pages(dataset, output)
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            page = (output / "headbutt-009.md").read_text(encoding="utf-8")
 
-        self.assertEqual(catalog["records"], [])
+        self.assertEqual(len(catalog["records"]), 1)
+        self.assertEqual(catalog["records"][0]["route_id"], "headbutt-009")
+        self.assertIn("# Headbutt encounters", page)
+        self.assertIn("Route 1", page)
 
     def test_raises_a_site_error_for_an_unroutable_catalog_record(self) -> None:
         # A malformed/inconsistent build state (the location engine hasn't
@@ -56,7 +65,7 @@ class EncounterRenderingTests(unittest.TestCase):
         ):
             _encounter_catalog_url(record)
 
-    def test_omits_daily_swarm_section_from_encounter_catalog(self) -> None:
+    def test_includes_daily_swarm_as_its_own_encounter_page(self) -> None:
         black = {
             "area_id": 194,
             "source_type": "daily-swarm",
@@ -67,7 +76,11 @@ class EncounterRenderingTests(unittest.TestCase):
             "table_offset": 0x50C0C,
             "name": "Route 6",
             "active": True,
-            "location": {"header_id": 331, "name": "Route 6"},
+            "location": {
+                "header_id": 331,
+                "internal_name": "map_331",
+                "name": "Route 6",
+            },
             "pokemon": {"id": 311, "slug": "plusle", "name": "Plusle"},
             "provenance": {"archive": "overlay36", "member": 2},
         }
@@ -96,11 +109,14 @@ class EncounterRenderingTests(unittest.TestCase):
             output = Path(directory)
             render_encounter_pages(dataset, output)
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            page = (output / "daily-swarm-331.md").read_text(encoding="utf-8")
 
-        self.assertFalse((output / "daily-swarm-331.md").exists())
-        self.assertEqual(catalog["records"], [])
+        self.assertEqual(len(catalog["records"]), 1)
+        self.assertEqual(catalog["records"][0]["route_id"], "daily-swarm-331")
+        self.assertIn("# Daily Swarm", page)
+        self.assertIn("Plusle", page)
 
-    def test_omits_hidden_grotto_section_from_encounter_catalog(self) -> None:
+    def test_includes_hidden_grotto_as_its_own_encounter_page(self) -> None:
         record = {
             "area_id": 174,
             "source_type": "hidden-grotto",
@@ -151,9 +167,13 @@ class EncounterRenderingTests(unittest.TestCase):
             output = Path(directory)
             render_encounter_pages(dataset, output)
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            page = (output / "hidden-grotto-00.md").read_text(encoding="utf-8")
 
-        self.assertFalse((output / "hidden-grotto-00.md").exists())
-        self.assertEqual(catalog["records"], [])
+        self.assertEqual(len(catalog["records"]), 1)
+        self.assertEqual(catalog["records"][0]["route_id"], "hidden-grotto-00")
+        self.assertIn("# Hidden Grotto 00", page)
+        self.assertIn("Dunsparce", page)
+        self.assertIn("Fire Stone", page)
 
     def test_nests_versions_inside_season_tabs(self) -> None:
         lines = _season_version_tabs(

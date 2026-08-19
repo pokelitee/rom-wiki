@@ -1856,7 +1856,7 @@ def _write_dataset_build(
     if comparison is not None:
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
         write_dataset(comparison, comparison_output)
-    write_public_dataset(wiki_output.parent, kind, dataset, comparison)
+    write_public_dataset(wiki_output.parent, kind, dataset)
     renderer = {
         "pokemon": render_pokemon_pages,
         "abilities": render_ability_pages,
@@ -1920,7 +1920,7 @@ def _write_type_build(
 ) -> None:
     data_output = _dataset_output(data_root, "types")
     write_dataset(dataset, data_output)
-    write_public_dataset(wiki_root, "types", dataset, None)
+    write_public_dataset(wiki_root, "types", dataset)
     page_count = render_type_chart(dataset, wiki_root / "types")
     _LOG.info("Wrote %s types: %s", len(dataset["records"]), data_output)
     _LOG.info(

@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import io
 import json
+import shutil
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -23,17 +24,17 @@ def write_public_dataset(
     wiki_root: Path,
     kind: str,
     dataset: dict[str, Any],
-    comparison: dict[str, Any] | None,
 ) -> None:
-    """Publish one normalized dataset and refresh its site's download manifest."""
+    """Publish one normalized dataset and refresh its site's download manifest.
+
+    Comparison/diff data is not published here -- it's changelog data, not
+    the dataset itself, so it doesn't belong in the data downloads.
+    """
     data_root = wiki_root / PUBLIC_DATA_DIRECTORY
     _write_gzip_json(data_root / f"{kind}.json.gz", dataset)
-    comparison_path = data_root / "comparisons" / f"{kind}.json.gz"
-    if comparison is None:
-        if comparison_path.is_file():
-            comparison_path.unlink()
-    else:
-        _write_gzip_json(comparison_path, comparison)
+    comparisons_dir = data_root / "comparisons"
+    if comparisons_dir.is_dir():
+        shutil.rmtree(comparisons_dir)
     _write_manifest(data_root, str(dataset["game"]))
 
 
@@ -108,8 +109,6 @@ def _download_index(manifest: dict[str, Any]) -> str:
     ]
     for entry in manifest["files"]:
         label = str(entry["kind"]).replace("_", " ").title()
-        if str(entry["path"]).startswith("comparisons/"):
-            label += " comparison"
         record_count = entry["record_count"]
         lines.append(
             f"| {label} | [{entry['path']}]({entry['path']}) | "

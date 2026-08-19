@@ -6,7 +6,7 @@ from typing import Any
 
 from romwiki.pipeline.semantics.encounter_identity import (
     SAFARI_ZONE_ROUTE,
-    EncounterSourceType,
+    encounter_route_key,
 )
 from romwiki.pipeline.transforms.relationships import (
     LocationEncounterReference,
@@ -34,9 +34,6 @@ from romwiki.renderers.mkdocs.components import (
     summary_section_link,
 )
 from romwiki.renderers.mkdocs.conditional_encounters import (
-    append_daily_swarm,
-    append_headbutt_encounters,
-    append_hidden_grotto,
     conditional_encounter_label,
     conditional_encounter_provenance,
 )
@@ -275,33 +272,10 @@ def _render_encounter_map_location(
         lines.extend(["## Wild encounters", ""])
         if encounters:
             _append_encounter_variants(lines, encounters, source_file, record["name"])
-        grotto_count = sum(
-            encounter.get("source_type") == EncounterSourceType.HIDDEN_GROTTO
-            for encounter in conditional_encounters
-        )
-        for encounter in conditional_encounters:
-            source_type = encounter.get("source_type")
-            if source_type == EncounterSourceType.HEADBUTT:
-                append_headbutt_encounters(
-                    lines, encounter, source_file, references, heading_level=3
-                )
-            elif source_type == EncounterSourceType.HIDDEN_GROTTO:
-                append_hidden_grotto(
-                    lines,
-                    encounter,
-                    source_file,
-                    references,
-                    heading_level=3,
-                    heading=(
-                        f"Hidden Grotto {encounter['grotto_id']:02}"
-                        if grotto_count > 1
-                        else "Hidden Grotto"
-                    ),
-                )
-            elif source_type == EncounterSourceType.DAILY_SWARM:
-                append_daily_swarm(
-                    lines, encounter, source_file, references, heading_level=3
-                )
+        if conditional_encounters:
+            _append_conditional_encounter_links(
+                lines, conditional_encounters, source_file
+            )
     append_items(lines, record["items"], source_file, references)
     append_script_awarded_items(
         lines, record.get("script_awarded_items", []), source_file, references
@@ -451,6 +425,31 @@ def _append_encounter_variants(
             f"| {' / '.join(seasons) or 'All'} | "
             f"{link} | {' / '.join(all_versions) or versions} |"
         )
+    lines.append("")
+
+
+def _append_conditional_encounter_links(
+    lines: list[str],
+    conditional_encounters: tuple[dict[str, Any], ...],
+    source_file: str,
+) -> None:
+    """Link out to each conditional encounter's own page, the same way
+    ordinary methods (`_append_encounter_variants`) and Safari Zone areas
+    already do, instead of embedding their tables here.
+    """
+    lines.extend(["| Encounter area |", "| -------------- |"])
+    for encounter in conditional_encounters:
+        route_key = encounter_route_key(encounter)
+        link = ROUTES.markdown_link(
+            entity_reference(
+                encounter_route_kind(route_key),
+                encounter["area_id"],
+                conditional_encounter_label(encounter),
+                route_key,
+            ),
+            source_file,
+        )
+        lines.append(f"| {link} |")
     lines.append("")
 
 

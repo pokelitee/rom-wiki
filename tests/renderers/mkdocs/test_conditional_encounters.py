@@ -87,6 +87,42 @@ class HeadbuttRenderingTests(unittest.TestCase):
         self.assertNotIn('=== "', page)
 
 
+    def test_duplicate_species_in_a_pool_are_merged_into_one_row(self) -> None:
+        record = {
+            "version_variants": {
+                "black": {
+                    "pools": {
+                        "common": [
+                            {
+                                "pokemon": _POKEMON,
+                                "minimum_level": 3,
+                                "maximum_level": 5,
+                                "chance": 50,
+                            },
+                            {
+                                "pokemon": _POKEMON,
+                                "minimum_level": 6,
+                                "maximum_level": 8,
+                                "chance": 15,
+                            },
+                        ],
+                        "rare": [],
+                        "secret": [],
+                    },
+                    "tree_groups": [],
+                },
+            },
+        }
+        lines: list[str] = []
+
+        append_headbutt_encounters(lines, record, "trainers/t.md", None)
+        page = "\n".join(lines)
+
+        self.assertEqual(page.count("Pikachu"), 1)
+        self.assertIn("3–8", page)
+        self.assertIn("65%", page)
+
+
 class DailySwarmRenderingTests(unittest.TestCase):
     def test_differing_versions_tab_without_duplicating_the_heading(self) -> None:
         record = {

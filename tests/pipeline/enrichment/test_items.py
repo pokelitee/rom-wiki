@@ -13,7 +13,9 @@ from romwiki.sources import PokeDBGeneration
 
 
 class ItemDatasetTests(unittest.TestCase):
-    def test_links_hidden_grotto_items_to_the_location_anchor(self) -> None:
+    def test_links_hidden_grotto_items_to_the_grottos_own_encounter_route(
+        self,
+    ) -> None:
         raw = {
             "game": "test",
             "source": {},
@@ -56,7 +58,7 @@ class ItemDatasetTests(unittest.TestCase):
 
         self.assertEqual(
             record["locations"][0]["encounter_route_key"],
-            "header-445#hidden-grotto-00",
+            "hidden-grotto-00",
         )
 
     def test_preserves_script_award_location_and_quantity(self) -> None:

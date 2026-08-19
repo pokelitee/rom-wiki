@@ -79,21 +79,13 @@ def encounter_route_key(record: Mapping[str, Any]) -> int | str:
     same record.
     """
     source_type = record.get("source_type")
-    if source_type == EncounterSourceType.HIDDEN_GROTTO:
-        grotto_id = _required_int(record, "grotto_id")
-        header_id = _required_location_header_id(record)
-        return f"header-{header_id:03}#{hidden_grotto_anchor(grotto_id)}"
-    if source_type == EncounterSourceType.DAILY_SWARM:
-        header_id = _required_location_header_id(record)
-        return f"header-{header_id:03}#{DAILY_SWARM_ANCHOR}"
-    if source_type == EncounterSourceType.HEADBUTT:
-        header_id = _required_location_header_id(record)
-        return f"header-{header_id:03}#{HEADBUTT_ANCHOR}"
-    if source_type == EncounterSourceType.SAFARI_ZONE:
-        # Each Safari area now renders its own page (see encounters.py's
-        # per-area rendering, split out to keep the combined page under the
-        # site audit's page-size limit), so its render identity is the same
-        # per-area catalog identity rather than an anchor into a shared page.
+    if source_type in CONDITIONAL_ENCOUNTER_SOURCES:
+        # Every conditional source (grotto/swarm/headbutt/safari) renders
+        # its own page under the encounters section, the same way Safari
+        # Zone areas already did (split out to keep pages under the site
+        # audit's page-size limit), so its render identity is the same
+        # per-record catalog identity rather than an anchor into the owning
+        # location page.
         return conditional_encounter_key(record)
     map_index = record.get("map_index")
     if not isinstance(map_index, int):

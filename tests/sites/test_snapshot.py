@@ -394,6 +394,5 @@ theme = "platinum"
             "record_count": 0,
             "records": [],
         },
-        None,
     )
     return first
