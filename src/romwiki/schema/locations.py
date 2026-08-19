@@ -88,6 +88,25 @@ class LocationShop:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationMartReference:
+    """A decoded mart-opening dispatch command with no decoded inventory.
+
+    Distinct from `LocationShop`: this records that a real, verified
+    mart-dispatch command exists and which map header owns it, without
+    claiming to know what it sells. Used when the dispatch command itself is
+    decodable but the inventory-content table it references is not (see
+    `gen4/hgss/marts.py`'s module comment for why) -- publishing this
+    location fact without item contents rather than not publishing it at
+    all, since the location itself is real and verified.
+    """
+
+    kind: str
+    inventory_id: int | None
+    script_file_id: int
+    command_offset: int
+
+
+@dataclass(frozen=True, slots=True)
 class LocationPokemonGift:
     kind: str
     species_id: int
@@ -230,10 +249,12 @@ class EncounterMapLocation:
     trainers: tuple[LocationTrainerReference, ...] = ()
     warps: tuple[LocationWarp, ...] = ()
     static_encounters: tuple[LocationStaticEncounter, ...] = ()
+    pokemon_gifts: tuple[LocationPokemonGift, ...] = ()
     connections: tuple[LocationConnection, ...] = ()
     items: tuple[LocationItem, ...] = ()
     script_awarded_items: tuple[LocationScriptAwardedItem, ...] = ()
     shops: tuple[LocationShop, ...] = ()
+    mart_references: tuple[LocationMartReference, ...] = ()
     npc_trades: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:

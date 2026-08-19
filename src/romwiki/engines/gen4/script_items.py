@@ -7,6 +7,7 @@ from romwiki.engines.gen4.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
+from romwiki.engines.gen4.script_opcode_table import OPCODE_TABLE
 from romwiki.engines.gen4.script_table import parse_script_function_offsets
 
 # Some NPC gifts and custom shops don't call the literal `AddItem` opcode
@@ -48,6 +49,18 @@ from romwiki.engines.gen4.script_table import parse_script_function_offsets
 # literal-shaped value instead). Accepting both opcodes is safe rather than
 # a guess: a genuine variable reference would fail the item/quantity bounds
 # check in `_record` below just as reliably as an unrelated literal would.
+#
+# These are Platinum's own opcode *names* (from `gen4/script_opcode_table.py`,
+# the pret/pokeplatinum-derived default `opcode_table`) -- HeartGold/SoulSilver
+# renumbers and renames several of these same-shaped commands (its own table,
+# from pret/pokeheartgold, calls the identical two-operand literal-write
+# opcode `SetVar` and the var-to-var copy `CopyVar`/`SetOrCopyVar`, and its
+# `CallCommonScript` equivalent `CallStd` -- verified against real Sacred
+# Gold ROM bytes: `SetVar(32772, 397)`, `SetVar(32773, 1)`, `CallStd(2033)`
+# is the exact real byte sequence for the documented Sprout Tower TM70 grant,
+# not `SetVarFromVar`/`CallCommonScript`, which HGSS's real opcode table
+# never produces). `gen4/hgss/script_items.py` supplies its own name set and
+# opcode table accordingly; do not assume Platinum's names transfer.
 _ITEM_WRITE_COMMANDS = frozenset({"SetVarFromValue", "SetVarFromVar"})
 _ITEM_WORK_VARIABLE = 32772
 _QUANTITY_WORK_VARIABLE = 32773
@@ -56,6 +69,7 @@ _GOTO_IF = "GoToIf"
 _CALL = "Call"
 _CALL_IF = "CallIf"
 _TERMINAL_COMMANDS = frozenset({"End", "Return", "ReturnCommonScript"})
+_CALL_COMMON_SCRIPT_COMMAND = "CallCommonScript"
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,27 +81,39 @@ class ScriptAwardedItem:
 
 
 def find_script_awarded_items(
-    data: bytes, *, item_count: int, give_item_common_script_ids: frozenset[int]
+    data: bytes,
+    *,
+    item_count: int,
+    give_item_common_script_ids: frozenset[int],
+    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+    item_write_commands: frozenset[str] = _ITEM_WRITE_COMMANDS,
+    call_common_script_command: str = _CALL_COMMON_SCRIPT_COMMAND,
+    terminal_commands: frozenset[str] = _TERMINAL_COMMANDS,
 ) -> tuple[ScriptAwardedItem, ...]:
     """Return reachable item-grant commands whose item and quantity are literals.
 
-    Covers both the direct `AddItem` opcode and the indirect
-    `SetVarFromValue`/`SetVarFromVar` + `CallCommonScript` give-item
-    convention (see module docstring above). Catches item grants an NPC's
-    own dialogue script hands over directly (e.g. a species-conditional
-    gift, or a custom shop's purchase), which never place an item-ball/
-    hidden-item event on the map and so are otherwise invisible to location
-    extraction.
+    Covers both the direct `AddItem` opcode and the indirect literal-write +
+    common-script-call give-item convention (see module docstring above).
+    Catches item grants an NPC's own dialogue script hands over directly
+    (e.g. a species-conditional gift, or a custom shop's purchase), which
+    never place an item-ball/hidden-item event on the map and so are
+    otherwise invisible to location extraction.
 
-    `give_item_common_script_ids` is the confirmed set of `CallCommonScript`
+    `give_item_common_script_ids` is the confirmed set of common-script-call
     targets that are real give-item routines for this specific engine leaf
-    -- `CallCommonScript` is a general-purpose call to any of the engine's
-    global subroutines, so accepting every target would match unrelated
-    common scripts en masse.
+    -- the underlying opcode is a general-purpose call to any of the
+    engine's global subroutines, so accepting every target would match
+    unrelated common scripts en masse. `opcode_table`, `item_write_commands`,
+    `call_common_script_command`, and `terminal_commands` default to
+    Platinum's own opcode table and instruction names; other engine leaves
+    (e.g. HeartGold/SoulSilver, whose opcode numbering and instruction names
+    differ -- see module docstring) must supply their own.
     """
     awards: dict[tuple[int, int], ScriptAwardedItem] = {}
     for function_offset in parse_script_function_offsets(data):
-        instructions = disassemble_function(data, function_offset)
+        instructions = disassemble_function(
+            data, function_offset, opcode_table=opcode_table
+        )
         by_offset = {
             instr.offset: instr
             for instr in sorted(instructions.values(), key=lambda value: value.offset)
@@ -97,16 +123,22 @@ def find_script_awarded_items(
                 item_id, quantity, _result = instruction.params
                 _record(awards, instruction, item_id, quantity, item_count)
                 continue
-            if instruction.name not in _ITEM_WRITE_COMMANDS:
+            if instruction.name not in item_write_commands:
                 continue
             variable, item_id = instruction.params
             if variable != _ITEM_WORK_VARIABLE:
                 continue
             baseline_quantity = _nearest_preceding_quantity(
-                by_offset, instruction.offset
+                by_offset, instruction.offset, item_write_commands
             )
             for call, quantity in _reachable_common_script_calls(
-                by_offset, instruction, baseline_quantity, give_item_common_script_ids
+                by_offset,
+                instruction,
+                baseline_quantity,
+                give_item_common_script_ids,
+                item_write_commands=item_write_commands,
+                call_common_script_command=call_common_script_command,
+                terminal_commands=terminal_commands,
             ):
                 _record(awards, call, item_id, quantity, item_count)
     return tuple(awards[key] for key in sorted(awards))
@@ -134,7 +166,9 @@ def _record(
 
 
 def _nearest_preceding_quantity(
-    by_offset: dict[int, Gen4Instruction], before_offset: int
+    by_offset: dict[int, Gen4Instruction],
+    before_offset: int,
+    item_write_commands: frozenset[str],
 ) -> int | None:
     """The quantity in effect when a given item write begins its own arm.
 
@@ -147,14 +181,16 @@ def _nearest_preceding_quantity(
         if instruction.offset >= before_offset:
             break
         if (
-            instruction.name in _ITEM_WRITE_COMMANDS
+            instruction.name in item_write_commands
             and instruction.params[0] == _QUANTITY_WORK_VARIABLE
         ):
             quantity = instruction.params[1]
     return quantity
 
 
-def _successors(instruction: Gen4Instruction) -> tuple[int, ...]:
+def _successors(
+    instruction: Gen4Instruction, terminal_commands: frozenset[str]
+) -> tuple[int, ...]:
     if instruction.name == _GOTO:
         return (instruction.next_offset + instruction.params[-1],)
     if instruction.name in (_GOTO_IF, _CALL_IF, _CALL):
@@ -162,7 +198,7 @@ def _successors(instruction: Gen4Instruction) -> tuple[int, ...]:
             instruction.next_offset,
             instruction.next_offset + instruction.params[-1],
         )
-    if instruction.name in _TERMINAL_COMMANDS:
+    if instruction.name in terminal_commands:
         return ()
     return (instruction.next_offset,)
 
@@ -172,6 +208,10 @@ def _reachable_common_script_calls(
     item_write: Gen4Instruction,
     baseline_quantity: int | None,
     give_item_common_script_ids: Iterable[int],
+    *,
+    item_write_commands: frozenset[str],
+    call_common_script_command: str,
+    terminal_commands: frozenset[str],
 ) -> list[tuple[Gen4Instruction, int | None]]:
     """Walk forward from one literal item write to the calls it actually feeds.
 
@@ -182,25 +222,31 @@ def _reachable_common_script_calls(
     """
     calls: list[tuple[Gen4Instruction, int | None]] = []
     visited: set[int] = set()
-    worklist = [(offset, baseline_quantity) for offset in _successors(item_write)]
+    worklist = [
+        (offset, baseline_quantity)
+        for offset in _successors(item_write, terminal_commands)
+    ]
     while worklist:
         offset, quantity = worklist.pop()
         if offset in visited or offset not in by_offset:
             continue
         visited.add(offset)
         instruction = by_offset[offset]
-        if instruction.name in _ITEM_WRITE_COMMANDS:
+        if instruction.name in item_write_commands:
             variable, value = instruction.params
             if variable == _ITEM_WORK_VARIABLE:
                 continue
             if variable == _QUANTITY_WORK_VARIABLE:
                 quantity = value
         elif (
-            instruction.name == "CallCommonScript"
+            instruction.name == call_common_script_command
             and instruction.params[0] in give_item_common_script_ids
         ):
             calls.append((instruction, quantity))
-        worklist.extend((successor, quantity) for successor in _successors(instruction))
+        worklist.extend(
+            (successor, quantity)
+            for successor in _successors(instruction, terminal_commands)
+        )
     return calls
 
 

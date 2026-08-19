@@ -38,7 +38,15 @@ class _Engine:
     MATRIX_VOID_HEADER_IDS = ()
 
     def __init__(
-        self, headers, location_names, item_names, events_by_id, matrices=None
+        self,
+        headers,
+        location_names,
+        item_names,
+        events_by_id,
+        matrices=None,
+        pokemon_names=(),
+        static_encounters_by_script=None,
+        mart_references_by_script=None,
     ):
         self._headers = headers
         self._events_by_id = events_by_id
@@ -46,7 +54,22 @@ class _Engine:
         self._messages_by_content = {
             b"location-names": tuple(location_names),
             b"item-names": tuple(item_names),
+            b"pokemon-names": tuple(pokemon_names),
         }
+        self._static_encounters_by_script = static_encounters_by_script
+        if static_encounters_by_script is not None:
+            self.parse_static_encounter_commands = (
+                self._parse_static_encounter_commands
+            )
+        self._mart_references_by_script = mart_references_by_script
+        if mart_references_by_script is not None:
+            self.parse_mart_dispatch_commands = self._parse_mart_dispatch_commands
+
+    def _parse_static_encounter_commands(self, data, *, species_count):
+        return self._static_encounters_by_script.get(data, ())
+
+    def _parse_mart_dispatch_commands(self, data):
+        return self._mart_references_by_script.get(data, ())
 
     def parse_map_headers(self, header_data, map_names_data, count):
         return self._headers
@@ -313,6 +336,105 @@ class Arm9EncounterMapDatasetTests(unittest.TestCase):
         second = dataset["records"][1]
         self.assertIsNone(second["encounter_map_index"])
         self.assertEqual(second["items"], ())
+
+    def test_attaches_static_encounters_by_owning_header_script(self) -> None:
+        item_names = ("NONE",)
+        location_names = ("Route 1",)
+        pokemon_names = ("NONE", "Bulbasaur")
+        headers = (
+            _header(
+                0,
+                internal_name="ROUTE_01",
+                location_name_id=0,
+                event_file_id=0,
+                script_file_id=0,
+            ),
+        )
+        events_by_id = {0: SimpleNamespace(warps=(), objects=(), backgrounds=())}
+        static_command = SimpleNamespace(
+            species_id=1, level=25, command="WildBattle", offset=57
+        )
+        engine = _Engine(
+            headers,
+            location_names,
+            item_names,
+            events_by_id,
+            pokemon_names=pokemon_names,
+            static_encounters_by_script={b"script-0": (static_command,)},
+        )
+        messages = _Archive(
+            3,
+            lambda i: {0: b"location-names", 1: b"item-names", 2: b"pokemon-names"}[i],
+        )
+        encounters = _Archive(0, lambda i: b"")
+        events = _Archive(1, lambda i: b"")
+        matrices = _Archive(1, lambda i: b"")
+        scripts = _Archive(1, lambda i: b"script-0")
+        profile = _profile(pokemon_names_member=2)
+        result = _result(profile)
+
+        get_platform_patch, get_engine_patch = _patched(
+            engine, messages, encounters, events, matrices, scripts
+        )
+        with get_platform_patch, get_engine_patch:
+            dataset = extract_arm9_encounter_map_location_dataset(
+                result, trainer_dataset={"records": []}
+            )
+
+        self.assertEqual(dataset["static_encounter_reference_count"], 1)
+        record = dataset["records"][0]
+        self.assertEqual(len(record["static_encounters"]), 1)
+        static_encounter = record["static_encounters"][0]
+        self.assertEqual(static_encounter["species_id"], 1)
+        self.assertEqual(static_encounter["name"], "Bulbasaur")
+        self.assertEqual(static_encounter["level"], 25)
+        self.assertEqual(static_encounter["command"], "WildBattle")
+        self.assertFalse(static_encounter["is_egg"])
+
+    def test_attaches_mart_references_by_owning_header_script(self) -> None:
+        item_names = ("NONE",)
+        location_names = ("Route 1",)
+        headers = (
+            _header(
+                0,
+                internal_name="ROUTE_01",
+                location_name_id=0,
+                event_file_id=0,
+                script_file_id=0,
+            ),
+        )
+        events_by_id = {0: SimpleNamespace(warps=(), objects=(), backgrounds=())}
+        mart_command = SimpleNamespace(kind="common", inventory_id=0, offset=938)
+        engine = _Engine(
+            headers,
+            location_names,
+            item_names,
+            events_by_id,
+            mart_references_by_script={b"script-0": (mart_command,)},
+        )
+        messages = _Archive(2, lambda i: b"location-names" if i == 0 else b"item-names")
+        encounters = _Archive(0, lambda i: b"")
+        events = _Archive(1, lambda i: b"")
+        matrices = _Archive(1, lambda i: b"")
+        scripts = _Archive(1, lambda i: b"script-0")
+        profile = _profile()
+        result = _result(profile)
+
+        get_platform_patch, get_engine_patch = _patched(
+            engine, messages, encounters, events, matrices, scripts
+        )
+        with get_platform_patch, get_engine_patch:
+            dataset = extract_arm9_encounter_map_location_dataset(
+                result, trainer_dataset={"records": []}
+            )
+
+        self.assertEqual(dataset["mart_reference_count"], 1)
+        record = dataset["records"][0]
+        self.assertEqual(len(record["mart_references"]), 1)
+        mart_reference = record["mart_references"][0]
+        self.assertEqual(mart_reference["kind"], "common")
+        self.assertEqual(mart_reference["inventory_id"], 0)
+        self.assertEqual(mart_reference["command_offset"], 938)
 
 
 if __name__ == "__main__":

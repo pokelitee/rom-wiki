@@ -20,10 +20,18 @@ the public dataset exposes 513 nonzero item IDs without inventing records.
 The in-game trade archive at `a/1/1/2` publishes 11 actual NPC exchanges. Shuckie
 and Kenya are excluded because their records are gift-like static Pokémon rather
 than trades. A unique executable signature resolves 27 supported specialty shops
-with 141 item entries. Shop map placement remains unavailable. The mart handlers
-and dispatch entries are identified, but a two-halfword opcode/selector scan also
-matches operands and embedded data; a reachable HGSS instruction decoder is
-still required before selectors can be joined to map headers.
+with 141 item entries, published standalone (unlocated) as this site's marts
+dataset.
+
+Separately, each map header's own decoded field-script mart-opening dispatch
+commands (`MartBuy`, `SpecialMartBuy`, `DecorationMart`, `SealMart`) are now
+published per location as a real, verified fact -- kind and raw inventory
+selector, cross-referenced to their owning map header -- without claiming to
+know what each mart sells. The inventory content those dispatch commands
+reference is a separate, still-undecoded structure: an exhaustive search for
+DPPT's equivalent ARM9-embedded inventory tables across HGSS's entire ARM9
+binary and every overlay found no match, so this project does not invent
+item lists for them.
 
 Pickup uses two uniquely located tables in decompressed battle overlay 12. Its 18
 common and 11 rare items expand into ten exact level bands whose probabilities
@@ -189,12 +197,24 @@ mechanism, if any exists in this specific ROM build, is not reachable by any
 extraction method this project currently has, so it is not published as
 obtainable rather than guessed at.
 
-Static encounters, gifts, and eggs remain unavailable. The ARM9 dispatch and
-matching handlers prove the operand contracts for literal `WildBattle`,
-`GiveMon`, and `GiveEgg` commands, but an opcode/operand scan cannot prove that a
-match begins at a reachable instruction. The existing inferred HGSS walker is
-not accurate enough for publication, and common-script callers, variable-backed
-operands, and specialized paths such as `GiveTogepiEgg` remain unresolved.
+Battle-triggered static encounters (`WildBattle`) are decoded and published as
+each map header's `static_encounters`, using a ground-truth field-script
+opcode table (`gen4/hgss/script_opcode_table.py`, sourced from
+pret/pokeheartgold's real decompilation, not an inferred walker) rather than
+the previous unpublished 90.8%-accurate heuristic. A literal `WildBattle`
+site is accepted only when its species/level operands are in range and its
+result is validated by a real follow-on command (`CheckBattleWon`, directly
+or after a `ClearFlag`) -- see `gen4/hgss/scripts.py`'s module comment for
+the full verification, including a cross-check against every resulting
+site's real-world identity (every HeartGold/SoulSilver hit is a known,
+named legendary or gift encounter; Sacred Gold/Storm Silver's additional
+hits match that hack's own documented legendary/gift additions).
+
+Direct-to-party gifts (`GiveMon`, `GiveEgg`, and specialized paths such as
+`GiveTogepiEgg`) remain unavailable -- these use a different, non-battle
+mechanism (no `CheckBattleWon`-style result to validate against) and are not
+yet resolved. Common-script-routed gifts and eggs, and variable-backed
+operands, also remain unresolved.
 
 ## Text and names
 

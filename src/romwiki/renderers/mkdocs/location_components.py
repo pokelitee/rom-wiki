@@ -228,6 +228,44 @@ def append_shops(
         lines.append("")
 
 
+def append_mart_references(
+    lines: list[str],
+    mart_references: list[dict[str, Any]],
+    source_file: str,
+) -> None:
+    if not mart_references:
+        return
+    lines.extend(
+        [
+            "## Marts (contents undecoded)",
+            "",
+            "A real, decoded mart-opening script command exists here, but its "
+            "inventory contents are not yet decoded from the ROM.",
+            "",
+        ]
+    )
+    kind_labels = {
+        "common": "Common Poké Mart",
+        "specialty": "Specialty shop",
+        "decoration": "Decoration shop",
+        "seal": "Seal shop",
+    }
+    rows = [
+        f"| {kind_labels.get(reference['kind'], reference['kind'].title())} "
+        f"| {reference['inventory_id']} |"
+        for reference in mart_references
+    ]
+    lines.extend(
+        markdown_table(
+            [
+                "| Kind | Inventory selector |",
+                "| ---- | ------------------: |",
+            ],
+            rows,
+        )
+    )
+
+
 def append_trainers(
     lines: list[str], trainers: list[dict[str, Any]], source_file: str
 ) -> None:
@@ -259,6 +297,67 @@ def append_trainers(
                 ],
                 rows,
             ),
+        )
+    )
+
+
+def append_pokemon_gifts(
+    lines: list[str],
+    gifts: list[dict[str, Any]],
+    source_file: str,
+    references: ReferenceIndex | None,
+) -> None:
+    if not gifts:
+        return
+    lines.extend(
+        [
+            "## Gift Pokémon",
+            "",
+            "These are literal gift outcomes in this map's scripts; conditional "
+            "branches may be mutually exclusive.",
+            "",
+        ]
+    )
+    rows = []
+    for gift in gifts:
+        pokemon = entity_link(
+            "pokemon", gift["species_id"], gift["name"], source_file, references
+        )
+        held_item = (
+            entity_link(
+                "item",
+                gift["held_item_id"],
+                gift["held_item_name"],
+                source_file,
+                references,
+            )
+            if gift["held_item_id"] is not None and gift["held_item_name"]
+            else "—"
+        )
+        kind = "Pokémon" if gift["kind"] == "pokemon" else gift["kind"].title()
+        pokemon_sprite = entity_sprite("pokemon", gift["species_id"], references)
+        held_item_sprite = (
+            entity_sprite("item", gift["held_item_id"], references)
+            if gift["held_item_id"] is not None and gift["held_item_name"]
+            else "—"
+        )
+        held_item_cell = (
+            sprite_with_link(held_item_sprite, held_item)
+            if gift["held_item_id"] is not None and gift["held_item_name"]
+            else "—"
+        )
+        rows.append(
+            f"| {sprite_with_link(pokemon_sprite, pokemon)} | "
+            f"{reference_type_cell('pokemon', gift['species_id'], references)} | "
+            f"{kind} | {gift['level']} | {held_item_cell} |"
+        )
+    lines.extend(
+        markdown_table(
+            [
+                "| Pokémon | Type | Kind | Level | Held item |",
+                "| ------- | ---- | ---- | ----: | --------- |",
+            ],
+            rows,
         )
     )
 

@@ -22,7 +22,10 @@ from romwiki.pipeline.semantics.location_sections import (
 from romwiki.platforms.registry import get_platform
 from romwiki.schema import (
     EncounterMapLocation,
+    LocationMartReference,
+    LocationPokemonGift,
     LocationScriptAwardedItem,
+    LocationStaticEncounter,
     LocationWarp,
     RecordProvenance,
 )
@@ -103,6 +106,12 @@ def extract_arm9_encounter_map_location_dataset(
     item_names = tuple(
         record["name"] for record in (item_dataset or {}).get("records", ())
     ) or engine.parse_english_message_archive(messages.read(item_names_member))
+    pokemon_names_member = profile.parameters.get("pokemon_names_member")
+    pokemon_names = (
+        engine.parse_english_message_archive(messages.read(pokemon_names_member))
+        if pokemon_names_member is not None
+        else ()
+    )
     parsed_events: dict[int, Any] = {}
     items_by_event: dict[int, EventMapItemScan] = {}
     raw_warps_by_header: dict[int, tuple[Any, ...]] = {}
@@ -174,6 +183,86 @@ def extract_arm9_encounter_map_location_dataset(
                 )
                 for award in find_script_awarded_items(
                     scripts.read(script_file_id), item_count=len(item_names)
+                )
+            )
+    static_encounters_by_script: dict[
+        int, tuple[LocationStaticEncounter, ...]
+    ] = {}
+    parse_static_encounter_commands = getattr(
+        engine, "parse_static_encounter_commands", None
+    )
+    if parse_static_encounter_commands is not None:
+        for header in headers:
+            script_file_id = header.script_file_id
+            if script_file_id in static_encounters_by_script:
+                continue
+            if script_file_id >= len(scripts.members):
+                raise InvalidRomError(
+                    f"Map header {header.header_id} references missing script file "
+                    f"{script_file_id}"
+                )
+            static_encounters_by_script[script_file_id] = tuple(
+                LocationStaticEncounter(
+                    species_id=command.species_id,
+                    name=pokemon_names[command.species_id],
+                    level=command.level,
+                    is_egg=False,
+                    command=command.command,
+                    script_file_id=script_file_id,
+                    command_offset=command.offset,
+                )
+                for command in parse_static_encounter_commands(
+                    scripts.read(script_file_id), species_count=len(pokemon_names)
+                )
+            )
+    pokemon_gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
+    parse_pokemon_gift_commands = getattr(engine, "parse_pokemon_gift_commands", None)
+    if parse_pokemon_gift_commands is not None:
+        for header in headers:
+            script_file_id = header.script_file_id
+            if script_file_id in pokemon_gifts_by_script:
+                continue
+            if script_file_id >= len(scripts.members):
+                raise InvalidRomError(
+                    f"Map header {header.header_id} references missing script file "
+                    f"{script_file_id}"
+                )
+            pokemon_gifts_by_script[script_file_id] = tuple(
+                LocationPokemonGift(
+                    kind="pokemon",
+                    species_id=command.species_id,
+                    name=pokemon_names[command.species_id],
+                    level=command.level,
+                    held_item_id=None,
+                    held_item_name=None,
+                    script_file_id=script_file_id,
+                    command_offset=command.offset,
+                )
+                for command in parse_pokemon_gift_commands(
+                    scripts.read(script_file_id), species_count=len(pokemon_names)
+                )
+            )
+    mart_references_by_script: dict[int, tuple[LocationMartReference, ...]] = {}
+    parse_mart_dispatch_commands = getattr(engine, "parse_mart_dispatch_commands", None)
+    if parse_mart_dispatch_commands is not None:
+        for header in headers:
+            script_file_id = header.script_file_id
+            if script_file_id in mart_references_by_script:
+                continue
+            if script_file_id >= len(scripts.members):
+                raise InvalidRomError(
+                    f"Map header {header.header_id} references missing script file "
+                    f"{script_file_id}"
+                )
+            mart_references_by_script[script_file_id] = tuple(
+                LocationMartReference(
+                    kind=command.kind,
+                    inventory_id=command.inventory_id,
+                    script_file_id=script_file_id,
+                    command_offset=command.offset,
+                )
+                for command in parse_mart_dispatch_commands(
+                    scripts.read(script_file_id)
                 )
             )
     connections = extract_event_map_connections(
@@ -268,6 +357,13 @@ def extract_arm9_encounter_map_location_dataset(
                 script_awarded_items=script_awarded_items_by_script.get(
                     header.script_file_id, ()
                 ),
+                static_encounters=static_encounters_by_script.get(
+                    header.script_file_id, ()
+                ),
+                pokemon_gifts=pokemon_gifts_by_script.get(header.script_file_id, ()),
+                mart_references=mart_references_by_script.get(
+                    header.script_file_id, ()
+                ),
                 provenance=RecordProvenance(
                     source="rom", archive="arm9", member=header.header_id
                 ),
@@ -295,6 +391,15 @@ def extract_arm9_encounter_map_location_dataset(
         ),
         "script_awarded_item_reference_count": sum(
             len(record["script_awarded_items"]) for record in records
+        ),
+        "static_encounter_reference_count": sum(
+            len(record["static_encounters"]) for record in records
+        ),
+        "pokemon_gift_reference_count": sum(
+            len(record["pokemon_gifts"]) for record in records
+        ),
+        "mart_reference_count": sum(
+            len(record["mart_references"]) for record in records
         ),
         "source": {
             "rom_sha256": result.image.hashes.sha256,

@@ -243,5 +243,5 @@ fishing. Scripted static encounters, gifts, and trades are published separately
 on location and Pokémon pages.
 
 Tornadus and Thundurus are not roaming encounters in Black 2 or White 2. The
-executable-code limitation documented for those roamers applies only to the
-original Black and White games.
+species-identity decode documented for those roamers (see Black/White's own
+data-sources page) applies only to the original Black and White games.

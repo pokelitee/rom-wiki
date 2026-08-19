@@ -43,7 +43,9 @@ from romwiki.renderers.mkdocs.location_components import (
     LOCATION_CATALOG_DESCRIPTION,
     append_connections,
     append_items,
+    append_mart_references,
     append_npc_trades,
+    append_pokemon_gifts,
     append_script_awarded_items,
     append_shops,
     append_static_encounters,
@@ -180,6 +182,7 @@ def render_encounter_map_location_pages(
                         *(["trainers"] if record["trainers"] else []),
                         *(["warps"] if record["warps"] else []),
                         *(["static-encounters"] if record["static_encounters"] else []),
+                        *(["gifts"] if record.get("pokemon_gifts") else []),
                         *(["connections"] if record["connections"] else []),
                         *(["items"] if record["items"] else []),
                         *(
@@ -188,6 +191,7 @@ def render_encounter_map_location_pages(
                             else []
                         ),
                         *(["shops"] if record.get("shops") else []),
+                        *(["marts"] if record.get("mart_references") else []),
                         *(["trades"] if record.get("npc_trades") else []),
                     ],
                     "search_text": (
@@ -298,9 +302,13 @@ def _render_encounter_map_location(
         lines, record.get("script_awarded_items", []), source_file, references
     )
     append_shops(lines, record.get("shops", []), source_file, references)
+    append_mart_references(lines, record.get("mart_references", []), source_file)
     append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
     append_static_encounters(
         lines, record["static_encounters"], source_file, references
+    )
+    append_pokemon_gifts(
+        lines, record.get("pokemon_gifts", []), source_file, references
     )
     append_trainers(lines, record["trainers"], source_file)
     append_warps(lines, record["warps"], source_file, location_labels)

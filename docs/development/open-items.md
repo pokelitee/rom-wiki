@@ -54,24 +54,68 @@ unanchored byte scans cannot improve confidence.
 
 ## 2. Not currently recoverable as structured ROM facts
 
-- **HGSS static encounters, gifts, and eggs** — the ARM9 command dispatch and
-  matching handlers prove the operand contracts for `WildBattle`, `GiveMon`, and
-  `GiveEgg`, and direct map headers prove ownership of dedicated script members.
-  However, scanning for an opcode plus valid literal operands and a plausible
-  following opcode does not prove that the bytes begin at a reachable command.
-  The existing inferred HGSS walker is only 90.8% accurate against Platinum's
-  known battle sites, so these acquisitions remain unpublished. Resume with a
-  complete, reachable instruction decoder; then add variable-produced operands,
-  common-script callers, and specialized handlers such as `GiveTogepiEgg`.
-- **HGSS specialty-shop placement** — the inventory catalog is decoded, but no
-  shop is attached to a map. ARM9 dispatch identifies the mart-opening handlers,
-  but the short opcode/selector signature also occurs inside operands and data;
-  requiring only a valid following halfword produced false dispatch candidates.
-  Resume with a reachable HGSS instruction decoder and then join its selector to
-  the catalog. Do not map inventories from shop or location names.
+- **HGSS static encounters (`WildBattle`) — resolved.** A ground-truth field-script
+  opcode table (`gen4/hgss/script_opcode_table.py`, sourced from
+  pret/pokeheartgold's real decompilation, cross-checked against every opcode
+  this codebase had already independently verified, including a direct
+  real-ROM byte comparison) replaced the abandoned 90.8%-accurate inferred
+  walker. Literal `WildBattle` sites, validated by a real follow-on
+  `CheckBattleWon` (directly, or after `ClearFlag`), are now decoded and
+  published per map header (`gen4/hgss/scripts.py`'s
+  `parse_static_encounter_commands`, wired into
+  `pipeline/extraction/locations/arm9_encounter_map.py`). Verified end to end
+  against real HeartGold/SoulSilver and Sacred Gold/Storm Silver ROMs: every
+  hit is a known, named legendary or gift encounter at its correct real map
+  location (Mewtwo/Cerulean Cave, the three legendary birds, Suicune, both
+  Snorlax roadblocks, both Sudowoodo blocks, the Lake of Rage red Gyarados,
+  the three self-destructing Team Rocket Electrode, the Kyogre/Groudon/
+  Rayquaza trio for HGSS; plus Sacred Gold/Storm Silver's own documented
+  legendary/gift additions -- Regigigas, Celebi, Mew, Jirachi, Arceus,
+  roaming Latios/Latias, and route-guardian Pokémon).
+- **HGSS gifts and eggs (`GiveMon`/`GiveEgg`) — still open.** Direct-to-party
+  gifts use a different, non-battle mechanism with no `CheckBattleWon`-style
+  result to validate against, so the same technique doesn't transfer.
+  Common-script-routed gifts, variable-produced operands, and specialized
+  handlers such as `GiveTogepiEgg` also remain unresolved. The same
+  ground-truth opcode table now removes the decoder blocker these previously
+  cited -- what's missing is a validated acceptance signal analogous to
+  `CheckBattleWon`, not the decoder itself.
+- **HGSS specialty-shop placement (map attachment) — resolved for dispatch,
+  still open for inventory content.** The field-script decoder
+  (`gen4/hgss/script_opcode_table.py`) found `MartBuy`/`SpecialMartBuy`/
+  `DecorationMart`/`SealMart` as real, named, correctly-widthed opcodes
+  (0x113-0x116). Scanning for them (`gen4/hgss/marts.py`'s
+  `parse_mart_dispatch_commands`) found 65 real dispatch sites, every one
+  cross-referencing to a real, correctly-named map header (Goldenrod City,
+  Celadon City's four separate department-store-floor scripts, Pokéathlon
+  Dome, Olivine City, Route 32/40, Pokémon League, Battle Frontier). This
+  location fact is now published as `LocationMartReference` (kind, raw
+  inventory selector, map header) on encounter-map locations.
+  What remains genuinely unresolved: the inventory *content* those dispatch
+  commands reference. DPPT's two structures for this (an ARM9 pointer table
+  of `0xFFFF`-terminated item lists for specialty/decoration/seal marts, and
+  a single badge-tiered `(item_id, tier)` list terminated by `(0, 0)` for
+  common marts) were searched for exhaustively and mechanically across
+  HGSS's entire ARM9 binary and all 129 ARM9 overlays -- zero candidate
+  matches of either structure at any length. This is a real negative
+  result, not an incomplete search: HGSS encodes mart inventory content
+  differently from DPPT (or somewhere this search didn't cover), and no
+  further guessing was attempted, consistent with this project's
+  decode-don't-guess bar. Do not map inventories from shop or location
+  names.
 
-- **BW roaming Tornadus and Thundurus** — kept explicitly unsupported rather
-  than derived from a published offset that points into code.
+- **BW roaming Tornadus and Thundurus (species identity) — resolved.** The
+  published community offset pointed into code, not data, so it was
+  correctly rejected as a guess. What that code actually does was decoded
+  by hand instead (see `gen5/bw/__init__.py`'s module comment for the full
+  Thumb-instruction trace, verified byte-identical between Black (US) and
+  White (US)): Tornadus = species 641 (a literal pool constant), Thundurus
+  = species 642 (computed as Tornadus + 1 by the routine itself) — both
+  correct real National Dex numbers. What remains open is not the species
+  identity but *where this belongs in the schema*: Gen5's roaming mechanic
+  has no location-tied activation script the way DPPT's `roaming_activations`
+  does, so publishing this needs a deliberate schema decision, not more
+  binary parsing.
 - **Generation V location section labels** — decoded map headers provide a
   broad display name and stable header identity, but no floor/room label. Warps
   already carry `destination_section_name` when an explicit profile mapping is

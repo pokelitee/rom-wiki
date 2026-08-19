@@ -142,12 +142,42 @@ from .trainers import parse_trainer_record, trainer_name_index
 # `CallWildBattle`/`PokePartyAdd` instructions. Fossil choices use the same
 # validated comparison pattern as item enrichment, so BW profiles need no
 # per-encounter script addresses.
-# Roaming Pokémon (Thundurus/Tornadus) were investigated the same way and
-# found to be a genuine exception: the unmodified retail ROM stores an ARM
-# instruction, not a data word, at the "species" offset the randomizer's own
-# ini lists for at least one of the two (verified against the real Black
-# ROM) -- the real species is only a literal fact after the randomizer's own
-# ASM patch is applied, so it's left undecoded here rather than guessed at.
+# Roaming Pokémon (Thundurus/Tornadus) species identity -- resolved.
+# The unmodified retail ROM stores an ARM Thumb instruction, not a data
+# word, at the "species" offset the randomizer community's own ini config
+# lists (`GetRoamerFlagOffsetStartOffset=0x95C4`, overlay 10) -- so blindly
+# trusting that published offset as a literal would have been a guess. What
+# it actually points to was decoded by hand instead: a small routine at
+# overlay 10 file offset 0x95C4 (verified byte-identical between Black (US)
+# and White (US)) that takes a species ID in r0 and returns which roamer it
+# is. Manually disassembling its real Thumb instructions:
+#   +0x00  LDR  r1, [PC, #0x14]   ; r1 = literal pool word at +0x18 = 0x281
+#   +0x02  CMP  r0, r1
+#   +0x04  BEQ  +0x10             ; -> MOV r0, #1 ("Tornadus") ; BX LR
+#   +0x06  ADD  r1, r1, #1        ; r1 = 0x282 (Tornadus id + 1)
+#   +0x08  CMP  r0, r1
+#   +0x0A  BNE  +0x0C             ; -> MOV r0, #2 (default) ; BX LR
+#   +0x0C  MOV  r0, #0            ; ("Thundurus") ; BX LR
+#   +0x18  .word 0x00000281       ; literal pool: 641 (Tornadus's real
+#                                   National Dex number)
+# This exactly matches the (independently written) code comment in
+# Ajarmar/universal-pokemon-randomizer-zx's `Gen5RomHandler.applyBlackWhiteRoamerPatch`
+# describing the routine's real behavior ("returns 0 for Thundurus, 1 for
+# Tornadus, and 2 for any other species... computing Thundurus's ID as
+# TornadusID + 1") -- confirming both the derivation above and that the
+# tool's own patch never needed to guess either ID; it only needed to
+# short-circuit the "any other species" branch. Tornadus = 641, Thundurus =
+# 642 (641 + 1) -- both correct, real National Dex numbers, cross-checked
+# against real-world knowledge, not read from the tool's output.
+#
+# What's still open is not the species identity but *where this belongs in
+# the schema*: Gen5's roaming mechanic has no location-tied activation
+# script the way DPPT's `roaming_activations` does (that field is populated
+# from a specific NPC/trigger script owning a map header; this routine is a
+# generic species-identity helper with no map-header ownership to attach
+# to). Publishing this fact needs a deliberate schema decision (e.g. a
+# location-less "roaming species" fact rather than a per-map record), not
+# more binary parsing.
 # Pickup's item table (pickup.py) is found the same way the TM/HM move table
 # is (machines.py): a byte-pattern search in an overlay, since it has no
 # stable absolute offset across ROM builds -- no script-engine research

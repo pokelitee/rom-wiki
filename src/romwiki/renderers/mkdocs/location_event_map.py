@@ -42,6 +42,7 @@ from romwiki.renderers.mkdocs.location_components import (
     append_connections,
     append_items,
     append_npc_trades,
+    append_pokemon_gifts,
     append_shops,
     append_static_encounters,
     append_trainers,
@@ -262,7 +263,7 @@ def _render_location(
                 )
     append_items(lines, record.get("items", []), source_file, references)
     append_shops(lines, record.get("shops", []), source_file, references)
-    _append_pokemon_gifts(
+    append_pokemon_gifts(
         lines, record.get("pokemon_gifts", []), source_file, references
     )
     append_npc_trades(lines, record.get("npc_trades", []), source_file, references)
@@ -428,67 +429,6 @@ def _location_summary(record: dict[str, Any]) -> list[str]:
             '<dd><span class="rw-summary__empty">None</span></dd></div>'
         )
     return summary_section("rw-location-summary", fact_lines)
-
-
-def _append_pokemon_gifts(
-    lines: list[str],
-    gifts: list[dict[str, Any]],
-    source_file: str,
-    references: ReferenceIndex | None,
-) -> None:
-    if not gifts:
-        return
-    lines.extend(
-        [
-            "## Gift Pokémon",
-            "",
-            "These are literal gift outcomes in this map's scripts; conditional "
-            "branches may be mutually exclusive.",
-            "",
-        ]
-    )
-    rows = []
-    for gift in gifts:
-        pokemon = entity_link(
-            "pokemon", gift["species_id"], gift["name"], source_file, references
-        )
-        held_item = (
-            entity_link(
-                "item",
-                gift["held_item_id"],
-                gift["held_item_name"],
-                source_file,
-                references,
-            )
-            if gift["held_item_id"] is not None and gift["held_item_name"]
-            else "—"
-        )
-        kind = "Pokémon" if gift["kind"] == "pokemon" else gift["kind"].title()
-        pokemon_sprite = entity_sprite("pokemon", gift["species_id"], references)
-        held_item_sprite = (
-            entity_sprite("item", gift["held_item_id"], references)
-            if gift["held_item_id"] is not None and gift["held_item_name"]
-            else "—"
-        )
-        held_item_cell = (
-            sprite_with_link(held_item_sprite, held_item)
-            if gift["held_item_id"] is not None and gift["held_item_name"]
-            else "—"
-        )
-        rows.append(
-            f"| {sprite_with_link(pokemon_sprite, pokemon)} | "
-            f"{reference_type_cell('pokemon', gift['species_id'], references)} | "
-            f"{kind} | {gift['level']} | {held_item_cell} |"
-        )
-    lines.extend(
-        markdown_table(
-            [
-                "| Pokémon | Type | Kind | Level | Held item |",
-                "| ------- | ---- | ---- | ----: | --------- |",
-            ],
-            rows,
-        )
-    )
 
 
 def _append_roaming_activations(

@@ -90,9 +90,10 @@ from .events import (
     resolve_hidden_item_id,
     resolve_visible_item_id,
 )
+from .gifts import Gen4HgssPokemonGiftCommand, parse_pokemon_gift_commands
 from .headbutt import HEADBUTT_SLOT_CHANCES, parse_headbutt_record
 from .map_headers import MAP_HEADER_SIZE, parse_map_headers
-from .marts import parse_shop_catalog
+from .marts import Gen4HgssMartDispatchCommand, parse_mart_dispatch_commands, parse_shop_catalog
 from .pickup import (
     PICKUP_COMMON_ITEM_COUNT,
     PICKUP_COMMON_TABLE_LOCATOR,
@@ -109,7 +110,10 @@ from .script_items import find_script_awarded_items
 from .scripts import (
     CHECK_WON_BATTLE,
     START_TRAINER_BATTLE,
+    START_WILD_BATTLE,
+    Gen4StaticEncounterCommand,
     Gen4TrainerBattleCommand,
+    parse_static_encounter_commands,
     parse_trainer_battle_commands,
 )
 from .trades import NPC_TRADE_RECORD_SIZE, parse_npc_trade_record
@@ -210,7 +214,11 @@ __all__ = [
     "MAP_HEADER_SIZE",
     "SAFARI_AREA_NAMES",
     "START_TRAINER_BATTLE",
+    "START_WILD_BATTLE",
     "Gen4TrainerBattleCommand",
+    "Gen4StaticEncounterCommand",
+    "Gen4HgssPokemonGiftCommand",
+    "Gen4HgssMartDispatchCommand",
     "parse_egg_move_table",
     "parse_encounter_record",
     "parse_headbutt_record",
@@ -239,6 +247,9 @@ __all__ = [
     "parse_trainer_class_prize_multipliers",
     "parse_trainer_record",
     "parse_trainer_battle_commands",
+    "parse_static_encounter_commands",
+    "parse_pokemon_gift_commands",
+    "parse_mart_dispatch_commands",
     "parse_npc_trade_record",
     "parse_tutor_compatibility_table",
     "parse_tutor_move_table",
