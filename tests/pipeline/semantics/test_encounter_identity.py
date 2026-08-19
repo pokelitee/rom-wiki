@@ -44,7 +44,7 @@ class EncounterIdentityTests(unittest.TestCase):
                     "area_name": "Rocky Beach",
                 },
                 "safari-zone-04",
-                "safari-zone#rocky-beach",
+                "safari-zone-04",
             ),
         )
 
@@ -106,11 +106,10 @@ class EncounterIdentityTests(unittest.TestCase):
                     "area_id": 42,
                 }
             )
-        with self.assertRaisesRegex(ValueError, "missing its area name"):
+        with self.assertRaisesRegex(ValueError, "safari_area_id must be an integer"):
             encounter_route_key(
                 {
                     "source_type": EncounterSourceType.SAFARI_ZONE.value,
-                    "safari_area_id": 4,
                     "area_id": 42,
                 }
             )

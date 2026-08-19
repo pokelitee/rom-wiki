@@ -86,12 +86,12 @@ class DatasetComparisonTests(unittest.TestCase):
         baseline = _dataset(
             "trainers",
             "base",
-            [{"trainer_id": 1, "name": "Sam", "party": [baseline_member]}],
+            [{"trainer_id": 1, "name": "Sam", "class_name": "Youngster", "party": [baseline_member]}],
         )
         current = _dataset(
             "trainers",
             "hack",
-            [{"trainer_id": 1, "name": "Sam", "party": [current_member]}],
+            [{"trainer_id": 1, "name": "Sam", "class_name": "Youngster", "party": [current_member]}],
         )
 
         comparison = compare_datasets(current, baseline)
@@ -115,12 +115,12 @@ class DatasetComparisonTests(unittest.TestCase):
             _dataset(
                 "trainers",
                 "hack",
-                [{"trainer_id": 1, "name": "Sam", "party": [current_member]}],
+                [{"trainer_id": 1, "name": "Sam", "class_name": "Youngster", "party": [current_member]}],
             ),
             _dataset(
                 "trainers",
                 "base",
-                [{"trainer_id": 1, "name": "Sam", "party": [baseline_member]}],
+                [{"trainer_id": 1, "name": "Sam", "class_name": "Youngster", "party": [baseline_member]}],
             ),
         )
 

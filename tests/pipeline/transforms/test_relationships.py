@@ -423,7 +423,7 @@ class RelationshipIndexTests(unittest.TestCase):
         )
         self.assertEqual(index.encounter_locations, {})
 
-    def test_indexes_safari_pokemon_with_anchored_area_routes(self) -> None:
+    def test_indexes_safari_pokemon_with_per_area_routes(self) -> None:
         safari = {
             "area_id": 300,
             "source_type": "safari-zone",
@@ -451,7 +451,7 @@ class RelationshipIndexTests(unittest.TestCase):
         )
 
         reference = index.pokemon_wild_encounters["bulbasaur"][0]
-        self.assertEqual(reference.encounter_route_key, "safari-zone#plains")
+        self.assertEqual(reference.encounter_route_key, "safari-zone-00")
         self.assertEqual(
             (reference.method, reference.condition), ("Grass", "morning; base pool")
         )

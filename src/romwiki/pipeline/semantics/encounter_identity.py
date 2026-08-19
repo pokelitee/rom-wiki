@@ -4,8 +4,6 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
-from romwiki.util.text import name_slug
-
 
 class EncounterSourceType(StrEnum):
     """Normalized identities for nonstandard encounter sources."""
@@ -92,11 +90,11 @@ def encounter_route_key(record: Mapping[str, Any]) -> int | str:
         header_id = _required_location_header_id(record)
         return f"header-{header_id:03}#{HEADBUTT_ANCHOR}"
     if source_type == EncounterSourceType.SAFARI_ZONE:
-        _required_int(record, "safari_area_id")
-        area_name = record.get("area_name")
-        if not isinstance(area_name, str):
-            raise ValueError("Safari Zone encounter is missing its area name")
-        return f"{SAFARI_ZONE_ROUTE}#{name_slug(area_name)}"
+        # Each Safari area now renders its own page (see encounters.py's
+        # per-area rendering, split out to keep the combined page under the
+        # site audit's page-size limit), so its render identity is the same
+        # per-area catalog identity rather than an anchor into a shared page.
+        return conditional_encounter_key(record)
     map_index = record.get("map_index")
     if not isinstance(map_index, int):
         return int(record["area_id"])

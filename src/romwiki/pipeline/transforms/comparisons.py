@@ -7,6 +7,7 @@ from romwiki.pipeline.semantics.encounter_identity import (
     CONDITIONAL_ENCOUNTER_SOURCES,
     encounter_route_key,
 )
+from romwiki.schema.trainers import is_unused_trainer_slot
 from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError
 
@@ -520,7 +521,7 @@ def _has_detail_page(kind: str, record: dict[str, Any]) -> bool:
     if kind in {"pokemon", "moves"}:
         return bool(record.get("public"))
     if kind == "trainers":
-        return bool(record.get("party"))
+        return bool(record.get("party")) and not is_unused_trainer_slot(record)
     if kind == "wild_encounters":
         return bool(record.get("active"))
     return True

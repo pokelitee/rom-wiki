@@ -321,7 +321,7 @@ def append_npc_trades(
         return
     show_nature = any(trade.get("nature") for trade in trades)
     show_versions = any(trade.get("versions") for trade in trades)
-    show_contest_stats = any(any(trade["contest_stats"]) for trade in trades)
+    show_contest_stats = any(any(trade.get("contest_stats") or ()) for trade in trades)
     headers = ["Give", "Receive", "Nickname"]
     if show_versions:
         headers.append("Versions")

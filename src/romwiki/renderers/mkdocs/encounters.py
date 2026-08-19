@@ -28,7 +28,6 @@ from romwiki.renderers.mkdocs.comparisons import (
     comparison_notes_section,
     comparison_section,
     encounter_record_comparison,
-    grouped_comparison_section,
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
@@ -129,7 +128,10 @@ def render_encounter_pages(
                 if only_pages is None or f"area-{record['area_id']:03}" in only_pages
             ),
             *(
-                (f"{SAFARI_ZONE_ROUTE}.md",)
+                (
+                    f"{SAFARI_ZONE_ROUTE}.md",
+                    *(f"{encounter_route_key(record)}.md" for record in safari_records),
+                )
                 if safari_records and _safari_page_selected(safari_records, only_pages)
                 else ()
             ),
@@ -219,15 +221,22 @@ def render_encounter_pages(
     if safari_records and _safari_page_selected(safari_records, only_pages):
         write_text(
             output_root / f"{SAFARI_ZONE_ROUTE}.md",
-            _render_safari_zone_page(
-                safari_records,
-                comparison,
-                comparison.get("baseline") if comparison else None,
-                references,
-                relationships,
-            ),
+            _render_safari_zone_index(safari_records, references, relationships),
         )
         page_count += 1
+        for record in safari_records:
+            filename = f"{encounter_route_key(record)}.md"
+            if only_pages is None or filename.removesuffix(".md") in only_pages:
+                write_text(
+                    output_root / filename,
+                    _render_safari_zone_area_page(
+                        record,
+                        comparison,
+                        comparison.get("baseline") if comparison else None,
+                        references,
+                    ),
+                )
+                page_count += 1
     for record in safari_records:
         route_id = conditional_encounter_key(record)
         change = encounter_record_comparison(comparison, record)
@@ -369,13 +378,18 @@ def _safari_page_selected(
     )
 
 
-def _render_safari_zone_page(
+def _render_safari_zone_index(
     records: list[dict[str, Any]],
-    comparison: dict[str, Any] | None,
-    baseline_name: str | None,
     references: ReferenceIndex | None,
     relationships: RelationshipIndex | None = None,
 ) -> str:
+    """Render the Safari Zone overview page.
+
+    Each area's full encounter data is rendered on its own page (see
+    `_render_safari_zone_area_page`) rather than combined here, since the
+    combined page's image count pushed several sites over the site audit's
+    HTML page-size limit.
+    """
     source_file = f"encounters/{SAFARI_ZONE_ROUTE}.md"
     lines = [
         "# Safari Zone encounters",
@@ -396,23 +410,42 @@ def _render_safari_zone_page(
                 "",
             ]
         )
-    for record in records:
-        append_safari_area(lines, record, source_file)
+    lines.extend(["## Areas", ""])
     lines.extend(
-        grouped_comparison_section(
-            [
-                (
-                    record["area_name"],
-                    encounter_record_comparison(comparison, record),
-                )
-                for record in records
-            ],
+        "- "
+        + ROUTES.markdown_link(
+            entity_reference(
+                encounter_route_kind(encounter_route_key(record)),
+                record["area_id"],
+                record["area_name"],
+                encounter_route_key(record),
+            ),
+            source_file,
+        )
+        for record in records
+    )
+    lines.extend(["", *provenance_section(safari_provenance(records))])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _render_safari_zone_area_page(
+    record: dict[str, Any],
+    comparison: dict[str, Any] | None,
+    baseline_name: str | None,
+    references: ReferenceIndex | None,
+) -> str:
+    source_file = f"encounters/{encounter_route_key(record)}.md"
+    lines: list[str] = []
+    append_safari_area(lines, record, source_file, heading_level=1)
+    lines.extend(
+        comparison_section(
+            encounter_record_comparison(comparison, record),
             baseline_name,
             source_file,
             references,
         )
     )
-    lines.extend(provenance_section(safari_provenance(records)))
+    lines.extend(provenance_section(safari_provenance([record])))
     return "\n".join(lines).rstrip() + "\n"
 
 

@@ -218,19 +218,21 @@ class EncounterRenderingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             render_encounter_pages(dataset, output)
-            page = (output / "safari-zone.md").read_text(encoding="utf-8")
+            index_page = (output / "safari-zone.md").read_text(encoding="utf-8")
+            area_page = (output / "safari-zone-00.md").read_text(encoding="utf-8")
             catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
-        self.assertIn("# Safari Zone encounters", page)
-        self.assertIn("## Plains { #plains }", page)
-        self.assertIn("3 Plains, 5 Forest", page)
-        self.assertIn("[Eevee](../pokemon/eevee.md) (Lv. 18)", page)
+        self.assertIn("# Safari Zone encounters", index_page)
+        self.assertIn("[Plains](safari-zone-00.md)", index_page)
+        self.assertIn("# Plains { #plains }", area_page)
+        self.assertIn("3 Plains, 5 Forest", area_page)
+        self.assertIn("[Eevee](../pokemon/eevee.md) (Lv. 18)", area_page)
         self.assertEqual(catalog["records"][0]["methods"], ["Grass", "Surf"])
         self.assertEqual(
             catalog["records"][0]["method_pokemon"],
             {"Grass": ["Pikachu", "Eevee"], "Surf": ["Pikachu", "Eevee"]},
         )
-        self.assertEqual(catalog["records"][0]["url"], "safari-zone/#plains")
+        self.assertEqual(catalog["records"][0]["url"], "safari-zone-00/")
 
     def test_catalog_keeps_pokemon_correlated_with_encounter_methods(self) -> None:
         pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
