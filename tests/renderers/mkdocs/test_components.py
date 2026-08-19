@@ -14,6 +14,7 @@ from romwiki.renderers.mkdocs.components import (
     effectiveness_value,
     evolution_condition,
     fact_grid,
+    heading_anchor,
     markdown_section,
     markdown_table,
     markdown_table_from_cells,
@@ -92,6 +93,49 @@ class DisplayNameTests(unittest.TestCase):
             self.assertIn('=== "White"', lines)
             self.assertTrue(any("Black entry." in line for line in lines))
             self.assertTrue(any("White entry." in line for line in lines))
+
+    def test_identical_effect_text_is_not_repeated_per_version_tab(self) -> None:
+        # Only the flavor text differs between versions here (the common
+        # real-world case) -- the "## Effect" heading and its identical
+        # content must not be duplicated inside every version tab, since
+        # mkdocs' toc extension indexes headings in every tab regardless of
+        # which one is active.
+        record = {
+            "reference_variants": {
+                "black": {
+                    "short_effect": "Does a thing.",
+                    "flavor_text": "Black entry.",
+                },
+                "white": {
+                    "short_effect": "Does a thing.",
+                    "flavor_text": "White entry.",
+                },
+            }
+        }
+
+        rendered = reference_description(record, "Missing")
+        page = "\n".join(rendered)
+
+        self.assertEqual(rendered.count("## Effect"), 1)
+        self.assertEqual(page.count("Does a thing."), 1)
+        self.assertIn('=== "Black"', rendered)
+        self.assertIn('=== "White"', rendered)
+
+    def test_differing_effect_text_still_tabs_the_effect_section(self) -> None:
+        record = {
+            "reference_variants": {
+                "black": {"short_effect": "Black effect."},
+                "white": {"short_effect": "White effect."},
+            }
+        }
+
+        rendered = reference_description(record, "Missing")
+
+        self.assertEqual(rendered.count("## Effect"), 1)
+        self.assertIn('=== "Black"', rendered)
+        self.assertIn('=== "White"', rendered)
+        self.assertTrue(any("Black effect." in line for line in rendered))
+        self.assertTrue(any("White effect." in line for line in rendered))
 
     def test_title_cases_regular_slug(self) -> None:
         self.assertEqual(display_name("evolution-stone"), "Evolution Stone")
@@ -181,6 +225,24 @@ class ComponentEscapingTests(unittest.TestCase):
             summary_section_link("A & B", 'facts" onclick="alert(1)'),
             '<a href="#facts&quot; onclick=&quot;alert(1)">A &amp; B</a>',
         )
+
+
+class HeadingAnchorTests(unittest.TestCase):
+    def test_matches_mkdocs_toc_slug_for_real_headings(self) -> None:
+        headings = (
+            "Gift Pokémon",
+            "Grass/Cave",
+            "Marts (contents undecoded)",
+            "Great Marsh daily rotation",
+            "Walking (Morning)",
+            "Rock Smash",
+            "In-game trades",
+        )
+        for heading in headings:
+            with self.subTest(heading=heading):
+                html = markdown.markdown(f"## {heading}", extensions=["toc"])
+                expected = html.split('id="', 1)[1].split('"', 1)[0]
+                self.assertEqual(heading_anchor(heading), expected)
 
 
 class MarkdownTableTests(unittest.TestCase):

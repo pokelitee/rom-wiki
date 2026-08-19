@@ -31,8 +31,8 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
-    content_tabs,
     display_name,
+    heading_anchor,
     level_range,
     markdown_table,
     markdown_table_from_cells,
@@ -44,7 +44,7 @@ from romwiki.renderers.mkdocs.components import (
     sprite_with_link,
     summary_section,
     summary_section_link,
-    tab_contents_identical,
+    tab_dimension,
     table_sprite_cell,
     version_variant_records,
 )
@@ -310,6 +310,7 @@ def _safari_catalog_record(
             "url": filename,
             "locations": ["Safari Zone"],
             "methods": methods,
+            "method_anchors": {},
             "pokemon": names,
             "pokemon_refs": [
                 ROUTES.catalog_reference(reference, "encounters/")
@@ -467,17 +468,51 @@ def _safari_physical_maps(
     ]
 
 
+class _MethodAccumulator:
+    """Collects per-method encounter slots into the fields shared by the
+    standard and seasonal encounter catalog records, so the two builders
+    don't each hand-roll the same species/level/anchor bookkeeping.
+    """
+
+    def __init__(self) -> None:
+        self.methods: list[str] = []
+        self.method_anchors: dict[str, str] = {}
+        self.method_pokemon: dict[str, list[str]] = {}
+        self.species: list[str] = []
+        self.pokemon_refs: list[Any] = []
+        self.levels: list[int] = []
+
+    def add(self, label: str, anchor: str, method: dict[str, Any] | None) -> None:
+        if not method or not method.get("rate"):
+            return
+        self.methods.append(label)
+        self.method_anchors[label] = anchor
+        method_species = self.method_pokemon.setdefault(label, [])
+        for slot in method["slots"]:
+            pokemon = slot.get("pokemon")
+            if pokemon:
+                self.species.append(pokemon["name"])
+                method_species.append(pokemon["name"])
+                self.pokemon_refs.append(_pokemon_reference(pokemon))
+            if "level" in slot:
+                self.levels.append(slot["level"])
+            else:
+                self.levels.extend((slot["minimum_level"], slot["maximum_level"]))
+
+    def method_pokemon_deduped(self) -> dict[str, list[str]]:
+        return {
+            label: list(dict.fromkeys(values))
+            for label, values in self.method_pokemon.items()
+        }
+
+
 def _catalog_record(
     record: dict[str, Any],
     filename: str,
     referenced: bool,
     change: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    methods = []
-    levels = []
-    species = []
-    pokemon_refs = []
-    method_pokemon = {}
+    accumulator = _MethodAccumulator()
     for label, key in (
         ("walking", "walking"),
         ("surf", "surf"),
@@ -486,27 +521,19 @@ def _catalog_record(
         ("good rod", "good_rod"),
         ("super rod", "super_rod"),
     ):
-        method = record.get(key)
-        if not method or not method["rate"]:
-            continue
-        methods.append(label)
-        method_species = []
-        for slot in method["slots"]:
-            pokemon = slot.get("pokemon")
-            if pokemon:
-                species.append(pokemon["name"])
-                method_species.append(pokemon["name"])
-                pokemon_refs.append(_pokemon_reference(pokemon))
-            if "level" in slot:
-                levels.append(slot["level"])
-            else:
-                levels.extend((slot["minimum_level"], slot["maximum_level"]))
-        method_pokemon[label] = list(dict.fromkeys(method_species))
+        accumulator.add(
+            label,
+            heading_anchor(_method_heading(label, key, record)),
+            record.get(key),
+        )
+    method_pokemon = accumulator.method_pokemon_deduped()
     special_pokemon = _special_pokemon(record["special"])
     special_species = [pokemon["name"] for pokemon in special_pokemon]
-    pokemon_refs.extend(_pokemon_reference(pokemon) for pokemon in special_pokemon)
-    species.extend(special_species)
-    levels.extend(
+    accumulator.pokemon_refs.extend(
+        _pokemon_reference(pokemon) for pokemon in special_pokemon
+    )
+    accumulator.species.extend(special_species)
+    accumulator.levels.extend(
         slot["level"]
         for group in special_encounter_groups(record["special"])
         for slot in group.slots
@@ -525,18 +552,19 @@ def _catalog_record(
             "label": record["name"],
             "url": filename,
             "locations": list(dict.fromkeys(location_names)),
-            "methods": methods,
-            "pokemon": list(dict.fromkeys(species)),
+            "methods": accumulator.methods,
+            "method_anchors": accumulator.method_anchors,
+            "pokemon": list(dict.fromkeys(accumulator.species)),
             "pokemon_refs": [
                 ROUTES.catalog_reference(reference, "encounters/")
-                for reference in unique_references(pokemon_refs)
+                for reference in unique_references(accumulator.pokemon_refs)
             ],
             "method_pokemon": method_pokemon,
-            "min_level": min(levels) if levels else None,
-            "max_level": max(levels) if levels else None,
+            "min_level": min(accumulator.levels) if accumulator.levels else None,
+            "max_level": max(accumulator.levels) if accumulator.levels else None,
             "referenced": referenced,
             "search_text": " ".join(
-                (record["name"], route_id, *location_names, *species)
+                (record["name"], route_id, *location_names, *accumulator.species)
             ).lower(),
         },
         change,
@@ -574,6 +602,13 @@ def _pokemon_reference(pokemon: dict[str, Any]):
         pokemon["name"],
         pokemon.get("slug"),
     )
+
+
+def _method_heading(label: str, key: str, record: dict[str, Any]) -> str:
+    """The exact heading text `_render_area` emits for a given method."""
+    if key == "walking" and record.get("walking_variants"):
+        return "Walking (Morning)"
+    return label.title()
 
 
 def _render_area(
@@ -668,14 +703,14 @@ def _render_area(
 
 def _area_summary(record: dict[str, Any]) -> list[str]:
     methods = [
-        label
+        (label, key)
         for label, key in (
-            ("Walking", "walking"),
-            ("Surf", "surf"),
-            ("Rock Smash", "rock_smash"),
-            ("Old Rod", "old_rod"),
-            ("Good Rod", "good_rod"),
-            ("Super Rod", "super_rod"),
+            ("walking", "walking"),
+            ("surf", "surf"),
+            ("rock smash", "rock_smash"),
+            ("old rod", "old_rod"),
+            ("good rod", "good_rod"),
+            ("super rod", "super_rod"),
         )
         if record.get(key, {}).get("rate")
     ]
@@ -687,14 +722,10 @@ def _area_summary(record: dict[str, Any]) -> list[str]:
             + (
                 ", ".join(
                     summary_section_link(
-                        label,
-                        (
-                            "walking-morning"
-                            if label == "Walking" and record.get("walking_variants")
-                            else label.lower().replace(" ", "-")
-                        ),
+                        label.title(),
+                        heading_anchor(_method_heading(label, key, record)),
                     )
-                    for label in methods
+                    for label, key in methods
                 )
                 if methods
                 else "None"
@@ -863,7 +894,7 @@ def _append_special(
         return
     lines.extend(["## Special encounters", ""])
     for group in groups:
-        lines.extend([f"**{group.label}:**", ""])
+        lines.extend([f"### {group.label}", ""])
         if group.key == "radar":
             lines.extend(
                 [
@@ -912,7 +943,7 @@ def _append_special(
     if unown_forms:
         lines.extend(
             [
-                "**Unown forms:**",
+                "### Unown forms",
                 "",
                 "Unown always shows the generic sprite in the tables above — "
                 "the ROM's encounter slots only store species and level, "
@@ -1077,11 +1108,7 @@ def _seasonal_catalog_record(
     locations: tuple[EncounterLocationReference, ...] = (),
 ) -> dict[str, Any]:
     record = records[0]
-    methods = []
-    levels = []
-    species = []
-    pokemon_refs = []
-    method_pokemon = {}
+    accumulator = _MethodAccumulator()
     source_records = [
         value
         for seasonal_record in records
@@ -1089,18 +1116,7 @@ def _seasonal_catalog_record(
     ]
     for source_record in source_records:
         for key, label in _SEASONAL_METHOD_LABELS.items():
-            method = source_record[key]
-            if not method["rate"]:
-                continue
-            methods.append(label)
-            method_species = method_pokemon.setdefault(label, [])
-            for slot in method["slots"]:
-                pokemon = slot.get("pokemon")
-                if pokemon:
-                    species.append(pokemon["name"])
-                    method_species.append(pokemon["name"])
-                    pokemon_refs.append(_pokemon_reference(pokemon))
-                levels.extend((slot["minimum_level"], slot["maximum_level"]))
+            accumulator.add(label, heading_anchor(label), source_record[key])
     location_names = list(
         dict.fromkeys(
             [location.location_name for location in locations]
@@ -1120,21 +1136,19 @@ def _seasonal_catalog_record(
             "label": record_name,
             "url": filename,
             "locations": location_names,
-            "methods": list(dict.fromkeys(methods)),
-            "pokemon": list(dict.fromkeys(species)),
+            "methods": list(dict.fromkeys(accumulator.methods)),
+            "method_anchors": accumulator.method_anchors,
+            "pokemon": list(dict.fromkeys(accumulator.species)),
             "pokemon_refs": [
                 ROUTES.catalog_reference(reference, "encounters/")
-                for reference in unique_references(pokemon_refs)
+                for reference in unique_references(accumulator.pokemon_refs)
             ],
-            "method_pokemon": {
-                label: list(dict.fromkeys(values))
-                for label, values in method_pokemon.items()
-            },
-            "min_level": min(levels) if levels else None,
-            "max_level": max(levels) if levels else None,
+            "method_pokemon": accumulator.method_pokemon_deduped(),
+            "min_level": min(accumulator.levels) if accumulator.levels else None,
+            "max_level": max(accumulator.levels) if accumulator.levels else None,
             "referenced": True,
             "search_text": " ".join(
-                (record_name, route_id, *location_names, *species)
+                (record_name, route_id, *location_names, *accumulator.species)
             ).lower(),
         },
         change,
@@ -1292,18 +1306,12 @@ def _season_version_tabs(
         )
 
     season_contents = [
-        (display_name(season or "all"), _render_tab_dimension(version_contents))
+        (display_name(season or "all"), tab_dimension(version_contents))
         for season, version_contents in by_season.items()
     ]
     if set(by_season) == {None}:
         return season_contents[0][1]
-    return _render_tab_dimension(season_contents)
-
-
-def _render_tab_dimension(contents: list[tuple[str, list[str]]]) -> list[str]:
-    if len(contents) == 1 or tab_contents_identical(contents):
-        return contents[0][1]
-    return content_tabs(contents)
+    return tab_dimension(season_contents)
 
 
 def _seasonal_area_summary(

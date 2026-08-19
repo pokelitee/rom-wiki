@@ -258,6 +258,10 @@ class EncounterRenderingTests(unittest.TestCase):
             entry["method_pokemon"],
             {"Grass/Cave": ["Pikachu"], "Surfing": ["Eevee"]},
         )
+        self.assertEqual(
+            entry["method_anchors"],
+            {"Grass/Cave": "grasscave", "Surfing": "surfing"},
+        )
         self.assertEqual((entry["min_level"], entry["max_level"]), (5, 20))
 
     def test_aggregates_nonadjacent_slots_by_species_and_form(self) -> None:
@@ -363,14 +367,19 @@ class EncounterRenderingTests(unittest.TestCase):
             output = Path(directory)
             render_encounter_pages(dataset, output)
             page = (output / "area-000.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertIn("## Walking (Morning)", page)
         self.assertIn("## Walking (Night)", page)
         self.assertIn('href="#walking-morning"', page)
         self.assertNotIn('href="#walking"', page)
         self.assertIn("## Rock Smash", page)
-        self.assertIn("**Hoenn Sound radio:**", page)
+        self.assertIn("### Hoenn Sound radio", page)
         self.assertNotIn("Unown table ID", page)
+        self.assertEqual(
+            catalog["records"][0]["method_anchors"],
+            {"walking": "walking-morning", "rock smash": "rock-smash"},
+        )
 
     def test_links_seasonal_and_nonseasonal_gen5_encounters_to_locations(self) -> None:
         seasonal = _encounter_record(8, 3, "spring", "Route 1")

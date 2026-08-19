@@ -383,8 +383,10 @@ Renderer entry points accept the shared enriched-record contracts in
 specifications own headers and alignment while preserving already-rendered cells,
 and section framing owns heading separation without interpreting section content.
 Location presentation shared by event-map and encounter-map records lives in the
-neutral `location_components.py`; sibling renderers must not import each other's
-private helpers.
+neutral `location_components.py` (rendering helpers) and `location_features.py`
+(the shared per-section feature/anchor table each family's summary card and
+locations-catalog builder both read from); sibling renderers must not import
+each other's private helpers.
 
 `sites/games/<slug>/` contains one independently configurable game wiki. The site
 catalog builds those wikis and the portal into one GitHub Pages artifact while

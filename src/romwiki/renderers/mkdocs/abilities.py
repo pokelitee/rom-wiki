@@ -299,9 +299,9 @@ def _pickup_section(
         f"| {tier * 10 + 1}–{tier * 10 + 10} | {rate}% |"
         for tier, rate in enumerate(pickup["common_rate"])
     )
-    lines.extend(["", "**Common pool:**", ""])
+    lines.extend(["", "### Common pool", ""])
     lines.extend(_pickup_pool_rows(pickup["common_items"], source_file, references))
-    lines.extend(["**Rare pool** (the remaining chance):", ""])
+    lines.extend(["### Rare pool", "", "The remaining chance.", ""])
     lines.extend(_pickup_pool_rows(pickup["rare_items"], source_file, references))
     return lines
 

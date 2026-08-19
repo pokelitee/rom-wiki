@@ -31,6 +31,7 @@ from romwiki.renderers.mkdocs.components import (
     provenance_section,
     record_navigation_for,
     summary_section,
+    summary_section_link,
 )
 from romwiki.renderers.mkdocs.conditional_encounters import (
     append_daily_swarm,
@@ -56,6 +57,7 @@ from romwiki.renderers.mkdocs.location_components import (
     location_label,
     section_name_provenance_facts,
 )
+from romwiki.renderers.mkdocs.location_features import encounter_map_feature_rows
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
@@ -164,6 +166,15 @@ def render_encounter_map_location_pages(
                 "locations/index.md",
             )
         )
+        feature_rows = [
+            row
+            for row in encounter_map_feature_rows(
+                record,
+                has_ordinary_encounters=bool(ordinary_encounters),
+                conditional_encounters=conditional_encounters,
+            )
+            if row[3]
+        ]
         catalog_records.append(
             add_change_status(
                 {
@@ -173,27 +184,10 @@ def render_encounter_map_location_pages(
                     "location_name": record["name"],
                     "section_name": record.get("section_name"),
                     "url": route_id + "/",
-                    "features": [
-                        *(
-                            ["encounters"]
-                            if ordinary_encounters or conditional_encounters
-                            else []
-                        ),
-                        *(["trainers"] if record["trainers"] else []),
-                        *(["warps"] if record["warps"] else []),
-                        *(["static-encounters"] if record["static_encounters"] else []),
-                        *(["gifts"] if record.get("pokemon_gifts") else []),
-                        *(["connections"] if record["connections"] else []),
-                        *(["items"] if record["items"] else []),
-                        *(
-                            ["script-awarded-items"]
-                            if record.get("script_awarded_items")
-                            else []
-                        ),
-                        *(["shops"] if record.get("shops") else []),
-                        *(["marts"] if record.get("mart_references") else []),
-                        *(["trades"] if record.get("npc_trades") else []),
-                    ],
+                    "features": [key for key, *_ in feature_rows],
+                    "feature_anchors": {
+                        key: anchor for key, _, anchor, *_ in feature_rows
+                    },
                     "search_text": (
                         f"{record['name']} {record.get('section_name') or ''} "
                         f"{record.get('internal_name') or ''} {route_id}".lower()
@@ -236,10 +230,21 @@ def _render_encounter_map_location(
             f"<div><dt>Location</dt><dd>{escape_table_cell(record['name'])}</dd></div>",
             f"<div><dt>Section</dt><dd>{escape_table_cell(record['section_name'])}</dd></div>",
         ]
-    if encounters:
+    for catalog_key, label, anchor, present, value in encounter_map_feature_rows(
+        record,
+        has_ordinary_encounters=bool(encounters),
+        conditional_encounters=conditional_encounters,
+    ):
+        if not present:
+            continue
+        display_value = (
+            f"map index {record['encounter_map_index']}"
+            if catalog_key == "encounters" and encounters
+            else value
+        )
         facts.append(
-            "<div><dt>Wild encounters</dt><dd>"
-            f"map index {record['encounter_map_index']}</dd></div>"
+            f"<div><dt>{label}</dt><dd>"
+            f"{summary_section_link(display_value, anchor)}</dd></div>"
         )
     lines = [
         f"# {location_label(record)}",

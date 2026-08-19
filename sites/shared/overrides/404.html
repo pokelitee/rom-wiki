@@ -62,14 +62,25 @@
             <h2 id="not-found-games-heading">Choose a game</h2>
           </div>
         </div>
-        <nav class="rw-not-found__links" aria-label="Game wikis">
-          {% for game in games %}
-            <a href="{{ (game.slug ~ '/') | url }}">
-              <strong>{{ game.name }}</strong>
-              <span>Generation {{ game.generation }} · {{ game.platform_name }}</span>
-            </a>
-          {% endfor %}
-        </nav>
+        {% for generation, generation_games in games | groupby("generation") %}
+          <section class="rw-generation-group" aria-labelledby="not-found-generation-{{ generation }}-heading">
+            <h3 class="rw-generation-heading" id="not-found-generation-{{ generation }}-heading">Generation {{ generation }}</h3>
+            <div class="rw-game-grid">
+              {% for game in generation_games %}
+                <a class="rw-game-card" href="{{ (game.slug ~ '/') | url }}" data-theme="{{ game.theme }}">
+                  <h4>{{ game.name }}</h4>
+                  <p>{{ game.description }}</p>
+                  <dl>
+                    <div><dt>Creator</dt><dd>{{ game.creator }}</dd></div>
+                    <div><dt>Platform</dt><dd>{{ game.platform_name }}</dd></div>
+                    <div><dt>Base game</dt><dd>{{ game.base_game | replace('-', ' ') | title }}</dd></div>
+                  </dl>
+                  <span class="rw-card-action">Open wiki <span aria-hidden="true">&rarr;</span></span>
+                </a>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
       </section>
     {% endif %}
   </div>

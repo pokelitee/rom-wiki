@@ -673,7 +673,7 @@ def _append_berry_mechanics(lines: list[str], berry: dict[str, Any] | None) -> N
                 )
             ),
             "",
-            "**Contest flavor:**",
+            "### Contest flavor",
             "",
             *fact_grid(
                 (

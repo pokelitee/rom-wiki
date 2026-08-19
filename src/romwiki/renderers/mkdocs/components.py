@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+import unicodedata
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from html import escape
@@ -323,6 +325,22 @@ def tab_contents_identical(contents: list[tuple[str, list[str]]]) -> bool:
     return bool(contents) and all(content == contents[0][1] for _, content in contents)
 
 
+def tab_dimension(contents: list[tuple[str, list[str]]]) -> list[str]:
+    """Render one tabbed dimension, collapsing it to plain lines when tabs
+    would be redundant (a single tab, or every tab rendering identically).
+
+    Headings inside `content_tabs` are indexed by mkdocs' TOC extension for
+    every tab, not just the active one, so a heading repeated across tabs
+    produces duplicate/suffixed TOC entries. Callers should keep any heading
+    that would otherwise repeat per tab outside the tabbed content, and only
+    tab the part that actually differs (see `_render_seasonal_area` in
+    `encounters.py` for the pattern), using this helper for the tabbed part.
+    """
+    if len(contents) == 1 or tab_contents_identical(contents):
+        return contents[0][1]
+    return content_tabs(contents)
+
+
 def ability_link(value: dict[str, Any], source_url: str) -> str:
     """Render one Pokémon's ability as a link, marking hidden ones.
 
@@ -619,6 +637,23 @@ def summary_section_link(value: str | int, anchor: str) -> str:
     return f'<a href="#{escape(anchor, quote=True)}">{escape(str(value))}</a>'
 
 
+_ANCHOR_STRIP_RE = re.compile(r"[^\w\s-]")
+_ANCHOR_WHITESPACE_RE = re.compile(r"[-\s]+")
+
+
+def heading_anchor(heading: str) -> str:
+    """Compute the anchor slug mkdocs assigns to a rendered heading.
+
+    Mirrors the default (ASCII) behavior of `markdown.extensions.toc.slugify`
+    so links to a heading can be derived from its text instead of hardcoding
+    the slug a second time.
+    """
+    value = unicodedata.normalize("NFKD", heading)
+    value = value.encode("ascii", "ignore").decode("ascii")
+    value = _ANCHOR_STRIP_RE.sub("", value).strip().lower()
+    return _ANCHOR_WHITESPACE_RE.sub("-", value)
+
+
 def record_nav_link(
     href: str | None,
     label: str,
@@ -720,44 +755,88 @@ def reference_type_cell(
 
 
 def reference_description(record: dict[str, Any], empty_message: str) -> list[str]:
+    """Render a move/ability/item's Effect and Pokédex-flavor sections.
+
+    Kept as two independently tabbed dimensions (rather than one tab per
+    version wrapping both) so a version difference confined to the flavor
+    text (the common case -- game-mechanic effect text rarely differs
+    between paired versions) doesn't force the "## Effect" heading and its
+    identical content to repeat inside every version tab.
+    """
     variants = record.get("reference_variants")
-    if isinstance(variants, Mapping) and variants:
-        contents = [
-            (
-                display_name(str(version)),
-                _reference_description(reference or {}, empty_message),
+    if not (isinstance(variants, Mapping) and variants):
+        return _reference_description(record.get("reference") or {}, empty_message)
+    references = {
+        display_name(str(version)): (reference or {})
+        for version, reference in variants.items()
+    }
+    effect_tabs = [(label, _effect_lines(ref)) for label, ref in references.items()]
+    flavor_tabs = [(label, _flavor_lines(ref)) for label, ref in references.items()]
+    lines: list[str] = []
+    if any(content for _, content in effect_tabs):
+        lines.extend(["## Effect", ""])
+        lines.extend(
+            tab_dimension(
+                [
+                    (label, content or empty_state("No effect text for this version."))
+                    for label, content in effect_tabs
+                ]
             )
-            for version, reference in variants.items()
-        ]
-        if tab_contents_identical(contents):
-            return contents[0][1]
-        return content_tabs(contents)
-    return _reference_description(record.get("reference") or {}, empty_message)
+        )
+    if any(content for _, content in flavor_tabs):
+        lines.extend(
+            tab_dimension(
+                [
+                    (
+                        label,
+                        content or empty_state("No Pokédex entry for this version."),
+                    )
+                    for label, content in flavor_tabs
+                ]
+            )
+        )
+    if not lines:
+        lines = empty_state(empty_message)
+    return lines
+
+
+def _effect_lines(reference: Mapping[str, Any]) -> list[str]:
+    short_effect = reference.get("short_effect")
+    effect = reference.get("effect")
+    if not (short_effect or effect):
+        return []
+    lines: list[str] = []
+    if short_effect:
+        lines.append(
+            f"<p><strong>{escape(' '.join(short_effect.split()))}</strong></p>"
+        )
+    if effect and effect != short_effect:
+        lines.append(f"<p>{escape(' '.join(effect.split()))}</p>")
+    lines.append("")
+    return lines
+
+
+def _flavor_lines(reference: Mapping[str, Any]) -> list[str]:
+    flavor_text = reference.get("flavor_text")
+    if not flavor_text:
+        return []
+    version_label = reference.get("flavor_text_label") or (
+        f"{display_name(reference['version'])} Pokédex"
+        if reference.get("version")
+        else "Pokédex"
+    )
+    return pokedex_quote(flavor_text, version_label)
 
 
 def _reference_description(
     reference: Mapping[str, Any], empty_message: str
 ) -> list[str]:
-    short_effect = reference.get("short_effect")
-    effect = reference.get("effect")
-    flavor_text = reference.get("flavor_text")
     lines: list[str] = []
-    if short_effect or effect:
+    effect = _effect_lines(reference)
+    if effect:
         lines.extend(["## Effect", ""])
-        if short_effect:
-            lines.append(
-                f"<p><strong>{escape(' '.join(short_effect.split()))}</strong></p>"
-            )
-        if effect and effect != short_effect:
-            lines.append(f"<p>{escape(' '.join(effect.split()))}</p>")
-        lines.append("")
-    if flavor_text:
-        version_label = reference.get("flavor_text_label") or (
-            f"{display_name(reference['version'])} Pokédex"
-            if reference.get("version")
-            else "Pokédex"
-        )
-        lines.extend(pokedex_quote(flavor_text, version_label))
+        lines.extend(effect)
+    lines.extend(_flavor_lines(reference))
     if not lines:
         lines = empty_state(empty_message)
     return lines

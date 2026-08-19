@@ -10,7 +10,6 @@ from romwiki.pipeline.semantics.encounter_identity import (
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
-    content_tabs,
     display_name,
     level_range,
     markdown_table_from_cells,
@@ -18,6 +17,7 @@ from romwiki.renderers.mkdocs.components import (
     reference_type_cell,
     rom_record_source,
     sprite_with_link,
+    tab_dimension,
     table_sprite_cell,
     version_variant_records,
 )
@@ -50,50 +50,63 @@ def append_headbutt_encounters(
             "",
         ]
     )
-    tabs = []
-    for version, value in version_variant_records(record):
-        content: list[str] = []
-        for kind in ("common", "rare", "secret"):
-            content.extend(
-                [f"{'#' * (heading_level + 1)} {display_name(kind)} trees", ""]
-            )
-            if not value["pools"][kind]:
-                content.extend(["—", ""])
-                continue
-            content.extend(
-                markdown_table_from_cells(
-                    _SLOT_COLUMNS,
+    variants = list(version_variant_records(record))
+    for kind in ("common", "rare", "secret"):
+        lines.extend([f"{'#' * (heading_level + 1)} {display_name(kind)} trees", ""])
+        lines.extend(
+            tab_dimension(
+                [
                     (
-                        (
-                            _pokemon_cell(slot["pokemon"], source_file),
-                            _type_cell(slot["pokemon"], references),
-                            level_range(slot["minimum_level"], slot["maximum_level"]),
-                            f"{slot['chance']}%",
+                        display_name(version) if version else "Encounter data",
+                        markdown_table_from_cells(
+                            _SLOT_COLUMNS,
+                            (
+                                (
+                                    _pokemon_cell(slot["pokemon"], source_file),
+                                    _type_cell(slot["pokemon"], references),
+                                    level_range(
+                                        slot["minimum_level"], slot["maximum_level"]
+                                    ),
+                                    f"{slot['chance']}%",
+                                )
+                                for slot in value["pools"][kind]
+                            ),
                         )
-                        for slot in value["pools"][kind]
-                    ),
-                )
-            )
-        content.extend([f"{'#' * (heading_level + 1)} Tree groups", ""])
-        content.extend(
-            markdown_table_from_cells(
-                (
-                    MarkdownColumn("Group", "right"),
-                    MarkdownColumn("Kind"),
-                    MarkdownColumn("Coordinates"),
-                ),
-                (
-                    (
-                        str(group["group"]),
-                        display_name(group["kind"]),
-                        ", ".join(f"({x}, {z})" for x, z in group["coordinates"]),
+                        if value["pools"][kind]
+                        else ["—", ""],
                     )
-                    for group in value["tree_groups"]
-                ),
+                    for version, value in variants
+                ]
             )
         )
-        tabs.append((display_name(version) if version else "Encounter data", content))
-    lines.extend(tabs[0][1] if len(tabs) == 1 else content_tabs(tabs))
+    lines.extend([f"{'#' * (heading_level + 1)} Tree groups", ""])
+    lines.extend(
+        tab_dimension(
+            [
+                (
+                    display_name(version) if version else "Encounter data",
+                    markdown_table_from_cells(
+                        (
+                            MarkdownColumn("Group", "right"),
+                            MarkdownColumn("Kind"),
+                            MarkdownColumn("Coordinates"),
+                        ),
+                        (
+                            (
+                                str(group["group"]),
+                                display_name(group["kind"]),
+                                ", ".join(
+                                    f"({x}, {z})" for x, z in group["coordinates"]
+                                ),
+                            )
+                            for group in value["tree_groups"]
+                        ),
+                    ),
+                )
+                for version, value in variants
+            ]
+        )
+    )
 
 
 def append_daily_swarm(
@@ -112,28 +125,32 @@ def append_daily_swarm(
             "",
         ]
     )
-    tabs = []
-    for version, value in version_variant_records(record):
-        tabs.append(
-            (
-                display_name(version) if version else "Encounter data",
-                markdown_table_from_cells(
-                    (
-                        MarkdownColumn("Pokémon"),
-                        MarkdownColumn("Type"),
-                        MarkdownColumn("Levels", "right"),
-                    ),
-                    (
+    lines.extend(
+        tab_dimension(
+            [
+                (
+                    display_name(version) if version else "Encounter data",
+                    markdown_table_from_cells(
                         (
-                            _pokemon_cell(value["pokemon"], source_file),
-                            _type_cell(value["pokemon"], references),
-                            level_range(value["minimum_level"], value["maximum_level"]),
+                            MarkdownColumn("Pokémon"),
+                            MarkdownColumn("Type"),
+                            MarkdownColumn("Levels", "right"),
+                        ),
+                        (
+                            (
+                                _pokemon_cell(value["pokemon"], source_file),
+                                _type_cell(value["pokemon"], references),
+                                level_range(
+                                    value["minimum_level"], value["maximum_level"]
+                                ),
+                            ),
                         ),
                     ),
-                ),
-            )
+                )
+                for version, value in version_variant_records(record)
+            ]
         )
-    lines.extend(tabs[0][1] if len(tabs) == 1 else content_tabs(tabs))
+    )
 
 
 def append_hidden_grotto(
@@ -155,69 +172,84 @@ def append_hidden_grotto(
             "",
         ]
     )
-    tabs = []
-    for version, value in version_variant_records(record):
-        content = [f"{'#' * (heading_level + 1)} Pokémon", ""]
-        content.extend(
-            markdown_table_from_cells(
+    variants = list(version_variant_records(record))
+    lines.extend([f"{'#' * (heading_level + 1)} Pokémon", ""])
+    lines.extend(
+        tab_dimension(
+            [
                 (
-                    MarkdownColumn("Pokémon"),
-                    MarkdownColumn("Type"),
-                    MarkdownColumn("Levels", "right"),
-                    MarkdownColumn("Female", "right"),
-                    MarkdownColumn("Pool", "right"),
-                    MarkdownColumn("Group"),
-                ),
-                (
-                    (
-                        _pokemon_cell(slot["pokemon"], source_file),
-                        _type_cell(slot["pokemon"], references),
-                        level_range(slot["minimum_level"], slot["maximum_level"]),
-                        f"{slot['female_percentage']}%",
-                        f"{slot['pool_chance']}%",
-                        chr(ord("A") + slot["group"]),
-                    )
-                    for slot in value["pokemon"]
-                ),
-            )
-        )
-        for key, heading in (
-            ("visible_items", "Visible items"),
-            ("hidden_items", "Hidden items"),
-        ):
-            content.extend([f"{'#' * (heading_level + 1)} {heading}", ""])
-            content.extend(
-                markdown_table_from_cells(
-                    (
-                        MarkdownColumn("Item"),
-                        MarkdownColumn("Pool", "right"),
-                        MarkdownColumn("Group"),
-                    ),
-                    (
+                    display_name(version) if version else "Encounter data",
+                    markdown_table_from_cells(
                         (
-                            sprite_with_link(
-                                reference_sprite_cell(
-                                    "item", slot["item"]["id"], references
+                            MarkdownColumn("Pokémon"),
+                            MarkdownColumn("Type"),
+                            MarkdownColumn("Levels", "right"),
+                            MarkdownColumn("Female", "right"),
+                            MarkdownColumn("Pool", "right"),
+                            MarkdownColumn("Group"),
+                        ),
+                        (
+                            (
+                                _pokemon_cell(slot["pokemon"], source_file),
+                                _type_cell(slot["pokemon"], references),
+                                level_range(
+                                    slot["minimum_level"], slot["maximum_level"]
                                 ),
-                                ROUTES.markdown_link(
-                                    entity_reference(
-                                        "item",
-                                        slot["item"]["id"],
-                                        slot["item"]["name"],
-                                        slot["item"]["slug"],
-                                    ),
-                                    source_file,
-                                ),
-                            ),
-                            f"{slot['pool_chance']}%",
-                            chr(ord("A") + slot["group"]),
-                        )
-                        for slot in value[key]
+                                f"{slot['female_percentage']}%",
+                                f"{slot['pool_chance']}%",
+                                chr(ord("A") + slot["group"]),
+                            )
+                            for slot in value["pokemon"]
+                        ),
                     ),
                 )
+                for version, value in variants
+            ]
+        )
+    )
+    for key, item_heading in (
+        ("visible_items", "Visible items"),
+        ("hidden_items", "Hidden items"),
+    ):
+        lines.extend([f"{'#' * (heading_level + 1)} {item_heading}", ""])
+        lines.extend(
+            tab_dimension(
+                [
+                    (
+                        display_name(version) if version else "Encounter data",
+                        markdown_table_from_cells(
+                            (
+                                MarkdownColumn("Item"),
+                                MarkdownColumn("Pool", "right"),
+                                MarkdownColumn("Group"),
+                            ),
+                            (
+                                (
+                                    sprite_with_link(
+                                        reference_sprite_cell(
+                                            "item", slot["item"]["id"], references
+                                        ),
+                                        ROUTES.markdown_link(
+                                            entity_reference(
+                                                "item",
+                                                slot["item"]["id"],
+                                                slot["item"]["name"],
+                                                slot["item"]["slug"],
+                                            ),
+                                            source_file,
+                                        ),
+                                    ),
+                                    f"{slot['pool_chance']}%",
+                                    chr(ord("A") + slot["group"]),
+                                )
+                                for slot in value[key]
+                            ),
+                        ),
+                    )
+                    for version, value in variants
+                ]
             )
-        tabs.append((display_name(version) if version else "Encounter data", content))
-    lines.extend(tabs[0][1] if len(tabs) == 1 else content_tabs(tabs))
+        )
 
 
 def append_safari_area(
@@ -234,64 +266,86 @@ def append_safari_area(
             "",
         ]
     )
-    tabs = []
-    for version, value in version_variant_records(record):
-        content: list[str] = []
-        for method_name, method in value["methods"].items():
-            content.extend(
-                [f"{'#' * (heading_level + 1)} {display_name(method_name)}", ""]
-            )
-            content.extend([f"{'#' * (heading_level + 2)} Base encounters", ""])
-            times = ("morning", "day", "night")
-            slot_count = len(method["base_pools"][times[0]])
-            content.extend(
-                markdown_table_from_cells(
+    variants = list(version_variant_records(record))
+    times = ("morning", "day", "night")
+    method_names = list(next(iter(variants))[1]["methods"])
+    for method_name in method_names:
+        lines.extend([f"{'#' * (heading_level + 1)} {display_name(method_name)}", ""])
+        lines.extend([f"{'#' * (heading_level + 2)} Base encounters", ""])
+        lines.extend(
+            tab_dimension(
+                [
                     (
-                        MarkdownColumn("Slot", "right"),
-                        *(MarkdownColumn(display_name(time)) for time in times),
-                    ),
-                    (
-                        (
-                            str(index + 1),
-                            *(
-                                _safari_slot_cell(
-                                    method["base_pools"][time][index], source_file
+                        display_name(version) if version else "Encounter data",
+                        markdown_table_from_cells(
+                            (
+                                MarkdownColumn("Slot", "right"),
+                                *(MarkdownColumn(display_name(time)) for time in times),
+                            ),
+                            (
+                                (
+                                    str(index + 1),
+                                    *(
+                                        _safari_slot_cell(
+                                            value["methods"][method_name]["base_pools"][
+                                                time
+                                            ][index],
+                                            source_file,
+                                        )
+                                        for time in times
+                                    ),
                                 )
-                                for time in times
+                                for index in range(
+                                    len(
+                                        value["methods"][method_name]["base_pools"][
+                                            times[0]
+                                        ]
+                                    )
+                                )
+                            ),
+                        ),
+                    )
+                    for version, value in variants
+                ]
+            )
+        )
+        lines.extend([f"{'#' * (heading_level + 2)} Block encounters", ""])
+        lines.extend(
+            tab_dimension(
+                [
+                    (
+                        display_name(version) if version else "Encounter data",
+                        markdown_table_from_cells(
+                            (
+                                MarkdownColumn("Stored requirements"),
+                                *(MarkdownColumn(display_name(time)) for time in times),
+                            ),
+                            (
+                                (
+                                    ", ".join(
+                                        f"{requirement['count']} "
+                                        f"{display_name(requirement['block_type'])}"
+                                        for requirement in encounter["requirements"]
+                                    ),
+                                    *(
+                                        _safari_slot_cell(
+                                            encounter["times"][time], source_file
+                                        )
+                                        for time in times
+                                    ),
+                                )
+                                for encounter in value["methods"][method_name][
+                                    "block_encounters"
+                                ]
                             ),
                         )
-                        for index in range(slot_count)
-                    ),
-                )
+                        if value["methods"][method_name]["block_encounters"]
+                        else ["—", ""],
+                    )
+                    for version, value in variants
+                ]
             )
-            content.extend([f"{'#' * (heading_level + 2)} Block encounters", ""])
-            if not method["block_encounters"]:
-                content.extend(["—", ""])
-                continue
-            content.extend(
-                markdown_table_from_cells(
-                    (
-                        MarkdownColumn("Stored requirements"),
-                        *(MarkdownColumn(display_name(time)) for time in times),
-                    ),
-                    (
-                        (
-                            ", ".join(
-                                f"{requirement['count']} "
-                                f"{display_name(requirement['block_type'])}"
-                                for requirement in encounter["requirements"]
-                            ),
-                            *(
-                                _safari_slot_cell(encounter["times"][time], source_file)
-                                for time in times
-                            ),
-                        )
-                        for encounter in method["block_encounters"]
-                    ),
-                )
-            )
-        tabs.append((display_name(version) if version else "Encounter data", content))
-    lines.extend(tabs[0][1] if len(tabs) == 1 else content_tabs(tabs))
+        )
 
 
 def conditional_encounter_provenance(record: dict[str, Any]) -> list[str]:

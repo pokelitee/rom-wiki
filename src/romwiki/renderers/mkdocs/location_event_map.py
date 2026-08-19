@@ -54,6 +54,7 @@ from romwiki.renderers.mkdocs.location_components import (
     location_label,
     section_name_provenance_facts,
 )
+from romwiki.renderers.mkdocs.location_features import event_map_feature_rows
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
@@ -148,27 +149,10 @@ def render_event_map_location_pages(
                 "locations/index.md",
             )
         )
-        features = [
-            feature
-            for feature, active in (
-                (
-                    "encounters",
-                    record["encounter_id"] is not None or bool(conditional_encounters),
-                ),
-                ("items", bool(record.get("items"))),
-                ("shops", bool(record.get("shops"))),
-                ("gifts", bool(record.get("pokemon_gifts"))),
-                ("trades", bool(record.get("npc_trades"))),
-                ("static encounters", bool(record.get("static_encounters"))),
-                ("roaming", bool(record.get("roaming_activations"))),
-                ("honey tree", bool(record.get("honey_tree"))),
-                ("daily rotation", bool(record.get("daily_encounter_pool"))),
-                ("game corner", bool(record.get("game_corner_prizes"))),
-                ("trainers", bool(record.get("trainers"))),
-                ("warps", bool(record.get("warps"))),
-                ("connections", bool(record.get("connections"))),
-            )
-            if active
+        feature_rows = [
+            row
+            for row in event_map_feature_rows(record, conditional_encounters)
+            if row[3]
         ]
         catalog_records.append(
             add_change_status(
@@ -180,7 +164,10 @@ def render_event_map_location_pages(
                     "section_name": record.get("section_name"),
                     "url": route_id + "/",
                     "internal_name": record["internal_name"],
-                    "features": features,
+                    "features": [key for key, *_ in feature_rows],
+                    "feature_anchors": {
+                        key: anchor for key, _, anchor, *_ in feature_rows
+                    },
                     "search_text": (
                         f"{record['name']} {record.get('section_name') or ''} "
                         f"{record['internal_name']} {route_id}".lower()
@@ -217,7 +204,7 @@ def _render_location(
     lines = [
         f"# {location_label(record)}",
         "",
-        *_location_summary(record),
+        *_location_summary(record, conditional_encounters),
     ]
     if record["encounter_id"] is not None or conditional_encounters:
         lines.extend(["## Wild encounters", ""])
@@ -382,38 +369,16 @@ def _append_record_navigation(
     )
 
 
-def _location_summary(record: dict[str, Any]) -> list[str]:
-    has_encounters = record["encounter_id"] is not None
-    has_honey_tree = bool(record.get("honey_tree"))
-    daily_pool = record.get("daily_encounter_pool")
-    daily_pool_anchor = (
-        "great-marsh-daily-rotation"
-        if daily_pool and daily_pool["kind"] == "great_marsh"
-        else "trophy-garden-daily-rotation"
-    )
-    facts: list[tuple[str, int | str, str, bool]] = [
-        ("Wild encounters", "Yes", "wild-encounters", has_encounters),
-        ("Honey tree", "Yes", "honey-tree", has_honey_tree),
-        ("Daily rotation", "Yes", daily_pool_anchor, bool(daily_pool)),
-    ]
-    for label, key, anchor in (
-        ("Item pickups", "items", "item-pickups"),
-        ("Shops", "shops", "shops"),
-        ("Gift Pokémon", "pokemon_gifts", "gift-pokemon"),
-        ("In-game trades", "npc_trades", "in-game-trades"),
-        ("Static encounters", "static_encounters", "static-encounters"),
-        ("Roaming activations", "roaming_activations", "roaming-activations"),
-        ("Game Corner prizes", "game_corner_prizes", "game-corner-prizes"),
-        ("Trainers", "trainers", "trainers"),
-        ("Warps", "warps", "warps"),
-        ("Outdoor connections", "connections", "outdoor-connections"),
-    ):
-        count = len(record.get(key, []))
-        facts.append((label, count, anchor, count > 0))
+def _location_summary(
+    record: dict[str, Any],
+    conditional_encounters: tuple[dict[str, Any], ...] = (),
+) -> list[str]:
     fact_lines = [
         f"<div><dt>{label}</dt><dd>{summary_section_link(value, anchor)}</dd></div>"
-        for label, value, anchor, populated in facts
-        if populated
+        for _, label, anchor, present, value in event_map_feature_rows(
+            record, conditional_encounters
+        )
+        if present
     ]
     fact_lines.insert(
         0, f"<div><dt>Map header</dt><dd>header-{record['header_id']:03}</dd></div>"
@@ -549,7 +514,7 @@ def _append_honey_tree(
         ("Rare", "rare"),
     ):
         rows = _bonus_species_rows(honey_tree[key], source_file, references)
-        lines.extend([f"**{label}:**", ""])
+        lines.extend([f"### {label}", ""])
         lines.extend(markdown_table_from_cells(_POKEMON_TYPE_CHANCE_COLUMNS, rows))
 
 
@@ -592,7 +557,7 @@ def _append_daily_encounter_pool(
     for group_label, entries in groups:
         rows = _bonus_species_rows(entries, source_file, references)
         if group_label:
-            lines.extend([f"**{group_label}:**", ""])
+            lines.extend([f"### {group_label}", ""])
         lines.extend(markdown_table_from_cells(_POKEMON_TYPE_CHANCE_COLUMNS, rows))
 
 

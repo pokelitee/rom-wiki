@@ -78,7 +78,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
             page,
         )
         self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
-        self.assertIn("**Swarm:**", page)
+        self.assertIn("### Swarm", page)
         self.assertIn("[Ivysaur](../pokemon/ivysaur.md)", page)
         # Swarm replaces walking slot 0's species only, so it inherits that
         # slot's level (5) and fixed chance (20%).

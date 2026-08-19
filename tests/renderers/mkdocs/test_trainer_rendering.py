@@ -516,6 +516,37 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertLess(page.index('scope="row">EV'), page.index('scope="row">Min'))
         self.assertLess(page.index('scope="row">Min'), page.index('scope="row">Max'))
 
+    def test_colors_the_natures_boosted_and_lowered_stats(self) -> None:
+        member = _party_member([])
+        member["nature"] = {"name": "Adamant", "value": 3}
+        member["calculated_stats"] = {"source": "derived", "values": _stats(42)}
+        member["ivs"] = {"source": "derived", "values": _stats(12)}
+        member["evs"] = {"source": "engine-default", "values": _stats(0)}
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertIn(
+            '<tr><th scope="row">Value</th>'
+            '<td>42</td><td class="rw-party-card__stat--up">42</td>'
+            "<td>42</td>"
+            '<td class="rw-party-card__stat--down">42</td>'
+            "<td>42</td><td>42</td></tr>",
+            page,
+        )
+        # A nature only affects the calculated stat row, not raw IVs/EVs.
+        self.assertIn('<tr><th scope="row">IV</th><td>12</td>', page)
+        self.assertNotIn('rw-party-card__stat--up">12', page)
+
+    def test_omits_stat_coloring_for_a_neutral_nature(self) -> None:
+        member = _party_member([])
+        member["nature"] = {"name": "Hardy", "value": 0}
+        member["calculated_stats"] = {"source": "derived", "values": _stats(42)}
+
+        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+
+        self.assertNotIn("rw-party-card__stat--up", page)
+        self.assertNotIn("rw-party-card__stat--down", page)
+
     def test_marks_a_hidden_ability_in_the_party_card(self) -> None:
         member = _party_member([])
         member["ability"] = {

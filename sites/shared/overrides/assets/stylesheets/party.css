@@ -164,6 +164,12 @@
 .rw-party-card__stats tbody td {
   font-weight: 700;
 }
+.rw-party-card__stats tbody td.rw-party-card__stat--up {
+  color: var(--rw-positive);
+}
+.rw-party-card__stats tbody td.rw-party-card__stat--down {
+  color: var(--rw-negative);
+}
 .rw-party-card__item {
   display: inline-flex;
   gap: var(--rw-party-space-compact);

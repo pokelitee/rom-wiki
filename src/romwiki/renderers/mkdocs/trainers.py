@@ -1001,6 +1001,58 @@ def _party_gender(gender: dict[str, Any] | None) -> str:
     )
 
 
+# A nature's raised/lowered stat pair, keyed by name. This is a fixed game
+# mechanic identical across every Generation III+ title, not ROM data, so it
+# is safe to hardcode rather than decode per-ROM.
+_NATURE_STAT_MODIFIERS: dict[str, tuple[str, str] | None] = {
+    "Hardy": None,
+    "Lonely": ("attack", "defense"),
+    "Brave": ("attack", "speed"),
+    "Adamant": ("attack", "special_attack"),
+    "Naughty": ("attack", "special_defense"),
+    "Bold": ("defense", "attack"),
+    "Docile": None,
+    "Relaxed": ("defense", "speed"),
+    "Impish": ("defense", "special_attack"),
+    "Lax": ("defense", "special_defense"),
+    "Timid": ("speed", "attack"),
+    "Hasty": ("speed", "defense"),
+    "Serious": None,
+    "Jolly": ("speed", "special_attack"),
+    "Naive": ("speed", "special_defense"),
+    "Modest": ("special_attack", "attack"),
+    "Mild": ("special_attack", "defense"),
+    "Quiet": ("special_attack", "speed"),
+    "Bashful": None,
+    "Rash": ("special_attack", "special_defense"),
+    "Calm": ("special_defense", "attack"),
+    "Gentle": ("special_defense", "defense"),
+    "Sassy": ("special_defense", "speed"),
+    "Careful": ("special_defense", "special_attack"),
+    "Quirky": None,
+}
+
+# Row labels that reflect a nature-affected final stat, as opposed to raw
+# IVs/EVs, which a nature does not modify.
+_CALCULATED_STAT_LABELS = {"Value", "Min", "Max"}
+
+
+def _nature_stat_modifiers(nature: dict[str, Any] | None) -> tuple[str, str] | None:
+    name = (nature or {}).get("name")
+    return _NATURE_STAT_MODIFIERS.get(name) if isinstance(name, str) else None
+
+
+def _stat_cell(key: str, value: Any, modifiers: tuple[str, str] | None) -> str:
+    css_class = ""
+    if modifiers:
+        boosted, lowered = modifiers
+        if key == boosted:
+            css_class = ' class="rw-party-card__stat--up"'
+        elif key == lowered:
+            css_class = ' class="rw-party-card__stat--down"'
+    return f"<td{css_class}>{_stat_value(value)}</td>"
+
+
 def _party_stat_table(member: dict[str, Any]) -> list[str]:
     ordered = (
         ("HP", "hp"),
@@ -1034,6 +1086,7 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
     rows.extend(ranged_stats)
     if not rows:
         return []
+    nature_modifiers = _nature_stat_modifiers(member.get("nature"))
     return [
         '<table class="rw-party-card__stats">',
         "<caption>Stats, IVs, and EVs</caption>",
@@ -1043,7 +1096,14 @@ def _party_stat_table(member: dict[str, Any]) -> list[str]:
         "<tbody>",
         *[
             f'<tr><th scope="row">{label}</th>'
-            + "".join(f"<td>{_stat_value(values[key])}</td>" for _, key in ordered)
+            + "".join(
+                _stat_cell(
+                    key,
+                    values[key],
+                    nature_modifiers if label in _CALCULATED_STAT_LABELS else None,
+                )
+                for _, key in ordered
+            )
             + "</tr>"
             for label, values in rows
         ],

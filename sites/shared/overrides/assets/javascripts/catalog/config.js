@@ -2,7 +2,9 @@ import { title } from "../formatting.js";
 import {
   accessMethods,
   classBadge,
+  featureList,
   levelRange,
+  methodList,
   numberOrDash,
   pokemonAvailability,
   pokemonName,
@@ -54,7 +56,7 @@ export const CATALOGS = {
     searchPlaceholder: "Search location or internal map name",
     filters: [{ key: "features", label: "Contains", multi: true }],
     sorts: [["label", "Name"], ["section_name", "Section"], ["route_id", "Map ID"]],
-    columns: [["Location", recordLink], ["Section", (record) => text(record.section_name || "—", "rw-catalog__id")], ["Map ID", routeId], ["Contains", (record) => text(record.features.map(title).join(", ") || "—")]],
+    columns: [["Location", recordLink], ["Section", (record) => text(record.section_name || "—", "rw-catalog__id")], ["Map ID", routeId], ["Contains", featureList]],
   },
   encounters: {
     searchPlaceholder: "Search areas or wild Pokémon",
@@ -62,7 +64,7 @@ export const CATALOGS = {
     ranges: [{ key: "level", label: "Level", mode: "overlap", minKey: "min_level", maxKey: "max_level" }],
     correlations: [{ left: "methods", right: "pokemon", path: "method_pokemon" }],
     sorts: [["label", "Area"], ["route_id", "ID"], ["min_level", "Minimum level"], ["max_level", "Maximum level"]],
-    columns: [["Area", recordLink], ["ID", routeId], ["Methods", (record) => text(record.methods.map(title).join(", ") || "—")], ["Levels", levelRange], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
+    columns: [["Area", recordLink], ["ID", routeId], ["Methods", methodList], ["Levels", levelRange], ["Pokémon", (record) => referencePreviewList(record.pokemon_refs)]],
   },
 };
 

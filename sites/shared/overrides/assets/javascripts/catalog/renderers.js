@@ -107,6 +107,52 @@ export function pokemonAvailability(record) {
   return text(methods.join(" · "));
 }
 
+export function methodList(record) {
+  const wrap = document.createElement("span");
+  wrap.className = "rw-catalog__list";
+  if (!record.methods?.length) {
+    wrap.textContent = "—";
+    return wrap;
+  }
+  const anchors = record.method_anchors || {};
+  record.methods.forEach((method, index) => {
+    if (index) wrap.append(", ");
+    const anchor = anchors[method];
+    if (!anchor) {
+      wrap.append(title(method));
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = `${record.url}#${anchor}`;
+    link.textContent = title(method);
+    wrap.append(link);
+  });
+  return wrap;
+}
+
+export function featureList(record) {
+  const wrap = document.createElement("span");
+  wrap.className = "rw-catalog__list";
+  if (!record.features?.length) {
+    wrap.textContent = "—";
+    return wrap;
+  }
+  const anchors = record.feature_anchors || {};
+  record.features.forEach((feature, index) => {
+    if (index) wrap.append(", ");
+    const anchor = anchors[feature];
+    if (!anchor) {
+      wrap.append(title(feature));
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = `${record.url}#${anchor}`;
+    link.textContent = title(feature);
+    wrap.append(link);
+  });
+  return wrap;
+}
+
 export function levelRange(record) {
   return text(
     record.min_level == null

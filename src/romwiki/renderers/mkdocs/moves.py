@@ -633,7 +633,7 @@ def _tutor_compatibility(
     for tutor_index, tutor in enumerate(record["tutors"], start=1):
         costs = tutor_requirement(tutor)
         location = _tutor_location_link(tutor["location"], source_file)
-        lines.extend([f"**{location} — {costs}:**", ""])
+        lines.extend([f"#### {location} — {costs}", ""])
         lines.extend(
             _pokemon_sprite_table(
                 tutor["compatible_pokemon"],

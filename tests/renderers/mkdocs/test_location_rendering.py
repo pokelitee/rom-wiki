@@ -163,6 +163,7 @@ class LocationRenderingTests(unittest.TestCase):
                 encounter_comparison=encounter_comparison,
             )
             page = (output / "header-009.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertIn("### Headbutt encounters { #headbutt-encounters }", page)
         self.assertIn("### Headbutt encounters", page)
@@ -172,6 +173,12 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("**Headbutt encounters**", page)
         self.assertNotIn("### Location\n", page)
         self.assertLess(page.index("## Hack changes"), page.index("Data provenance"))
+        self.assertIn('<a href="#headbutt-encounters">Yes</a>', page)
+        self.assertIn("headbutt encounters", catalog["records"][0]["features"])
+        self.assertEqual(
+            catalog["records"][0]["feature_anchors"]["headbutt encounters"],
+            "headbutt-encounters",
+        )
 
     def test_embeds_hidden_grotto_and_daily_swarm_on_event_map(self) -> None:
         location = {
@@ -286,6 +293,7 @@ class LocationRenderingTests(unittest.TestCase):
                 relationships=relationships,
             )
             page = (output / "header-445.md").read_text(encoding="utf-8")
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
 
         self.assertIn("### Hidden Grotto { #hidden-grotto-00 }", page)
         self.assertIn("### Hidden Grotto", page)
@@ -295,6 +303,13 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("### Daily Swarm", page)
         self.assertIn("40–55", page)
         self.assertNotIn("header-445.md#daily-swarm", page)
+        self.assertIn('<a href="#hidden-grotto-00">1</a>', page)
+        self.assertIn('<a href="#daily-swarm">Yes</a>', page)
+        entry = catalog["records"][0]
+        self.assertIn("hidden grotto", entry["features"])
+        self.assertIn("daily swarm", entry["features"])
+        self.assertEqual(entry["feature_anchors"]["hidden grotto"], "hidden-grotto-00")
+        self.assertEqual(entry["feature_anchors"]["daily swarm"], "daily-swarm")
 
     def test_links_gen5_location_to_all_seasonal_encounter_variants(self) -> None:
         record = {
@@ -562,6 +577,7 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("### Standard Poké Mart", page)
         self.assertIn("Stock changes with badge progression", page)
         self.assertIn("shops", catalog["records"][0]["features"])
+        self.assertEqual(catalog["records"][0]["feature_anchors"]["shops"], "shops")
 
     def test_renders_special_vendor_currency_and_runtime_availability(self) -> None:
         record = {
@@ -892,6 +908,11 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("../trainers/trainer-0246.md", page)
         self.assertEqual(catalog["kind"], "locations")
         self.assertIn("shops", catalog["records"][0]["features"])
+        self.assertEqual(catalog["records"][0]["feature_anchors"]["shops"], "shops")
+        self.assertEqual(
+            catalog["records"][0]["feature_anchors"]["encounters"],
+            "wild-encounters",
+        )
 
     def test_renders_location_items_shops_and_encounters(self) -> None:
         _, _, page, _ = self._render_feature_rich_location()
@@ -975,9 +996,9 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn('<a href="#honey-tree">Yes</a>', page)
         self.assertIn('<a href="#trophy-garden-daily-rotation">Yes</a>', page)
         self.assertIn("## Honey tree", page)
-        self.assertIn("**Common:**", page)
-        self.assertIn("**Uncommon:**", page)
-        self.assertIn("**Rare:**", page)
+        self.assertIn("### Common", page)
+        self.assertIn("### Uncommon", page)
+        self.assertIn("### Rare", page)
         self.assertIn("## Trophy Garden daily rotation", page)
         self.assertNotIn("After National Dex", page)
         self.assertIn("game corner", catalog["records"][0]["features"])
@@ -1096,8 +1117,8 @@ class LocationRenderingTests(unittest.TestCase):
             page = (output / "header-504.md").read_text(encoding="utf-8")
 
         self.assertIn("## Great Marsh daily rotation", page)
-        self.assertIn("**After National Dex:**", page)
-        self.assertIn("**Before National Dex:**", page)
+        self.assertIn("### After National Dex", page)
+        self.assertIn("### Before National Dex", page)
         self.assertIn("[Rotom](../pokemon/rotom.md)", page)
         self.assertIn("[Togepi](../pokemon/togepi.md)", page)
         self.assertIn('<a href="#great-marsh-daily-rotation">Yes</a>', page)
