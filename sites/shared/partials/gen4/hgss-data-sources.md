@@ -21,7 +21,15 @@ The in-game trade archive at `a/1/1/2` publishes 11 actual NPC exchanges. Shucki
 and Kenya are excluded because their records are gift-like static Pokémon rather
 than trades. A unique executable signature resolves 27 supported specialty shops
 with 141 item entries, published standalone (unlocated) as this site's marts
-dataset.
+dataset. Shop labels are sourced from Ajarmar/universal-pokemon-randomizer-zx's
+HGSS-specific `hgssShopNames` (`Gen4Constants.java`), distinct from that same
+file's separate Platinum/Diamond-Pearl arrays. Several of that array's own
+labels name Sinnoh locations that don't exist in HGSS's Johto/Kanto setting --
+placeholder names in the source tool for shared byte-table slots holding no
+valid HGSS data -- so those slots are excluded rather than published; every
+published shop decodes to real, in-bounds item IDs under a real Johto/Kanto
+location name, and its main-game/post-game flag matches HGSS's real Johto
+(pre-Elite-Four) versus Kanto (post-Elite-Four) structure.
 
 Separately, each map header's own decoded field-script mart-opening dispatch
 commands (`MartBuy`, `SpecialMartBuy`, `DecorationMart`, `SealMart`) are now

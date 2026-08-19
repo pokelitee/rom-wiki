@@ -90,10 +90,21 @@ from .events import (
     resolve_hidden_item_id,
     resolve_visible_item_id,
 )
-from .gifts import Gen4HgssPokemonGiftCommand, parse_pokemon_gift_commands
+from .gifts import (
+    Gen4HgssEggGiftCommand,
+    Gen4HgssPokemonGiftCommand,
+    Gen4HgssTogepiEggGiftCommand,
+    parse_egg_gift_commands,
+    parse_pokemon_gift_commands,
+    parse_togepi_egg_gift_commands,
+)
 from .headbutt import HEADBUTT_SLOT_CHANCES, parse_headbutt_record
 from .map_headers import MAP_HEADER_SIZE, parse_map_headers
-from .marts import Gen4HgssMartDispatchCommand, parse_mart_dispatch_commands, parse_shop_catalog
+from .marts import (
+    Gen4HgssMartDispatchCommand,
+    parse_mart_dispatch_commands,
+    parse_shop_catalog,
+)
 from .pickup import (
     PICKUP_COMMON_ITEM_COUNT,
     PICKUP_COMMON_TABLE_LOCATOR,
@@ -218,6 +229,8 @@ __all__ = [
     "Gen4TrainerBattleCommand",
     "Gen4StaticEncounterCommand",
     "Gen4HgssPokemonGiftCommand",
+    "Gen4HgssEggGiftCommand",
+    "Gen4HgssTogepiEggGiftCommand",
     "Gen4HgssMartDispatchCommand",
     "parse_egg_move_table",
     "parse_encounter_record",
@@ -249,6 +262,8 @@ __all__ = [
     "parse_trainer_battle_commands",
     "parse_static_encounter_commands",
     "parse_pokemon_gift_commands",
+    "parse_egg_gift_commands",
+    "parse_togepi_egg_gift_commands",
     "parse_mart_dispatch_commands",
     "parse_npc_trade_record",
     "parse_tutor_compatibility_table",

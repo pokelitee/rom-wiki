@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from romwiki.engines.registry import get_engine
@@ -31,6 +32,99 @@ from romwiki.schema import (
 )
 from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import InvalidRomError, ProfileError
+
+
+@dataclass(frozen=True, slots=True)
+class _PokemonGiftParsers:
+    pokemon: Any | None
+    egg: Any | None
+    togepi_egg: Any | None
+    togepi_species_id: int | None
+
+
+def _resolve_pokemon_gift_parsers(
+    engine: Any, pokemon_names: tuple[str, ...]
+) -> _PokemonGiftParsers | None:
+    pokemon = getattr(engine, "parse_pokemon_gift_commands", None)
+    egg = getattr(engine, "parse_egg_gift_commands", None)
+    togepi_egg = getattr(engine, "parse_togepi_egg_gift_commands", None)
+    if pokemon is None and egg is None and togepi_egg is None:
+        return None
+    # `GiveTogepiEgg` carries no species operand -- species identity comes
+    # only from the opcode's own name, resolved against this profile's own
+    # decoded Pokémon name table rather than a hardcoded ID, so a hack that
+    # renumbers species is not silently mislabeled. Omitted entirely when the
+    # current name table has no exact "TOGEPI" entry.
+    togepi_species_id = next(
+        (
+            species_id
+            for species_id, name in enumerate(pokemon_names)
+            if name.strip().upper() == "TOGEPI"
+        ),
+        None,
+    )
+    return _PokemonGiftParsers(
+        pokemon=pokemon,
+        egg=egg,
+        togepi_egg=togepi_egg,
+        togepi_species_id=togepi_species_id,
+    )
+
+
+def _collect_pokemon_gifts(
+    parsers: _PokemonGiftParsers,
+    script_data: bytes,
+    *,
+    pokemon_names: tuple[str, ...],
+    script_file_id: int,
+) -> tuple[LocationPokemonGift, ...]:
+    gifts = []
+    if parsers.pokemon is not None:
+        gifts.extend(
+            LocationPokemonGift(
+                kind="pokemon",
+                species_id=command.species_id,
+                name=pokemon_names[command.species_id],
+                level=command.level,
+                held_item_id=None,
+                held_item_name=None,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+            for command in parsers.pokemon(
+                script_data, species_count=len(pokemon_names)
+            )
+        )
+    if parsers.egg is not None:
+        gifts.extend(
+            LocationPokemonGift(
+                kind="egg",
+                species_id=command.species_id,
+                name=pokemon_names[command.species_id],
+                level=1,
+                held_item_id=None,
+                held_item_name=None,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+            for command in parsers.egg(script_data, species_count=len(pokemon_names))
+        )
+    if parsers.togepi_egg is not None and parsers.togepi_species_id is not None:
+        togepi_species_id = parsers.togepi_species_id
+        gifts.extend(
+            LocationPokemonGift(
+                kind="egg",
+                species_id=togepi_species_id,
+                name=pokemon_names[togepi_species_id],
+                level=1,
+                held_item_id=None,
+                held_item_name=None,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
+            )
+            for command in parsers.togepi_egg(script_data)
+        )
+    return tuple(sorted(gifts, key=lambda gift: gift.command_offset))
 
 
 def extract_arm9_encounter_map_location_dataset(
@@ -216,8 +310,8 @@ def extract_arm9_encounter_map_location_dataset(
                 )
             )
     pokemon_gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
-    parse_pokemon_gift_commands = getattr(engine, "parse_pokemon_gift_commands", None)
-    if parse_pokemon_gift_commands is not None:
+    gift_parsers = _resolve_pokemon_gift_parsers(engine, pokemon_names)
+    if gift_parsers is not None:
         for header in headers:
             script_file_id = header.script_file_id
             if script_file_id in pokemon_gifts_by_script:
@@ -227,20 +321,11 @@ def extract_arm9_encounter_map_location_dataset(
                     f"Map header {header.header_id} references missing script file "
                     f"{script_file_id}"
                 )
-            pokemon_gifts_by_script[script_file_id] = tuple(
-                LocationPokemonGift(
-                    kind="pokemon",
-                    species_id=command.species_id,
-                    name=pokemon_names[command.species_id],
-                    level=command.level,
-                    held_item_id=None,
-                    held_item_name=None,
-                    script_file_id=script_file_id,
-                    command_offset=command.offset,
-                )
-                for command in parse_pokemon_gift_commands(
-                    scripts.read(script_file_id), species_count=len(pokemon_names)
-                )
+            pokemon_gifts_by_script[script_file_id] = _collect_pokemon_gifts(
+                gift_parsers,
+                scripts.read(script_file_id),
+                pokemon_names=pokemon_names,
+                script_file_id=script_file_id,
             )
     mart_references_by_script: dict[int, tuple[LocationMartReference, ...]] = {}
     parse_mart_dispatch_commands = getattr(engine, "parse_mart_dispatch_commands", None)

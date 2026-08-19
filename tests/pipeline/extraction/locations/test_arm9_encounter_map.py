@@ -47,6 +47,9 @@ class _Engine:
         pokemon_names=(),
         static_encounters_by_script=None,
         mart_references_by_script=None,
+        pokemon_gifts_by_script=None,
+        egg_gifts_by_script=None,
+        togepi_egg_gifts_by_script=None,
     ):
         self._headers = headers
         self._events_by_id = events_by_id
@@ -64,12 +67,32 @@ class _Engine:
         self._mart_references_by_script = mart_references_by_script
         if mart_references_by_script is not None:
             self.parse_mart_dispatch_commands = self._parse_mart_dispatch_commands
+        self._pokemon_gifts_by_script = pokemon_gifts_by_script
+        if pokemon_gifts_by_script is not None:
+            self.parse_pokemon_gift_commands = self._parse_pokemon_gift_commands
+        self._egg_gifts_by_script = egg_gifts_by_script
+        if egg_gifts_by_script is not None:
+            self.parse_egg_gift_commands = self._parse_egg_gift_commands
+        self._togepi_egg_gifts_by_script = togepi_egg_gifts_by_script
+        if togepi_egg_gifts_by_script is not None:
+            self.parse_togepi_egg_gift_commands = (
+                self._parse_togepi_egg_gift_commands
+            )
 
     def _parse_static_encounter_commands(self, data, *, species_count):
         return self._static_encounters_by_script.get(data, ())
 
     def _parse_mart_dispatch_commands(self, data):
         return self._mart_references_by_script.get(data, ())
+
+    def _parse_pokemon_gift_commands(self, data, *, species_count):
+        return self._pokemon_gifts_by_script.get(data, ())
+
+    def _parse_egg_gift_commands(self, data, *, species_count):
+        return self._egg_gifts_by_script.get(data, ())
+
+    def _parse_togepi_egg_gift_commands(self, data):
+        return self._togepi_egg_gifts_by_script.get(data, ())
 
     def parse_map_headers(self, header_data, map_names_data, count):
         return self._headers
@@ -390,6 +413,69 @@ class Arm9EncounterMapDatasetTests(unittest.TestCase):
         self.assertEqual(static_encounter["level"], 25)
         self.assertEqual(static_encounter["command"], "WildBattle")
         self.assertFalse(static_encounter["is_egg"])
+
+    def test_attaches_pokemon_and_egg_gifts_by_owning_header_script(self) -> None:
+        item_names = ("NONE",)
+        location_names = ("Route 1",)
+        pokemon_names = ("NONE", "Bulbasaur", "Togepi")
+        headers = (
+            _header(
+                0,
+                internal_name="ROUTE_01",
+                location_name_id=0,
+                event_file_id=0,
+                script_file_id=0,
+            ),
+        )
+        events_by_id = {0: SimpleNamespace(warps=(), objects=(), backgrounds=())}
+        pokemon_command = SimpleNamespace(species_id=1, level=15, offset=95)
+        egg_command = SimpleNamespace(species_id=1, offset=50)
+        togepi_command = SimpleNamespace(offset=10)
+        engine = _Engine(
+            headers,
+            location_names,
+            item_names,
+            events_by_id,
+            pokemon_names=pokemon_names,
+            pokemon_gifts_by_script={b"script-0": (pokemon_command,)},
+            egg_gifts_by_script={b"script-0": (egg_command,)},
+            togepi_egg_gifts_by_script={b"script-0": (togepi_command,)},
+        )
+        messages = _Archive(
+            3,
+            lambda i: {0: b"location-names", 1: b"item-names", 2: b"pokemon-names"}[i],
+        )
+        encounters = _Archive(0, lambda i: b"")
+        events = _Archive(1, lambda i: b"")
+        matrices = _Archive(1, lambda i: b"")
+        scripts = _Archive(1, lambda i: b"script-0")
+        profile = _profile(pokemon_names_member=2)
+        result = _result(profile)
+
+        get_platform_patch, get_engine_patch = _patched(
+            engine, messages, encounters, events, matrices, scripts
+        )
+        with get_platform_patch, get_engine_patch:
+            dataset = extract_arm9_encounter_map_location_dataset(
+                result, trainer_dataset={"records": []}
+            )
+
+        record = dataset["records"][0]
+        gifts = record["pokemon_gifts"]
+        self.assertEqual([gift["command_offset"] for gift in gifts], [10, 50, 95])
+        togepi_gift, egg_gift, pokemon_gift = gifts
+        self.assertEqual(
+            (togepi_gift["kind"], togepi_gift["species_id"], togepi_gift["name"]),
+            ("egg", 2, "Togepi"),
+        )
+        self.assertEqual(
+            (egg_gift["kind"], egg_gift["species_id"], egg_gift["level"]),
+            ("egg", 1, 1),
+        )
+        self.assertEqual(
+            (pokemon_gift["kind"], pokemon_gift["species_id"], pokemon_gift["level"]),
+            ("pokemon", 1, 15),
+        )
 
     def test_attaches_mart_references_by_owning_header_script(self) -> None:
         item_names = ("NONE",)

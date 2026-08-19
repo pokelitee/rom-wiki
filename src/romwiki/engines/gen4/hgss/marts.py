@@ -82,6 +82,25 @@ def parse_mart_dispatch_commands(
         )
     return tuple(commands)
 
+
+# `hgssShopNames`/`getShopNames(Type_HGSS)` (Ajarmar/universal-pokemon-
+# randomizer-zx's `Gen4Constants.java`) -- an HGSS-specific array, distinct
+# from that same file's separate `ptShopNames`/`dpShopNames`. Several of its
+# labels ("Veilstone Department Store...", "Sunyshore Market Seals...",
+# "Pokeathlon Dome...") name Sinnoh locations that don't exist in HGSS's
+# Johto/Kanto setting; those are the tool's own placeholder names for shared
+# byte-table slots that hold no valid HGSS data, not real in-game shops.
+# `SKIPPED_SHOP_IDS` excludes exactly those slots (plus index 28, the array's
+# own "Unused Secondary" label, and 37/39), verified against the real
+# HeartGold ROM: every skipped slot's real item-ID data is either absent or
+# structurally implausible, while every published (non-skipped) slot decodes
+# to real, in-bounds item IDs under a real Johto/Kanto location name.
+# `MAIN_GAME_SHOP_IDS` is cross-checked against real HGSS game structure:
+# every included ID is a Johto shop reachable before the Elite Four; every
+# excluded ID is either Kanto (post-Elite-Four-only, e.g. every Celadon
+# Department Store floor) or a story-gated variant superseded by another
+# entry (e.g. "Mahogany Before Hideout" is excluded in favor of "Mahogany
+# After Hideout").
 SHOP_COUNT = 40
 SKIPPED_SHOP_IDS = frozenset({17, 18, 22, 23, 24, 25, 26, 27, 28, 29, 30, 37, 39})
 MAIN_GAME_SHOP_IDS = frozenset({0, 2, 5, 6, 7, 12, 14, 16, 19, 31, 33, 34, 36})
