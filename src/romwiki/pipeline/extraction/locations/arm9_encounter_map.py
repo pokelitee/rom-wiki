@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -127,6 +128,101 @@ def _collect_pokemon_gifts(
     return tuple(sorted(gifts, key=lambda gift: gift.command_offset))
 
 
+def _script_keyed_records(
+    headers: Iterable[Any],
+    scripts: Any,
+    *,
+    enabled: bool,
+    build: Callable[[int, bytes], tuple[Any, ...]],
+) -> dict[int, tuple[Any, ...]]:
+    """Build a per-script-file record cache shared by every script-derived section.
+
+    Each such section (script-awarded items, static encounters, Pokémon
+    gifts, mart references) resolves the same way: skip if the engine
+    doesn't support it, dedupe by script file, bounds-check that file, then
+    let the caller's `build` decode its own records from the script bytes.
+    """
+    records_by_script: dict[int, tuple[Any, ...]] = {}
+    if not enabled:
+        return records_by_script
+    for header in headers:
+        script_file_id = header.script_file_id
+        if script_file_id in records_by_script:
+            continue
+        if script_file_id >= len(scripts.members):
+            raise InvalidRomError(
+                f"Map header {header.header_id} references missing script file "
+                f"{script_file_id}"
+            )
+        records_by_script[script_file_id] = build(
+            script_file_id, scripts.read(script_file_id)
+        )
+    return records_by_script
+
+
+def _resolve_warps(
+    header: Any,
+    raw_warps: Iterable[Any],
+    *,
+    headers: Any,
+    profile: Any,
+    location_names: tuple[str, ...],
+    dynamic_warp_header_id: int,
+    dynamic_warp_id: int,
+    raw_warps_by_header: dict[int, tuple[Any, ...]],
+) -> tuple[LocationWarp, ...]:
+    warps = []
+    for warp in raw_warps:
+        if (
+            warp.destination_header_id == dynamic_warp_header_id
+            and warp.destination_warp_id == dynamic_warp_id
+        ):
+            warps.append(
+                LocationWarp(
+                    index=warp.index,
+                    x=warp.x,
+                    z=warp.z,
+                    destination_header_id=None,
+                    destination_warp_id=None,
+                    destination_name=None,
+                    destination_section_name=None,
+                    destination_internal_name=None,
+                    destination_warp_exists=None,
+                    dynamic=True,
+                )
+            )
+            continue
+        if warp.destination_header_id >= len(headers):
+            raise InvalidRomError(
+                f"Map header {header.header_id} warp {warp.index} references "
+                f"missing header {warp.destination_header_id}"
+            )
+        destination = headers[warp.destination_header_id]
+        destination_section_name, _ = resolve_location_section(
+            profile,
+            header_id=destination.header_id,
+            internal_name=destination.internal_name,
+        )
+        warps.append(
+            LocationWarp(
+                index=warp.index,
+                x=warp.x,
+                z=warp.z,
+                destination_header_id=destination.header_id,
+                destination_warp_id=warp.destination_warp_id,
+                destination_name=location_names[destination.location_name_id],
+                destination_section_name=destination_section_name,
+                destination_internal_name=destination.internal_name,
+                destination_warp_exists=(
+                    warp.destination_warp_id
+                    < len(raw_warps_by_header[destination.header_id])
+                ),
+                dynamic=False,
+            )
+        )
+    return tuple(warps)
+
+
 def extract_arm9_encounter_map_location_dataset(
     result: InspectionResult,
     trainer_dataset: dict[str, Any] | None = None,
@@ -252,102 +348,72 @@ def extract_arm9_encounter_map_location_dataset(
         raw_warps_by_header[header.header_id] = parsed_events[
             header.event_file_id
         ].warps
-    script_awarded_items_by_script: dict[
-        int, tuple[LocationScriptAwardedItem, ...]
-    ] = {}
     find_script_awarded_items = getattr(engine, "find_script_awarded_items", None)
-    if find_script_awarded_items is not None:
-        for header in headers:
-            script_file_id = header.script_file_id
-            if script_file_id in script_awarded_items_by_script:
-                continue
-            if script_file_id >= len(scripts.members):
-                raise InvalidRomError(
-                    f"Map header {header.header_id} references missing script file "
-                    f"{script_file_id}"
-                )
-            script_awarded_items_by_script[script_file_id] = tuple(
-                LocationScriptAwardedItem(
-                    item_id=award.item_id,
-                    name=item_names[award.item_id],
-                    quantity=award.quantity,
-                    script_file_id=script_file_id,
-                    command_offset=award.command_offset,
-                    command=award.command,
-                )
-                for award in find_script_awarded_items(
-                    scripts.read(script_file_id), item_count=len(item_names)
-                )
+    script_awarded_items_by_script = _script_keyed_records(
+        headers,
+        scripts,
+        enabled=find_script_awarded_items is not None,
+        build=lambda script_file_id, data: tuple(
+            LocationScriptAwardedItem(
+                item_id=award.item_id,
+                name=item_names[award.item_id],
+                quantity=award.quantity,
+                script_file_id=script_file_id,
+                command_offset=award.command_offset,
+                command=award.command,
             )
-    static_encounters_by_script: dict[int, tuple[LocationStaticEncounter, ...]] = {}
+            for award in find_script_awarded_items(data, item_count=len(item_names))
+        ),
+    )
     parse_static_encounter_commands = getattr(
         engine, "parse_static_encounter_commands", None
     )
-    if parse_static_encounter_commands is not None:
-        for header in headers:
-            script_file_id = header.script_file_id
-            if script_file_id in static_encounters_by_script:
-                continue
-            if script_file_id >= len(scripts.members):
-                raise InvalidRomError(
-                    f"Map header {header.header_id} references missing script file "
-                    f"{script_file_id}"
-                )
-            static_encounters_by_script[script_file_id] = tuple(
-                LocationStaticEncounter(
-                    species_id=command.species_id,
-                    name=pokemon_names[command.species_id],
-                    level=command.level,
-                    is_egg=False,
-                    command=command.command,
-                    script_file_id=script_file_id,
-                    command_offset=command.offset,
-                )
-                for command in parse_static_encounter_commands(
-                    scripts.read(script_file_id), species_count=len(pokemon_names)
-                )
-            )
-    pokemon_gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
-    gift_parsers = _resolve_pokemon_gift_parsers(engine, pokemon_names)
-    if gift_parsers is not None:
-        for header in headers:
-            script_file_id = header.script_file_id
-            if script_file_id in pokemon_gifts_by_script:
-                continue
-            if script_file_id >= len(scripts.members):
-                raise InvalidRomError(
-                    f"Map header {header.header_id} references missing script file "
-                    f"{script_file_id}"
-                )
-            pokemon_gifts_by_script[script_file_id] = _collect_pokemon_gifts(
-                gift_parsers,
-                scripts.read(script_file_id),
-                pokemon_names=pokemon_names,
+    static_encounters_by_script = _script_keyed_records(
+        headers,
+        scripts,
+        enabled=parse_static_encounter_commands is not None,
+        build=lambda script_file_id, data: tuple(
+            LocationStaticEncounter(
+                species_id=command.species_id,
+                name=pokemon_names[command.species_id],
+                level=command.level,
+                is_egg=False,
+                command=command.command,
                 script_file_id=script_file_id,
+                command_offset=command.offset,
             )
-    mart_references_by_script: dict[int, tuple[LocationMartReference, ...]] = {}
+            for command in parse_static_encounter_commands(
+                data, species_count=len(pokemon_names)
+            )
+        ),
+    )
+    gift_parsers = _resolve_pokemon_gift_parsers(engine, pokemon_names)
+    pokemon_gifts_by_script = _script_keyed_records(
+        headers,
+        scripts,
+        enabled=gift_parsers is not None,
+        build=lambda script_file_id, data: _collect_pokemon_gifts(
+            gift_parsers,
+            data,
+            pokemon_names=pokemon_names,
+            script_file_id=script_file_id,
+        ),
+    )
     parse_mart_dispatch_commands = getattr(engine, "parse_mart_dispatch_commands", None)
-    if parse_mart_dispatch_commands is not None:
-        for header in headers:
-            script_file_id = header.script_file_id
-            if script_file_id in mart_references_by_script:
-                continue
-            if script_file_id >= len(scripts.members):
-                raise InvalidRomError(
-                    f"Map header {header.header_id} references missing script file "
-                    f"{script_file_id}"
-                )
-            mart_references_by_script[script_file_id] = tuple(
-                LocationMartReference(
-                    kind=command.kind,
-                    inventory_id=command.inventory_id,
-                    script_file_id=script_file_id,
-                    command_offset=command.offset,
-                )
-                for command in parse_mart_dispatch_commands(
-                    scripts.read(script_file_id)
-                )
+    mart_references_by_script = _script_keyed_records(
+        headers,
+        scripts,
+        enabled=parse_mart_dispatch_commands is not None,
+        build=lambda script_file_id, data: tuple(
+            LocationMartReference(
+                kind=command.kind,
+                inventory_id=command.inventory_id,
+                script_file_id=script_file_id,
+                command_offset=command.offset,
             )
+            for command in parse_mart_dispatch_commands(data)
+        ),
+    )
     connections = extract_event_map_connections(
         engine, headers, matrices, location_names, matrix_void_header_ids
     )
@@ -370,56 +436,16 @@ def extract_arm9_encounter_map_location_dataset(
                 f"Map header {header.header_id} references missing encounter "
                 f"member {encounter_map_index}"
             )
-        warps = []
-        for warp in raw_warps_by_header[header.header_id]:
-            dynamic = (
-                warp.destination_header_id == dynamic_warp_header_id
-                and warp.destination_warp_id == dynamic_warp_id
-            )
-            if dynamic:
-                warps.append(
-                    LocationWarp(
-                        index=warp.index,
-                        x=warp.x,
-                        z=warp.z,
-                        destination_header_id=None,
-                        destination_warp_id=None,
-                        destination_name=None,
-                        destination_section_name=None,
-                        destination_internal_name=None,
-                        destination_warp_exists=None,
-                        dynamic=True,
-                    )
-                )
-                continue
-            if warp.destination_header_id >= len(headers):
-                raise InvalidRomError(
-                    f"Map header {header.header_id} warp {warp.index} references "
-                    f"missing header {warp.destination_header_id}"
-                )
-            destination = headers[warp.destination_header_id]
-            destination_section_name, _ = resolve_location_section(
-                profile,
-                header_id=destination.header_id,
-                internal_name=destination.internal_name,
-            )
-            warps.append(
-                LocationWarp(
-                    index=warp.index,
-                    x=warp.x,
-                    z=warp.z,
-                    destination_header_id=destination.header_id,
-                    destination_warp_id=warp.destination_warp_id,
-                    destination_name=location_names[destination.location_name_id],
-                    destination_section_name=destination_section_name,
-                    destination_internal_name=destination.internal_name,
-                    destination_warp_exists=(
-                        warp.destination_warp_id
-                        < len(raw_warps_by_header[destination.header_id])
-                    ),
-                    dynamic=False,
-                )
-            )
+        warps = _resolve_warps(
+            header,
+            raw_warps_by_header[header.header_id],
+            headers=headers,
+            profile=profile,
+            location_names=location_names,
+            dynamic_warp_header_id=dynamic_warp_header_id,
+            dynamic_warp_id=dynamic_warp_id,
+            raw_warps_by_header=raw_warps_by_header,
+        )
         records.append(
             EncounterMapLocation(
                 header_id=header.header_id,
@@ -430,7 +456,7 @@ def extract_arm9_encounter_map_location_dataset(
                 section_name=section_name,
                 section_name_source=section_name_source,
                 trainers=tuple(trainers.get(header.header_id, ())),
-                warps=tuple(warps),
+                warps=warps,
                 connections=tuple(connections.get(header.header_id, ())),
                 items=(
                     ()
