@@ -50,6 +50,50 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("# Headbutt encounters", page)
         self.assertIn("Route 1", page)
 
+    def test_disambiguates_headbutt_labels_sharing_a_location_name(self) -> None:
+        # Two different map headers can share the same display name (a route
+        # and a connecting sub-area both named "Route 2", for example), so a
+        # bare "Headbutt encounters -- Route 2" label would be identical and
+        # indistinguishable for both catalog rows without this.
+        def headbutt(area_id: int, header_id: int, internal_name: str) -> dict:
+            return {
+                "area_id": area_id,
+                "source_type": "headbutt",
+                "name": "Route 2",
+                "active": True,
+                "location": {
+                    "header_id": header_id,
+                    "internal_name": internal_name,
+                    "name": "Route 2",
+                },
+                "pools": {"common": [], "rare": [], "secret": []},
+                "tree_groups": [],
+                "provenance": {"source": "rom", "archive": "a/2/5/2", "member": area_id},
+            }
+
+        dataset = {
+            "game": "test",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [
+                headbutt(143, 10, "R02"),
+                headbutt(199, 414, "R02R0101"),
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            index_page = (output / "index.md").read_text(encoding="utf-8")
+
+        labels = {record["label"] for record in catalog["records"]}
+        self.assertEqual(len(labels), 2)
+        self.assertIn("Headbutt encounters — Route 2 (R02)", labels)
+        self.assertIn("Headbutt encounters — Route 2 (R02R0101)", labels)
+        self.assertIn("Headbutt encounters — Route 2 (R02)", index_page)
+        self.assertIn("Headbutt encounters — Route 2 (R02R0101)", index_page)
+
     def test_raises_a_site_error_for_an_unroutable_catalog_record(self) -> None:
         # A malformed/inconsistent build state (the location engine hasn't
         # registered a route for this area) must surface as the project's
@@ -245,6 +289,8 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("# Safari Zone encounters", index_page)
         self.assertIn("[Plains](safari-zone-00.md)", index_page)
         self.assertIn("# Plains { #plains }", area_page)
+        self.assertIn("## Grass", area_page)
+        self.assertIn("## Surf", area_page)
         self.assertIn("3 Plains, 5 Forest", area_page)
         self.assertIn("[Eevee](../pokemon/eevee.md) (Lv. 18)", area_page)
         self.assertEqual(catalog["records"][0]["methods"], ["Grass", "Surf"])
@@ -253,6 +299,55 @@ class EncounterRenderingTests(unittest.TestCase):
             {"Grass": ["Pikachu", "Eevee"], "Surf": ["Pikachu", "Eevee"]},
         )
         self.assertEqual(catalog["records"][0]["url"], "safari-zone-00/")
+        # Methods must link to their own-page sections, the same way ordinary
+        # and seasonal encounter methods do.
+        self.assertEqual(
+            catalog["records"][0]["method_anchors"], {"Grass": "grass", "Surf": "surf"}
+        )
+
+    def test_links_safari_zone_areas_to_each_other_for_navigation(self) -> None:
+        pikachu = {
+            "species_id": 25,
+            "level": 12,
+            "pokemon": {"id": 25, "slug": "pikachu", "name": "Pikachu"},
+        }
+        method = {
+            "base_pools": {time: [pikachu] for time in ("morning", "day", "night")},
+            "block_encounters": [],
+        }
+        plains = {
+            "area_id": 202,
+            "source_type": "safari-zone",
+            "safari_area_id": 0,
+            "area_name": "Plains",
+            "name": "Safari Zone — Plains",
+            "active": True,
+            "locations": [],
+            "methods": {"grass": method},
+            "provenance": {"archive": "a/2/3/0", "member": 0},
+        }
+        forest = {**plains, "area_id": 203, "safari_area_id": 1, "area_name": "Forest"}
+        dataset = {
+            "game": "heartgold-us",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [plains, forest],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            plains_page = (output / "safari-zone-00.md").read_text(encoding="utf-8")
+            forest_page = (output / "safari-zone-01.md").read_text(encoding="utf-8")
+
+        # Safari area pages must get the same prev/next navigation as the
+        # Headbutt/Hidden Grotto/Daily Swarm pages they were the model for.
+        self.assertIn('aria-label="Wild encounter navigation"', plains_page)
+        self.assertIn('href="../safari-zone-01/"', plains_page)
+        self.assertIn(">Forest →</span>", plains_page)
+        self.assertIn('aria-label="Wild encounter navigation"', forest_page)
+        self.assertIn('href="../safari-zone-00/"', forest_page)
+        self.assertIn(">← Plains</span>", forest_page)
 
     def test_catalog_keeps_pokemon_correlated_with_encounter_methods(self) -> None:
         pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}
@@ -505,6 +600,10 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(page.count('=== "Spring"'), 2)
         self.assertEqual(page.count('=== "Winter"'), 2)
         self.assertNotIn("    ##", page)
+        # The summary card's Methods row must link to its own page section,
+        # the same way non-seasonal encounter pages already do.
+        self.assertIn('<a href="#grasscave">Grass/Cave</a>', page)
+        self.assertIn('<a href="#surfing">Surfing</a>', page)
 
     def test_combines_version_and_season_in_content_tabs(self) -> None:
         pikachu = {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None}

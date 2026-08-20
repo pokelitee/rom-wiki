@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 from romwiki.pipeline.semantics.encounter_identity import (
@@ -398,13 +399,46 @@ def conditional_encounter_provenance(record: dict[str, Any]) -> list[str]:
 
 def conditional_encounter_label(record: dict[str, Any]) -> str:
     source_type = record.get("source_type")
+    if source_type == EncounterSourceType.SAFARI_ZONE:
+        return record["area_name"]
+    location_name = (record.get("location") or {}).get("name")
     if source_type == EncounterSourceType.HIDDEN_GROTTO:
-        return f"Hidden Grotto {record['grotto_id']:02}"
-    if source_type == EncounterSourceType.DAILY_SWARM:
-        return "Daily Swarm"
-    if source_type == EncounterSourceType.HEADBUTT:
-        return "Headbutt encounters"
-    return display_name(str(source_type or "encounters"))
+        label = f"Hidden Grotto {record['grotto_id']:02}"
+    elif source_type == EncounterSourceType.DAILY_SWARM:
+        label = "Daily Swarm"
+    elif source_type == EncounterSourceType.HEADBUTT:
+        label = "Headbutt encounters"
+    else:
+        return display_name(str(source_type or "encounters"))
+    # Map-owned conditional sources can have many records of the same source
+    # type (dozens of Headbutt trees, several daily swarms), so the location
+    # name is required to tell catalog rows, index links, and nav buttons
+    # apart -- unlike Safari Zone, whose area_name is already unique per area.
+    return f"{label} — {location_name}" if location_name else label
+
+
+def disambiguated_conditional_labels(
+    records: list[dict[str, Any]],
+) -> dict[int, str]:
+    """Map each record's `area_id` to a label unique within `records`.
+
+    Two different map headers occasionally share the same display name (a
+    route and a connecting sub-area both named "Route 2", for example), so
+    `conditional_encounter_label` alone isn't always unique across an entire
+    encounters catalog -- the same collision ordinary encounter areas already
+    handle by appending the internal map name. Mirror that here for any
+    conditional records sharing a label within this batch.
+    """
+    labels = {record["area_id"]: conditional_encounter_label(record) for record in records}
+    counts = Counter(labels.values())
+    for record in records:
+        area_id = record["area_id"]
+        label = labels[area_id]
+        if counts[label] > 1:
+            internal_name = (record.get("location") or {}).get("internal_name")
+            if internal_name:
+                labels[area_id] = f"{label} ({internal_name})"
+    return labels
 
 
 def safari_provenance(records: list[dict[str, Any]]) -> list[str]:

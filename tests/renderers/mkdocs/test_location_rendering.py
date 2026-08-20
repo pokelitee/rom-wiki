@@ -167,11 +167,13 @@ class LocationRenderingTests(unittest.TestCase):
 
         # The full Headbutt table now lives on its own encounters/ page; the
         # location page only links to it.
-        self.assertIn("[Headbutt encounters](../encounters/headbutt-009.md)", page)
+        self.assertIn(
+            "[Headbutt encounters — Route 1](../encounters/headbutt-009.md)", page
+        )
         self.assertNotIn("[Hoothoot](../pokemon/hoothoot.md)", page)
         self.assertEqual(page.count("## Hack changes"), 1)
         self.assertIn("**Location**", page)
-        self.assertIn("**Headbutt encounters**", page)
+        self.assertIn("**Headbutt encounters — Route 1**", page)
         self.assertNotIn("### Location\n", page)
         self.assertLess(page.index("## Hack changes"), page.index("Data provenance"))
         self.assertIn('<a href="#wild-encounters">Yes</a>', page)
@@ -299,9 +301,12 @@ class LocationRenderingTests(unittest.TestCase):
         # The full tables now live on their own encounters/ pages; the
         # location page only links to them.
         self.assertIn(
-            "[Hidden Grotto 00](../encounters/hidden-grotto-00.md)", page
+            "[Hidden Grotto 00 — Floccesy Ranch](../encounters/hidden-grotto-00.md)",
+            page,
         )
-        self.assertIn("[Daily Swarm](../encounters/daily-swarm-445.md)", page)
+        self.assertIn(
+            "[Daily Swarm — Floccesy Ranch](../encounters/daily-swarm-445.md)", page
+        )
         self.assertNotIn("[Fire Stone](../items/fire-stone.md)", page)
         self.assertNotIn("40–55", page)
         self.assertNotIn("header-445.md#daily-swarm", page)

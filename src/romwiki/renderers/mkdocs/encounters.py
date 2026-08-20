@@ -58,6 +58,7 @@ from romwiki.renderers.mkdocs.conditional_encounters import (
     append_safari_area,
     conditional_encounter_label,
     conditional_encounter_provenance,
+    disambiguated_conditional_labels,
     safari_provenance,
 )
 from romwiki.renderers.mkdocs.references import (
@@ -244,7 +245,7 @@ def render_encounter_pages(
             _render_safari_zone_index(safari_records, references, relationships),
         )
         page_count += 1
-        for record in safari_records:
+        for index, record in enumerate(safari_records):
             filename = f"{encounter_route_key(record)}.md"
             if only_pages is None or filename.removesuffix(".md") in only_pages:
                 write_text(
@@ -254,6 +255,8 @@ def render_encounter_pages(
                         comparison,
                         comparison.get("baseline") if comparison else None,
                         references,
+                        _conditional_sibling(safari_records, index, -1),
+                        _conditional_sibling(safari_records, index, 1),
                     ),
                 )
                 page_count += 1
@@ -331,6 +334,10 @@ def _safari_catalog_record(
         display_name(method)
         for method in next(iter(version_variant_records(record)))[1]["methods"]
     ]
+    # `append_safari_area` renders each method as an unlabeled heading, so its
+    # anchor is mkdocs' default slug of that same heading text -- mirroring how
+    # `_MethodAccumulator.add` derives anchors for ordinary encounter methods.
+    method_anchors = {label: heading_anchor(label) for label in methods}
     return add_change_status(
         {
             "id": record["area_id"],
@@ -339,7 +346,7 @@ def _safari_catalog_record(
             "url": filename,
             "locations": ["Safari Zone"],
             "methods": methods,
-            "method_anchors": {},
+            "method_anchors": method_anchors,
             "pokemon": names,
             "pokemon_refs": [
                 ROUTES.catalog_reference(reference, "encounters/")
@@ -456,6 +463,7 @@ def _render_conditional_encounter_records(
     (Headbutt/Hidden Grotto/Daily Swarm) the same way.
     """
     baseline_name = comparison.get("baseline") if comparison else None
+    labels = disambiguated_conditional_labels(conditional_records)
     page_count = 0
     for index, record in enumerate(conditional_records):
         change = encounter_record_comparison(comparison, record)
@@ -467,7 +475,13 @@ def _render_conditional_encounter_records(
             write_text(
                 output_root / filename,
                 _render_conditional_encounter_page(
-                    record, comparison, baseline_name, references, previous, following
+                    record,
+                    comparison,
+                    baseline_name,
+                    references,
+                    previous,
+                    following,
+                    labels,
                 ),
             )
             page_count += 1
@@ -477,14 +491,16 @@ def _render_conditional_encounter_records(
                 entity_reference(
                     encounter_route_kind(route_key),
                     record["area_id"],
-                    conditional_encounter_label(record),
+                    labels[record["area_id"]],
                     route_key,
                 ),
                 "encounters/index.md",
             )
         )
         catalog_records.append(
-            _conditional_catalog_record(record, f"{route_key}/", change)
+            _conditional_catalog_record(
+                record, f"{route_key}/", change, labels[record["area_id"]]
+            )
         )
     return page_count
 
@@ -515,12 +531,12 @@ def _conditional_catalog_record(
     record: dict[str, Any],
     filename: str,
     change: dict[str, Any] | None,
+    label: str,
 ) -> dict[str, Any]:
     slots = _conditional_slots(record)
     names = list(dict.fromkeys(slot["pokemon"]["name"] for slot in slots))
     location = record.get("location") or {}
     location_name = location.get("name")
-    label = conditional_encounter_label(record)
     route_id = filename.removesuffix("/")
     levels = [_conditional_slot_levels(slot) for slot in slots]
     return add_change_status(
@@ -583,8 +599,15 @@ def _append_conditional_record_navigation(
     record: dict[str, Any],
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
+    labels: dict[int, str] | None = None,
 ) -> None:
     route_key = encounter_route_key(record)
+
+    def label(value: dict[str, Any]) -> str:
+        if labels is not None and value["area_id"] in labels:
+            return labels[value["area_id"]]
+        return conditional_encounter_label(value)
+
     lines.extend(
         record_navigation_for(
             encounter_route_kind(route_key),
@@ -594,7 +617,7 @@ def _append_conditional_record_navigation(
             aria_label="Wild encounter navigation",
             identity=lambda value: value["area_id"],
             route_key=encounter_route_key,
-            label=conditional_encounter_label,
+            label=label,
         )
     )
 
@@ -606,6 +629,7 @@ def _render_conditional_encounter_page(
     references: ReferenceIndex | None,
     previous: dict[str, Any] | None,
     following: dict[str, Any] | None,
+    labels: dict[int, str],
 ) -> str:
     route_key = encounter_route_key(record)
     source_file = f"encounters/{route_key}.md"
@@ -622,7 +646,7 @@ def _render_conditional_encounter_page(
             source_file,
             references,
             heading_level=1,
-            heading=conditional_encounter_label(record),
+            heading=labels[record["area_id"]],
         )
     elif source_type == EncounterSourceType.DAILY_SWARM:
         append_daily_swarm(lines, record, source_file, references, heading_level=1)
@@ -638,7 +662,7 @@ def _render_conditional_encounter_page(
         )
     )
     lines.extend(provenance_section(conditional_encounter_provenance(record)))
-    _append_conditional_record_navigation(lines, record, previous, following)
+    _append_conditional_record_navigation(lines, record, previous, following, labels)
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -697,6 +721,8 @@ def _render_safari_zone_area_page(
     comparison: dict[str, Any] | None,
     baseline_name: str | None,
     references: ReferenceIndex | None,
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"encounters/{encounter_route_key(record)}.md"
     lines: list[str] = []
@@ -710,6 +736,7 @@ def _render_safari_zone_area_page(
         )
     )
     lines.extend(provenance_section(safari_provenance([record])))
+    _append_conditional_record_navigation(lines, record, previous, following)
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -1580,7 +1607,13 @@ def _seasonal_area_summary(
         f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
         f"<div><dt>Map index</dt><dd>{record['map_index']}</dd></div>",
         "<div><dt>Methods</dt><dd>"
-        + (", ".join(methods) if methods else "None")
+        + (
+            ", ".join(
+                summary_section_link(label, heading_anchor(label)) for label in methods
+            )
+            if methods
+            else "None"
+        )
         + "</dd></div>",
     ]
     seasons = [value["season"] for value in records if value.get("season")]
