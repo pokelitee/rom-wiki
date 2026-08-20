@@ -247,6 +247,10 @@ def extract_arm9_encounter_map_location_dataset(
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).locations
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(

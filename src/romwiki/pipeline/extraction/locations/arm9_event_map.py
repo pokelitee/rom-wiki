@@ -237,6 +237,10 @@ def _load_event_map_source(
     game_corner_prize_count = profile.parameters.get("game_corner_prize_count", 0)
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).locations
 
     null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)

@@ -9,6 +9,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.build.context import GameBuildContext
@@ -1947,13 +1948,25 @@ def _write_type_build(
 def _current_relationship_datasets(
     context: GameBuildContext,
 ) -> dict[str, dict]:
+    # "trades" has no dedicated dataset_kind (it's an optional per-engine
+    # detail, always None-safe) so it's never gated here; the rest correspond
+    # 1:1 to a DATASET_KINDS entry and are only built when the profile's
+    # engine actually declares support for it -- a personal-data-only
+    # vertical slice (an engine's first onboarding step, per
+    # adding-a-game.md) has nothing to build for the others yet.
+    enabled = set(enabled_dataset_kinds(context.profile))
+    accessors: dict[str, tuple[str | None, Callable[[], dict[str, Any] | None]]] = {
+        "pokemon": ("pokemon", context.pokemon),
+        "encounters": ("encounters", context.encounters),
+        "trainers": ("trainers", context.trainers),
+        "locations": ("locations", context.locations),
+        "items": ("items", context.items),
+        "trades": (None, context.trades),
+    }
     datasets = {
-        "pokemon": context.pokemon(),
-        "encounters": context.encounters(),
-        "trainers": context.trainers(),
-        "locations": context.locations(),
-        "items": context.items(),
-        "trades": context.trades(),
+        name: accessor()
+        for name, (kind, accessor) in accessors.items()
+        if kind is None or kind in enabled
     }
     return {kind: dataset for kind, dataset in datasets.items() if dataset is not None}
 

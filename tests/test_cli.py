@@ -514,6 +514,16 @@ class RelationshipDatasetTests(unittest.TestCase):
             for kind in ("pokemon", "encounters", "items")
         }
         context = SimpleNamespace(
+            profile=SimpleNamespace(
+                layout={
+                    "personal": "personal",
+                    "moves": "moves",
+                    "item_data": "items",
+                    "messages": "messages",
+                    "encounters": "encounters",
+                },
+                parameters={},
+            ),
             pokemon=lambda: datasets["pokemon"],
             encounters=lambda: datasets["encounters"],
             trainers=lambda: None,
@@ -1005,6 +1015,7 @@ def _build_dataset(kind: str, game: str) -> dict:
 def _section_profile(profile_id: str, *, optional: bool = False) -> SimpleNamespace:
     return SimpleNamespace(
         id=profile_id,
+        parameters={},
         layout={
             "personal": "personal",
             "messages": "messages",

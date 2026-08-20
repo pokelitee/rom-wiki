@@ -61,6 +61,7 @@ class SiteCatalogTests(unittest.TestCase):
             [site.id for site in catalog.sites],
             [
                 "portal",
+                "firered-leafgreen",
                 "platinum",
                 "renegade-platinum",
                 "heart-gold-soul-silver",

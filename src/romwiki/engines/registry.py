@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, get_args
 
+import romwiki.engines.gen3.frlg as gen3_frlg
 import romwiki.engines.gen4.dppt as gen4_dppt
 import romwiki.engines.gen4.hgss as gen4_hgss
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.engines.profile_contracts import (
+    GEN3_FRLG_PROFILE_CONTRACT,
     GEN4_DPPT_PROFILE_CONTRACT,
     GEN4_HGSS_PROFILE_CONTRACT,
     GEN5_B2W2_PROFILE_CONTRACT,
@@ -17,6 +19,7 @@ from romwiki.engines.profile_contracts import (
 from romwiki.util.errors import DataSourceError
 
 # Canonical engine identifiers used by registration and contract tests.
+GEN3_FRLG_ENGINE = "gen3_frlg"
 GEN4_DPPT_ENGINE = "gen4_dppt"
 GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
@@ -127,6 +130,50 @@ class EngineAdapter:
 
 
 _ENGINES: dict[str, EngineAdapter] = {
+    GEN3_FRLG_ENGINE: EngineAdapter(
+        # Vertical slice: only Pokémon personal data is implemented so far.
+        # Every concern currently points at the same flat `gen3_frlg`
+        # namespace; unimplemented concerns are never accessed because
+        # `dataset_kinds`/`formats` below declare no capability that would
+        # require them (enforced by `_validate_engine_adapter`'s `required`
+        # map). Widen this entry's concerns/formats as extraction work adds
+        # more Generation III domains.
+        personal=gen3_frlg,
+        locations=gen3_frlg,
+        trainers=gen3_frlg,
+        encounters=gen3_frlg,
+        evolutions=gen3_frlg,
+        items=gen3_frlg,
+        machines=gen3_frlg,
+        moves=gen3_frlg,
+        tutors=gen3_frlg,
+        egg_moves=gen3_frlg,
+        learnsets=gen3_frlg,
+        reference_names=gen3_frlg,
+        enrich=gen3_frlg,
+        trainer_party=gen3_frlg,
+        trades=gen3_frlg,
+        marts=gen3_frlg,
+        static_encounters=gen3_frlg,
+        pickup=gen3_frlg,
+        formats=EngineFormats(
+            encounters="unsupported",
+            locations="unsupported",
+            location_extraction="unsupported",
+            pickup="none",
+            trainers="unsupported",
+            tutors="none",
+            fossils="none",
+            static_encounters="none",
+            egg_moves="none",
+            item_archive="archive-index",
+            machines="none",
+        ),
+        generation=3,
+        dataset_kinds=frozenset({"pokemon"}),
+        required_dataset_kinds=frozenset({"pokemon"}),
+        profile_contract=GEN3_FRLG_PROFILE_CONTRACT,
+    ),
     GEN4_DPPT_ENGINE: EngineAdapter(
         personal=gen4_dppt,
         locations=gen4_dppt,

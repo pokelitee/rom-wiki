@@ -116,6 +116,10 @@ def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
     engine = get_engine(profile.engine).tutors
     if platform.read_overlay_decompressed is None:
         raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
+    if platform.filesystem_from_image is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     move_size = engine.TUTOR_COUNT * engine.TUTOR_RECORD_SIZE
     move_data = _slice_overlay(overlay_data, move_offset, move_size, "move")
@@ -170,6 +174,10 @@ def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]
     engine = get_engine(profile.engine).tutors
     if platform.read_overlay_decompressed is None:
         raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     filesystem = platform.filesystem_from_image(result.image)
     personal = platform.archive_cls.from_bytes(filesystem.read(personal_path))

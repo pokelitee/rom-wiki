@@ -27,6 +27,20 @@ def make_header() -> bytes:
     return bytes(data)
 
 
+def make_gba_header(*, game_code: bytes = b"BPRE", software_version: int = 0) -> bytes:
+    data = bytearray(0xC0)
+    data[0xA0:0xAC] = b"POKEMON FIRE"
+    data[0xAC:0xB0] = game_code
+    data[0xB0:0xB2] = b"01"
+    data[0xB2] = 0x96
+    data[0xB3] = 0
+    data[0xB4] = 0
+    data[0xBC] = software_version
+    checksum = (-(sum(data[0xA0:0xBD]) + 0x19)) & 0xFF
+    data[0xBD] = checksum
+    return bytes(data)
+
+
 def make_narc() -> bytes:
     raw_data = b"abc\0de"
     fat = struct.pack("<4sII", b"BTAF", 28, 2)

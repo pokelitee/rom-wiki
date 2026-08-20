@@ -54,7 +54,7 @@ def dataset_enabled(profile: GameProfile, kind: str) -> bool:
         ) from error
     supported, _required = _engine_dataset_contract(profile)
     return kind in supported and any(
-        _contains_all(profile.layout, keys) for keys in alternatives
+        _contains_all(profile, keys) for keys in alternatives
     )
 
 
@@ -83,8 +83,16 @@ def describe_section_mismatch(
     return "; ".join(differences)
 
 
-def _contains_all(layout: Mapping[str, str], keys: tuple[str, ...]) -> bool:
-    return all(key in layout for key in keys)
+def _contains_all(profile: GameProfile, keys: tuple[str, ...]) -> bool:
+    # NDS-style engines locate a domain via a `[layout]` archive path alias
+    # (e.g. `personal = "a/0/0/2"`); a flat, offset-addressed platform (e.g.
+    # Game Boy Advance) has no filesystem path for the same domain and
+    # signals it instead via a `<key>_offset` parameter (e.g.
+    # `personal_offset`), per the `gen3_frlg` engine's profile contract.
+    # Either signal counts as "this profile configures this domain."
+    return all(
+        key in profile.layout or f"{key}_offset" in profile.parameters for key in keys
+    )
 
 
 def _format_requirements(alternatives: tuple[tuple[str, ...], ...]) -> str:

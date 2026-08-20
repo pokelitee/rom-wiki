@@ -109,6 +109,19 @@ class EngineProfileContract:
             )
 
 
+GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
+    # Generation III (Game Boy Advance) has no filesystem/archive concept --
+    # data is addressed by fixed ROM offsets under `[parameters]`, not
+    # `[layout]` path aliases like the Nintendo DS engines above.
+    required_parameters=frozenset(
+        {
+            "personal_offset",
+            "personal_count",
+        }
+    ),
+    reject_unknown=True,
+)
+
 _GEN5_LAYOUT = frozenset(
     {
         "egg_moves",

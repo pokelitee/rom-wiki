@@ -35,6 +35,10 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     adapter = get_engine(profile.engine)
     engine = adapter.items
     fossil_format = adapter.formats.fossils

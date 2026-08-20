@@ -135,6 +135,7 @@ TYPE_CHARTS = {
     "gen2-5": RegisteredTypeChart("gen2-5", TYPE_CHART_FAMILIES["gen2-5"]),
     # Backward-compatible profile aliases. Chart selection describes battle
     # mechanics, not which extraction engine happens to consume them.
+    "gen3": RegisteredTypeChart("gen3", TYPE_CHART_FAMILIES["gen2-5"]),
     "gen4": RegisteredTypeChart("gen4", TYPE_CHART_FAMILIES["gen2-5"]),
     "gen5": RegisteredTypeChart("gen5", TYPE_CHART_FAMILIES["gen2-5"]),
 }

@@ -26,6 +26,10 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).moves
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))

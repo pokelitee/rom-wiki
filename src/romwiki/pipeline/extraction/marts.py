@@ -46,6 +46,10 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} is missing mart metadata: {error.args[0]}"
         ) from error
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).marts
     items_engine = get_engine(profile.engine).items
     filesystem = platform.filesystem_from_image(result.image)
@@ -91,6 +95,10 @@ def _extract_arm9_marts(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(f"Profile {profile.id} has invalid mart metadata") from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).marts
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(
@@ -132,6 +140,10 @@ def _extract_archive_marts(result: InspectionResult) -> dict[str, Any]:
             f"Profile {profile.id} is missing archive mart metadata: {error.args[0]}"
         ) from error
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     filesystem = platform.filesystem_from_image(result.image)
     shops = platform.archive_cls.from_bytes(filesystem.read(shop_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))

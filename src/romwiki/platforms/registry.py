@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from romwiki.platforms.gba import GbaImage
+from romwiki.platforms.gba import read_bytes as gba_read_bytes
 from romwiki.platforms.nds import (
     NarcArchive,
     NintendoDSFileSystem,
@@ -80,9 +82,10 @@ class PlatformAdapter[ImageT: RomImage]:
     """
 
     inspect: Callable[[Path], ImageT]
-    filesystem_from_image: Callable[[ImageT], Any]
     matches_header: Callable[[ImageT, Sequence[str], Sequence[int]], bool]
-    archive_cls: type[Archive]
+    filesystem_from_image: Callable[[ImageT], Any] | None = None
+    archive_cls: type[Archive] | None = None
+    read_bytes: Callable[[ImageT, int, int], bytes] | None = None
     read_overlay: Callable[[ImageT, int], tuple[OverlayDescriptor, bytes]] | None = None
     read_overlay_decompressed: (
         Callable[[ImageT, int], tuple[OverlayDescriptor, bytes]] | None
@@ -101,6 +104,15 @@ def _nds_matches_header(
     )
 
 
+def _gba_matches_header(
+    image: GbaImage, game_codes: Sequence[str], rom_versions: Sequence[int]
+) -> bool:
+    return (
+        image.header.game_code in game_codes
+        and image.header.software_version in rom_versions
+    )
+
+
 _PLATFORMS: dict[str, PlatformAdapter[Any]] = {
     "nintendo-ds": PlatformAdapter(
         inspect=NintendoDSImage.inspect,
@@ -112,6 +124,11 @@ _PLATFORMS: dict[str, PlatformAdapter[Any]] = {
         read_code_binary=read_arm9_binary,
         read_decompressed_code_binary=read_arm9_binary_decompressed,
         code_load_address=arm9_load_address,
+    ),
+    "game-boy-advance": PlatformAdapter(
+        inspect=GbaImage.inspect,
+        matches_header=_gba_matches_header,
+        read_bytes=gba_read_bytes,
     ),
 }
 
@@ -151,15 +168,20 @@ def _validate_platform_adapter(platform: str, adapter: PlatformAdapter[Any]) -> 
         raise DataSourceError(f"Invalid platform identifier: {platform!r}")
     required_callables = {
         "inspect": adapter.inspect,
-        "filesystem_from_image": adapter.filesystem_from_image,
         "matches_header": adapter.matches_header,
     }
     missing = [
         name for name, member in required_callables.items() if not callable(member)
     ]
-    if not hasattr(adapter.archive_cls, "from_bytes"):
+    if adapter.archive_cls is None and adapter.read_bytes is None:
+        missing.append("archive_cls or read_bytes")
+    if adapter.archive_cls is not None and not hasattr(
+        adapter.archive_cls, "from_bytes"
+    ):
         missing.append("archive_cls.from_bytes")
     optional_callables = {
+        "filesystem_from_image": adapter.filesystem_from_image,
+        "read_bytes": adapter.read_bytes,
         "read_overlay": adapter.read_overlay,
         "read_overlay_decompressed": adapter.read_overlay_decompressed,
         "read_code_binary": adapter.read_code_binary,

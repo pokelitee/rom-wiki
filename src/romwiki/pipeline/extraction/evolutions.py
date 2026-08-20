@@ -24,6 +24,10 @@ def extract_evolution_dataset(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     adapter = get_engine(profile.engine)
     engine = adapter.evolutions
     filesystem = platform.filesystem_from_image(result.image)

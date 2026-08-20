@@ -43,6 +43,10 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).pickup
     common_count = profile.parameters.get(
         "pickup_common_item_count", engine.PICKUP_COMMON_ITEM_COUNT
@@ -112,6 +116,10 @@ def _extract_locator_tables(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).pickup
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(
@@ -199,6 +207,10 @@ def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     items_engine = get_engine(profile.engine).items
     pickup_engine = get_engine(profile.engine).pickup
     locator_hex = profile.parameters.get(

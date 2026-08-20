@@ -25,6 +25,10 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
     unused_trade_ids = frozenset(profile.parameters.get("npc_trades_unused", ()))
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).trades
     interaction_by_id = getattr(engine, "NPC_TRADE_INTERACTION_BY_ID", {})
     filesystem = platform.filesystem_from_image(result.image)

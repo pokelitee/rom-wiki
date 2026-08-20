@@ -51,6 +51,10 @@ def extract_reference_names(
             f"Profile {profile.id} defines name tables without a message archive"
         ) from error
     archive_cls = get_platform(profile.platform).archive_cls
+    if archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     parse_english_message_archive = engine.parse_english_message_archive
     archive_options = {}
     if profile.parameters.get("messages_allow_truncated", False):
@@ -98,6 +102,10 @@ def extract_reference_descriptions(
             f"Profile {profile.id} defines description tables without a message archive"
         ) from error
     archive_cls = get_platform(profile.platform).archive_cls
+    if archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     archive_options = {}
     if profile.parameters.get("messages_allow_truncated", False):
         archive_options["allow_truncated"] = True

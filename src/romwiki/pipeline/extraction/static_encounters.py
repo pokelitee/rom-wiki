@@ -23,6 +23,10 @@ def extract_static_encounter_dataset(result: InspectionResult) -> dict[str, Any]
             f"Profile {profile.id} is missing static encounter metadata: {error.args[0]}"
         ) from error
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     adapter = get_engine(profile.engine)
     engine = adapter.static_encounters
     filesystem = platform.filesystem_from_image(result.image)
