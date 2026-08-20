@@ -62,6 +62,43 @@ class TrainerEnrichmentTests(unittest.TestCase):
 
         self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Burmy (Sandy Cloak)")
 
+    def test_falls_back_to_the_base_species_for_an_unrecognized_form_bit(self) -> None:
+        # A hack's own trainer data can set a Generation IV form bit for a
+        # species that engine's own form tables have no entry for at all
+        # (Sacred Gold/Storm Silver's trainer 229 does this for Pinsir,
+        # species 127, which has no real Generation IV form). This must
+        # resolve to the base species rather than failing the whole build,
+        # the same tolerant treatment already given to explicitly
+        # cosmetic-only forms.
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={127: {"id": 127, "name": "Pinsir", "species": "pinsir"}},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 0,
+            "class_id": 0,
+            "class_gender": "male",
+            "has_custom_moves": False,
+            "reward_item_ids": [],
+            "party": [
+                {
+                    "difficulty": 0,
+                    "species_id": 127,
+                    "form_id": 1,
+                    "level": 5,
+                    "held_item_id": None,
+                    "move_ids": [],
+                }
+            ],
+        }
+
+        trainer = enrich_trainer_record(source, pokedb, None, None, engine="gen4_hgss")
+
+        self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Pinsir")
+
     def test_enriches_and_renders_a_trainer_party(self) -> None:
         source = {
             "trainer_id": 0,

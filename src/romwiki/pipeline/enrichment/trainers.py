@@ -136,12 +136,17 @@ def enrich_trainer_record(
                 if pokemon_records is not None:
                     game_record = pokemon_records.get(slug)
                 reference = None if game_record else pokedb.pokemon_for_name(slug)
-            elif cosmetic_form is not None:
-                reference = pokedb.pokemon_for_id(species_id)
             else:
-                raise DataSourceError(
-                    f"Unknown trainer form {form_id} for species {species_id}"
-                )
+                # An engine-recognized form ID with no dedicated game record
+                # (either explicitly cosmetic-only, or a form bit this
+                # engine's own species table has no entry for at all -- a
+                # hack's own data can set one for a species with no real
+                # Generation IV form, e.g. Sacred Gold/Storm Silver's
+                # Pinsir) resolves to the base species reference rather than
+                # failing the build. The raw form ID is still retained on
+                # the record below, so this never claims the data doesn't
+                # exist -- only that it has no distinct game entry to link.
+                reference = pokedb.pokemon_for_id(species_id)
         else:
             cosmetic_form = None
             if pokemon_records is not None:

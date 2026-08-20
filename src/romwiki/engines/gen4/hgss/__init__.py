@@ -45,10 +45,8 @@ from romwiki.engines.gen4.personal import (
     PERSONAL_INTERNAL_MEMBERS,
     PERSONAL_RECORD_SIZE,
     TRAINER_COSMETIC_FORM_LABELS,
+    TRAINER_FORM_SLUGS,
     parse_personal_record,
-)
-from romwiki.engines.gen4.personal import (
-    TRAINER_FORM_SLUGS as GEN4_TRAINER_FORM_SLUGS,
 )
 from romwiki.engines.gen4.starter_branches import (
     GET_STARTER_SPECIES as GET_STARTER_SPECIES,
@@ -171,10 +169,6 @@ TRAINER_OBJECT_SCRIPT_START = 3000
 TRAINER_OBJECT_SCRIPT_END = 3999
 TRAINER_OBJECT_ID_OFFSET = 1
 ALLOW_DUPLICATE_EGG_MOVES = True
-# Sacred Gold and Storm Silver v1.05 both store form bits 1 on trainer 229's
-# Pinsir. Pinsir has no Generation IV form, so retain the raw form ID while
-# resolving its display/reference target to the base species.
-TRAINER_FORM_SLUGS = {**GEN4_TRAINER_FORM_SLUGS, (127, 1): "pinsir"}
 
 __all__ = [
     "ABILITY_NAME_COUNT",

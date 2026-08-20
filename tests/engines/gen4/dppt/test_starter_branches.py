@@ -81,6 +81,31 @@ class Gen4StarterBranchTests(unittest.TestCase):
         self.assertEqual(family.fallthrough_trainer_id, 247)
         self.assertEqual(family.trainer_ids, (248, 249, 247))
 
+    def test_decodes_the_fallthrough_when_it_is_laid_out_after_the_branches(
+        self,
+    ) -> None:
+        # Retail Platinum emits the fall-through battle's bytes before the
+        # branched battles; Renegade Platinum emits it after them instead
+        # (see `_fallthrough_staged`'s own docstring). Only `battles`' order
+        # changes here -- the branch targets (248, 249) are laid out first
+        # in the byte stream and the fall-through (247) last, the opposite
+        # of `test_decodes_species_to_record_and_the_fallthrough` above --
+        # to lock in that this is resolved by scanning either side of the
+        # branched region rather than assuming one fixed layout.
+        data = _script(
+            species_targets=((387, 248), (390, 249)),
+            battles=(248, 249, 247),
+        )
+
+        families = parse_starter_branch_families(
+            data, script_file_id=429, trainer_count=928
+        )
+
+        self.assertEqual(len(families), 1)
+        family = families[0]
+        self.assertEqual(family.selected, ((387, 248), (390, 249)))
+        self.assertEqual(family.fallthrough_trainer_id, 247)
+
     def test_declines_a_script_that_never_reads_the_starter(self) -> None:
         data = _script(
             species_targets=((387, 248), (390, 249)),

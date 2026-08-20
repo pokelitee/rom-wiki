@@ -291,6 +291,18 @@ adjacent IDs, levels, party size, species similarity, or locations. Hacks must
 select an explicit compatible or overridden contract after ROM and creator-source
 verification; inheriting a retail profile alone is not evidence of script behavior.
 
+Concretely, this is one of the few places a hack profile for an *already supported*
+engine still needs a source-code touch, not just profile data: each trainer-enabled
+engine leaf keeps its own `_CONTRACTS` allowlist (e.g.
+`engines/gen4/dppt/battle_variants.py`, `engines/gen5/b2w2/battle_variants.py`) of
+every `trainer_variant_contract` string that engine's own decoders have been
+verified against. A profile's `trainer_variant_contract` parameter must name a
+value already present in its engine's set, or `resolve_trainer_variants` raises
+`ProfileError` — by design, not a bug to work around. Verify the new hack's field
+scripts against the owning leaf's decoded selectors (starter branches, rematch
+tables, and so on) the same way an existing hack was verified, then add its own new
+contract string to that engine's `_CONTRACTS` set as part of onboarding the profile.
+
 If party pages expose calculated stats, implement the generation's formula in its
 engine adapter and emit normalized `calculated_stats`; do not calculate them in a
 renderer. This keeps DV/Stat Experience generations separate from IV/EV formulas.
