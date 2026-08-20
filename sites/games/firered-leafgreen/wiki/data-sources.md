@@ -14,7 +14,10 @@ ROMs are parsed independently and merged by stable record identity.
 
 ## Coverage and provenance
 
-This site derives Pokémon base data and the type chart directly from the
-ROMs. Other sections are not yet implemented for this engine. PokéDB
-supplies reference identity, sprites, and Pokédex text; the wiki always
-distinguishes ROM-derived facts from reference content.
+This site derives Pokémon base data, moves, items, trainers, abilities, wild
+encounters, locations, and the type chart directly from the ROMs. Location
+coverage is a bounded first slice: the 124 Sevii Islands/postgame map
+headers verified against real ROM data, not Kanto's main-region map
+headers, which have not yet been located. PokéDB supplies reference
+identity, sprites, and Pokédex text; the wiki always distinguishes
+ROM-derived facts from reference content.

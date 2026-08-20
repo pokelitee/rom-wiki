@@ -14,4 +14,11 @@ nav:
   - Data Sources: data-sources.md
   - Game Data:
       - Pokémon: pokemon/index.md
+      - Abilities: abilities/index.md
+      - Items: items/index.md
+      - Moves: moves/index.md
+      - Trainers: trainers/index.md
       - Type Chart: types/index.md
+  - World:
+      - Wild Encounters: encounters/index.md
+      - Locations: locations/index.md

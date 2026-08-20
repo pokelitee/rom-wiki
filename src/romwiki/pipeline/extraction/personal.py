@@ -28,10 +28,9 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
             _extract_personal_records_archive(profile, platform, engine, result)
         )
     elif platform.read_bytes is not None:
-        records, source = _extract_personal_records_flat(
+        records, source, reference_names = _extract_personal_records_flat(
             profile, platform, engine, result
         )
-        reference_names = {}
         reference_descriptions = {}
     else:
         raise ProfileError(
@@ -91,7 +90,7 @@ def _extract_personal_records_archive(
 
 def _extract_personal_records_flat(
     profile: Any, platform: Any, engine: Any, result: InspectionResult
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     try:
         offset = profile.parameters["personal_offset"]
         count = profile.parameters["personal_count"]
@@ -119,4 +118,32 @@ def _extract_personal_records_flat(
         ).to_dict()
         for index in range(decoded_count)
     ]
-    return records, {"offset": offset}
+    reference_names = _extract_ability_names_flat(profile, platform, engine, result)
+    return records, {"offset": offset}, reference_names
+
+
+def _extract_ability_names_flat(
+    profile: Any, platform: Any, engine: Any, result: InspectionResult
+) -> dict[str, Any]:
+    # Optional: an engine that hasn't wired up the "abilities" domain yet
+    # (or a profile that doesn't declare these parameters) simply gets no
+    # ability_names key, matching `resolve_ability_names`'s None-tolerant
+    # fallback -- mirrors `moves.py`'s flat move-name decode, but this one
+    # is optional rather than required since abilities is itself optional.
+    name_offset = profile.parameters.get("ability_name_offset")
+    name_stride = profile.parameters.get("ability_name_stride")
+    name_count = profile.parameters.get("ability_name_count")
+    if not all(
+        isinstance(value, int) for value in (name_offset, name_stride, name_count)
+    ):
+        return {}
+    name_data = platform.read_bytes(result.image, name_offset, name_stride * name_count)
+    ability_names = engine.decode_gen3_text_table(
+        name_data, stride=name_stride, count=name_count
+    )
+    return {
+        "ability_names": ability_names,
+        "name_sources": {
+            "ability_names": {"archive": f"offset:{name_offset:#x}", "member": 0}
+        },
+    }

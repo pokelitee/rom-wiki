@@ -335,7 +335,16 @@ class GameBuildContext:
             self.pokemon(),
             self.trainers(),
             self.locations(),
-            encounter_dataset=self.encounters(),
+            # Unlike moves_raw/encounters_raw (mandatory dataset kinds for
+            # every engine that declares "encounters" support at all),
+            # gen3_frlg doesn't implement encounters yet -- gated the same
+            # way trainers()/locations() already are, rather than crashing
+            # on a domain this engine's items build doesn't need.
+            encounter_dataset=(
+                self.encounters()
+                if dataset_enabled(self.profile, "encounters")
+                else None
+            ),
             trade_dataset=self.trades(),
             mart_dataset=self.marts_raw(),
             reference_version=self.profile.base_game,

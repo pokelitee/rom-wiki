@@ -16,11 +16,22 @@ base_game = "firered-leafgreen"
 platform = "game-boy-advance"
 platform_name = "Game Boy Advance"
 creator = "Game Freak"
-# gen3_frlg is a vertical slice: only the Pokémon domain is implemented so
-# far (see engines/registry.py's GEN3_FRLG_ENGINE entry). Restricted to what
-# the profiles actually support -- "types"/"data" are always-available,
-# non-dataset-kind sections, required for every data-driven site.
-generated_sections = ["pokemon", "types", "data"]
+# gen3_frlg is a vertical slice: Pokémon, moves, items, trainers, abilities,
+# encounters, and locations are implemented so far (see engines/registry.py's
+# GEN3_FRLG_ENGINE entry). Restricted to what the profiles actually support
+# -- "types"/"data" are always-available, non-dataset-kind sections,
+# required for every data-driven site.
+generated_sections = [
+    "pokemon",
+    "moves",
+    "items",
+    "trainers",
+    "abilities",
+    "encounters",
+    "locations",
+    "types",
+    "data",
+]
 
 [appearance]
 # Placeholder: reusing the neutral "platinum" theme (already shared by two

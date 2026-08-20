@@ -20,6 +20,75 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for item extraction")
     profile = result.match.profile
+    platform = get_platform(profile.platform)
+
+    if platform.archive_cls is not None:
+        return _extract_item_dataset_archive(result, profile, platform)
+    if platform.read_bytes is not None:
+        return _extract_item_dataset_flat(result, profile, platform)
+    raise ProfileError(
+        f"Platform {profile.platform!r} supports neither archive nor flat reads"
+    )
+
+
+def _extract_item_dataset_flat(
+    result: InspectionResult, profile: Any, platform: Any
+) -> dict[str, Any]:
+    try:
+        offset = profile.parameters["item_offset"]
+        count = profile.parameters["item_count"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define item_offset/item_count"
+        ) from error
+    if not isinstance(offset, int) or not isinstance(count, int):
+        raise ProfileError(f"Profile {profile.id} has an invalid item parameter")
+
+    engine = get_engine(profile.engine).items
+    record_size = engine.ITEM_RECORD_SIZE
+    data = platform.read_bytes(result.image, offset, record_size * count)
+    archive_path = f"offset:{offset:#x}"
+    decoded_count = min(count, engine.ITEM_RECORD_COUNT)
+
+    records = []
+    for item_id in range(decoded_count):
+        record_bytes = data[item_id * record_size : (item_id + 1) * record_size]
+        parsed = engine.parse_item_record(
+            record_bytes, item_id=item_id, archive_path=archive_path
+        ).to_dict()
+        name = engine.item_name(record_bytes)
+        pocket_id = parsed["field_pocket_id"]
+        if pocket_id >= len(engine.ITEM_POCKET_NAMES):
+            raise DataSourceError(f"Unknown item pocket ID: {pocket_id}")
+        records.append(
+            {
+                **parsed,
+                "name": name,
+                "public": item_id > 0 and name != "",
+                "revives_into_species_id": None,
+                "berry": None,
+                "pocket": {
+                    "id": pocket_id,
+                    "name": engine.ITEM_POCKET_NAMES[pocket_id],
+                },
+            }
+        )
+
+    envelope = dataset_envelope(
+        schema_version=ITEMS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="items",
+        source={"rom_sha256": result.image.hashes.sha256, "offset": offset},
+        records=records,
+    )
+    envelope["public_record_count"] = sum(record["public"] for record in records)
+    return envelope
+
+
+def _extract_item_dataset_archive(
+    result: InspectionResult, profile: Any, platform: Any
+) -> dict[str, Any]:
     try:
         item_archive_path = profile.layout["item_data"]
         message_archive_path = profile.layout["messages"]
@@ -34,11 +103,6 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     fossil_revival_count = profile.parameters.get("fossil_revival_count")
     first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
-    platform = get_platform(profile.platform)
-    if platform.filesystem_from_image is None or platform.archive_cls is None:
-        raise ProfileError(
-            f"Platform {profile.platform!r} does not support archive-based extraction"
-        )
     adapter = get_engine(profile.engine)
     engine = adapter.items
     fossil_format = adapter.formats.fossils

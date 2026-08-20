@@ -28,11 +28,12 @@ def enrich_encounter_dataset(
     engine = adapter.enrich
     pokemon_names = resolve_pokemon_names(engine, dataset)
     item_names = resolve_item_names(engine, dataset)
-    enrich_area = (
-        enrich_seasonal_encounter_area
-        if adapter.formats.encounters == "seasonal"
-        else enrich_conditional_encounter_area
-    )
+    if adapter.formats.encounters == "seasonal":
+        enrich_area = enrich_seasonal_encounter_area
+    elif adapter.formats.encounters == "method-table":
+        enrich_area = enrich_method_table_encounter_area
+    else:
+        enrich_area = enrich_conditional_encounter_area
 
     records = []
     for expected_area, source in enumerate(source_records):
@@ -410,6 +411,59 @@ def enrich_seasonal_encounter_area(
         "name": " / ".join(location_names) or label,
         "location_names": location_names,
         "active": active,
+        **methods,
+        "provenance": source["provenance"],
+    }
+
+
+def enrich_method_table_encounter_area(
+    engine: Any,
+    source: dict[str, Any],
+    pokedb: PokeDBGeneration,
+    sprite_version: str | None = None,
+    pokemon_names: list[str] | None = None,
+) -> dict[str, Any]:
+    """Enrich a Generation III `MethodEncounterArea` record: up to four
+    independent methods (land/water/rock-smash/fishing), each an explicit
+    min/max level range per slot -- no season system, no swarm/day/night/
+    radar/dual-slot/Unown bonus-slot mechanics (see
+    `schema/encounters.py::MethodEncounterArea`'s docstring). Reuses the same
+    species/level/chance-resolution shape as `enrich_conditional_encounter_area`
+    for each present method, without any of that function's Generation
+    IV-only bonus-slot handling (there's nothing to enrich there -- this
+    engine's raw records never populate those fields at all).
+    """
+    method_chances = {
+        "land": engine.ENCOUNTER_LAND_SLOT_CHANCES,
+        "water": engine.ENCOUNTER_WATER_SLOT_CHANCES,
+        "rock_smash": engine.ENCOUNTER_ROCK_SMASH_SLOT_CHANCES,
+        "fishing": engine.ENCOUNTER_FISHING_SLOT_CHANCES,
+    }
+    methods = {}
+    for name, chances in method_chances.items():
+        method = source.get(name)
+        if method is None:
+            continue
+        methods[name] = {
+            "rate": method["rate"],
+            "slots": [
+                {
+                    **slot,
+                    "chance": chances[index],
+                    "pokemon": _encounter_pokemon(
+                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                    ),
+                }
+                for index, slot in enumerate(method["slots"])
+            ],
+        }
+    locations = source.get("locations", [])
+    names = list(dict.fromkeys(location["name"] for location in locations))
+    return {
+        "area_id": source["area_id"],
+        "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
+        "locations": locations,
+        "active": any(method["rate"] for method in methods.values()),
         **methods,
         "provenance": source["provenance"],
     }

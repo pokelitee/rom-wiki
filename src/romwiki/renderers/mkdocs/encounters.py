@@ -100,9 +100,12 @@ def render_encounter_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     engine_id = dataset.get("engine")
+    encounter_format = (
+        get_engine(engine_id).formats.encounters if isinstance(engine_id, str) else None
+    )
     seasonal = (
-        get_engine(engine_id).formats.encounters == "seasonal"
-        if isinstance(engine_id, str)
+        encounter_format == "seasonal"
+        if encounter_format is not None
         else bool(dataset.get("records")) and "season" in dataset["records"][0]
     )
     dataset_dict = cast(dict[str, Any], dataset)
@@ -113,6 +116,14 @@ def render_encounter_pages(
             comparison,
             references,
             relationships,
+            only_pages=only_pages,
+        )
+    if encounter_format == "method-table":
+        return _render_method_table_encounter_pages(
+            dataset_dict,
+            output_root,
+            comparison,
+            references,
             only_pages=only_pages,
         )
     all_records = cast(list[dict[str, Any]], dataset["records"])
@@ -1201,6 +1212,204 @@ def _append_special(
                 "",
             ]
         )
+
+
+# Generation III has no seasons and no Generation IV-only bonus-slot
+# mechanics (swarm/day/night/radar/dual-slot/Unown) -- every method stores
+# an explicit min/max level range per slot (see `schema/encounters.py`'s
+# `MethodEncounterArea`), so this renders each present method with the same
+# generic `_append_water` table the conditional path already uses for its
+# own min/max-level methods (surf/rod), rather than reusing the Generation
+# IV-shaped `_render_area`/`_catalog_record`, which assume fields (`special`,
+# `walking_variants`, `unown_table_id`) this engine's records never have.
+_METHOD_TABLE_LABELS = {
+    "land": "Land",
+    "water": "Water",
+    "rock_smash": "Rock Smash",
+    "fishing": "Fishing",
+}
+
+
+def _render_method_table_encounter_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    comparison: dict[str, Any] | None,
+    references: ReferenceIndex | None,
+    *,
+    only_pages: frozenset[str] | None = None,
+) -> int:
+    # Unlike the conditional path, an area with no map header pointing at
+    # it is still rendered here: this engine has no location/map-header
+    # system implemented yet, so every record legitimately has empty
+    # `locations` (see `pipeline/extraction/encounters.py`'s method-table
+    # branch) -- that's not evidence of unused ROM padding the way it is
+    # for the NDS engines the conditional path was written for.
+    records = [record for record in dataset["records"] if record["active"]]
+    output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                f"area-{record['area_id']:03}"
+                for record in records
+                if only_pages is None or f"area-{record['area_id']:03}" in only_pages
+            ),
+        },
+    )
+    fallback_links = []
+    catalog_records = []
+    page_count = 0
+    sorted_records = sorted(records, key=lambda item: (item["name"], item["area_id"]))
+    for index, record in enumerate(sorted_records):
+        change = encounter_record_comparison(comparison, record)
+        filename = f"area-{record['area_id']:03}.md"
+        previous = sorted_records[index - 1] if index else None
+        following = (
+            sorted_records[index + 1] if index + 1 < len(sorted_records) else None
+        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            write_text(
+                output_root / filename,
+                _render_method_table_area(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                    previous,
+                    following,
+                ),
+            )
+            page_count += 1
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "encounter", record["area_id"], record["name"], record["area_id"]
+                ),
+                "encounters/index.md",
+            )
+        )
+        catalog_records.append(
+            _method_table_catalog_record(
+                record, filename.removesuffix(".md") + "/", True, change
+            )
+        )
+    write_catalog(output_root, "encounters", catalog_records)
+    write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Wild encounters",
+            "Exact encounter tables decoded from the ROM's own wild-encounter archive.",
+            "encounters",
+            fallback_links,
+        ),
+    )
+    return page_count
+
+
+def _method_table_catalog_record(
+    record: dict[str, Any],
+    filename: str,
+    referenced: bool,
+    change: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    accumulator = _MethodAccumulator()
+    for key, label in _METHOD_TABLE_LABELS.items():
+        accumulator.add(label, heading_anchor(label), record.get(key))
+    method_pokemon = accumulator.method_pokemon_deduped()
+    location_names = [location["name"] for location in record.get("locations", [])]
+    route_id = filename.removesuffix("/")
+    return add_change_status(
+        {
+            "id": record["area_id"],
+            "route_id": route_id,
+            "label": record["name"],
+            "url": filename,
+            "locations": list(dict.fromkeys(location_names)),
+            "methods": accumulator.methods,
+            "method_anchors": accumulator.method_anchors,
+            "pokemon": list(dict.fromkeys(accumulator.species)),
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "encounters/")
+                for reference in unique_references(accumulator.pokemon_refs)
+            ],
+            "method_pokemon": method_pokemon,
+            "min_level": min(accumulator.levels) if accumulator.levels else None,
+            "max_level": max(accumulator.levels) if accumulator.levels else None,
+            "referenced": referenced,
+            "search_text": " ".join(
+                (record["name"], route_id, *location_names, *accumulator.species)
+            ).lower(),
+        },
+        change,
+    )
+
+
+def _render_method_table_area(
+    record: dict[str, Any],
+    change: dict[str, Any] | None = None,
+    baseline_name: str | None = None,
+    references: ReferenceIndex | None = None,
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
+) -> str:
+    source_file = f"encounters/area-{record['area_id']:03}.md"
+    lines = [
+        f"# {record['name']}",
+        "",
+        *_method_table_area_summary(record),
+    ]
+    _append_locations(lines, record.get("locations", []), source_file)
+    for key, label in _METHOD_TABLE_LABELS.items():
+        if key in record:
+            _append_water(lines, label, record[key], source_file, references)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
+    lines.extend(
+        provenance_section(
+            [
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
+                ),
+                "Chance percentages are not stored in the ROM's encounter tables — "
+                "only each slot's species and level range are ROM data — they are "
+                "fixed, publicly documented Generation III engine weights applied "
+                "by slot position.",
+            ]
+        )
+    )
+    _append_record_navigation(lines, record, previous, following)
+    return "\n".join(lines)
+
+
+def _method_table_area_summary(record: dict[str, Any]) -> list[str]:
+    methods = [
+        label
+        for key, label in _METHOD_TABLE_LABELS.items()
+        if record.get(key, {}).get("rate")
+    ]
+    locations = record.get("locations", [])
+    facts = [
+        f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
+        (
+            "<div><dt>Methods</dt><dd>"
+            + (
+                ", ".join(
+                    summary_section_link(label, heading_anchor(label))
+                    for label in methods
+                )
+                if methods
+                else "None"
+            )
+            + "</dd></div>"
+        ),
+    ]
+    if locations:
+        facts.append(
+            "<div><dt>Map headers</dt><dd>"
+            f"{summary_section_link(len(locations), 'map-headers')}</dd></div>"
+        )
+    return summary_section("rw-encounter-summary", facts)
 
 
 def _slot_type_cell(

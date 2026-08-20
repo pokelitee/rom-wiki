@@ -25,13 +25,17 @@ GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
 
-EncounterFormat = Literal["unsupported", "conditional", "seasonal"]
+EncounterFormat = Literal["unsupported", "conditional", "seasonal", "method-table"]
 LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 LocationExtractionFormat = Literal[
-    "unsupported", "arm9-event-map", "arm9-encounter-map", "archive-encounter-map"
+    "unsupported",
+    "arm9-event-map",
+    "arm9-encounter-map",
+    "archive-encounter-map",
+    "flat-header-segments",
 ]
 PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
-TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
+TrainerFormat = Literal["unsupported", "class-gender", "battle-mode", "pointer-party"]
 TutorFormat = Literal["none", "overlay-table", "overlay-archive", "personal-archive"]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
@@ -131,9 +135,10 @@ class EngineAdapter:
 
 _ENGINES: dict[str, EngineAdapter] = {
     GEN3_FRLG_ENGINE: EngineAdapter(
-        # Vertical slice: only Pokémon personal data is implemented so far.
-        # Every concern currently points at the same flat `gen3_frlg`
-        # namespace; unimplemented concerns are never accessed because
+        # Vertical slice: Pokémon personal data, moves, items, trainers,
+        # abilities, encounters, and locations are implemented so far. Every
+        # concern currently points at the same flat `gen3_frlg` namespace;
+        # unimplemented concerns are never accessed because
         # `dataset_kinds`/`formats` below declare no capability that would
         # require them (enforced by `_validate_engine_adapter`'s `required`
         # map). Widen this entry's concerns/formats as extraction work adds
@@ -157,11 +162,11 @@ _ENGINES: dict[str, EngineAdapter] = {
         static_encounters=gen3_frlg,
         pickup=gen3_frlg,
         formats=EngineFormats(
-            encounters="unsupported",
-            locations="unsupported",
-            location_extraction="unsupported",
+            encounters="method-table",
+            locations="encounter-map",
+            location_extraction="flat-header-segments",
             pickup="none",
-            trainers="unsupported",
+            trainers="pointer-party",
             tutors="none",
             fossils="none",
             static_encounters="none",
@@ -170,7 +175,17 @@ _ENGINES: dict[str, EngineAdapter] = {
             machines="none",
         ),
         generation=3,
-        dataset_kinds=frozenset({"pokemon"}),
+        dataset_kinds=frozenset(
+            {
+                "pokemon",
+                "moves",
+                "items",
+                "trainers",
+                "abilities",
+                "encounters",
+                "locations",
+            }
+        ),
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN3_FRLG_PROFILE_CONTRACT,
     ),
@@ -398,6 +413,7 @@ def _validate_engine_formats(engine: str, adapter: EngineAdapter) -> None:
         "arm9-event-map": "event-map",
         "arm9-encounter-map": "encounter-map",
         "archive-encounter-map": "encounter-map",
+        "flat-header-segments": "encounter-map",
     }[adapter.formats.location_extraction]
     if adapter.formats.locations != expected_location_shape:
         raise DataSourceError(
@@ -452,6 +468,7 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
     format_required = {
         ("encounters", "conditional"): ("parse_encounter_record",),
         ("encounters", "seasonal"): ("parse_encounter_entry",),
+        ("encounters", "method-table"): ("parse_encounter_record",),
         ("locations", "event-map"): ("parse_map_headers",),
         ("locations", "encounter-map"): ("parse_map_header_table",),
         ("pickup", "split-table"): ("parse_pickup_tables",),
@@ -461,6 +478,10 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
             "resolve_trainer_variants",
         ),
         ("trainers", "battle-mode"): (
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+        ),
+        ("trainers", "pointer-party"): (
             "parse_trainer_record",
             "resolve_trainer_variants",
         ),
