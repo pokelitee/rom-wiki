@@ -59,17 +59,18 @@ def _conditional_encounter_rows(
     ]
 
 
-def event_map_feature_rows(
-    record: dict[str, Any],
-    conditional_encounters: tuple[dict[str, Any], ...] = (),
-) -> list[FeatureRow]:
+def event_map_feature_rows(record: dict[str, Any]) -> list[FeatureRow]:
     """Notable sections on an event-map location page.
 
     Shared by the page's own summary card and the locations catalog's
     "Contains" column so the two can't drift into different vocabularies for
-    the same section.
+    the same section. Unlike encounter-map locations, event-map locations
+    (Gen4 DPPt) never carry map-owned conditional encounters (Headbutt/Hidden
+    Grotto/Daily Swarm): DPPt's profile contract has no layout key for them,
+    and its own Headbutt-like/swarm-like mechanics (honey trees, Trophy
+    Garden/Great Marsh rotations) are separate fields handled below instead.
     """
-    has_encounters = record["encounter_id"] is not None or bool(conditional_encounters)
+    has_encounters = record["encounter_id"] is not None
     daily_pool = record.get("daily_encounter_pool")
     daily_pool_anchor = (
         "great-marsh-daily-rotation"
@@ -78,7 +79,6 @@ def event_map_feature_rows(
     )
     rows: list[FeatureRow] = [
         ("encounters", "Wild encounters", "wild-encounters", has_encounters, "Yes"),
-        *_conditional_encounter_rows(conditional_encounters),
         (
             "honey tree",
             "Honey tree",

@@ -45,11 +45,13 @@ def append_headbutt_encounters(
     references: ReferenceIndex | None,
     *,
     heading_level: int = 3,
+    extra_intro_lines: tuple[str, ...] = (),
 ) -> None:
     lines.extend(
         [
             f"{'#' * heading_level} Headbutt encounters {{ #{HEADBUTT_ANCHOR} }}",
             "",
+            *extra_intro_lines,
         ]
     )
     variants = list(version_variant_records(record))
@@ -122,6 +124,7 @@ def append_daily_swarm(
     references: ReferenceIndex | None,
     *,
     heading_level: int = 3,
+    extra_intro_lines: tuple[str, ...] = (),
 ) -> None:
     lines.extend(
         [
@@ -129,6 +132,7 @@ def append_daily_swarm(
             "",
             "This encounter is available only when this route is selected as the daily swarm.",
             "",
+            *extra_intro_lines,
         ]
     )
     lines.extend(
@@ -167,6 +171,7 @@ def append_hidden_grotto(
     *,
     heading_level: int = 3,
     heading: str = "Hidden Grotto",
+    extra_intro_lines: tuple[str, ...] = (),
 ) -> None:
     grotto_id = record["grotto_id"]
     lines.extend(
@@ -176,6 +181,7 @@ def append_hidden_grotto(
             "The ROM chooses one of four groups independently from the listed pool. "
             "Pool chance and group chance are kept separate.",
             "",
+            *extra_intro_lines,
         ]
     )
     variants = list(version_variant_records(record))

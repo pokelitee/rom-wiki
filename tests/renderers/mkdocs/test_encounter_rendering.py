@@ -49,6 +49,9 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["route_id"], "headbutt-009")
         self.assertIn("# Headbutt encounters", page)
         self.assertIn("Route 1", page)
+        # Map headers must appear before the encounter tables, the same
+        # position ordinary and seasonal encounter pages already use.
+        self.assertLess(page.index("## Map headers"), page.index("## Common trees"))
 
     def test_disambiguates_headbutt_labels_sharing_a_location_name(self) -> None:
         # Two different map headers can share the same display name (a route
@@ -159,6 +162,9 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["route_id"], "daily-swarm-331")
         self.assertIn("# Daily Swarm", page)
         self.assertIn("Plusle", page)
+        # Map headers must appear before the encounter table, the same
+        # position ordinary and seasonal encounter pages already use.
+        self.assertLess(page.index("## Map headers"), page.index("Plusle"))
 
     def test_includes_hidden_grotto_as_its_own_encounter_page(self) -> None:
         record = {
@@ -218,6 +224,9 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("# Hidden Grotto 00", page)
         self.assertIn("Dunsparce", page)
         self.assertIn("Fire Stone", page)
+        # Map headers must appear before the encounter tables, the same
+        # position ordinary and seasonal encounter pages already use.
+        self.assertLess(page.index("## Map headers"), page.index("## Pokémon"))
 
     def test_nests_versions_inside_season_tabs(self) -> None:
         lines = _season_version_tabs(

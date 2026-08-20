@@ -4,7 +4,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.pipeline.semantics.encounter_identity import encounter_route_key
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -14,7 +13,6 @@ from romwiki.renderers.mkdocs.catalog import (
 )
 from romwiki.renderers.mkdocs.comparisons import (
     add_change_status,
-    encounter_record_comparison,
     grouped_comparison_section,
     record_comparison,
 )
@@ -30,10 +28,6 @@ from romwiki.renderers.mkdocs.components import (
     sprite_with_link,
     summary_section,
     summary_section_link,
-)
-from romwiki.renderers.mkdocs.conditional_encounters import (
-    conditional_encounter_label,
-    conditional_encounter_provenance,
 )
 from romwiki.renderers.mkdocs.location_components import (
     LOCATION_CATALOG_DESCRIPTION,
@@ -56,7 +50,6 @@ from romwiki.renderers.mkdocs.location_features import event_map_feature_rows
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
-    encounter_route_kind,
     entity_reference,
     escape_markdown,
 )
@@ -109,11 +102,6 @@ def render_event_map_location_pages(
     for index, record in enumerate(sorted_records):
         change = record_comparison(comparison, record["header_id"])
         filename = location_filename(record["header_id"])
-        conditional_encounters = (
-            relationships.location_conditional_encounters.get(record["header_id"], ())
-            if relationships
-            else ()
-        )
         previous = sorted_records[index - 1] if index else None
         following = (
             sorted_records[index + 1] if index + 1 < len(sorted_records) else None
@@ -129,8 +117,6 @@ def render_event_map_location_pages(
                     previous,
                     following,
                     relationships.location_labels if relationships else None,
-                    conditional_encounters,
-                    encounter_comparison,
                 ),
             )
             page_count += 1
@@ -148,11 +134,7 @@ def render_event_map_location_pages(
                 "locations/index.md",
             )
         )
-        feature_rows = [
-            row
-            for row in event_map_feature_rows(record, conditional_encounters)
-            if row[3]
-        ]
+        feature_rows = [row for row in event_map_feature_rows(record) if row[3]]
         catalog_records.append(
             add_change_status(
                 {
@@ -196,50 +178,33 @@ def _render_location(
     previous: dict[str, Any] | None = None,
     following: dict[str, Any] | None = None,
     location_labels: Mapping[int, str] | None = None,
-    conditional_encounters: tuple[dict[str, Any], ...] = (),
-    encounter_comparison: dict[str, Any] | None = None,
 ) -> str:
     source_file = f"locations/{location_filename(record['header_id'])}"
     lines = [
         f"# {location_label(record)}",
         "",
-        *_location_summary(record, conditional_encounters),
+        *_location_summary(record),
     ]
-    if record["encounter_id"] is not None or conditional_encounters:
-        lines.extend(["## Wild encounters", ""])
-        if record["encounter_id"] is not None:
-            link = ROUTES.markdown_link(
-                entity_reference(
-                    "encounter",
-                    record["encounter_id"],
-                    "View encounter table",
-                    record["encounter_id"],
-                ),
-                source_file,
-            )
-            lines.extend(
-                [
-                    "| Encounter area | ID |",
-                    "| --------------- | -- |",
-                    f"| {link} | `area-{record['encounter_id']:03}` |",
-                    "",
-                ]
-            )
-        if conditional_encounters:
-            lines.extend(["| Encounter area | ID |", "| -------------- | -- |"])
-            for encounter in conditional_encounters:
-                route_key = encounter_route_key(encounter)
-                link = ROUTES.markdown_link(
-                    entity_reference(
-                        encounter_route_kind(route_key),
-                        encounter["area_id"],
-                        conditional_encounter_label(encounter),
-                        route_key,
-                    ),
-                    source_file,
-                )
-                lines.append(f"| {link} | `{route_key}` |")
-            lines.append("")
+    if record["encounter_id"] is not None:
+        link = ROUTES.markdown_link(
+            entity_reference(
+                "encounter",
+                record["encounter_id"],
+                "View encounter table",
+                record["encounter_id"],
+            ),
+            source_file,
+        )
+        lines.extend(
+            [
+                "## Wild encounters",
+                "",
+                "| Encounter area | ID |",
+                "| --------------- | -- |",
+                f"| {link} | `area-{record['encounter_id']:03}` |",
+                "",
+            ]
+        )
     append_items(lines, record.get("items", []), source_file, references)
     append_shops(lines, record.get("shops", []), source_file, references)
     append_pokemon_gifts(
@@ -264,16 +229,7 @@ def _render_location(
     append_connections(lines, record["connections"], source_file, location_labels)
     lines.extend(
         grouped_comparison_section(
-            [
-                ("Location", change),
-                *(
-                    (
-                        conditional_encounter_label(encounter),
-                        encounter_record_comparison(encounter_comparison, encounter),
-                    )
-                    for encounter in conditional_encounters
-                ),
-            ],
+            [("Location", change)],
             baseline_name,
             source_file,
             references,
@@ -310,11 +266,6 @@ def _render_location(
                 ),
                 "Source: exact map header, event, script, item-data, and map-matrix "
                 "records from the ROM.",
-                *(
-                    fact
-                    for encounter in conditional_encounters
-                    for fact in conditional_encounter_provenance(encounter)
-                ),
                 *(
                     (
                         f"Trade `{trade['trade_id']}` "
@@ -361,15 +312,10 @@ def _append_record_navigation(
     )
 
 
-def _location_summary(
-    record: dict[str, Any],
-    conditional_encounters: tuple[dict[str, Any], ...] = (),
-) -> list[str]:
+def _location_summary(record: dict[str, Any]) -> list[str]:
     fact_lines = [
         f"<div><dt>{label}</dt><dd>{summary_section_link(value, anchor)}</dd></div>"
-        for _, label, anchor, present, value in event_map_feature_rows(
-            record, conditional_encounters
-        )
+        for _, label, anchor, present, value in event_map_feature_rows(record)
         if present
     ]
     fact_lines.insert(

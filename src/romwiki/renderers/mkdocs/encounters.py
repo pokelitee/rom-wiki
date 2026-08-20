@@ -572,26 +572,31 @@ def _conditional_catalog_record(
     )
 
 
-def _append_conditional_location(
-    lines: list[str], record: dict[str, Any], source_file: str
-) -> None:
+def _conditional_location_lines(
+    record: dict[str, Any], source_file: str
+) -> list[str]:
+    """Build the "Map headers" section for a conditional encounter page.
+
+    Returned as its own line list (rather than appended in place) so the
+    caller can splice it in right after the page's intro -- the same
+    position ordinary and seasonal encounter pages already put their own
+    Map headers section, before the encounter tables rather than after them.
+    """
     location = record.get("location")
     if not isinstance(location, dict):
-        return
+        return []
     reference = entity_reference(
         "location", location["header_id"], location["name"], location["header_id"]
     )
-    lines.extend(
-        [
-            "## Map headers",
-            "",
-            "| Location | Map ID | Internal ID |",
-            "| -------- | ------ | ----------- |",
-            f"| {ROUTES.markdown_link(reference, source_file)} "
-            f"| `header-{location['header_id']:03}` | `{location['internal_name']}` |",
-            "",
-        ]
-    )
+    return [
+        "## Map headers",
+        "",
+        "| Location | Map ID | Internal ID |",
+        "| -------- | ------ | ----------- |",
+        f"| {ROUTES.markdown_link(reference, source_file)} "
+        f"| `header-{location['header_id']:03}` | `{location['internal_name']}` |",
+        "",
+    ]
 
 
 def _append_conditional_record_navigation(
@@ -634,10 +639,16 @@ def _render_conditional_encounter_page(
     route_key = encounter_route_key(record)
     source_file = f"encounters/{route_key}.md"
     lines: list[str] = []
+    location_lines = _conditional_location_lines(record, source_file)
     source_type = record.get("source_type")
     if source_type == EncounterSourceType.HEADBUTT:
         append_headbutt_encounters(
-            lines, record, source_file, references, heading_level=1
+            lines,
+            record,
+            source_file,
+            references,
+            heading_level=1,
+            extra_intro_lines=location_lines,
         )
     elif source_type == EncounterSourceType.HIDDEN_GROTTO:
         append_hidden_grotto(
@@ -647,12 +658,19 @@ def _render_conditional_encounter_page(
             references,
             heading_level=1,
             heading=labels[record["area_id"]],
+            extra_intro_lines=location_lines,
         )
     elif source_type == EncounterSourceType.DAILY_SWARM:
-        append_daily_swarm(lines, record, source_file, references, heading_level=1)
+        append_daily_swarm(
+            lines,
+            record,
+            source_file,
+            references,
+            heading_level=1,
+            extra_intro_lines=location_lines,
+        )
     else:
         raise SiteError(f"Unsupported conditional encounter source: {source_type!r}")
-    _append_conditional_location(lines, record, source_file)
     lines.extend(
         comparison_section(
             encounter_record_comparison(comparison, record),

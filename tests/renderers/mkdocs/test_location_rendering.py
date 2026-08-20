@@ -93,7 +93,7 @@ class LocationRenderingTests(unittest.TestCase):
         location = {
             "header_id": 9,
             "name": "Route 1",
-            "encounter_map_index": None,
+            "encounter_map_index": 3,
             "matrix_id": 0,
             "provenance": {"archive": "arm9", "member": 9},
             "trainers": [],
@@ -104,6 +104,12 @@ class LocationRenderingTests(unittest.TestCase):
             "shops": [],
         }
         pokemon = {"id": 163, "slug": "hoothoot", "name": "Hoothoot"}
+        ordinary = {
+            "area_id": 111,
+            "map_index": 3,
+            "name": "Route 1",
+            "active": True,
+        }
         headbutt = {
             "area_id": 142,
             "source_type": "headbutt",
@@ -135,7 +141,10 @@ class LocationRenderingTests(unittest.TestCase):
         relationships = build_relationship_index(
             {
                 "locations": dataset,
-                "encounters": {"game": "heartgold-us", "records": [headbutt]},
+                "encounters": {
+                    "game": "heartgold-us",
+                    "records": [ordinary, headbutt],
+                },
             }
         )
         location_comparison = {
@@ -170,6 +179,10 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn(
             "[Headbutt encounters — Route 1](../encounters/headbutt-009.md)", page
         )
+        # The ordinary and conditional encounter rows must share a single
+        # table under "## Wild encounters" rather than stacking two.
+        self.assertEqual(page.count("| Seasons | Encounter area | Version |"), 1)
+        self.assertIn("[Route 1](../encounters/map-003.md)", page)
         self.assertNotIn("[Hoothoot](../pokemon/hoothoot.md)", page)
         self.assertEqual(page.count("## Hack changes"), 1)
         self.assertIn("**Location**", page)
@@ -183,7 +196,12 @@ class LocationRenderingTests(unittest.TestCase):
             "wild-encounters",
         )
 
-    def test_links_hidden_grotto_and_daily_swarm_on_event_map(self) -> None:
+    def test_links_hidden_grotto_and_daily_swarm(self) -> None:
+        # Despite gen5_b2w2's Gen4-DPPt-flavored event/matrix data, its
+        # `formats.locations` is "encounter-map", so this renders through
+        # location_encounter_map.py -- not location_event_map.py, which never
+        # sees conditional encounters (see location_features.py's
+        # event_map_feature_rows docstring).
         location = {
             "header_id": 445,
             "internal_name": "map_445",
@@ -307,6 +325,9 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn(
             "[Daily Swarm — Floccesy Ranch](../encounters/daily-swarm-445.md)", page
         )
+        # Both conditional rows must share a single table under
+        # "## Wild encounters" rather than stacking one per source.
+        self.assertEqual(page.count("| Seasons | Encounter area | Version |"), 1)
         self.assertNotIn("[Fire Stone](../items/fire-stone.md)", page)
         self.assertNotIn("40–55", page)
         self.assertNotIn("header-445.md#daily-swarm", page)
