@@ -131,7 +131,7 @@ def find_script_awarded_items(
             baseline_quantity = _nearest_preceding_quantity(
                 by_offset, instruction.offset, item_write_commands
             )
-            for call, quantity in _reachable_common_script_calls(
+            for call, call_quantity in _reachable_common_script_calls(
                 by_offset,
                 instruction,
                 baseline_quantity,
@@ -140,7 +140,7 @@ def find_script_awarded_items(
                 call_common_script_command=call_common_script_command,
                 terminal_commands=terminal_commands,
             ):
-                _record(awards, call, item_id, quantity, item_count)
+                _record(awards, call, item_id, call_quantity, item_count)
     return tuple(awards[key] for key in sorted(awards))
 
 

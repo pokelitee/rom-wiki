@@ -122,6 +122,8 @@ def extract_archive_encounter_map_location_dataset(
     mart_dataset: dict[str, Any] | None = None,
     trade_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if result.match is None:
+        raise ProfileError("A known game profile is required for location extraction")
     source = _load_archive_location_source(result)
     relationships = _collect_archive_location_relationships(
         result,
@@ -143,6 +145,7 @@ def extract_archive_encounter_map_location_dataset(
 def _load_archive_location_source(
     result: InspectionResult,
 ) -> _ArchiveLocationSource:
+    assert result.match is not None
     profile = result.match.profile
     try:
         map_headers_path = profile.layout["map_headers"]
@@ -463,9 +466,9 @@ def _extract_script_shops(
     catalogs: _ArchiveLocationCatalogs,
     script_file_id: int,
 ) -> tuple[list[LocationShop], set[str], list[int]]:
-    shops = []
+    shops: list[LocationShop] = []
     seen_vendor_ids: set[str] = set()
-    unsupported_shop_selectors = []
+    unsupported_shop_selectors: list[int] = []
     if script_file_id >= len(source.scripts.members):
         return shops, seen_vendor_ids, unsupported_shop_selectors
 

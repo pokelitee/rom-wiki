@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.pipeline.semantics.encounter_identity import (
     SAFARI_ZONE_ROUTE,
@@ -74,7 +74,7 @@ def render_encounter_map_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = dataset["records"]
+    records = cast(list[dict[str, Any]], dataset["records"])
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -429,13 +429,13 @@ def _append_encounter_variants(
             f"| {' / '.join(seasons) or 'All'} | "
             f"{link} | {' / '.join(all_versions) or versions} |"
         )
-    for encounter in conditional_encounters:
-        route_key = encounter_route_key(encounter)
+    for conditional_encounter in conditional_encounters:
+        route_key = encounter_route_key(conditional_encounter)
         link = ROUTES.markdown_link(
             entity_reference(
                 encounter_route_kind(route_key),
-                encounter["area_id"],
-                conditional_encounter_label(encounter),
+                conditional_encounter["area_id"],
+                conditional_encounter_label(conditional_encounter),
                 route_key,
             ),
             source_file,

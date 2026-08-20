@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.schema.trainers import NormalizedTrainerPokemon
+from romwiki.schema.trainers import NormalizedTrainerPokemon, TrainerAttribute
 from romwiki.util.errors import DataSourceError
 
 from .constants import NATURE_NAMES
@@ -97,6 +97,8 @@ def derive_trainer_party_attributes(
     )
     ivs = _trainer_ivs(difficulty_value, rng_seed)
     nature_index = personality % len(NATURE_NAMES)
+    evs = member["evs"]
+    assert evs is not None
     return {
         **member,
         "ivs": ivs,
@@ -114,7 +116,7 @@ def derive_trainer_party_attributes(
             level=member["level"],
             base_stats=base_stats,
             ivs=ivs["values"],
-            evs=member["evs"]["values"],
+            evs=evs["values"],
             nature_index=nature_index,
         ),
     }
@@ -137,7 +139,7 @@ def _trainer_personality(
     return (random_value << 8) | gender_modifier, seed
 
 
-def _trainer_ivs(difficulty: int, rng_seed: int) -> dict[str, Any]:
+def _trainer_ivs(difficulty: int, rng_seed: int) -> TrainerAttribute:
     iv = _fixed_iv_from_difficulty(difficulty)
     if iv <= 31:
         return {"source": "derived", "values": dict.fromkeys(_STATS, iv)}
@@ -187,7 +189,7 @@ def _calculated_stats(
     ivs: Mapping[str, int],
     evs: Mapping[str, int],
     nature_index: int,
-) -> dict[str, Any] | None:
+) -> TrainerAttribute | None:
     if base_stats is None:
         return None
     if any(

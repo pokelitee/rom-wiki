@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from time import perf_counter
 
@@ -766,6 +766,8 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} trainer records: {output}")
     elif args.command == "extract-locations":
+        if result.match is None:
+            raise LocalConfigError("The ROM did not match a game profile")
         profile = result.match.profile
         engine = get_engine(profile.engine)
         dataset = extract_location_dataset(
@@ -1076,8 +1078,14 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             relationship_index = build_relationship_index(relationship_datasets)
     reference_datasets = {}
     if args.command == "build-locations":
+        current_locations = workflow.current.locations()
+        if current_locations is None:
+            raise LocalConfigError(
+                "The build-locations command requires a profile with a "
+                "locations dataset"
+            )
         relationship_datasets = {
-            "locations": workflow.current.locations(),
+            "locations": current_locations,
             "encounters": workflow.current.encounters(),
         }
         relationship_index = build_relationship_index(relationship_datasets)
@@ -1103,6 +1111,9 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     )
     for index, kind in enumerate(kinds):
         build = abilities_dataset if kind == "abilities" else workflow.build(kind)
+        # `kinds` was filtered above to drop "abilities" when
+        # `abilities_dataset` is None, so `build` is always set here.
+        assert build is not None
         data_output = (
             args.data_output
             if index == 0 and args.data_output is not None
@@ -1857,7 +1868,9 @@ def _write_dataset_build(
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
         write_dataset(comparison, comparison_output)
     write_public_dataset(wiki_output.parent, kind, dataset)
-    renderer = {
+    # Each renderer takes a different, kind-specific argument list (branched
+    # below), so this can only be typed as a loose callable.
+    renderers: dict[str, Callable[..., int]] = {
         "pokemon": render_pokemon_pages,
         "abilities": render_ability_pages,
         "moves": render_move_pages,
@@ -1865,7 +1878,8 @@ def _write_dataset_build(
         "encounters": render_encounter_pages,
         "trainers": render_trainer_pages,
         "locations": render_location_pages,
-    }[kind]
+    }
+    renderer = renderers[kind]
     if kind == "pokemon":
         page_count = renderer(
             dataset,
@@ -1950,7 +1964,7 @@ def _dataset_output(data_root: Path, kind: str) -> Path:
 
 
 def _load_comparisons(root: Path) -> dict[str, dict]:
-    comparisons = {}
+    comparisons: dict[str, dict] = {}
     if not root.is_dir():
         return comparisons
     for path in root.glob("*.json"):

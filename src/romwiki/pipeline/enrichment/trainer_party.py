@@ -26,7 +26,7 @@ def derive_trainer_party_attributes(
     *,
     trainer_id: int,
     class_id: int,
-    class_gender: str,
+    class_gender: str | None,
     gender_ratio: int | None,
     base_stats: Mapping[str, Any] | None,
 ) -> NormalizedTrainerPokemon:

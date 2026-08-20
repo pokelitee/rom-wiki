@@ -89,7 +89,7 @@ def _decode_message(data: bytes, offset: int, length: int, index: int) -> str:
 def _unpack_compressed_characters(
     words: list[int], *, allow_outer_terminator: bool = False
 ) -> list[int]:
-    characters = []
+    characters: list[int] = []
     buffer = 0
     bit_count = 0
     for word in words:

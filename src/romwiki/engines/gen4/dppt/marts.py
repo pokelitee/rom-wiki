@@ -92,7 +92,7 @@ def parse_mart_commands(data: bytes) -> tuple[Gen4MartCommand, ...]:
 def parse_common_mart_inventory(
     data: bytes, *, offset: int, item_count: int
 ) -> tuple[Gen4CommonMartItem, ...]:
-    items = []
+    items: list[Gen4CommonMartItem] = []
     cursor = offset
     while cursor + 4 <= len(data):
         item_id, tier = struct.unpack_from("<HH", data, cursor)

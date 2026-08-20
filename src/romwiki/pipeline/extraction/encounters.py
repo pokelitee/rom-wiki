@@ -105,6 +105,7 @@ def _extract_headbutt_encounters(
     *,
     first_area_id: int,
 ) -> list[dict[str, Any]]:
+    assert result.match is not None
     profile = result.match.profile
     archive_path = profile.layout.get("headbutt_encounters")
     if archive_path is None:
@@ -131,7 +132,7 @@ def _extract_headbutt_encounters(
         count=map_header_count,
         location_names_member=profile.parameters["location_names_member"],
     )
-    records = []
+    records: list[dict[str, Any]] = []
     for member in archive.members:
         encounter = engine.parse_headbutt_record(
             archive.read(member.index),
@@ -165,6 +166,7 @@ def _extract_safari_encounters(
     *,
     first_area_id: int,
 ) -> list[dict[str, Any]]:
+    assert result.match is not None
     profile = result.match.profile
     archive_path = profile.layout.get("safari_encounters")
     if archive_path is None:
@@ -197,6 +199,7 @@ def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, A
     # area, up to four seasonal variants per map) don't share Gen4's shape
     # (walking/surf/rod/swarm/day/night/radar/dual-slot/Unown), so this is a
     # standalone extraction path rather than a variant of the one above.
+    assert result.match is not None
     profile = result.match.profile
     try:
         archive_path = profile.layout["encounters"]
@@ -275,6 +278,7 @@ def _extract_seasonal_wild_map_names(
     # Optional: a profile that doesn't declare this yet (or a future
     # generation reusing this path) simply gets unnamed encounter areas,
     # same as every other optional enrichment input in this codebase.
+    assert result.match is not None
     profile = result.match.profile
     if (
         "map_headers" not in profile.layout
@@ -314,6 +318,7 @@ def _extract_hidden_grottos(
     *,
     first_area_id: int,
 ) -> list[dict[str, Any]]:
+    assert result.match is not None
     profile = result.match.profile
     archive_path = profile.layout.get("hidden_grottos")
     if archive_path is None:
@@ -428,6 +433,7 @@ def _extract_swarms(
     *,
     first_area_id: int,
 ) -> list[dict[str, Any]]:
+    assert result.match is not None
     profile = result.match.profile
     required = ("swarm_overlay_id", "swarm_table_offset", "swarm_record_count")
     if not all(name in profile.parameters for name in required):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from functools import cache
 from typing import Any
 
 from romwiki.engines.registry import get_engine
@@ -17,6 +18,7 @@ from romwiki.pipeline.enrichment.trainer_party import (
 )
 from romwiki.pipeline.enrichment.trainer_rewards import calculate_base_prize_money
 from romwiki.schema.trainers import (
+    TrainerAttribute,
     unresolved_trainer_variant_support,
     validate_trainer_battle_families,
 )
@@ -103,6 +105,19 @@ def enrich_trainer_dataset(
     return enriched
 
 
+@cache
+def _trainer_form_species(engine: str) -> frozenset[int]:
+    """Species IDs with at least one known form entry for this engine."""
+    engine_tables = get_engine(engine).enrich
+    return frozenset(
+        species_id
+        for species_id, _form_id in (
+            *engine_tables.TRAINER_FORM_SLUGS,
+            *engine_tables.TRAINER_COSMETIC_FORM_LABELS,
+        )
+    )
+
+
 def enrich_trainer_record(
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
@@ -136,16 +151,24 @@ def enrich_trainer_record(
                 if pokemon_records is not None:
                     game_record = pokemon_records.get(slug)
                 reference = None if game_record else pokedb.pokemon_for_name(slug)
+            elif cosmetic_form is not None:
+                reference = pokedb.pokemon_for_id(species_id)
+            elif species_id in _trainer_form_species(engine):
+                # This species has known forms in the engine's table, but not
+                # this specific form ID -- likely a parsing bug rather than a
+                # deliberate hack encoding, so fail loudly instead of
+                # silently resolving to the wrong Pokemon.
+                raise DataSourceError(
+                    f"Unknown trainer form {form_id} for species {species_id}"
+                )
             else:
-                # An engine-recognized form ID with no dedicated game record
-                # (either explicitly cosmetic-only, or a form bit this
-                # engine's own species table has no entry for at all -- a
-                # hack's own data can set one for a species with no real
-                # Generation IV form, e.g. Sacred Gold/Storm Silver's
-                # Pinsir) resolves to the base species reference rather than
-                # failing the build. The raw form ID is still retained on
-                # the record below, so this never claims the data doesn't
-                # exist -- only that it has no distinct game entry to link.
+                # A hack's own data can set a form bit for a species with no
+                # real Generation IV form entry at all (e.g. Sacred
+                # Gold/Storm Silver's Pinsir). Resolve to the base species
+                # reference rather than failing the build. The raw form ID
+                # is still retained on the record below, so this never
+                # claims the data doesn't exist -- only that it has no
+                # distinct game entry to link.
                 reference = pokedb.pokemon_for_id(species_id)
         else:
             cosmetic_form = None
@@ -172,20 +195,24 @@ def enrich_trainer_record(
                 else game_record["slug"]
             ) or game_record["slug"]
         else:
+            # `reference` is only ever None when `game_record` is truthy
+            # (see the assignments above), so it's guaranteed set here.
+            assert reference is not None
             pokemon_slug = reference["name"]
         if game_record:
             pokemon_name = game_record["name"]
         elif form_id and slug:
             pokemon_name = title_case_slug(slug)
         else:
+            assert reference is not None
             pokemon_name = pokemon_display_name(
                 species_id, reference["name"], pokemon_names
             )
-        pokemon_sprite = (
-            game_record.get("sprite")
-            if game_record
-            else pokedb.pokemon_sprite(reference, sprite_version)
-        )
+        if game_record:
+            pokemon_sprite = game_record.get("sprite")
+        else:
+            assert reference is not None
+            pokemon_sprite = pokedb.pokemon_sprite(reference, sprite_version)
         ability = _trainer_ability(pokemon.get("ability"), game_record)
         held_item = (
             item_reference(pokemon["held_item_id"], pokedb, item_names)
@@ -329,7 +356,7 @@ def _trainer_move_index(
 
 
 def _trainer_ability(
-    value: dict[str, Any] | None,
+    value: TrainerAttribute | None,
     pokemon_record: dict[str, Any] | None,
 ) -> dict[str, Any] | None:
     if value is None or pokemon_record is None:

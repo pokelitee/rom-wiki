@@ -182,6 +182,17 @@ filesystem/archive types, and header-matching function as a new entry in
 `src/romwiki/platforms/registry.py`'s `_PLATFORMS` dict, and give the profile a
 matching `platform` key.
 
+This filesystem/archive shape is what Nintendo DS needs (NitroFS + NARC
+members), not a platform-agnostic guarantee — see [Current
+limitations](architecture.md#current-limitations). A platform whose ROM is a
+flat binary addressed by fixed offsets, with no filesystem or archive concept
+(e.g. Game Boy Advance), cannot implement `archive_cls` as given. Decide the
+right shape from that platform's real format rather than forcing an archive
+abstraction around flat reads: extend `PlatformAdapter` with the read
+primitive that platform actually needs, and expect to add a platform-aware
+branch or sibling function at each `pipeline/extraction/*` call site that
+currently assumes `platform.archive_cls`/`filesystem`.
+
 Add engine parsers under
 `src/romwiki/engines/<generation>/<family>/` for each supported record type.
 Generation packages are internal namespaces; profiles continue to select stable

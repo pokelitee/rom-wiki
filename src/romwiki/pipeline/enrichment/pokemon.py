@@ -719,6 +719,8 @@ def _ability_id(
     if ability_id == 0:
         return {"id": 0, "slug": None, "name": None}
     slug = pokedb.ability_name(ability_id)
+    if slug is None:
+        raise DataSourceError(f"Unknown ability ID: {ability_id}")
     if ability_names is not None:
         if ability_id >= len(ability_names):
             raise DataSourceError(f"Unknown ability ID: {ability_id}")

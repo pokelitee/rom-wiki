@@ -142,7 +142,7 @@ def validate_tutors(
             ):
                 raise DataSourceError("Tutor record references an unknown location")
         tutors[expected_id] = record
-    ids_by_member = {}
+    ids_by_member: dict[int, list[int]] = {}
     for compatibility_group in (compatibility, special_compatibility):
         group_members = set()
         for record in compatibility_group:

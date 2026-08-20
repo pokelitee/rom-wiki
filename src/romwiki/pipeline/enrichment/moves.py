@@ -90,11 +90,12 @@ def enrich_move_dataset(
         if source.get("move_id") != expected_id:
             raise DataSourceError("Move records must be ordered by member ID")
         public = 1 <= expected_id <= engine.MAX_MOVE_ID
-        slug = (
-            move_name(expected_id, pokedb, move_names)
-            if public
-            else f"internal-move-{expected_id}"
-        )
+        if public:
+            slug = move_name(expected_id, pokedb, move_names)
+            if slug is None:
+                raise DataSourceError(f"Unknown move ID: {expected_id}")
+        else:
+            slug = f"internal-move-{expected_id}"
         records.append(
             {
                 **source,

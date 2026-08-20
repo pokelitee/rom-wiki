@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.renderers.mkdocs.catalog import (
     catalog_index,
@@ -57,7 +57,7 @@ def render_ability_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = dataset["records"]
+    records = cast(list[dict[str, Any]], dataset["records"])
     name_source = dataset.get("name_source")
     description_source = dataset.get("description_source")
     output_root.mkdir(parents=True, exist_ok=True)

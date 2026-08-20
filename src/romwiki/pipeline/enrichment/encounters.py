@@ -198,7 +198,7 @@ def enrich_conditional_encounter_area(
             ("super_rod", source["super_rod"], engine.FISHING_SLOT_CHANCES),
         )
     }
-    special = {
+    special: dict[str, Any] = {
         "swarm": _encounter_special_slots(
             source["swarm_species_ids"],
             source["walking_slots"],

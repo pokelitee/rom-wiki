@@ -75,7 +75,7 @@ def build_ability_dataset(
     for ability_id in range(1, len(ability_names)):
         slug = pokedb.ability_name(ability_id)
         pickup = None
-        if is_sliding_pickup and slug == "pickup":
+        if is_sliding_pickup and pickup_dataset is not None and slug == "pickup":
             pickup = {"level_ranges": pickup_dataset["level_ranges"]}
         elif pickup_tables is not None and slug == "pickup":
             pickup = {

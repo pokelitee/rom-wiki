@@ -35,6 +35,8 @@ def item_reference(
         return {"id": 0, "slug": None, "name": None}
     if item_names is None:
         reference_slug = pokedb.item_name(item_id)
+        if reference_slug is None:
+            raise DataSourceError(f"Unknown item ID: {item_id}")
         page_slug = (
             page_slugs.get(item_id) if page_slugs is not None else reference_slug
         )
@@ -46,7 +48,7 @@ def item_reference(
     if item_id >= len(item_names):
         raise DataSourceError(f"Unknown item ID: {item_id}")
     name = item_names[item_id]
-    slug = pokedb.item_slug(name)
+    slug: str | None = pokedb.item_slug(name)
     if page_slugs is not None:
         slug = page_slugs.get(item_id)
     return {"id": item_id, "slug": slug, "name": name}

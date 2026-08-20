@@ -12,6 +12,7 @@ import tempfile
 from contextlib import suppress
 from functools import cache
 from pathlib import Path, PurePosixPath
+from typing import TypedDict, cast
 
 from romwiki.pipeline.build.fingerprint import (
     GENERATION_EXTRACTOR_MODULES,
@@ -121,7 +122,7 @@ def restore_generated_wiki_snapshot(
                     _LOG.info(
                         "Snapshot restore: restored %s/%s files",
                         f"{count:,}",
-                        f"{int(manifest['file_count']):,}",
+                        f"{manifest['file_count']:,}",
                     )
             if count != manifest.get("file_count"):
                 raise SiteError(
@@ -345,11 +346,18 @@ def _restore_snapshot_directory(
                 )
             if entry["source_fingerprint"] != _site_source_fingerprint(catalog, site):
                 raise SiteError(f"Generated wiki snapshot is stale for {site_id}")
+            entry_file_count = entry["file_count"]
+            if not isinstance(entry_file_count, int) or isinstance(
+                entry_file_count, bool
+            ):
+                raise SiteError(
+                    f"Generated wiki snapshot manifest entry is invalid: {site_id}"
+                )
             restored = _restore_site_archive(
                 catalog,
                 site,
                 archive_path,
-                int(entry["file_count"]),
+                entry_file_count,
                 str(entry["source_fingerprint"]),
             )
             count += restored
@@ -397,14 +405,16 @@ def _read_snapshot_directory_manifest(
 
 def _valid_snapshot_directory_entry(entry: dict[str, object]) -> bool:
     archive = entry.get("archive")
+    file_count = entry.get("file_count")
     return (
         isinstance(archive, str)
         and PurePosixPath(archive).name == archive
         and "/" not in archive
         and "\\" not in archive
         and archive.endswith(".tar.gz")
-        and type(entry.get("file_count")) is int
-        and int(entry["file_count"]) >= 0
+        and isinstance(file_count, int)
+        and not isinstance(file_count, bool)
+        and file_count >= 0
         and all(
             isinstance(entry.get(key), str)
             for key in (
@@ -508,7 +518,7 @@ def _generated_files_for_site(site: SiteDefinition) -> list[Path]:
     assert site.game is not None
     wiki_root = site.config_path.parent / "wiki"
     validate_public_data(wiki_root)
-    files = []
+    files: list[Path] = []
     for section in (*site.game.generated_sections, "changes"):
         section_root = wiki_root / section
         if section != "changes" and not (section_root / "index.md").is_file():
@@ -557,9 +567,15 @@ def _site_source_fingerprint(catalog: SiteCatalog, site: SiteDefinition) -> str:
     return digest.hexdigest()
 
 
+class _SnapshotManifest(TypedDict):
+    schema_version: int
+    file_count: int
+    source_fingerprint: str
+
+
 def _read_snapshot_manifest(
     archive: tarfile.TarFile, archive_path: Path
-) -> dict[str, object]:
+) -> _SnapshotManifest:
     try:
         member = archive.getmember(SNAPSHOT_MANIFEST)
         source = archive.extractfile(member)
@@ -579,11 +595,11 @@ def _read_snapshot_manifest(
         raise SiteError(
             f"Generated wiki snapshot has an unsupported manifest: {archive_path}"
         )
-    return manifest
+    return cast(_SnapshotManifest, manifest)
 
 
 def _generated_files(catalog: SiteCatalog) -> list[Path]:
-    files = []
+    files: list[Path] = []
     for site in catalog.published():
         if not _is_published_data_site(site):
             continue

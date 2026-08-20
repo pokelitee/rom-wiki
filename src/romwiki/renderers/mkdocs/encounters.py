@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
@@ -105,16 +105,18 @@ def render_encounter_pages(
         if isinstance(engine_id, str)
         else bool(dataset.get("records")) and "season" in dataset["records"][0]
     )
+    dataset_dict = cast(dict[str, Any], dataset)
     if seasonal:
         return _render_seasonal_encounter_pages(
-            dataset,
+            dataset_dict,
             output_root,
             comparison,
             references,
             relationships,
             only_pages=only_pages,
         )
-    records = [record for record in dataset["records"] if record["active"]]
+    all_records = cast(list[dict[str, Any]], dataset["records"])
+    records = [record for record in all_records if record["active"]]
     safari_records = [
         record
         for record in records
@@ -538,9 +540,7 @@ def _conditional_catalog_record(
     )
 
 
-def _conditional_location_lines(
-    record: dict[str, Any], source_file: str
-) -> list[str]:
+def _conditional_location_lines(record: dict[str, Any], source_file: str) -> list[str]:
     """Build the "Map headers" section for a conditional encounter page.
 
     Returned as its own line list (rather than appended in place) so the
@@ -574,7 +574,7 @@ def _append_conditional_record_navigation(
 ) -> None:
     route_key = encounter_route_key(record)
 
-    def label(value: dict[str, Any]) -> str:
+    def label(value: Mapping[str, Any]) -> str:
         if labels is not None and value["area_id"] in labels:
             return labels[value["area_id"]]
         return conditional_encounter_label(value)
@@ -614,7 +614,7 @@ def _render_conditional_encounter_page(
             source_file,
             references,
             heading_level=1,
-            extra_intro_lines=location_lines,
+            extra_intro_lines=tuple(location_lines),
         )
     elif source_type == EncounterSourceType.HIDDEN_GROTTO:
         append_hidden_grotto(
@@ -624,7 +624,7 @@ def _render_conditional_encounter_page(
             references,
             heading_level=1,
             heading=labels[record["area_id"]],
-            extra_intro_lines=location_lines,
+            extra_intro_lines=tuple(location_lines),
         )
     elif source_type == EncounterSourceType.DAILY_SWARM:
         append_daily_swarm(
@@ -633,7 +633,7 @@ def _render_conditional_encounter_page(
             source_file,
             references,
             heading_level=1,
-            extra_intro_lines=location_lines,
+            extra_intro_lines=tuple(location_lines),
         )
     else:
         raise SiteError(f"Unsupported conditional encounter source: {source_type!r}")
@@ -1686,7 +1686,7 @@ def _append_seasonal_method(
 
 
 def _seasonal_display_name(
-    record: dict[str, Any],
+    record: Mapping[str, Any],
     locations: tuple[EncounterLocationReference, ...],
 ) -> str:
     names = list(dict.fromkeys(location.location_name for location in locations))

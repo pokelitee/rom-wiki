@@ -41,7 +41,12 @@ def parse_personal_record(
     ):
         egg_group_ids = (egg_group_ids[0], egg_group_ids[0])
     tmhm_bits = int.from_bytes(data[0x28:0x35], "little")
-    machine_masks = tuple((tmhm_bits >> (32 * word)) & 0xFFFFFFFF for word in range(4))
+    machine_masks: tuple[int, int, int, int] = (
+        (tmhm_bits >> 0) & 0xFFFFFFFF,
+        (tmhm_bits >> 32) & 0xFFFFFFFF,
+        (tmhm_bits >> 64) & 0xFFFFFFFF,
+        (tmhm_bits >> 96) & 0xFFFFFFFF,
+    )
     machine_ids = tuple(
         machine_id
         for machine_id in range(1, GEN5_MACHINE_COUNT + 1)

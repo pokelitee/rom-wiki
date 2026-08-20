@@ -13,6 +13,7 @@ from romwiki.pipeline.enrichment.trainers import (
 from romwiki.pipeline.transforms.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_trainer_pages
 from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import DataSourceError
 
 
 class TrainerEnrichmentTests(unittest.TestCase):
@@ -98,6 +99,42 @@ class TrainerEnrichmentTests(unittest.TestCase):
         trainer = enrich_trainer_record(source, pokedb, None, None, engine="gen4_hgss")
 
         self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Pinsir")
+
+    def test_raises_for_an_unrecognized_form_bit_on_a_species_with_known_forms(
+        self,
+    ) -> None:
+        # Unlike a species with no form table entries at all, a form bit
+        # that doesn't match any known entry for a species that *does* have
+        # tabulated forms (Deoxys, species 386) is far more likely a
+        # parsing bug than deliberate hack data, so it must still fail
+        # loudly rather than silently resolving to the base species.
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={386: {"id": 386, "name": "Deoxys", "species": "deoxys"}},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 0,
+            "class_id": 0,
+            "class_gender": "male",
+            "has_custom_moves": False,
+            "reward_item_ids": [],
+            "party": [
+                {
+                    "difficulty": 0,
+                    "species_id": 386,
+                    "form_id": 9,
+                    "level": 5,
+                    "held_item_id": None,
+                    "move_ids": [],
+                }
+            ],
+        }
+
+        with self.assertRaises(DataSourceError):
+            enrich_trainer_record(source, pokedb, None, None, engine="gen4_dppt")
 
     def test_enriches_and_renders_a_trainer_party(self) -> None:
         source = {

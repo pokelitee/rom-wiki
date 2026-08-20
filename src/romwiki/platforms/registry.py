@@ -21,24 +21,75 @@ from romwiki.util.errors import DataSourceError
 class RomImage(Protocol):
     """Minimal image surface a profile needs to identify and cache a ROM."""
 
-    hashes: Any
+    @property
+    def path(self) -> Path: ...
+
+    @property
+    def size(self) -> int: ...
+
+    @property
+    def hashes(self) -> Any: ...
 
     def to_dict(self) -> dict[str, Any]: ...
 
 
-@dataclass(frozen=True, slots=True)
-class PlatformAdapter:
-    """Everything a pipeline module needs from one platform's container format."""
+class ArchiveMember(Protocol):
+    """Minimal member surface pipeline extraction code reads by index."""
 
-    inspect: Callable[[Path], RomImage]
-    filesystem_from_image: Callable[[RomImage], Any]
-    matches_header: Callable[[RomImage, Sequence[str], Sequence[int]], bool]
-    archive_cls: type
-    read_overlay: Callable[..., tuple[int, bytes]] | None = None
-    read_overlay_decompressed: Callable[..., tuple[int, bytes]] | None = None
-    read_code_binary: Callable[[RomImage], bytes] | None = None
-    read_decompressed_code_binary: Callable[[RomImage], bytes] | None = None
-    code_load_address: Callable[[RomImage], int] | None = None
+    @property
+    def index(self) -> int: ...
+
+
+class Archive(Protocol):
+    """Minimal container surface a platform's `archive_cls` must provide."""
+
+    @property
+    def members(self) -> Sequence[ArchiveMember]: ...
+
+    @classmethod
+    def from_bytes(
+        cls,
+        data: bytes,
+        *,
+        allow_truncated: bool = False,
+        allow_trailing_data: bool = False,
+        allow_incorrect_data_block_size: bool = False,
+    ) -> Archive: ...
+
+    def read(self, index: int) -> bytes: ...
+
+
+class OverlayDescriptor(Protocol):
+    """Minimal overlay metadata surface `read_overlay*` must return."""
+
+    @property
+    def id(self) -> int: ...
+
+    @property
+    def file_id(self) -> int: ...
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformAdapter[ImageT: RomImage]:
+    """Everything a pipeline module needs from one platform's container format.
+
+    Generic over the platform's own concrete image type: every callable field
+    on one adapter instance is always called with that same platform's image
+    (`inspect` produces it, the rest consume it), so the type parameter ties
+    them together without forcing every platform to share one image shape.
+    """
+
+    inspect: Callable[[Path], ImageT]
+    filesystem_from_image: Callable[[ImageT], Any]
+    matches_header: Callable[[ImageT, Sequence[str], Sequence[int]], bool]
+    archive_cls: type[Archive]
+    read_overlay: Callable[[ImageT, int], tuple[OverlayDescriptor, bytes]] | None = None
+    read_overlay_decompressed: (
+        Callable[[ImageT, int], tuple[OverlayDescriptor, bytes]] | None
+    ) = None
+    read_code_binary: Callable[[ImageT], bytes] | None = None
+    read_decompressed_code_binary: Callable[[ImageT], bytes] | None = None
+    code_load_address: Callable[[ImageT], int] | None = None
 
 
 def _nds_matches_header(
@@ -50,7 +101,7 @@ def _nds_matches_header(
     )
 
 
-_PLATFORMS: dict[str, PlatformAdapter] = {
+_PLATFORMS: dict[str, PlatformAdapter[Any]] = {
     "nintendo-ds": PlatformAdapter(
         inspect=NintendoDSImage.inspect,
         filesystem_from_image=NintendoDSFileSystem.from_image,
@@ -65,20 +116,20 @@ _PLATFORMS: dict[str, PlatformAdapter] = {
 }
 
 
-def get_platform(platform: str) -> PlatformAdapter:
+def get_platform(platform: str) -> PlatformAdapter[Any]:
     try:
         return _PLATFORMS[platform]
     except KeyError as error:
         raise DataSourceError(f"Unsupported platform: {platform!r}") from error
 
 
-def registered_platforms() -> dict[str, PlatformAdapter]:
+def registered_platforms() -> dict[str, PlatformAdapter[Any]]:
     """Return the registered platform adapters keyed by platform ID."""
     return dict(_PLATFORMS)
 
 
 def register_platform(
-    platform: str, adapter: PlatformAdapter, *, validate: bool = True
+    platform: str, adapter: PlatformAdapter[Any], *, validate: bool = True
 ) -> None:
     """Register a platform adapter under `platform`, replacing any existing entry.
 
@@ -95,7 +146,7 @@ def unregister_platform(platform: str) -> None:
     _PLATFORMS.pop(platform, None)
 
 
-def _validate_platform_adapter(platform: str, adapter: PlatformAdapter) -> None:
+def _validate_platform_adapter(platform: str, adapter: PlatformAdapter[Any]) -> None:
     if not platform or any(character.isspace() for character in platform):
         raise DataSourceError(f"Invalid platform identifier: {platform!r}")
     required_callables = {

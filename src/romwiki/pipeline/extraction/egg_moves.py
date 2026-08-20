@@ -26,6 +26,7 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
     profile = result.match.profile
     try:
         overlay_id = profile.parameters["egg_move_overlay_id"]
@@ -37,6 +38,8 @@ def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).egg_moves
+    if platform.read_overlay is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, data = platform.read_overlay(result.image, overlay_id)
     records = engine.parse_egg_move_table(data, table_offset=table_offset)
     envelope = dataset_envelope(
@@ -59,6 +62,7 @@ def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:
 def _extract_from_archive(
     result: InspectionResult, *, table_archive: bool
 ) -> dict[str, Any]:
+    assert result.match is not None
     profile = result.match.profile
     archive_path = profile.layout["egg_moves"]
     platform = get_platform(profile.platform)

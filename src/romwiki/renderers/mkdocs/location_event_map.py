@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.catalog import (
@@ -72,7 +72,7 @@ def render_event_map_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = dataset["records"]
+    records = cast(list[dict[str, Any]], dataset["records"])
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -466,6 +466,7 @@ def _append_daily_encounter_pool(
         return
     label = "Great Marsh" if pool["kind"] == "great_marsh" else "Trophy Garden"
     lines.extend([f"## {label} daily rotation", ""])
+    groups: tuple[tuple[str | None, Any], ...]
     if pool["pre_national_dex_species"] is not None:
         lines.extend(
             [

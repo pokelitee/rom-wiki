@@ -177,7 +177,7 @@ def _unpack_compressed_characters(words: list[int], index: int) -> list[int]:
     # independently verified against real Gen5 data.
     bits = 0
     bit_count = 0
-    unpacked = []
+    unpacked: list[int] = []
     for word in words[1:]:
         bits |= word << bit_count
         bit_count += 16

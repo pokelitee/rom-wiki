@@ -113,9 +113,9 @@ def _acquisition_references(
                 )
 
     for trade in trade_records:
-        offered = trade.get("offered_pokemon")
+        offered_pokemon = trade.get("offered_pokemon")
         requested = trade.get("requested_pokemon") or {}
-        if not isinstance(offered, dict):
+        if not isinstance(offered_pokemon, dict):
             continue
         if trade.get("locations"):
             # Fixed trades were already emitted from the location records,
@@ -125,8 +125,8 @@ def _acquisition_references(
             result,
             aliases,
             {
-                "pokemon": offered,
-                "species_id": offered.get("species_id"),
+                "pokemon": offered_pokemon,
+                "species_id": offered_pokemon.get("species_id"),
                 "detail": _detached_trade_detail(trade, requested),
             },
             "trade",

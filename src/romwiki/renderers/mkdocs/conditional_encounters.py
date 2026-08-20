@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 from typing import Any
 
 from romwiki.pipeline.semantics.encounter_identity import (
@@ -403,7 +404,7 @@ def conditional_encounter_provenance(record: dict[str, Any]) -> list[str]:
     return facts
 
 
-def conditional_encounter_label(record: dict[str, Any]) -> str:
+def conditional_encounter_label(record: Mapping[str, Any]) -> str:
     source_type = record.get("source_type")
     if source_type == EncounterSourceType.SAFARI_ZONE:
         return record["area_name"]
@@ -435,7 +436,9 @@ def disambiguated_conditional_labels(
     handle by appending the internal map name. Mirror that here for any
     conditional records sharing a label within this batch.
     """
-    labels = {record["area_id"]: conditional_encounter_label(record) for record in records}
+    labels = {
+        record["area_id"]: conditional_encounter_label(record) for record in records
+    }
     counts = Counter(labels.values())
     for record in records:
         area_id = record["area_id"]

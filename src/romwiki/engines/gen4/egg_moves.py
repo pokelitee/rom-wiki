@@ -17,7 +17,7 @@ def parse_egg_move_table(
     if table_offset < 0 or table_offset % 2 or table_offset + 2 > len(data):
         raise InvalidRomError("Gen IV egg move table has an invalid offset")
 
-    records = []
+    records: list[OverlayEggMoveSet] = []
     species_id: int | None = None
     move_ids: list[int] = []
     marker_offset = table_offset

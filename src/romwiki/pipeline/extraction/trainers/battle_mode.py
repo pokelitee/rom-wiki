@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
-from romwiki.engines.trainer_variants import resolve_trainer_variants
+from romwiki.engines.trainer_variants import (
+    TrainerVariantResolver,
+    resolve_trainer_variants,
+)
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
 from romwiki.pipeline.extraction.trainers.support import (
@@ -29,6 +32,8 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
     # data: 16 bytes vs. the normal 20, 6 bytes vs. a real party record), so
     # real trainer IDs start at 1. The owning engine leaf resolves the
     # message-table index: BW omits entry zero, while B2W2 retains it.
+    if result.match is None:
+        raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
     try:
         trainer_path = profile.layout["trainer_data"]
@@ -111,7 +116,11 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
         if value is not None
     }
     variant_contract = resolve_trainer_variants(
-        engine, profile.id, profile.parameters, records, selector_data or None
+        cast(TrainerVariantResolver, engine),
+        profile.id,
+        profile.parameters,
+        records,
+        selector_data or None,
     )
     envelope = dataset_envelope(
         schema_version=TRAINERS_RAW_SCHEMA_VERSION,

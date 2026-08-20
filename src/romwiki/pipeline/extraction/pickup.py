@@ -27,6 +27,7 @@ def extract_pickup_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
     profile = result.match.profile
     try:
         overlay_id = profile.parameters["pickup_overlay_id"]
@@ -58,6 +59,8 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    if platform.read_overlay is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     _, overlay_data = platform.read_overlay(result.image, overlay_id)
     tables = engine.parse_pickup_tables(
         overlay_data,
@@ -116,6 +119,8 @@ def _extract_locator_tables(result: InspectionResult) -> dict[str, Any]:
         allow_truncated=profile.parameters.get("messages_allow_truncated", False),
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     common_offset = find_unique_pattern(
         overlay_data,
@@ -182,6 +187,7 @@ def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
     # generation's pickup item table has no stable location: it's found by
     # byte-pattern search (see gen5/bw/pickup.py's own module comment), the
     # same technique used for the TM/HM move table.
+    assert result.match is not None
     profile = result.match.profile
     try:
         overlay_id = profile.parameters["pickup_overlay_id"]
@@ -203,6 +209,8 @@ def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
     item_names = items_engine.parse_english_message_archive(
         messages.read(item_names_member)
     )
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     _, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     locator = bytes.fromhex(locator_hex)
     table_offset = find_unique_pattern(

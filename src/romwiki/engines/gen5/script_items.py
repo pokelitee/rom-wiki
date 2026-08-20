@@ -58,11 +58,12 @@ def find_script_awarded_items(
             instruction.name == "RTCallGlobal"
             and instruction.params[0] in _GIVE_ITEM_GLOBAL_FUNCTION_IDS
         ):
-            item_id, quantity = _preceding_item_grant_literals(
+            preceding_item_id, preceding_quantity = _preceding_item_grant_literals(
                 instruction, preceding_by_offset
             )
-            if item_id is None or quantity is None:
+            if preceding_item_id is None or preceding_quantity is None:
                 continue
+            item_id, quantity = preceding_item_id, preceding_quantity
         else:
             continue
         if not 0 < item_id < item_count:

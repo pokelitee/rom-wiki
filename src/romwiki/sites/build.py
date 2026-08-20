@@ -329,8 +329,8 @@ def _publish_staged_root(
             current_path.unlink()
 
         for source in sorted(staging.rglob("*")):
-            relative = source.relative_to(staging)
-            current_path = output / relative
+            relative_path = source.relative_to(staging)
+            current_path = output / relative_path
             if source.is_dir():
                 current_path.mkdir(parents=True, exist_ok=True)
             else:

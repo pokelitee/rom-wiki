@@ -542,6 +542,22 @@ capabilities. A second physical platform remains proven only by
 still add profile-identification, parser, and normalized-output fixtures following
 [Adding a game](adding-a-game.md).
 
+Because that boundary has never been exercised by a second real platform, its
+current shape is a single data point, not a proven contract: `PlatformAdapter`
+(`platforms/registry.py`) models a platform as filesystem + named archive
+members, and roughly twenty `pipeline/extraction/*` modules call
+`platform.archive_cls.from_bytes(filesystem.read(path))` directly against that
+shape. That fits Nintendo DS's NitroFS/NARC layout, but not every platform has
+a filesystem or archive concept — a flat ROM addressed by fixed byte offsets
+(e.g. Game Boy Advance) cannot satisfy `archive_cls` as written. Follow the
+same rule as the engine boundary above: don't redesign `PlatformAdapter`
+speculatively ahead of that work. When a real non-archive-based platform is
+added, decide then — informed by its actual ROM format — whether it needs a
+new read primitive alongside `archive_cls`/`filesystem` or its own extraction
+entry points; expect several of those ~20 call sites to need a platform-aware
+branch or a sibling function, the same "small, targeted fixes" pattern
+`gen5_bw` hit when it joined `gen4_dppt`.
+
 Normalized schemas are implemented as Python dataclasses and typed contracts
 serialized to JSON.
 

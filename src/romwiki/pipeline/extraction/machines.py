@@ -24,6 +24,7 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
     profile = result.match.profile
     try:
         # Unlike sibling extractors' ARM9-relative offsets (e.g. locations.py's
@@ -72,12 +73,17 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
     # table is found by byte-pattern search against the *decompressed*
     # binary (see platforms/nds/blz.py and Gen5RomHandler.java's
     # `getTMMoves`/tmDataPrefix).
+    assert result.match is not None
     profile = result.match.profile
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).machines
     prefix_hex = profile.parameters.get(
         "machine_move_prefix", engine.MACHINE_TABLE_LOCATOR
     )
+    if platform.read_decompressed_code_binary is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support code binary reads"
+        )
     arm9 = platform.read_decompressed_code_binary(result.image)
     prefix = bytes.fromhex(prefix_hex)
     offset = find_unique_pattern(

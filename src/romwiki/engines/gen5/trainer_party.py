@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.schema.trainers import NormalizedTrainerPokemon
+from romwiki.schema.trainers import NormalizedTrainerPokemon, TrainerAttribute
 from romwiki.util.errors import DataSourceError
 
 _STATS = ("hp", "attack", "defense", "special_attack", "special_defense", "speed")
@@ -77,12 +77,15 @@ def derive_trainer_party_attributes(
     base_stats: Mapping[str, Any] | None,
 ) -> NormalizedTrainerPokemon:
     if base_stats is not None:
+        ivs = member["ivs"]
+        evs = member["evs"]
+        assert ivs is not None and evs is not None
         member["calculated_stats"] = _calculated_stat_ranges(
             species_id=member["species_id"],
             level=member["level"],
             base_stats=base_stats,
-            ivs=member["ivs"]["values"],
-            evs=member["evs"]["values"],
+            ivs=ivs["values"],
+            evs=evs["values"],
         )
     return member
 
@@ -94,7 +97,7 @@ def _calculated_stat_ranges(
     base_stats: Mapping[str, Any],
     ivs: Mapping[str, int],
     evs: Mapping[str, int],
-) -> dict[str, Any]:
+) -> TrainerAttribute:
     if any(
         not isinstance(base_stats.get(stat), int) or base_stats[stat] <= 0
         for stat in _STATS

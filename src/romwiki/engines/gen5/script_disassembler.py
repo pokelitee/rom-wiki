@@ -56,7 +56,7 @@ class Gen5Instruction:
 
 def parse_function_offsets(data: bytes) -> tuple[int, ...]:
     """Return the absolute starts in a Gen V script's function table."""
-    offsets = []
+    offsets: list[int] = []
     cursor = 0
     while cursor + 2 <= len(data):
         if struct.unpack_from("<H", data, cursor)[0] == _FUNCTION_TABLE_END:

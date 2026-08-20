@@ -67,7 +67,7 @@ def _direct_groups(special: Mapping[str, Any]) -> tuple[SpecialEncounterGroup, .
 def _slotted_groups(
     special: Mapping[str, Any],
 ) -> tuple[SpecialEncounterGroup, ...]:
-    groups = []
+    groups: list[SpecialEncounterGroup] = []
     for key, label in (
         ("swarm", "Swarm"),
         ("day", "Day replacements"),

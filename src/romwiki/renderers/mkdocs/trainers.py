@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from html import escape
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.pipeline.enrichment.features import POST_BATTLE_HEALING, VICTORY_ITEMS
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
@@ -56,21 +57,25 @@ def render_trainer_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
+    dataset_dict = cast(dict[str, Any], dataset)
     location_labels = relationships.location_labels if relationships else None
+    source_records = cast(list[dict[str, Any]], dataset["records"])
     records = [
         with_resolved_location_labels(record, location_labels)
-        for record in dataset["records"]
+        for record in source_records
         if record["party"] and not is_unused_trainer_slot(record)
     ]
     records_by_id = {record["trainer_id"]: record for record in records}
     family_memberships: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
-    for family in dataset.get("battle_families", []):
+    for family in dataset_dict.get("battle_families", []):
         for variant in family["variants"]:
             if variant["trainer_id"] in records_by_id:
                 family_memberships.setdefault(variant["trainer_id"], []).append(
                     (family, variant)
                 )
-    dataset_features = frozenset(dataset.get("features", _DEFAULT_TRAINER_FEATURES))
+    dataset_features = frozenset(
+        dataset_dict.get("features", _DEFAULT_TRAINER_FEATURES)
+    )
     same_name_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in records:
         key = (record["class_name"], record["name"])
@@ -883,7 +888,7 @@ def _append_party(
         lines.extend(prepared_tabs[0][2])
         return
 
-    tabs = []
+    content_pairs: list[tuple[str, list[str]]] = []
     for tab_label, candidate, presentation in prepared_tabs:
         route_id = f"trainer-{candidate['trainer_id']:04}"
         record_link = ROUTES.markdown_link(
@@ -895,8 +900,10 @@ def _append_party(
             ),
             source_file,
         )
-        tabs.append((tab_label, [f"Exact record: {record_link}", "", *presentation]))
-    lines.extend(content_tabs(tabs))
+        content_pairs.append(
+            (tab_label, [f"Exact record: {record_link}", "", *presentation])
+        )
+    lines.extend(content_tabs(content_pairs))
 
 
 def _variant_battle_details(
@@ -1265,7 +1272,7 @@ def _append_same_name_trainers(
         lines.extend(["</details>", ""])
 
 
-def _trainer_label(record: dict[str, Any]) -> str:
+def _trainer_label(record: Mapping[str, Any]) -> str:
     return " ".join(value for value in (record["class_name"], record["name"]) if value)
 
 

@@ -42,6 +42,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors
+    if platform.read_overlay is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, data = platform.read_overlay(result.image, parameters["tutor_overlay_id"])
     move_size = parameters["tutor_count"] * engine.TUTOR_RECORD_SIZE
     form_members = tuple(sorted(engine.FORM_MEMBERS))
@@ -112,6 +114,8 @@ def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     move_size = engine.TUTOR_COUNT * engine.TUTOR_RECORD_SIZE
     move_data = _slice_overlay(overlay_data, move_offset, move_size, "move")
@@ -164,6 +168,8 @@ def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     filesystem = platform.filesystem_from_image(result.image)
     personal = platform.archive_cls.from_bytes(filesystem.read(personal_path))

@@ -235,7 +235,7 @@ def entity_markdown_link(
 
 
 def unique_references(
-    references: list[EntityReference],
+    references: Iterable[EntityReference],
 ) -> list[EntityReference]:
     result = []
     seen = set()

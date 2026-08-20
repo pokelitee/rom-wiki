@@ -112,8 +112,10 @@ def resolve_trainer_variants(
         raise ProfileError(
             f"Profile {profile_id!r} must select a verified HGSS trainer variant contract"
         )
-    records_by_id = {
-        record.get("trainer_id"): record for record in records if record.get("party")
+    records_by_id: dict[int, Mapping[str, Any]] = {
+        trainer_id: record
+        for record in records
+        if record.get("party") and (trainer_id := record.get("trainer_id")) is not None
     }
     families = _starter_branch_families(profile_id, records_by_id, selector_data)
     return {

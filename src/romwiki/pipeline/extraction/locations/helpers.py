@@ -138,7 +138,7 @@ def extract_event_map_connections(
                 directions[source][destination].add(forward)
                 directions[destination][source].add(reverse)
 
-    result = {}
+    result: dict[int, list[LocationConnection]] = {}
     direction_order = {"north": 0, "east": 1, "south": 2, "west": 3}
     for source, destinations in directions.items():
         result[source] = []

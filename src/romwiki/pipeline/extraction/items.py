@@ -154,15 +154,14 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
 
     berry_by_item: dict[int, dict[str, Any]] = {}
     if berry_data_path is not None:
-        berry_archive = platform.archive_cls.from_bytes(
-            filesystem.read(berry_data_path)
+        berry_by_item = _extract_berry_data(
+            profile,
+            platform,
+            filesystem,
+            engine,
+            berry_data_path,
+            first_berry_item_id,
         )
-        for index in range(len(berry_archive.members)):
-            berry = engine.parse_berry_record(berry_archive.read(index))
-            berry_by_item[first_berry_item_id + index] = {
-                **asdict(berry),
-                "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
-            }
         source["berry_data"] = {
             "archive": berry_data_path,
             "record_count": len(berry_by_item),
@@ -239,3 +238,26 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     envelope["public_record_count"] = sum(record["public"] for record in records)
     envelope.update(reference_descriptions)
     return envelope
+
+
+def _extract_berry_data(
+    profile: Any,
+    platform: Any,
+    filesystem: Any,
+    engine: Any,
+    berry_data_path: str,
+    first_berry_item_id: int | None,
+) -> dict[int, dict[str, Any]]:
+    if first_berry_item_id is None:
+        raise ProfileError(
+            f"Profile {profile.id} defines berry_data without first_berry_item_id"
+        )
+    berry_archive = platform.archive_cls.from_bytes(filesystem.read(berry_data_path))
+    berry_by_item: dict[int, dict[str, Any]] = {}
+    for index in range(len(berry_archive.members)):
+        berry = engine.parse_berry_record(berry_archive.read(index))
+        berry_by_item[first_berry_item_id + index] = {
+            **asdict(berry),
+            "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
+        }
+    return berry_by_item

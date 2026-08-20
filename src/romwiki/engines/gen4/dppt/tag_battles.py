@@ -182,10 +182,14 @@ def _family_from_pairs(
     compared = pairs[:-1]
     if len({species for species, _ in compared}) != len(compared):
         return None
+    selected: list[tuple[int, int]] = []
+    for species, trainer_id in compared:
+        assert species is not None
+        selected.append((species, trainer_id))
     return Gen4StarterBranchFamily(
         script_file_id=script_file_id,
         position=position,
-        selected=tuple(compared),
+        selected=tuple(selected),
         fallthrough_trainer_id=fallthrough_id,
     )
 

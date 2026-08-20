@@ -17,7 +17,8 @@ from romwiki.util.json_io import write_json_atomic
 
 
 class _GameDefinition(Protocol):
-    generated_sections: tuple[str, ...]
+    @property
+    def generated_sections(self) -> tuple[str, ...]: ...
 
 
 class _SiteDefinition(Protocol):
@@ -25,10 +26,16 @@ class _SiteDefinition(Protocol):
 
     Defined locally (rather than importing the real type) so this pipeline
     module doesn't depend upward on the `sites` package that orchestrates it.
+    Declared as read-only properties (rather than plain attributes) so the
+    real, frozen `SiteDefinition` dataclass -- whose fields are read-only --
+    satisfies this protocol structurally.
     """
 
-    config_path: Path
-    game: _GameDefinition | None
+    @property
+    def config_path(self) -> Path: ...
+
+    @property
+    def game(self) -> _GameDefinition | None: ...
 
 
 REGENERATION_STATE_SCHEMA_VERSION = 2

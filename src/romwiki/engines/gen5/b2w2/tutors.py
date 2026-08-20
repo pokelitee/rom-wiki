@@ -59,7 +59,7 @@ def parse_tutor_compatibility_record(
     move_starts = tuple(
         sum(_MOVE_GROUP_COUNTS[:group]) for group in range(len(_MOVE_GROUP_COUNTS))
     )
-    tutor_ids = []
+    tutor_ids: list[int] = []
     for personal_group, count in enumerate(_PERSONAL_GROUP_COUNTS):
         offset = TUTOR_COMPATIBILITY_OFFSET + personal_group * 4
         mask = int.from_bytes(data[offset : offset + 4], "little")

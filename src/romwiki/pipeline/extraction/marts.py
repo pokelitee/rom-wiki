@@ -53,6 +53,8 @@ def extract_mart_dataset(result: InspectionResult) -> dict[str, Any]:
     item_names = items_engine.parse_english_message_archive(
         messages.read(item_names_member)
     )
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, overlay_data = platform.read_overlay_decompressed(
         result.image, shop_item_overlay_id
     )

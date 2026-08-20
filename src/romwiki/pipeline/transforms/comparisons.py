@@ -314,6 +314,7 @@ def compare_datasets(
     ):
         after = current_records.get(key)
         before = baseline_records.get(key)
+        changes: list[dict[str, Any]]
         if before is None:
             status = "added"
             changes = []
@@ -325,6 +326,7 @@ def compare_datasets(
             status = "changed" if changes else "unchanged"
         counts[status] += 1
         record = after or before
+        assert record is not None
         value = {
             "kind": kind,
             "key": key,
@@ -339,6 +341,7 @@ def compare_datasets(
             "changes": changes,
         }
         if status == "removed":
+            assert before is not None
             value["baseline_record"] = _snapshot(kind, before)
         records.append(value)
     return {

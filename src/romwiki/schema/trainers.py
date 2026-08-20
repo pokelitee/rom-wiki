@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 from romwiki.schema.pokemon import RecordProvenance
 from romwiki.util.errors import DataSourceError
@@ -226,9 +226,18 @@ def _normalize_trainer_variant_conditions(
 
 
 class TrainerAttribute(TypedDict):
-    """A stored or derived party attribute with explicit provenance."""
+    """A stored or derived party attribute with explicit provenance.
+
+    `slot`/`name`/`values`/`limitation` are each populated by only some
+    attribute kinds (e.g. `ability` carries `slot`, `nature`/`gender` carry
+    `name`, `ivs`/`evs`/`calculated_stats` carry `values`).
+    """
 
     source: Literal["stored", "derived", "engine-default"]
+    slot: NotRequired[int]
+    name: NotRequired[str]
+    values: NotRequired[dict[str, Any]]
+    limitation: NotRequired[str]
 
 
 class NormalizedTrainerPokemon(TypedDict):
