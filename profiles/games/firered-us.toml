@@ -1,0 +1,26 @@
+[profile]
+id = "firered-us"
+name = "Pokémon FireRed (USA)"
+platform = "game-boy-advance"
+engine = "gen3_frlg"
+base_game = "firered"
+
+[header]
+game_codes = ["BPRE"]
+rom_versions = [0]
+
+[type_chart]
+chart = "gen3"
+
+[parameters]
+# Verified against the real ROM: species 0 is an all-zero dummy record,
+# species 1 (offset + 28) decodes to Bulbasaur's known base stats, and the
+# table stays well-formed through species 411 before a different table's
+# data begins at species 412.
+personal_offset = 0x254784
+personal_count = 412
+
+[[hashes]]
+algorithm = "sha256"
+value = "3d0c79f1627022e18765766f6cb5ea067f6b5bf7dca115552189ad65a5c3a8ac"
+variant = "usa-retail"

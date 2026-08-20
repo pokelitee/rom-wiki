@@ -1,0 +1,25 @@
+[profile]
+id = "leafgreen-us"
+name = "Pokémon LeafGreen (USA)"
+extends = "firered-us"
+base_game = "leafgreen"
+
+[header]
+game_codes = ["BPGE"]
+rom_versions = [0]
+
+[type_chart]
+chart = "gen3"
+
+[parameters]
+# LeafGreen's personal table sits at a different offset than FireRed's due
+# to the two builds' differing binary layout; verified the same way as
+# firered-us (Bulbasaur signature at species 1, table ends after species
+# 411).
+personal_offset = 0x254760
+personal_count = 412
+
+[[hashes]]
+algorithm = "sha256"
+value = "78d310d557ceebc593bd393acc52d1b19a8f023fec40bc200e6063880d8531fc"
+variant = "usa-retail"
