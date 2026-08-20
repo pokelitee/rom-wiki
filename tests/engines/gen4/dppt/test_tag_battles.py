@@ -13,6 +13,7 @@ _HEADER = 6  # make_script's table: relative offset (4) + terminator (2)
 _STARTER_VAR = 0x800C
 _PARTNER_VAR = 0x8004
 _GET_STARTER_SPECIES = 0x00DE
+_GET_PLAYER_GENDER = 0x014D
 _SET_VAR_FROM_VALUE = 0x0028
 _COMPARE_VAR_TO_VALUE = 0x0011
 _GOTO_IF = 0x001C
@@ -24,6 +25,10 @@ _START_TAG_BATTLE = 0x02A0
 
 def _get_starter_species(var: int) -> bytes:
     return struct.pack("<HH", _GET_STARTER_SPECIES, var)
+
+
+def _get_player_gender(var: int) -> bytes:
+    return struct.pack("<HH", _GET_PLAYER_GENDER, var)
 
 
 def _set_var(dest: int, value: int) -> bytes:
@@ -76,6 +81,47 @@ def _staged_subroutine(
     body += struct.pack("<H", _RETURN)
     assert start + len(body) - 2 == return_offset
     return body, return_offset
+
+
+def _gender_gated_subroutine(
+    start: int,
+    *,
+    gender_var: int,
+    block_a: tuple[list[tuple[int, int]], int],
+    block_b: tuple[list[tuple[int, int]], int],
+) -> bytes:
+    """`GetPlayerGender(G); Compare(G,0); GoToIf -> A; Compare(G,1); GoToIf -> B`.
+
+    `A` and `B` are each an independent `_staged_subroutine` block, mirroring
+    Platinum's Route 201 and Route 203 tag battles (the rival's own gender
+    picks which nested starter-branch block runs).
+    """
+    header_prefix = _get_player_gender(gender_var)
+    compare_len = len(_compare(0, 0))
+    goto_len = len(_goto_if(0, from_offset=0))
+    header_len = len(header_prefix) + 2 * (compare_len + goto_len)
+    target_a = start + header_len
+    a_bytes, _ = _staged_subroutine(
+        target_a, staged=block_a[0], fallthrough_id=block_a[1]
+    )
+    target_b = target_a + len(a_bytes)
+    b_bytes, _ = _staged_subroutine(
+        target_b, staged=block_b[0], fallthrough_id=block_b[1]
+    )
+
+    goto_a_offset = start + len(header_prefix) + compare_len
+    goto_b_offset = goto_a_offset + goto_len + compare_len
+    body = (
+        header_prefix
+        + _compare(gender_var, 0)
+        + _goto_if(target_a, from_offset=goto_a_offset)
+        + _compare(gender_var, 1)
+        + _goto_if(target_b, from_offset=goto_b_offset)
+        + a_bytes
+        + b_bytes
+    )
+    assert start + header_len == target_a
+    return body
 
 
 class Gen4TagBattleTests(unittest.TestCase):
@@ -146,6 +192,37 @@ class Gen4TagBattleTests(unittest.TestCase):
         )
 
         self.assertEqual(families, ())
+
+    def test_resolves_two_families_from_a_gender_gated_subroutine(self) -> None:
+        # Platinum's Route 201 and Route 203 tag battles: the rival's own
+        # gender picks which nested starter-branch block runs, so this must
+        # resolve to two independent families -- one per gender branch --
+        # rather than being silently dropped like an unrecognized gate.
+        sub = _gender_gated_subroutine(
+            _HEADER,
+            gender_var=0x800C,
+            block_a=([(387, 101), (390, 102)], 103),
+            block_b=([(387, 201), (390, 202)], 203),
+        )
+        call_offset = _HEADER + len(sub)
+        call_bytes = _call(_HEADER, from_offset=call_offset)
+        tag_bytes = _tag_battle(_PARTNER_VAR, 200, 201)
+        body = sub + call_bytes + tag_bytes
+
+        families = parse_staged_partner_battle_families(
+            make_script(body),
+            script_file_id=9,
+            trainer_count=1000,
+            starter_species=(387, 390, 393),
+        )
+
+        self.assertEqual(len(families), 2)
+        self.assertEqual(families[0].position, 0)
+        self.assertEqual(sorted(families[0].selected), [(387, 101), (390, 102)])
+        self.assertEqual(families[0].fallthrough_trainer_id, 103)
+        self.assertEqual(families[1].position, 1)
+        self.assertEqual(sorted(families[1].selected), [(387, 201), (390, 202)])
+        self.assertEqual(families[1].fallthrough_trainer_id, 203)
 
     def test_ignores_a_literal_partner(self) -> None:
         tag_bytes = _tag_battle(50, 200, 201)

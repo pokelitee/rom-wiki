@@ -170,6 +170,10 @@ def extract_class_gender_trainer_dataset(
             # Branch conditions name the species the ROM itself compares, so the
             # resolver needs this profile's own species names.
             ("species_names", reference_names.get("pokemon_names")),
+            # Lets the resolver name an unguarded fallthrough branch's species
+            # by elimination against the profile's own starter table, instead
+            # of a generic "remaining starter" label.
+            ("starter_species", starter_species),
         )
         if value is not None
     }

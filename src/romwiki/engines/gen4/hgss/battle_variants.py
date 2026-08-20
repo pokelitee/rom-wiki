@@ -29,6 +29,7 @@ def _starter_branch_families(
     """
     decoded = (selector_data or {}).get("starter_branch_families") or ()
     species_names = (selector_data or {}).get("species_names") or ()
+    starter_species = (selector_data or {}).get("starter_species") or ()
     families: list[dict[str, Any]] = []
     for family in decoded:
         if not all(t in records_by_id for t in family.trainer_ids):
@@ -52,16 +53,25 @@ def _starter_branch_families(
                 }
             )
         if family.fallthrough_trainer_id is not None:
+            # When every starter but one is guarded by an explicit branch,
+            # the fall-through is that one species by elimination and can be
+            # named outright instead of left generic.
+            guarded = {species_id for species_id, _ in family.selected}
+            missing = [sid for sid in starter_species if sid not in guarded]
+            if len(missing) == 1:
+                species = _species_name(species_names, missing[0])
+                value, text = species.lower(), f"Player chose {species}"
+            else:
+                value, text = (
+                    "remaining-starter",
+                    "Player chose the remaining starter",
+                )
             variants.append(
                 {
                     "trainer_id": family.fallthrough_trainer_id,
                     "order": len(variants),
                     "conditions": [
-                        {
-                            "kind": "starter-choice",
-                            "value": "remaining-starter",
-                            "label": "Player chose the remaining starter",
-                        }
+                        {"kind": "starter-choice", "value": value, "label": text}
                     ],
                 }
             )

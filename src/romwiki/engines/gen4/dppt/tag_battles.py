@@ -26,6 +26,7 @@ _CALL_OPCODE = 0x1A
 # hand-copied, so a correction there can't silently desync this offset math.
 _CALL_WIDTH = 2 + sum(OPCODE_TABLE[_CALL_OPCODE][1])
 _GET_STARTER_SPECIES = "GetPlayerStarterSpecies"
+_GET_PLAYER_GENDER = "GetPlayerGender"
 _SET_VAR_FROM_VALUE = "SetVarFromValue"
 _COMPARE_VAR_TO_VALUE = "CompareVarToValue"
 _GOTO_IF = "GoToIf"
@@ -92,11 +93,19 @@ def parse_staged_partner_battle_families(
     `P` matching the tag-battle's own partner variable, and every compared
     species drawn from this profile's own decoded starter table, are what
     this requires before trusting a match -- the same "decode, don't guess"
-    bar `starter_branches.py` holds its own block resolution to. A
-    subroutine gated by anything else before `GetPlayerStarterSpecies` (for
-    example, a player-gender check also seen in this game, which this
-    schema has no condition kind to represent) is deliberately not matched,
-    rather than silently dropping that extra condition.
+    bar `starter_branches.py` holds its own block resolution to.
+
+    A subroutine may instead be gated by an outer `GetPlayerGender` check
+    before either staged block (Platinum's Route 201 and Route 203 tag
+    battles: the rival's own gender determines which nested starter-branch
+    block runs, and the game's own name for that opposite-gender rival is
+    what the resulting trainer records are named). That outer gate carries
+    no starter information itself, so it is not folded into one family;
+    instead each gender's block is independently confirmed against the
+    exact staged-subroutine shape above and emitted as its own family, the
+    same way a script staging multiple battle positions already gets one
+    family per position. A subroutine gated by anything else is still
+    deliberately not matched, rather than guessing at an unrecognized shape.
 
     The two enemy operands are not resolved here: `parse_tag_battle_commands`
     already covers them as ordinary literal trainer references.
@@ -130,23 +139,100 @@ def parse_staged_partner_battle_families(
             trainer_count=trainer_count,
             starter_species=species_set,
         )
-        if pairs is None:
-            continue
-        fallthrough_species, fallthrough_id = pairs[-1]
-        if fallthrough_species is not None or len(pairs) < 2:
-            continue
-        compared = pairs[:-1]
-        if len({species for species, _ in compared}) != len(compared):
-            continue
-        families.append(
-            Gen4StarterBranchFamily(
-                script_file_id=script_file_id,
-                position=0,
-                selected=tuple(compared),
-                fallthrough_trainer_id=fallthrough_id,
+        if pairs is not None:
+            family = _family_from_pairs(
+                pairs, script_file_id=script_file_id, position=0
             )
-        )
+            if family is not None:
+                families.append(family)
+            continue
+        gender_targets = _parse_gender_gated_target(instructions, target)
+        if gender_targets is None:
+            continue
+        position = 0
+        for gender_target in gender_targets:
+            gender_pairs = _parse_staged_subroutine(
+                instructions,
+                gender_target,
+                dest_var=partner_var,
+                trainer_count=trainer_count,
+                starter_species=species_set,
+            )
+            if gender_pairs is None:
+                continue
+            family = _family_from_pairs(
+                gender_pairs, script_file_id=script_file_id, position=position
+            )
+            if family is None:
+                continue
+            families.append(family)
+            position += 1
     return tuple(families)
+
+
+def _family_from_pairs(
+    pairs: list[tuple[int | None, int]],
+    *,
+    script_file_id: int,
+    position: int,
+) -> Gen4StarterBranchFamily | None:
+    fallthrough_species, fallthrough_id = pairs[-1]
+    if fallthrough_species is not None or len(pairs) < 2:
+        return None
+    compared = pairs[:-1]
+    if len({species for species, _ in compared}) != len(compared):
+        return None
+    return Gen4StarterBranchFamily(
+        script_file_id=script_file_id,
+        position=position,
+        selected=tuple(compared),
+        fallthrough_trainer_id=fallthrough_id,
+    )
+
+
+def _parse_gender_gated_target(
+    instructions: dict[int, Gen4Instruction], start: int
+) -> tuple[int, int] | None:
+    """Recognize `GetPlayerGender` guarding two exclusive branch targets.
+
+    Verified shape (Platinum's Route 201 and Route 203 tag battles):
+
+        GetPlayerGender(G)
+        CompareVarToValue(G, 0); GoToIf -> A
+        CompareVarToValue(G, 1); GoToIf -> B
+
+    Returns `(A, B)` -- which numeric gender code plays which role is not
+    resolved further, since nothing downstream needs to distinguish them:
+    each target is independently re-checked against the full staged-subroutine
+    shape before either is trusted.
+    """
+    entry = instructions.get(start)
+    if entry is None or entry.name != _GET_PLAYER_GENDER:
+        return None
+    gender_var = entry.params[0]
+    compare_a = instructions.get(entry.next_offset)
+    if (
+        compare_a is None
+        or compare_a.name != _COMPARE_VAR_TO_VALUE
+        or compare_a.params != (gender_var, 0)
+    ):
+        return None
+    goto_a = instructions.get(compare_a.next_offset)
+    if goto_a is None or goto_a.name != _GOTO_IF or goto_a.params[0] != _GOTO_IF_TRUE:
+        return None
+    compare_b = instructions.get(goto_a.next_offset)
+    if (
+        compare_b is None
+        or compare_b.name != _COMPARE_VAR_TO_VALUE
+        or compare_b.params != (gender_var, 1)
+    ):
+        return None
+    goto_b = instructions.get(compare_b.next_offset)
+    if goto_b is None or goto_b.name != _GOTO_IF or goto_b.params[0] != _GOTO_IF_TRUE:
+        return None
+    target_a = goto_a.next_offset + goto_a.params[-1]
+    target_b = goto_b.next_offset + goto_b.params[-1]
+    return target_a, target_b
 
 
 def _find_call_immediately_before(
