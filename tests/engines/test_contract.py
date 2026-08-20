@@ -509,6 +509,17 @@ class EngineContractTests(unittest.TestCase):
         source = parse_encounter_record(
             bytes(data), area_id=0, archive_path="encounters.narc"
         ).to_dict()
+        # A location is required for the area to render a page at all --
+        # entries with no map header pointing at them are unused ROM data
+        # and get skipped.
+        source["locations"] = [
+            {
+                "header_id": 1,
+                "internal_name": "route1",
+                "name": "Test Route",
+                "location_name_id": 1,
+            }
+        ]
 
         enriched = enrich_encounter_dataset(
             {

@@ -133,6 +133,10 @@ def render_encounter_pages(
         for record in records
         if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES
     ]
+    # Encounter table entries with no map header pointing at them are ROM
+    # padding/unused data -- not a place a player can reach -- so they're
+    # dropped rather than rendered under a fallback "Encounter Area NNN" name.
+    linked = [record for record in records if record.get("locations")]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -140,7 +144,7 @@ def render_encounter_pages(
             "index.md",
             *(
                 f"area-{record['area_id']:03}.md"
-                for record in records
+                for record in linked
                 if only_pages is None or f"area-{record['area_id']:03}" in only_pages
             ),
             *(
@@ -161,8 +165,6 @@ def render_encounter_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    linked = [record for record in records if record.get("locations")]
-    unlinked = [record for record in records if not record.get("locations")]
     name_counts = Counter(record["name"] for record in linked)
     sorted_linked = sorted(linked, key=lambda item: (item["name"], item["area_id"]))
     for index, record in enumerate(sorted_linked):
@@ -203,42 +205,6 @@ def render_encounter_pages(
         catalog_records.append(
             _catalog_record(record, filename.removesuffix(".md") + "/", True, change)
         )
-    if unlinked:
-        for index, record in enumerate(unlinked):
-            change = encounter_record_comparison(comparison, record)
-            filename = f"area-{record['area_id']:03}.md"
-            previous = unlinked[index - 1] if index else None
-            following = unlinked[index + 1] if index + 1 < len(unlinked) else None
-            if only_pages is None or filename.removesuffix(".md") in only_pages:
-                write_text(
-                    output_root / filename,
-                    _render_area(
-                        record,
-                        change,
-                        comparison.get("baseline") if comparison else None,
-                        references,
-                        previous,
-                        following,
-                    ),
-                )
-                page_count += 1
-            fallback_links.append(
-                "- "
-                + ROUTES.markdown_link(
-                    entity_reference(
-                        "encounter",
-                        record["area_id"],
-                        record["name"],
-                        record["area_id"],
-                    ),
-                    "encounters/index.md",
-                )
-            )
-            catalog_records.append(
-                _catalog_record(
-                    record, filename.removesuffix(".md") + "/", False, change
-                )
-            )
     if safari_records and _safari_page_selected(safari_records, only_pages):
         write_text(
             output_root / f"{SAFARI_ZONE_ROUTE}.md",
