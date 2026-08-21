@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import TRAINER_RECORD_SIZE
+from romwiki.engines.gen3.shared.text import decode_gen3_text
 from romwiki.schema import (
     AbilitySlotTrainerPokemon,
     BattleModeTrainer,
     RecordProvenance,
 )
 from romwiki.util.errors import InvalidRomError
-
-from .constants import TRAINER_RECORD_SIZE
-from .text import decode_gen3_text
 
 # Generation III's trainer struct (`struct Trainer` in the public
 # pokefirered decompilation), verified against the real FireRed and

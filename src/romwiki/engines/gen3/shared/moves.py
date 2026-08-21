@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import MOVE_RECORD_SIZE
 from romwiki.schema import Move, RecordProvenance
 from romwiki.util.errors import InvalidRomError
-
-from .constants import MOVE_RECORD_SIZE
 
 # Generation III's move struct (`gBattleMoves` in the public pokefirered/
 # pokeemerald decompilations) is a fixed 12-byte record, verified against

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.machines import (
+from romwiki.engines.gen3.shared.machines import (
     machine_name,
     parse_machine_move_table,
     parse_tmhm_learnset,

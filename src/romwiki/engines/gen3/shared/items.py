@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import ITEM_RECORD_SIZE
 from romwiki.schema import Item, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
-from .constants import ITEM_RECORD_SIZE
 from .text import decode_gen3_text
 
 # Generation III's item struct (44 bytes, `struct Item` in the public

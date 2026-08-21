@@ -1,0 +1,27 @@
+[profile]
+id = "emerald-us"
+name = "Pokémon Emerald (USA, Europe)"
+platform = "game-boy-advance"
+engine = "gen3_emerald"
+base_game = "emerald"
+
+[header]
+game_codes = ["BPEE"]
+rom_versions = [0]
+
+[type_chart]
+chart = "gen3"
+
+[parameters]
+personal_offset = 0x3203cc
+personal_count = 412
+
+ability_name_offset = 0x31b6db
+ability_name_stride = 13
+ability_name_count = 76
+ability_description_offset = 0x31bad4
+
+[[hashes]]
+algorithm = "sha256"
+value = "a9dec84dfe7f62ab2220bafaef7479da0929d066ece16a6885f6226db19085af"
+variant = "usa-europe-retail"

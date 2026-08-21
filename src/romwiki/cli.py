@@ -21,6 +21,7 @@ from romwiki.pipeline.build.regeneration import (
 )
 from romwiki.pipeline.build.sections import (
     DATASET_KINDS,
+    dataset_enabled,
     describe_section_mismatch,
     enabled_dataset_kinds,
 )
@@ -1044,15 +1045,16 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     comparisons = _load_comparisons(data_root / "comparisons")
     # An engine's Abilities section needs ROM-decoded ability names with no
     # PokéDB fallback (unlike Pokémon page names); an engine whose first
-    # vertical slice implements only personal data (no message-archive
+    # vertical slice implements only personal data (no ability-name table
     # decoding yet) can still build its Pokémon section without one. Gated
-    # declaratively on the profile's "messages" layout entry, matching
-    # GameBuildContext's optional-input accessors, rather than probing with a
-    # try/except around the build.
+    # declaratively via `dataset_enabled`, the same "personal_offset or
+    # personal layout, per platform" check `pipeline/build/context.py`'s
+    # `items_raw`/`trainers_raw` accessors already use -- checking for a
+    # `"messages"` layout entry specifically would only ever be true for
+    # NDS/archive-shaped profiles, never for flat-offset (GBA) ones.
     abilities_dataset = None
-    if (
-        args.command == "build-pokemon"
-        and "messages" in workflow.current.profile.layout
+    if args.command == "build-pokemon" and dataset_enabled(
+        workflow.current.profile, "abilities"
     ):
         abilities_dataset = workflow.build("abilities")
     relationship_index = None

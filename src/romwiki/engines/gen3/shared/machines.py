@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import (
+    FIRST_MACHINE_ITEM_ID,
+    MACHINE_COUNT,
+    MAX_MOVE_ID,
+    TM_COUNT,
+)
 from romwiki.schema import Machine
 from romwiki.util.errors import InvalidRomError
-
-from .constants import FIRST_MACHINE_ITEM_ID, MACHINE_COUNT, MAX_MOVE_ID, TM_COUNT
 
 
 def machine_name(machine_id: int) -> str:

@@ -201,5 +201,10 @@ def _extract_ability_descriptions_flat(
         )
     return {
         "ability_descriptions": descriptions,
-        "description_sources": {"ability_descriptions": {"offset": description_offset}},
+        "description_sources": {
+            "ability_descriptions": {
+                "archive": f"offset:{description_offset:#x}",
+                "member": 0,
+            }
+        },
     }

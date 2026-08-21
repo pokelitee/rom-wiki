@@ -1,3 +1,27 @@
+from romwiki.engines.gen3.shared.evolutions import parse_evolution_record
+from romwiki.engines.gen3.shared.items import (
+    item_description_pointer,
+    item_name,
+    parse_item_record,
+)
+from romwiki.engines.gen3.shared.machines import (
+    machine_name,
+    parse_machine_move_table,
+    parse_tmhm_learnset,
+)
+from romwiki.engines.gen3.shared.moves import parse_move_record
+from romwiki.engines.gen3.shared.personal import parse_personal_record
+from romwiki.engines.gen3.shared.pointers import (
+    gba_pointer_for_offset,
+    resolve_gba_pointer,
+)
+from romwiki.engines.gen3.shared.text import (
+    decode_gen3_text,
+    decode_gen3_text_sequence,
+    decode_gen3_text_table,
+)
+from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
+
 from .battle_variants import resolve_trainer_variants
 from .constants import (
     ABILITY_NAME_COUNT,
@@ -56,29 +80,21 @@ from .encounters import (
     parse_method_info,
     parse_method_slots,
 )
-from .evolutions import parse_evolution_record
-from .items import item_description_pointer, item_name, parse_item_record
 from .locations import (
     parse_gmapgroups_pointers,
     parse_map_group_index,
     parse_map_header,
     parse_map_header_table,
 )
-from .machines import machine_name, parse_machine_move_table, parse_tmhm_learnset
-from .moves import parse_move_record
 from .overworld import (
     decode_trainerbattle_id,
     parse_map_events,
     parse_object_event_template,
 )
-from .personal import parse_personal_record
-from .pointers import gba_pointer_for_offset, resolve_gba_pointer
-from .text import decode_gen3_text, decode_gen3_text_sequence, decode_gen3_text_table
 from .trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
-from .trainers import parse_trainer_record, party_record_size
 from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 
 # `pipeline/enrichment/pokemon.py` reads these off the flat engine namespace

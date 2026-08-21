@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen3.frlg.text import (
+from romwiki.engines.gen3.shared.text import (
     decode_gen3_text,
     decode_gen3_text_sequence,
     decode_gen3_text_table,

@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import (
+    EVOLUTION_RECORD_SIZE,
+    EVOLUTION_SLOT_COUNT,
+    EVOLUTION_SLOT_SIZE,
+)
 from romwiki.schema import EvolutionEntry, EvolutionSet, RecordProvenance
 from romwiki.util.errors import InvalidRomError
-
-from .constants import EVOLUTION_RECORD_SIZE, EVOLUTION_SLOT_COUNT, EVOLUTION_SLOT_SIZE
 
 
 def parse_evolution_record(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen3.frlg.pointers import resolve_gba_pointer
+from romwiki.engines.gen3.shared.pointers import resolve_gba_pointer
 from romwiki.util.errors import InvalidRomError
 
 

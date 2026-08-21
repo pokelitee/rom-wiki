@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.moves import parse_move_record
+from romwiki.engines.gen3.shared.moves import parse_move_record
 from romwiki.util.errors import InvalidRomError
 
 

@@ -3,12 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, get_args
 
+import romwiki.engines.gen3.emerald as gen3_emerald
 import romwiki.engines.gen3.frlg as gen3_frlg
 import romwiki.engines.gen4.dppt as gen4_dppt
 import romwiki.engines.gen4.hgss as gen4_hgss
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.engines.profile_contracts import (
+    GEN3_EMERALD_PROFILE_CONTRACT,
     GEN3_FRLG_PROFILE_CONTRACT,
     GEN4_DPPT_PROFILE_CONTRACT,
     GEN4_HGSS_PROFILE_CONTRACT,
@@ -20,6 +22,7 @@ from romwiki.util.errors import DataSourceError
 
 # Canonical engine identifiers used by registration and contract tests.
 GEN3_FRLG_ENGINE = "gen3_frlg"
+GEN3_EMERALD_ENGINE = "gen3_emerald"
 GEN4_DPPT_ENGINE = "gen4_dppt"
 GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
@@ -192,6 +195,49 @@ _ENGINES: dict[str, EngineAdapter] = {
         ),
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN3_FRLG_PROFILE_CONTRACT,
+    ),
+    GEN3_EMERALD_ENGINE: EngineAdapter(
+        # First vertical slice (Pokémon personal data + abilities): every
+        # concern points at the same flat `gen3_emerald` namespace, which
+        # itself re-exports FireRed/LeafGreen-proven-identical parsers from
+        # `gen3/shared/` (see that package's module comments for the real-
+        # ROM cross-checks proving each shared fact). Widen dataset_kinds
+        # as more Generation III domains are verified against this ROM.
+        personal=gen3_emerald,
+        locations=gen3_emerald,
+        trainers=gen3_emerald,
+        encounters=gen3_emerald,
+        evolutions=gen3_emerald,
+        items=gen3_emerald,
+        machines=gen3_emerald,
+        moves=gen3_emerald,
+        tutors=gen3_emerald,
+        egg_moves=gen3_emerald,
+        learnsets=gen3_emerald,
+        reference_names=gen3_emerald,
+        enrich=gen3_emerald,
+        trainer_party=gen3_emerald,
+        trades=gen3_emerald,
+        marts=gen3_emerald,
+        static_encounters=gen3_emerald,
+        pickup=gen3_emerald,
+        formats=EngineFormats(
+            encounters="unsupported",
+            locations="unsupported",
+            location_extraction="unsupported",
+            pickup="none",
+            trainers="unsupported",
+            tutors="none",
+            fossils="none",
+            static_encounters="none",
+            egg_moves="none",
+            item_archive="archive-index",
+            machines="none",
+        ),
+        generation=3,
+        dataset_kinds=frozenset({"pokemon", "abilities"}),
+        required_dataset_kinds=frozenset({"pokemon"}),
+        profile_contract=GEN3_EMERALD_PROFILE_CONTRACT,
     ),
     GEN4_DPPT_ENGINE: EngineAdapter(
         personal=gen4_dppt,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.items import (
+from romwiki.engines.gen3.shared.items import (
     item_description_pointer,
     item_name,
     parse_item_record,

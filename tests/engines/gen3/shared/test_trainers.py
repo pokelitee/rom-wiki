@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.trainers import parse_trainer_record, party_record_size
+from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
 from romwiki.util.errors import InvalidRomError
 
 

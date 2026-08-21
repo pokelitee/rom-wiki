@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import MACHINE_COUNT, PERSONAL_RECORD_SIZE
+from romwiki.engines.gen3.shared.machines import parse_tmhm_learnset
 from romwiki.schema import (
     PokemonPersonalData,
     RecordProvenance,
@@ -9,9 +11,6 @@ from romwiki.schema import (
     WildHeldItems,
 )
 from romwiki.util.errors import InvalidRomError
-
-from .constants import MACHINE_COUNT, PERSONAL_RECORD_SIZE
-from .machines import parse_tmhm_learnset
 
 # Field offsets below are Generation III's `struct BaseStats` (pret/
 # pokefirered `include/constants/pokemon.h` + `src/data/pokemon/base_stats.h`),
