@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen4.dppt.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen4.platinum.battle_variants import resolve_trainer_variants
 from romwiki.engines.gen4.shared.starter_branches import Gen4StarterBranchFamily
 
 _CONTRACT = "platinum-retail-v1"

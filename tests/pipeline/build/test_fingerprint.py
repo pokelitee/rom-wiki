@@ -16,7 +16,9 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         )
 
         self.assertTrue(any(path.startswith("engines/gen4/hgss/") for path in files))
-        self.assertFalse(any(path.startswith("engines/gen4/dppt/") for path in files))
+        self.assertFalse(
+            any(path.startswith("engines/gen4/platinum/") for path in files)
+        )
         self.assertFalse(any(path.startswith("engines/gen5/") for path in files))
         self.assertNotIn("engines/registry.py", files)
 
@@ -45,7 +47,7 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         self.assertIn("pipeline/extraction/locations/helpers.py", files)
 
         dppt_files = extraction_source_files(
-            "gen4_dppt", "romwiki.pipeline.extraction.locations.dispatcher"
+            "gen4_platinum", "romwiki.pipeline.extraction.locations.dispatcher"
         )
         self.assertIn("pipeline/extraction/locations/arm9_event_map.py", dppt_files)
         self.assertIn("pipeline/extraction/locations/helpers.py", dppt_files)
@@ -60,7 +62,7 @@ class ExtractionSourceFilesTests(unittest.TestCase):
 
     def test_includes_split_trainer_strategy_dependencies(self) -> None:
         class_gender = extraction_source_files(
-            "gen4_dppt", "romwiki.pipeline.extraction.trainers.dispatcher"
+            "gen4_platinum", "romwiki.pipeline.extraction.trainers.dispatcher"
         )
         battle_mode = extraction_source_files(
             "gen5_bw", "romwiki.pipeline.extraction.trainers.dispatcher"

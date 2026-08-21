@@ -5,7 +5,7 @@ from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import romwiki.engines.gen4.dppt as gen4_dppt
+import romwiki.engines.gen4.platinum as gen4_platinum
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.learnsets import extract_learnset_dataset
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
@@ -53,7 +53,7 @@ class LearnsetDatasetTests(unittest.TestCase):
                 return_value=platform,
             ),
             patch(
-                "romwiki.engines.gen4.dppt.parse_level_up_learnset",
+                "romwiki.engines.gen4.platinum.parse_level_up_learnset",
                 side_effect=[record_0, record_1],
             ) as parse_learnset,
         ):
@@ -144,7 +144,7 @@ class LearnsetDatasetTests(unittest.TestCase):
         record_1 = Mock(to_dict=Mock(return_value={"species_id": 1}))
         fake_adapter = SimpleNamespace(
             personal=SimpleNamespace(PERSONAL_RECORD_COUNT=2),
-            learnsets=gen4_dppt,
+            learnsets=gen4_platinum,
         )
 
         with (
@@ -157,7 +157,7 @@ class LearnsetDatasetTests(unittest.TestCase):
                 return_value=fake_adapter,
             ),
             patch(
-                "romwiki.engines.gen4.dppt.parse_level_up_learnset",
+                "romwiki.engines.gen4.platinum.parse_level_up_learnset",
                 side_effect=[record_0, record_1],
             ) as parse_learnset,
         ):
@@ -173,7 +173,7 @@ def _profile() -> GameProfile:
         id="test",
         name="Test",
         platform="nintendo-ds",
-        engine="gen4_dppt",
+        engine="gen4_platinum",
         base_game="platinum",
         game_codes=("CPUE",),
         rom_versions=(1,),

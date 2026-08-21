@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import (
+from romwiki.engines.gen4.platinum import (
     parse_egg_gift_command,
     parse_egg_gift_commands,
     parse_pokemon_gift_commands,

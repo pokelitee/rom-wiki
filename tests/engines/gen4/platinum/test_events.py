@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import parse_map_events, parse_object_events
+from romwiki.engines.gen4.platinum import parse_map_events, parse_object_events
 from romwiki.util.errors import InvalidRomError
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import find_item_archive_members, parse_item_record
+from romwiki.engines.gen4.platinum import find_item_archive_members, parse_item_record
 from romwiki.util.errors import InvalidRomError
 
 

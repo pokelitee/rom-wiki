@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt.tutors import (
+from romwiki.engines.gen4.platinum.tutors import (
     parse_special_tutor_move,
     parse_special_tutor_species,
     parse_tutor_compatibility_table,

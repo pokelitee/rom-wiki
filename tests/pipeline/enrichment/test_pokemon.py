@@ -80,7 +80,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
         enriched = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "ability_names": ability_names,
                 "pokemon_names": pokemon_names,

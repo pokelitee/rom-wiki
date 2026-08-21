@@ -41,7 +41,7 @@ class ExtractTrainerDatasetTests(unittest.TestCase):
         self.assertEqual(dataset, {"dataset": "trainers", "records": []})
 
     def test_dispatches_class_gender_profiles_to_their_extractor(self) -> None:
-        profile = _profile(engine="gen4_dppt")
+        profile = _profile(engine="gen4_platinum")
         result = InspectionResult(image=Mock(), match=SimpleNamespace(profile=profile))
         engine_adapter = SimpleNamespace(
             formats=SimpleNamespace(trainers="class-gender")

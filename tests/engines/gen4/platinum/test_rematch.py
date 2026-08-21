@@ -3,8 +3,8 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import parse_rematch_table
-from romwiki.engines.gen4.dppt.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen4.platinum import parse_rematch_table
+from romwiki.engines.gen4.platinum.battle_variants import resolve_trainer_variants
 from romwiki.util.errors import InvalidRomError
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt.tag_battles import (
+from romwiki.engines.gen4.platinum.tag_battles import (
     parse_staged_partner_battle_families,
     parse_tag_battle_commands,
 )

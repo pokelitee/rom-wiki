@@ -111,7 +111,7 @@ class EnginePackageBoundaryTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
     def test_shared_dispatch_uses_semantic_formats_not_engine_ids(self) -> None:
-        forbidden = ("GEN4_DPPT_ENGINE", "GEN5_ENGINES", '== "gen', 'in {"gen')
+        forbidden = ("GEN4_PLATINUM_ENGINE", "GEN5_ENGINES", '== "gen', 'in {"gen')
         violations = [
             f"{path.relative_to(SOURCE_ROOT)} contains {token!r}"
             for path in SEMANTIC_DISPATCH_PATHS

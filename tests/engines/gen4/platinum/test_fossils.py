@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import Gen4FossilRevival, parse_fossil_revival_table
+from romwiki.engines.gen4.platinum import Gen4FossilRevival, parse_fossil_revival_table
 from romwiki.util.errors import InvalidRomError
 
 

@@ -6,7 +6,7 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from romwiki.engines.gen4.dppt import parse_encounter_record
+from romwiki.engines.gen4.platinum import parse_encounter_record
 from romwiki.engines.gen5.bw import parse_encounter_entry
 from romwiki.pipeline.enrichment.encounters import enrich_encounter_dataset
 from romwiki.renderers.mkdocs import render_encounter_pages
@@ -45,7 +45,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         enriched = enrich_encounter_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "encounters.narc"},
                 "records": [source],
             },
@@ -127,7 +127,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         enriched = enrich_encounter_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "encounters.narc"},
                 "records": [source],
             },

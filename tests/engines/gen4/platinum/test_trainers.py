@@ -3,12 +3,12 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import (
+from romwiki.engines.gen4.platinum import (
     Gen4StarterBranchFamily,
     parse_trainer_class_genders,
     parse_trainer_record,
 )
-from romwiki.engines.gen4.dppt.battle_variants import (
+from romwiki.engines.gen4.platinum.battle_variants import (
     resolve_trainer_variants,
 )
 from romwiki.engines.gen4.shared.trainers import (

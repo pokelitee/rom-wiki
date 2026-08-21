@@ -270,7 +270,7 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
     reject_unknown=True,
 )
 
-GEN4_DPPT_PROFILE_CONTRACT = EngineProfileContract(
+GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
     required_layout=frozenset(
         {
             "berry_data",

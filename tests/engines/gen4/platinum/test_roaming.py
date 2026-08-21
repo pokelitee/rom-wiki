@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import parse_roaming_activation_commands
+from romwiki.engines.gen4.platinum import parse_roaming_activation_commands
 from tests.conftest import make_script
 
 

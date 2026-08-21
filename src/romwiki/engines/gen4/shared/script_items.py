@@ -26,7 +26,7 @@ from romwiki.engines.gen4.shared.script_table import parse_script_function_offse
 # ARM9 codebase the way Black/White and Black 2/White 2 do, so their
 # `CallCommonScript` ID tables are assigned independently and a numeric ID
 # confirmed for one is not assumed safe for the other -- each engine leaf
-# supplies its own confirmed set (see `gen4/dppt/script_items.py` and
+# supplies its own confirmed set (see `gen4/platinum/script_items.py` and
 # `gen4/hgss/script_items.py`) rather than sharing one constant here.
 #
 # Unlike Gen5's equivalent convention, these aren't simple one-arm scripts:

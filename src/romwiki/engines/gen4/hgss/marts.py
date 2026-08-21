@@ -21,7 +21,7 @@ from romwiki.util.errors import InvalidRomError
 # references. DPPT's equivalent commands resolve to real item lists via two
 # ARM9-embedded structures -- an ARM9 pointer table of 0xFFFF-terminated
 # item lists for `specialty`/`decoration`/`seal` marts
-# (`gen4/dppt/marts.py`'s `parse_specialty_mart_inventories`), and a single
+# (`gen4/platinum/marts.py`'s `parse_specialty_mart_inventories`), and a single
 # badge-tiered (item_id, tier) list terminated by (0, 0) for `common` marts
 # (`parse_common_mart_inventory`). An exhaustive, mechanical byte-pattern
 # search for both exact structures across HGSS's entire ARM9 binary *and*

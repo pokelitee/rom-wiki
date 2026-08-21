@@ -21,7 +21,7 @@ authoritative for every field stored by the ROM.
 
 ## Engine notes
 
-Platinum uses the Generation IV reference engine (`gen4_dppt`). The later
+Platinum uses the Generation IV reference engine (`gen4_platinum`). The later
 Generation V engines (`gen5_bw` and `gen5_b2w2`) follow the extraction and
 provenance boundaries established here where their platform structures match.
 
@@ -29,7 +29,7 @@ The sections below describe the shared Generation IV DPPt-engine record
 formats and decoding techniques; this page adds this specific release's own
 verified facts and configuration on top.
 
---8<-- "gen4/dppt-data-sources.md"
+--8<-- "gen4/platinum-data-sources.md"
 
 ## Roaming Pokémon
 

@@ -56,7 +56,7 @@ def _profile(digest: str, *, profile_id: str = "test-game") -> GameProfile:
         id=profile_id,
         name="Test Game",
         platform=_PLATFORM_ID,
-        engine="gen4_dppt",
+        engine="gen4_platinum",
         base_game="test",
         game_codes=(),
         rom_versions=(),
@@ -131,7 +131,7 @@ class InspectRomTests(unittest.TestCase):
         data = result.to_dict()
 
         self.assertEqual(data["profile"]["id"], "test-game")
-        self.assertEqual(data["profile"]["engine"], "gen4_dppt")
+        self.assertEqual(data["profile"]["engine"], "gen4_platinum")
         self.assertEqual(data["profile"]["matched_by"], "sha256")
 
     def test_to_dict_reports_no_profile_when_unmatched(self) -> None:

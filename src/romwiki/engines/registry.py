@@ -5,15 +5,15 @@ from typing import Any, Literal, Protocol, get_args
 
 import romwiki.engines.gen3.emerald as gen3_emerald
 import romwiki.engines.gen3.frlg as gen3_frlg
-import romwiki.engines.gen4.dppt as gen4_dppt
 import romwiki.engines.gen4.hgss as gen4_hgss
+import romwiki.engines.gen4.platinum as gen4_platinum
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.engines.profile_contracts import (
     GEN3_EMERALD_PROFILE_CONTRACT,
     GEN3_FRLG_PROFILE_CONTRACT,
-    GEN4_DPPT_PROFILE_CONTRACT,
     GEN4_HGSS_PROFILE_CONTRACT,
+    GEN4_PLATINUM_PROFILE_CONTRACT,
     GEN5_B2W2_PROFILE_CONTRACT,
     GEN5_BW_PROFILE_CONTRACT,
     EngineProfileContract,
@@ -23,7 +23,7 @@ from romwiki.util.errors import DataSourceError
 # Canonical engine identifiers used by registration and contract tests.
 GEN3_FRLG_ENGINE = "gen3_frlg"
 GEN3_EMERALD_ENGINE = "gen3_emerald"
-GEN4_DPPT_ENGINE = "gen4_dppt"
+GEN4_PLATINUM_ENGINE = "gen4_platinum"
 GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
@@ -249,25 +249,25 @@ _ENGINES: dict[str, EngineAdapter] = {
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN3_EMERALD_PROFILE_CONTRACT,
     ),
-    GEN4_DPPT_ENGINE: EngineAdapter(
-        personal=gen4_dppt,
-        locations=gen4_dppt,
-        trainers=gen4_dppt,
-        encounters=gen4_dppt,
-        evolutions=gen4_dppt,
-        items=gen4_dppt,
-        machines=gen4_dppt,
-        moves=gen4_dppt,
-        tutors=gen4_dppt,
-        egg_moves=gen4_dppt,
-        learnsets=gen4_dppt,
-        reference_names=gen4_dppt,
-        enrich=gen4_dppt,
-        trainer_party=gen4_dppt,
-        trades=gen4_dppt,
-        marts=gen4_dppt,
-        static_encounters=gen4_dppt,
-        pickup=gen4_dppt,
+    GEN4_PLATINUM_ENGINE: EngineAdapter(
+        personal=gen4_platinum,
+        locations=gen4_platinum,
+        trainers=gen4_platinum,
+        encounters=gen4_platinum,
+        evolutions=gen4_platinum,
+        items=gen4_platinum,
+        machines=gen4_platinum,
+        moves=gen4_platinum,
+        tutors=gen4_platinum,
+        egg_moves=gen4_platinum,
+        learnsets=gen4_platinum,
+        reference_names=gen4_platinum,
+        enrich=gen4_platinum,
+        trainer_party=gen4_platinum,
+        trades=gen4_platinum,
+        marts=gen4_platinum,
+        static_encounters=gen4_platinum,
+        pickup=gen4_platinum,
         formats=EngineFormats(
             encounters="conditional",
             locations="event-map",
@@ -283,7 +283,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         ),
         generation=4,
         presentation_features=frozenset({"contests"}),
-        profile_contract=GEN4_DPPT_PROFILE_CONTRACT,
+        profile_contract=GEN4_PLATINUM_PROFILE_CONTRACT,
     ),
     GEN4_HGSS_ENGINE: EngineAdapter(
         personal=gen4_hgss,

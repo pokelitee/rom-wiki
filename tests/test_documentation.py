@@ -21,7 +21,7 @@ class DocumentationTests(unittest.TestCase):
 
     def test_engine_data_source_partials_have_explicit_consumers(self) -> None:
         consumers = {
-            "gen4/dppt-data-sources.md": {
+            "gen4/platinum-data-sources.md": {
                 "platinum",
                 "renegade-platinum",
             },

@@ -85,7 +85,7 @@ the known party records and runtime behavior are already documented.
   identical gap (its own opening battle) turned out to be gated behind a
   `GetPlayerGender` check ahead of the starter branch, feeding the trainer ID
   into `StartTagBattle` through a script variable instead of a literal
-  operand (see `gen4/dppt/tag_battles.py`'s `_parse_gender_gated_target`).
+  operand (see `gen4/platinum/tag_battles.py`'s `_parse_gender_gated_target`).
   That exact mechanism was checked and ruled out here: HGSS's entire script
   archive has only 4 variable-operand `TrainerBattle` (0xD5) sites in total,
   and all 4 belong to one shared `GetEyeTrainerNum`-based overworld

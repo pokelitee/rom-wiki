@@ -306,7 +306,7 @@ class MainErrorHandlingTests(unittest.TestCase):
     def test_dppt_location_extraction_uses_integrated_trade_records(self) -> None:
         profile = SimpleNamespace(
             id="platinum-us",
-            engine="gen4_dppt",
+            engine="gen4_platinum",
             layout={"npc_trades": "trades.narc"},
             parameters={},
         )

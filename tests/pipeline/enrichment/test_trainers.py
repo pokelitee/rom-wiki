@@ -59,7 +59,9 @@ class TrainerEnrichmentTests(unittest.TestCase):
             ],
         }
 
-        trainer = enrich_trainer_record(source, pokedb, None, None, engine="gen4_dppt")
+        trainer = enrich_trainer_record(
+            source, pokedb, None, None, engine="gen4_platinum"
+        )
 
         self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Burmy (Sandy Cloak)")
 
@@ -134,7 +136,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         }
 
         with self.assertRaises(DataSourceError):
-            enrich_trainer_record(source, pokedb, None, None, engine="gen4_dppt")
+            enrich_trainer_record(source, pokedb, None, None, engine="gen4_platinum")
 
     def test_enriches_and_renders_a_trainer_party(self) -> None:
         source = {
@@ -200,7 +202,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         enriched = enrich_trainer_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {},
                 "move_names": move_names,
                 "records": [source],

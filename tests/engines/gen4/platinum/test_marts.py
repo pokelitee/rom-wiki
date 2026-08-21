@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import (
+from romwiki.engines.gen4.platinum import (
     ITEM_RECORD_SIZE,
     parse_common_mart_inventory,
     parse_decoration_price_table,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import parse_static_encounter_commands
+from romwiki.engines.gen4.platinum import parse_static_encounter_commands
 from tests.conftest import make_script
 
 

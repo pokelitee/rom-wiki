@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import Gen4GameCornerPrize, parse_game_corner_prizes
+from romwiki.engines.gen4.platinum import Gen4GameCornerPrize, parse_game_corner_prizes
 from romwiki.util.errors import InvalidRomError
 
 

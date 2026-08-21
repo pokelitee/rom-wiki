@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import parse_species_list
+from romwiki.engines.gen4.platinum import parse_species_list
 
 
 class Gen4BonusEncountersTests(unittest.TestCase):

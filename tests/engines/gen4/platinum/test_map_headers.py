@@ -4,7 +4,7 @@ import string
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import (
+from romwiki.engines.gen4.platinum import (
     parse_english_message_archive,
     parse_platinum_map_headers,
 )

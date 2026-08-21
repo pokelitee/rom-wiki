@@ -13,7 +13,7 @@ from romwiki.engines.gen5.b2w2.opcode_table import OPCODE_TABLE
 # `WorkSetConst` and friends, and every one of those is a named command in this
 # engine's own opcode table. Requiring the win check discarded two thirds of the
 # scripted trainer battles. The follow-on is validated as a real command
-# instead, matching `gen4/dppt/scripts.py` and the BW leaf.
+# instead, matching `gen4/platinum/scripts.py` and the BW leaf.
 START_TRAINER_BATTLE = 0x0085
 START_TRAINER_MULTI_BATTLE = 0x0086
 CHECK_TRAINER_BATTLE_WON = 0x008D

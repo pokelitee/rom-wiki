@@ -48,7 +48,7 @@ values. New engines must emit the stable keys needed to align equivalent records
 
 Examples:
 
-- A Platinum hack that preserves Platinum's layouts can reuse `gen4_dppt` and may
+- A Platinum hack that preserves Platinum's layouts can reuse `gen4_platinum` and may
   need mostly profile data and verification.
 - A Diamond or Pearl hack can reuse the NDS platform and some Generation IV parsers,
   but Platinum-specific tables and scripts must be audited.
@@ -196,7 +196,7 @@ currently assumes `platform.archive_cls`/`filesystem`.
 Add engine parsers under
 `src/romwiki/engines/<generation>/<family>/` for each supported record type.
 Generation packages are internal namespaces; profiles continue to select stable
-leaf adapter IDs such as `gen4_dppt` and `gen5_bw`. Keep parsers small, typed, and
+leaf adapter IDs such as `gen4_platinum` and `gen5_bw`. Keep parsers small, typed, and
 independently testable. Preserve raw source locations in provenance and reject
 malformed or out-of-range records instead of silently guessing. Register the new
 engine's modules as a new `EngineAdapter` entry in
@@ -305,7 +305,7 @@ verification; inheriting a retail profile alone is not evidence of script behavi
 Concretely, this is one of the few places a hack profile for an *already supported*
 engine still needs a source-code touch, not just profile data: each trainer-enabled
 engine leaf keeps its own `_CONTRACTS` allowlist (e.g.
-`engines/gen4/dppt/battle_variants.py`, `engines/gen5/b2w2/battle_variants.py`) of
+`engines/gen4/platinum/battle_variants.py`, `engines/gen5/b2w2/battle_variants.py`) of
 every `trainer_variant_contract` string that engine's own decoders have been
 verified against. A profile's `trainer_variant_contract` parameter must name a
 value already present in its engine's set, or `resolve_trainer_variants` raises

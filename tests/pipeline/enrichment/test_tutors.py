@@ -19,7 +19,7 @@ class TutorEnrichmentTests(unittest.TestCase):
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },
@@ -29,7 +29,7 @@ class TutorEnrichmentTests(unittest.TestCase):
         moves = enrich_move_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "moves.narc"},
                 "records": [_move_source_record(move_id) for move_id in range(471)],
             },
@@ -70,7 +70,7 @@ class TutorEnrichmentTests(unittest.TestCase):
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },
@@ -87,7 +87,7 @@ class TutorEnrichmentTests(unittest.TestCase):
 def _tutor_dataset() -> dict:
     return {
         "game": "test",
-        "engine": "gen4_dppt",
+        "engine": "gen4_platinum",
         "source": {"overlay_id": 5},
         "location_names": ["Route 212"],
         "records": [

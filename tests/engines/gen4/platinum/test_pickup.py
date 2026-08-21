@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import SplitPickupTable, parse_pickup_tables
+from romwiki.engines.gen4.platinum import SplitPickupTable, parse_pickup_tables
 from romwiki.util.errors import InvalidRomError
 
 

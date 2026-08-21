@@ -52,14 +52,14 @@ class LearnsetEnrichmentTests(unittest.TestCase):
         enriched = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },
             pokedb,
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "wotbl.narc"},
                 "records": learnsets,
             },

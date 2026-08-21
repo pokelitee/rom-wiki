@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.dppt import (
+from romwiki.engines.gen4.platinum import (
     parse_npc_trade_commands,
     parse_npc_trade_record,
 )

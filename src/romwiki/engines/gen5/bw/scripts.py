@@ -26,7 +26,7 @@ from romwiki.util.errors import InvalidRomError
 # (0x85) is always immediately followed by `TrainerBattleIsVictory` (0x8D)
 # reading the same result variable in every real occurrence found in the ROM
 # (12/12 samples) -- the same "opcode signature + validating follow-on
-# command" pattern this project's `gen4/dppt/scripts.py` already uses for
+# command" pattern this project's `gen4/platinum/scripts.py` already uses for
 # Platinum's `StartTrainerBattle`/`CheckWonBattle`, so no full script
 # disassembler is needed to find these.
 START_TRAINER_BATTLE = 0x0085
@@ -42,7 +42,7 @@ CHECK_TRAINER_BATTLE_WON = 0x008D
 # command in this generation's own opcode table (`VMCall`, `VMJump`,
 # `WorkSetConst`, `ActorDelete`, `CallTrainerBattleEnd`, ...), never an unknown
 # value. Requiring the win check alone dropped whole battle categories, exactly
-# as the equivalent rule did for Platinum in `gen4/dppt/scripts.py`.
+# as the equivalent rule did for Platinum in `gen4/platinum/scripts.py`.
 #
 # The follow-on is therefore validated as "a real command in the engine's
 # opcode table" rather than against one specific command or a fitted list, which

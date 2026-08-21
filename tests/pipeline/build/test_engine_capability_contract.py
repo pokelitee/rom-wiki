@@ -13,7 +13,7 @@ from romwiki.util.local_config import LocalGameRegistry
 _PROFILES_DIR = Path("profiles")
 _GAMES_CONFIG = Path(".local/games.toml")
 _POKEDB_ROOTS = {
-    "gen4_dppt": Path("../pokedb/.output/gen4"),
+    "gen4_platinum": Path("../pokedb/.output/gen4"),
     "gen4_hgss": Path("../pokedb/.output/gen4"),
     "gen5_bw": Path("../pokedb/.output/gen5"),
     "gen5_b2w2": Path("../pokedb/.output/gen5"),
