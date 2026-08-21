@@ -5,27 +5,22 @@ import struct
 from romwiki.schema import EncounterMapLocation, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
-from .constants import GMAPGROUPS_GROUP_COUNT, MAP_HEADER_REGION_COUNT, MAP_HEADER_SIZE
+from .constants import MAP_HEADER_SIZE
 
-# Generation III's map headers aren't one flat table -- `gMapGroups[group]`
-# points to that group's own contiguous array of `MapHeader` structs. A
-# full-ROM scan found three such segments (`map_header_segments` in the
-# profile TOML), all resolving to real Sevii Islands/postgame locations.
-# Kanto's own main-region headers (Pallet Town, Routes 1-25, etc.) haven't
-# been located -- a deliberately bounded first slice, not a claim Kanto has
-# no headers; widen `map_header_segments` once a verified Kanto segment is
-# found.
+# `struct MapHeader` (28 bytes), verified against both FireRed/LeafGreen and
+# Emerald: four leading pointers (mapLayout/events/mapScripts/connections,
+# not decoded here), music/mapLayoutId (u16 each), regionMapSectionId (u8,
+# index into a per-game region-name table), cave/weather/mapType/flag bytes
+# (not decoded). Generation III's map headers aren't one flat table --
+# `gMapGroups[group]` points to that group's own contiguous array of
+# `MapHeader` structs; each leaf's `map_header_segments` profile parameter
+# lists every verified `(offset, count)` run (see each leaf's own module/
+# constants comments for the real-ROM cross-checks that found them).
 #
-# `MapHeader` (28 bytes): four leading pointers (mapLayout/events/
-# mapScripts/connections, not decoded here), music/mapLayoutId (u16 each),
-# regionMapSectionId (u8, index into the region-name table), cave/weather/
-# mapType/flag bytes (not decoded).
-#
-# The region-name table is a *separate*, variable-length, back-to-back
-# 0xFF-terminated string table (`text.decode_gen3_text_sequence`, not the
-# fixed-stride table every other name table here uses). Exactly 109
-# entries on both games (index 0 = "PALLET TOWN" ... 108 = "CELADON
-# DEPT.").
+# The region-name table itself is a *separate*, variable-length, back-to-
+# back 0xFF-terminated string table (`text.decode_gen3_text_sequence`, not
+# the fixed-stride table every other name table uses) -- its entry count
+# differs per game and stays leaf-specific.
 
 
 def parse_map_header(data: bytes, *, header_id: int) -> tuple[int, int, int]:
@@ -67,11 +62,6 @@ def parse_map_header_table(
             f"Gen III map header table has size {len(header_data)}, "
             f"expected {count * MAP_HEADER_SIZE}"
         )
-    if len(region_names) != MAP_HEADER_REGION_COUNT:
-        raise InvalidRomError(
-            f"Gen III region-name table has {len(region_names)} entries, "
-            f"expected {MAP_HEADER_REGION_COUNT}"
-        )
     records = []
     for header_id in range(count):
         raw = header_data[
@@ -96,18 +86,18 @@ def parse_map_header_table(
     return tuple(records)
 
 
-def parse_gmapgroups_pointers(data: bytes) -> tuple[int, ...]:
-    """Decode `gMapGroups` itself: `GMAPGROUPS_GROUP_COUNT` consecutive GBA
-    pointers, each the ROM address of that group's own array of
-    pointers-to-`MapHeader` (see `constants.py`'s `GMAPGROUPS_GROUP_COUNT`
-    comment for how this was verified).
+def parse_gmapgroups_pointers(data: bytes, *, group_count: int) -> tuple[int, ...]:
+    """Decode `gMapGroups` itself: `group_count` consecutive GBA pointers,
+    each the ROM address of that group's own array of pointers-to-
+    `MapHeader` (see each leaf's own `GMAPGROUPS_GROUP_COUNT` comment for
+    how this was verified).
     """
-    expected_size = GMAPGROUPS_GROUP_COUNT * 4
+    expected_size = group_count * 4
     if len(data) != expected_size:
         raise InvalidRomError(
             f"Gen III gMapGroups table has size {len(data)}, expected {expected_size}"
         )
-    return struct.unpack(f"<{GMAPGROUPS_GROUP_COUNT}I", data)
+    return struct.unpack(f"<{group_count}I", data)
 
 
 def parse_map_group_index(

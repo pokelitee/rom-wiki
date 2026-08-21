@@ -16,7 +16,7 @@ def extract_flat_header_segments_location_dataset(
     # Generation III (FireRed/LeafGreen)'s map headers live in `gMapGroups`,
     # a small array of pointers to each group's own separate, contiguous
     # array of full `MapHeader` structs -- not one flat table. A real-ROM
-    # scan (see `gen3/frlg/locations.py`'s module comment) found each
+    # scan (see `gen3/shared/locations.py`'s module comment) found each
     # group's array as its own contiguous run, so `map_header_segments`
     # lists every verified `(offset, count)` run rather than a single
     # offset/count pair, the flat-offset analog of how

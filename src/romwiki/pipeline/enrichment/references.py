@@ -62,3 +62,29 @@ def move_name(
     if move_names is not None and move_id in move_names:
         return move_names[move_id]
     return pokedb.move_name(move_id)
+
+
+def move_reference(
+    move_id: int,
+    pokedb: PokeDBGeneration,
+    move_names: Mapping[int, str] | None,
+    *,
+    page_slugs: Mapping[int, str] | None = None,
+) -> dict[str, Any] | None:
+    """Build a `{id, slug, name}` cross-reference to a move page.
+
+    `slug` drives the display name (`title_case_slug`, preferring PokeDB's
+    readable canonical name, e.g. "Solar Beam") -- but the actual `moves`
+    page for a move whose ROM-decoded name diverges from PokeDB's ("SOLARBEAM"
+    vs "Solar Beam") is generated under the ROM-derived slug (`moves.py`'s
+    own `enrich_move_dataset` computes the identical value this function
+    would get if `page_slugs` weren't overriding it). `page_slugs` (built
+    from the real moves dataset the same way `item_reference`'s own
+    `page_slugs` is) corrects the *link target* to the page that actually
+    exists, without changing the nicer display text.
+    """
+    slug = move_name(move_id, pokedb, move_names)
+    if slug is None:
+        return None
+    route_slug = page_slugs.get(move_id, slug) if page_slugs is not None else slug
+    return {"id": move_id, "slug": route_slug, "name": title_case_slug(slug)}

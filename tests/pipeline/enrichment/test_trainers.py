@@ -239,6 +239,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
                 "records": [
                     {
                         "move_id": 33,
+                        "slug": "tackle",
                         "type": {"id": 0, "name": "normal"},
                         "damage_class": {"id": 0, "name": "physical"},
                     }

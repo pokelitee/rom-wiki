@@ -1104,7 +1104,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             reference_datasets["moves"] = move_dataset
     elif args.command == "build-moves":
         reference_datasets = dict(relationship_datasets)
-    elif args.command == "build-encounters":
+    elif args.command in {"build-encounters", "build-items", "build-trainers"}:
         reference_datasets = {"pokemon": workflow.current.pokemon()}
     reference_index = (
         ReferenceIndex.from_datasets(reference_datasets) if reference_datasets else None

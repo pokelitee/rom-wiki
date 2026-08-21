@@ -729,7 +729,7 @@ def _pokemon_table_link(
     references: ReferenceIndex | None,
     show_sprite: bool,
 ) -> str:
-    link = pokemon_record_link(value, source_file)
+    link = pokemon_record_link(value, source_file, references)
     if not show_sprite:
         return link
     return sprite_with_link(

@@ -352,7 +352,9 @@ def _extract_gen3_encounter_locations(
     group_pointer_data = platform.read_bytes(
         result.image, gmapgroups_offset, engine.GMAPGROUPS_GROUP_COUNT * 4
     )
-    group_pointers = engine.parse_gmapgroups_pointers(group_pointer_data)
+    group_pointers = engine.parse_gmapgroups_pointers(
+        group_pointer_data, group_count=engine.GMAPGROUPS_GROUP_COUNT
+    )
     gmapgroups_address = engine.gba_pointer_for_offset(gmapgroups_offset)
     subtable_start = engine.resolve_gba_pointer(group_pointers[0])
     subtable_data = platform.read_bytes(

@@ -24,6 +24,7 @@ from romwiki.pipeline.enrichment.names import (
 from romwiki.pipeline.enrichment.references import (
     item_reference,
     move_name,
+    move_reference,
     with_rom_description,
 )
 from romwiki.schema.versions import POKEMON_ENRICHED_SCHEMA_VERSION
@@ -43,6 +44,7 @@ def enrich_personal_dataset(
     static_encounter_dataset: dict[str, Any] | None = None,
     *,
     item_dataset: dict[str, Any] | None = None,
+    move_dataset: dict[str, Any] | None = None,
     type_names: Mapping[int, str] | None = None,
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
@@ -55,6 +57,20 @@ def enrich_personal_dataset(
         raise DataSourceError(f"Expected exactly {expected_count} personal records")
     type_names = resolve_type_names(engine, dataset, type_names)
     move_names = resolve_move_names(engine, dataset, move_names)
+    # A move whose exact ROM-decoded name diverges stylistically from
+    # PokeDB's canonical one (e.g. "SOLARBEAM" vs "Solar Beam") gets its own
+    # `moves` page under the ROM-derived slug (see `moves.py`'s own
+    # `enrich_move_dataset`) -- resolving that same table here (independent
+    # of `move_names` above, which only carries this profile's static
+    # overrides) lets `move_reference`'s `page_slugs` correct cross-
+    # reference links to the page that actually exists, the same
+    # `page_slugs`-override pattern `evolution_item_slugs` already uses for
+    # items.
+    move_page_slugs = (
+        resolve_move_names(engine, move_dataset, None)
+        if move_dataset is not None
+        else {}
+    )
     ability_names = resolve_ability_names(engine, dataset)
     item_names = resolve_item_names(engine, dataset)
     pokemon_names = resolve_pokemon_names(engine, dataset)
@@ -103,6 +119,7 @@ def enrich_personal_dataset(
                 static_encounters_by_species.get(expected_member, []),
                 type_names,
                 move_names,
+                move_page_slugs,
                 ability_names,
                 item_names,
                 pokemon_names,
@@ -202,6 +219,7 @@ def _enrich_record(
     static_encounters: list[dict[str, Any]],
     type_names: Mapping[int, str] | None,
     move_names: Mapping[int, str] | None,
+    move_page_slugs: Mapping[int, str] | None,
     ability_names: list[str] | None,
     item_names: list[str] | None,
     pokemon_names: list[str] | None,
@@ -375,24 +393,38 @@ def _enrich_record(
             []
             if is_internal
             else _enrich_compatible_machines(
-                engine, source["machine_ids"], machines, pokedb, move_names
+                engine,
+                source["machine_ids"],
+                machines,
+                pokedb,
+                move_names,
+                move_page_slugs,
             )
         ),
         "tutor_moves": (
             []
             if is_internal
             else _enrich_compatible_tutors(
-                tutor_ids, tutors, tutor_locations, pokedb, move_names
+                tutor_ids,
+                tutors,
+                tutor_locations,
+                pokedb,
+                move_names,
+                move_page_slugs,
             )
         ),
         "level_up_moves": (
-            [] if is_internal else _enrich_level_up_moves(learnset, pokedb, move_names)
+            []
+            if is_internal
+            else _enrich_level_up_moves(learnset, pokedb, move_names, move_page_slugs)
         ),
         "learnset_provenance": (
             None if is_internal or learnset is None else learnset["provenance"]
         ),
         "egg_moves": (
-            [] if is_internal else _enrich_egg_moves(egg_move_set, pokedb, move_names)
+            []
+            if is_internal
+            else _enrich_egg_moves(egg_move_set, pokedb, move_names, move_page_slugs)
         ),
         "egg_move_provenance": (
             None if is_internal else _egg_move_provenance(egg_move_set)
@@ -518,21 +550,20 @@ def _enrich_compatible_tutors(
     location_names: list[str],
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
+    move_page_slugs: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     result = []
     for tutor_id in tutor_ids:
         tutor = tutors[tutor_id]
-        slug = move_name(tutor["move_id"], pokedb, move_names)
-        if slug is None:
+        move = move_reference(
+            tutor["move_id"], pokedb, move_names, page_slugs=move_page_slugs
+        )
+        if move is None:
             raise DataSourceError(f"Tutor {tutor_id} references move ID 0")
         result.append(
             {
                 **tutor,
-                "move": {
-                    "id": tutor["move_id"],
-                    "slug": slug,
-                    "name": title_case_slug(slug),
-                },
+                "move": move,
                 "location": tutor_location(tutor, location_names),
             }
         )
@@ -545,6 +576,7 @@ def _enrich_compatible_machines(
     machines: dict[int, dict[str, Any]],
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
+    move_page_slugs: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     if not machines:
         return [
@@ -558,8 +590,10 @@ def _enrich_compatible_machines(
             raise DataSourceError(
                 f"Pokémon compatibility references unknown machine ID {machine_id}"
             ) from error
-        slug = move_name(machine["move_id"], pokedb, move_names)
-        if slug is None:
+        move = move_reference(
+            machine["move_id"], pokedb, move_names, page_slugs=move_page_slugs
+        )
+        if move is None:
             raise DataSourceError(f"Machine {machine['name']} references move ID 0")
         result.append(
             {
@@ -568,11 +602,7 @@ def _enrich_compatible_machines(
                 "kind": machine["kind"],
                 "number": machine["number"],
                 "item_id": machine.get("item_id"),
-                "move": {
-                    "id": machine["move_id"],
-                    "slug": slug,
-                    "name": title_case_slug(slug),
-                },
+                "move": move,
             }
         )
     return result
@@ -673,22 +703,16 @@ def _enrich_level_up_moves(
     learnset: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
+    move_page_slugs: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     moves = []
     for entry in learnset["moves"] if learnset is not None else []:
-        slug = move_name(entry["move_id"], pokedb, move_names)
-        if slug is None:
-            raise DataSourceError("Level-up learnsets cannot reference move ID 0")
-        moves.append(
-            {
-                "level": entry["level"],
-                "move": {
-                    "id": entry["move_id"],
-                    "slug": slug,
-                    "name": title_case_slug(slug),
-                },
-            }
+        move = move_reference(
+            entry["move_id"], pokedb, move_names, page_slugs=move_page_slugs
         )
+        if move is None:
+            raise DataSourceError("Level-up learnsets cannot reference move ID 0")
+        moves.append({"level": entry["level"], "move": move})
     return moves
 
 
@@ -709,6 +733,7 @@ def _enrich_egg_moves(
     egg_move_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
+    move_page_slugs: Mapping[int, str] | None,
 ) -> list[dict[str, Any]]:
     moves = []
     seen: set[int] = set()
@@ -716,10 +741,10 @@ def _enrich_egg_moves(
         if move_id in seen:
             continue
         seen.add(move_id)
-        slug = move_name(move_id, pokedb, move_names)
-        if slug is None:
+        move = move_reference(move_id, pokedb, move_names, page_slugs=move_page_slugs)
+        if move is None:
             raise DataSourceError("Egg moves cannot reference move ID 0")
-        moves.append({"id": move_id, "slug": slug, "name": title_case_slug(slug)})
+        moves.append(move)
     return moves
 
 

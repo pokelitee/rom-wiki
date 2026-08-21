@@ -880,13 +880,20 @@ def _unique_pokemon(pokemon: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return unique
 
 
-def _pokemon_reference(pokemon: dict[str, Any]):
-    return entity_reference(
-        "pokemon",
-        pokemon.get("id", pokemon["slug"]),
-        pokemon["name"],
-        pokemon.get("slug"),
-    )
+def _pokemon_reference(
+    pokemon: dict[str, Any], references: ReferenceIndex | None = None
+):
+    identifier = pokemon.get("id", pokemon["slug"])
+    name = pokemon["name"]
+    if references is not None:
+        # `id` is the raw, engine-native species identifier (see
+        # `pipeline/enrichment/encounters.py`'s `_encounter_pokemon`
+        # comment) -- resolving through the reference index (rather than
+        # trusting `slug` unconditionally) avoids linking to a species page
+        # that was never actually rendered, e.g. a Generation III species
+        # beyond `PERSONAL_RECORD_COUNT`'s currently-exposed range.
+        return references.resolve_matching("pokemon", identifier, name)
+    return entity_reference("pokemon", identifier, name, pokemon.get("slug"))
 
 
 def _method_heading(label: str, key: str, record: dict[str, Any]) -> str:
@@ -1096,7 +1103,7 @@ def _append_walking(
                 (
                     sprite_with_link(
                         table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
-                        _pokemon_link(slot["pokemon"], source_file),
+                        _pokemon_link(slot["pokemon"], source_file, references),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
                     level_range(slot["minimum_level"], slot["maximum_level"]),
@@ -1126,7 +1133,7 @@ def _append_water(
                 (
                     sprite_with_link(
                         table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
-                        _pokemon_link(slot["pokemon"], source_file),
+                        _pokemon_link(slot["pokemon"], source_file, references),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
                     level_range(slot["minimum_level"], slot["maximum_level"]),
@@ -1170,7 +1177,9 @@ def _append_special(
                         (
                             sprite_with_link(
                                 table_sprite_cell(entry["pokemon"].get("sprite")),
-                                _pokemon_link(entry["pokemon"], source_file),
+                                _pokemon_link(
+                                    entry["pokemon"], source_file, references
+                                ),
                             ),
                             _slot_type_cell(entry["pokemon"], references),
                             level_range(entry["minimum_level"], entry["maximum_level"]),
@@ -1190,7 +1199,7 @@ def _append_special(
             markdown_table(
                 ["| Pokémon | Type |", "| ------- | ---- |"],
                 [
-                    f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file))} | "
+                    f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file, references))} | "
                     f"{_slot_type_cell(value, references)} |"
                     for value in pokemon
                 ],
@@ -1418,10 +1427,14 @@ def _slot_type_cell(
     return reference_type_cell("pokemon", (pokemon or {}).get("id"), references)
 
 
-def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
+def _pokemon_link(
+    pokemon: dict[str, Any] | None,
+    source_file: str,
+    references: ReferenceIndex | None = None,
+) -> str:
     if pokemon is None:
         return "None"
-    return ROUTES.markdown_link(_pokemon_reference(pokemon), source_file)
+    return ROUTES.markdown_link(_pokemon_reference(pokemon, references), source_file)
 
 
 def _render_seasonal_encounter_pages(
@@ -1882,7 +1895,7 @@ def _append_seasonal_method(
                 (
                     sprite_with_link(
                         table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
-                        _pokemon_link(slot["pokemon"], source_file),
+                        _pokemon_link(slot["pokemon"], source_file, references),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
                     level_range(slot["minimum_level"], slot["maximum_level"]),

@@ -3,13 +3,14 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.constants import GMAPGROUPS_GROUP_COUNT
-from romwiki.engines.gen3.frlg.locations import (
+from romwiki.engines.gen3.shared.locations import (
     parse_gmapgroups_pointers,
     parse_map_group_index,
     parse_map_header,
     parse_map_header_table,
 )
+
+_GROUP_COUNT = 43
 from romwiki.schema import EncounterMapLocation
 from romwiki.util.errors import InvalidRomError
 
@@ -86,18 +87,16 @@ class ParseMapHeaderTableTests(unittest.TestCase):
 
 class ParseGmapgroupsPointersTests(unittest.TestCase):
     def test_decodes_group_count_pointers(self) -> None:
-        pointers = tuple(
-            0x08350000 + index * 4 for index in range(GMAPGROUPS_GROUP_COUNT)
-        )
-        data = struct.pack(f"<{GMAPGROUPS_GROUP_COUNT}I", *pointers)
+        pointers = tuple(0x08350000 + index * 4 for index in range(_GROUP_COUNT))
+        data = struct.pack(f"<{_GROUP_COUNT}I", *pointers)
 
-        decoded = parse_gmapgroups_pointers(data)
+        decoded = parse_gmapgroups_pointers(data, group_count=_GROUP_COUNT)
 
         self.assertEqual(decoded, pointers)
 
     def test_rejects_wrong_size(self) -> None:
         with self.assertRaises(InvalidRomError):
-            parse_gmapgroups_pointers(b"\x00" * 10)
+            parse_gmapgroups_pointers(b"\x00" * 10, group_count=_GROUP_COUNT)
 
 
 class ParseMapGroupIndexTests(unittest.TestCase):

@@ -147,15 +147,6 @@ TUTOR_LOCATIONS = {
 # 124).
 ENCOUNTER_HEADER_COUNT = 132
 
-# Town Map region-name table: variable-length, back-to-back,
-# 0xFF-terminated (see `shared/text.py`'s `decode_gen3_text_sequence`), not
-# fixed-stride like every other name table. Exactly 109 entries on both
-# FireRed and LeafGreen (index 0 = "PALLET TOWN" ... 108 = "CELADON
-# DEPT."). Emerald's own region-name table is a real superset (197
-# entries, including Kanto and all of Sevii Islands) -- not the same
-# count, so this stays leaf-specific.
-MAP_HEADER_REGION_COUNT = 109
-
 # `gMapGroups`'s own base: an array of pointers, one per map group, each to
 # that group's own array of pointers-to-`MapHeader`. Located via ROM
 # disassembly (the `gMapGroups[group][num]` accessor's literal pool value

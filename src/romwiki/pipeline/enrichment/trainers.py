@@ -265,8 +265,18 @@ def enrich_trainer_record(
                     {
                         "id": move_id,
                         "name": move_name(move_id, pokedb, move_names),
+                        # `move_records` (the enriched `moves` dataset, see
+                        # `enrich_trainer_dataset`'s `move_dataset` param)
+                        # already computed each move's real page slug via
+                        # its own ROM-decoded name table -- reusing it here
+                        # (rather than falling back to PokeDB's canonical
+                        # slug) avoids linking to a move page that doesn't
+                        # exist under that slug (see
+                        # `pipeline/enrichment/references.py`'s
+                        # `move_reference` for the same fix elsewhere).
                         **(
                             {
+                                "slug": move_records[move_id]["slug"],
                                 "type": move_records[move_id]["type"],
                                 "damage_class": move_records[move_id]["damage_class"],
                             }

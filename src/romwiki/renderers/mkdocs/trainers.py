@@ -173,7 +173,7 @@ def render_trainer_pages(
                     record,
                     change,
                     comparison.get("baseline") if comparison else None,
-                    None,
+                    references,
                     previous,
                     following,
                     same_name_groups[(record["class_name"], record["name"])],
@@ -331,11 +331,14 @@ def _render_trainer(
         source_file,
         source_url,
         features=features,
+        references=references,
     )
     _append_ai_battle_items(lines, grouped_ai_items, source_file)
     _append_locations(lines, record["locations"], source_file)
     _append_script_references(lines, record.get("script_references", []), source_file)
-    _append_same_name_trainers(lines, record, same_name_records or [], source_file)
+    _append_same_name_trainers(
+        lines, record, same_name_records or [], source_file, references
+    )
     lines.extend(comparison_section(change, baseline_name, source_file, references))
     lines.extend(provenance_section(_trainer_provenance(record)))
     _append_record_navigation(lines, record, previous, following)
@@ -529,21 +532,27 @@ def _party_preview(record: dict[str, Any], limit: int = 3) -> str:
     return f"{preview}, +{remaining} more" if remaining > 0 else preview
 
 
-def _linked_party(record: dict[str, Any], source_file: str) -> str:
+def _linked_party(
+    record: dict[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None = None,
+) -> str:
     links = []
     for member in record["party"]:
         pokemon = member["pokemon"]
-        links.append(
-            ROUTES.markdown_link(
-                entity_reference(
-                    "pokemon",
-                    pokemon.get("id", pokemon.get("slug", pokemon["name"])),
-                    pokemon["name"],
-                    pokemon.get("page_slug", pokemon.get("slug")),
-                ),
-                source_file,
+        identifier = pokemon.get("id", pokemon.get("slug", pokemon["name"]))
+        name = pokemon["name"]
+        reference = (
+            references.resolve_matching("pokemon", identifier, name)
+            if references is not None
+            else entity_reference(
+                "pokemon",
+                identifier,
+                name,
+                pokemon.get("page_slug", pokemon.get("slug")),
             )
         )
+        links.append(ROUTES.markdown_link(reference, source_file))
     return ", ".join(links)
 
 
@@ -641,7 +650,11 @@ def _trainer_summary(
     )
 
 
-def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
+def _party_cards(
+    party: list[dict[str, Any]],
+    source_url: str,
+    references: ReferenceIndex | None = None,
+) -> list[str]:
     lines = ['<div class="rw-party-grid">']
     for index, member in enumerate(party, start=1):
         pokemon = member["pokemon"]
@@ -668,15 +681,18 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             )
         else:
             item_name = "—"
-        pokemon_link = ROUTES.html_link(
-            entity_reference(
+        pokemon_identifier = pokemon.get("id", pokemon["slug"])
+        pokemon_reference = (
+            references.resolve_matching("pokemon", pokemon_identifier, pokemon["name"])
+            if references is not None
+            else entity_reference(
                 "pokemon",
-                pokemon.get("id", pokemon["slug"]),
+                pokemon_identifier,
                 pokemon["name"],
                 pokemon.get("page_slug", pokemon.get("slug")),
-            ),
-            source_url,
+            )
         )
+        pokemon_link = ROUTES.html_link(pokemon_reference, source_url)
         pokemon_sprite = pokemon.get("sprite")
         sprite_icon = (
             f'<img class="rw-party-card__sprite" src="{escape(pokemon_sprite["url"], quote=True)}" '
@@ -746,13 +762,18 @@ def _party_cards(party: list[dict[str, Any]], source_url: str) -> list[str]:
             move_label = escape(f"{pokemon['name']} moves", quote=True)
             lines.append(f'<ol class="rw-party-card__moves" aria-label="{move_label}">')
             for move_index, move in enumerate(member["moves"], start=1):
-                slug = move["name"]
+                display_slug = move["name"]
+                # `slug` (when present) is the move's real, ROM-derived page
+                # slug -- see `pipeline/enrichment/trainers.py`'s own
+                # comment -- distinct from `name`/`display_slug`, which is
+                # PokeDB's canonical slug used only for display formatting.
+                route_slug = move.get("slug", display_slug)
                 move_link = ROUTES.html_link(
                     entity_reference(
                         "move",
-                        move.get("id", slug),
-                        display_name(slug),
-                        slug,
+                        move.get("id", route_slug),
+                        display_name(display_slug),
+                        route_slug,
                     ),
                     source_url,
                 )
@@ -817,11 +838,12 @@ def _append_party(
     source_url: str,
     *,
     features: frozenset[str] = _DEFAULT_TRAINER_FEATURES,
+    references: ReferenceIndex | None = None,
 ) -> None:
     lines.extend(["## Party", ""])
     families = {family["id"]: family for family, _variant in memberships}
     if not families:
-        lines.extend(_party_cards(record["party"], source_url))
+        lines.extend(_party_cards(record["party"], source_url, references))
         return
 
     tabs: list[tuple[str, dict[str, Any], bool]] = []
@@ -863,7 +885,7 @@ def _append_party(
                 is_difficulty=is_difficulty,
                 features=features,
             ),
-            *_party_cards(candidate["party"], source_url),
+            *_party_cards(candidate["party"], source_url, references),
         ]
         prepared_tabs.append((tab_label, candidate, presentation))
 
@@ -1214,6 +1236,7 @@ def _append_same_name_trainers(
     record: dict[str, Any],
     same_name_records: list[dict[str, Any]],
     source_file: str,
+    references: ReferenceIndex | None = None,
 ) -> None:
     related = sorted(
         (
@@ -1265,7 +1288,7 @@ def _append_same_name_trainers(
         lines.append(
             f"| {trainer_link} | `{route_id}` | {' / '.join(locations) or '—'} | "
             f"{_trainer_level_range(candidate)} | "
-            f"{_linked_party(candidate, source_file)} |"
+            f"{_linked_party(candidate, source_file, references)} |"
         )
     lines.append("")
     if collapsed:

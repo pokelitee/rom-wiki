@@ -5,12 +5,17 @@ import struct
 from romwiki.util.errors import InvalidRomError
 
 # Generation III's overworld-object/script system (`struct MapEvents`,
-# `struct ObjectEventTemplate`, public pokefirered decompilation
-# `include/global.fieldmap.h`). Verified against the real ROMs: decoding
-# every already-known Sevii Islands/postgame map's `events` pointer found
-# 75 real trainer object events whose scripts start with the
-# `trainerbattle` opcode and decode to valid trainer IDs (0-742), including
-# a real double-battle pair sharing one trainer ID.
+# `struct ObjectEventTemplate`, public pokefirered/pokeemerald
+# decompilation `include/global.fieldmap.h`). Verified against both real
+# ROMs: decoding every already-known FireRed/LeafGreen Sevii Islands/
+# postgame map's `events` pointer found 75 real trainer object events whose
+# scripts start with the `trainerbattle` opcode and decode to valid
+# trainer IDs (0-742), including a real double-battle pair sharing one
+# trainer ID; decoding every already-known Emerald map's `events` pointer
+# (across its own `map_header_segments`) found 441 real trainer object
+# events whose scripts decode to valid Emerald trainer IDs matching real
+# trainer names (CALVIN, RICK, TIANA, DAISY, ...) -- confirming the same
+# 20/24-byte struct shapes, unchanged.
 MAP_EVENTS_SIZE = 20  # objectEventCount(u8) + ... + objectEvents ptr @0x04
 
 # 0x02 kind: 0 = "normal" object (fields below apply); nonzero = "clone"

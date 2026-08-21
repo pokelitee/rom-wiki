@@ -62,6 +62,7 @@ class SiteCatalogTests(unittest.TestCase):
             [
                 "portal",
                 "firered-leafgreen",
+                "emerald",
                 "platinum",
                 "renegade-platinum",
                 "heart-gold-soul-silver",

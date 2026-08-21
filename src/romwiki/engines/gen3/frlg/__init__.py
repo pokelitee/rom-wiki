@@ -1,3 +1,4 @@
+import romwiki.engines.gen3.shared.overworld as overworld
 from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
 from romwiki.engines.gen3.shared.constants import (
     ENCOUNTER_FISHING_SLOT_CHANCES,
@@ -24,12 +25,23 @@ from romwiki.engines.gen3.shared.items import (
     item_name,
     parse_item_record,
 )
+from romwiki.engines.gen3.shared.locations import (
+    parse_gmapgroups_pointers,
+    parse_map_group_index,
+    parse_map_header,
+    parse_map_header_table,
+)
 from romwiki.engines.gen3.shared.machines import (
     machine_name,
     parse_machine_move_table,
     parse_tmhm_learnset,
 )
 from romwiki.engines.gen3.shared.moves import parse_move_record
+from romwiki.engines.gen3.shared.overworld import (
+    decode_trainerbattle_id,
+    parse_map_events,
+    parse_object_event_template,
+)
 from romwiki.engines.gen3.shared.personal import parse_personal_record
 from romwiki.engines.gen3.shared.pointers import (
     gba_pointer_for_offset,
@@ -67,7 +79,6 @@ from .constants import (
     ITEM_RECORD_SIZE,
     MACHINE_COUNT,
     MACHINE_LEARNSET_SIZE,
-    MAP_HEADER_REGION_COUNT,
     MAP_HEADER_SIZE,
     MAX_MOVE_ID,
     MOVE_NAME_COUNT,
@@ -87,17 +98,6 @@ from .constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
-from .locations import (
-    parse_gmapgroups_pointers,
-    parse_map_group_index,
-    parse_map_header,
-    parse_map_header_table,
-)
-from .overworld import (
-    decode_trainerbattle_id,
-    parse_map_events,
-    parse_object_event_template,
-)
 from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 
 # `pipeline/enrichment/pokemon.py` reads these off the flat engine namespace
@@ -107,7 +107,11 @@ INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 # `pipeline/enrichment/common.py`'s `validate_egg_moves` reads this bound
 # off the flat engine namespace too (matching Gen IV/V's own
-# `BASE_SPECIES_COUNT` alias).
+# `BASE_SPECIES_COUNT` alias). Some raw ROM tables this bounds (e.g. egg
+# moves) legitimately reference species up to 386 even though the
+# `pokemon` domain only exposes public records through member 385 (see
+# `PERSONAL_RECORD_COUNT`'s own comment) -- `personal_member_reference`
+# handles that specific gap itself rather than this bound doing so.
 BASE_SPECIES_COUNT = PERSONAL_RECORD_COUNT
 
 __all__ = [
@@ -144,7 +148,6 @@ __all__ = [
     "ITEM_RECORD_SIZE",
     "MACHINE_COUNT",
     "MACHINE_LEARNSET_SIZE",
-    "MAP_HEADER_REGION_COUNT",
     "MAP_HEADER_SIZE",
     "MAX_MOVE_ID",
     "MOVE_NAME_COUNT",
@@ -173,6 +176,7 @@ __all__ = [
     "item_name",
     "machine_name",
     "normalize_trainer_party_member",
+    "overworld",
     "parse_egg_move_table",
     "parse_encounter_record",
     "parse_evolution_record",

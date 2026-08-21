@@ -202,7 +202,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         # parsers from `gen3/shared/` (see that package's module comments
         # for the real-ROM cross-checks proving each shared fact). Widen
         # dataset_kinds as more Generation III domains are verified against
-        # this ROM (locations remains unimplemented for this leaf).
+        # this ROM.
         personal=gen3_emerald,
         locations=gen3_emerald,
         trainers=gen3_emerald,
@@ -223,8 +223,8 @@ _ENGINES: dict[str, EngineAdapter] = {
         pickup=gen3_emerald,
         formats=EngineFormats(
             encounters="method-table",
-            locations="unsupported",
-            location_extraction="unsupported",
+            locations="encounter-map",
+            location_extraction="flat-header-segments",
             pickup="none",
             trainers="pointer-party",
             tutors="none",
@@ -236,7 +236,15 @@ _ENGINES: dict[str, EngineAdapter] = {
         ),
         generation=3,
         dataset_kinds=frozenset(
-            {"pokemon", "abilities", "moves", "items", "trainers", "encounters"}
+            {
+                "pokemon",
+                "abilities",
+                "moves",
+                "items",
+                "trainers",
+                "encounters",
+                "locations",
+            }
         ),
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN3_EMERALD_PROFILE_CONTRACT,

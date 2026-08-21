@@ -127,7 +127,7 @@ def _extract_gen3_trainer_locations(
     overworld object, by decoding that map's `MapEvents`/
     `ObjectEventTemplate` chain and matching each trainer-type object's
     leading `trainerbattle` script command against a trainer ID (see
-    `engines/gen3/frlg/overworld.py`'s module comment for how this was
+    `engines/gen3/shared/overworld.py`'s module comment for how this was
     verified against real ROM data).
 
     Independently re-decodes `map_header_segments`/`region_name_offset`/

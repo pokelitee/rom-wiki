@@ -40,3 +40,10 @@ TRAINER_RECORD_COUNT = 855
 # sentinel immediately after entry 123, same convention as FireRed/
 # LeafGreen. Real count differs from FireRed/LeafGreen's 132.
 ENCOUNTER_HEADER_COUNT = 124
+
+# Region-name (Town Map section) table and `map_header_segments`: real
+# ROM offsets, not per-game-count facts, so they live in the profile TOML
+# (`profiles/games/emerald-us.toml`) rather than here -- see that file's
+# comments for the real-ROM cross-checks (region names, decoded map
+# groups) that verified them, mirroring FireRed/LeafGreen's own TOML-level
+# documentation for the same parameters.

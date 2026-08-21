@@ -236,6 +236,7 @@ class GameBuildContext:
                     self.egg_moves_raw(),
                     self.static_encounters_raw(),
                     item_dataset=self.items_raw(),
+                    move_dataset=self.moves_raw(),
                     type_names=self.profile.type_names,
                     move_names=self.profile.move_names,
                     sprite_version=self.profile.sprite_version,

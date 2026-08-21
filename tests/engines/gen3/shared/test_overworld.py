@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.overworld import (
+from romwiki.engines.gen3.shared.overworld import (
     decode_trainerbattle_id,
     parse_map_events,
     parse_object_event_template,

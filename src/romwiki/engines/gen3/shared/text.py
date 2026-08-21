@@ -47,8 +47,8 @@ def decode_gen3_text_sequence(data: bytes, *, offset: int, count: int) -> list[s
     padding between entries -- each string is only as long as its own text
     plus one terminator byte, so entries must be found by scanning for the
     next terminator rather than by a fixed stride. Verified against the
-    real FireRed/LeafGreen region-name (Town Map section) table -- see
-    `gen3/frlg/locations.py`'s module comment.
+    real FireRed/LeafGreen and Emerald region-name (Town Map section)
+    tables -- see `gen3/shared/locations.py`'s module comment.
     """
     values = []
     position = offset
