@@ -453,7 +453,25 @@ def _clean(value: Any) -> Any:
     return {
         key: _clean(item)
         for key, item in value.items()
-        if key not in {"provenance", "reference", "source_fields", "sprite", "sprites"}
+        if key
+        not in {
+            "provenance",
+            "reference",
+            "source_fields",
+            "sprite",
+            "sprites",
+            # A raw ROM file offset (`TrainerLocation.script_id`, the
+            # trainerbattle script's address), not game content -- two
+            # independently-compiled sibling ROMs (e.g. FireRed/LeafGreen)
+            # place the same logical script at different addresses even
+            # when every other field of the same trainer-location match
+            # (verified: FireRed/LeafGreen trainer 89's own location record
+            # differs only in this field). Distinct from the unrelated
+            # `level_script_id` field (Gen IV map headers' real, meaningful
+            # "which script runs on entering this map" content), which
+            # stays compared.
+            "script_id",
+        }
         and not key.endswith("_provenance")
     }
 
