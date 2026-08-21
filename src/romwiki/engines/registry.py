@@ -197,12 +197,12 @@ _ENGINES: dict[str, EngineAdapter] = {
         profile_contract=GEN3_FRLG_PROFILE_CONTRACT,
     ),
     GEN3_EMERALD_ENGINE: EngineAdapter(
-        # First vertical slice (Pokémon personal data + abilities): every
-        # concern points at the same flat `gen3_emerald` namespace, which
-        # itself re-exports FireRed/LeafGreen-proven-identical parsers from
-        # `gen3/shared/` (see that package's module comments for the real-
-        # ROM cross-checks proving each shared fact). Widen dataset_kinds
-        # as more Generation III domains are verified against this ROM.
+        # Every concern points at the same flat `gen3_emerald` namespace,
+        # which itself re-exports FireRed/LeafGreen-proven-identical
+        # parsers from `gen3/shared/` (see that package's module comments
+        # for the real-ROM cross-checks proving each shared fact). Widen
+        # dataset_kinds as more Generation III domains are verified against
+        # this ROM (locations remains unimplemented for this leaf).
         personal=gen3_emerald,
         locations=gen3_emerald,
         trainers=gen3_emerald,
@@ -222,7 +222,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         static_encounters=gen3_emerald,
         pickup=gen3_emerald,
         formats=EngineFormats(
-            encounters="unsupported",
+            encounters="method-table",
             locations="unsupported",
             location_extraction="unsupported",
             pickup="none",
@@ -235,7 +235,9 @@ _ENGINES: dict[str, EngineAdapter] = {
             machines="profile-offset",
         ),
         generation=3,
-        dataset_kinds=frozenset({"pokemon", "abilities", "moves", "items", "trainers"}),
+        dataset_kinds=frozenset(
+            {"pokemon", "abilities", "moves", "items", "trainers", "encounters"}
+        ),
         required_dataset_kinds=frozenset({"pokemon"}),
         profile_contract=GEN3_EMERALD_PROFILE_CONTRACT,
     ),

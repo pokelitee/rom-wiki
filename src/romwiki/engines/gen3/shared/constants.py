@@ -341,3 +341,33 @@ TUTOR_MOVE_COUNT = 15
 # same `gMapGroups[group][num]` accessor idiom, located via ROM
 # disassembly, exists at a unique location in both ROMs).
 MAP_HEADER_SIZE = 28
+
+# `WildPokemonHeader`, 20 bytes -- one entry per map (mapGroup/mapNum, not a
+# species-style index), so no dummy record. Verified identical struct shape
+# on both games (FireRed's table decodes real Kanto data; Emerald's table,
+# at its own offset, decodes real Hoenn data -- e.g. Emerald header 0
+# (mapGroup 0/mapNum 16) decodes to Wurmple/Poochyena/Zigzagoon, Route 101's
+# real land encounters, and header 1 (mapNum 17) includes Ralts, Route 102's
+# well-known Emerald-exclusive encounter). Per-game table offset/count stay
+# leaf-specific (FireRed/LeafGreen 132 entries, Emerald 124), each
+# terminated by a {0xFF, 0xFF, ...} sentinel.
+ENCOUNTER_HEADER_SIZE = 20
+
+# Rock Smash shares water's slot count per the public decompilation's
+# `WILD_TABLE_ROWS`. Verified identical on both games (Emerald's rock-smash
+# table, e.g. mapGroup 0/mapNum 26, decodes to exactly 5 Geodude slots
+# before running into the next struct's bytes).
+ENCOUNTER_LAND_SLOT_COUNT = 12
+ENCOUNTER_WATER_SLOT_COUNT = 5
+ENCOUNTER_ROCK_SMASH_SLOT_COUNT = 5
+ENCOUNTER_FISHING_SLOT_COUNT = 10
+
+ENCOUNTER_METHOD_NAMES = ("land", "water", "rock_smash", "fishing")
+
+# Fixed game-design percentages (not ROM-derived), unchanged since
+# Generation III. Fishing concatenates all three rods into one 10-slot
+# table (unlike Gen IV+, which splits each rod into its own method).
+ENCOUNTER_LAND_SLOT_CHANCES = (20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1)
+ENCOUNTER_WATER_SLOT_CHANCES = (60, 30, 5, 4, 1)
+ENCOUNTER_ROCK_SMASH_SLOT_CHANCES = (60, 30, 5, 4, 1)
+ENCOUNTER_FISHING_SLOT_CHANCES = (70, 30, 60, 20, 20, 40, 40, 15, 4, 1)

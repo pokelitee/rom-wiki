@@ -29,3 +29,14 @@ ITEM_NAME_COUNT = 377
 # (FireRed/LeafGreen 743) -- Emerald's own trainer table runs through
 # index 854.
 TRAINER_RECORD_COUNT = 855
+
+# `gWildMonHeaders`: verified against the real Emerald ROM -- struct shape
+# and slot counts are the shared Gen III fact (`gen3/shared/constants.py`'s
+# `ENCOUNTER_HEADER_SIZE`); this leaf's table offset/count are its own.
+# Header 0 (mapGroup 0/mapNum 16) decodes to Wurmple/Poochyena/Zigzagoon,
+# Route 101's real land encounters; header 1 (mapNum 17) includes Ralts,
+# Route 102's well-known Emerald-exclusive encounter -- confirming both the
+# struct layout and the table location. Terminated by a {0xFF, 0xFF, ...}
+# sentinel immediately after entry 123, same convention as FireRed/
+# LeafGreen. Real count differs from FireRed/LeafGreen's 132.
+ENCOUNTER_HEADER_COUNT = 124

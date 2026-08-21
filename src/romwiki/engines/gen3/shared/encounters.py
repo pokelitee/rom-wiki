@@ -13,9 +13,11 @@ from romwiki.util.errors import InvalidRomError
 from .constants import ENCOUNTER_HEADER_SIZE, ENCOUNTER_METHOD_NAMES
 
 # Generation III's wild-encounter tables (`gWildMonHeaders` in the public
-# pokefirered decompilation), verified against the real FireRed and
-# LeafGreen ROMs by decoding map group 3 / map 22's full land/water/fishing
-# tables to real, sane Kanto species (see `constants.py`'s header comment).
+# pokefirered/pokeemerald decompilations), verified against the real
+# FireRed, LeafGreen, and Emerald ROMs by decoding each game's own table to
+# real, sane species (see `constants.py`'s `ENCOUNTER_HEADER_SIZE` comment
+# for the specific cross-checks). Struct shapes below are proven identical
+# across all three games; only each profile's table offset/count differ.
 #
 # `WildPokemonHeader` (20 bytes, one per map):
 #   0x00  mapGroup (u8)

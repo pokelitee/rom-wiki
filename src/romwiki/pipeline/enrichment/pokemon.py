@@ -7,13 +7,13 @@ from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
     named_id,
     national_dex_id_for_member,
+    pokemon_display_name,
     tutor_location,
     type_id,
     validate_egg_moves,
     validate_machines,
     validate_tutors,
 )
-from romwiki.pipeline.enrichment.encounters import pokemon_display_name
 from romwiki.pipeline.enrichment.names import (
     resolve_ability_names,
     resolve_item_names,

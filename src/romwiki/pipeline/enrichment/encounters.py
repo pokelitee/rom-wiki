@@ -3,6 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.enrichment.common import (
+    national_dex_id_for_member,
+    pokemon_display_name,
+)
 from romwiki.pipeline.enrichment.names import resolve_item_names, resolve_pokemon_names
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
 from romwiki.pipeline.semantics.encounter_identity import (
@@ -56,6 +60,7 @@ def enrich_encounter_dataset(
                 pokedb,
                 sprite_version,
                 pokemon_names,
+                engine=engine,
             )
             records.append(
                 {
@@ -81,6 +86,7 @@ def enrich_encounter_dataset(
                                     pokedb,
                                     sprite_version,
                                     pokemon_names,
+                                    engine=engine,
                                 ),
                             }
                             for slot in slots
@@ -107,6 +113,7 @@ def enrich_encounter_dataset(
                                             pokedb,
                                             sprite_version,
                                             pokemon_names,
+                                            engine=engine,
                                         ),
                                     }
                                     for slot in slots
@@ -124,6 +131,7 @@ def enrich_encounter_dataset(
                                                 pokedb,
                                                 sprite_version,
                                                 pokemon_names,
+                                                engine=engine,
                                             ),
                                         }
                                         for time_name, slot in encounter[
@@ -172,7 +180,11 @@ def enrich_conditional_encounter_area(
                 **slot,
                 "chance": engine.WALKING_SLOT_CHANCES[index],
                 "pokemon": _encounter_pokemon(
-                    slot["species_id"], pokedb, sprite_version, pokemon_names
+                    slot["species_id"],
+                    pokedb,
+                    sprite_version,
+                    pokemon_names,
+                    engine=engine,
                 ),
             }
             for index, slot in enumerate(source["walking_slots"])
@@ -186,7 +198,11 @@ def enrich_conditional_encounter_area(
                     **slot,
                     "chance": chances[index],
                     "pokemon": _encounter_pokemon(
-                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                        slot["species_id"],
+                        pokedb,
+                        sprite_version,
+                        pokemon_names,
+                        engine=engine,
                     ),
                 }
                 for index, slot in enumerate(method["slots"])
@@ -208,6 +224,7 @@ def enrich_conditional_encounter_area(
             pokedb,
             sprite_version,
             pokemon_names,
+            engine=engine,
         ),
         "day": _encounter_special_slots(
             source["day_species_ids"],
@@ -217,6 +234,7 @@ def enrich_conditional_encounter_area(
             pokedb,
             sprite_version,
             pokemon_names,
+            engine=engine,
         ),
         "night": _encounter_special_slots(
             source["night_species_ids"],
@@ -226,9 +244,14 @@ def enrich_conditional_encounter_area(
             pokedb,
             sprite_version,
             pokemon_names,
+            engine=engine,
         ),
         "radar": _encounter_pokemon_list(
-            source["radar_species_ids"], pokedb, sprite_version, pokemon_names
+            source["radar_species_ids"],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+            engine=engine,
         ),
         "unown_forms": _resolve_unown_forms(engine, source["unown_table_id"]),
         "dual_slot": {
@@ -240,6 +263,7 @@ def enrich_conditional_encounter_area(
                 pokedb,
                 sprite_version,
                 pokemon_names,
+                engine=engine,
             )
             for game, species_ids in source["dual_slot_species_ids"].items()
         },
@@ -290,7 +314,11 @@ def _enrich_hgss_encounter_area(
                     **slot,
                     "chance": engine.WALKING_SLOT_CHANCES[index],
                     "pokemon": _encounter_pokemon(
-                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                        slot["species_id"],
+                        pokedb,
+                        sprite_version,
+                        pokemon_names,
+                        engine=engine,
                     ),
                 }
                 for index, slot in enumerate(slots)
@@ -306,7 +334,11 @@ def _enrich_hgss_encounter_area(
                     **slot,
                     "chance": chances[index],
                     "pokemon": _encounter_pokemon(
-                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                        slot["species_id"],
+                        pokedb,
+                        sprite_version,
+                        pokemon_names,
+                        engine=engine,
                     ),
                 }
                 for index, slot in enumerate(source[name]["slots"])
@@ -323,28 +355,46 @@ def _enrich_hgss_encounter_area(
     special = {
         "format": "hgss",
         "land_swarm": _encounter_pokemon(
-            source["swarm_species_ids"][0], pokedb, sprite_version, pokemon_names
+            source["swarm_species_ids"][0],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+            engine=engine,
         ),
         "surf_swarm": _encounter_pokemon(
-            source["swarm_species_ids"][1], pokedb, sprite_version, pokemon_names
+            source["swarm_species_ids"][1],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+            engine=engine,
         ),
         "hoenn_radio": _encounter_pokemon_list(
-            source["radio_species_ids"][:2], pokedb, sprite_version, pokemon_names
+            source["radio_species_ids"][:2],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+            engine=engine,
         ),
         "sinnoh_radio": _encounter_pokemon_list(
-            source["radio_species_ids"][2:], pokedb, sprite_version, pokemon_names
+            source["radio_species_ids"][2:],
+            pokedb,
+            sprite_version,
+            pokemon_names,
+            engine=engine,
         ),
         "night_fishing": _encounter_pokemon(
             source["night_fishing_species_id"],
             pokedb,
             sprite_version,
             pokemon_names,
+            engine=engine,
         ),
         "fishing_swarm": _encounter_pokemon(
             source["fishing_swarm_species_id"],
             pokedb,
             sprite_version,
             pokemon_names,
+            engine=engine,
         ),
     }
     locations = source.get("locations", [])
@@ -451,7 +501,11 @@ def enrich_method_table_encounter_area(
                     **slot,
                     "chance": chances[index],
                     "pokemon": _encounter_pokemon(
-                        slot["species_id"], pokedb, sprite_version, pokemon_names
+                        slot["species_id"],
+                        pokedb,
+                        sprite_version,
+                        pokemon_names,
+                        engine=engine,
                     ),
                 }
                 for index, slot in enumerate(method["slots"])
@@ -514,22 +568,18 @@ def _enrich_hidden_grotto(
     }
 
 
-def pokemon_display_name(
-    species_id: int, slug: str, pokemon_names: list[str] | None
-) -> str:
-    if pokemon_names is not None and 0 < species_id < len(pokemon_names):
-        return pokemon_names[species_id]
-    return title_case_slug(slug)
-
-
 def _encounter_pokemon_list(
     species_ids: list[int],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
+    *,
+    engine: Any | None = None,
 ) -> list[dict[str, Any] | None]:
     return [
-        _encounter_pokemon(species_id, pokedb, sprite_version, pokemon_names)
+        _encounter_pokemon(
+            species_id, pokedb, sprite_version, pokemon_names, engine=engine
+        )
         for species_id in species_ids
     ]
 
@@ -555,10 +605,20 @@ def _encounter_pokemon(
         if form_id
         else None
     )
+    # `id` stays the raw, engine-native species identifier (not the
+    # translated National Dex number) -- it's what `ReferenceIndex` keys
+    # site-internal Pokémon pages/type lookups by (see
+    # `references.py`'s `identity_fields["pokemon"] = "member"`), so
+    # translating it here would silently point type badges/links at
+    # whichever *other* species happens to share that National Dex number
+    # as its own raw member index. Only the PokeDB lookup (a real,
+    # universal Pokédex, not this site's own ROM-keyed pages) and the
+    # display name need the translated ID.
+    national_dex_id = national_dex_id_for_member(engine, species_id)
     reference = (
         pokedb.pokemon_for_name(form_slug)
         if form_slug is not None
-        else pokedb.pokemon_for_id(species_id)
+        else pokedb.pokemon_for_id(national_dex_id)
     )
     name = (
         title_case_slug(reference["name"])
@@ -583,12 +643,14 @@ def _encounter_special_slots(
     pokedb: PokeDBGeneration,
     sprite_version: str | None,
     pokemon_names: list[str] | None,
+    *,
+    engine: Any | None = None,
 ) -> list[dict[str, Any]]:
     """Apply special species replacements without changing slot odds or levels."""
     return [
         {
             "pokemon": _encounter_pokemon(
-                species_id, pokedb, sprite_version, pokemon_names
+                species_id, pokedb, sprite_version, pokemon_names, engine=engine
             ),
             "level": walking_slots[slot_index]["level"],
             "chance": chances[slot_index],

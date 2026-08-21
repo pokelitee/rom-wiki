@@ -1,5 +1,23 @@
 from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen3.shared.constants import (
+    ENCOUNTER_FISHING_SLOT_CHANCES,
+    ENCOUNTER_FISHING_SLOT_COUNT,
+    ENCOUNTER_HEADER_SIZE,
+    ENCOUNTER_LAND_SLOT_CHANCES,
+    ENCOUNTER_LAND_SLOT_COUNT,
+    ENCOUNTER_METHOD_NAMES,
+    ENCOUNTER_ROCK_SMASH_SLOT_CHANCES,
+    ENCOUNTER_ROCK_SMASH_SLOT_COUNT,
+    ENCOUNTER_WATER_SLOT_CHANCES,
+    ENCOUNTER_WATER_SLOT_COUNT,
+)
 from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
+from romwiki.engines.gen3.shared.encounters import (
+    parse_encounter_record,
+    parse_header,
+    parse_method_info,
+    parse_method_slots,
+)
 from romwiki.engines.gen3.shared.evolutions import parse_evolution_record
 from romwiki.engines.gen3.shared.items import (
     item_description_pointer,
@@ -33,17 +51,7 @@ from .constants import (
     COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
     EGG_GROUP_NAMES,
-    ENCOUNTER_FISHING_SLOT_CHANCES,
-    ENCOUNTER_FISHING_SLOT_COUNT,
     ENCOUNTER_HEADER_COUNT,
-    ENCOUNTER_HEADER_SIZE,
-    ENCOUNTER_LAND_SLOT_CHANCES,
-    ENCOUNTER_LAND_SLOT_COUNT,
-    ENCOUNTER_METHOD_NAMES,
-    ENCOUNTER_ROCK_SMASH_SLOT_CHANCES,
-    ENCOUNTER_ROCK_SMASH_SLOT_COUNT,
-    ENCOUNTER_WATER_SLOT_CHANCES,
-    ENCOUNTER_WATER_SLOT_COUNT,
     EVOLUTION_METHOD_NAMES,
     EVOLUTION_PARAMETER_KINDS,
     EVOLUTION_RECORD_SIZE,
@@ -78,12 +86,6 @@ from .constants import (
     TUTOR_MOVE_COUNT,
     TYPE_NAME_COUNT,
     TYPE_NAMES,
-)
-from .encounters import (
-    parse_encounter_record,
-    parse_header,
-    parse_method_info,
-    parse_method_slots,
 )
 from .locations import (
     parse_gmapgroups_pointers,

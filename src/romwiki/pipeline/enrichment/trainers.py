@@ -5,8 +5,10 @@ from functools import cache
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.pipeline.enrichment.common import national_dex_id_for_member
-from romwiki.pipeline.enrichment.encounters import pokemon_display_name
+from romwiki.pipeline.enrichment.common import (
+    national_dex_id_for_member,
+    pokemon_display_name,
+)
 from romwiki.pipeline.enrichment.names import (
     resolve_item_names,
     resolve_move_names,

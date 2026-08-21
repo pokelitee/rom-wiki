@@ -71,7 +71,11 @@ class EncounterRenderingTests(unittest.TestCase):
                 },
                 "pools": {"common": [], "rare": [], "secret": []},
                 "tree_groups": [],
-                "provenance": {"source": "rom", "archive": "a/2/5/2", "member": area_id},
+                "provenance": {
+                    "source": "rom",
+                    "archive": "a/2/5/2",
+                    "member": area_id,
+                },
             }
 
         dataset = {

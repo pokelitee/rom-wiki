@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.pipeline.enrichment.encounters import pokemon_display_name
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug
@@ -28,6 +27,14 @@ def national_dex_id_for_member(engine: Any, member: int) -> int:
     numbering schemes are genuinely different starting at species 252.
     """
     return getattr(engine, "INTERNAL_TO_NATIONAL_DEX", {}).get(member, member)
+
+
+def pokemon_display_name(
+    species_id: int, slug: str, pokemon_names: list[str] | None
+) -> str:
+    if pokemon_names is not None and 0 < species_id < len(pokemon_names):
+        return pokemon_names[species_id]
+    return title_case_slug(slug)
 
 
 def validate_egg_moves(

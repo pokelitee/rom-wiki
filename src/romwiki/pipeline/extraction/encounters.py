@@ -307,17 +307,24 @@ def _extract_gen3_encounter_locations(
     `locations` domain's own extraction output -- the same "each domain
     independently re-decodes the shared table" pattern already used by the
     NDS engines' `battle_mode.py`/`encounters.py` location backfills.
+
+    Optional: a profile whose engine doesn't implement the `locations`
+    domain yet (e.g. Emerald) simply gets every record's `locations=()`,
+    the same "optional enrichment input" precedent as
+    `_extract_seasonal_wild_map_names` above.
     """
-    try:
-        segments = profile.parameters["map_header_segments"]
-        region_name_offset = profile.parameters["region_name_offset"]
-        region_name_count = profile.parameters["region_name_count"]
-        gmapgroups_offset = profile.parameters["gmapgroups_offset"]
-    except KeyError as error:
-        raise ProfileError(
-            f"Profile {profile.id} does not define map_header_segments/"
-            "region_name_offset/region_name_count/gmapgroups_offset"
-        ) from error
+    location_params = (
+        "map_header_segments",
+        "region_name_offset",
+        "region_name_count",
+        "gmapgroups_offset",
+    )
+    if not all(name in profile.parameters for name in location_params):
+        return {}
+    segments = profile.parameters["map_header_segments"]
+    region_name_offset = profile.parameters["region_name_offset"]
+    region_name_count = profile.parameters["region_name_count"]
+    gmapgroups_offset = profile.parameters["gmapgroups_offset"]
 
     region_name_data = platform.read_bytes(
         result.image, region_name_offset, region_name_count * 32

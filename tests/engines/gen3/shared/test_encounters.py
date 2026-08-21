@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.encounters import (
+from romwiki.engines.gen3.shared.encounters import (
     parse_encounter_record,
     parse_header,
     parse_method_info,

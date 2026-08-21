@@ -141,28 +141,11 @@ TUTOR_LOCATIONS = {
 }
 
 # One entry per map (mapGroup/mapNum, not a species-style index), so no
-# dummy record. Terminated by a {0xFF, 0xFF, ...} sentinel. Not yet
-# verified against Emerald's own encounter tables -- FireRed/LeafGreen-
-# specific until that's checked.
-ENCOUNTER_HEADER_SIZE = 20
+# dummy record. Terminated by a {0xFF, 0xFF, ...} sentinel. Struct shape
+# and slot counts are shared (see `gen3/shared/constants.py`'s
+# `ENCOUNTER_HEADER_SIZE`); only this count differs per game (Emerald has
+# 124).
 ENCOUNTER_HEADER_COUNT = 132
-
-# Rock Smash shares water's slot count per the public decompilation's
-# `WILD_TABLE_ROWS`.
-ENCOUNTER_LAND_SLOT_COUNT = 12
-ENCOUNTER_WATER_SLOT_COUNT = 5
-ENCOUNTER_ROCK_SMASH_SLOT_COUNT = 5
-ENCOUNTER_FISHING_SLOT_COUNT = 10
-
-ENCOUNTER_METHOD_NAMES = ("land", "water", "rock_smash", "fishing")
-
-# Fixed game-design percentages (not ROM-derived), unchanged since
-# Generation III. Fishing concatenates all three rods into one 10-slot
-# table (unlike Gen IV+, which splits each rod into its own method).
-ENCOUNTER_LAND_SLOT_CHANCES = (20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1)
-ENCOUNTER_WATER_SLOT_CHANCES = (60, 30, 5, 4, 1)
-ENCOUNTER_ROCK_SMASH_SLOT_CHANCES = (60, 30, 5, 4, 1)
-ENCOUNTER_FISHING_SLOT_CHANCES = (70, 30, 60, 20, 20, 40, 40, 15, 4, 1)
 
 # Town Map region-name table: variable-length, back-to-back,
 # 0xFF-terminated (see `shared/text.py`'s `decode_gen3_text_sequence`), not

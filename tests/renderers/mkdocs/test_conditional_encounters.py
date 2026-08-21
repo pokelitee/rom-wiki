@@ -102,8 +102,9 @@ class HeadbuttRenderingTests(unittest.TestCase):
         page = "\n".join(lines)
 
         self.assertLess(page.index("## Map headers"), page.index("#### Common trees"))
-        self.assertGreater(page.index("## Map headers"), page.index("Headbutt encounters"))
-
+        self.assertGreater(
+            page.index("## Map headers"), page.index("Headbutt encounters")
+        )
 
     def test_duplicate_species_in_a_pool_are_merged_into_one_row(self) -> None:
         record = {
