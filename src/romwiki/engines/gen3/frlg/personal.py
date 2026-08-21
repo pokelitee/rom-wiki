@@ -10,7 +10,8 @@ from romwiki.schema import (
 )
 from romwiki.util.errors import InvalidRomError
 
-from .constants import PERSONAL_RECORD_SIZE
+from .constants import MACHINE_COUNT, PERSONAL_RECORD_SIZE
+from .machines import parse_tmhm_learnset
 
 # Field offsets below are Generation III's `struct BaseStats` (pret/
 # pokefirered `include/constants/pokemon.h` + `src/data/pokemon/base_stats.h`),
@@ -32,9 +33,12 @@ from .constants import PERSONAL_RECORD_SIZE
 #   0x19       bit 0-6 body color, bit 7 no-flip flag
 #   0x1A-0x1B  padding
 # Unlike Generation IV/V, this struct has no inline TM/HM compatibility
-# bitmap -- that's a separate `gTMHMLearnsets` table -- and only two
-# wild-held-item slots (no Dark Grass slot, introduced in Generation V) and
-# two ability slots (no hidden-ability slot, introduced in Generation V).
+# bitmap -- that's a separate, species-indexed `sTMHMLearnsets` table (see
+# `machines.py`'s module comment), passed in here as `tmhm_learnset` since
+# the extraction layer owns reading it (same reasoning as
+# `resolve_gba_pointer`'s pointer resolution) -- and only two wild-held-item
+# slots (no Dark Grass slot, introduced in Generation V) and two ability
+# slots (no hidden-ability slot, introduced in Generation V).
 #
 # The raw item1/item2 values are read but not yet surfaced through
 # `wild_held_items` (see below): `pipeline/enrichment/references.py`'s
@@ -56,12 +60,23 @@ def parse_personal_record(
     *,
     species_id: int,
     archive_path: str,
+    tmhm_learnset: bytes = b"",
 ) -> PokemonPersonalData:
     if len(data) != PERSONAL_RECORD_SIZE:
         raise InvalidRomError(
             f"Gen III personal record {species_id} has size {len(data)}, "
             f"expected {PERSONAL_RECORD_SIZE}"
         )
+
+    if tmhm_learnset:
+        bits, machine_masks = parse_tmhm_learnset(tmhm_learnset)
+        machine_ids = tuple(
+            machine_id
+            for machine_id in range(1, MACHINE_COUNT + 1)
+            if bits & (1 << (machine_id - 1))
+        )
+    else:
+        machine_ids, machine_masks = (), (0, 0, 0, 0)
 
     ev_mask = struct.unpack_from("<H", data, 0x0A)[0]
     return PokemonPersonalData(
@@ -88,8 +103,8 @@ def parse_personal_record(
         safari_flee_rate=data[0x18],
         body_color_id=data[0x19] & 0x3F,
         flip_sprite=bool(data[0x19] & 0x40),
-        machine_ids=(),
-        machine_masks=(0, 0, 0, 0),
+        machine_ids=machine_ids,
+        machine_masks=machine_masks,
         provenance=RecordProvenance(
             source="rom",
             archive=archive_path,

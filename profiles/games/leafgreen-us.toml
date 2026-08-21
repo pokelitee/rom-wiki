@@ -19,6 +19,16 @@ chart = "gen3"
 personal_offset = 0x254760
 personal_count = 412
 
+evolution_offset = 0x259734
+
+tmhm_learnset_offset = 0x252ba4
+machine_move_offset = 0x459fc4
+
+egg_move_offset = 0x25eeec
+
+tutor_move_offset = 0x459580
+tutor_compatibility_offset = 0x45959e
+
 move_offset = 0x250be0
 move_name_offset = 0x247070
 
@@ -27,6 +37,7 @@ item_offset = 0x3dae64
 trainer_offset = 0x23eaa4
 
 ability_name_offset = 0x24fc1c
+ability_description_offset = 0x24fae4
 
 encounter_offset = 0x3c9af4
 

@@ -20,9 +20,44 @@ def extract_egg_move_dataset(result: InspectionResult) -> dict[str, Any]:
         return _extract_from_archive(
             result, table_archive=egg_move_format == "archive-table"
         )
+    if egg_move_format == "flat-offset-table":
+        return _extract_from_flat_offset(result)
     raise ProfileError(
         f"Engine {result.match.profile.engine!r} does not support egg move extraction"
     )
+
+
+def _extract_from_flat_offset(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        offset = profile.parameters["egg_move_offset"]
+        table_size = profile.parameters["egg_move_table_size"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define egg_move_offset/egg_move_table_size"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    if platform.read_bytes is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
+    engine = get_engine(profile.engine).egg_moves
+    data = platform.read_bytes(result.image, offset, table_size)
+    records = engine.parse_egg_move_table(data)
+    envelope = dataset_envelope(
+        schema_version=POKEMON_EGG_MOVES_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="egg_moves",
+        source={
+            "rom_sha256": result.image.hashes.sha256,
+            "offset": offset,
+            "table_size": table_size,
+        },
+        records=[record.to_dict() for record in records],
+    )
+    envelope["move_reference_count"] = sum(len(record.move_ids) for record in records)
+    return envelope
 
 
 def _extract_from_overlay_table(result: InspectionResult) -> dict[str, Any]:

@@ -47,6 +47,24 @@ class Gen3PersonalDataTests(unittest.TestCase):
         self.assertEqual(record.provenance.archive, "offset:0x0")
         self.assertEqual(record.provenance.source, "rom")
 
+    def test_decodes_machine_compatibility_when_a_learnset_is_given(self) -> None:
+        # Real Bulbasaur/Ivysaur mask (see machines.py's test coverage):
+        # TM06/09/10/11/17/19/21/22/27/32/36/42/43/44/45, HM01/04/05/06.
+        learnset = struct.pack("<II", 0x84350720, 0x00E41E08)
+
+        record = parse_personal_record(
+            bytes(28),
+            species_id=1,
+            archive_path="offset:0x0",
+            tmhm_learnset=learnset,
+        )
+
+        self.assertEqual(
+            record.machine_ids,
+            (6, 9, 10, 11, 17, 19, 21, 22, 27, 32, 36, 42, 43, 44, 45, 51, 54, 55, 56),
+        )
+        self.assertEqual(record.machine_masks, (0x84350720, 0x00E41E08, 0, 0))
+
     def test_rejects_an_unexpected_record_size(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_personal_record(b"short", species_id=1, archive_path="offset:0x0")

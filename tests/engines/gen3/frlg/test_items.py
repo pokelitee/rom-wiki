@@ -3,7 +3,11 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.items import item_name, parse_item_record
+from romwiki.engines.gen3.frlg.items import (
+    item_description_pointer,
+    item_name,
+    parse_item_record,
+)
 from romwiki.util.errors import InvalidRomError
 
 
@@ -46,6 +50,15 @@ class Gen3ItemDataTests(unittest.TestCase):
         self.assertEqual(record.provenance.member, 1)
         self.assertEqual(record.provenance.archive, "offset:0x0")
         self.assertEqual(record.provenance.source, "rom")
+
+    def test_reads_the_description_pointer(self) -> None:
+        data = bytearray(_master_ball_record())
+        struct.pack_into("<I", data, 0x14, 0x0824F3C4)
+
+        self.assertEqual(item_description_pointer(bytes(data)), 0x0824F3C4)
+
+    def test_description_pointer_is_zero_when_unset(self) -> None:
+        self.assertEqual(item_description_pointer(_master_ball_record()), 0)
 
     def test_rejects_an_unexpected_record_size(self) -> None:
         with self.assertRaises(InvalidRomError):

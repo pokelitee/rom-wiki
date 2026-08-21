@@ -36,10 +36,14 @@ LocationExtractionFormat = Literal[
 ]
 PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode", "pointer-party"]
-TutorFormat = Literal["none", "overlay-table", "overlay-archive", "personal-archive"]
+TutorFormat = Literal[
+    "none", "overlay-table", "overlay-archive", "personal-archive", "flat-offset-table"
+]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
-EggMoveFormat = Literal["none", "overlay-table", "archive-table", "species-archive"]
+EggMoveFormat = Literal[
+    "none", "overlay-table", "archive-table", "species-archive", "flat-offset-table"
+]
 ItemArchiveFormat = Literal["archive-index", "arm9-map"]
 MachineFormat = Literal["none", "profile-offset", "binary-prefix"]
 
@@ -167,12 +171,12 @@ _ENGINES: dict[str, EngineAdapter] = {
             location_extraction="flat-header-segments",
             pickup="none",
             trainers="pointer-party",
-            tutors="none",
+            tutors="flat-offset-table",
             fossils="none",
             static_encounters="none",
-            egg_moves="none",
+            egg_moves="flat-offset-table",
             item_archive="archive-index",
-            machines="none",
+            machines="profile-offset",
         ),
         generation=3,
         dataset_kinds=frozenset(
@@ -487,9 +491,11 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
         ),
         ("tutors", "overlay-table"): ("parse_tutor_move_table",),
         ("tutors", "personal-archive"): ("parse_tutor_move_table",),
+        ("tutors", "flat-offset-table"): ("parse_tutor_move_table",),
         ("egg_moves", "overlay-table"): ("parse_egg_move_table",),
         ("egg_moves", "archive-table"): ("parse_egg_move_table",),
         ("egg_moves", "species-archive"): ("parse_egg_move_set",),
+        ("egg_moves", "flat-offset-table"): ("parse_egg_move_table",),
         ("item_archive", "arm9-map"): ("find_item_archive_members",),
         ("machines", "profile-offset"): ("parse_machine_move_table",),
         ("machines", "binary-prefix"): (

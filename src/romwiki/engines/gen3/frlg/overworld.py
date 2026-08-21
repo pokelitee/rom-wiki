@@ -6,48 +6,20 @@ from romwiki.util.errors import InvalidRomError
 
 # Generation III's overworld-object/script system (`struct MapEvents`,
 # `struct ObjectEventTemplate`, public pokefirered decompilation
-# `include/global.fieldmap.h`), verified against the real FireRed and
-# LeafGreen ROMs: decoding all 124 already-known Sevii Islands/postgame map
-# headers' `events` pointers found 75 real trainer object events whose
-# script bytes start with the `trainerbattle` opcode (0x5c) and decode to
-# trainer IDs entirely within the valid 0-742 range (`TRAINER_RECORD_COUNT`)
-# -- e.g. trainer IDs 89/90/105-107/116-119 clustered on one map, matching a
-# real gym-style room layout, and a double-battle pair (two objects sharing
-# the same trainer ID 484, `battle_type=4` = `TRAINER_BATTLE_DOUBLE`).
-#
-# `MapEvents` (20 bytes):
-#   0x00  objectEventCount (u8)
-#   0x01  warpCount (u8)
-#   0x02  coordEventCount (u8)
-#   0x03  bgEventCount (u8)
-#   0x04  objectEvents pointer (u32 GBA ROM address)
-#   0x08  warps pointer (not decoded this pass)
-#   0x0C  coordEvents pointer (not decoded this pass)
-#   0x10  bgEvents pointer (not decoded this pass)
-MAP_EVENTS_SIZE = 20
+# `include/global.fieldmap.h`). Verified against the real ROMs: decoding
+# every already-known Sevii Islands/postgame map's `events` pointer found
+# 75 real trainer object events whose scripts start with the
+# `trainerbattle` opcode and decode to valid trainer IDs (0-742), including
+# a real double-battle pair sharing one trainer ID.
+MAP_EVENTS_SIZE = 20  # objectEventCount(u8) + ... + objectEvents ptr @0x04
 
-# `ObjectEventTemplate` (24 bytes, one per overworld object on a map):
-#   0x00  localId (u8)
-#   0x01  graphicsId (u8, not decoded)
-#   0x02  kind (u8) -- 0 = "normal" (the union fields below apply); any
-#         other value is a "clone" object (a duplicate NPC mirroring
-#         another map's object) with a different union layout, not decoded
-#         here since it can't itself be a trainer battle trigger
-#   0x03  padding
-#   0x04  x (s16), 0x06 y (s16)
-#   0x08  elevation (u8), 0x09 movementType (u8, not decoded)
-#   0x0A  movementRangeX:4 / movementRangeY:4 (u16 bitfield, not decoded)
-#   0x0C  trainerType (u16) -- 0 = not a trainer
-#   0x0E  trainerRange_berryTreeId (u16, not decoded)
-#   0x10  script pointer (u32 GBA ROM address)
-#   0x14  flagId (u16, not decoded)
+# 0x02 kind: 0 = "normal" object (fields below apply); nonzero = "clone"
+# (a different union layout, can't be a trainer). trainerType @0x0C, script
+# pointer @0x10.
 OBJECT_EVENT_TEMPLATE_SIZE = 24
 
-# The `trainerbattle` script command (`asm/macros/event.inc` in the public
-# decompilation): opcode 0x5c, then a 1-byte battle type, then a 2-byte
-# trainer ID (LE u16) -- the only two fields this module needs; the
-# variable-length text/event-script pointers that follow (depending on
-# battle type) aren't decoded.
+# `trainerbattle` script command: opcode 0x5c, 1-byte battle type, then a
+# 2-byte trainer ID -- the only fields this module needs.
 _TRAINERBATTLE_OPCODE = 0x5C
 
 

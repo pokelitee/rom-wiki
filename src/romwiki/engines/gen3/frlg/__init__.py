@@ -15,12 +15,20 @@ from .constants import (
     ENCOUNTER_ROCK_SMASH_SLOT_COUNT,
     ENCOUNTER_WATER_SLOT_CHANCES,
     ENCOUNTER_WATER_SLOT_COUNT,
+    EVOLUTION_METHOD_NAMES,
+    EVOLUTION_PARAMETER_KINDS,
+    EVOLUTION_RECORD_SIZE,
+    EVOLUTION_SLOT_COUNT,
+    EVOLUTION_SLOT_SIZE,
+    FIRST_MACHINE_ITEM_ID,
     GMAPGROUPS_GROUP_COUNT,
     GROWTH_RATE_NAMES,
     ITEM_NAME_COUNT,
     ITEM_POCKET_NAMES,
     ITEM_RECORD_COUNT,
     ITEM_RECORD_SIZE,
+    MACHINE_COUNT,
+    MACHINE_LEARNSET_SIZE,
     MAP_HEADER_REGION_COUNT,
     MAP_HEADER_SIZE,
     MAX_MOVE_ID,
@@ -33,24 +41,29 @@ from .constants import (
     PERSONAL_RECORD_SIZE,
     POKEMON_DESCRIPTION_COUNT,
     POKEMON_NAME_COUNT,
+    TM_COUNT,
     TRAINER_RECORD_COUNT,
     TRAINER_RECORD_SIZE,
+    TUTOR_MOVE_COUNT,
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
+from .egg_moves import parse_egg_move_table
 from .encounters import (
     parse_encounter_record,
     parse_header,
     parse_method_info,
     parse_method_slots,
 )
-from .items import item_name, parse_item_record
+from .evolutions import parse_evolution_record
+from .items import item_description_pointer, item_name, parse_item_record
 from .locations import (
     parse_gmapgroups_pointers,
     parse_map_group_index,
     parse_map_header,
     parse_map_header_table,
 )
+from .machines import machine_name, parse_machine_move_table, parse_tmhm_learnset
 from .moves import parse_move_record
 from .overworld import (
     decode_trainerbattle_id,
@@ -65,15 +78,21 @@ from .trainer_party import (
     normalize_trainer_party_member,
 )
 from .trainers import parse_trainer_record, party_record_size
+from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 
 # `pipeline/enrichment/pokemon.py` reads these off the flat engine namespace
 # without the `PERSONAL_` prefix, matching `engines/gen5/bw/__init__.py`'s
 # own INTERNAL_MEMBERS/FORM_MEMBERS aliasing convention.
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
+# `pipeline/enrichment/common.py`'s `validate_egg_moves` reads this bound
+# off the flat engine namespace too (matching Gen IV/V's own
+# `BASE_SPECIES_COUNT` alias).
+BASE_SPECIES_COUNT = PERSONAL_RECORD_COUNT
 
 __all__ = [
     "ABILITY_NAME_COUNT",
+    "BASE_SPECIES_COUNT",
     "COLOR_NAMES",
     "DAMAGE_CLASS_NAMES",
     "EGG_GROUP_NAMES",
@@ -88,6 +107,12 @@ __all__ = [
     "ENCOUNTER_ROCK_SMASH_SLOT_COUNT",
     "ENCOUNTER_WATER_SLOT_CHANCES",
     "ENCOUNTER_WATER_SLOT_COUNT",
+    "EVOLUTION_METHOD_NAMES",
+    "EVOLUTION_PARAMETER_KINDS",
+    "EVOLUTION_RECORD_SIZE",
+    "EVOLUTION_SLOT_COUNT",
+    "EVOLUTION_SLOT_SIZE",
+    "FIRST_MACHINE_ITEM_ID",
     "FORM_MEMBERS",
     "GMAPGROUPS_GROUP_COUNT",
     "GROWTH_RATE_NAMES",
@@ -96,6 +121,8 @@ __all__ = [
     "ITEM_POCKET_NAMES",
     "ITEM_RECORD_COUNT",
     "ITEM_RECORD_SIZE",
+    "MACHINE_COUNT",
+    "MACHINE_LEARNSET_SIZE",
     "MAP_HEADER_REGION_COUNT",
     "MAP_HEADER_SIZE",
     "MAX_MOVE_ID",
@@ -108,8 +135,10 @@ __all__ = [
     "PERSONAL_RECORD_SIZE",
     "POKEMON_DESCRIPTION_COUNT",
     "POKEMON_NAME_COUNT",
+    "TM_COUNT",
     "TRAINER_RECORD_COUNT",
     "TRAINER_RECORD_SIZE",
+    "TUTOR_MOVE_COUNT",
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "decode_gen3_text",
@@ -118,12 +147,17 @@ __all__ = [
     "decode_trainerbattle_id",
     "derive_trainer_party_attributes",
     "gba_pointer_for_offset",
+    "item_description_pointer",
     "item_name",
+    "machine_name",
     "normalize_trainer_party_member",
+    "parse_egg_move_table",
     "parse_encounter_record",
+    "parse_evolution_record",
     "parse_gmapgroups_pointers",
     "parse_header",
     "parse_item_record",
+    "parse_machine_move_table",
     "parse_map_events",
     "parse_map_group_index",
     "parse_map_header",
@@ -133,7 +167,10 @@ __all__ = [
     "parse_move_record",
     "parse_object_event_template",
     "parse_personal_record",
+    "parse_tmhm_learnset",
     "parse_trainer_record",
+    "parse_tutor_compatibility",
+    "parse_tutor_move_table",
     "party_record_size",
     "resolve_gba_pointer",
     "resolve_trainer_variants",

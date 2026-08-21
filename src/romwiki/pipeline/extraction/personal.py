@@ -31,7 +31,9 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
         records, source, reference_names = _extract_personal_records_flat(
             profile, platform, engine, result
         )
-        reference_descriptions = {}
+        reference_descriptions = _extract_ability_descriptions_flat(
+            profile, platform, engine, result
+        )
     else:
         raise ProfileError(
             f"Platform {profile.platform!r} supports neither archive nor flat reads"
@@ -110,11 +112,35 @@ def _extract_personal_records_flat(
     # to size the read); decoding is bounded to the engine's declared record
     # count, same reasoning as the archive path above.
     decoded_count = min(count, engine.PERSONAL_RECORD_COUNT)
+
+    # Optional: a species-indexed TM/HM compatibility bitmap, separate from
+    # the personal struct itself (unlike Generation IV/V, which embed it
+    # inline) -- see `engines/gen3/frlg/machines.py`'s module comment. A
+    # profile that doesn't declare this (or an engine with no such concept)
+    # simply gets every record's `machine_ids`/`machine_masks` left at
+    # `parse_personal_record`'s own empty default.
+    tmhm_learnset_offset = profile.parameters.get("tmhm_learnset_offset")
+    tmhm_learnset_kwargs: dict[int, dict[str, Any]] = {}
+    if isinstance(tmhm_learnset_offset, int):
+        learnset_size = engine.MACHINE_LEARNSET_SIZE
+        learnset_data = platform.read_bytes(
+            result.image, tmhm_learnset_offset, learnset_size * count
+        )
+        tmhm_learnset_kwargs = {
+            index: {
+                "tmhm_learnset": learnset_data[
+                    index * learnset_size : (index + 1) * learnset_size
+                ]
+            }
+            for index in range(decoded_count)
+        }
+
     records = [
         engine.parse_personal_record(
             data[index * record_size : (index + 1) * record_size],
             species_id=index,
             archive_path=archive_path,
+            **tmhm_learnset_kwargs.get(index, {}),
         ).to_dict()
         for index in range(decoded_count)
     ]
@@ -146,4 +172,34 @@ def _extract_ability_names_flat(
         "name_sources": {
             "ability_names": {"archive": f"offset:{name_offset:#x}", "member": 0}
         },
+    }
+
+
+def _extract_ability_descriptions_flat(
+    profile: Any, platform: Any, engine: Any, result: InspectionResult
+) -> dict[str, Any]:
+    # Optional, same reasoning as `_extract_ability_names_flat` above: a
+    # profile that doesn't declare `ability_description_offset` simply
+    # skips ability descriptions rather than failing.
+    description_offset = profile.parameters.get("ability_description_offset")
+    if not isinstance(description_offset, int):
+        return {}
+    count = engine.ABILITY_NAME_COUNT
+    pointer_data = platform.read_bytes(result.image, description_offset, count * 4)
+    descriptions = []
+    for index in range(count):
+        pointer = int.from_bytes(pointer_data[index * 4 : index * 4 + 4], "little")
+        if pointer == 0:
+            descriptions.append("")
+            continue
+        offset = engine.resolve_gba_pointer(pointer)
+        # A generously-sized read (see `items.py`'s identical reasoning for
+        # item descriptions) -- `decode_gen3_text` stops at the real 0xFF
+        # terminator regardless of the exact string length.
+        descriptions.append(
+            engine.decode_gen3_text(platform.read_bytes(result.image, offset, 256))
+        )
+    return {
+        "ability_descriptions": descriptions,
+        "description_sources": {"ability_descriptions": {"offset": description_offset}},
     }

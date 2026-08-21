@@ -103,7 +103,10 @@ class GameBuildContext:
         return self._raw("pokemon/egg-moves", extract_egg_move_dataset)
 
     def evolutions_raw(self) -> dict[str, Any] | None:
-        if "evolutions" not in self.profile.layout:
+        if (
+            "evolutions" not in self.profile.layout
+            and "evolution_offset" not in self.profile.parameters
+        ):
             return None
         return self._raw("pokemon/evolutions", extract_evolution_dataset)
 

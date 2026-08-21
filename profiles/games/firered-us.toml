@@ -16,6 +16,19 @@ chart = "gen3"
 personal_offset = 0x254784
 personal_count = 412
 
+evolution_offset = 0x259754
+
+tmhm_learnset_offset = 0x252bc8
+machine_move_offset = 0x45a5a4
+machine_count = 58
+tm_count = 50
+
+egg_move_offset = 0x25ef0c
+egg_move_table_size = 2278
+
+tutor_move_offset = 0x459b60
+tutor_compatibility_offset = 0x459b7e
+
 move_offset = 0x250c04
 move_count = 355
 
@@ -34,6 +47,7 @@ trainer_count = 743
 ability_name_offset = 0x24fc40
 ability_name_stride = 13
 ability_name_count = 76
+ability_description_offset = 0x24fb08
 
 encounter_offset = 0x3c9cb8
 encounter_count = 132

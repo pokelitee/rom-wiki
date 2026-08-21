@@ -51,6 +51,7 @@ def _extract_item_dataset_flat(
     decoded_count = min(count, engine.ITEM_RECORD_COUNT)
 
     records = []
+    descriptions = []
     for item_id in range(decoded_count):
         record_bytes = data[item_id * record_size : (item_id + 1) * record_size]
         parsed = engine.parse_item_record(
@@ -73,6 +74,9 @@ def _extract_item_dataset_flat(
                 },
             }
         )
+        descriptions.append(
+            _decode_item_description(engine, platform, result, record_bytes)
+        )
 
     envelope = dataset_envelope(
         schema_version=ITEMS_RAW_SCHEMA_VERSION,
@@ -83,7 +87,24 @@ def _extract_item_dataset_flat(
         records=records,
     )
     envelope["public_record_count"] = sum(record["public"] for record in records)
+    envelope["item_descriptions"] = descriptions
     return envelope
+
+
+def _decode_item_description(
+    engine: Any, platform: Any, result: InspectionResult, record_bytes: bytes
+) -> str:
+    # Each item's description lives at its own inline ROM pointer (see
+    # `engines/gen3/frlg/items.py`'s `item_description_pointer`), not a
+    # shared table -- a generously-sized read (description text is at most
+    # a handful of short lines) lets `decode_gen3_text` find the real
+    # 0xFF terminator regardless of the exact string length.
+    pointer = engine.item_description_pointer(record_bytes)
+    if pointer == 0:
+        return ""
+    offset = engine.resolve_gba_pointer(pointer)
+    data = platform.read_bytes(result.image, offset, 256)
+    return engine.decode_gen3_text(data)
 
 
 def _extract_item_dataset_archive(

@@ -22,8 +22,8 @@ from .text import decode_gen3_text
 #   0x10-0x11  price (u16)
 #   0x12       hold_effect_id
 #   0x13       hold_effect_parameter
-#   0x14-0x17  description pointer (ROM address; not decoded -- no text
-#              extraction for descriptions in this pass)
+#   0x14-0x17  description pointer (ROM address to a Gen III text-encoded,
+#              0xFF-terminated string -- see `item_description_pointer`)
 #   0x18-0x19  unknown/importance (not decoded -- semantics unconfirmed)
 #   0x1A       field_pocket_id (see verification above)
 # Deliberately left undecoded: byte 0x1B (varies across items but doesn't
@@ -43,6 +43,15 @@ from .text import decode_gen3_text
 # adjacent fields above), not a decodable data table like Gen4/5's dedicated
 # party-effects bitfield.
 _NAME_SIZE = 14
+
+
+def item_description_pointer(data: bytes) -> int:
+    """Read one item record's description pointer (a GBA ROM address, or 0
+    for items that display no description). Resolving and decoding the
+    text it points to is the extraction layer's job, since it owns ROM I/O
+    (same reasoning as `trainers.py`'s party pointer).
+    """
+    return struct.unpack_from("<I", data, 0x14)[0]
 
 
 def item_name(data: bytes) -> str:
@@ -90,7 +99,3 @@ def parse_item_record(
         party_effects=None,
         provenance=RecordProvenance(source="rom", archive=archive_path, member=item_id),
     )
-
-
-def _decode_item_name(data: bytes) -> str:
-    return decode_gen3_text(data[:_NAME_SIZE])

@@ -7,47 +7,25 @@ from romwiki.util.errors import InvalidRomError
 
 from .constants import GMAPGROUPS_GROUP_COUNT, MAP_HEADER_REGION_COUNT, MAP_HEADER_SIZE
 
-# Generation III's map-header system (`gMapGroups`/`struct MapHeader` in the
-# public pokefirered decompilation, `include/global.fieldmap.h`), verified
-# against the real FireRed and LeafGreen ROMs.
+# Generation III's map headers aren't one flat table -- `gMapGroups[group]`
+# points to that group's own contiguous array of `MapHeader` structs. A
+# full-ROM scan found three such segments (`map_header_segments` in the
+# profile TOML), all resolving to real Sevii Islands/postgame locations.
+# Kanto's own main-region headers (Pallet Town, Routes 1-25, etc.) haven't
+# been located -- a deliberately bounded first slice, not a claim Kanto has
+# no headers; widen `map_header_segments` once a verified Kanto segment is
+# found.
 #
-# Unlike every other flat table this engine has decoded so far (personal,
-# moves, items, trainers), map headers are NOT one contiguous table --
-# `gMapGroups[group]` is a pointer to that group's own separate, contiguous
-# array of full `MapHeader` structs. A full-ROM scan for this session's
-# verified two games found three such contiguous segments, all resolving to
-# real Sevii Islands/postgame locations (Berry Forest, Icefall Cave, Rocket
-# Warehouse, Trainer Tower, the Tanoby chambers, Celadon Dept. Store, and
-# more) -- see the profile TOML's `map_header_segments` parameter for the
-# exact verified offsets. Kanto's own main-region map headers (Pallet Town
-# through Cinnabar Island, Routes 1-25, and Kanto's dungeons) were not
-# located within this session's verification effort; they use the same
-# struct shape but live in ROM regions this scan didn't successfully
-# isolate from unrelated binary data. This is a deliberately bounded first
-# slice, not a claim that Kanto has no map headers -- widen
-# `map_header_segments` once a real, verified Kanto segment is found.
+# `MapHeader` (28 bytes): four leading pointers (mapLayout/events/
+# mapScripts/connections, not decoded here), music/mapLayoutId (u16 each),
+# regionMapSectionId (u8, index into the region-name table), cave/weather/
+# mapType/flag bytes (not decoded).
 #
-# `MapHeader` (28 bytes, one per map):
-#   0x00  mapLayout pointer (u32 GBA ROM address; not decoded this slice)
-#   0x04  events pointer (u32 GBA ROM address, 0 if absent; not decoded)
-#   0x08  mapScripts pointer (u32 GBA ROM address, 0 if absent; not decoded)
-#   0x0C  connections pointer (u32 GBA ROM address, 0 if absent; not decoded)
-#   0x10  music (u16 LE)
-#   0x12  mapLayoutId (u16 LE)
-#   0x14  regionMapSectionId (u8) -- index into the region-name table
-#   0x15  cave (u8)
-#   0x16  weather (u8)
-#   0x17  mapType (u8)
-#   0x18-0x1B  bikingAllowed/flags/floorNum/battleType (not decoded)
-#
-# The region-name table (`region_name_offset`/`region_name_count` in the
-# profile TOML) is a *separate*, variable-length, back-to-back
-# 0xFF-terminated string table -- decoded via
-# `text.decode_gen3_text_sequence`, not the fixed-stride
-# `decode_gen3_text_table` every other name table in this engine uses.
-# Verified complete at exactly 109 entries for both games (index 0 =
-# "PALLET TOWN" through index 108 = "CELADON DEPT."; the byte immediately
-# after index 108's terminator is unambiguous non-text graphics data).
+# The region-name table is a *separate*, variable-length, back-to-back
+# 0xFF-terminated string table (`text.decode_gen3_text_sequence`, not the
+# fixed-stride table every other name table here uses). Exactly 109
+# entries on both games (index 0 = "PALLET TOWN" ... 108 = "CELADON
+# DEPT.").
 
 
 def parse_map_header(data: bytes, *, header_id: int) -> tuple[int, int, int]:
