@@ -5,7 +5,7 @@ import struct
 from romwiki.schema import EncounterMapLocation, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
-from .constants import MAP_HEADER_REGION_COUNT, MAP_HEADER_SIZE
+from .constants import GMAPGROUPS_GROUP_COUNT, MAP_HEADER_REGION_COUNT, MAP_HEADER_SIZE
 
 # Generation III's map-header system (`gMapGroups`/`struct MapHeader` in the
 # public pokefirered decompilation, `include/global.fieldmap.h`), verified
@@ -116,3 +116,52 @@ def parse_map_header_table(
             )
         )
     return tuple(records)
+
+
+def parse_gmapgroups_pointers(data: bytes) -> tuple[int, ...]:
+    """Decode `gMapGroups` itself: `GMAPGROUPS_GROUP_COUNT` consecutive GBA
+    pointers, each the ROM address of that group's own array of
+    pointers-to-`MapHeader` (see `constants.py`'s `GMAPGROUPS_GROUP_COUNT`
+    comment for how this was verified).
+    """
+    expected_size = GMAPGROUPS_GROUP_COUNT * 4
+    if len(data) != expected_size:
+        raise InvalidRomError(
+            f"Gen III gMapGroups table has size {len(data)}, expected {expected_size}"
+        )
+    return struct.unpack(f"<{GMAPGROUPS_GROUP_COUNT}I", data)
+
+
+def parse_map_group_index(
+    group_pointers: tuple[int, ...],
+    subtable_data: bytes,
+    *,
+    gmapgroups_address: int,
+) -> dict[tuple[int, int], int]:
+    """Decode `gMapGroups`' second indirection level into a mapping from
+    `(map_group, map_num)` to the ROM address of that map's `MapHeader`
+    struct.
+
+    `subtable_data` must be the raw bytes spanning from `group_pointers[0]`
+    (the lowest address, verified ascending for both games) to
+    `gmapgroups_address` -- every group's own pointer array is packed
+    contiguously, in ascending group-index order, across exactly this span
+    (verified against real ROM data: consecutive group-pointer differences,
+    divided by 4, give each group's real map count, cross-checked against
+    every already-known Sevii Islands header's address).
+    """
+    bounds = (*group_pointers, gmapgroups_address)
+    base = group_pointers[0]
+    index: dict[tuple[int, int], int] = {}
+    for group in range(len(group_pointers)):
+        start, end = bounds[group], bounds[group + 1]
+        if end < start or (end - start) % 4:
+            raise InvalidRomError(
+                f"Gen III map group {group} has an invalid boundary "
+                f"(0x{start:x}-0x{end:x})"
+            )
+        for slot in range((end - start) // 4):
+            offset = (start - base) + slot * 4
+            (pointer,) = struct.unpack_from("<I", subtable_data, offset)
+            index[(group, slot)] = pointer
+    return index

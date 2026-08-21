@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from dataclasses import replace
 from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
@@ -11,6 +12,7 @@ from romwiki.engines.trainer_variants import (
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
+from romwiki.schema.trainers import TrainerLocation
 from romwiki.schema.versions import (
     TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
     TRAINERS_RAW_SCHEMA_VERSION,
@@ -51,7 +53,7 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     header_data = platform.read_bytes(result.image, offset, record_size * decoded_count)
     archive_path = f"offset:{offset:#x}"
 
-    records = []
+    parsed_records = []
     for trainer_id in range(decoded_count):
         header = header_data[trainer_id * record_size : (trainer_id + 1) * record_size]
         party_flags = header[_PARTY_FLAGS_OFFSET]
@@ -68,17 +70,25 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
             party_data = platform.read_bytes(
                 result.image, party_offset, party_size_bytes
             )
-        # No overworld/script system decoded for Generation III yet (see
-        # the plan's Context section) -- `parse_trainer_record` leaves
-        # `locations`/`script_references` at their dataclass defaults
-        # (both `()`) rather than guessing where a trainer battle triggers.
         record = engine.parse_trainer_record(
             header,
             party_data,
             trainer_id=trainer_id,
             archive_path=archive_path,
         )
-        records.append(record.to_dict())
+        parsed_records.append(record)
+
+    # Only trainers placed as overworld objects on the already-verified
+    # Sevii Islands/postgame `map_header_segments` span can be linked --
+    # Kanto's own trainers have no corresponding location record yet (same
+    # documented gap as `locations.py`/`encounters.py`'s backfill).
+    locations_by_trainer = _extract_gen3_trainer_locations(platform, result, profile)
+    records = [
+        replace(
+            record, locations=tuple(locations_by_trainer.get(record.trainer_id, ()))
+        ).to_dict()
+        for record in parsed_records
+    ]
 
     variant_contract = resolve_trainer_variants(
         cast(TrainerVariantResolver, engine),
@@ -97,8 +107,10 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     )
     envelope["battle_family_schema_version"] = TRAINER_BATTLE_FAMILY_SCHEMA_VERSION
     envelope.update(variant_contract)
-    envelope["linked_record_count"] = 0
-    envelope["location_reference_count"] = 0
+    envelope["linked_record_count"] = len(locations_by_trainer)
+    envelope["location_reference_count"] = sum(
+        len(locations) for locations in locations_by_trainer.values()
+    )
     envelope["script_reference_count"] = 0
     item_names = _item_names(
         profile, platform, result, engine=get_engine(profile.engine)
@@ -106,6 +118,125 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     if item_names is not None:
         envelope["item_names"] = item_names
     return envelope
+
+
+def _extract_gen3_trainer_locations(
+    platform: Any, result: InspectionResult, profile: Any
+) -> dict[int, tuple[TrainerLocation, ...]]:
+    """Link each Generation III trainer to the map it's placed on as an
+    overworld object, by decoding that map's `MapEvents`/
+    `ObjectEventTemplate` chain and matching each trainer-type object's
+    leading `trainerbattle` script command against a trainer ID (see
+    `engines/gen3/frlg/overworld.py`'s module comment for how this was
+    verified against real ROM data).
+
+    Independently re-decodes `map_header_segments`/`region_name_offset`/
+    `region_name_count` the same way `locations.py`'s own extraction and
+    `encounters.py`'s `_extract_gen3_encounter_locations` do, rather than
+    depending on either domain's own extraction output.
+    """
+    engine = get_engine(profile.engine).trainers
+    try:
+        segments = profile.parameters["map_header_segments"]
+        region_name_offset = profile.parameters["region_name_offset"]
+        region_name_count = profile.parameters["region_name_count"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define map_header_segments/"
+            "region_name_offset/region_name_count"
+        ) from error
+
+    region_name_data = platform.read_bytes(
+        result.image, region_name_offset, region_name_count * 32
+    )
+    region_names = engine.decode_gen3_text_sequence(
+        region_name_data, offset=0, count=region_name_count
+    )
+
+    header_size = engine.MAP_HEADER_SIZE
+    locations: dict[int, list[TrainerLocation]] = {}
+    header_id = 0
+    for segment_offset, segment_count in segments:
+        segment_data = platform.read_bytes(
+            result.image, segment_offset, header_size * segment_count
+        )
+        for slot in range(segment_count):
+            raw = segment_data[slot * header_size : (slot + 1) * header_size]
+            _music, _layout_id, region_id = engine.parse_map_header(
+                raw, header_id=header_id
+            )
+            events_pointer = struct.unpack_from("<I", raw, 0x04)[0]
+            if events_pointer != 0:
+                _link_gen3_trainer_objects(
+                    platform,
+                    result,
+                    engine,
+                    events_pointer,
+                    header_id=header_id,
+                    name=region_names[region_id],
+                    locations=locations,
+                )
+            header_id += 1
+    return {trainer_id: tuple(entries) for trainer_id, entries in locations.items()}
+
+
+def _link_gen3_trainer_objects(
+    platform: Any,
+    result: InspectionResult,
+    engine: Any,
+    events_pointer: int,
+    *,
+    header_id: int,
+    name: str,
+    locations: dict[int, list[TrainerLocation]],
+) -> None:
+    events_offset = engine.resolve_gba_pointer(events_pointer)
+    events_data = platform.read_bytes(
+        result.image, events_offset, engine.overworld.MAP_EVENTS_SIZE
+    )
+    object_event_count, object_events_pointer = engine.parse_map_events(
+        events_data, header_id=header_id
+    )
+    if object_event_count == 0 or object_events_pointer == 0:
+        return
+    object_events_offset = engine.resolve_gba_pointer(object_events_pointer)
+    template_size = engine.overworld.OBJECT_EVENT_TEMPLATE_SIZE
+    object_events_data = platform.read_bytes(
+        result.image, object_events_offset, template_size * object_event_count
+    )
+    for index in range(object_event_count):
+        raw = object_events_data[index * template_size : (index + 1) * template_size]
+        local_id, kind, x, y, elevation, trainer_type, script_pointer = (
+            engine.parse_object_event_template(raw, header_id=header_id, index=index)
+        )
+        if kind != 0 or trainer_type == 0 or script_pointer == 0:
+            continue
+        script_offset = engine.resolve_gba_pointer(script_pointer)
+        script_data = platform.read_bytes(result.image, script_offset, 4)
+        trainer_id = engine.decode_trainerbattle_id(script_data)
+        if trainer_id is None:
+            continue
+        locations.setdefault(trainer_id, []).append(
+            TrainerLocation(
+                header_id=header_id,
+                internal_name="",
+                location_name_id=header_id,
+                name=name,
+                # Generation III has no archive/file-member concept for
+                # overworld objects (they're a flat ROM-address array per
+                # map header, not indexed archive members like the NDS
+                # engines' `overworld_file_id`) -- 0 rather than a guessed
+                # index.
+                event_file_id=0,
+                object_index=index,
+                object_local_id=local_id,
+                script_id=script_offset,
+                trainer_type=trainer_type,
+                x=x,
+                y=y,
+                z=elevation,
+            )
+        )
 
 
 def _item_names(

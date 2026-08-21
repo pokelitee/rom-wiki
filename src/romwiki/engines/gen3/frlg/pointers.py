@@ -20,3 +20,14 @@ def resolve_gba_pointer(value: int) -> int:
             f"Value is not a valid Game Boy Advance pointer: {value:#x}"
         )
     return value - _ROM_BASE
+
+
+def gba_pointer_for_offset(offset: int) -> int:
+    """Convert a file offset to the raw GBA ROM address (0x08000000-based)
+    that would point to it -- the inverse of `resolve_gba_pointer`, needed
+    when comparing/constructing pointer values rather than resolving one
+    already read from ROM data (e.g. `encounters.py`'s wild-encounter-to-
+    location backfill, matching pointer values found in `gMapGroups`
+    against file offsets computed from `map_header_segments`).
+    """
+    return offset + _ROM_BASE

@@ -12,56 +12,28 @@ rom_versions = [0]
 chart = "gen3"
 
 [parameters]
-# LeafGreen's personal table sits at a different offset than FireRed's due
-# to the two builds' differing binary layout; verified the same way as
-# firered-us (Bulbasaur signature at species 1, table ends after species
-# 411).
+# LeafGreen's tables sit at different offsets than FireRed's throughout;
+# unset counts/strides are identical between the two games and inherited
+# from firered-us. See that profile and engines/gen3/frlg/constants.py for
+# what's verified.
 personal_offset = 0x254760
 personal_count = 412
 
-# LeafGreen's move-data and move-name tables sit at different offsets than
-# FireRed's; move_count/move_name_stride/move_name_count are identical (both
-# games share the same 355-move Generation III move list) and inherited from
-# firered-us. Verified the same way as firered-us (move 1 = Pound, move 33 =
-# Tackle stats/name match).
 move_offset = 0x250be0
 move_name_offset = 0x247070
 
-# LeafGreen's item table sits at a different offset than FireRed's;
-# item_count is identical (both games share the same 375-item list) and
-# inherited from firered-us. Verified the same way as firered-us (item 1 =
-# Master Ball, item 374 = Sapphire).
 item_offset = 0x3dae64
 
-# LeafGreen's trainer table sits at a different offset than FireRed's;
-# trainer_count is identical (both games share the same 743-trainer list)
-# and inherited from firered-us. Verified the same way as firered-us
-# (Brock/Lance rosters match).
 trainer_offset = 0x23eaa4
 
-# LeafGreen's ability-name table sits at a different offset than FireRed's;
-# ability_name_stride/ability_name_count are identical (both games share the
-# same 78-entry Generation III ability list) and inherited from firered-us.
-# Verified the same way as firered-us (ability 1 = "STENCH").
 ability_name_offset = 0x24fc1c
 
-# LeafGreen's wild-encounter header table sits at a different offset than
-# FireRed's; encounter_count is identical (both games share the same
-# 132-entry table) and inherited from firered-us. Verified the same way as
-# firered-us: map group 3 / map 22 decodes to the identical land/water/
-# fishing tables except species 23 (Ekans) is replaced by species 27
-# (Sandshrew) -- the real, documented FireRed/LeafGreen version-exclusive
-# encounter difference for this route.
 encounter_offset = 0x3c9af4
 
-# LeafGreen's map-header segments and region-name table sit at different
-# offsets than FireRed's; the segment counts and region_name_count are
-# identical (both games share the same map-group layout and 109-entry Town
-# Map region-name table) and inherited from firered-us. Verified the same
-# way as firered-us (the 104-entry segment resolves to the same sequential
-# Sevii Islands region names).
 map_header_segments = [[0x3505f8, 12], [0x35080c, 8], [0x350d30, 104]]
 region_name_offset = 0x3eeb38
+
+gmapgroups_offset = 0x352688
 
 [[hashes]]
 algorithm = "sha256"

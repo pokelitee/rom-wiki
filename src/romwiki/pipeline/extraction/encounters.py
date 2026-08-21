@@ -228,7 +228,7 @@ def _extract_method_table_encounter_dataset(result: InspectionResult) -> dict[st
     header_data = platform.read_bytes(result.image, offset, header_size * count)
     archive_path = f"offset:{offset:#x}"
 
-    records = []
+    parsed_records = []
     for map_index in range(count):
         header = header_data[map_index * header_size : (map_index + 1) * header_size]
         map_group, map_num, pointers = engine.parse_header(header, map_index=map_index)
@@ -254,10 +254,6 @@ def _extract_method_table_encounter_dataset(result: InspectionResult) -> dict[st
                 slots_data, map_index=map_index, name=name, count=slot_count
             )
             methods[name] = EncounterMethod(rate=rate, slots=slots)
-        # No map-header/location system decoded for Generation III yet --
-        # `parse_encounter_record` leaves `locations` at its dataclass
-        # default (`()`) rather than guessing where a map is displayed,
-        # same deferral already applied to trainer extraction.
         record = engine.parse_encounter_record(
             map_group,
             map_num,
@@ -265,7 +261,21 @@ def _extract_method_table_encounter_dataset(result: InspectionResult) -> dict[st
             map_index=map_index,
             archive_path=archive_path,
         )
-        records.append(record.to_dict())
+        parsed_records.append(record)
+
+    # Only maps within the already-verified Sevii Islands/postgame
+    # `map_header_segments` span can be linked -- Kanto's own maps have no
+    # corresponding location record yet (see `locations.py`'s module
+    # comment), so those records keep `locations=()`.
+    locations_by_map_index = _extract_gen3_encounter_locations(
+        platform, result, profile, engine, parsed_records
+    )
+    records = [
+        replace(
+            record, locations=locations_by_map_index.get(record.area_id, ())
+        ).to_dict()
+        for record in parsed_records
+    ]
 
     envelope = dataset_envelope(
         schema_version=ENCOUNTERS_RAW_SCHEMA_VERSION,
@@ -276,6 +286,93 @@ def _extract_method_table_encounter_dataset(result: InspectionResult) -> dict[st
         records=records,
     )
     return envelope
+
+
+def _extract_gen3_encounter_locations(
+    platform: Any,
+    result: InspectionResult,
+    profile: Any,
+    engine: Any,
+    parsed_records: list[Any],
+) -> dict[int, tuple[EncounterLocation, ...]]:
+    """Link each Generation III wild-encounter map (`map_group`/`map_num`,
+    see `parse_header`) to the location record it corresponds to, when that
+    map falls within the already-verified `map_header_segments` span.
+
+    Independently re-decodes both `map_header_segments` (the same way
+    `flat_header_segments.py` does for the `locations` domain) and
+    `gMapGroups` (the two-level pointer structure those segments are
+    actually reached through in-game, see `constants.py`'s
+    `GMAPGROUPS_GROUP_COUNT` comment) rather than depending on the
+    `locations` domain's own extraction output -- the same "each domain
+    independently re-decodes the shared table" pattern already used by the
+    NDS engines' `battle_mode.py`/`encounters.py` location backfills.
+    """
+    try:
+        segments = profile.parameters["map_header_segments"]
+        region_name_offset = profile.parameters["region_name_offset"]
+        region_name_count = profile.parameters["region_name_count"]
+        gmapgroups_offset = profile.parameters["gmapgroups_offset"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define map_header_segments/"
+            "region_name_offset/region_name_count/gmapgroups_offset"
+        ) from error
+
+    region_name_data = platform.read_bytes(
+        result.image, region_name_offset, region_name_count * 32
+    )
+    region_names = engine.decode_gen3_text_sequence(
+        region_name_data, offset=0, count=region_name_count
+    )
+
+    header_size = engine.MAP_HEADER_SIZE
+    header_by_address: dict[int, tuple[int, str]] = {}
+    header_id = 0
+    for segment_offset, segment_count in segments:
+        segment_data = platform.read_bytes(
+            result.image, segment_offset, header_size * segment_count
+        )
+        for slot in range(segment_count):
+            raw = segment_data[slot * header_size : (slot + 1) * header_size]
+            _music, _layout_id, region_id = engine.parse_map_header(
+                raw, header_id=header_id
+            )
+            address = engine.gba_pointer_for_offset(segment_offset + slot * header_size)
+            header_by_address[address] = (header_id, region_names[region_id])
+            header_id += 1
+
+    group_pointer_data = platform.read_bytes(
+        result.image, gmapgroups_offset, engine.GMAPGROUPS_GROUP_COUNT * 4
+    )
+    group_pointers = engine.parse_gmapgroups_pointers(group_pointer_data)
+    gmapgroups_address = engine.gba_pointer_for_offset(gmapgroups_offset)
+    subtable_start = engine.resolve_gba_pointer(group_pointers[0])
+    subtable_data = platform.read_bytes(
+        result.image, subtable_start, gmapgroups_address - group_pointers[0]
+    )
+    group_num_to_address = engine.parse_map_group_index(
+        group_pointers, subtable_data, gmapgroups_address=gmapgroups_address
+    )
+
+    locations: dict[int, tuple[EncounterLocation, ...]] = {}
+    for record in parsed_records:
+        address = group_num_to_address.get((record.map_group, record.map_num))
+        if address is None:
+            continue
+        header = header_by_address.get(address)
+        if header is None:
+            continue
+        header_id, name = header
+        locations[record.area_id] = (
+            EncounterLocation(
+                header_id=header_id,
+                internal_name="",
+                location_name_id=0,
+                name=name,
+            ),
+        )
+    return locations
 
 
 def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, Any]:

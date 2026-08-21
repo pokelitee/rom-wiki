@@ -13,84 +13,40 @@ rom_versions = [0]
 chart = "gen3"
 
 [parameters]
-# Verified against the real ROM: species 0 is an all-zero dummy record,
-# species 1 (offset + 28) decodes to Bulbasaur's known base stats, and the
-# table stays well-formed through species 411 before a different table's
-# data begins at species 412.
 personal_offset = 0x254784
 personal_count = 412
 
-# Verified against the real ROM: move 0 is an all-zero placeholder record,
-# move 1 (offset) decodes to Pound's known stats (power 40/type 0/accuracy
-# 100/pp 35), move 33 to Tackle's (power 35/accuracy 95/pp 35), move 354
-# (Psycho Boost) is the last real Generation III move.
 move_offset = 0x250c04
 move_count = 355
 
-# The move-name table is a separate fixed-width array (13 bytes/entry, one
-# per move ID), verified by decoding move 1 as "POUND", move 33 as "TACKLE",
-# and move 354 as "PSYCHO BOOST".
 move_name_offset = 0x247094
 move_name_stride = 13
 move_name_count = 355
 
-# Verified against the real ROM: item 0 is an all-zero/"????????" placeholder
-# record, item 1 decodes to "MASTER BALL" (price 0), item 2 to "ULTRA BALL"
-# (price 1200), item 374 ("SAPPHIRE") is the last real item.
 item_offset = 0x3db028
 item_count = 375
 
-# Verified against the real ROM: trainer 0 is an all-zero-except-terminator
-# dummy record, trainer 414 decodes to "BROCK" (2-member party: Geodude
-# Lv12, Onix Lv14), trainer 413 to "LANCE" (5-member party: Gyarados, 2x
-# Dragonair, Aerodactyl, Dragonite, each with a held item and 4 moves),
-# trainer 742 ("PAXTON") is the last real trainer.
 trainer_offset = 0x23eac8
 trainer_count = 743
 
-# The ability-name table is a separate fixed-width array (13 bytes/entry,
-# one per ability ID, index 0 a "?" placeholder) -- verified by decoding 12
-# consecutive entries against the real Generation III ability ID order
-# (Stench, Drizzle, Speed Boost, Battle Armor, Sturdy, Damp, Limber, Sand
-# Veil, Static, ...). Bounded to 76 (abilities 1-75), not the ROM table's
-# real 78 entries -- see engines/gen3/frlg/constants.py's ABILITY_NAME_COUNT
-# comment for why (index 76 "CACOPHONY" has no PokeDB counterpart, causing
-# a one-entry ID-numbering divergence that only matters once the
-# unconfirmed 387-411 padding species range is exposed).
+# See engines/gen3/frlg/constants.py's ABILITY_NAME_COUNT comment: the real
+# ROM table has 78 entries, bounded here to 76.
 ability_name_offset = 0x24fc40
 ability_name_stride = 13
 ability_name_count = 76
 
-# Verified against the real ROM: map group 3 / map 22's wild-encounter
-# header decodes to a 12-slot land table (Spearow/Rattata/Ekans/Mankey at
-# levels 6-12), a 5-slot water table (Tentacool at levels 5-40), and a
-# 10-slot fishing table (Magikarp/Horsea/Gyarados/Krabby/Psyduck at levels
-# 5-35) -- real, sane Kanto encounter data. The table is terminated by a
-# {0xFF, 0xFF, ...} sentinel immediately after entry 131.
 encounter_offset = 0x3c9cb8
 encounter_count = 132
 
-# `gMapGroups` holds a pointer per map group to that group's own separate,
-# contiguous array of 28-byte `MapHeader` structs -- not one flat table.
-# Verified against the real ROM: three real, contiguous segments were found
-# (Sevii Islands / postgame map groups), each decoding to sane, sequential
-# `regionMapSectionId` values that resolve to real Town Map region names
-# below (e.g. the 104-entry segment starts at "ONE ISLAND" and ends at a
-# Sevii Islands interior). Kanto's own main-region map headers were not
-# located within a reasonable scanning effort and are intentionally not
-# included here -- this is a deliberately bounded first slice (124 real
-# headers, region IDs 88-108), the same "populate what's real, document
-# what isn't" approach as ABILITY_NAME_COUNT/PERSONAL_RECORD_COUNT.
+# Sevii Islands/postgame only -- see engines/gen3/frlg/locations.py's module
+# comment for the Kanto scope decision.
 map_header_segments = [[0x350618, 12], [0x35082c, 8], [0x350d50, 104]]
-
-# The Town Map region-name table is a separate, variable-length,
-# back-to-back 0xFF-terminated string table (see
-# `gen3/frlg/text.py`'s `decode_gen3_text_sequence`) indexed by
-# `regionMapSectionId`. Verified complete at exactly 109 entries (index 0 =
-# "PALLET TOWN" ... index 108 = "CELADON DEPT."); the byte immediately
-# after index 108's terminator is unambiguous non-text graphics data.
 region_name_offset = 0x3eecfc
 region_name_count = 109
+
+# `gMapGroups`'s own base address, distinct from map_header_segments above
+# -- see engines/gen3/frlg/constants.py's GMAPGROUPS_GROUP_COUNT comment.
+gmapgroups_offset = 0x3526a8
 
 [[hashes]]
 algorithm = "sha256"

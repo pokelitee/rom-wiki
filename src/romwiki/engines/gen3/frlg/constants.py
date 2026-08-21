@@ -245,3 +245,21 @@ MAP_HEADER_SIZE = 28
 # "CELADON DEPT."; the byte immediately after index 108's terminator is
 # unambiguous non-text graphics data, not a 110th entry).
 MAP_HEADER_REGION_COUNT = 109
+
+# `gMapGroups` itself (as opposed to `map_header_segments`' already-resolved
+# `MapHeader` arrays) is a small array of pointers, one per map group, each
+# pointing to that group's own contiguous array of pointers-to-`MapHeader`.
+# Verified against real ROM code: the ARM7/ARM9-style Thumb routine at ROM
+# address 0x08055238 in both games (`gMapGroups[group][num]`, an identical
+# two-level-indirection double `ldr` chase) loads this exact base via a
+# `ldr r2, [pc, #0xc]` literal pool value -- confirmed byte-for-byte at file
+# offset 0x05524C (FireRed: `a8 26 35 08`; LeafGreen: `88 26 35 08`).
+# Walking forward from that base until an invalid pointer is hit gives
+# exactly 43 groups for both games (the 43rd entry, at `gmapgroups_offset +
+# 43*4`, decodes to a small non-pointer integer, not a 44th valid address).
+# Used only to backfill `locations` on wild-encounter records that fall
+# within the already-verified Sevii Islands/postgame `map_header_segments`
+# span -- every group/map slot outside that span (Kanto's own maps) has no
+# corresponding entry in `map_header_segments` and is left unlinked, the
+# same documented gap as `locations.py`'s module comment.
+GMAPGROUPS_GROUP_COUNT = 43

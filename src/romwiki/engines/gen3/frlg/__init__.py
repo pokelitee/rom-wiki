@@ -15,6 +15,7 @@ from .constants import (
     ENCOUNTER_ROCK_SMASH_SLOT_COUNT,
     ENCOUNTER_WATER_SLOT_CHANCES,
     ENCOUNTER_WATER_SLOT_COUNT,
+    GMAPGROUPS_GROUP_COUNT,
     GROWTH_RATE_NAMES,
     ITEM_NAME_COUNT,
     ITEM_POCKET_NAMES,
@@ -44,10 +45,20 @@ from .encounters import (
     parse_method_slots,
 )
 from .items import item_name, parse_item_record
-from .locations import parse_map_header, parse_map_header_table
+from .locations import (
+    parse_gmapgroups_pointers,
+    parse_map_group_index,
+    parse_map_header,
+    parse_map_header_table,
+)
 from .moves import parse_move_record
+from .overworld import (
+    decode_trainerbattle_id,
+    parse_map_events,
+    parse_object_event_template,
+)
 from .personal import parse_personal_record
-from .pointers import resolve_gba_pointer
+from .pointers import gba_pointer_for_offset, resolve_gba_pointer
 from .text import decode_gen3_text, decode_gen3_text_sequence, decode_gen3_text_table
 from .trainer_party import (
     derive_trainer_party_attributes,
@@ -78,6 +89,7 @@ __all__ = [
     "ENCOUNTER_WATER_SLOT_CHANCES",
     "ENCOUNTER_WATER_SLOT_COUNT",
     "FORM_MEMBERS",
+    "GMAPGROUPS_GROUP_COUNT",
     "GROWTH_RATE_NAMES",
     "INTERNAL_MEMBERS",
     "ITEM_NAME_COUNT",
@@ -103,17 +115,23 @@ __all__ = [
     "decode_gen3_text",
     "decode_gen3_text_sequence",
     "decode_gen3_text_table",
+    "decode_trainerbattle_id",
     "derive_trainer_party_attributes",
+    "gba_pointer_for_offset",
     "item_name",
     "normalize_trainer_party_member",
     "parse_encounter_record",
+    "parse_gmapgroups_pointers",
     "parse_header",
     "parse_item_record",
+    "parse_map_events",
+    "parse_map_group_index",
     "parse_map_header",
     "parse_map_header_table",
     "parse_method_info",
     "parse_method_slots",
     "parse_move_record",
+    "parse_object_event_template",
     "parse_personal_record",
     "parse_trainer_record",
     "party_record_size",

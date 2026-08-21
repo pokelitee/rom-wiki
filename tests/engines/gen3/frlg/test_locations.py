@@ -3,7 +3,13 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.locations import parse_map_header, parse_map_header_table
+from romwiki.engines.gen3.frlg.constants import GMAPGROUPS_GROUP_COUNT
+from romwiki.engines.gen3.frlg.locations import (
+    parse_gmapgroups_pointers,
+    parse_map_group_index,
+    parse_map_header,
+    parse_map_header_table,
+)
 from romwiki.schema import EncounterMapLocation
 from romwiki.util.errors import InvalidRomError
 
@@ -75,6 +81,47 @@ class ParseMapHeaderTableTests(unittest.TestCase):
         with self.assertRaises(InvalidRomError):
             parse_map_header_table(
                 header_data, ["x"] * 109, count=1, archive_path="0x0"
+            )
+
+
+class ParseGmapgroupsPointersTests(unittest.TestCase):
+    def test_decodes_group_count_pointers(self) -> None:
+        pointers = tuple(
+            0x08350000 + index * 4 for index in range(GMAPGROUPS_GROUP_COUNT)
+        )
+        data = struct.pack(f"<{GMAPGROUPS_GROUP_COUNT}I", *pointers)
+
+        decoded = parse_gmapgroups_pointers(data)
+
+        self.assertEqual(decoded, pointers)
+
+    def test_rejects_wrong_size(self) -> None:
+        with self.assertRaises(InvalidRomError):
+            parse_gmapgroups_pointers(b"\x00" * 10)
+
+
+class ParseMapGroupIndexTests(unittest.TestCase):
+    def test_resolves_group_num_to_header_address_using_boundaries(self) -> None:
+        # Two groups: group 0 has 2 maps, group 1 has 1 map. Sub-table data
+        # (the raw pointer bytes spanning group_pointers[0] to
+        # gmapgroups_address) holds 3 header-address pointers back to back.
+        group_pointers = (0x08350000, 0x08350008)
+        gmapgroups_address = 0x0835000C
+        subtable_data = struct.pack("<3I", 0x08360000, 0x08360020, 0x08360040)
+
+        index = parse_map_group_index(
+            group_pointers, subtable_data, gmapgroups_address=gmapgroups_address
+        )
+
+        self.assertEqual(index[(0, 0)], 0x08360000)
+        self.assertEqual(index[(0, 1)], 0x08360020)
+        self.assertEqual(index[(1, 0)], 0x08360040)
+
+    def test_rejects_a_misaligned_group_boundary(self) -> None:
+        group_pointers = (0x08350000, 0x08350003)
+        with self.assertRaises(InvalidRomError):
+            parse_map_group_index(
+                group_pointers, b"\x00" * 8, gmapgroups_address=0x08350008
             )
 
 

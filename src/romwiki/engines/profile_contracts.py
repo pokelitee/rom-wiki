@@ -134,6 +134,7 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
             "map_header_segments",
             "region_name_offset",
             "region_name_count",
+            "gmapgroups_offset",
         }
     ),
     reject_unknown=True,
