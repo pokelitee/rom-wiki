@@ -1,8 +1,16 @@
+from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
 from romwiki.engines.gen3.shared.constants import (
     COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
     EGG_GROUP_NAMES,
+    EVOLUTION_METHOD_NAMES,
+    EVOLUTION_PARAMETER_KINDS,
+    EVOLUTION_RECORD_SIZE,
+    EVOLUTION_SLOT_COUNT,
+    EVOLUTION_SLOT_SIZE,
+    FIRST_MACHINE_ITEM_ID,
     GROWTH_RATE_NAMES,
+    INTERNAL_TO_NATIONAL_DEX,
     ITEM_POCKET_NAMES,
     ITEM_RECORD_SIZE,
     MACHINE_COUNT,
@@ -20,6 +28,8 @@ from romwiki.engines.gen3.shared.constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
+from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
+from romwiki.engines.gen3.shared.evolutions import parse_evolution_record
 from romwiki.engines.gen3.shared.items import (
     item_description_pointer,
     item_name,
@@ -41,13 +51,19 @@ from romwiki.engines.gen3.shared.text import (
     decode_gen3_text_sequence,
     decode_gen3_text_table,
 )
+from romwiki.engines.gen3.shared.trainer_party import (
+    derive_trainer_party_attributes,
+    normalize_trainer_party_member,
+)
 from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
 
 from .constants import (
     ABILITY_NAME_COUNT,
     ITEM_NAME_COUNT,
+    ITEM_RECORD_COUNT,
     POKEMON_DESCRIPTION_COUNT,
     POKEMON_NAME_COUNT,
+    TRAINER_RECORD_COUNT,
 )
 
 # `pipeline/enrichment/pokemon.py` reads these off the flat engine namespace
@@ -63,11 +79,19 @@ __all__ = [
     "COLOR_NAMES",
     "DAMAGE_CLASS_NAMES",
     "EGG_GROUP_NAMES",
+    "EVOLUTION_METHOD_NAMES",
+    "EVOLUTION_PARAMETER_KINDS",
+    "EVOLUTION_RECORD_SIZE",
+    "EVOLUTION_SLOT_COUNT",
+    "EVOLUTION_SLOT_SIZE",
+    "FIRST_MACHINE_ITEM_ID",
     "FORM_MEMBERS",
     "GROWTH_RATE_NAMES",
     "INTERNAL_MEMBERS",
+    "INTERNAL_TO_NATIONAL_DEX",
     "ITEM_NAME_COUNT",
     "ITEM_POCKET_NAMES",
+    "ITEM_RECORD_COUNT",
     "ITEM_RECORD_SIZE",
     "MACHINE_COUNT",
     "MACHINE_LEARNSET_SIZE",
@@ -82,16 +106,21 @@ __all__ = [
     "POKEMON_DESCRIPTION_COUNT",
     "POKEMON_NAME_COUNT",
     "TM_COUNT",
+    "TRAINER_RECORD_COUNT",
     "TRAINER_RECORD_SIZE",
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "decode_gen3_text",
     "decode_gen3_text_sequence",
     "decode_gen3_text_table",
+    "derive_trainer_party_attributes",
     "gba_pointer_for_offset",
     "item_description_pointer",
     "item_name",
     "machine_name",
+    "normalize_trainer_party_member",
+    "parse_egg_move_table",
+    "parse_evolution_record",
     "parse_item_record",
     "parse_machine_move_table",
     "parse_move_record",
@@ -100,4 +129,5 @@ __all__ = [
     "parse_trainer_record",
     "party_record_size",
     "resolve_gba_pointer",
+    "resolve_trainer_variants",
 ]

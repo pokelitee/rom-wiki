@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen3.frlg.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
 from romwiki.schema.trainers import validate_trainer_battle_families
 
 

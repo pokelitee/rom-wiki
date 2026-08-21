@@ -36,6 +36,9 @@ from romwiki.engines.gen3.shared.constants import (
     GROWTH_RATE_NAMES as GROWTH_RATE_NAMES,
 )
 from romwiki.engines.gen3.shared.constants import (
+    INTERNAL_TO_NATIONAL_DEX as INTERNAL_TO_NATIONAL_DEX,
+)
+from romwiki.engines.gen3.shared.constants import (
     ITEM_POCKET_NAMES as ITEM_POCKET_NAMES,
 )
 from romwiki.engines.gen3.shared.constants import (

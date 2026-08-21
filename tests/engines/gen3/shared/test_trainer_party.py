@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen3.frlg.trainer_party import (
+from romwiki.engines.gen3.shared.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )

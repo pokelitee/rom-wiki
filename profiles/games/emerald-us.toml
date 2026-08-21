@@ -21,6 +21,29 @@ ability_name_stride = 13
 ability_name_count = 76
 ability_description_offset = 0x31bad4
 
+move_offset = 0x31c898
+move_count = 355
+
+move_name_offset = 0x31977c
+move_name_stride = 13
+move_name_count = 355
+
+item_offset = 0x5839a0
+item_count = 377
+
+trainer_offset = 0x310030
+trainer_count = 855
+
+evolution_offset = 0x32531c
+
+tmhm_learnset_offset = 0x31e898
+machine_move_offset = 0x615b94
+machine_count = 58
+tm_count = 50
+
+egg_move_offset = 0x32add8
+egg_move_table_size = 2278
+
 [[hashes]]
 algorithm = "sha256"
 value = "a9dec84dfe7f62ab2220bafaef7479da0929d066ece16a6885f6226db19085af"

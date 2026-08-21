@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.frlg.egg_moves import parse_egg_move_table
+from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
 from romwiki.util.errors import InvalidRomError
 
 

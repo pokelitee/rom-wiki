@@ -2,20 +2,19 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen3.shared.constants import MAX_MOVE_ID, PERSONAL_RECORD_COUNT
 from romwiki.schema import OverlayEggMoveSet
 from romwiki.util.errors import InvalidRomError
-
-from .constants import MAX_MOVE_ID, PERSONAL_RECORD_COUNT
 
 # `gEggMoves[]`: a single flat u16 array, not indexed by species -- each
 # species' block starts with a marker `species_id + 20000`, followed by
 # move IDs, until the next marker or the `0xFFFF` terminator. Same scheme
 # as Generation IV (`gen4/egg_moves.py`, which this mirrors).
 #
-# Markers span the real on-ROM species range (1-411, same padding as
-# PERSONAL_RECORD_COUNT), not just the exposed 1-386. Records beyond
-# PERSONAL_RECORD_COUNT are decoded (so parsing doesn't fail) but dropped
-# before returning.
+# Markers span the real on-ROM species range (1-411, all real Pokemon --
+# see `constants.py`'s `INTERNAL_TO_NATIONAL_DEX`), not just the exposed
+# 1-386. Records beyond PERSONAL_RECORD_COUNT are decoded (so parsing
+# doesn't fail) but dropped before returning.
 EGG_MOVE_TABLE_TERMINATOR = 0xFFFF
 EGG_MOVE_SPECIES_MARKER_BASE = 20000
 _MAX_ON_ROM_SPECIES_ID = 411

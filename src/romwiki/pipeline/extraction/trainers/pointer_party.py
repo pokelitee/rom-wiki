@@ -133,18 +133,19 @@ def _extract_gen3_trainer_locations(
     Independently re-decodes `map_header_segments`/`region_name_offset`/
     `region_name_count` the same way `locations.py`'s own extraction and
     `encounters.py`'s `_extract_gen3_encounter_locations` do, rather than
-    depending on either domain's own extraction output.
+    depending on either domain's own extraction output. Optional: a profile
+    without a `locations` domain yet (e.g. a fresh Generation III leaf that
+    hasn't verified its own map-header data) simply gets every trainer's
+    `locations` left at its schema default (`()`), matching the "no
+    location system decoded yet" deferral every other Gen III engine
+    already documents.
     """
     engine = get_engine(profile.engine).trainers
-    try:
-        segments = profile.parameters["map_header_segments"]
-        region_name_offset = profile.parameters["region_name_offset"]
-        region_name_count = profile.parameters["region_name_count"]
-    except KeyError as error:
-        raise ProfileError(
-            f"Profile {profile.id} does not define map_header_segments/"
-            "region_name_offset/region_name_count"
-        ) from error
+    segments = profile.parameters.get("map_header_segments")
+    region_name_offset = profile.parameters.get("region_name_offset")
+    region_name_count = profile.parameters.get("region_name_count")
+    if segments is None or region_name_offset is None or region_name_count is None:
+        return {}
 
     region_name_data = platform.read_bytes(
         result.image, region_name_offset, region_name_count * 32

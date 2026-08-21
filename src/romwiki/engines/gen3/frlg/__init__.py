@@ -1,3 +1,5 @@
+from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
 from romwiki.engines.gen3.shared.evolutions import parse_evolution_record
 from romwiki.engines.gen3.shared.items import (
     item_description_pointer,
@@ -20,9 +22,12 @@ from romwiki.engines.gen3.shared.text import (
     decode_gen3_text_sequence,
     decode_gen3_text_table,
 )
+from romwiki.engines.gen3.shared.trainer_party import (
+    derive_trainer_party_attributes,
+    normalize_trainer_party_member,
+)
 from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
 
-from .battle_variants import resolve_trainer_variants
 from .constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
@@ -47,6 +52,7 @@ from .constants import (
     FIRST_MACHINE_ITEM_ID,
     GMAPGROUPS_GROUP_COUNT,
     GROWTH_RATE_NAMES,
+    INTERNAL_TO_NATIONAL_DEX,
     ITEM_NAME_COUNT,
     ITEM_POCKET_NAMES,
     ITEM_RECORD_COUNT,
@@ -73,7 +79,6 @@ from .constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
-from .egg_moves import parse_egg_move_table
 from .encounters import (
     parse_encounter_record,
     parse_header,
@@ -90,10 +95,6 @@ from .overworld import (
     decode_trainerbattle_id,
     parse_map_events,
     parse_object_event_template,
-)
-from .trainer_party import (
-    derive_trainer_party_attributes,
-    normalize_trainer_party_member,
 )
 from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 
@@ -134,6 +135,7 @@ __all__ = [
     "GMAPGROUPS_GROUP_COUNT",
     "GROWTH_RATE_NAMES",
     "INTERNAL_MEMBERS",
+    "INTERNAL_TO_NATIONAL_DEX",
     "ITEM_NAME_COUNT",
     "ITEM_POCKET_NAMES",
     "ITEM_RECORD_COUNT",

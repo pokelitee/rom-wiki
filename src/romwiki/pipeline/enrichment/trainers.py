@@ -5,6 +5,7 @@ from functools import cache
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.enrichment.common import national_dex_id_for_member
 from romwiki.pipeline.enrichment.encounters import pokemon_display_name
 from romwiki.pipeline.enrichment.names import (
     resolve_item_names,
@@ -152,7 +153,9 @@ def enrich_trainer_record(
                     game_record = pokemon_records.get(slug)
                 reference = None if game_record else pokedb.pokemon_for_name(slug)
             elif cosmetic_form is not None:
-                reference = pokedb.pokemon_for_id(species_id)
+                reference = pokedb.pokemon_for_id(
+                    national_dex_id_for_member(engine_tables, species_id)
+                )
             elif species_id in _trainer_form_species(engine):
                 # This species has known forms in the engine's table, but not
                 # this specific form ID -- likely a parsing bug rather than a
@@ -169,12 +172,20 @@ def enrich_trainer_record(
                 # is still retained on the record below, so this never
                 # claims the data doesn't exist -- only that it has no
                 # distinct game entry to link.
-                reference = pokedb.pokemon_for_id(species_id)
+                reference = pokedb.pokemon_for_id(
+                    national_dex_id_for_member(engine_tables, species_id)
+                )
         else:
             cosmetic_form = None
             if pokemon_records is not None:
                 game_record = pokemon_records.get(species_id)
-            reference = None if game_record else pokedb.pokemon_for_id(species_id)
+            reference = (
+                None
+                if game_record
+                else pokedb.pokemon_for_id(
+                    national_dex_id_for_member(engine_tables, species_id)
+                )
+            )
         pokemon = derive_trainer_party_attributes(
             engine,
             pokemon,
@@ -228,7 +239,7 @@ def enrich_trainer_record(
             {
                 **canonical_member,
                 "pokemon": {
-                    "id": species_id,
+                    "id": national_dex_id_for_member(engine_tables, species_id),
                     "slug": pokemon_slug,
                     "name": pokemon_name
                     + (f" ({cosmetic_form})" if cosmetic_form else ""),

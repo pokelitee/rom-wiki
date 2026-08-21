@@ -6,6 +6,7 @@ from typing import Any
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
     named_id,
+    national_dex_id_for_member,
     tutor_location,
     type_id,
     validate_egg_moves,
@@ -213,7 +214,11 @@ def _enrich_record(
     is_internal = member in engine.INTERNAL_MEMBERS
     if is_internal:
         slug = engine.INTERNAL_MEMBERS[member]
-        identity = {"national_dex_id": None, "base_species": None, "form": None}
+        identity: dict[str, Any] = {
+            "national_dex_id": None,
+            "base_species": None,
+            "form": None,
+        }
         sprite = None
         sprites = []
         portrait = None
@@ -253,10 +258,11 @@ def _enrich_record(
         reference_data = None
         public = False
     else:
-        reference = pokedb.pokemon_for_id(member)
+        national_dex_id = national_dex_id_for_member(engine, member)
+        reference = pokedb.pokemon_for_id(national_dex_id)
         slug = reference["name"]
         identity = {
-            "national_dex_id": member,
+            "national_dex_id": national_dex_id,
             "base_species": reference["species"],
             "form": None,
         }
@@ -586,7 +592,9 @@ def _enrich_evolutions(
     result = []
     for entry in evolution_set["evolutions"]:
         method_id = entry["method_id"]
-        target = pokedb.pokemon_for_id(entry["target_species_id"])
+        target_member = entry["target_species_id"]
+        target_national_dex_id = national_dex_id_for_member(engine, target_member)
+        target = pokedb.pokemon_for_id(target_national_dex_id)
         result.append(
             {
                 **entry,
@@ -603,10 +611,13 @@ def _enrich_evolutions(
                     pokemon_names,
                 ),
                 "target": {
-                    "id": entry["target_species_id"],
+                    "id": target_national_dex_id,
                     "slug": target["name"],
+                    # `pokemon_names` (when present) is a ROM-extracted name
+                    # table indexed the same raw way as `target_member`
+                    # itself, not National Dex order.
                     "name": pokemon_display_name(
-                        entry["target_species_id"], target["name"], pokemon_names
+                        target_member, target["name"], pokemon_names
                     ),
                 },
             }
@@ -643,10 +654,11 @@ def _evolution_parameter(
             "name": move_name(parameter, pokedb, move_names),
         }
     if kind == "pokemon":
-        species = pokedb.pokemon_for_id(parameter)
+        national_dex_id = national_dex_id_for_member(engine, parameter)
+        species = pokedb.pokemon_for_id(national_dex_id)
         return {
             "kind": "pokemon",
-            "id": parameter,
+            "id": national_dex_id,
             "slug": species["name"],
             "name": pokemon_display_name(parameter, species["name"], pokemon_names),
         }

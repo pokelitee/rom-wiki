@@ -151,9 +151,8 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
 )
 
 GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
-    # First vertical slice (personal data + abilities) -- widen as more
-    # Generation III domains are verified against the real Emerald ROM,
-    # matching how GEN3_FRLG_PROFILE_CONTRACT itself grew.
+    # Widen as more Generation III domains are verified against the real
+    # Emerald ROM, matching how GEN3_FRLG_PROFILE_CONTRACT itself grew.
     required_parameters=frozenset(
         {
             "personal_offset",
@@ -162,6 +161,22 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "ability_name_stride",
             "ability_name_count",
             "ability_description_offset",
+            "move_offset",
+            "move_count",
+            "move_name_offset",
+            "move_name_stride",
+            "move_name_count",
+            "item_offset",
+            "item_count",
+            "trainer_offset",
+            "trainer_count",
+            "evolution_offset",
+            "tmhm_learnset_offset",
+            "machine_move_offset",
+            "machine_count",
+            "tm_count",
+            "egg_move_offset",
+            "egg_move_table_size",
         }
     ),
     reject_unknown=True,
