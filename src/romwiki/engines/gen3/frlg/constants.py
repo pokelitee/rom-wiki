@@ -151,12 +151,21 @@ TUTOR_MOVE_COUNT = 15
 # Sevii Islands/postgame segments found exactly 4 real matches (identical
 # on both games). The other 11 tutors are in Kanto, which this engine has
 # no map-header data for (see `locations.py`) -- excluded rather than
-# guessed. Maps each `sTutorMoves` index to its location `header_id`.
+# guessed.
+#
+# Maps each `sTutorMoves` index to its Town Map region name -- not a
+# `header_id`. `header_id` is a synthetic number the extraction layer
+# assigns from `map_header_segments`' list order, so it isn't guaranteed
+# stable across profiles (FireRed and LeafGreen only agree because both
+# happen to list their 3 segments in the same order). Region name is a
+# real ROM-native fact (`regionMapSectionId` on the `MapHeader` struct
+# itself), so the extraction layer resolves it to that profile's own
+# `header_id` at read time instead of trusting a baked-in number.
 TUTOR_LOCATIONS = {
-    0: 15,  # Mega Punch -> Scufib Chamber
-    2: 15,  # Mega Kick -> Scufib Chamber
-    5: 30,  # Counter -> Rocket Warehouse
-    14: 7,  # Substitute -> Altering Cave
+    0: "SCUFIB CHAMBER",  # Mega Punch
+    2: "SCUFIB CHAMBER",  # Mega Kick
+    5: "ROCKET WAREHOUSE",  # Counter
+    14: "ALTERING CAVE",  # Substitute
 }
 
 # Matches Generation IV's evolution-method numbering through "beauty"

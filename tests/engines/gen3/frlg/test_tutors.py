@@ -19,9 +19,12 @@ def _move_table() -> bytes:
     return struct.pack("<15H", *ids)
 
 
+_LOCATION_IDS = {0: 15, 2: 15, 5: 30, 14: 7}
+
+
 class ParseTutorMoveTableTests(unittest.TestCase):
     def test_decodes_only_the_four_located_tutors(self) -> None:
-        records = parse_tutor_move_table(_move_table())
+        records = parse_tutor_move_table(_move_table(), location_ids=_LOCATION_IDS)
 
         self.assertEqual(len(records), 4)
         self.assertEqual(
@@ -33,7 +36,7 @@ class ParseTutorMoveTableTests(unittest.TestCase):
 
     def test_rejects_wrong_size(self) -> None:
         with self.assertRaises(InvalidRomError):
-            parse_tutor_move_table(b"short")
+            parse_tutor_move_table(b"short", location_ids=_LOCATION_IDS)
 
 
 class ParseTutorCompatibilityTests(unittest.TestCase):

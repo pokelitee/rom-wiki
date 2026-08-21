@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.constants import NATURE_NAMES
+from romwiki.engines.gen4.shared.constants import NATURE_NAMES
 from romwiki.util.errors import InvalidRomError
 
 from .scripts import parse_script_table

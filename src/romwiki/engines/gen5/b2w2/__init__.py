@@ -1,6 +1,6 @@
 """Pokémon Black 2 and White 2 engine-specific record support."""
 
-from romwiki.engines.gen5.script_items import find_script_awarded_items
+from romwiki.engines.gen5.shared.script_items import find_script_awarded_items
 
 from .battle_variants import resolve_trainer_variants
 from .constants import (

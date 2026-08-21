@@ -4,7 +4,7 @@ import struct
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.script_opcode_table import (
+from romwiki.engines.gen5.shared.script_opcode_table import (
     OPCODE_TABLE,
     STACK_CMP,
     STACK_CMP_EQUAL,

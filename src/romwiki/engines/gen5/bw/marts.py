@@ -3,8 +3,8 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.script_disassembler import disassemble_function
-from romwiki.engines.gen5.vendors import (
+from romwiki.engines.gen5.shared.script_disassembler import disassemble_function
+from romwiki.engines.gen5.shared.vendors import (
     Gen5SpecialVendor,
     Gen5SpecialVendorItem,
     fixed_vendor_items,

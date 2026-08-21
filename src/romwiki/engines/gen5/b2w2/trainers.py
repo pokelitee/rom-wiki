@@ -10,7 +10,7 @@ from romwiki.engines.gen5.b2w2.scripts import (
     Gen5TrainerBattleCommand,
     parse_trainer_battle_commands,
 )
-from romwiki.engines.gen5.trainer_records import (
+from romwiki.engines.gen5.shared.trainer_records import (
     TRAINER_RECORD_SIZE,
     parse_trainer_record,
     resolve_common_script_trainer_id,

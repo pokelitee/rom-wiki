@@ -3,19 +3,19 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.script_table import (
+from romwiki.engines.gen4.shared.script_table import (
     SCRIPT_COMMAND_COUNT as SCRIPT_COMMAND_COUNT,
 )
-from romwiki.engines.gen4.script_table import (
+from romwiki.engines.gen4.shared.script_table import (
     SCRIPT_TABLE_END as SCRIPT_TABLE_END,
 )
-from romwiki.engines.gen4.script_table import (
+from romwiki.engines.gen4.shared.script_table import (
     Gen4TrainerBattleCommand as Gen4TrainerBattleCommand,
 )
-from romwiki.engines.gen4.script_table import (
+from romwiki.engines.gen4.shared.script_table import (
     parse_script_table as parse_script_table,
 )
-from romwiki.engines.gen4.script_table import (
+from romwiki.engines.gen4.shared.script_table import (
     parse_trainer_battle_commands as _parse_trainer_battle_commands,
 )
 

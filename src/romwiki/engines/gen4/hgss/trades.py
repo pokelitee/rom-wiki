@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.engines.gen4.personal import GEN4_BASE_SPECIES_COUNT
+from romwiki.engines.gen4.shared.personal import GEN4_BASE_SPECIES_COUNT
 from romwiki.schema import NpcTrade, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 

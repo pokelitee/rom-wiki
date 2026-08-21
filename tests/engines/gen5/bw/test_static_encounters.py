@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from romwiki.engines.gen5.bw.static_encounters import _static_fact
-from romwiki.engines.gen5.script_disassembler import Gen5Instruction
+from romwiki.engines.gen5.shared.script_disassembler import Gen5Instruction
 
 
 class Gen5StaticEncounterTests(unittest.TestCase):

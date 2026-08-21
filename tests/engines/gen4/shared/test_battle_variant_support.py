@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen4.battle_variant_support import (
+from romwiki.engines.gen4.shared.battle_variant_support import (
     resolved_battle_location,
     species_name,
 )

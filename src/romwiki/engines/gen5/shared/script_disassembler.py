@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.script_opcode_table import OPCODE_TABLE
+from romwiki.engines.gen5.shared.script_opcode_table import OPCODE_TABLE
 
 # A real, control-flow-aware disassembler for Gen V field-script bytecode,
 # using `script_opcode_table.py`'s adopted core table. Built after a

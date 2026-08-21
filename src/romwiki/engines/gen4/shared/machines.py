@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.engines.gen4.constants import MAX_MOVE_ID
+from romwiki.engines.gen4.shared.constants import MAX_MOVE_ID
 from romwiki.schema import Machine
 from romwiki.util.errors import InvalidRomError
 

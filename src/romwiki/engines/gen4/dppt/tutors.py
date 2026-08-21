@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.engines.gen4.constants import MAX_MOVE_ID
-from romwiki.engines.gen4.personal import GEN4_BASE_SPECIES_COUNT
+from romwiki.engines.gen4.shared.constants import MAX_MOVE_ID
+from romwiki.engines.gen4.shared.personal import GEN4_BASE_SPECIES_COUNT
 from romwiki.schema import (
     ShardCosts,
     SpecialTutorMove,

@@ -132,12 +132,18 @@ class EnginePackageBoundaryTests(unittest.TestCase):
 
 
 def _engine_leaves() -> tuple[str, ...]:
+    # `shared/` holds record parsers promoted to the generation namespace
+    # once real ROM fixtures prove they're shared by at least two families
+    # (see architecture.md) -- it's the shared namespace leaves are meant
+    # to depend on, not a selectable engine/leaf family itself.
     return tuple(
         f"romwiki.engines.{generation.name}.{family.name}"
         for generation in ENGINE_ROOT.iterdir()
         if generation.is_dir() and generation.name.startswith("gen")
         for family in generation.iterdir()
-        if family.is_dir() and (family / "__init__.py").is_file()
+        if family.is_dir()
+        and family.name != "shared"
+        and (family / "__init__.py").is_file()
     )
 
 

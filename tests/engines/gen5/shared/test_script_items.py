@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.script_items import find_script_awarded_items
+from romwiki.engines.gen5.shared.script_items import find_script_awarded_items
 
 
 class Gen5ScriptItemTests(unittest.TestCase):

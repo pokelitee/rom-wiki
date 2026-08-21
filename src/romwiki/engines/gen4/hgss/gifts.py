@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from romwiki.engines.gen4.hgss.script_opcode_table import OPCODE_TABLE
-from romwiki.engines.gen4.script_disassembler import (
+from romwiki.engines.gen4.shared.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
-from romwiki.engines.gen4.script_table import parse_script_function_offsets
+from romwiki.engines.gen4.shared.script_table import parse_script_function_offsets
 
 # HGSS's own `GiveMon` opcode (0x0089, per `gen4/hgss/script_opcode_table.py`)
 # takes six 2-byte operands -- structurally different from Platinum's simpler

@@ -1,8 +1,8 @@
-from romwiki.engines.gen5.script_disassembler import (
+from romwiki.engines.gen5.shared.script_disassembler import (
     disassemble_function,
     parse_function_offsets,
 )
-from romwiki.engines.gen5.script_items import find_script_awarded_items
+from romwiki.engines.gen5.shared.script_items import find_script_awarded_items
 
 from .battle_variants import resolve_trainer_variants
 from .constants import (

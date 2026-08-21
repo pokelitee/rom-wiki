@@ -4,7 +4,10 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.script_table import SCRIPT_COMMAND_COUNT, parse_script_table
+from romwiki.engines.gen4.shared.script_table import (
+    SCRIPT_COMMAND_COUNT,
+    parse_script_table,
+)
 
 #: Reads the player's starter species into a script variable.
 GET_STARTER_SPECIES = 0x00DE

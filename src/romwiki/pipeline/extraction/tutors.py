@@ -368,7 +368,10 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
     # `location_names` reuses the same Sevii Islands/postgame
     # `map_header_segments` decode `locations.py`'s own extraction and
     # `encounters.py`/`trainers/pointer_party.py`'s location backfills
-    # already do, so `location_id` on each tutor is a real `header_id`.
+    # already do. `TUTOR_LOCATIONS` names a target *region*, not a
+    # `header_id` -- resolved against this specific ROM's own decoded
+    # `location_names` below, since `header_id` numbering isn't guaranteed
+    # stable across profiles (see that constant's comment).
     assert result.match is not None
     profile = result.match.profile
     try:
@@ -390,11 +393,6 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
     engine = get_engine(profile.engine).tutors
 
-    move_data = platform.read_bytes(
-        result.image, move_offset, engine.TUTOR_MOVE_COUNT * 2
-    )
-    tutors = engine.parse_tutor_move_table(move_data)
-
     region_name_data = platform.read_bytes(
         result.image, region_name_offset, region_name_count * 32
     )
@@ -413,8 +411,21 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
                 raw, header_id=len(location_names)
             )
             location_names.append(region_names[region_id])
-    if any(tutor.location_id >= len(location_names) for tutor in tutors):
-        raise InvalidRomError("Gen III tutor references an unknown location ID")
+
+    location_ids = {}
+    for table_index, target_name in engine.TUTOR_LOCATIONS.items():
+        try:
+            location_ids[table_index] = location_names.index(target_name)
+        except ValueError as error:
+            raise InvalidRomError(
+                f"Gen III tutor {table_index} references location "
+                f"{target_name!r}, not present in this ROM's decoded locations"
+            ) from error
+
+    move_data = platform.read_bytes(
+        result.image, move_offset, engine.TUTOR_MOVE_COUNT * 2
+    )
+    tutors = engine.parse_tutor_move_table(move_data, location_ids=location_ids)
 
     compatibility_data = platform.read_bytes(
         result.image, compatibility_offset, personal_count * 2

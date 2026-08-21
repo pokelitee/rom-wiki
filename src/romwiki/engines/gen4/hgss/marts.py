@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.script_table import parse_script_table
+from romwiki.engines.gen4.shared.script_table import parse_script_table
 from romwiki.schema import RecordProvenance, Shop
 from romwiki.util.byte_search import find_unique_pattern
 from romwiki.util.errors import InvalidRomError

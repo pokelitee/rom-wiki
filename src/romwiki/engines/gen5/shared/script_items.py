@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.script_disassembler import Gen5Instruction, disassemble_script
+from romwiki.engines.gen5.shared.script_disassembler import (
+    Gen5Instruction,
+    disassemble_script,
+)
 
 # Some NPC-dialogue item grants don't call the literal `ItemAdd` opcode
 # directly; instead they stage the item and quantity into two scratch work

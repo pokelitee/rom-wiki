@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from romwiki.engines.gen4.hgss.battle_variants import resolve_trainer_variants
-from romwiki.engines.gen4.starter_branches import Gen4StarterBranchFamily
+from romwiki.engines.gen4.shared.starter_branches import Gen4StarterBranchFamily
 
 _CONTRACT = "hgss-retail-v1"
 

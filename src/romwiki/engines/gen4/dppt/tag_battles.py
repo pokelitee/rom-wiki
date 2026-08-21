@@ -3,17 +3,17 @@ from __future__ import annotations
 import struct
 from collections.abc import Sequence
 
-from romwiki.engines.gen4.script_disassembler import (
+from romwiki.engines.gen4.shared.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
-from romwiki.engines.gen4.script_opcode_table import OPCODE_TABLE
-from romwiki.engines.gen4.script_table import (
+from romwiki.engines.gen4.shared.script_opcode_table import OPCODE_TABLE
+from romwiki.engines.gen4.shared.script_table import (
     SCRIPT_COMMAND_COUNT,
     Gen4TrainerBattleCommand,
     parse_script_table,
 )
-from romwiki.engines.gen4.starter_branches import Gen4StarterBranchFamily
+from romwiki.engines.gen4.shared.starter_branches import Gen4StarterBranchFamily
 
 # Platinum's tag-battle command (partner, enemy1, enemy2), found and verified
 # against real Platinum ROM data: it does not appear in `scrcmd.py`'s shared

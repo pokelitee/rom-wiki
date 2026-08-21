@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.machines import parse_machine_move_table
+from romwiki.engines.gen4.shared.machines import parse_machine_move_table
 from romwiki.util.errors import InvalidRomError
 
 

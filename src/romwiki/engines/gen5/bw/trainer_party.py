@@ -1,4 +1,4 @@
-from romwiki.engines.gen5.trainer_party import (
+from romwiki.engines.gen5.shared.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )

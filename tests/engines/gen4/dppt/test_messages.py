@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.messages import parse_english_message_archive
+from romwiki.engines.gen4.shared.messages import parse_english_message_archive
 from romwiki.util.errors import InvalidRomError
 from tests.engines.gen4.dppt.test_map_headers import _make_message_archive
 

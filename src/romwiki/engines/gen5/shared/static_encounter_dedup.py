@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from romwiki.engines.gen5.script_disassembler import Gen5Instruction
+from romwiki.engines.gen5.shared.script_disassembler import Gen5Instruction
 
 # Shared by BW and B2W2's own `discover_static_encounters`. A static-encounter
 # "fact" is a plain `(species_id, level, is_egg)` tuple, paired with the

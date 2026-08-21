@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from collections.abc import Mapping
 
 from romwiki.schema import ShardCosts, TutorCompatibility, TutorMove
 from romwiki.util.errors import InvalidRomError
@@ -14,7 +15,15 @@ TUTOR_ID_BY_TABLE_INDEX = {
 }
 
 
-def parse_tutor_move_table(data: bytes) -> tuple[TutorMove, ...]:
+def parse_tutor_move_table(
+    data: bytes, *, location_ids: Mapping[int, int]
+) -> tuple[TutorMove, ...]:
+    """Decode `gTutorMoves`. `location_ids` must map each exposed tutor's
+    table index (`TUTOR_LOCATIONS`' keys) to that specific ROM's own
+    `header_id` for its target region -- resolved by the extraction layer
+    against this ROM's own decoded location names, not read from
+    `TUTOR_LOCATIONS` directly (see its comment for why).
+    """
     expected_size = TUTOR_MOVE_COUNT * 2
     if len(data) != expected_size:
         raise InvalidRomError(
@@ -33,7 +42,7 @@ def parse_tutor_move_table(data: bytes) -> tuple[TutorMove, ...]:
                 move_id=move_id,
                 # Genuinely free -- no shard-like cost mechanic exists.
                 shard_costs=ShardCosts(0, 0, 0, 0),
-                location_id=TUTOR_LOCATIONS[table_index],
+                location_id=location_ids[table_index],
                 table_index=table_index,
             )
         )

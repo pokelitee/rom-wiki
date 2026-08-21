@@ -11,7 +11,7 @@ from romwiki.engines.gen4.dppt import (
 from romwiki.engines.gen4.dppt.battle_variants import (
     resolve_trainer_variants,
 )
-from romwiki.engines.gen4.trainers import (
+from romwiki.engines.gen4.shared.trainers import (
     parse_trainer_class_prize_multipliers,
 )
 from romwiki.util.errors import InvalidRomError

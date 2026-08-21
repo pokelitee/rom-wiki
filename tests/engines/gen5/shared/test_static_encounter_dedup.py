@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.engines.gen5.script_disassembler import Gen5Instruction
-from romwiki.engines.gen5.static_encounter_dedup import (
+from romwiki.engines.gen5.shared.script_disassembler import Gen5Instruction
+from romwiki.engines.gen5.shared.static_encounter_dedup import (
     deduplicate_exact_paths,
     deduplicate_wild_paths,
 )

@@ -3,10 +3,12 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from romwiki.engines.gen4.battle_variant_support import (
+from romwiki.engines.gen4.shared.battle_variant_support import (
     resolved_battle_location as _resolved_battle_location,
 )
-from romwiki.engines.gen4.battle_variant_support import species_name as _species_name
+from romwiki.engines.gen4.shared.battle_variant_support import (
+    species_name as _species_name,
+)
 from romwiki.util.errors import ProfileError
 
 _CONTRACTS = {

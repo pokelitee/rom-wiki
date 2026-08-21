@@ -3,12 +3,12 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.script_disassembler import (
+from romwiki.engines.gen4.shared.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
-from romwiki.engines.gen4.script_opcode_table import OPCODE_TABLE
-from romwiki.engines.gen4.script_table import parse_script_function_offsets
+from romwiki.engines.gen4.shared.script_opcode_table import OPCODE_TABLE
+from romwiki.engines.gen4.shared.script_table import parse_script_function_offsets
 
 # Some NPC gifts and custom shops don't call the literal `AddItem` opcode
 # directly; instead they stage the item and quantity into two scratch work

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.script_disassembler import disassemble_function
+from romwiki.engines.gen4.shared.script_disassembler import disassemble_function
 
 _COMPARE_VAR_TO_VALUE = 0x0011
 _GOTO_IF = 0x001C
