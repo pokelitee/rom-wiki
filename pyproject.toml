@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,14 +8,21 @@ version = "0.1.0"
 description = "Extract structured Pokémon ROM data and generate static wikis"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "zhenga8533" }]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Games/Entertainment",
 ]
+
+[project.urls]
+Homepage = "https://pokelitee.github.io/rom-wiki/"
+Repository = "https://github.com/pokelitee/rom-wiki"
+Documentation = "https://github.com/pokelitee/rom-wiki/tree/main/docs"
+Issues = "https://github.com/pokelitee/rom-wiki/issues"
 
 [project.optional-dependencies]
 # capstone is an analysis-only tool: it is used to verify ROM code paths when
