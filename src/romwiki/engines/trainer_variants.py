@@ -36,6 +36,10 @@ def resolve_trainer_variants(
     validate_trainer_battle_families(
         result["battle_families"],
         result["trainer_variant_support"],
-        (record.get("trainer_id") for record in records),
+        (
+            trainer_id
+            for record in records
+            if (trainer_id := record.get("trainer_id")) is not None
+        ),
     )
     return result

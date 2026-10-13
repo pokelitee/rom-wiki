@@ -48,7 +48,7 @@ values. New engines must emit the stable keys needed to align equivalent records
 
 Examples:
 
-- A Platinum hack that preserves Platinum's layouts can reuse `gen4_dppt` and may
+- A Platinum hack that preserves Platinum's layouts can reuse `gen4_platinum` and may
   need mostly profile data and verification.
 - A Diamond or Pearl hack can reuse the NDS platform and some Generation IV parsers,
   but Platinum-specific tables and scripts must be audited.
@@ -182,10 +182,21 @@ filesystem/archive types, and header-matching function as a new entry in
 `src/romwiki/platforms/registry.py`'s `_PLATFORMS` dict, and give the profile a
 matching `platform` key.
 
+This filesystem/archive shape is what Nintendo DS needs (NitroFS + NARC
+members), not a platform-agnostic guarantee — see [Current
+limitations](architecture.md#current-limitations). A platform whose ROM is a
+flat binary addressed by fixed offsets, with no filesystem or archive concept
+(e.g. Game Boy Advance), cannot implement `archive_cls` as given. Decide the
+right shape from that platform's real format rather than forcing an archive
+abstraction around flat reads: extend `PlatformAdapter` with the read
+primitive that platform actually needs, and expect to add a platform-aware
+branch or sibling function at each `pipeline/extraction/*` call site that
+currently assumes `platform.archive_cls`/`filesystem`.
+
 Add engine parsers under
 `src/romwiki/engines/<generation>/<family>/` for each supported record type.
 Generation packages are internal namespaces; profiles continue to select stable
-leaf adapter IDs such as `gen4_dppt` and `gen5_bw`. Keep parsers small, typed, and
+leaf adapter IDs such as `gen4_platinum` and `gen5_bw`. Keep parsers small, typed, and
 independently testable. Preserve raw source locations in provenance and reject
 malformed or out-of-range records instead of silently guessing. Register the new
 engine's modules as a new `EngineAdapter` entry in
@@ -290,6 +301,18 @@ exact trainer IDs with rule provenance. Never construct a family from names,
 adjacent IDs, levels, party size, species similarity, or locations. Hacks must
 select an explicit compatible or overridden contract after ROM and creator-source
 verification; inheriting a retail profile alone is not evidence of script behavior.
+
+Concretely, this is one of the few places a hack profile for an *already supported*
+engine still needs a source-code touch, not just profile data: each trainer-enabled
+engine leaf keeps its own `_CONTRACTS` allowlist (e.g.
+`engines/gen4/platinum/battle_variants.py`, `engines/gen5/b2w2/battle_variants.py`) of
+every `trainer_variant_contract` string that engine's own decoders have been
+verified against. A profile's `trainer_variant_contract` parameter must name a
+value already present in its engine's set, or `resolve_trainer_variants` raises
+`ProfileError` — by design, not a bug to work around. Verify the new hack's field
+scripts against the owning leaf's decoded selectors (starter branches, rematch
+tables, and so on) the same way an existing hack was verified, then add its own new
+contract string to that engine's `_CONTRACTS` set as part of onboarding the profile.
 
 If party pages expose calculated stats, implement the generation's formula in its
 engine adapter and emit normalized `calculated_stats`; do not calculate them in a

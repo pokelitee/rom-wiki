@@ -109,6 +109,84 @@ class EngineProfileContract:
             )
 
 
+GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
+    # Generation III (Game Boy Advance) has no filesystem/archive concept --
+    # data is addressed by fixed ROM offsets under `[parameters]`, not
+    # `[layout]` path aliases like the Nintendo DS engines above.
+    required_parameters=frozenset(
+        {
+            "personal_offset",
+            "personal_count",
+            "move_offset",
+            "move_count",
+            "move_name_offset",
+            "move_name_stride",
+            "move_name_count",
+            "item_offset",
+            "item_count",
+            "trainer_offset",
+            "trainer_count",
+            "ability_name_offset",
+            "ability_name_stride",
+            "ability_name_count",
+            "encounter_offset",
+            "encounter_count",
+            "map_header_segments",
+            "region_name_offset",
+            "region_name_count",
+            "gmapgroups_offset",
+            "evolution_offset",
+            "tmhm_learnset_offset",
+            "machine_move_offset",
+            "machine_count",
+            "tm_count",
+            "egg_move_offset",
+            "egg_move_table_size",
+            "ability_description_offset",
+            "tutor_move_offset",
+            "tutor_compatibility_offset",
+        }
+    ),
+    reject_unknown=True,
+)
+
+GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
+    # Widen as more Generation III domains are verified against the real
+    # Emerald ROM, matching how GEN3_FRLG_PROFILE_CONTRACT itself grew.
+    required_parameters=frozenset(
+        {
+            "personal_offset",
+            "personal_count",
+            "ability_name_offset",
+            "ability_name_stride",
+            "ability_name_count",
+            "ability_description_offset",
+            "move_offset",
+            "move_count",
+            "move_name_offset",
+            "move_name_stride",
+            "move_name_count",
+            "item_offset",
+            "item_count",
+            "trainer_offset",
+            "trainer_count",
+            "evolution_offset",
+            "tmhm_learnset_offset",
+            "machine_move_offset",
+            "machine_count",
+            "tm_count",
+            "egg_move_offset",
+            "egg_move_table_size",
+            "encounter_offset",
+            "encounter_count",
+            "map_header_segments",
+            "region_name_offset",
+            "region_name_count",
+        }
+    ),
+    reject_unknown=True,
+)
+
 _GEN5_LAYOUT = frozenset(
     {
         "egg_moves",
@@ -192,7 +270,7 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
     reject_unknown=True,
 )
 
-GEN4_DPPT_PROFILE_CONTRACT = EngineProfileContract(
+GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
     required_layout=frozenset(
         {
             "berry_data",

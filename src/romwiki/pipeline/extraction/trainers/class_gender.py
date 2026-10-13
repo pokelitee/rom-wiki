@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
-from romwiki.engines.trainer_variants import resolve_trainer_variants
+from romwiki.engines.trainer_variants import (
+    TrainerVariantResolver,
+    resolve_trainer_variants,
+)
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
     read_code_binary,
@@ -31,6 +34,8 @@ from romwiki.util.errors import InvalidRomError, ProfileError
 def extract_class_gender_trainer_dataset(
     result: InspectionResult,
 ) -> dict[str, Any]:
+    if result.match is None:
+        raise ProfileError("A known game profile is required for trainer extraction")
     profile = result.match.profile
     try:
         trainer_path = profile.layout["trainer_data"]
@@ -45,6 +50,10 @@ def extract_class_gender_trainer_dataset(
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).trainers
     filesystem = platform.filesystem_from_image(result.image)
     trainer_archive_options = {
@@ -76,6 +85,10 @@ def extract_class_gender_trainer_dataset(
     class_prize_offset = profile.parameters.get("trainer_class_prize_offset")
     class_prize_multipliers = None
     if class_prize_overlay_id is not None and class_prize_offset is not None:
+        if platform.read_overlay is None:
+            raise ProfileError(
+                f"Platform {profile.platform!r} does not support overlays"
+            )
         _, prize_overlay = platform.read_overlay(result.image, class_prize_overlay_id)
         class_prize_multipliers = engine.parse_trainer_class_prize_multipliers(
             prize_overlay[class_prize_offset : class_prize_offset + len(classes)],
@@ -170,11 +183,19 @@ def extract_class_gender_trainer_dataset(
             # Branch conditions name the species the ROM itself compares, so the
             # resolver needs this profile's own species names.
             ("species_names", reference_names.get("pokemon_names")),
+            # Lets the resolver name an unguarded fallthrough branch's species
+            # by elimination against the profile's own starter table, instead
+            # of a generic "remaining starter" label.
+            ("starter_species", starter_species),
         )
         if value is not None
     }
     variant_contract = resolve_trainer_variants(
-        engine, profile.id, profile.parameters, records, selector_data or None
+        cast(TrainerVariantResolver, engine),
+        profile.id,
+        profile.parameters,
+        records,
+        selector_data or None,
     )
     envelope = dataset_envelope(
         schema_version=TRAINERS_RAW_SCHEMA_VERSION,

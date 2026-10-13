@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.static_encounter_dedup import (
+from romwiki.engines.gen5.shared.static_encounter_dedup import (
     deduplicate_exact_paths,
     deduplicate_wild_paths,
 )

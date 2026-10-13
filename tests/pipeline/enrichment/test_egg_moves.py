@@ -18,7 +18,7 @@ class EggMoveEnrichmentTests(unittest.TestCase):
         pokedb.moves_by_id.update({113: "light-screen", 130: "skull-bash"})
         egg_moves = {
             "game": "test",
-            "engine": "gen4_dppt",
+            "engine": "gen4_platinum",
             "source": {"overlay_id": 5, "table_offset": 0x100},
             "records": [
                 {
@@ -33,7 +33,7 @@ class EggMoveEnrichmentTests(unittest.TestCase):
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },
@@ -43,7 +43,7 @@ class EggMoveEnrichmentTests(unittest.TestCase):
         moves = enrich_move_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "moves.narc"},
                 "records": [_move_source_record(move_id) for move_id in range(471)],
             },

@@ -58,7 +58,7 @@ class LocationItemTests(unittest.TestCase):
         )
 
         scan = extract_event_map_items(
-            get_engine("gen4_dppt").locations, events, tuple(names)
+            get_engine("gen4_platinum").locations, events, tuple(names)
         )
         items = scan.items
 

@@ -1,4 +1,4 @@
-"""Proves the enrichment and rendering layers hold no gen4_dppt-specific
+"""Proves the enrichment and rendering layers hold no gen4_platinum-specific
 branches or constants: a fake engine registered only for these tests uses
 deliberately different table shapes (4 personal records, 3 moves, 3 types)
 and must flow through unmodified, exactly as a real second engine would.
@@ -13,7 +13,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from romwiki.engines.gen4.dppt import parse_encounter_record
+from romwiki.engines.gen4.platinum import parse_encounter_record
 from romwiki.engines.profile_contracts import EngineProfileContract
 from romwiki.engines.registry import (
     GEN5_B2W2_ENGINE,
@@ -44,7 +44,7 @@ _FAKE_MOVE_COUNT = 3
 
 
 def _fake_engine_tables(**overrides: object) -> types.SimpleNamespace:
-    """A minimal engine contract with shapes unlike gen4_dppt's."""
+    """A minimal engine contract with shapes unlike gen4_platinum's."""
     values: dict[str, object] = {
         "PERSONAL_RECORD_COUNT": _FAKE_PERSONAL_COUNT,
         "MOVE_RECORD_COUNT": _FAKE_MOVE_COUNT,
@@ -509,6 +509,17 @@ class EngineContractTests(unittest.TestCase):
         source = parse_encounter_record(
             bytes(data), area_id=0, archive_path="encounters.narc"
         ).to_dict()
+        # A location is required for the area to render a page at all --
+        # entries with no map header pointing at them are unused ROM data
+        # and get skipped.
+        source["locations"] = [
+            {
+                "header_id": 1,
+                "internal_name": "route1",
+                "name": "Test Route",
+                "location_name_id": 1,
+            }
+        ]
 
         enriched = enrich_encounter_dataset(
             {

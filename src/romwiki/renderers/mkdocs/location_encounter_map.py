@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.pipeline.semantics.encounter_identity import (
     SAFARI_ZONE_ROUTE,
@@ -74,7 +74,7 @@ def render_encounter_map_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    records = dataset["records"]
+    records = cast(list[dict[str, Any]], dataset["records"])
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -270,12 +270,9 @@ def _render_encounter_map_location(
         )
     elif encounters or conditional_encounters:
         lines.extend(["## Wild encounters", ""])
-        if encounters:
-            _append_encounter_variants(lines, encounters, source_file, record["name"])
-        if conditional_encounters:
-            _append_conditional_encounter_links(
-                lines, conditional_encounters, source_file
-            )
+        _append_encounter_variants(
+            lines, encounters, conditional_encounters, source_file, record["name"]
+        )
     append_items(lines, record["items"], source_file, references)
     append_script_awarded_items(
         lines, record.get("script_awarded_items", []), source_file, references
@@ -382,9 +379,16 @@ def _render_encounter_map_location(
 def _append_encounter_variants(
     lines: list[str],
     encounters: tuple[LocationEncounterReference, ...],
+    conditional_encounters: tuple[dict[str, Any], ...],
     source_file: str,
     location_name: str,
 ) -> None:
+    """Append one Wild encounters table covering both ordinary methods and
+    map-owned conditional sources (Headbutt/Hidden Grotto/Daily Swarm), each
+    linking out to its own encounters/ page. A single shared table -- rather
+    than one per source -- avoids stacking multiple differently-shaped tables
+    under the same heading.
+    """
     grouped: dict[int | str, list[LocationEncounterReference]] = {}
     for encounter in encounters:
         grouped.setdefault(encounter.encounter_route_key, []).append(encounter)
@@ -425,31 +429,18 @@ def _append_encounter_variants(
             f"| {' / '.join(seasons) or 'All'} | "
             f"{link} | {' / '.join(all_versions) or versions} |"
         )
-    lines.append("")
-
-
-def _append_conditional_encounter_links(
-    lines: list[str],
-    conditional_encounters: tuple[dict[str, Any], ...],
-    source_file: str,
-) -> None:
-    """Link out to each conditional encounter's own page, the same way
-    ordinary methods (`_append_encounter_variants`) and Safari Zone areas
-    already do, instead of embedding their tables here.
-    """
-    lines.extend(["| Encounter area |", "| -------------- |"])
-    for encounter in conditional_encounters:
-        route_key = encounter_route_key(encounter)
+    for conditional_encounter in conditional_encounters:
+        route_key = encounter_route_key(conditional_encounter)
         link = ROUTES.markdown_link(
             entity_reference(
                 encounter_route_kind(route_key),
-                encounter["area_id"],
-                conditional_encounter_label(encounter),
+                conditional_encounter["area_id"],
+                conditional_encounter_label(conditional_encounter),
                 route_key,
             ),
             source_file,
         )
-        lines.append(f"| {link} |")
+        lines.append(f"| — | {link} | — |")
     lines.append("")
 
 

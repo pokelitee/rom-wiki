@@ -1,0 +1,52 @@
+[profile]
+id = "leafgreen-us"
+name = "Pokémon LeafGreen (USA)"
+extends = "firered-us"
+base_game = "leafgreen"
+
+[header]
+game_codes = ["BPGE"]
+rom_versions = [0]
+
+[type_chart]
+chart = "gen3"
+
+[parameters]
+# LeafGreen's tables sit at different offsets than FireRed's throughout;
+# unset counts/strides are identical between the two games and inherited
+# from firered-us. See that profile and engines/gen3/frlg/constants.py for
+# what's verified.
+personal_offset = 0x254760
+personal_count = 412
+
+evolution_offset = 0x259734
+
+tmhm_learnset_offset = 0x252ba4
+machine_move_offset = 0x459fc4
+
+egg_move_offset = 0x25eeec
+
+tutor_move_offset = 0x459580
+tutor_compatibility_offset = 0x45959e
+
+move_offset = 0x250be0
+move_name_offset = 0x247070
+
+item_offset = 0x3dae64
+
+trainer_offset = 0x23eaa4
+
+ability_name_offset = 0x24fc1c
+ability_description_offset = 0x24fae4
+
+encounter_offset = 0x3c9af4
+
+map_header_segments = [[0x3505f8, 12], [0x35080c, 8], [0x350d30, 104]]
+region_name_offset = 0x3eeb38
+
+gmapgroups_offset = 0x352688
+
+[[hashes]]
+algorithm = "sha256"
+value = "78d310d557ceebc593bd393acc52d1b19a8f023fec40bc200e6063880d8531fc"
+variant = "usa-retail"

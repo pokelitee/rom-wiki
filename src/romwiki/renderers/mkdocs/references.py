@@ -195,14 +195,31 @@ def pokemon_markdown_link(
     )
 
 
-def pokemon_record_link(value: Mapping[str, Any], source_file: str) -> str:
-    """Link a Pokémon reference dict keyed by `id`/`slug`/`name` (fallback order)."""
-    return pokemon_markdown_link(
-        value.get("id", value.get("slug", value["name"])),
-        value["name"],
-        value.get("slug"),
-        source_file,
-    )
+def pokemon_record_link(
+    value: Mapping[str, Any],
+    source_file: str,
+    references: ReferenceIndex | None = None,
+) -> str:
+    """Link a Pokémon reference dict keyed by `id`/`slug`/`name` (fallback order).
+
+    When `references` is given, resolves through it (`resolve_matching`)
+    instead of trusting `slug` unconditionally -- a species beyond what the
+    `pokemon` domain currently exposes as a public record (e.g. Generation
+    III species past `PERSONAL_RECORD_COUNT`) has no real page, so this
+    renders plain text rather than a dead link.
+    """
+    name = value["name"]
+    if references is not None:
+        # Different callers key their Pokémon dicts by "member" (the raw
+        # engine-native species identifier, e.g. `personal_member_reference`'s
+        # output) or by "id" (e.g. National Dex ID) -- `ReferenceIndex`
+        # indexes "pokemon" records under both (see `from_datasets`), so try
+        # "member" first, then "id".
+        lookup_identifier = value.get("member", value.get("id", value.get("slug")))
+        reference = references.resolve_matching("pokemon", lookup_identifier, name)
+        return ROUTES.markdown_link(reference, source_file)
+    identifier = value.get("id", value.get("slug", value["name"]))
+    return pokemon_markdown_link(identifier, name, value.get("slug"), source_file)
 
 
 def resolved_reference(
@@ -235,7 +252,7 @@ def entity_markdown_link(
 
 
 def unique_references(
-    references: list[EntityReference],
+    references: Iterable[EntityReference],
 ) -> list[EntityReference]:
     result = []
     seen = set()

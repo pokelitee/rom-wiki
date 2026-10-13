@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.engines.gen5.machines import (
+from romwiki.engines.gen5.shared.machines import (
     machine_id_for_table_index as machine_id_for_table_index,
 )
 from romwiki.schema import Machine

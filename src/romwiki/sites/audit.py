@@ -13,6 +13,7 @@ from concurrent.futures import ProcessPoolExecutor
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, TypedDict
 from urllib.parse import unquote, urlsplit
 
 from romwiki.util.errors import SiteError
@@ -379,21 +380,30 @@ def _cached_parsed_pages(
         yield from _parsed_pages(tasks, jobs=jobs)
 
 
-def _parsed_page_to_dict(size: int, page: _ParsedPage) -> dict[str, object]:
+class _ParsedPageDict(TypedDict):
+    size: int
+    ids: list[str]
+    links: list[list[str | int]]
+    classes: list[str]
+    images: int
+    issues: list[dict[str, Any]]
+
+
+def _parsed_page_to_dict(size: int, page: _ParsedPage) -> _ParsedPageDict:
     return {
         "size": size,
         "ids": sorted(page.ids),
-        "links": page.links,
+        "links": [list(link) for link in page.links],
         "classes": sorted(page.custom_classes),
         "images": page.image_count,
         "issues": [issue.__dict__ for issue in page.issues],
     }
 
 
-def _parsed_page_from_dict(value: dict[str, object]) -> tuple[int, _ParsedPage]:
+def _parsed_page_from_dict(value: _ParsedPageDict) -> tuple[int, _ParsedPage]:
     return int(value["size"]), _ParsedPage(
         set(value["ids"]),
-        [tuple(link) for link in value["links"]],
+        [(str(link[0]), int(link[1])) for link in value["links"]],
         set(value["classes"]),
         [SiteAuditIssue(**issue) for issue in value["issues"]],
         int(value["images"]),

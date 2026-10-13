@@ -11,13 +11,28 @@ from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import ProfileError
 
 _SECTION_LAYOUT_REQUIREMENTS: dict[str, tuple[tuple[str, ...], ...]] = {
-    "pokemon": (("personal",),),
-    "abilities": (("personal",),),
-    "moves": (("moves",),),
-    "items": (("item_data", "messages"),),
-    "encounters": (("encounters",),),
-    "trainers": (("trainer_data", "trainer_parties"),),
-    "locations": (("map_matrices",), ("map_headers",), ("map_names",)),
+    # Each inner tuple lists keys that must ALL be present (in `profile.layout`
+    # or `profile.parameters`, see `_contains_all`); the outer tuple lists
+    # alternative ways to satisfy the section. NDS-style engines locate a
+    # domain via a `[layout]` archive path alias (e.g. `personal = "a/0/0/2"`);
+    # a flat, offset-addressed platform (e.g. Game Boy Advance) has no
+    # filesystem path for the same domain and signals it instead via its own
+    # `[parameters]` keys, listed here as a second alternative rather than
+    # derived from the layout key name -- the two naming schemes don't always
+    # match (`item_data`+`messages` vs `item_offset`, `moves` vs
+    # `move_offset`), per the `gen3_frlg` engine's profile contract.
+    "pokemon": (("personal",), ("personal_offset",)),
+    "abilities": (("personal",), ("personal_offset",)),
+    "moves": (("moves",), ("move_offset",)),
+    "items": (("item_data", "messages"), ("item_offset",)),
+    "encounters": (("encounters",), ("encounter_offset",)),
+    "trainers": (("trainer_data", "trainer_parties"), ("trainer_offset",)),
+    "locations": (
+        ("map_matrices",),
+        ("map_headers",),
+        ("map_names",),
+        ("map_header_segments",),
+    ),
 }
 
 
@@ -54,7 +69,7 @@ def dataset_enabled(profile: GameProfile, kind: str) -> bool:
         ) from error
     supported, _required = _engine_dataset_contract(profile)
     return kind in supported and any(
-        _contains_all(profile.layout, keys) for keys in alternatives
+        _contains_all(profile, keys) for keys in alternatives
     )
 
 
@@ -83,8 +98,8 @@ def describe_section_mismatch(
     return "; ".join(differences)
 
 
-def _contains_all(layout: Mapping[str, str], keys: tuple[str, ...]) -> bool:
-    return all(key in layout for key in keys)
+def _contains_all(profile: GameProfile, keys: tuple[str, ...]) -> bool:
+    return all(key in profile.layout or key in profile.parameters for key in keys)
 
 
 def _format_requirements(alternatives: tuple[tuple[str, ...], ...]) -> str:

@@ -75,9 +75,34 @@ the known party records and runtime behavior are already documented.
   uses for common-script item grants — a genuine negative result: none of
   the ~40 literal writes later in the same function actually reach the
   flagged call site without an intervening rewrite.
+- **HGSS's opening (New Bark Town/Elm's Lab) rival battle** — trainer records
+  2, 3, and 265 (solo Cyndaquil/Totodile/Chikorita parties, the type-counter
+  to whichever starter the player picks — the same relationship Platinum's
+  Route 201 battle uses) appear in no `battle_families` entry at all, and
+  have both `locations` and `script_references` empty, unlike every other
+  Silver battle (compare `starter-branch-0866-0`'s Azalea Town family, whose
+  three trainer IDs do carry a real header). Platinum's structurally
+  identical gap (its own opening battle) turned out to be gated behind a
+  `GetPlayerGender` check ahead of the starter branch, feeding the trainer ID
+  into `StartTagBattle` through a script variable instead of a literal
+  operand (see `gen4/platinum/tag_battles.py`'s `_parse_gender_gated_target`).
+  That exact mechanism was checked and ruled out here: HGSS's entire script
+  archive has only 4 variable-operand `TrainerBattle` (0xD5) sites in total,
+  and all 4 belong to one shared `GetEyeTrainerNum`-based overworld
+  patrol/rematch handler (script member 953) unrelated to Silver or the
+  starter choice. A literal-operand scan for `TrainerBattle(2, ...)`,
+  `TrainerBattle(3, ...)`, and `TrainerBattle(265, ...)` across every script
+  file also found zero real matches (one coincidental raw-byte hit on an
+  unrelated, unnamed opcode does not validate as a battle command). The
+  trigger is therefore neither a literal nor a script-variable-fed
+  `TrainerBattle` call anywhere in the field-script archive — the same
+  category of blocker as the DPPT partner battles and HGSS phone rematches
+  below (a native ARM9 code anchor, not a script-scanning gap). Not
+  attempted further without one.
 - **HGSS phone rematches** — the phone state machine/table is not decoded. The
-  starter-selected Silver branches are decoded independently across the script
-  archive. A real, curated phone-contact-ID space was found and verified:
+  starter-selected Silver branches other than the opening battle above (see
+  its own bullet) are decoded independently across the script archive. A
+  real, curated phone-contact-ID space was found and verified:
   scanning HeartGold's script archive for `GetPhoneBookRematch`(0x8E)/
   `CheckRegisteredPhoneNumber`(0x93) finds a small set of contact IDs
   (`{17,18,26-39,50}`, ~23 distinct values) clearly separate from the ~900-

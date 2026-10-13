@@ -18,7 +18,7 @@ def _profile(**overrides: object) -> GameProfile:
         "id": "test",
         "name": "Test",
         "platform": "nintendo-ds",
-        "engine": "gen4_dppt",
+        "engine": "gen4_platinum",
         "base_game": "platinum",
         "game_codes": ("CPUE",),
         "rom_versions": (1,),
@@ -35,7 +35,7 @@ def _move_table(count: int, move_id: int = 1) -> bytes:
 
 
 class OffsetFormatMachineExtractionTests(unittest.TestCase):
-    """Covers gen4_dppt's `profile-offset` branch with real binary parsing."""
+    """Covers gen4_platinum's `profile-offset` branch with real binary parsing."""
 
     def _write_rom(self, tmp_path, prefix: bytes, table: bytes, suffix: bytes = b""):
         rom_path = tmp_path / "rom.bin"
@@ -247,7 +247,7 @@ class MachineExtractionDispatchTests(unittest.TestCase):
             extract_machine_dataset(result)
 
     def test_raises_for_an_unsupported_machine_format(self) -> None:
-        profile = _profile(engine="gen4_dppt")
+        profile = _profile(engine="gen4_platinum")
         result = SimpleNamespace(
             match=SimpleNamespace(profile=profile), image=SimpleNamespace()
         )

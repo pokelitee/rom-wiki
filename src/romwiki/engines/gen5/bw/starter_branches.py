@@ -4,11 +4,11 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.script_disassembler import (
+from romwiki.engines.gen5.shared.script_disassembler import (
     Gen5Instruction,
     disassemble_script,
 )
-from romwiki.engines.gen5.script_opcode_table import (
+from romwiki.engines.gen5.shared.script_opcode_table import (
     STACK_CMP,
     STACK_CMP_EQUAL,
     STACK_PUSH,

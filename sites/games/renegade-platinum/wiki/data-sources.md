@@ -24,7 +24,7 @@ authoritative for every field stored by the ROM.
 
 ## Engine notes
 
-Renegade Platinum uses the same Generation IV DS engine (`gen4_dppt`) as retail
+Renegade Platinum uses the same Generation IV DS engine (`gen4_platinum`) as retail
 Platinum. Its profile changes table contents and selected semantics without
 introducing a separate binary-format engine.
 
@@ -34,7 +34,7 @@ release, since a hack patches table contents rather than the engine's own
 record layouts); this page adds Renegade Platinum's own specific facts and
 deltas from the base game on top.
 
---8<-- "gen4/dppt-data-sources.md"
+--8<-- "gen4/platinum-data-sources.md"
 
 ## Renegade Platinum-specific changes
 

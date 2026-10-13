@@ -585,7 +585,7 @@ def markdown_table_from_cells(
 
 
 def aggregate_slots(
-    slots: list[dict[str, Any]],
+    slots: Iterable[Mapping[str, Any]],
     minimum_level_key: str,
     maximum_level_key: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -912,7 +912,7 @@ def provenance_section(
     ]
 
 
-def provenance_fact_table(fields: tuple[tuple[str, str], ...]) -> list[str]:
+def provenance_fact_table(fields: Sequence[tuple[str, str]]) -> list[str]:
     """Render the shared "Native field | Value" table used across every
     Data provenance section that has ROM-native engine values not already
     shown elsewhere on the page.

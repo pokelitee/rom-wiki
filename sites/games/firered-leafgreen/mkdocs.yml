@@ -1,0 +1,24 @@
+INHERIT: ../../shared/mkdocs.base.yml
+
+site_name: Pokémon FireRed & LeafGreen Wiki
+site_description: A data-driven reference for Pokémon FireRed and LeafGreen
+docs_dir: wiki
+hooks:
+  - ../../../src/romwiki/sites/mkdocs_hooks.py
+
+theme:
+  custom_dir: ../../shared/overrides
+
+nav:
+  - Home: index.md
+  - Data Sources: data-sources.md
+  - Game Data:
+      - Pokémon: pokemon/index.md
+      - Abilities: abilities/index.md
+      - Items: items/index.md
+      - Moves: moves/index.md
+      - Trainers: trainers/index.md
+      - Type Chart: types/index.md
+  - World:
+      - Wild Encounters: encounters/index.md
+      - Locations: locations/index.md

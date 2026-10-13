@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from collections.abc import Sequence
 
-from romwiki.engines.gen5.vendors import (
+from romwiki.engines.gen5.shared.vendors import (
     Gen5SpecialVendor,
     Gen5SpecialVendorItem,
     fixed_vendor_items,

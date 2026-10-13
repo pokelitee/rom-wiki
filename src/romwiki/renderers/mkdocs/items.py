@@ -512,7 +512,7 @@ def _wild_holder_link(
     references: ReferenceIndex | None,
     show_sprite: bool,
 ) -> str:
-    link = pokemon_record_link(pokemon, source_file)
+    link = pokemon_record_link(pokemon, source_file, references)
     if not show_sprite:
         return link
     return sprite_with_link(_pokemon_sprite_cell(pokemon, references), link)
@@ -610,7 +610,7 @@ def _append_gift_trade_table(
                 (
                     f"| {_location_or_trade_cell(value, source_file)} "
                     f"| {_location_section(value)} | {_map_header(value)} "
-                    f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), pokemon_record_link(pokemon, source_file))} "
+                    f"| {kind} | {sprite_with_link(_pokemon_sprite_cell(pokemon, references), pokemon_record_link(pokemon, source_file, references))} "
                     f"| {reference_type_cell('pokemon', pokemon.get('member', pokemon.get('id')), references)} |"
                 )
                 for value, kind, pokemon in values
@@ -645,8 +645,8 @@ def _append_evolutions(
             "| ---- | -- | ------ |",
             *[
                 (
-                    f"| {sprite_with_link(_pokemon_sprite_cell(value['source'], references), pokemon_record_link(value['source'], source_file))} "
-                    f"| {sprite_with_link(_pokemon_sprite_cell(value['target'], references), pokemon_record_link(value['target'], source_file))} | "
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value['source'], references), pokemon_record_link(value['source'], source_file, references))} "
+                    f"| {sprite_with_link(_pokemon_sprite_cell(value['target'], references), pokemon_record_link(value['target'], source_file, references))} | "
                     f"{display_name(value['method'])} |"
                 )
                 for value in evolutions
@@ -705,7 +705,7 @@ def _append_fossil_revival(
             "",
             "Reviving this fossil produces:",
             "",
-            f"{sprite_with_link(_pokemon_sprite_cell(revives_into, references), pokemon_record_link(revives_into, source_file))}",
+            f"{sprite_with_link(_pokemon_sprite_cell(revives_into, references), pokemon_record_link(revives_into, source_file, references))}",
             "",
         ]
     )

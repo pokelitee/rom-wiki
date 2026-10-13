@@ -1,4 +1,4 @@
-from romwiki.engines.gen4.constants import (
+from romwiki.engines.gen4.shared.constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
@@ -16,58 +16,56 @@ from romwiki.engines.gen4.constants import (
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
-from romwiki.engines.gen4.egg_moves import parse_egg_move_table
-from romwiki.engines.gen4.events import (
+from romwiki.engines.gen4.shared.egg_moves import parse_egg_move_table
+from romwiki.engines.gen4.shared.events import (
     is_trainer_object_candidate,
     parse_map_events,
     parse_object_events,
 )
-from romwiki.engines.gen4.evolutions import parse_evolution_record
-from romwiki.engines.gen4.items import (
+from romwiki.engines.gen4.shared.evolutions import parse_evolution_record
+from romwiki.engines.gen4.shared.items import (
     GEN4_ITEM_FIELD_USE_NAMES,
     GEN4_ITEM_POCKET_NAMES,
     find_item_archive_members,
     parse_item_record,
 )
-from romwiki.engines.gen4.learnsets import parse_level_up_learnset
-from romwiki.engines.gen4.machines import (
+from romwiki.engines.gen4.shared.learnsets import parse_level_up_learnset
+from romwiki.engines.gen4.shared.machines import (
     GEN4_MACHINE_COUNT,
     GEN4_TM_COUNT,
     machine_name,
     parse_machine_move_table,
 )
-from romwiki.engines.gen4.map_matrices import parse_map_matrix
-from romwiki.engines.gen4.messages import parse_english_message_archive
-from romwiki.engines.gen4.moves import MOVE_RECORD_SIZE, parse_move_record
-from romwiki.engines.gen4.personal import (
+from romwiki.engines.gen4.shared.map_matrices import parse_map_matrix
+from romwiki.engines.gen4.shared.messages import parse_english_message_archive
+from romwiki.engines.gen4.shared.moves import MOVE_RECORD_SIZE, parse_move_record
+from romwiki.engines.gen4.shared.personal import (
     GEN4_BASE_SPECIES_COUNT,
     PERSONAL_FORM_MEMBERS,
     PERSONAL_INTERNAL_MEMBERS,
     PERSONAL_RECORD_SIZE,
     TRAINER_COSMETIC_FORM_LABELS,
+    TRAINER_FORM_SLUGS,
     parse_personal_record,
 )
-from romwiki.engines.gen4.personal import (
-    TRAINER_FORM_SLUGS as GEN4_TRAINER_FORM_SLUGS,
-)
-from romwiki.engines.gen4.starter_branches import (
+from romwiki.engines.gen4.shared.starter_branches import (
     GET_STARTER_SPECIES as GET_STARTER_SPECIES,
 )
-from romwiki.engines.gen4.starter_branches import (
+from romwiki.engines.gen4.shared.starter_branches import (
     Gen4StarterBranchFamily as Gen4StarterBranchFamily,
 )
-from romwiki.engines.gen4.starter_branches import (
+from romwiki.engines.gen4.shared.starter_branches import (
     parse_starter_branch_families as _parse_starter_branch_families,
 )
-from romwiki.engines.gen4.starter_species import (
+from romwiki.engines.gen4.shared.starter_species import (
     STARTER_SPECIES_ENTRY_SIZE,
     parse_starter_species,
 )
-from romwiki.engines.gen4.trainer_party import (
+from romwiki.engines.gen4.shared.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
-from romwiki.engines.gen4.trainers import (
+from romwiki.engines.gen4.shared.trainers import (
     parse_trainer_class_genders,
     parse_trainer_class_prize_multipliers,
     parse_trainer_record,
@@ -171,10 +169,6 @@ TRAINER_OBJECT_SCRIPT_START = 3000
 TRAINER_OBJECT_SCRIPT_END = 3999
 TRAINER_OBJECT_ID_OFFSET = 1
 ALLOW_DUPLICATE_EGG_MOVES = True
-# Sacred Gold and Storm Silver v1.05 both store form bits 1 on trainer 229's
-# Pinsir. Pinsir has no Generation IV form, so retain the raw form ID while
-# resolving its display/reference target to the base species.
-TRAINER_FORM_SLUGS = {**GEN4_TRAINER_FORM_SLUGS, (127, 1): "pinsir"}
 
 __all__ = [
     "ABILITY_NAME_COUNT",

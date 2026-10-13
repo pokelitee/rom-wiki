@@ -124,8 +124,14 @@ def _parse_block(
         area_id=map_index,
         map_index=map_index,
         season=season,
+        grass_cave=methods["grass_cave"],
+        doubles_grass=methods["doubles_grass"],
+        shaking_spots=methods["shaking_spots"],
+        surfing=methods["surfing"],
+        surfing_spots=methods["surfing_spots"],
+        fishing=methods["fishing"],
+        fishing_spots=methods["fishing_spots"],
         provenance=RecordProvenance(
             source="rom", archive=archive_path, member=map_index
         ),
-        **methods,
     )

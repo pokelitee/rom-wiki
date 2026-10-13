@@ -19,7 +19,7 @@ def parse_level_up_learnset(
             f"Gen V learnset record {species_id} has invalid size {len(data)}"
         )
 
-    moves = []
+    moves: list[LevelUpMove] = []
     for offset in range(0, len(data), 4):
         move_id, level = struct.unpack_from("<HH", data, offset)
         if (move_id, level) == LEARNSET_TERMINATOR:

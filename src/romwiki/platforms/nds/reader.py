@@ -1,26 +1,15 @@
 from __future__ import annotations
 
-import hashlib
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any
 
+from romwiki.platforms.common import RomHashes, calculate_hashes
 from romwiki.platforms.nds.blz import decompress_arm9
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.util.errors import InvalidRomError
 
 _HEADER_READ_SIZE = 0x200
-_HASH_CHUNK_SIZE = 1024 * 1024
-
-
-@dataclass(frozen=True, slots=True)
-class RomHashes:
-    md5: str
-    sha1: str
-    sha256: str
-
-    def to_dict(self) -> dict[str, str]:
-        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,7 +28,7 @@ class NintendoDSImage:
         with resolved_path.open("rb") as stream:
             header = NintendoDSHeader.from_bytes(stream.read(_HEADER_READ_SIZE))
             stream.seek(0)
-            hashes = _calculate_hashes(stream)
+            hashes = calculate_hashes(stream)
 
         size = resolved_path.stat().st_size
         _validate_regions(header, size)
@@ -75,18 +64,6 @@ def read_arm9_binary_decompressed(image: NintendoDSImage) -> bytes:
 def arm9_load_address(image: NintendoDSImage) -> int:
     """Return the RAM address the ARM9 binary is loaded at."""
     return image.header.arm9_ram_address
-
-
-def _calculate_hashes(stream: BinaryIO) -> RomHashes:
-    digests = {
-        "md5": hashlib.md5(usedforsecurity=False),
-        "sha1": hashlib.sha1(usedforsecurity=False),
-        "sha256": hashlib.sha256(),
-    }
-    while chunk := stream.read(_HASH_CHUNK_SIZE):
-        for digest in digests.values():
-            digest.update(chunk)
-    return RomHashes(**{name: digest.hexdigest() for name, digest in digests.items()})
 
 
 def _validate_regions(header: NintendoDSHeader, image_size: int) -> None:

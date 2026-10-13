@@ -46,7 +46,7 @@ def file_path_inventory(
 ) -> dict[str, str]:
     if not root.is_dir():
         return {}
-    paths = []
+    paths: list[str] = []
     for directory, child_directories, names in os.walk(root):
         if Path(directory) == root:
             child_directories[:] = [

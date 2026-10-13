@@ -193,7 +193,7 @@ def _profile(*, layout_overrides=None, parameter_overrides=None) -> GameProfile:
         id="test-dppt",
         name="Test DPPt",
         platform="nintendo-ds",
-        engine="gen4_dppt",
+        engine="gen4_platinum",
         base_game="platinum",
         game_codes=("CPUE",),
         rom_versions=(1,),

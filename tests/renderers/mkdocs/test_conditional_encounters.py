@@ -86,6 +86,25 @@ class HeadbuttRenderingTests(unittest.TestCase):
 
         self.assertNotIn('=== "', page)
 
+    def test_extra_intro_lines_land_after_the_heading_before_the_tables(self) -> None:
+        record = {
+            "version_variants": {"black": _headbutt_value(25)},
+        }
+        lines: list[str] = []
+
+        append_headbutt_encounters(
+            lines,
+            record,
+            "trainers/t.md",
+            None,
+            extra_intro_lines=("## Map headers", "", "inserted"),
+        )
+        page = "\n".join(lines)
+
+        self.assertLess(page.index("## Map headers"), page.index("#### Common trees"))
+        self.assertGreater(
+            page.index("## Map headers"), page.index("Headbutt encounters")
+        )
 
     def test_duplicate_species_in_a_pool_are_merged_into_one_row(self) -> None:
         record = {

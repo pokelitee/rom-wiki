@@ -1,0 +1,90 @@
+[profile]
+id = "emerald-us"
+name = "Pokémon Emerald (USA, Europe)"
+platform = "game-boy-advance"
+engine = "gen3_emerald"
+base_game = "emerald"
+
+[header]
+game_codes = ["BPEE"]
+rom_versions = [0]
+
+[type_chart]
+chart = "gen3"
+
+[parameters]
+personal_offset = 0x3203cc
+personal_count = 412
+
+ability_name_offset = 0x31b6db
+ability_name_stride = 13
+ability_name_count = 76
+ability_description_offset = 0x31bad4
+
+move_offset = 0x31c898
+move_count = 355
+
+move_name_offset = 0x31977c
+move_name_stride = 13
+move_name_count = 355
+
+item_offset = 0x5839a0
+item_count = 377
+
+trainer_offset = 0x310030
+trainer_count = 855
+
+evolution_offset = 0x32531c
+
+tmhm_learnset_offset = 0x31e898
+machine_move_offset = 0x615b94
+machine_count = 58
+tm_count = 50
+
+egg_move_offset = 0x32add8
+egg_move_table_size = 2278
+
+# `gWildMonHeaders` -- see `engines/gen3/emerald/constants.py`'s
+# `ENCOUNTER_HEADER_COUNT` comment for the real-ROM cross-checks.
+encounter_offset = 0x552d48
+encounter_count = 124
+
+# Region-name (Town Map section) table: entries 0-77 are Hoenn's own 78
+# locations (0 = "LITTLEROOT TOWN" ... 77 = "SECRET BASE"), entry 78 is a
+# blank separator, and entries 79-196 are FireRed/LeafGreen's own 118-entry
+# Kanto+Sevii table verbatim -- confirmed byte-identical to that table's
+# content, evidently shared source data left over from Emerald's
+# Kanto-facing subsystems even though Emerald itself has no Sevii Islands.
+# Entry 197 onward decodes to unrelated binary data (Secret Base decoration
+# item descriptions), confirming the boundary.
+region_name_offset = 0x5a0b10
+region_name_count = 197
+
+# `gMapGroups`: found by a full-ROM scan for contiguous runs of valid
+# 28-byte `MapHeader` records (same method used for FireRed/LeafGreen's own
+# segments). Five real, densely-packed segments, each confirmed by its
+# decoded region names: a 54-header town/city exterior-map group
+# (PETALBURG CITY, SLATEPORT CITY, ... EVER GRANDE CITY), a 204-header
+# town/city interior-map group (many buildings per town, e.g. 23 Lilycove
+# City interiors), a 48-header group covering Southern Island/Fiery
+# Path/Jagged Pass/Sealed Chamber/Island Cave (the legendary-encounter
+# postgame locations) plus a few leftover unused Kanto-region headers, a
+# 118-header group covering New Mauville (47 room headers alone) and
+# Abandoned Ship, and a 22-header group covering Routes
+# 104/109/110/113/119/123/124. This is real, substantial Hoenn coverage but
+# not an exhaustive scan of every map in the game -- widen this if a
+# further verified segment is found, the same open-ended scope FireRed/
+# LeafGreen's own Sevii-Islands-only slice already documents.
+#
+# Trainer/encounter location backfill (which needs `gmapgroups_offset` and
+# the `gMapGroups` pointer-indirection table itself, not just this segment
+# list) is deliberately not wired up for this leaf yet --
+# `pipeline/extraction/encounters.py`'s `_extract_gen3_encounter_locations`
+# already treats those parameters as optional, so Emerald's `encounters`
+# records simply keep `locations=()` until that follow-up lands.
+map_header_segments = [[0x4824b8, 54], [0x482af4, 204], [0x484198, 48], [0x484a74, 118], [0x485af8, 22]]
+
+[[hashes]]
+algorithm = "sha256"
+value = "a9dec84dfe7f62ab2220bafaef7479da0929d066ece16a6885f6226db19085af"
+variant = "usa-europe-retail"

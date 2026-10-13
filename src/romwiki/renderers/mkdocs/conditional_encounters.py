@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 from typing import Any
 
 from romwiki.pipeline.semantics.encounter_identity import (
@@ -45,11 +46,13 @@ def append_headbutt_encounters(
     references: ReferenceIndex | None,
     *,
     heading_level: int = 3,
+    extra_intro_lines: tuple[str, ...] = (),
 ) -> None:
     lines.extend(
         [
             f"{'#' * heading_level} Headbutt encounters {{ #{HEADBUTT_ANCHOR} }}",
             "",
+            *extra_intro_lines,
         ]
     )
     variants = list(version_variant_records(record))
@@ -122,6 +125,7 @@ def append_daily_swarm(
     references: ReferenceIndex | None,
     *,
     heading_level: int = 3,
+    extra_intro_lines: tuple[str, ...] = (),
 ) -> None:
     lines.extend(
         [
@@ -129,6 +133,7 @@ def append_daily_swarm(
             "",
             "This encounter is available only when this route is selected as the daily swarm.",
             "",
+            *extra_intro_lines,
         ]
     )
     lines.extend(
@@ -167,6 +172,7 @@ def append_hidden_grotto(
     *,
     heading_level: int = 3,
     heading: str = "Hidden Grotto",
+    extra_intro_lines: tuple[str, ...] = (),
 ) -> None:
     grotto_id = record["grotto_id"]
     lines.extend(
@@ -176,6 +182,7 @@ def append_hidden_grotto(
             "The ROM chooses one of four groups independently from the listed pool. "
             "Pool chance and group chance are kept separate.",
             "",
+            *extra_intro_lines,
         ]
     )
     variants = list(version_variant_records(record))
@@ -397,7 +404,7 @@ def conditional_encounter_provenance(record: dict[str, Any]) -> list[str]:
     return facts
 
 
-def conditional_encounter_label(record: dict[str, Any]) -> str:
+def conditional_encounter_label(record: Mapping[str, Any]) -> str:
     source_type = record.get("source_type")
     if source_type == EncounterSourceType.SAFARI_ZONE:
         return record["area_name"]
@@ -429,7 +436,9 @@ def disambiguated_conditional_labels(
     handle by appending the internal map name. Mirror that here for any
     conditional records sharing a label within this batch.
     """
-    labels = {record["area_id"]: conditional_encounter_label(record) for record in records}
+    labels = {
+        record["area_id"]: conditional_encounter_label(record) for record in records
+    }
     counts = Counter(labels.values())
     for record in records:
         area_id = record["area_id"]

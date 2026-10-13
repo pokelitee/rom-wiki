@@ -567,6 +567,7 @@ def _keyed_records(values: list[Any]) -> dict[Any, dict[str, Any]] | None:
         return None
     result: dict[Any, dict[str, Any]] = {}
     for value in values:
+        key: tuple[Any, ...]
         if "command_offset" in value:
             key = (
                 value.get("kind"),
@@ -782,7 +783,7 @@ def _format_trainer_location_change(
                     references,
                 )
             )
-        else:
+        elif new is not None:
             added.append(
                 _reference_html(
                     {**new, "id": new.get("header_id")},
@@ -913,9 +914,9 @@ def _format_evolutions(
     for target_id in target_ids:
         old = previous.get(target_id)
         new = current.get(target_id)
-        display = _reference_html(
-            (old or new)["target"], "pokemon", source_url, references
-        )
+        anchor = old if old is not None else new
+        assert anchor is not None
+        display = _reference_html(anchor["target"], "pokemon", source_url, references)
         if old is not None and new is not None:
             old_condition = evolution_condition(old, source_url, references)
             new_condition = evolution_condition(new, source_url, references)
@@ -926,7 +927,7 @@ def _format_evolutions(
             removed.append(
                 f"{display}: {evolution_condition(old, source_url, references)}"
             )
-        else:
+        elif new is not None:
             added.append(
                 f"{display}: {evolution_condition(new, source_url, references)}"
             )
@@ -1143,7 +1144,9 @@ def _format_machine_compatibility(
         new = current.get(key)
         if old is not None and new is not None:
             continue
-        label = _machine_label(old or new, source_url, references)
+        anchor = old if old is not None else new
+        assert anchor is not None
+        label = _machine_label(anchor, source_url, references)
         if old is not None:
             lines.append(f"{label}: {_diff('Compatible', 'Not compatible')}")
         else:

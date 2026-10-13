@@ -23,7 +23,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
         }
 
         normalized = normalize_trainer_party_member(
-            "gen4_dppt", member, has_custom_moves=True
+            "gen4_platinum", member, has_custom_moves=True
         )
 
         self.assertEqual(normalized["moves_source"], "explicit")
@@ -41,7 +41,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
 
     def test_marks_gen4_default_moves_explicitly(self) -> None:
         normalized = normalize_trainer_party_member(
-            "gen4_dppt",
+            "gen4_platinum",
             {
                 "difficulty": 0,
                 "gender_ability": 0,
@@ -60,7 +60,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
 
     def test_derives_gen4_nature_and_gender_from_personality(self) -> None:
         normalized = normalize_trainer_party_member(
-            "gen4_dppt",
+            "gen4_platinum",
             {
                 "difficulty": 0,
                 "gender_ability": 0,
@@ -75,7 +75,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
         )
 
         derived = derive_trainer_party_attributes(
-            "gen4_dppt",
+            "gen4_platinum",
             normalized,
             trainer_id=0,
             class_id=2,
@@ -89,7 +89,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
 
     def test_reproduces_gen4_invalid_iv_fallback(self) -> None:
         normalized = normalize_trainer_party_member(
-            "gen4_dppt",
+            "gen4_platinum",
             {
                 "difficulty": 196,
                 "gender_ability": 9,
@@ -103,7 +103,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
             has_custom_moves=False,
         )
         derived = derive_trainer_party_attributes(
-            "gen4_dppt",
+            "gen4_platinum",
             normalized,
             trainer_id=320,
             class_id=79,
@@ -173,7 +173,7 @@ class TrainerPartyNormalizationTests(unittest.TestCase):
     def test_rejects_invalid_gen4_difficulty(self) -> None:
         with self.assertRaisesRegex(DataSourceError, "difficulty"):
             normalize_trainer_party_member(
-                "gen4_dppt",
+                "gen4_platinum",
                 {
                     "difficulty": 256,
                     "level": 5,

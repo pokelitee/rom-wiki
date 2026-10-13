@@ -29,7 +29,7 @@ class ProfileRepositoryTests(unittest.TestCase):
         profile = next(value for value in profiles if value.id == "platinum-us")
 
         self.assertEqual(profile.platform, "nintendo-ds")
-        self.assertEqual(profile.engine, "gen4_dppt")
+        self.assertEqual(profile.engine, "gen4_platinum")
         self.assertEqual(profile.base_game, "platinum")
         self.assertEqual(profile.rom_versions, (0,))
         self.assertNotIn("egg_gifts", profile.parameters)
@@ -413,7 +413,7 @@ class ProfileRepositoryTests(unittest.TestCase):
 id = "test"
 name = "Test Profile"
 platform = "nintendo-ds"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
@@ -454,7 +454,7 @@ variant = "test"
 id = "base"
 name = "Base"
 platform = "nintendo-ds"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
@@ -563,7 +563,7 @@ variant = "test"
 id = "base"
 name = "Base"
 platform = "nintendo-ds"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
@@ -603,7 +603,7 @@ variant = "child"
 id = "base"
 name = "Base"
 platform = "nintendo-ds"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
@@ -658,7 +658,7 @@ variant = "{profile_id}"
 id = "test"
 name = "Test Profile"
 platform = "nintendo-ds"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
@@ -685,7 +685,7 @@ variant = "test"
 id = "test"
 name = "Test Profile"
 platform = "nintendo-ds"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]
@@ -711,7 +711,7 @@ variant = "test"
 [profile]
 id = "test"
 name = "Test Profile"
-engine = "gen4_dppt"
+engine = "gen4_platinum"
 base_game = "platinum"
 [header]
 game_codes = ["CPUE"]

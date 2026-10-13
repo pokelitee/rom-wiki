@@ -50,7 +50,7 @@ class MoveDatasetTests(unittest.TestCase):
                 return_value=platform,
             ) as get_platform,
             patch(
-                "romwiki.engines.gen4.dppt.parse_move_record",
+                "romwiki.engines.gen4.platinum.parse_move_record",
                 side_effect=[record_0, record_1],
             ) as parse_move_record,
             patch(
@@ -80,7 +80,7 @@ class MoveDatasetTests(unittest.TestCase):
 
         self.assertEqual(dataset["dataset"], "moves")
         self.assertEqual(dataset["game"], "test")
-        self.assertEqual(dataset["engine"], "gen4_dppt")
+        self.assertEqual(dataset["engine"], "gen4_platinum")
         self.assertEqual(dataset["record_count"], 2)
         self.assertEqual(
             dataset["records"],
@@ -102,7 +102,7 @@ def _profile() -> GameProfile:
         id="test",
         name="Test",
         platform="nintendo-ds",
-        engine="gen4_dppt",
+        engine="gen4_platinum",
         base_game="platinum",
         game_codes=("CPUE",),
         rom_versions=(1,),

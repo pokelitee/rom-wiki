@@ -12,7 +12,7 @@ class StaticEncounterEnrichmentTests(unittest.TestCase):
         pokedb = _reference_pokedb()
         static_encounters = {
             "game": "test",
-            "engine": "gen4_dppt",
+            "engine": "gen4_platinum",
             "source": {"archive": "a/0/5/7"},
             "records": [
                 {
@@ -35,7 +35,7 @@ class StaticEncounterEnrichmentTests(unittest.TestCase):
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },
@@ -62,7 +62,7 @@ class StaticEncounterEnrichmentTests(unittest.TestCase):
         pokemon = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },

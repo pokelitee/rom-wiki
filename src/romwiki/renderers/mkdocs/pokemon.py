@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from html import escape
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.pipeline.enrichment.features import EGG_MOVES, MOVE_TUTORS
 from romwiki.pipeline.enrichment.type_charts import defensive_effectiveness
@@ -89,8 +89,12 @@ def render_pokemon_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    public_records = [record for record in dataset["records"] if record["public"]]
-    dataset_features = frozenset(dataset.get("features", _DEFAULT_LEARNSET_FEATURES))
+    all_records = cast(list[dict[str, Any]], dataset["records"])
+    public_records = [record for record in all_records if record["public"]]
+    dataset_dict = cast(dict[str, Any], dataset)
+    dataset_features = frozenset(
+        dataset_dict.get("features", _DEFAULT_LEARNSET_FEATURES)
+    )
     preevolutions = _index_preevolutions(public_records)
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
@@ -107,11 +111,11 @@ def render_pokemon_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    type_name_source = dataset.get("name_sources", {}).get("type_names")
+    type_name_source = dataset_dict.get("name_sources", {}).get("type_names")
     move_lookup = {
         record["move_id"]: record for record in (move_dataset or {}).get("records", [])
     }
-    relationships = relationships or build_relationship_index({"pokemon": dataset})
+    relationships = relationships or build_relationship_index({"pokemon": dataset_dict})
     for index, record in enumerate(public_records):
         change = record_comparison(
             comparison, record.get("member", record["national_dex_id"])
@@ -1162,7 +1166,8 @@ def _trainer_held_item(
 def _move_cells(
     reference: dict[str, Any], move_lookup: dict[int, dict[str, Any]]
 ) -> str:
-    move = move_lookup.get(reference.get("id"))
+    move_id = reference.get("id")
+    move = move_lookup.get(move_id) if move_id is not None else None
     if move is None:
         return "— | — | — | — | —"
     move_type = type_badges([move["type"]])

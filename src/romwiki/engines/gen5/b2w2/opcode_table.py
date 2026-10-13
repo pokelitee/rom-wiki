@@ -12,7 +12,9 @@ table, and relative control-flow format.
 
 from __future__ import annotations
 
-from romwiki.engines.gen5.script_opcode_table import OPCODE_TABLE as BASE_OPCODE_TABLE
+from romwiki.engines.gen5.shared.script_opcode_table import (
+    OPCODE_TABLE as BASE_OPCODE_TABLE,
+)
 
 #: Named here so `difficulty_branches.py`'s byte-pattern scan (which runs
 #: before disassembly can resolve the opcode to its name) doesn't hand-copy

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from romwiki.engines.gen4.hgss import parse_english_message_archive
-from tests.engines.gen4.dppt.test_map_headers import _make_message_archive
+from tests.engines.gen4.platinum.test_map_headers import _make_message_archive
 
 
 class HgssMessageTests(unittest.TestCase):

@@ -64,7 +64,7 @@ whether extraction may proceed. Comparison workflows should normalize each input
 independently and compare those datasets rather than comparing ROM bytes.
 
 The `platinum-us` profile is the verified clean baseline for Renegade Platinum. It
-uses the same `gen4_dppt` engine while retaining retail-specific profile metadata,
+uses the same `gen4_platinum` engine while retaining retail-specific profile metadata,
 including its ROM version, hash, and egg-gift script offsets. Selecting
 `renegade-platinum` with `--base` resolves the local base path; profile
 identification then assigns extracted datasets to `platinum-us`. Generated baseline
@@ -131,9 +131,9 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 ### Engine decoders
 
 `src/romwiki/engines/` groups binary and script parsers first by generation and
-then by engine family. The current `gen4/dppt`, `gen4/hgss`, `gen5/bw`, and
+then by engine family. The current `gen4/platinum`, `gen4/hgss`, `gen5/bw`, and
 `gen5/b2w2` leaf packages decode their independently verified formats. Their
-stable profile-facing engine IDs are `gen4_dppt`, `gen4_hgss`, `gen5_bw`, and
+stable profile-facing engine IDs are `gen4_platinum`, `gen4_hgss`, `gen5_bw`, and
 `gen5_b2w2`. HGSS has its own adapter for its encounter and map-header formats
 while reusing ROM-verified shared Generation IV record parsers.
 
@@ -151,7 +151,7 @@ documentation.
 
 When an engine stores a semantic value indirectly, its engine package also owns
 the translator for that encoding. For example,
-`engines/gen4/dppt/trainer_party.py` translates Gen IV trainer-party records into
+`engines/gen4/platinum/trainer_party.py` translates Gen IV trainer-party records into
 the shared party contract. `pipeline/enrichment/trainer_party.py` dispatches by the explicit
 `engine` field on the raw dataset; it must not accumulate generation-specific
 branches itself.
@@ -473,7 +473,7 @@ The CLI uses the engine generation to select the matching local PokéDB output b
 default, and the site catalog verifies descriptor generation metadata against it.
 Pipeline modules resolve
 `get_platform(profile.platform)` and `get_engine(profile.engine)` instead of
-importing `platforms.nds` or `engines.gen4.dppt` directly; only the registries
+importing `platforms.nds` or `engines.gen4.platinum` directly; only the registries
 themselves, and each engine/platform's own package, are allowed to name a specific
 implementation. Trainer-party normalization follows this same adapter boundary.
 
@@ -501,7 +501,7 @@ profile contracts.
 But a pipeline
 module that has only ever run against one engine can still carry that engine's
 unstated assumptions, invisible until a second real engine exercises the same
-code path. Implementing `gen5_bw` (alongside `gen4_dppt`) found two:
+code path. Implementing `gen5_bw` (alongside `gen4_platinum`) found two:
 `pipeline/extraction/locations/dispatcher.py` unconditionally required several
 Platinum-only Sinnoh
 mechanics (honey trees, Trophy Garden, Great Marsh, decorations, seals, Battle
@@ -528,7 +528,7 @@ Nintendo DS. `tests/platforms/test_contract.py` proves this against a
 throwaway fake platform, the same pattern `tests/engines/test_contract.py`
 uses for the engine boundary above.
 
-The `gen4_dppt` and `gen5_bw` engines exercise the complete normalized pipeline
+The `gen4_platinum` and `gen5_bw` engines exercise the complete normalized pipeline
 and shared renderer system against two real generations, including retail games,
 single-version hacks, and sibling-version hack families. The `gen4_hgss` adapter
 independently exercises Pokémon, ability, move, item, encounter, trainer, and
@@ -541,6 +541,22 @@ capabilities. A second physical platform remains proven only by
 `tests/platforms/test_contract.py`'s fake adapter. A real platform addition should
 still add profile-identification, parser, and normalized-output fixtures following
 [Adding a game](adding-a-game.md).
+
+Because that boundary has never been exercised by a second real platform, its
+current shape is a single data point, not a proven contract: `PlatformAdapter`
+(`platforms/registry.py`) models a platform as filesystem + named archive
+members, and roughly twenty `pipeline/extraction/*` modules call
+`platform.archive_cls.from_bytes(filesystem.read(path))` directly against that
+shape. That fits Nintendo DS's NitroFS/NARC layout, but not every platform has
+a filesystem or archive concept — a flat ROM addressed by fixed byte offsets
+(e.g. Game Boy Advance) cannot satisfy `archive_cls` as written. Follow the
+same rule as the engine boundary above: don't redesign `PlatformAdapter`
+speculatively ahead of that work. When a real non-archive-based platform is
+added, decide then — informed by its actual ROM format — whether it needs a
+new read primitive alongside `archive_cls`/`filesystem` or its own extraction
+entry points; expect several of those ~20 call sites to need a platform-aware
+branch or a sibling function, the same "small, targeted fixes" pattern
+`gen5_bw` hit when it joined `gen4_platinum`.
 
 Normalized schemas are implemented as Python dataclasses and typed contracts
 serialized to JSON.

@@ -3,21 +3,21 @@ from __future__ import annotations
 import struct
 from collections.abc import Sequence
 
-from romwiki.engines.gen4.events import (
+from romwiki.engines.gen4.shared.events import (
     HIDDEN_ITEM_EVENT_TYPE,
     HIDDEN_ITEM_SCRIPT_BASE,
     VISIBLE_ITEM_SCRIPT_BASE,
     Gen4BackgroundEvent,
     Gen4ObjectEvent,
 )
-from romwiki.engines.gen4.events import (
+from romwiki.engines.gen4.shared.events import (
     is_hidden_item_candidate as is_hidden_item_candidate,
 )
-from romwiki.engines.gen4.events import (
+from romwiki.engines.gen4.shared.events import (
     is_visible_item_candidate as is_visible_item_candidate,
 )
-from romwiki.engines.gen4.script_disassembler import disassemble_function
-from romwiki.engines.gen4.script_table import parse_script_function_offsets
+from romwiki.engines.gen4.shared.script_disassembler import disassemble_function
+from romwiki.engines.gen4.shared.script_table import parse_script_function_offsets
 from romwiki.util.errors import InvalidRomError
 
 # Unlike Platinum, HGSS's item-ball placements do not store the item ID as a

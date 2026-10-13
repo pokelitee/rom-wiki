@@ -676,7 +676,7 @@ def _profile() -> GameProfile:
         id="test",
         name="Test",
         platform="nintendo-ds",
-        engine="gen4_dppt",
+        engine="gen4_platinum",
         base_game="platinum",
         game_codes=("CPUE",),
         rom_versions=(1,),

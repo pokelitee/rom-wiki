@@ -4,7 +4,7 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from romwiki.engines.gen5.trainer_records import (
+from romwiki.engines.gen5.shared.trainer_records import (
     resolve_common_script_trainer_id as resolve_common_script_trainer_id,
 )
 

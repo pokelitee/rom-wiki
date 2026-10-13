@@ -103,7 +103,10 @@ class GameBuildContext:
         return self._raw("pokemon/egg-moves", extract_egg_move_dataset)
 
     def evolutions_raw(self) -> dict[str, Any] | None:
-        if "evolutions" not in self.profile.layout:
+        if (
+            "evolutions" not in self.profile.layout
+            and "evolution_offset" not in self.profile.parameters
+        ):
             return None
         return self._raw("pokemon/evolutions", extract_evolution_dataset)
 
@@ -127,14 +130,13 @@ class GameBuildContext:
             return None
         return self._raw("pickup/raw", extract_pickup_dataset)
 
-    # moves_raw/encounters_raw/items_raw are deliberately NOT gated like the
-    # accessors above: Moves, Encounters, and Items are mandatory dataset
-    # kinds every profile must define (unlike the optional enrichment inputs
-    # above, some of which a given engine may never implement -- e.g. Gen5
-    # BW has no move tutors at all). A profile missing one of their layout
-    # keys is a real configuration error, so it should surface as the
-    # extractor's own clear ProfileError rather than be silently treated as
-    # an absent, optional section.
+    # moves_raw/encounters_raw are deliberately NOT gated like the accessors
+    # above: Moves and Encounters are mandatory dataset kinds every profile
+    # must define (unlike the optional enrichment inputs above, some of which
+    # a given engine may never implement -- e.g. Gen5 BW has no move tutors
+    # at all). A profile missing one of their layout keys is a real
+    # configuration error, so it should surface as the extractor's own clear
+    # ProfileError rather than be silently treated as an absent section.
     def moves_raw(self) -> dict[str, Any]:
         return self._raw("moves/raw", extract_move_dataset)
 
@@ -173,10 +175,15 @@ class GameBuildContext:
             ),
         )
 
-    # Also mandatory (see the comment above moves_raw/encounters_raw) --
-    # unlike trainers_raw/locations_raw just above, which are legitimately
-    # optional per-engine slices.
-    def items_raw(self) -> dict[str, Any]:
+    # Items is normally as mandatory as moves/encounters (see the comment
+    # above), but -- like trainers_raw/locations_raw -- it's gated on the
+    # engine's own declared dataset support: a personal-data-only vertical
+    # slice (an engine's first onboarding step) has no items domain yet, and
+    # pokemon()/locations_raw() below already treat a missing item dataset as
+    # an absent, optional enrichment input rather than a hard failure.
+    def items_raw(self) -> dict[str, Any] | None:
+        if not dataset_enabled(self.profile, "items"):
+            return None
         return self._raw("items/raw", extract_item_dataset)
 
     def trades_raw(self) -> dict[str, Any] | None:
@@ -229,6 +236,7 @@ class GameBuildContext:
                     self.egg_moves_raw(),
                     self.static_encounters_raw(),
                     item_dataset=self.items_raw(),
+                    move_dataset=self.moves_raw(),
                     type_names=self.profile.type_names,
                     move_names=self.profile.move_names,
                     sprite_version=self.profile.sprite_version,
@@ -311,19 +319,39 @@ class GameBuildContext:
         return attach_features(
             self._memo(
                 "items/enriched",
-                lambda: build_item_dataset(
-                    self.items_raw(),
-                    self.pokedb,
-                    self.pokemon(),
-                    self.trainers(),
-                    self.locations(),
-                    encounter_dataset=self.encounters(),
-                    trade_dataset=self.trades(),
-                    mart_dataset=self.marts_raw(),
-                    reference_version=self.profile.base_game,
-                ),
+                self._build_item_dataset,
             ),
             self.profile,
+        )
+
+    def _build_item_dataset(self) -> dict[str, Any]:
+        # Only called when dataset_enabled(profile, "items") is true (see
+        # items_raw() above and its callers), so a None items_raw() here
+        # would be a real bug, not a normal engine-capability gap.
+        dataset = self.items_raw()
+        if dataset is None:
+            raise ProfileError(
+                f"Profile {self.profile.id} does not support an items dataset"
+            )
+        return build_item_dataset(
+            dataset,
+            self.pokedb,
+            self.pokemon(),
+            self.trainers(),
+            self.locations(),
+            # Unlike moves_raw/encounters_raw (mandatory dataset kinds for
+            # every engine that declares "encounters" support at all),
+            # gen3_frlg doesn't implement encounters yet -- gated the same
+            # way trainers()/locations() already are, rather than crashing
+            # on a domain this engine's items build doesn't need.
+            encounter_dataset=(
+                self.encounters()
+                if dataset_enabled(self.profile, "encounters")
+                else None
+            ),
+            trade_dataset=self.trades(),
+            mart_dataset=self.marts_raw(),
+            reference_version=self.profile.base_game,
         )
 
     def all_datasets(self) -> dict[str, dict[str, Any]]:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
@@ -100,21 +100,34 @@ def render_encounter_pages(
     only_pages: frozenset[str] | None = None,
 ) -> int:
     engine_id = dataset.get("engine")
+    encounter_format = (
+        get_engine(engine_id).formats.encounters if isinstance(engine_id, str) else None
+    )
     seasonal = (
-        get_engine(engine_id).formats.encounters == "seasonal"
-        if isinstance(engine_id, str)
+        encounter_format == "seasonal"
+        if encounter_format is not None
         else bool(dataset.get("records")) and "season" in dataset["records"][0]
     )
+    dataset_dict = cast(dict[str, Any], dataset)
     if seasonal:
         return _render_seasonal_encounter_pages(
-            dataset,
+            dataset_dict,
             output_root,
             comparison,
             references,
             relationships,
             only_pages=only_pages,
         )
-    records = [record for record in dataset["records"] if record["active"]]
+    if encounter_format == "method-table":
+        return _render_method_table_encounter_pages(
+            dataset_dict,
+            output_root,
+            comparison,
+            references,
+            only_pages=only_pages,
+        )
+    all_records = cast(list[dict[str, Any]], dataset["records"])
+    records = [record for record in all_records if record["active"]]
     safari_records = [
         record
         for record in records
@@ -133,6 +146,10 @@ def render_encounter_pages(
         for record in records
         if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES
     ]
+    # Encounter table entries with no map header pointing at them are ROM
+    # padding/unused data -- not a place a player can reach -- so they're
+    # dropped rather than rendered under a fallback "Encounter Area NNN" name.
+    linked = [record for record in records if record.get("locations")]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -140,7 +157,7 @@ def render_encounter_pages(
             "index.md",
             *(
                 f"area-{record['area_id']:03}.md"
-                for record in records
+                for record in linked
                 if only_pages is None or f"area-{record['area_id']:03}" in only_pages
             ),
             *(
@@ -161,8 +178,6 @@ def render_encounter_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    linked = [record for record in records if record.get("locations")]
-    unlinked = [record for record in records if not record.get("locations")]
     name_counts = Counter(record["name"] for record in linked)
     sorted_linked = sorted(linked, key=lambda item: (item["name"], item["area_id"]))
     for index, record in enumerate(sorted_linked):
@@ -203,42 +218,6 @@ def render_encounter_pages(
         catalog_records.append(
             _catalog_record(record, filename.removesuffix(".md") + "/", True, change)
         )
-    if unlinked:
-        for index, record in enumerate(unlinked):
-            change = encounter_record_comparison(comparison, record)
-            filename = f"area-{record['area_id']:03}.md"
-            previous = unlinked[index - 1] if index else None
-            following = unlinked[index + 1] if index + 1 < len(unlinked) else None
-            if only_pages is None or filename.removesuffix(".md") in only_pages:
-                write_text(
-                    output_root / filename,
-                    _render_area(
-                        record,
-                        change,
-                        comparison.get("baseline") if comparison else None,
-                        references,
-                        previous,
-                        following,
-                    ),
-                )
-                page_count += 1
-            fallback_links.append(
-                "- "
-                + ROUTES.markdown_link(
-                    entity_reference(
-                        "encounter",
-                        record["area_id"],
-                        record["name"],
-                        record["area_id"],
-                    ),
-                    "encounters/index.md",
-                )
-            )
-            catalog_records.append(
-                _catalog_record(
-                    record, filename.removesuffix(".md") + "/", False, change
-                )
-            )
     if safari_records and _safari_page_selected(safari_records, only_pages):
         write_text(
             output_root / f"{SAFARI_ZONE_ROUTE}.md",
@@ -572,26 +551,29 @@ def _conditional_catalog_record(
     )
 
 
-def _append_conditional_location(
-    lines: list[str], record: dict[str, Any], source_file: str
-) -> None:
+def _conditional_location_lines(record: dict[str, Any], source_file: str) -> list[str]:
+    """Build the "Map headers" section for a conditional encounter page.
+
+    Returned as its own line list (rather than appended in place) so the
+    caller can splice it in right after the page's intro -- the same
+    position ordinary and seasonal encounter pages already put their own
+    Map headers section, before the encounter tables rather than after them.
+    """
     location = record.get("location")
     if not isinstance(location, dict):
-        return
+        return []
     reference = entity_reference(
         "location", location["header_id"], location["name"], location["header_id"]
     )
-    lines.extend(
-        [
-            "## Map headers",
-            "",
-            "| Location | Map ID | Internal ID |",
-            "| -------- | ------ | ----------- |",
-            f"| {ROUTES.markdown_link(reference, source_file)} "
-            f"| `header-{location['header_id']:03}` | `{location['internal_name']}` |",
-            "",
-        ]
-    )
+    return [
+        "## Map headers",
+        "",
+        "| Location | Map ID | Internal ID |",
+        "| -------- | ------ | ----------- |",
+        f"| {ROUTES.markdown_link(reference, source_file)} "
+        f"| `header-{location['header_id']:03}` | `{location['internal_name']}` |",
+        "",
+    ]
 
 
 def _append_conditional_record_navigation(
@@ -603,7 +585,7 @@ def _append_conditional_record_navigation(
 ) -> None:
     route_key = encounter_route_key(record)
 
-    def label(value: dict[str, Any]) -> str:
+    def label(value: Mapping[str, Any]) -> str:
         if labels is not None and value["area_id"] in labels:
             return labels[value["area_id"]]
         return conditional_encounter_label(value)
@@ -634,10 +616,16 @@ def _render_conditional_encounter_page(
     route_key = encounter_route_key(record)
     source_file = f"encounters/{route_key}.md"
     lines: list[str] = []
+    location_lines = _conditional_location_lines(record, source_file)
     source_type = record.get("source_type")
     if source_type == EncounterSourceType.HEADBUTT:
         append_headbutt_encounters(
-            lines, record, source_file, references, heading_level=1
+            lines,
+            record,
+            source_file,
+            references,
+            heading_level=1,
+            extra_intro_lines=tuple(location_lines),
         )
     elif source_type == EncounterSourceType.HIDDEN_GROTTO:
         append_hidden_grotto(
@@ -647,12 +635,19 @@ def _render_conditional_encounter_page(
             references,
             heading_level=1,
             heading=labels[record["area_id"]],
+            extra_intro_lines=tuple(location_lines),
         )
     elif source_type == EncounterSourceType.DAILY_SWARM:
-        append_daily_swarm(lines, record, source_file, references, heading_level=1)
+        append_daily_swarm(
+            lines,
+            record,
+            source_file,
+            references,
+            heading_level=1,
+            extra_intro_lines=tuple(location_lines),
+        )
     else:
         raise SiteError(f"Unsupported conditional encounter source: {source_type!r}")
-    _append_conditional_location(lines, record, source_file)
     lines.extend(
         comparison_section(
             encounter_record_comparison(comparison, record),
@@ -885,13 +880,20 @@ def _unique_pokemon(pokemon: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return unique
 
 
-def _pokemon_reference(pokemon: dict[str, Any]):
-    return entity_reference(
-        "pokemon",
-        pokemon.get("id", pokemon["slug"]),
-        pokemon["name"],
-        pokemon.get("slug"),
-    )
+def _pokemon_reference(
+    pokemon: dict[str, Any], references: ReferenceIndex | None = None
+):
+    identifier = pokemon.get("id", pokemon["slug"])
+    name = pokemon["name"]
+    if references is not None:
+        # `id` is the raw, engine-native species identifier (see
+        # `pipeline/enrichment/encounters.py`'s `_encounter_pokemon`
+        # comment) -- resolving through the reference index (rather than
+        # trusting `slug` unconditionally) avoids linking to a species page
+        # that was never actually rendered, e.g. a Generation III species
+        # beyond `PERSONAL_RECORD_COUNT`'s currently-exposed range.
+        return references.resolve_matching("pokemon", identifier, name)
+    return entity_reference("pokemon", identifier, name, pokemon.get("slug"))
 
 
 def _method_heading(label: str, key: str, record: dict[str, Any]) -> str:
@@ -1101,7 +1103,7 @@ def _append_walking(
                 (
                     sprite_with_link(
                         table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
-                        _pokemon_link(slot["pokemon"], source_file),
+                        _pokemon_link(slot["pokemon"], source_file, references),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
                     level_range(slot["minimum_level"], slot["maximum_level"]),
@@ -1131,7 +1133,7 @@ def _append_water(
                 (
                     sprite_with_link(
                         table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
-                        _pokemon_link(slot["pokemon"], source_file),
+                        _pokemon_link(slot["pokemon"], source_file, references),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
                     level_range(slot["minimum_level"], slot["maximum_level"]),
@@ -1175,7 +1177,9 @@ def _append_special(
                         (
                             sprite_with_link(
                                 table_sprite_cell(entry["pokemon"].get("sprite")),
-                                _pokemon_link(entry["pokemon"], source_file),
+                                _pokemon_link(
+                                    entry["pokemon"], source_file, references
+                                ),
                             ),
                             _slot_type_cell(entry["pokemon"], references),
                             level_range(entry["minimum_level"], entry["maximum_level"]),
@@ -1195,7 +1199,7 @@ def _append_special(
             markdown_table(
                 ["| Pokémon | Type |", "| ------- | ---- |"],
                 [
-                    f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file))} | "
+                    f"| {sprite_with_link(table_sprite_cell(value.get('sprite')), _pokemon_link(value, source_file, references))} | "
                     f"{_slot_type_cell(value, references)} |"
                     for value in pokemon
                 ],
@@ -1219,16 +1223,218 @@ def _append_special(
         )
 
 
+# Generation III has no seasons and no Generation IV-only bonus-slot
+# mechanics (swarm/day/night/radar/dual-slot/Unown) -- every method stores
+# an explicit min/max level range per slot (see `schema/encounters.py`'s
+# `MethodEncounterArea`), so this renders each present method with the same
+# generic `_append_water` table the conditional path already uses for its
+# own min/max-level methods (surf/rod), rather than reusing the Generation
+# IV-shaped `_render_area`/`_catalog_record`, which assume fields (`special`,
+# `walking_variants`, `unown_table_id`) this engine's records never have.
+_METHOD_TABLE_LABELS = {
+    "land": "Land",
+    "water": "Water",
+    "rock_smash": "Rock Smash",
+    "fishing": "Fishing",
+}
+
+
+def _render_method_table_encounter_pages(
+    dataset: dict[str, Any],
+    output_root: Path,
+    comparison: dict[str, Any] | None,
+    references: ReferenceIndex | None,
+    *,
+    only_pages: frozenset[str] | None = None,
+) -> int:
+    # Unlike the conditional path, an area with no map header pointing at
+    # it is still rendered here: this engine has no location/map-header
+    # system implemented yet, so every record legitimately has empty
+    # `locations` (see `pipeline/extraction/encounters.py`'s method-table
+    # branch) -- that's not evidence of unused ROM padding the way it is
+    # for the NDS engines the conditional path was written for.
+    records = [record for record in dataset["records"] if record["active"]]
+    output_root.mkdir(parents=True, exist_ok=True)
+    prune_catalog_pages(
+        output_root,
+        {
+            "index.md",
+            *(
+                f"area-{record['area_id']:03}"
+                for record in records
+                if only_pages is None or f"area-{record['area_id']:03}" in only_pages
+            ),
+        },
+    )
+    fallback_links = []
+    catalog_records = []
+    page_count = 0
+    sorted_records = sorted(records, key=lambda item: (item["name"], item["area_id"]))
+    for index, record in enumerate(sorted_records):
+        change = encounter_record_comparison(comparison, record)
+        filename = f"area-{record['area_id']:03}.md"
+        previous = sorted_records[index - 1] if index else None
+        following = (
+            sorted_records[index + 1] if index + 1 < len(sorted_records) else None
+        )
+        if only_pages is None or filename.removesuffix(".md") in only_pages:
+            write_text(
+                output_root / filename,
+                _render_method_table_area(
+                    record,
+                    change,
+                    comparison.get("baseline") if comparison else None,
+                    references,
+                    previous,
+                    following,
+                ),
+            )
+            page_count += 1
+        fallback_links.append(
+            "- "
+            + ROUTES.markdown_link(
+                entity_reference(
+                    "encounter", record["area_id"], record["name"], record["area_id"]
+                ),
+                "encounters/index.md",
+            )
+        )
+        catalog_records.append(
+            _method_table_catalog_record(
+                record, filename.removesuffix(".md") + "/", True, change
+            )
+        )
+    write_catalog(output_root, "encounters", catalog_records)
+    write_text(
+        output_root / "index.md",
+        catalog_index(
+            "Wild encounters",
+            "Exact encounter tables decoded from the ROM's own wild-encounter archive.",
+            "encounters",
+            fallback_links,
+        ),
+    )
+    return page_count
+
+
+def _method_table_catalog_record(
+    record: dict[str, Any],
+    filename: str,
+    referenced: bool,
+    change: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    accumulator = _MethodAccumulator()
+    for key, label in _METHOD_TABLE_LABELS.items():
+        accumulator.add(label, heading_anchor(label), record.get(key))
+    method_pokemon = accumulator.method_pokemon_deduped()
+    location_names = [location["name"] for location in record.get("locations", [])]
+    route_id = filename.removesuffix("/")
+    return add_change_status(
+        {
+            "id": record["area_id"],
+            "route_id": route_id,
+            "label": record["name"],
+            "url": filename,
+            "locations": list(dict.fromkeys(location_names)),
+            "methods": accumulator.methods,
+            "method_anchors": accumulator.method_anchors,
+            "pokemon": list(dict.fromkeys(accumulator.species)),
+            "pokemon_refs": [
+                ROUTES.catalog_reference(reference, "encounters/")
+                for reference in unique_references(accumulator.pokemon_refs)
+            ],
+            "method_pokemon": method_pokemon,
+            "min_level": min(accumulator.levels) if accumulator.levels else None,
+            "max_level": max(accumulator.levels) if accumulator.levels else None,
+            "referenced": referenced,
+            "search_text": " ".join(
+                (record["name"], route_id, *location_names, *accumulator.species)
+            ).lower(),
+        },
+        change,
+    )
+
+
+def _render_method_table_area(
+    record: dict[str, Any],
+    change: dict[str, Any] | None = None,
+    baseline_name: str | None = None,
+    references: ReferenceIndex | None = None,
+    previous: dict[str, Any] | None = None,
+    following: dict[str, Any] | None = None,
+) -> str:
+    source_file = f"encounters/area-{record['area_id']:03}.md"
+    lines = [
+        f"# {record['name']}",
+        "",
+        *_method_table_area_summary(record),
+    ]
+    _append_locations(lines, record.get("locations", []), source_file)
+    for key, label in _METHOD_TABLE_LABELS.items():
+        if key in record:
+            _append_water(lines, label, record[key], source_file, references)
+    lines.extend(comparison_section(change, baseline_name, source_file, references))
+    lines.extend(
+        provenance_section(
+            [
+                rom_record_source(
+                    record["provenance"]["archive"], record["provenance"]["member"]
+                ),
+                "Chance percentages are not stored in the ROM's encounter tables — "
+                "only each slot's species and level range are ROM data — they are "
+                "fixed, publicly documented Generation III engine weights applied "
+                "by slot position.",
+            ]
+        )
+    )
+    _append_record_navigation(lines, record, previous, following)
+    return "\n".join(lines)
+
+
+def _method_table_area_summary(record: dict[str, Any]) -> list[str]:
+    methods = [
+        label
+        for key, label in _METHOD_TABLE_LABELS.items()
+        if record.get(key, {}).get("rate")
+    ]
+    locations = record.get("locations", [])
+    facts = [
+        f"<div><dt>Area ID</dt><dd>{record['area_id']}</dd></div>",
+        (
+            "<div><dt>Methods</dt><dd>"
+            + (
+                ", ".join(
+                    summary_section_link(label, heading_anchor(label))
+                    for label in methods
+                )
+                if methods
+                else "None"
+            )
+            + "</dd></div>"
+        ),
+    ]
+    if locations:
+        facts.append(
+            "<div><dt>Map headers</dt><dd>"
+            f"{summary_section_link(len(locations), 'map-headers')}</dd></div>"
+        )
+    return summary_section("rw-encounter-summary", facts)
+
+
 def _slot_type_cell(
     pokemon: dict[str, Any] | None, references: ReferenceIndex | None
 ) -> str:
     return reference_type_cell("pokemon", (pokemon or {}).get("id"), references)
 
 
-def _pokemon_link(pokemon: dict[str, Any] | None, source_file: str) -> str:
+def _pokemon_link(
+    pokemon: dict[str, Any] | None,
+    source_file: str,
+    references: ReferenceIndex | None = None,
+) -> str:
     if pokemon is None:
         return "None"
-    return ROUTES.markdown_link(_pokemon_reference(pokemon), source_file)
+    return ROUTES.markdown_link(_pokemon_reference(pokemon, references), source_file)
 
 
 def _render_seasonal_encounter_pages(
@@ -1689,7 +1895,7 @@ def _append_seasonal_method(
                 (
                     sprite_with_link(
                         table_sprite_cell((slot["pokemon"] or {}).get("sprite")),
-                        _pokemon_link(slot["pokemon"], source_file),
+                        _pokemon_link(slot["pokemon"], source_file, references),
                     ),
                     _slot_type_cell(slot["pokemon"], references),
                     level_range(slot["minimum_level"], slot["maximum_level"]),
@@ -1702,7 +1908,7 @@ def _append_seasonal_method(
 
 
 def _seasonal_display_name(
-    record: dict[str, Any],
+    record: Mapping[str, Any],
     locations: tuple[EncounterLocationReference, ...],
 ) -> str:
     names = list(dict.fromkeys(location.location_name for location in locations))

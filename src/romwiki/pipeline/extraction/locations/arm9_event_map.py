@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -236,6 +237,10 @@ def _load_event_map_source(
     game_corner_prize_count = profile.parameters.get("game_corner_prize_count", 0)
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).locations
 
     null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)
@@ -331,6 +336,10 @@ def _load_event_map_source(
         seal_names = ()
         seal_prices = ()
     if frontier_price_overlay_id is not None:
+        if platform.read_overlay is None:
+            raise ProfileError(
+                f"Platform {profile.platform!r} does not support overlays"
+            )
         _, frontier_overlay = platform.read_overlay(
             result.image, frontier_price_overlay_id
         )
@@ -877,8 +886,8 @@ def _build_event_map_location_record(
     static_encounters: tuple[LocationStaticEncounter, ...],
     npc_trades: tuple[LocationNpcTrade, ...],
     script_awarded_items: tuple[LocationScriptAwardedItem, ...],
-    section_name: str,
-    section_name_source: dict[str, Any],
+    section_name: str | None,
+    section_name_source: dict[str, str] | None,
 ) -> dict[str, Any]:
     features = context.features
     return EventMapLocation(
@@ -965,7 +974,7 @@ def _extract_event_map_location_shops(
         price_by_item: dict[int, int] | None = None
         currency = "money"
         if command.kind == "common":
-            source_items = (
+            source_items: Iterable[tuple[int, Any]] = (
                 (item.item_id, item.required_badges) for item in common_items
             )
             names = item_names

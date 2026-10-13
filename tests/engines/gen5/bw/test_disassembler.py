@@ -4,7 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen5.bw.marts import parse_shop_dispatch
-from romwiki.engines.gen5.script_disassembler import (
+from romwiki.engines.gen5.shared.script_disassembler import (
     disassemble_function,
     find_calls,
     parse_function_offsets,

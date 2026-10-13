@@ -49,6 +49,9 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["route_id"], "headbutt-009")
         self.assertIn("# Headbutt encounters", page)
         self.assertIn("Route 1", page)
+        # Map headers must appear before the encounter tables, the same
+        # position ordinary and seasonal encounter pages already use.
+        self.assertLess(page.index("## Map headers"), page.index("## Common trees"))
 
     def test_disambiguates_headbutt_labels_sharing_a_location_name(self) -> None:
         # Two different map headers can share the same display name (a route
@@ -68,7 +71,11 @@ class EncounterRenderingTests(unittest.TestCase):
                 },
                 "pools": {"common": [], "rare": [], "secret": []},
                 "tree_groups": [],
-                "provenance": {"source": "rom", "archive": "a/2/5/2", "member": area_id},
+                "provenance": {
+                    "source": "rom",
+                    "archive": "a/2/5/2",
+                    "member": area_id,
+                },
             }
 
         dataset = {
@@ -93,6 +100,87 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("Headbutt encounters — Route 2 (R02R0101)", labels)
         self.assertIn("Headbutt encounters — Route 2 (R02)", index_page)
         self.assertIn("Headbutt encounters — Route 2 (R02R0101)", index_page)
+
+    def test_omits_encounter_areas_with_no_map_header(self) -> None:
+        # Some encounter-table entries (Platinum's, in practice) aren't
+        # referenced by any map header at all -- leftover/unused ROM data,
+        # not a place a player can reach. These shouldn't get a fallback
+        # "Encounter Area NNN" page or catalog entry.
+        walking_slot = {
+            "level": 5,
+            "species_id": 25,
+            "chance": 100,
+            "pokemon": {"id": 25, "slug": "pikachu", "name": "Pikachu", "sprite": None},
+        }
+        unlinked = {
+            "area_id": 60,
+            "name": "Encounter Area 060",
+            "locations": [],
+            "active": True,
+            "walking": {"rate": 15, "slots": [walking_slot]},
+            "walking_variants": {
+                period: {"rate": 15, "slots": [walking_slot]}
+                for period in ("morning", "day", "night")
+            },
+            "special": {
+                "format": "hgss",
+                "land_swarm": None,
+                "surf_swarm": None,
+                "hoenn_radio": [],
+                "sinnoh_radio": [],
+                "night_fishing": None,
+                "fishing_swarm": None,
+            },
+            "provenance": {"archive": "a/0/1/2", "member": 60},
+        }
+        linked = {
+            "area_id": 61,
+            "name": "Route 201",
+            "locations": [
+                {
+                    "header_id": 4,
+                    "internal_name": "route201",
+                    "name": "Route 201",
+                    "location_name_id": 4,
+                }
+            ],
+            "active": True,
+            "walking": {"rate": 15, "slots": [walking_slot]},
+            "walking_variants": {
+                period: {"rate": 15, "slots": [walking_slot]}
+                for period in ("morning", "day", "night")
+            },
+            "special": {
+                "format": "hgss",
+                "land_swarm": None,
+                "surf_swarm": None,
+                "hoenn_radio": [],
+                "sinnoh_radio": [],
+                "night_fishing": None,
+                "fishing_swarm": None,
+            },
+            "provenance": {"archive": "a/0/1/2", "member": 61},
+        }
+        dataset = {
+            "game": "test",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [unlinked, linked],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            render_encounter_pages(dataset, output)
+            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
+            index_page = (output / "index.md").read_text(encoding="utf-8")
+            written = {path.name for path in output.iterdir()}
+
+        self.assertNotIn("area-060.md", written)
+        self.assertIn("area-061.md", written)
+        self.assertEqual(len(catalog["records"]), 1)
+        self.assertEqual(catalog["records"][0]["id"], 61)
+        self.assertNotIn("Encounter Area 060", index_page)
+        self.assertIn("Route 201", index_page)
 
     def test_raises_a_site_error_for_an_unroutable_catalog_record(self) -> None:
         # A malformed/inconsistent build state (the location engine hasn't
@@ -159,6 +247,9 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["route_id"], "daily-swarm-331")
         self.assertIn("# Daily Swarm", page)
         self.assertIn("Plusle", page)
+        # Map headers must appear before the encounter table, the same
+        # position ordinary and seasonal encounter pages already use.
+        self.assertLess(page.index("## Map headers"), page.index("Plusle"))
 
     def test_includes_hidden_grotto_as_its_own_encounter_page(self) -> None:
         record = {
@@ -218,6 +309,9 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("# Hidden Grotto 00", page)
         self.assertIn("Dunsparce", page)
         self.assertIn("Fire Stone", page)
+        # Map headers must appear before the encounter tables, the same
+        # position ordinary and seasonal encounter pages already use.
+        self.assertLess(page.index("## Map headers"), page.index("## Pokémon"))
 
     def test_nests_versions_inside_season_tabs(self) -> None:
         lines = _season_version_tabs(
@@ -448,7 +542,14 @@ class EncounterRenderingTests(unittest.TestCase):
         record = {
             "area_id": 0,
             "name": "Route 29",
-            "locations": [],
+            "locations": [
+                {
+                    "header_id": 12,
+                    "internal_name": "route29",
+                    "name": "Route 29",
+                    "location_name_id": 12,
+                }
+            ],
             "active": True,
             "walking": {"rate": 20, "slots": [walking_slot]},
             "walking_variants": {

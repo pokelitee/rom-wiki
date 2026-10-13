@@ -18,7 +18,7 @@ class AbilityDatasetTests(unittest.TestCase):
         dataset = build_ability_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "dataset": "pokemon",
                 "source": {"archive": "personal.narc"},
                 "name_sources": {
@@ -109,7 +109,7 @@ class AbilityDatasetTests(unittest.TestCase):
         dataset = build_ability_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "dataset": "pokemon",
                 "source": {"archive": "personal.narc"},
                 "ability_names": names,
@@ -164,7 +164,7 @@ class AbilityDatasetTests(unittest.TestCase):
         dataset = build_ability_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "dataset": "pokemon",
                 "source": {"archive": "personal.narc"},
                 "ability_names": names,
@@ -208,7 +208,7 @@ class AbilityDatasetTests(unittest.TestCase):
         dataset = build_ability_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "dataset": "pokemon",
                 "source": {"archive": "personal.narc"},
                 "ability_names": names,

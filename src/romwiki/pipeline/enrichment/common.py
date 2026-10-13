@@ -3,10 +3,38 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.pipeline.enrichment.encounters import pokemon_display_name
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug
+
+
+def national_dex_id_for_member(engine: Any, member: int) -> int:
+    """Translate a raw, engine-native species identifier into its National
+    Dex number, wherever the two diverge.
+
+    Every NDS engine's own species numbering already matches the National
+    Dex directly, so `engine.INTERNAL_TO_NATIONAL_DEX` is simply absent for
+    them (this returns `member` unchanged). Generation III's own internal
+    `SPECIES_*` ordering only matches National Dex order through species
+    251 (Kanto+Johto); Hoenn-native species (like Kirlia, internal ROM
+    index 393) are stored in in-game "regional dex discovery order," not
+    National Dex order, requiring the real conversion table
+    (`sSpeciesToNationalPokedexNum[]` in the public pokeemerald/pokefirered
+    decompilation) `gen3/shared/constants.py` verified this against.
+    Verified directly against real ROM data (not just the public source):
+    internal index 281 decodes to Combusken's exact real stats on both the
+    FireRed and Emerald ROMs, while National Dex #281 is Kirlia -- the two
+    numbering schemes are genuinely different starting at species 252.
+    """
+    return getattr(engine, "INTERNAL_TO_NATIONAL_DEX", {}).get(member, member)
+
+
+def pokemon_display_name(
+    species_id: int, slug: str, pokemon_names: list[str] | None
+) -> str:
+    if pokemon_names is not None and 0 < species_id < len(pokemon_names):
+        return pokemon_names[species_id]
+    return title_case_slug(slug)
 
 
 def validate_egg_moves(
@@ -142,7 +170,7 @@ def validate_tutors(
             ):
                 raise DataSourceError("Tutor record references an unknown location")
         tutors[expected_id] = record
-    ids_by_member = {}
+    ids_by_member: dict[int, list[int]] = {}
     for compatibility_group in (compatibility, special_compatibility):
         group_members = set()
         for record in compatibility_group:
@@ -187,9 +215,12 @@ def personal_member_reference(
         national_dex_id = pokedb.pokemon_for_species(reference["species"])["id"]
         name = title_case_slug(slug)
     elif 1 <= member <= engine.BASE_SPECIES_COUNT:
-        reference = pokedb.pokemon_for_id(member)
+        national_dex_id = national_dex_id_for_member(engine, member)
+        reference = pokedb.pokemon_for_id(national_dex_id)
         slug = reference["name"]
-        national_dex_id = member
+        # `pokemon_names` (when present) is a ROM-extracted name table
+        # indexed the same raw way as `member` itself, not National Dex
+        # order -- must use `member` here, not `national_dex_id`.
         name = pokemon_display_name(member, slug, pokemon_names)
     else:
         raise DataSourceError(

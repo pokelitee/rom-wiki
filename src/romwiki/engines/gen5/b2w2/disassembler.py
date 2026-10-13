@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from romwiki.engines.gen5.script_disassembler import (
+from romwiki.engines.gen5.shared.script_disassembler import (
     Gen5Instruction,
     parse_function_offsets,
 )
-from romwiki.engines.gen5.script_disassembler import (
+from romwiki.engines.gen5.shared.script_disassembler import (
     disassemble_function as _disassemble_function,
 )
-from romwiki.engines.gen5.script_disassembler import (
+from romwiki.engines.gen5.shared.script_disassembler import (
     disassemble_script as _disassemble_script,
 )
 

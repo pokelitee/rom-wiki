@@ -23,7 +23,7 @@ GEN5_ITEM_POCKET_NAMES = (
 )
 
 # Byte-identical to Gen4's own field-use function ID enumeration
-# (`gen4.dppt.items.GEN4_ITEM_FIELD_USE_NAMES`); duplicated here since the
+# (`gen4.platinum.items.GEN4_ITEM_FIELD_USE_NAMES`); duplicated here since the
 # two engines are independent modules. Extended with one new entry (25) for
 # the Dowsing MCHN, this generation's Itemfinder replacement with no Gen4
 # counterpart.
@@ -70,7 +70,7 @@ GEN5_ITEM_FIELD_USE_NAMES = (
 #   natural_gift_type_id: bits 0-4 of the u16 @ 8 -- 0x1F ("no type") for
 #     every non-berry item; real berries carry a real `TYPE_NAMES` index.
 #   prevent_toss: bit 5 of the same u16 -- byte-identical bit position to
-#     Gen4's own `prevent_toss` (`gen4.dppt.items.parse_item_record`).
+#     Gen4's own `prevent_toss` (`gen4.platinum.items.parse_item_record`).
 #     Verified against the real Black ROM's full item table: true for
 #     exactly 120 items, and every one checked is a real non-discardable
 #     category -- every TM/HM (328-419, 618-620) and every real key item

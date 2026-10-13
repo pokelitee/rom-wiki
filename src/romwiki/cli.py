@@ -6,9 +6,10 @@ import logging
 import os
 import sys
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.build.context import GameBuildContext
@@ -20,6 +21,7 @@ from romwiki.pipeline.build.regeneration import (
 )
 from romwiki.pipeline.build.sections import (
     DATASET_KINDS,
+    dataset_enabled,
     describe_section_mismatch,
     enabled_dataset_kinds,
 )
@@ -766,6 +768,8 @@ def _run_rom_command(args: argparse.Namespace, result: InspectionResult) -> None
         write_dataset(dataset, output)
         print(f"Wrote {dataset['record_count']} trainer records: {output}")
     elif args.command == "extract-locations":
+        if result.match is None:
+            raise LocalConfigError("The ROM did not match a game profile")
         profile = result.match.profile
         engine = get_engine(profile.engine)
         dataset = extract_location_dataset(
@@ -1041,15 +1045,16 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     comparisons = _load_comparisons(data_root / "comparisons")
     # An engine's Abilities section needs ROM-decoded ability names with no
     # PokéDB fallback (unlike Pokémon page names); an engine whose first
-    # vertical slice implements only personal data (no message-archive
+    # vertical slice implements only personal data (no ability-name table
     # decoding yet) can still build its Pokémon section without one. Gated
-    # declaratively on the profile's "messages" layout entry, matching
-    # GameBuildContext's optional-input accessors, rather than probing with a
-    # try/except around the build.
+    # declaratively via `dataset_enabled`, the same "personal_offset or
+    # personal layout, per platform" check `pipeline/build/context.py`'s
+    # `items_raw`/`trainers_raw` accessors already use -- checking for a
+    # `"messages"` layout entry specifically would only ever be true for
+    # NDS/archive-shaped profiles, never for flat-offset (GBA) ones.
     abilities_dataset = None
-    if (
-        args.command == "build-pokemon"
-        and "messages" in workflow.current.profile.layout
+    if args.command == "build-pokemon" and dataset_enabled(
+        workflow.current.profile, "abilities"
     ):
         abilities_dataset = workflow.build("abilities")
     relationship_index = None
@@ -1076,8 +1081,14 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             relationship_index = build_relationship_index(relationship_datasets)
     reference_datasets = {}
     if args.command == "build-locations":
+        current_locations = workflow.current.locations()
+        if current_locations is None:
+            raise LocalConfigError(
+                "The build-locations command requires a profile with a "
+                "locations dataset"
+            )
         relationship_datasets = {
-            "locations": workflow.current.locations(),
+            "locations": current_locations,
             "encounters": workflow.current.encounters(),
         }
         relationship_index = build_relationship_index(relationship_datasets)
@@ -1093,7 +1104,7 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
             reference_datasets["moves"] = move_dataset
     elif args.command == "build-moves":
         reference_datasets = dict(relationship_datasets)
-    elif args.command == "build-encounters":
+    elif args.command in {"build-encounters", "build-items", "build-trainers"}:
         reference_datasets = {"pokemon": workflow.current.pokemon()}
     reference_index = (
         ReferenceIndex.from_datasets(reference_datasets) if reference_datasets else None
@@ -1103,6 +1114,9 @@ def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> No
     )
     for index, kind in enumerate(kinds):
         build = abilities_dataset if kind == "abilities" else workflow.build(kind)
+        # `kinds` was filtered above to drop "abilities" when
+        # `abilities_dataset` is None, so `build` is always set here.
+        assert build is not None
         data_output = (
             args.data_output
             if index == 0 and args.data_output is not None
@@ -1857,7 +1871,9 @@ def _write_dataset_build(
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
         write_dataset(comparison, comparison_output)
     write_public_dataset(wiki_output.parent, kind, dataset)
-    renderer = {
+    # Each renderer takes a different, kind-specific argument list (branched
+    # below), so this can only be typed as a loose callable.
+    renderers: dict[str, Callable[..., int]] = {
         "pokemon": render_pokemon_pages,
         "abilities": render_ability_pages,
         "moves": render_move_pages,
@@ -1865,7 +1881,8 @@ def _write_dataset_build(
         "encounters": render_encounter_pages,
         "trainers": render_trainer_pages,
         "locations": render_location_pages,
-    }[kind]
+    }
+    renderer = renderers[kind]
     if kind == "pokemon":
         page_count = renderer(
             dataset,
@@ -1933,13 +1950,25 @@ def _write_type_build(
 def _current_relationship_datasets(
     context: GameBuildContext,
 ) -> dict[str, dict]:
+    # "trades" has no dedicated dataset_kind (it's an optional per-engine
+    # detail, always None-safe) so it's never gated here; the rest correspond
+    # 1:1 to a DATASET_KINDS entry and are only built when the profile's
+    # engine actually declares support for it -- a personal-data-only
+    # vertical slice (an engine's first onboarding step, per
+    # adding-a-game.md) has nothing to build for the others yet.
+    enabled = set(enabled_dataset_kinds(context.profile))
+    accessors: dict[str, tuple[str | None, Callable[[], dict[str, Any] | None]]] = {
+        "pokemon": ("pokemon", context.pokemon),
+        "encounters": ("encounters", context.encounters),
+        "trainers": ("trainers", context.trainers),
+        "locations": ("locations", context.locations),
+        "items": ("items", context.items),
+        "trades": (None, context.trades),
+    }
     datasets = {
-        "pokemon": context.pokemon(),
-        "encounters": context.encounters(),
-        "trainers": context.trainers(),
-        "locations": context.locations(),
-        "items": context.items(),
-        "trades": context.trades(),
+        name: accessor()
+        for name, (kind, accessor) in accessors.items()
+        if kind is None or kind in enabled
     }
     return {kind: dataset for kind, dataset in datasets.items() if dataset is not None}
 
@@ -1950,7 +1979,7 @@ def _dataset_output(data_root: Path, kind: str) -> Path:
 
 
 def _load_comparisons(root: Path) -> dict[str, dict]:
-    comparisons = {}
+    comparisons: dict[str, dict] = {}
     if not root.is_dir():
         return comparisons
     for path in root.glob("*.json"):

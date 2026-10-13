@@ -93,7 +93,7 @@ def _decoded_difficulty_families(
 ) -> list[dict[str, Any]]:
     decoded = (selector_data or {}).get("difficulty_branch_families") or ()
     records_by_id = {record.get("trainer_id"): record for record in records}
-    families = []
+    families: list[dict[str, Any]] = []
     seen_dispatches: set[tuple[tuple[int, ...], tuple[int, ...]]] = set()
     for branch in decoded:
         normal_ids = tuple(branch.normal_trainer_ids)

@@ -5,7 +5,7 @@ from dataclasses import asdict, replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from romwiki.engines.gen4.dppt import Gen4BerryData, Gen4FossilRevival
+from romwiki.engines.gen4.platinum import Gen4BerryData, Gen4FossilRevival
 from romwiki.pipeline.extraction.items import extract_item_dataset
 from romwiki.profiles.models import GameProfile
 from romwiki.schema import Item, RecordProvenance
@@ -55,7 +55,7 @@ def _profile(**overrides: object) -> GameProfile:
         "id": "test",
         "name": "Test",
         "platform": "nintendo-ds",
-        "engine": "gen4_dppt",
+        "engine": "gen4_platinum",
         "base_game": "platinum",
         "game_codes": ("CPUE",),
         "rom_versions": (1,),
@@ -174,19 +174,21 @@ class ItemExtractionTests(unittest.TestCase):
                 return_value={"item_descriptions": [], "description_sources": {}},
             ),
             patch(
-                "romwiki.engines.gen4.dppt.parse_english_message_archive",
+                "romwiki.engines.gen4.platinum.parse_english_message_archive",
                 side_effect=[item_names, type_names],
             ),
             patch(
-                "romwiki.engines.gen4.dppt.find_item_archive_members",
+                "romwiki.engines.gen4.platinum.find_item_archive_members",
                 return_value=(500, (0, 1, 2)),
             ),
             patch(
-                "romwiki.engines.gen4.dppt.parse_fossil_revival_table",
+                "romwiki.engines.gen4.platinum.parse_fossil_revival_table",
                 return_value=fossil_revivals,
             ),
-            patch("romwiki.engines.gen4.dppt.parse_berry_record", return_value=berry),
-            patch("romwiki.engines.gen4.dppt.parse_item_record", side_effect=items),
+            patch(
+                "romwiki.engines.gen4.platinum.parse_berry_record", return_value=berry
+            ),
+            patch("romwiki.engines.gen4.platinum.parse_item_record", side_effect=items),
         ):
             dataset = extract_item_dataset(result)
 
@@ -262,19 +264,19 @@ class ItemExtractionTests(unittest.TestCase):
                 return_value={},
             ),
             patch(
-                "romwiki.engines.gen4.dppt.parse_english_message_archive",
+                "romwiki.engines.gen4.platinum.parse_english_message_archive",
                 return_value=("Potion",),
             ),
             patch(
-                "romwiki.engines.gen4.dppt.find_item_archive_members",
+                "romwiki.engines.gen4.platinum.find_item_archive_members",
                 return_value=(0, (0,)),
             ),
-            patch("romwiki.engines.gen4.dppt.parse_item_record", return_value=item),
+            patch("romwiki.engines.gen4.platinum.parse_item_record", return_value=item),
         ):
             dataset = extract_item_dataset(result)
 
         self.assertNotIn("type_names", dataset["source"])
-        from romwiki.engines.gen4.dppt import TYPE_NAMES
+        from romwiki.engines.gen4.platinum import TYPE_NAMES
 
         self.assertEqual(
             dataset["records"][0]["natural_gift_type"],
@@ -331,14 +333,14 @@ class ItemExtractionTests(unittest.TestCase):
                 return_value={},
             ),
             patch(
-                "romwiki.engines.gen4.dppt.parse_english_message_archive",
+                "romwiki.engines.gen4.platinum.parse_english_message_archive",
                 side_effect=[("Potion",), tuple(f"Type{i}" for i in range(18))],
             ),
             patch(
-                "romwiki.engines.gen4.dppt.find_item_archive_members",
+                "romwiki.engines.gen4.platinum.find_item_archive_members",
                 return_value=(0, (0,)),
             ),
-            patch("romwiki.engines.gen4.dppt.parse_item_record", return_value=item),
+            patch("romwiki.engines.gen4.platinum.parse_item_record", return_value=item),
         ]
         for started in self._patches:
             started.start()

@@ -3,13 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, get_args
 
-import romwiki.engines.gen4.dppt as gen4_dppt
+import romwiki.engines.gen3.emerald as gen3_emerald
+import romwiki.engines.gen3.frlg as gen3_frlg
 import romwiki.engines.gen4.hgss as gen4_hgss
+import romwiki.engines.gen4.platinum as gen4_platinum
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
 from romwiki.engines.profile_contracts import (
-    GEN4_DPPT_PROFILE_CONTRACT,
+    GEN3_EMERALD_PROFILE_CONTRACT,
+    GEN3_FRLG_PROFILE_CONTRACT,
     GEN4_HGSS_PROFILE_CONTRACT,
+    GEN4_PLATINUM_PROFILE_CONTRACT,
     GEN5_B2W2_PROFILE_CONTRACT,
     GEN5_BW_PROFILE_CONTRACT,
     EngineProfileContract,
@@ -17,22 +21,32 @@ from romwiki.engines.profile_contracts import (
 from romwiki.util.errors import DataSourceError
 
 # Canonical engine identifiers used by registration and contract tests.
-GEN4_DPPT_ENGINE = "gen4_dppt"
+GEN3_FRLG_ENGINE = "gen3_frlg"
+GEN3_EMERALD_ENGINE = "gen3_emerald"
+GEN4_PLATINUM_ENGINE = "gen4_platinum"
 GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
 
-EncounterFormat = Literal["unsupported", "conditional", "seasonal"]
+EncounterFormat = Literal["unsupported", "conditional", "seasonal", "method-table"]
 LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 LocationExtractionFormat = Literal[
-    "unsupported", "arm9-event-map", "arm9-encounter-map", "archive-encounter-map"
+    "unsupported",
+    "arm9-event-map",
+    "arm9-encounter-map",
+    "archive-encounter-map",
+    "flat-header-segments",
 ]
 PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
-TrainerFormat = Literal["unsupported", "class-gender", "battle-mode"]
-TutorFormat = Literal["none", "overlay-table", "overlay-archive", "personal-archive"]
+TrainerFormat = Literal["unsupported", "class-gender", "battle-mode", "pointer-party"]
+TutorFormat = Literal[
+    "none", "overlay-table", "overlay-archive", "personal-archive", "flat-offset-table"
+]
 FossilFormat = Literal["none", "arm9-table", "script-pattern"]
 StaticEncounterFormat = Literal["none", "script-commands"]
-EggMoveFormat = Literal["none", "overlay-table", "archive-table", "species-archive"]
+EggMoveFormat = Literal[
+    "none", "overlay-table", "archive-table", "species-archive", "flat-offset-table"
+]
 ItemArchiveFormat = Literal["archive-index", "arm9-map"]
 MachineFormat = Literal["none", "profile-offset", "binary-prefix"]
 
@@ -127,25 +141,133 @@ class EngineAdapter:
 
 
 _ENGINES: dict[str, EngineAdapter] = {
-    GEN4_DPPT_ENGINE: EngineAdapter(
-        personal=gen4_dppt,
-        locations=gen4_dppt,
-        trainers=gen4_dppt,
-        encounters=gen4_dppt,
-        evolutions=gen4_dppt,
-        items=gen4_dppt,
-        machines=gen4_dppt,
-        moves=gen4_dppt,
-        tutors=gen4_dppt,
-        egg_moves=gen4_dppt,
-        learnsets=gen4_dppt,
-        reference_names=gen4_dppt,
-        enrich=gen4_dppt,
-        trainer_party=gen4_dppt,
-        trades=gen4_dppt,
-        marts=gen4_dppt,
-        static_encounters=gen4_dppt,
-        pickup=gen4_dppt,
+    GEN3_FRLG_ENGINE: EngineAdapter(
+        # Vertical slice: Pokémon personal data, moves, items, trainers,
+        # abilities, encounters, and locations are implemented so far. Every
+        # concern currently points at the same flat `gen3_frlg` namespace;
+        # unimplemented concerns are never accessed because
+        # `dataset_kinds`/`formats` below declare no capability that would
+        # require them (enforced by `_validate_engine_adapter`'s `required`
+        # map). Widen this entry's concerns/formats as extraction work adds
+        # more Generation III domains.
+        personal=gen3_frlg,
+        locations=gen3_frlg,
+        trainers=gen3_frlg,
+        encounters=gen3_frlg,
+        evolutions=gen3_frlg,
+        items=gen3_frlg,
+        machines=gen3_frlg,
+        moves=gen3_frlg,
+        tutors=gen3_frlg,
+        egg_moves=gen3_frlg,
+        learnsets=gen3_frlg,
+        reference_names=gen3_frlg,
+        enrich=gen3_frlg,
+        trainer_party=gen3_frlg,
+        trades=gen3_frlg,
+        marts=gen3_frlg,
+        static_encounters=gen3_frlg,
+        pickup=gen3_frlg,
+        formats=EngineFormats(
+            encounters="method-table",
+            locations="encounter-map",
+            location_extraction="flat-header-segments",
+            pickup="none",
+            trainers="pointer-party",
+            tutors="flat-offset-table",
+            fossils="none",
+            static_encounters="none",
+            egg_moves="flat-offset-table",
+            item_archive="archive-index",
+            machines="profile-offset",
+        ),
+        generation=3,
+        dataset_kinds=frozenset(
+            {
+                "pokemon",
+                "moves",
+                "items",
+                "trainers",
+                "abilities",
+                "encounters",
+                "locations",
+            }
+        ),
+        required_dataset_kinds=frozenset({"pokemon"}),
+        profile_contract=GEN3_FRLG_PROFILE_CONTRACT,
+    ),
+    GEN3_EMERALD_ENGINE: EngineAdapter(
+        # Every concern points at the same flat `gen3_emerald` namespace,
+        # which itself re-exports FireRed/LeafGreen-proven-identical
+        # parsers from `gen3/shared/` (see that package's module comments
+        # for the real-ROM cross-checks proving each shared fact). Widen
+        # dataset_kinds as more Generation III domains are verified against
+        # this ROM.
+        personal=gen3_emerald,
+        locations=gen3_emerald,
+        trainers=gen3_emerald,
+        encounters=gen3_emerald,
+        evolutions=gen3_emerald,
+        items=gen3_emerald,
+        machines=gen3_emerald,
+        moves=gen3_emerald,
+        tutors=gen3_emerald,
+        egg_moves=gen3_emerald,
+        learnsets=gen3_emerald,
+        reference_names=gen3_emerald,
+        enrich=gen3_emerald,
+        trainer_party=gen3_emerald,
+        trades=gen3_emerald,
+        marts=gen3_emerald,
+        static_encounters=gen3_emerald,
+        pickup=gen3_emerald,
+        formats=EngineFormats(
+            encounters="method-table",
+            locations="encounter-map",
+            location_extraction="flat-header-segments",
+            pickup="none",
+            trainers="pointer-party",
+            tutors="none",
+            fossils="none",
+            static_encounters="none",
+            egg_moves="flat-offset-table",
+            item_archive="archive-index",
+            machines="profile-offset",
+        ),
+        generation=3,
+        dataset_kinds=frozenset(
+            {
+                "pokemon",
+                "abilities",
+                "moves",
+                "items",
+                "trainers",
+                "encounters",
+                "locations",
+            }
+        ),
+        required_dataset_kinds=frozenset({"pokemon"}),
+        profile_contract=GEN3_EMERALD_PROFILE_CONTRACT,
+    ),
+    GEN4_PLATINUM_ENGINE: EngineAdapter(
+        personal=gen4_platinum,
+        locations=gen4_platinum,
+        trainers=gen4_platinum,
+        encounters=gen4_platinum,
+        evolutions=gen4_platinum,
+        items=gen4_platinum,
+        machines=gen4_platinum,
+        moves=gen4_platinum,
+        tutors=gen4_platinum,
+        egg_moves=gen4_platinum,
+        learnsets=gen4_platinum,
+        reference_names=gen4_platinum,
+        enrich=gen4_platinum,
+        trainer_party=gen4_platinum,
+        trades=gen4_platinum,
+        marts=gen4_platinum,
+        static_encounters=gen4_platinum,
+        pickup=gen4_platinum,
         formats=EngineFormats(
             encounters="conditional",
             locations="event-map",
@@ -161,7 +283,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         ),
         generation=4,
         presentation_features=frozenset({"contests"}),
-        profile_contract=GEN4_DPPT_PROFILE_CONTRACT,
+        profile_contract=GEN4_PLATINUM_PROFILE_CONTRACT,
     ),
     GEN4_HGSS_ENGINE: EngineAdapter(
         personal=gen4_hgss,
@@ -351,6 +473,7 @@ def _validate_engine_formats(engine: str, adapter: EngineAdapter) -> None:
         "arm9-event-map": "event-map",
         "arm9-encounter-map": "encounter-map",
         "archive-encounter-map": "encounter-map",
+        "flat-header-segments": "encounter-map",
     }[adapter.formats.location_extraction]
     if adapter.formats.locations != expected_location_shape:
         raise DataSourceError(
@@ -405,6 +528,7 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
     format_required = {
         ("encounters", "conditional"): ("parse_encounter_record",),
         ("encounters", "seasonal"): ("parse_encounter_entry",),
+        ("encounters", "method-table"): ("parse_encounter_record",),
         ("locations", "event-map"): ("parse_map_headers",),
         ("locations", "encounter-map"): ("parse_map_header_table",),
         ("pickup", "split-table"): ("parse_pickup_tables",),
@@ -417,11 +541,17 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
             "parse_trainer_record",
             "resolve_trainer_variants",
         ),
+        ("trainers", "pointer-party"): (
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+        ),
         ("tutors", "overlay-table"): ("parse_tutor_move_table",),
         ("tutors", "personal-archive"): ("parse_tutor_move_table",),
+        ("tutors", "flat-offset-table"): ("parse_tutor_move_table",),
         ("egg_moves", "overlay-table"): ("parse_egg_move_table",),
         ("egg_moves", "archive-table"): ("parse_egg_move_table",),
         ("egg_moves", "species-archive"): ("parse_egg_move_set",),
+        ("egg_moves", "flat-offset-table"): ("parse_egg_move_table",),
         ("item_archive", "arm9-map"): ("find_item_archive_members",),
         ("machines", "profile-offset"): ("parse_machine_move_table",),
         ("machines", "binary-prefix"): (

@@ -23,6 +23,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         return _extract_personal_archive_tutors(result)
     if tutor_format == "overlay-archive":
         return _extract_overlay_archive_tutors(result)
+    if tutor_format == "flat-offset-table":
+        return _extract_flat_offset_tutors(result)
     if tutor_format != "overlay-table":
         raise DataSourceError(
             f"Engine {profile.engine!r} does not provide tutor extraction"
@@ -42,6 +44,8 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors
+    if platform.read_overlay is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
     overlay, data = platform.read_overlay(result.image, parameters["tutor_overlay_id"])
     move_size = parameters["tutor_count"] * engine.TUTOR_RECORD_SIZE
     form_members = tuple(sorted(engine.FORM_MEMBERS))
@@ -112,6 +116,12 @@ def _extract_overlay_archive_tutors(result: InspectionResult) -> dict[str, Any]:
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
+    if platform.filesystem_from_image is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     move_size = engine.TUTOR_COUNT * engine.TUTOR_RECORD_SIZE
     move_data = _slice_overlay(overlay_data, move_offset, move_size, "move")
@@ -164,6 +174,12 @@ def _extract_personal_archive_tutors(result: InspectionResult) -> dict[str, Any]
 
     platform = get_platform(profile.platform)
     engine = get_engine(profile.engine).tutors
+    if platform.read_overlay_decompressed is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support overlays")
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     filesystem = platform.filesystem_from_image(result.image)
     personal = platform.archive_cls.from_bytes(filesystem.read(personal_path))
@@ -342,3 +358,112 @@ def _extract_special_tutors(
         {"personal_member": member, "tutor_ids": tutor_ids}
         for member, tutor_ids in sorted(compatibility.items())
     ]
+
+
+def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
+    # Generation III's move tutors are individual overworld NPC scripts,
+    # not a location-annotated data table -- only the 4 tutors with a
+    # real, ROM-verified NPC location are exposed at all (see
+    # `engines/gen3/frlg/constants.py`'s `TUTOR_LOCATIONS` comment).
+    # `location_names` reuses the same Sevii Islands/postgame
+    # `map_header_segments` decode `locations.py`'s own extraction and
+    # `encounters.py`/`trainers/pointer_party.py`'s location backfills
+    # already do. `TUTOR_LOCATIONS` names a target *region*, not a
+    # `header_id` -- resolved against this specific ROM's own decoded
+    # `location_names` below, since `header_id` numbering isn't guaranteed
+    # stable across profiles (see that constant's comment).
+    assert result.match is not None
+    profile = result.match.profile
+    try:
+        move_offset = profile.parameters["tutor_move_offset"]
+        compatibility_offset = profile.parameters["tutor_compatibility_offset"]
+        personal_count = profile.parameters["personal_count"]
+        segments = profile.parameters["map_header_segments"]
+        region_name_offset = profile.parameters["region_name_offset"]
+        region_name_count = profile.parameters["region_name_count"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define tutor_move_offset/"
+            "tutor_compatibility_offset/map_header_segments/region_name_offset/"
+            "region_name_count"
+        ) from error
+
+    platform = get_platform(profile.platform)
+    if platform.read_bytes is None:
+        raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
+    engine = get_engine(profile.engine).tutors
+
+    region_name_data = platform.read_bytes(
+        result.image, region_name_offset, region_name_count * 32
+    )
+    region_names = engine.decode_gen3_text_sequence(
+        region_name_data, offset=0, count=region_name_count
+    )
+    header_size = engine.MAP_HEADER_SIZE
+    location_names: list[str] = []
+    for segment_offset, segment_count in segments:
+        segment_data = platform.read_bytes(
+            result.image, segment_offset, header_size * segment_count
+        )
+        for slot in range(segment_count):
+            raw = segment_data[slot * header_size : (slot + 1) * header_size]
+            _music, _layout_id, region_id = engine.parse_map_header(
+                raw, header_id=len(location_names)
+            )
+            location_names.append(region_names[region_id])
+
+    location_ids = {}
+    for table_index, target_name in engine.TUTOR_LOCATIONS.items():
+        try:
+            location_ids[table_index] = location_names.index(target_name)
+        except ValueError as error:
+            raise InvalidRomError(
+                f"Gen III tutor {table_index} references location "
+                f"{target_name!r}, not present in this ROM's decoded locations"
+            ) from error
+
+    move_data = platform.read_bytes(
+        result.image, move_offset, engine.TUTOR_MOVE_COUNT * 2
+    )
+    tutors = engine.parse_tutor_move_table(move_data, location_ids=location_ids)
+
+    compatibility_data = platform.read_bytes(
+        result.image, compatibility_offset, personal_count * 2
+    )
+    # Bounded to the engine's exposed species count, not the table's real
+    # on-ROM size -- the same "populate what's real and currently exposed"
+    # gap `egg_moves.py`'s padding-species filter documents.
+    decoded_species_count = min(personal_count, engine.PERSONAL_RECORD_COUNT)
+    compatibility = [
+        record
+        for species_id in range(decoded_species_count)
+        if (
+            record := engine.parse_tutor_compatibility(
+                compatibility_data[species_id * 2 : species_id * 2 + 2],
+                species_id=species_id,
+                table_index=species_id,
+            )
+        )
+        is not None
+    ]
+
+    envelope = dataset_envelope(
+        schema_version=TUTORS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="move_tutors",
+        source={
+            "rom_sha256": result.image.hashes.sha256,
+            "move_offset": move_offset,
+            "compatibility_offset": compatibility_offset,
+        },
+        records=[{**tutor.to_dict(), "kind": "shard"} for tutor in tutors],
+    )
+    envelope["compatibility_record_count"] = len(compatibility)
+    envelope["special_record_count"] = 0
+    envelope["special_compatibility_record_count"] = 0
+    envelope["location_names"] = location_names
+    envelope["compatibility"] = [record.to_dict() for record in compatibility]
+    envelope["special_records"] = []
+    envelope["special_compatibility"] = []
+    return envelope

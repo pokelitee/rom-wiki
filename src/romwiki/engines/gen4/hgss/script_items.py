@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from romwiki.engines.gen4.hgss.script_opcode_table import OPCODE_TABLE
-from romwiki.engines.gen4.script_items import ScriptAwardedItem as ScriptAwardedItem
-from romwiki.engines.gen4.script_items import (
+from romwiki.engines.gen4.shared.script_items import (
+    ScriptAwardedItem as ScriptAwardedItem,
+)
+from romwiki.engines.gen4.shared.script_items import (
     find_script_awarded_items as _find_script_awarded_items,
 )
 

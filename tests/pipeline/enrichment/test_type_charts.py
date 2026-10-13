@@ -18,7 +18,7 @@ from romwiki.util.errors import DataSourceError, ProfileError
 
 class TypeChartTests(unittest.TestCase):
     def test_calculates_single_and_dual_type_defenses(self) -> None:
-        dataset = build_type_dataset(_profile("gen4_dppt", "gen4"))
+        dataset = build_type_dataset(_profile("gen4_platinum", "gen4"))
 
         water = defensive_effectiveness(dataset, ("water",))
         self.assertIn("electric", water["2"])
@@ -95,7 +95,7 @@ class TypeChartTests(unittest.TestCase):
 
     def test_applies_a_hack_addition_and_override(self) -> None:
         profile = _profile(
-            "gen4_dppt",
+            "gen4_platinum",
             "gen4",
             additional_types=("fairy",),
             overrides={
@@ -124,11 +124,11 @@ class TypeChartTests(unittest.TestCase):
 
     def test_rejects_invalid_profile_selection_and_overrides(self) -> None:
         with self.assertRaisesRegex(ProfileError, "unknown type chart"):
-            build_type_dataset(_profile("gen4_dppt", "missing"))
+            build_type_dataset(_profile("gen4_platinum", "missing"))
         with self.assertRaisesRegex(ProfileError, "Unknown type"):
             build_type_dataset(
                 _profile(
-                    "gen4_dppt",
+                    "gen4_platinum",
                     "gen4",
                     overrides={"fairy>dragon": "2"},
                 )
@@ -136,7 +136,7 @@ class TypeChartTests(unittest.TestCase):
         with self.assertRaisesRegex(ProfileError, "Invalid multiplier"):
             build_type_dataset(
                 _profile(
-                    "gen4_dppt",
+                    "gen4_platinum",
                     "gen4",
                     overrides={"fire>grass": "3"},
                 )

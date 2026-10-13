@@ -34,7 +34,7 @@ PERSONAL_INTERNAL_MEMBERS: dict[int, str] = {0: "none"}
 #
 # 13 real, independently-obtainable forms, each with its own PokéDB
 # reference file under pokedb/.output/gen5/pokemon/variant/ -- same shape as
-# gen4_dppt's PERSONAL_FORM_MEMBERS.
+# gen4_platinum's PERSONAL_FORM_MEMBERS.
 PERSONAL_FORM_MEMBERS: dict[int, str] = {
     650: "deoxys-attack",
     651: "deoxys-defense",
@@ -244,7 +244,7 @@ EVOLUTION_SLOT_SIZE = 6
 
 # EvolutionType.java's per-generation index table (Ajarmar/universal-pokemon-
 # randomizer-zx) gives Generation V's evolution-method IDs: identical to
-# Generation IV's own scheme (see gen4_dppt's EVOLUTION_METHOD_NAMES) except
+# Generation IV's own scheme (see gen4_platinum's EVOLUTION_METHOD_NAMES) except
 # for one new method -- "trade-special" -- inserted at index 7, shifting
 # every method from "use-item" onward up by one. Confirmed against a real
 # Black ROM: Tyrogue's three evolutions decode to methods 9/10/11 (attack-

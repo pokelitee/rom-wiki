@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.enrichment.common import national_dex_id_for_member
 from romwiki.pipeline.enrichment.references import with_rom_description
 from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
@@ -293,16 +294,21 @@ def _collect_detached_trade_relationships(
         if not held_item_id:
             continue
         offered = None
+        engine_tables = get_engine(pokemon_dataset["engine"]).enrich
         forme_id = trade.get("offered_forme_id")
         if forme_id:
-            engine_tables = get_engine(pokemon_dataset["engine"]).enrich
             form_slug = engine_tables.TRAINER_FORM_SLUGS.get(
                 (trade["offered_species_id"], forme_id)
             )
             if form_slug is not None:
                 offered = pokemon_by_slug.get(form_slug)
         if offered is None:
-            offered = pokemon_by_species.get(trade["offered_species_id"])
+            # `pokemon_by_species` is keyed by National Dex ID; `offered_species_id`
+            # is the raw, engine-native member ID (see `national_dex_id_for_member`)
+            # -- these only coincide for engines with no internal/dex divergence.
+            offered = pokemon_by_species.get(
+                national_dex_id_for_member(engine_tables, trade["offered_species_id"])
+            )
         pokemon_reference = (
             {"id": offered["member"], "name": offered["name"], "slug": offered["slug"]}
             if offered is not None
@@ -358,6 +364,8 @@ def build_item_dataset(
     reference_version: str | None = None,
 ) -> dict[str, Any]:
     game = item_dataset.get("game")
+    engine_name = item_dataset.get("engine")
+    engine_tables = get_engine(engine_name).enrich if engine_name else None
     descriptions = item_dataset.get("item_descriptions")
     if descriptions is not None:
         expected_description_count = get_engine(
@@ -454,8 +462,17 @@ def build_item_dataset(
                 "gifts": relation.get("gifts", []),
                 "trades": relation.get("trades", []),
                 "evolutions": relation.get("evolutions", []),
-                "revives_into": pokemon_by_species.get(
-                    source.get("revives_into_species_id")
+                "revives_into": (
+                    pokemon_by_species.get(
+                        national_dex_id_for_member(
+                            engine_tables, revives_into_species_id
+                        )
+                    )
+                    if (
+                        revives_into_species_id := source.get("revives_into_species_id")
+                    )
+                    is not None
+                    else None
                 ),
                 "revives_at": fossil_locations_by_species.get(
                     source.get("revives_into_species_id"), []

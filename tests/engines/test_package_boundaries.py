@@ -111,7 +111,7 @@ class EnginePackageBoundaryTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
     def test_shared_dispatch_uses_semantic_formats_not_engine_ids(self) -> None:
-        forbidden = ("GEN4_DPPT_ENGINE", "GEN5_ENGINES", '== "gen', 'in {"gen')
+        forbidden = ("GEN4_PLATINUM_ENGINE", "GEN5_ENGINES", '== "gen', 'in {"gen')
         violations = [
             f"{path.relative_to(SOURCE_ROOT)} contains {token!r}"
             for path in SEMANTIC_DISPATCH_PATHS
@@ -132,12 +132,18 @@ class EnginePackageBoundaryTests(unittest.TestCase):
 
 
 def _engine_leaves() -> tuple[str, ...]:
+    # `shared/` holds record parsers promoted to the generation namespace
+    # once real ROM fixtures prove they're shared by at least two families
+    # (see architecture.md) -- it's the shared namespace leaves are meant
+    # to depend on, not a selectable engine/leaf family itself.
     return tuple(
         f"romwiki.engines.{generation.name}.{family.name}"
         for generation in ENGINE_ROOT.iterdir()
         if generation.is_dir() and generation.name.startswith("gen")
         for family in generation.iterdir()
-        if family.is_dir() and (family / "__init__.py").is_file()
+        if family.is_dir()
+        and family.name != "shared"
+        and (family / "__init__.py").is_file()
     )
 
 

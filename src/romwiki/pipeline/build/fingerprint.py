@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, fields, is_dataclass
 from functools import cache
 from pathlib import Path
@@ -98,7 +99,11 @@ def extraction_source_files(engine_id: str, extractor_module: str) -> tuple[str,
 
 def profile_fingerprint(profile: Any) -> str:
     """Hash the resolved profile values that control extraction."""
-    value = asdict(profile) if is_dataclass(profile) else {"id": profile.id}
+    value = (
+        asdict(profile)
+        if is_dataclass(profile) and not isinstance(profile, type)
+        else {"id": profile.id}
+    )
     encoded = json.dumps(
         value,
         ensure_ascii=False,
@@ -179,6 +184,7 @@ def _local_imports(path: Path, module_name: str) -> set[str]:
     )
 
     for node in ast.walk(tree):
+        candidates: Iterable[str | None]
         if isinstance(node, ast.Import):
             candidates = (alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):

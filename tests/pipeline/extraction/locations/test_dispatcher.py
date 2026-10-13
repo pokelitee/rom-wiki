@@ -84,7 +84,7 @@ class LocationDatasetDispatchTests(unittest.TestCase):
         )
 
     def test_dispatches_arm9_event_map_engines(self) -> None:
-        result = _result("gen4_dppt")
+        result = _result("gen4_platinum")
         with (
             patch(
                 "romwiki.pipeline.extraction.locations.dispatcher.get_engine",
@@ -106,7 +106,7 @@ class LocationDatasetDispatchTests(unittest.TestCase):
         )
 
     def test_raises_for_an_unsupported_extraction_format(self) -> None:
-        result = _result("gen4_dppt")
+        result = _result("gen4_platinum")
         with (
             patch(
                 "romwiki.pipeline.extraction.locations.dispatcher.get_engine",

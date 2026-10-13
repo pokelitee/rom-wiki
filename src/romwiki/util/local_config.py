@@ -85,6 +85,7 @@ def _load_game_paths(
             f"Unknown fields for {game_id} in {config_path}: {fields}"
         )
     patched_rom = _resolve_path(value.get("patched_rom"), root, game_id, "patched_rom")
+    assert patched_rom is not None  # `optional` defaults to False above.
     base_rom = _resolve_path(
         value.get("base_rom"), root, game_id, "base_rom", optional=True
     )

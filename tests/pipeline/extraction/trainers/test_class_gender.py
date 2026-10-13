@@ -366,7 +366,7 @@ def _profile(*, layout: dict[str, str], parameters: dict[str, object]) -> GamePr
         id="test-dppt",
         name="Test Diamond",
         platform="nintendo-ds",
-        engine="gen4_dppt",
+        engine="gen4_platinum",
         base_game="diamond",
         game_codes=("ADAE",),
         rom_versions=(0,),

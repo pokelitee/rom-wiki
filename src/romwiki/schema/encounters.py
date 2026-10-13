@@ -61,6 +61,32 @@ class ConditionalEncounterArea:
 
 
 @dataclass(frozen=True, slots=True)
+class MethodEncounterArea:
+    """Generation III's wild-encounter shape: up to four independent
+    methods (land/water/rock-smash/fishing) per map, each an explicit
+    min/max level range per slot -- no season system, no swarm/day/night/
+    radar/dual-slot/Unown bonus-slot mechanics (those are Generation IV/V
+    additions). Reuses `WaterEncounterSlot`/`EncounterMethod` as-is since
+    Generation III stores an explicit level range for every method,
+    including land (unlike Generation IV's land encounters, which store one
+    exact level via `WalkingEncounterSlot`).
+    """
+
+    area_id: int
+    map_group: int
+    map_num: int
+    land: EncounterMethod | None
+    water: EncounterMethod | None
+    rock_smash: EncounterMethod | None
+    fishing: EncounterMethod | None
+    provenance: RecordProvenance
+    locations: tuple[EncounterLocation, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class SeasonalEncounterSlot:
     species_id: int
     form_id: int

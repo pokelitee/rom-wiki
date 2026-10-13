@@ -62,7 +62,7 @@ class TrainerRewardTests(unittest.TestCase):
                     "party": [{"level": 20}],
                     "double_battle": True,
                 },
-                engine="gen4_dppt",
+                engine="gen4_platinum",
             ),
             {
                 "amount": 1920,

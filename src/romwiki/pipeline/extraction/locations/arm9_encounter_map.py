@@ -79,7 +79,7 @@ def _collect_pokemon_gifts(
     pokemon_names: tuple[str, ...],
     script_file_id: int,
 ) -> tuple[LocationPokemonGift, ...]:
-    gifts = []
+    gifts: list[LocationPokemonGift] = []
     if parsers.pokemon is not None:
         gifts.extend(
             LocationPokemonGift(
@@ -247,6 +247,10 @@ def extract_arm9_encounter_map_location_dataset(
         ) from error
 
     platform = get_platform(profile.platform)
+    if platform.filesystem_from_image is None or platform.archive_cls is None:
+        raise ProfileError(
+            f"Platform {profile.platform!r} does not support archive-based extraction"
+        )
     engine = get_engine(profile.engine).locations
     filesystem = platform.filesystem_from_image(result.image)
     messages = platform.archive_cls.from_bytes(
@@ -349,11 +353,12 @@ def extract_arm9_encounter_map_location_dataset(
             header.event_file_id
         ].warps
     find_script_awarded_items = getattr(engine, "find_script_awarded_items", None)
-    script_awarded_items_by_script = _script_keyed_records(
-        headers,
-        scripts,
-        enabled=find_script_awarded_items is not None,
-        build=lambda script_file_id, data: tuple(
+
+    def _build_script_awarded_items(
+        script_file_id: int, data: bytes
+    ) -> tuple[LocationScriptAwardedItem, ...]:
+        assert find_script_awarded_items is not None
+        return tuple(
             LocationScriptAwardedItem(
                 item_id=award.item_id,
                 name=item_names[award.item_id],
@@ -363,16 +368,23 @@ def extract_arm9_encounter_map_location_dataset(
                 command=award.command,
             )
             for award in find_script_awarded_items(data, item_count=len(item_names))
-        ),
+        )
+
+    script_awarded_items_by_script = _script_keyed_records(
+        headers,
+        scripts,
+        enabled=find_script_awarded_items is not None,
+        build=_build_script_awarded_items,
     )
     parse_static_encounter_commands = getattr(
         engine, "parse_static_encounter_commands", None
     )
-    static_encounters_by_script = _script_keyed_records(
-        headers,
-        scripts,
-        enabled=parse_static_encounter_commands is not None,
-        build=lambda script_file_id, data: tuple(
+
+    def _build_static_encounters(
+        script_file_id: int, data: bytes
+    ) -> tuple[LocationStaticEncounter, ...]:
+        assert parse_static_encounter_commands is not None
+        return tuple(
             LocationStaticEncounter(
                 species_id=command.species_id,
                 name=pokemon_names[command.species_id],
@@ -385,26 +397,40 @@ def extract_arm9_encounter_map_location_dataset(
             for command in parse_static_encounter_commands(
                 data, species_count=len(pokemon_names)
             )
-        ),
-    )
-    gift_parsers = _resolve_pokemon_gift_parsers(engine, pokemon_names)
-    pokemon_gifts_by_script = _script_keyed_records(
+        )
+
+    static_encounters_by_script = _script_keyed_records(
         headers,
         scripts,
-        enabled=gift_parsers is not None,
-        build=lambda script_file_id, data: _collect_pokemon_gifts(
+        enabled=parse_static_encounter_commands is not None,
+        build=_build_static_encounters,
+    )
+    gift_parsers = _resolve_pokemon_gift_parsers(engine, pokemon_names)
+
+    def _build_pokemon_gifts(
+        script_file_id: int, data: bytes
+    ) -> tuple[LocationPokemonGift, ...]:
+        assert gift_parsers is not None
+        return _collect_pokemon_gifts(
             gift_parsers,
             data,
             pokemon_names=pokemon_names,
             script_file_id=script_file_id,
-        ),
-    )
-    parse_mart_dispatch_commands = getattr(engine, "parse_mart_dispatch_commands", None)
-    mart_references_by_script = _script_keyed_records(
+        )
+
+    pokemon_gifts_by_script = _script_keyed_records(
         headers,
         scripts,
-        enabled=parse_mart_dispatch_commands is not None,
-        build=lambda script_file_id, data: tuple(
+        enabled=gift_parsers is not None,
+        build=_build_pokemon_gifts,
+    )
+    parse_mart_dispatch_commands = getattr(engine, "parse_mart_dispatch_commands", None)
+
+    def _build_mart_references(
+        script_file_id: int, data: bytes
+    ) -> tuple[LocationMartReference, ...]:
+        assert parse_mart_dispatch_commands is not None
+        return tuple(
             LocationMartReference(
                 kind=command.kind,
                 inventory_id=command.inventory_id,
@@ -412,7 +438,13 @@ def extract_arm9_encounter_map_location_dataset(
                 command_offset=command.offset,
             )
             for command in parse_mart_dispatch_commands(data)
-        ),
+        )
+
+    mart_references_by_script = _script_keyed_records(
+        headers,
+        scripts,
+        enabled=parse_mart_dispatch_commands is not None,
+        build=_build_mart_references,
     )
     connections = extract_event_map_connections(
         engine, headers, matrices, location_names, matrix_void_header_ids

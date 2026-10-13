@@ -33,7 +33,7 @@ from romwiki.schema.pokemon import RecordProvenance
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
 
 
-def _profile(*, engine="gen4_dppt", layout=None, parameters=None) -> GameProfile:
+def _profile(*, engine="gen4_platinum", layout=None, parameters=None) -> GameProfile:
     return GameProfile(
         id="test",
         name="Test",

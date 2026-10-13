@@ -23,14 +23,14 @@ class EvolutionEnrichmentTests(unittest.TestCase):
         enriched = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": personal_records,
             },
             pokedb,
             evolution_dataset={
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "evo.narc"},
                 "item_names": item_names,
                 "records": records,
@@ -67,14 +67,14 @@ class EvolutionEnrichmentTests(unittest.TestCase):
         enriched = enrich_personal_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "personal.narc"},
                 "records": [_source_record(member) for member in range(508)],
             },
             pokedb,
             evolution_dataset={
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {"archive": "evo.narc"},
                 "item_names": [],
                 "records": records,

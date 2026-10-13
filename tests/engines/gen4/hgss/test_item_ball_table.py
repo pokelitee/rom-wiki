@@ -3,11 +3,11 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen4.events import Gen4ObjectEvent
 from romwiki.engines.gen4.hgss.events import (
     parse_item_ball_table,
     resolve_visible_item_id,
 )
+from romwiki.engines.gen4.shared.events import Gen4ObjectEvent
 
 _SCRIPT_TABLE_END = 0xFD13
 

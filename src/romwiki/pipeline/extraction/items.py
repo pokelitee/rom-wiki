@@ -20,6 +20,96 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     if result.match is None:
         raise ProfileError("A known game profile is required for item extraction")
     profile = result.match.profile
+    platform = get_platform(profile.platform)
+
+    if platform.archive_cls is not None:
+        return _extract_item_dataset_archive(result, profile, platform)
+    if platform.read_bytes is not None:
+        return _extract_item_dataset_flat(result, profile, platform)
+    raise ProfileError(
+        f"Platform {profile.platform!r} supports neither archive nor flat reads"
+    )
+
+
+def _extract_item_dataset_flat(
+    result: InspectionResult, profile: Any, platform: Any
+) -> dict[str, Any]:
+    try:
+        offset = profile.parameters["item_offset"]
+        count = profile.parameters["item_count"]
+    except KeyError as error:
+        raise ProfileError(
+            f"Profile {profile.id} does not define item_offset/item_count"
+        ) from error
+    if not isinstance(offset, int) or not isinstance(count, int):
+        raise ProfileError(f"Profile {profile.id} has an invalid item parameter")
+
+    engine = get_engine(profile.engine).items
+    record_size = engine.ITEM_RECORD_SIZE
+    data = platform.read_bytes(result.image, offset, record_size * count)
+    archive_path = f"offset:{offset:#x}"
+    decoded_count = min(count, engine.ITEM_RECORD_COUNT)
+
+    records = []
+    descriptions = []
+    for item_id in range(decoded_count):
+        record_bytes = data[item_id * record_size : (item_id + 1) * record_size]
+        parsed = engine.parse_item_record(
+            record_bytes, item_id=item_id, archive_path=archive_path
+        ).to_dict()
+        name = engine.item_name(record_bytes)
+        pocket_id = parsed["field_pocket_id"]
+        if pocket_id >= len(engine.ITEM_POCKET_NAMES):
+            raise DataSourceError(f"Unknown item pocket ID: {pocket_id}")
+        records.append(
+            {
+                **parsed,
+                "name": name,
+                "public": item_id > 0 and name != "",
+                "revives_into_species_id": None,
+                "berry": None,
+                "pocket": {
+                    "id": pocket_id,
+                    "name": engine.ITEM_POCKET_NAMES[pocket_id],
+                },
+            }
+        )
+        descriptions.append(
+            _decode_item_description(engine, platform, result, record_bytes)
+        )
+
+    envelope = dataset_envelope(
+        schema_version=ITEMS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="items",
+        source={"rom_sha256": result.image.hashes.sha256, "offset": offset},
+        records=records,
+    )
+    envelope["public_record_count"] = sum(record["public"] for record in records)
+    envelope["item_descriptions"] = descriptions
+    return envelope
+
+
+def _decode_item_description(
+    engine: Any, platform: Any, result: InspectionResult, record_bytes: bytes
+) -> str:
+    # Each item's description lives at its own inline ROM pointer (see
+    # `engines/gen3/frlg/items.py`'s `item_description_pointer`), not a
+    # shared table -- a generously-sized read (description text is at most
+    # a handful of short lines) lets `decode_gen3_text` find the real
+    # 0xFF terminator regardless of the exact string length.
+    pointer = engine.item_description_pointer(record_bytes)
+    if pointer == 0:
+        return ""
+    offset = engine.resolve_gba_pointer(pointer)
+    data = platform.read_bytes(result.image, offset, 256)
+    return engine.decode_gen3_text(data)
+
+
+def _extract_item_dataset_archive(
+    result: InspectionResult, profile: Any, platform: Any
+) -> dict[str, Any]:
     try:
         item_archive_path = profile.layout["item_data"]
         message_archive_path = profile.layout["messages"]
@@ -34,7 +124,6 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     fossil_revival_count = profile.parameters.get("fossil_revival_count")
     first_berry_item_id = profile.parameters.get("first_berry_item_id")
 
-    platform = get_platform(profile.platform)
     adapter = get_engine(profile.engine)
     engine = adapter.items
     fossil_format = adapter.formats.fossils
@@ -154,15 +243,14 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
 
     berry_by_item: dict[int, dict[str, Any]] = {}
     if berry_data_path is not None:
-        berry_archive = platform.archive_cls.from_bytes(
-            filesystem.read(berry_data_path)
+        berry_by_item = _extract_berry_data(
+            profile,
+            platform,
+            filesystem,
+            engine,
+            berry_data_path,
+            first_berry_item_id,
         )
-        for index in range(len(berry_archive.members)):
-            berry = engine.parse_berry_record(berry_archive.read(index))
-            berry_by_item[first_berry_item_id + index] = {
-                **asdict(berry),
-                "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
-            }
         source["berry_data"] = {
             "archive": berry_data_path,
             "record_count": len(berry_by_item),
@@ -239,3 +327,26 @@ def extract_item_dataset(result: InspectionResult) -> dict[str, Any]:
     envelope["public_record_count"] = sum(record["public"] for record in records)
     envelope.update(reference_descriptions)
     return envelope
+
+
+def _extract_berry_data(
+    profile: Any,
+    platform: Any,
+    filesystem: Any,
+    engine: Any,
+    berry_data_path: str,
+    first_berry_item_id: int | None,
+) -> dict[int, dict[str, Any]]:
+    if first_berry_item_id is None:
+        raise ProfileError(
+            f"Profile {profile.id} defines berry_data without first_berry_item_id"
+        )
+    berry_archive = platform.archive_cls.from_bytes(filesystem.read(berry_data_path))
+    berry_by_item: dict[int, dict[str, Any]] = {}
+    for index in range(len(berry_archive.members)):
+        berry = engine.parse_berry_record(berry_archive.read(index))
+        berry_by_item[first_berry_item_id + index] = {
+            **asdict(berry),
+            "firmness_name": engine.BERRY_FIRMNESS_NAMES.get(berry.firmness),
+        }
+    return berry_by_item

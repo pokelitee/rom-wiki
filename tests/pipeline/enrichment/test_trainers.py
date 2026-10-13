@@ -13,6 +13,7 @@ from romwiki.pipeline.enrichment.trainers import (
 from romwiki.pipeline.transforms.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_trainer_pages
 from romwiki.sources import PokeDBGeneration
+from romwiki.util.errors import DataSourceError
 
 
 class TrainerEnrichmentTests(unittest.TestCase):
@@ -58,9 +59,84 @@ class TrainerEnrichmentTests(unittest.TestCase):
             ],
         }
 
-        trainer = enrich_trainer_record(source, pokedb, None, None, engine="gen4_dppt")
+        trainer = enrich_trainer_record(
+            source, pokedb, None, None, engine="gen4_platinum"
+        )
 
         self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Burmy (Sandy Cloak)")
+
+    def test_falls_back_to_the_base_species_for_an_unrecognized_form_bit(self) -> None:
+        # A hack's own trainer data can set a Generation IV form bit for a
+        # species that engine's own form tables have no entry for at all
+        # (Sacred Gold/Storm Silver's trainer 229 does this for Pinsir,
+        # species 127, which has no real Generation IV form). This must
+        # resolve to the base species rather than failing the whole build,
+        # the same tolerant treatment already given to explicitly
+        # cosmetic-only forms.
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={127: {"id": 127, "name": "Pinsir", "species": "pinsir"}},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 0,
+            "class_id": 0,
+            "class_gender": "male",
+            "has_custom_moves": False,
+            "reward_item_ids": [],
+            "party": [
+                {
+                    "difficulty": 0,
+                    "species_id": 127,
+                    "form_id": 1,
+                    "level": 5,
+                    "held_item_id": None,
+                    "move_ids": [],
+                }
+            ],
+        }
+
+        trainer = enrich_trainer_record(source, pokedb, None, None, engine="gen4_hgss")
+
+        self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Pinsir")
+
+    def test_raises_for_an_unrecognized_form_bit_on_a_species_with_known_forms(
+        self,
+    ) -> None:
+        # Unlike a species with no form table entries at all, a form bit
+        # that doesn't match any known entry for a species that *does* have
+        # tabulated forms (Deoxys, species 386) is far more likely a
+        # parsing bug than deliberate hack data, so it must still fail
+        # loudly rather than silently resolving to the base species.
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={386: {"id": 386, "name": "Deoxys", "species": "deoxys"}},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+        )
+        source = {
+            "trainer_id": 0,
+            "class_id": 0,
+            "class_gender": "male",
+            "has_custom_moves": False,
+            "reward_item_ids": [],
+            "party": [
+                {
+                    "difficulty": 0,
+                    "species_id": 386,
+                    "form_id": 9,
+                    "level": 5,
+                    "held_item_id": None,
+                    "move_ids": [],
+                }
+            ],
+        }
+
+        with self.assertRaises(DataSourceError):
+            enrich_trainer_record(source, pokedb, None, None, engine="gen4_platinum")
 
     def test_enriches_and_renders_a_trainer_party(self) -> None:
         source = {
@@ -126,7 +202,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         enriched = enrich_trainer_dataset(
             {
                 "game": "test",
-                "engine": "gen4_dppt",
+                "engine": "gen4_platinum",
                 "source": {},
                 "move_names": move_names,
                 "records": [source],
@@ -165,6 +241,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
                 "records": [
                     {
                         "move_id": 33,
+                        "slug": "tackle",
                         "type": {"id": 0, "name": "normal"},
                         "damage_class": {"id": 0, "name": "physical"},
                     }

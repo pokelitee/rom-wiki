@@ -34,7 +34,7 @@ def location_filename(header_id: int) -> str:
     return f"header-{header_id:03}.md"
 
 
-def location_label(record: dict[str, Any]) -> str:
+def location_label(record: Mapping[str, Any]) -> str:
     return location_reference_label(record)
 
 
