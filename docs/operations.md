@@ -187,7 +187,7 @@ the site's data-sources page rather than a broad completion label.
 
 ## CI and GitHub Pages
 
-`.github/workflows/test.yml` runs the reusable `checks.yml` matrix for PRs and pushes to `main`. `.github/workflows/deploy-pages.yml` deploys pushes to `main` and supports manual dispatch from `main` only. All jobs have explicit timeouts; Actions are pinned to commit SHAs and dependencies to the requirement files.
+`.github/workflows/ci.yml` runs the reusable `checks.yml` matrix for PRs and pushes to `main`. `.github/workflows/deploy-pages.yml` deploys relevant source, profile, site, dependency, and deployment-workflow changes on `main`, and supports manual dispatch from `main` only. Contributor-documentation-only changes do not trigger a wiki build. All jobs have explicit timeouts; Actions are pinned to commit SHAs and dependencies to the requirement files.
 
 Deployment runs offline tests, resolves the published site catalog, restores each data-driven site's tracked snapshot, builds sites in parallel, assembles their artifacts, and audits the complete rendered link graph before publishing. Site and audit caches accelerate builds but do not replace validation. The Pages source is GitHub Actions; the `github-pages` environment permits only `main`.
 
