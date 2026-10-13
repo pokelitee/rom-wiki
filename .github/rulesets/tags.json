@@ -1,0 +1,22 @@
+{
+  "name": "Preserve archived development tags",
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/tags/archive/dev-*"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "update"
+    }
+  ]
+}

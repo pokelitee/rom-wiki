@@ -1,214 +1,44 @@
 # ROM Wiki
 
-ROM Wiki extracts structured Pokémon game data from locally supplied ROM images
-and publishes normalized datasets and static MkDocs wikis.
+ROM Wiki extracts structured Pokémon data from locally supplied ROM images and produces normalized datasets and static MkDocs wikis.
 
-The project keeps four concerns separate:
+## Live wikis
 
-1. platform readers open game containers;
-2. engine adapters decode generation-specific records;
-3. pipelines normalize, enrich, and compare game data;
-4. renderers and site tooling publish human- and machine-readable references.
+Browse [pokelitee.github.io/rom-wiki](https://pokelitee.github.io/rom-wiki/). Each game's data-sources page records its input revisions, provenance, supported mechanics, and limitations. Data-driven publication does not imply exhaustive extraction.
 
-ROM images, patches, keys, saves, and copyrighted extracted assets are never
-committed.
+## Getting started
 
-## Supported sites
+Use Python 3.12+. Activate the environment with `.venv\Scripts\Activate.ps1` in PowerShell or `source .venv/bin/activate` in bash.
 
-| Site | Publication model |
-| --- | --- |
-| Pokémon Platinum | Data-driven Generation IV baseline |
-| Pokémon Renegade Platinum | Data-driven comparison against Platinum |
-| Pokémon HeartGold & SoulSilver | Data-driven sibling-version family |
-| Pokémon Sacred Gold & Storm Silver | Data-driven paired-hack comparison |
-| Pokémon Black & White | Data-driven sibling-version family |
-| Pokémon Blaze Black & Volt White | Data-driven paired-hack comparison |
-| Pokémon Black 2 & White 2 | Data-driven sibling-version family |
-| Pokémon Blaze Black 2 & Volt White 2 | Data-driven paired-hack comparison |
-| Pokémon Blaze Black 2 Redux & Volt White 2 Redux | Data-driven paired-hack comparison |
-
-The mature Generation IV and V engines cover Pokémon, abilities, moves, items,
-learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,
-trades, static encounters, and other engine-specific mechanics where exact
-extraction is supported. The HGSS engine covers Pokémon, abilities, moves,
-items, encounters, trainers, and map-header locations, with explicitly recorded
-gaps for trainer payouts and map associations. Each site's data-sources page
-records its exact input versions, provenance, and known limitations.
-
-Rendered encounter tables aggregate exact slots by species and form without
-changing the downloads. Generation V seasons share canonical `map-NNN` pages.
-Trainer relationships are resolved by the owning engine and shown as complete
-party tabs, while typed routes such as `trainer-0782` and `header-191` remain
-separate from native ROM identifiers.
-
-“Data-driven” means a site is generated from normalized ROM datasets; it does
-not imply exhaustive extraction of every mechanic. Exact coverage belongs in
-the site's data-sources page rather than a broad completion label.
-
-## Setup
-
-ROM Wiki requires Python 3.12 or newer.
-
-```powershell
+```sh
+git clone https://github.com/pokelitee/rom-wiki.git
+cd rom-wiki
 python -m venv .venv
-.venv\Scripts\python -m pip install -e ".[dev,docs]"
-```
-
-Create the ignored local game registry:
-
-```powershell
-New-Item -ItemType Directory -Force .local | Out-Null
-Copy-Item config/games.example.toml .local/games.toml
-```
-
-Paths in `.local/games.toml` are relative to that file:
-
-```toml
-version = 1
-
-[games.renegade-platinum]
-patched_rom = "roms/Pokemon - Renegade Platinum.nds"
-base_rom = "roms/Pokemon - Platinum Version (USA).nds"
-```
-
-Committed profiles identify and decode supported ROM revisions; the local
-registry only supplies machine-specific paths.
-
-## Common workflows
-
-Identify a configured ROM or its clean comparison base:
-
-```console
-romwiki inspect --game renegade-platinum
-romwiki inspect --game renegade-platinum --base --json
-```
-
-Build every dataset and wiki section for one game:
-
-```console
-romwiki build game --game renegade-platinum
-```
-
-When a clean base is configured, the build extracts and caches it before
-current-game data. It then enriches normalized datasets, writes semantic
-comparisons, renders the configured site, and publishes deterministic compressed
-data downloads. The owning site is resolved from the profile, so profile and site
-IDs do not need to be identical.
-
-Regenerate selected sites, or every published site:
-
-```console
-romwiki regenerate platinum renegade-platinum
-romwiki regenerate --all
-```
-
-`regenerate` preflights every required ROM and PokéDB generation before writing,
-then builds and audits the combined artifact. Add `--refresh` to replace current
-and baseline extraction caches. After reviewing a complete build, add
-`--snapshot` to update the tracked ROM-free publication snapshot:
-
-```console
-romwiki regenerate --all --refresh --snapshot
-```
-
-For normal development, select one site and optionally reuse unchanged rendered
-pages; valid raw caches are reused per dataset and engine:
-
-```console
-romwiki regenerate renegade-platinum --incremental
-```
-
-Adding another engine does not invalidate existing engines' extraction caches.
-Use the complete `--all` workflow only for integrated release validation.
-Verified unchanged generation, site builds, audit parsing, and per-site snapshots
-are reused automatically. The audit still hashes every HTML file and validates
-the complete link graph. Use `--clean` to rebuild publication output, and combine
-`--clean --refresh` for an occasional from-scratch release check.
-
-Global diagnostic options precede the command:
-
-```console
-romwiki --verbose regenerate --all
-```
-
-## Focused development
-
-Single-ROM audit extraction and focused rendered builds are grouped by dataset:
-
-```console
-romwiki extract personal --game platinum-us
-romwiki extract encounters --game platinum-us
-romwiki build pokemon --game renegade-platinum
-romwiki build moves --game renegade-platinum --dev
-```
-
-Build a sibling-version family into one configured site:
-
-```console
-romwiki build family --games black-us white-us --versions black white --site-id black-white
-```
-
-For normal catalog-driven work, generate one or every configured game site without
-manually repeating its profiles and version labels:
-
-```console
-romwiki generate renegade-platinum --dev
-romwiki generate --all --dev
-```
-
-Manage baseline caches explicitly when needed:
-
-```console
-romwiki baseline build --game renegade-platinum
-romwiki baseline build --game renegade-platinum --scope pokemon moves
-```
-
-See [CLI reference](docs/cli-reference.md) for every command, input-selection
-rule, and output option.
-
-## Site development
-
-List, build, preview, and audit the site catalog:
-
-```console
-romwiki site list
+# Activate the environment using your shell's command.
+python -m pip install -r requirements/docs.txt
+python -m pip install --no-deps --no-build-isolation -e .
+romwiki site restore-snapshot
 romwiki site build --all --dev
 romwiki site serve --all --dev
-romwiki site build --all --output dist
-romwiki site audit dist
 ```
 
-Generated game pages are archived per site under `sites/generated-wiki/` rather than
-tracked individually. A clean checkout restores them with:
+This previews the tracked ROM-free snapshots without extracting games. To generate new datasets, supply local inputs through the ignored `.local/games.toml` registry and follow [Operations](docs/operations.md). PokéDB reference data defaults to the sibling checkout's `.output/gen<N>` directory.
 
-```console
-romwiki site restore-snapshot
-```
+## Architecture
 
-See [Frontend](docs/development/frontend.md) for the shared design system and
-development-preview contract.
+`src/romwiki/` separates platform readers, generation-specific engines, normalized schemas, pipelines, renderers, and site tooling. `profiles/` contains committed decoding configuration; `sites/` owns authored content, shared presentation, and reviewed publication snapshots. Tests mirror those layers.
 
-## Project documentation
+## Documentation
 
-- [CLI reference](docs/cli-reference.md): commands, inputs, outputs, and workflows.
-- [Architecture](docs/development/architecture.md): extraction and publication
-  boundaries.
-- [Adding a game](docs/development/adding-a-game.md): implementation checklist.
-- [Data contracts](docs/development/data-contracts.md): normalized and published
-  JSON guarantees.
-- [Frontend](docs/development/frontend.md): templates, catalogs, components, and
-  review requirements.
+- [Development](docs/development.md): setup, checks, architecture references, dependencies, and repository policy.
+- [Operations](docs/operations.md): local inputs, generation, snapshots, deployment, and recovery.
+- [CLI reference](docs/cli-reference.md): command arguments, input selection, and output options.
+- [Data contracts](docs/development/data-contracts.md): normalized and published JSON guarantees.
 
-## PokéDB
+## Contributing
 
-PokéDB is a local external reference dataset for canonical names, links,
-descriptive text, and optional media URLs. Exact mechanics and comparisons remain
-ROM-derived.
+Follow the [organization contribution guide](https://github.com/pokelitee/.github/blob/main/CONTRIBUTING.md) and the [development guide](docs/development.md). Use a short-lived branch and a PR into `main`.
 
-Build commands derive `../pokedb/.output/gen<N>` from the matched engine by
-default. Use `--pokedb` or `--pokedb-root` to select another local output.
+## License and local inputs
 
-## Legal notice
-
-This repository does not include game images, patches, keys, saves, or extracted
-copyrighted assets. Users must supply legally obtained inputs locally.
+Source code is licensed under the [MIT License](LICENSE). ROM images, patches, keys, saves, and extracted copyrighted assets are not committed. Users supply legally obtained inputs locally.
