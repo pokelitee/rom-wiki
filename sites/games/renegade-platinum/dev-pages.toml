@@ -33,7 +33,6 @@ items = [
 ]
 encounters = [
     "area-000",
-    "area-060",
     "area-134",
     "area-005",
     "area-029",
