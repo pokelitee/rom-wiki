@@ -127,6 +127,14 @@ class DevelopmentServerTests(unittest.TestCase):
             with self.assertRaises(SiteError):
                 _validate_server_options(root, root / "docs" / "preview", 8000)
 
+    def test_rejects_output_that_resolves_into_watched_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "build" / ".." / "sites" / "preview"
+
+            with self.assertRaises(SiteError):
+                _validate_server_options(root, output, 8000)
+
     def test_invalid_selection_does_not_clean_the_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

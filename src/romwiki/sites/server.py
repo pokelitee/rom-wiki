@@ -259,6 +259,7 @@ def _validate_server_options(root: Path, output_root: Path, port: int) -> None:
     if not 0 <= port <= 65535:
         raise SiteError(f"Development server port is out of range: {port}")
     resolved_root = root.resolve()
+    output_root = output_root.resolve()
     if (
         output_root == resolved_root
         or resolved_root.is_relative_to(output_root)
