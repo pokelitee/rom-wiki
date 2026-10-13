@@ -59,7 +59,8 @@ def main() -> None:
                 str(python),
                 "-c",
                 "from pathlib import Path; import romwiki; "
-                "assert Path(romwiki.__file__).is_relative_to(Path('venv').resolve()); "
+                "assert Path(romwiki.__file__).resolve().is_relative_to("
+                "Path('venv').resolve()); "
                 "assert romwiki.__version__",
             ],
             cwd=temporary,
