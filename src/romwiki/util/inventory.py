@@ -4,9 +4,19 @@ import hashlib
 import json
 import os
 import threading
+import time
 from pathlib import Path
 
 _INVENTORY_LOCK = threading.Lock()
+# Filesystem timestamps are coarse, so a same-size rewrite within this window
+# can keep its old modification time; such files must be read, not trusted
+# from a (size, mtime) cache.
+_RACY_MTIME_WINDOW_NS = 2_000_000_000
+
+
+def modified_too_recently(mtime_ns: int) -> bool:
+    """Whether a (size, mtime) cache entry for this file could be stale."""
+    return time.time_ns() - mtime_ns < _RACY_MTIME_WINDOW_NS
 
 
 def read_inventory_state(path: Path, *, schema_version: int) -> dict[str, str] | None:

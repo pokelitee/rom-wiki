@@ -29,7 +29,7 @@ from romwiki.sites.catalog import (
 from romwiki.sites.data_exports import validate_public_data
 from romwiki.sites.dev_pages import DevPages
 from romwiki.util.errors import SiteError
-from romwiki.util.inventory import inventory_fingerprint
+from romwiki.util.inventory import inventory_fingerprint, modified_too_recently
 from romwiki.util.json_io import write_json_atomic
 
 _LOG = logging.getLogger("romwiki")
@@ -1064,6 +1064,8 @@ def _source_fingerprint(root: Path) -> str:
 
 def _normalized_source_bytes(path: Path) -> bytes:
     stat = path.stat()
+    if modified_too_recently(stat.st_mtime_ns):
+        return _read_normalized_source.__wrapped__(path, stat.st_size, stat.st_mtime_ns)
     return _read_normalized_source(path, stat.st_size, stat.st_mtime_ns)
 
 
