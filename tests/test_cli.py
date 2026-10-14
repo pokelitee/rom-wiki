@@ -7,21 +7,19 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from romwiki.cli import (
-    _profile_wiki_root,
-    _report_site_audit,
-    _resolve_build_baseline,
-    _resolve_input_rom,
-    _resolve_pokedb_path,
-    _run_regeneration,
-    _run_rom_command,
-    _site_wiki_root,
-    _validate_regeneration_flags,
-    _version_family_inputs,
-    _version_family_uses_baselines,
-    build_parser,
-    main,
+from romwiki.cli import build_parser, main
+from romwiki.cli.build import resolve_build_baseline
+from romwiki.cli.common import (
+    profile_wiki_root,
+    report_site_audit,
+    resolve_input_rom,
+    resolve_pokedb_path,
+    site_wiki_root,
+    version_family_inputs,
+    version_family_uses_baselines,
 )
+from romwiki.cli.extract import extract
+from romwiki.cli.regenerate import run_regeneration, validate_regeneration_flags
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import (
     GameMetadata,
@@ -45,8 +43,8 @@ class MainErrorHandlingTests(unittest.TestCase):
     def test_combined_dev_server_arguments_are_forwarded(self) -> None:
         catalog = object()
         with (
-            patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
-            patch("romwiki.cli.serve_sites") as serve,
+            patch("romwiki.cli.site.SiteCatalog.load", return_value=catalog),
+            patch("romwiki.cli.site.serve_sites") as serve,
         ):
             exit_code = main(
                 [
@@ -77,8 +75,8 @@ class MainErrorHandlingTests(unittest.TestCase):
     def test_individual_dev_server_arguments_are_forwarded(self) -> None:
         catalog = object()
         with (
-            patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
-            patch("romwiki.cli.serve_sites") as serve,
+            patch("romwiki.cli.site.SiteCatalog.load", return_value=catalog),
+            patch("romwiki.cli.site.serve_sites") as serve,
         ):
             exit_code = main(["site", "serve", "renegade-platinum", "--dev"])
 
@@ -117,7 +115,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         )
 
     def test_generate_all_dev_is_catalog_driven(self) -> None:
-        with patch("romwiki.cli._run_generation") as generate:
+        with patch("romwiki.cli.regenerate.run_generation") as generate:
             exit_code = main(["generate", "--all", "--dev"])
 
         self.assertEqual(exit_code, 0)
@@ -132,8 +130,8 @@ class MainErrorHandlingTests(unittest.TestCase):
             output_path=lambda output: output / "platinum",
         )
         with (
-            patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
-            patch("romwiki.cli.build_sites", return_value=(built,)) as build,
+            patch("romwiki.cli.site.SiteCatalog.load", return_value=catalog),
+            patch("romwiki.cli.site.build_sites", return_value=(built,)) as build,
         ):
             exit_code = main(["site", "build", "--all", "--dev"])
 
@@ -171,7 +169,7 @@ class MainErrorHandlingTests(unittest.TestCase):
             clean=False,
         )
 
-        self.assertEqual(_validate_regeneration_flags(args), (True, False))
+        self.assertEqual(validate_regeneration_flags(args), (True, False))
 
     def test_validate_regeneration_flags_defaults_missing_attributes_to_false(
         self,
@@ -181,7 +179,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         # not raise AttributeError for that shape.
         args = SimpleNamespace(regenerate_all=True)
 
-        self.assertEqual(_validate_regeneration_flags(args), (False, False))
+        self.assertEqual(validate_regeneration_flags(args), (False, False))
 
     def test_validate_regeneration_flags_rejects_snapshot_without_all(self) -> None:
         args = SimpleNamespace(
@@ -193,7 +191,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
-            _validate_regeneration_flags(args)
+            validate_regeneration_flags(args)
 
     def test_validate_regeneration_flags_rejects_snapshot_with_incremental(
         self,
@@ -209,7 +207,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         with self.assertRaisesRegex(
             SiteError, "--snapshot cannot be combined with --incremental"
         ):
-            _validate_regeneration_flags(args)
+            validate_regeneration_flags(args)
 
     def test_validate_regeneration_flags_rejects_snapshot_with_dev(self) -> None:
         args = SimpleNamespace(
@@ -223,7 +221,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         with self.assertRaisesRegex(
             SiteError, "--snapshot cannot be combined with --dev"
         ):
-            _validate_regeneration_flags(args)
+            validate_regeneration_flags(args)
 
     def test_validate_regeneration_flags_rejects_clean_with_incremental(self) -> None:
         args = SimpleNamespace(
@@ -237,7 +235,7 @@ class MainErrorHandlingTests(unittest.TestCase):
         with self.assertRaisesRegex(
             SiteError, "--clean cannot be combined with --incremental"
         ):
-            _validate_regeneration_flags(args)
+            validate_regeneration_flags(args)
 
     def test_regenerate_parser_exposes_complete_workflow_options(self) -> None:
         args = build_parser().parse_args(
@@ -304,21 +302,21 @@ class MainErrorHandlingTests(unittest.TestCase):
             parameters={},
         )
         result = SimpleNamespace(match=SimpleNamespace(profile=profile))
-        args = SimpleNamespace(
-            command="extract-locations", output=Path("locations.json")
-        )
         locations = {"game": profile.id, "record_count": 1, "records": [{}]}
 
         with (
-            patch("romwiki.cli.extract_item_dataset", return_value={"records": []}),
-            patch("romwiki.cli.extract_npc_trade_dataset") as extract_trades,
             patch(
-                "romwiki.cli.extract_location_dataset", return_value=locations
+                "romwiki.cli.extract.extract_item_dataset",
+                return_value={"records": []},
+            ),
+            patch("romwiki.cli.extract.extract_npc_trade_dataset") as extract_trades,
+            patch(
+                "romwiki.cli.extract.extract_location_dataset", return_value=locations
             ) as extract_locations,
-            patch("romwiki.cli.write_dataset"),
+            patch("romwiki.cli.extract.write_dataset"),
             patch("builtins.print"),
         ):
-            _run_rom_command(args, result)
+            extract("locations", result, Path("locations.json"))
 
         extract_trades.assert_not_called()
         self.assertIsNone(extract_locations.call_args.kwargs["trade_dataset"])
@@ -327,21 +325,21 @@ class MainErrorHandlingTests(unittest.TestCase):
 class VersionFamilyInputTests(unittest.TestCase):
     def test_defaults_version_labels_to_game_ids(self) -> None:
         self.assertEqual(
-            _version_family_inputs(["black", "white"], None),
+            version_family_inputs(["black", "white"], None),
             (("black", "white"), ("black", "white")),
         )
 
     def test_requires_at_least_two_games(self) -> None:
         with self.assertRaisesRegex(LocalConfigError, "at least two games"):
-            _version_family_inputs(["black"], None)
+            version_family_inputs(["black"], None)
 
     def test_requires_one_label_per_game(self) -> None:
         with self.assertRaisesRegex(LocalConfigError, "one label"):
-            _version_family_inputs(["black", "white"], ["black"])
+            version_family_inputs(["black", "white"], ["black"])
 
     def test_requires_unique_labels(self) -> None:
         with self.assertRaisesRegex(LocalConfigError, "must be unique"):
-            _version_family_inputs(["black", "white"], ["hack", "hack"])
+            version_family_inputs(["black", "white"], ["hack", "hack"])
 
     def test_detects_consistent_baseline_configuration(self) -> None:
         without_baselines = {
@@ -353,19 +351,19 @@ class VersionFamilyInputTests(unittest.TestCase):
             "white": LocalGamePaths("white", Path("white.nds"), Path("base-white.nds")),
         }
 
-        self.assertFalse(_version_family_uses_baselines(without_baselines))
-        self.assertTrue(_version_family_uses_baselines(with_baselines))
+        self.assertFalse(version_family_uses_baselines(without_baselines))
+        self.assertTrue(version_family_uses_baselines(with_baselines))
 
     def test_derives_pokedb_generation_from_profiles(self) -> None:
         repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
         profiles = {profile.id: profile for profile in repository.profiles}
 
         self.assertEqual(
-            _resolve_pokedb_path(None, (profiles["platinum-us"],)),
+            resolve_pokedb_path(None, (profiles["platinum-us"],)),
             Path("../pokedb/.output/gen4"),
         )
         self.assertEqual(
-            _resolve_pokedb_path(
+            resolve_pokedb_path(
                 None,
                 (profiles["black-us"], profiles["white-us"]),
             ),
@@ -379,7 +377,7 @@ class VersionFamilyInputTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            _resolve_pokedb_path(Path("custom/pokedb"), (profile,)),
+            resolve_pokedb_path(Path("custom/pokedb"), (profile,)),
             Path("custom/pokedb"),
         )
 
@@ -390,29 +388,29 @@ class VersionFamilyInputTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(LocalConfigError, "every game"):
-            _version_family_uses_baselines(paths)
+            version_family_uses_baselines(paths)
 
 
 class WikiOutputPathTests(unittest.TestCase):
     def test_resolves_profile_to_its_catalog_site(self) -> None:
         self.assertEqual(
-            _profile_wiki_root("platinum-us", root=REPOSITORY_ROOT),
+            profile_wiki_root("platinum-us", root=REPOSITORY_ROOT),
             REPOSITORY_ROOT / "sites/games/platinum/wiki",
         )
         self.assertEqual(
-            _profile_wiki_root("renegade-platinum", root=REPOSITORY_ROOT),
+            profile_wiki_root("renegade-platinum", root=REPOSITORY_ROOT),
             REPOSITORY_ROOT / "sites/games/renegade-platinum/wiki",
         )
 
     def test_unknown_profile_retains_the_conventional_fallback(self) -> None:
         self.assertEqual(
-            _profile_wiki_root("new-game", root=REPOSITORY_ROOT),
+            profile_wiki_root("new-game", root=REPOSITORY_ROOT),
             Path("sites/games/new-game/wiki"),
         )
 
     def test_resolves_family_site_from_the_catalog(self) -> None:
         self.assertEqual(
-            _site_wiki_root("black-white", root=REPOSITORY_ROOT),
+            site_wiki_root("black-white", root=REPOSITORY_ROOT),
             REPOSITORY_ROOT / "sites/games/black-white/wiki",
         )
 
@@ -448,8 +446,8 @@ base_rom = "base.nds"
                 ]
             )
 
-            self.assertEqual(_resolve_input_rom(patched_args), patched.resolve())
-            self.assertEqual(_resolve_input_rom(base_args), base.resolve())
+            self.assertEqual(resolve_input_rom(patched_args), patched.resolve())
+            self.assertEqual(resolve_input_rom(base_args), base.resolve())
 
     def test_resolves_explicit_rom(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -457,7 +455,7 @@ base_rom = "base.nds"
             rom.touch()
             args = build_parser().parse_args(["inspect", "--rom", str(rom)])
 
-            self.assertEqual(_resolve_input_rom(args), rom.resolve())
+            self.assertEqual(resolve_input_rom(args), rom.resolve())
 
     def test_configured_build_uses_base_rom_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -475,7 +473,7 @@ base_rom = "base.nds"
                 ["build", "game", "--game", "test", "--games-config", str(config)]
             )
 
-            self.assertEqual(_resolve_build_baseline(args), base.resolve())
+            self.assertEqual(resolve_build_baseline(args), base.resolve())
 
     def test_configured_build_reports_a_stale_base_rom_path_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -492,7 +490,7 @@ base_rom = "base.nds"
             )
 
             with self.assertRaisesRegex(LocalConfigError, "does not exist"):
-                _resolve_build_baseline(args)
+                resolve_build_baseline(args)
 
     def test_configured_retail_build_without_base_is_standalone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -515,7 +513,7 @@ base_rom = "base.nds"
                 ]
             )
 
-            self.assertIsNone(_resolve_build_baseline(args))
+            self.assertIsNone(resolve_build_baseline(args))
 
     def test_explicit_build_requires_base_or_hack_only(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -527,8 +525,8 @@ base_rom = "base.nds"
             )
 
             with self.assertRaisesRegex(LocalConfigError, "require --base-rom"):
-                _resolve_build_baseline(args)
-            self.assertIsNone(_resolve_build_baseline(hack_only))
+                resolve_build_baseline(args)
+            self.assertIsNone(resolve_build_baseline(hack_only))
 
     def test_resolves_an_explicit_base_rom_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -538,7 +536,7 @@ base_rom = "base.nds"
                 ["build", "game", "--game", "test", "--base-rom", str(base)]
             )
 
-            self.assertEqual(_resolve_build_baseline(args), base.resolve())
+            self.assertEqual(resolve_build_baseline(args), base.resolve())
 
     def test_rejects_a_missing_explicit_base_rom_path(self) -> None:
         args = build_parser().parse_args(
@@ -546,7 +544,7 @@ base_rom = "base.nds"
         )
 
         with self.assertRaisesRegex(LocalConfigError, "does not exist"):
-            _resolve_build_baseline(args)
+            resolve_build_baseline(args)
 
     def test_rejects_base_rom_combined_with_hack_only_or_base(self) -> None:
         hack_only_args = build_parser().parse_args(
@@ -576,13 +574,13 @@ base_rom = "base.nds"
             with self.assertRaisesRegex(
                 LocalConfigError, "cannot be combined with --hack-only or --base"
             ):
-                _resolve_build_baseline(args)
+                resolve_build_baseline(args)
 
     def test_comparative_build_without_game_or_base_rom_is_rejected(self) -> None:
         args = build_parser().parse_args(["build", "game"])
 
         with self.assertRaisesRegex(LocalConfigError, "require --game or --base-rom"):
-            _resolve_build_baseline(args)
+            resolve_build_baseline(args)
 
     def test_missing_game_and_rom_is_rejected(self) -> None:
         args = build_parser().parse_args(["inspect"])
@@ -590,7 +588,7 @@ base_rom = "base.nds"
         with self.assertRaisesRegex(
             LocalConfigError, "Specify a ROM path or select a configured game"
         ):
-            _resolve_input_rom(args)
+            resolve_input_rom(args)
 
 
 class RegenerationTests(unittest.TestCase):
@@ -667,56 +665,87 @@ patched_rom = "roms/white-us.nds"
 
             report = SiteAuditReport(3, 10, 100, ("index.html", 50), (), ())
             with (
-                patch("romwiki.cli.SiteCatalog.load", return_value=catalog),
-                patch("romwiki.cli._regeneration_profiles", return_value=object()),
+                patch("romwiki.cli.regenerate.SiteCatalog.load", return_value=catalog),
                 patch(
-                    "romwiki.cli.PokeDBGeneration.load",
+                    "romwiki.cli.regenerate.regeneration_profiles",
+                    return_value=object(),
+                ),
+                patch(
+                    "romwiki.cli.regenerate.PokeDBGeneration.load",
                     return_value=object(),
                 ) as load_pokedb,
                 patch(
-                    "romwiki.cli.inspect_rom",
+                    "romwiki.cli.regenerate.inspect_rom",
                     side_effect=inspection,
                 ) as inspect,
-                patch("romwiki.cli._run_full_game_build") as build_game,
-                patch("romwiki.cli._run_version_family_build") as build_family,
                 patch(
-                    "romwiki.cli.regeneration_fingerprint",
+                    "romwiki.cli.regenerate.GameBuildWorkflow",
+                    side_effect=lambda result, *args, **kwargs: result,
+                ) as workflow,
+                patch("romwiki.cli.regenerate.render_game_build") as build_game,
+                patch(
+                    "romwiki.cli.regenerate.render_version_family_build"
+                ) as build_family,
+                patch(
+                    "romwiki.cli.regenerate.regeneration_fingerprint",
                     return_value="fingerprint",
                 ) as fingerprint,
-                patch("romwiki.cli.can_reuse_generation", return_value=False),
-                patch("romwiki.cli.write_regeneration_state"),
                 patch(
-                    "romwiki.cli.build_sites",
+                    "romwiki.cli.regenerate.can_reuse_generation", return_value=False
+                ),
+                patch("romwiki.cli.regenerate.write_regeneration_state"),
+                patch(
+                    "romwiki.cli.regenerate.build_sites",
                     return_value=catalog.published(),
                 ) as build_all_sites,
                 patch(
-                    "romwiki.cli.combined_artifact_files",
+                    "romwiki.cli.regenerate.combined_artifact_files",
                     return_value={"index.html"},
                 ),
-                patch("romwiki.cli.audit_site", return_value=report) as audit,
+                patch(
+                    "romwiki.cli.regenerate.audit_site", return_value=report
+                ) as audit,
                 self.assertLogs("romwiki", level="INFO") as logs,
             ):
-                _run_regeneration(args)
+                run_regeneration(args)
 
             self.assertEqual(inspect.call_count, 3)
             self.assertEqual(load_pokedb.call_count, 1)
-            single_args = build_game.call_args.args[0]
-            self.assertEqual(single_args.game, "platinum-us")
             self.assertEqual(
-                single_args.wiki_root,
-                root / "sites" / "platinum" / "wiki",
+                build_game.call_args.args[0].match.profile.id, "platinum-us"
             )
-            self.assertTrue(single_args.hack_only)
-            self.assertTrue(single_args.dev)
-            family_args = build_family.call_args.args[0]
-            self.assertEqual(family_args.games, ["black-us", "white-us"])
-            self.assertEqual(family_args.versions, ["black", "white"])
-            self.assertEqual(family_args.site_id, "black-white")
-            self.assertTrue(family_args.refresh_cache)
-            self.assertTrue(family_args.dev)
             self.assertEqual(
-                set(build_family.call_args.kwargs["workflows"]),
-                {"black", "white"},
+                build_game.call_args.kwargs,
+                {
+                    "data_root": root / "data" / "platinum-us",
+                    "wiki_root": root / "sites" / "platinum" / "wiki",
+                    "dev": True,
+                },
+            )
+            self.assertEqual(
+                [call.kwargs["baseline"] for call in workflow.call_args_list],
+                [None, None, None],
+            )
+            self.assertTrue(
+                all(call.kwargs["refresh_current"] for call in workflow.call_args_list)
+            )
+            site_id, workflows, versions = build_family.call_args.args
+            self.assertEqual(site_id, "black-white")
+            self.assertEqual(versions, ("black", "white"))
+            self.assertEqual(
+                {
+                    version: result.match.profile.id
+                    for version, result in workflows.items()
+                },
+                {"black": "black-us", "white": "white-us"},
+            )
+            self.assertEqual(
+                build_family.call_args.kwargs,
+                {
+                    "data_root": root / "data" / "black-white",
+                    "wiki_root": root / "sites" / "black-white" / "wiki",
+                    "dev": True,
+                },
             )
             self.assertTrue(fingerprint.call_args.kwargs["dev"])
             self.assertTrue(build_all_sites.call_args.kwargs["dev"])
@@ -735,7 +764,7 @@ patched_rom = "roms/white-us.nds"
         )
 
         with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
-            _run_regeneration(args)
+            run_regeneration(args)
 
     def test_snapshot_rejects_incremental_builds(self) -> None:
         args = SimpleNamespace(
@@ -745,7 +774,7 @@ patched_rom = "roms/white-us.nds"
         )
 
         with self.assertRaisesRegex(SiteError, "cannot be combined"):
-            _run_regeneration(args)
+            run_regeneration(args)
 
     def test_snapshot_rejects_development_regeneration(self) -> None:
         args = SimpleNamespace(
@@ -756,7 +785,7 @@ patched_rom = "roms/white-us.nds"
         )
 
         with self.assertRaisesRegex(SiteError, "cannot be combined with --dev"):
-            _run_regeneration(args)
+            run_regeneration(args)
 
     def test_site_audit_warnings_are_summarized_by_default(self) -> None:
         report = SiteAuditReport(
@@ -773,7 +802,7 @@ patched_rom = "roms/white-us.nds"
         )
 
         with self.assertLogs("romwiki", level="WARNING") as captured:
-            _report_site_audit(report)
+            report_site_audit(report)
 
         output = "\n".join(captured.output)
         self.assertIn("3 warning(s)", output)
