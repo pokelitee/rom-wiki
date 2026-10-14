@@ -36,6 +36,17 @@ class Gen4GameCornerTests(unittest.TestCase):
         with self.assertRaises(InvalidRomError):
             parse_game_corner_prizes(data, offset=0, count=1, item_count=468)
 
+    def test_rejects_the_empty_item_sentinel(self) -> None:
+        data = struct.pack("<HH", 0, 1000)
+
+        with self.assertRaisesRegex(InvalidRomError, "invalid item 0"):
+            parse_game_corner_prizes(data, offset=0, count=1, item_count=468)
+
+    def test_reads_nothing_for_an_empty_table(self) -> None:
+        self.assertEqual(
+            parse_game_corner_prizes(b"", offset=0, count=0, item_count=468), ()
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
