@@ -61,7 +61,7 @@ def build_ability_dataset(
             )
 
     # Generation V's pickup table is one shared, sliding-window array (see
-    # gen5/bw/pickup.py) rather than Generation IV's separate common/rare
+    # gen5/shared/pickup.py) rather than Generation IV's separate common/rare
     # item lists plus a rate curve, so its raw dataset carries a
     # `level_ranges` field directly instead of Gen IV's `tables` shape; it
     # also has no Honey Gather / Honey Tree equivalent to attach.

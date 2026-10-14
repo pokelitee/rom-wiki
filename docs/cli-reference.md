@@ -26,6 +26,11 @@ Individual records and files are not logged. `--verbose` adds diagnostic detail;
 `--quiet` retains warnings and errors while suppressing routine progress. Lifecycle
 messages consistently use `started`, `completed in`, and `failed after` wording.
 
+Commands exit with status `0` on success and `1` when a ROM Wiki error, such as a
+missing ROM, an unmatched profile, or a failed audit, stops the command. Status
+`2` is reserved for usage errors reported by argument parsing, such as an unknown
+option.
+
 ## ROM inputs
 
 Commands that operate on one ROM accept a configured game or explicit path:
@@ -187,6 +192,15 @@ representative detail pages declared by each site's `dev-pages.toml`. Valid
 extraction caches are reused. Use `--refresh` to replace extraction caches or
 `--clean` to bypass unchanged-generation reuse.
 
+Selected sites are generated in parallel worker processes, one per CPU by
+default; `--jobs` caps the worker count and `--jobs 1` generates sites one after
+another in the current process. Sites that share an extraction cache, such as two
+hacks of the same clean base ROM, are generated in sequence by one worker. Each
+worker's log lines are prefixed with its site ID. A failing site does not stop the
+other workers; the command reports the first failure once every site has settled.
+Each worker loads only the PokéDB generations its sites need, so peak memory grows
+with the worker count.
+
 ## Regenerate
 
 `regenerate` is the complete catalog-driven workflow:
@@ -202,7 +216,8 @@ It:
 
 1. validates every selected site, local ROM registration, profile match, and
    PokéDB generation;
-2. dispatches single-profile and version-family data builds;
+2. dispatches single-profile and version-family data builds, in parallel as
+   described for `generate`;
 3. builds the selected MkDocs sites into one artifact;
 4. audits the combined artifact.
 
@@ -271,7 +286,12 @@ romwiki site build --all --dev
 romwiki site build renegade-platinum --output dist --incremental
 romwiki site build renegade-platinum --output dist --reuse-unchanged
 romwiki site build --all --output dist
+romwiki site fingerprint renegade-platinum --output dist
 ```
+
+`--reuse-unchanged` and `site fingerprint` identify sources by content hash, so
+reuse survives fresh checkouts and snapshot restores; `--incremental` keeps the
+faster size-and-mtime comparison for local iteration.
 
 Without an explicit `--output`, production builds use `dist/` and development
 builds use `build/mkdocs-dev/`. `site build --dev` uses the lightweight MkDocs
@@ -296,12 +316,23 @@ Create or restore the deterministic ROM-free publication snapshot:
 
 ```console
 romwiki site snapshot
+romwiki site snapshot --pokedb-root ../pokedb/.output
 romwiki site restore-snapshot
 romwiki site restore-snapshot --site renegade-platinum
+romwiki site restore-snapshot --snapshot-url https://example.com/snapshots/
+romwiki site publish-snapshot
 ```
 
-The tracked snapshot is a manifest plus deterministic per-site archives under
-`sites/generated-wiki/`. Metadata inventories avoid rereading unchanged generated
+The snapshot is a tracked manifest plus deterministic, ignored per-site archives
+under `sites/generated-wiki/`. `site publish-snapshot` uploads the archives as
+content-addressed assets of the `snapshots` GitHub release through the
+authenticated `gh` CLI; it uploads only missing assets and never replaces
+existing ones (`--repo` selects another repository). `restore-snapshot` uses a
+matching local archive or downloads the asset into `.romwiki/snapshot-cache/`,
+verifying its SHA-256 before extraction. The download base URL defaults to the
+`pokelitee/rom-wiki` release and can be overridden with `--snapshot-url` or
+`ROMWIKI_SNAPSHOT_URL`. `--pokedb-root` records a PokéDB fingerprint in the
+manifest as provenance only. Metadata inventories avoid rereading unchanged generated
 content; content hashes remain the fallback when metadata changes. Unchanged
 archives are not rewritten. Snapshot creation and restore report bounded,
 site-level progress so long hashing and archive operations remain visible without

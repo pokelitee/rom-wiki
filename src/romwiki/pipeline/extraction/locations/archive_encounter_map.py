@@ -4,7 +4,8 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.concerns import LocationConcern
+from romwiki.engines.registry import LOCATION_SPECIAL_VENDORS, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.locations.helpers import extract_trainer_references
 from romwiki.pipeline.semantics.location_sections import (
@@ -368,7 +369,7 @@ def _build_archive_location_record(
         )
     shops.extend(
         _extract_location_vendors(
-            source.engine,
+            source,
             header.header_id,
             catalogs.item_names_by_id,
             script_file_id,
@@ -414,7 +415,7 @@ def _read_overworld_data(source: _ArchiveLocationSource, header: Any) -> bytes |
 
 
 def _extract_field_items(
-    engine: Any,
+    engine: LocationConcern,
     overworld_data: bytes,
     catalogs: _ArchiveLocationCatalogs,
     *,
@@ -423,13 +424,12 @@ def _extract_field_items(
 ) -> tuple[list[LocationItem], int]:
     items = []
     unresolved_visible_item_count = 0
-    is_visible_candidate = getattr(engine, "is_visible_item_candidate", None)
     for npc in engine.parse_overworld_npcs(overworld_data):
         item_id = engine.resolve_visible_item_id(
             npc, item_count=catalogs.item_count, item_ids=visible_item_ids
         )
         if item_id is None or item_id not in catalogs.item_names_by_id:
-            if is_visible_candidate is not None and is_visible_candidate(npc):
+            if engine.is_visible_item_candidate(npc):
                 unresolved_visible_item_count += 1
             continue
         items.append(
@@ -577,18 +577,17 @@ def _build_catalog_shop(
 
 
 def _extract_location_vendors(
-    engine: Any,
+    source: _ArchiveLocationSource,
     header_id: int,
     item_names_by_id: dict[int, str],
     script_file_id: int,
     seen_vendor_ids: set[str],
 ) -> list[LocationShop]:
-    resolve_location_vendors = getattr(engine, "resolve_location_special_vendors", None)
-    if resolve_location_vendors is None:
+    if LOCATION_SPECIAL_VENDORS not in get_engine(source.profile.engine).capabilities:
         return []
 
     shops = []
-    for special_vendor in resolve_location_vendors(header_id):
+    for special_vendor in source.engine.resolve_location_special_vendors(header_id):
         if (
             special_vendor.vendor_id is not None
             and special_vendor.vendor_id in seen_vendor_ids
@@ -644,7 +643,7 @@ def _extract_location_warps(
                 _read_overworld_data(source, destination) or b""
             )
         )
-        destination_indexed = getattr(source.engine, "WARP_DESTINATION_INDEXED", True)
+        destination_indexed = source.engine.WARP_DESTINATION_INDEXED
         warps.append(
             LocationWarp(
                 index=warp.index,
@@ -719,7 +718,7 @@ def _build_archive_location_envelope(
 
 
 def _extract_encounter_map_connections(
-    engine: Any,
+    engine: LocationConcern,
     headers: tuple[Any, ...],
     map_matrices: Any,
 ) -> dict[int, list[LocationConnection]]:
@@ -787,7 +786,7 @@ def _extract_encounter_map_connections(
 
 
 def _resolve_script_locations(
-    engine: Any,
+    engine: LocationConcern,
     headers: tuple[Any, ...],
     script_file_ids: tuple[int, ...],
     scripts: Any,
@@ -826,7 +825,7 @@ def _resolve_script_locations(
 
 
 def _extract_script_awarded_items(
-    engine: Any,
+    engine: LocationConcern,
     scripts: Any,
     script_headers: dict[int, tuple[int, ...]],
     item_dataset: dict[str, Any] | None,
@@ -867,7 +866,7 @@ def _extract_script_awarded_items(
 
 
 def _extract_npc_trade_references(
-    engine: Any,
+    engine: LocationConcern,
     profile: Any,
     messages: Any,
     map_header_data: bytes,
@@ -937,7 +936,7 @@ def _extract_npc_trade_references(
                     for header_id in header_ids:
                         add(trade_id, header_id, member, instruction.offset)
 
-    text_mapping = getattr(engine, "NPC_TRADE_TEXT_MEMBER_BY_ID", {})
+    text_mapping = engine.NPC_TRADE_TEXT_MEMBER_BY_ID
     if text_mapping:
         text_file_ids = engine.parse_map_header_text_files(map_header_data)
         headers_by_text: dict[int, list[int]] = defaultdict(list)
@@ -953,7 +952,7 @@ def _extract_npc_trade_references(
 
 
 def _extract_static_encounter_references(
-    engine: Any,
+    engine: LocationConcern,
     profile: Any,
     messages: Any,
     script_headers: dict[int, tuple[int, ...]],

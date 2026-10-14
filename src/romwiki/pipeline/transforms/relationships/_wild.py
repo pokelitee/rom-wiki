@@ -7,10 +7,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from romwiki.engines.registry import EncounterFormat
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
 from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
     encounter_route_key,
+    is_unlinked_encounter_area,
 )
 
 from ._shared import _location_display_name, _pokemon_slug, _record_variants
@@ -61,10 +63,13 @@ def _wild_encounters(
     records: list[dict[str, Any]],
     locations: list[dict[str, Any]],
     aliases: Mapping[int | str, str],
+    encounter_format: EncounterFormat | None,
 ) -> dict[str, list[WildEncounterReference]]:
     result: dict[str, list[WildEncounterReference]] = defaultdict(list)
     location_index = _encounter_location_index(locations)
     for merged_record in records:
+        if is_unlinked_encounter_area(merged_record, encounter_format):
+            continue
         for versions, record in _record_variants(merged_record):
             encounter_locations = _encounter_locations(record, location_index)
             common = {

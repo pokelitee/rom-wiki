@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import DETACHED_NPC_TRADES, get_engine
 from romwiki.pipeline.build.fingerprint import (
     combined_extraction_source_fingerprint,
     profile_fingerprint,
@@ -44,10 +44,10 @@ from romwiki.schema.versions import (
     RAW_SCHEMA_VERSION_BY_CACHE_KEY,
 )
 from romwiki.sources import PokeDBGeneration
-from romwiki.util.errors import ProfileError
-from romwiki.util.json_io import write_json_atomic
+from romwiki.util.errors import DataSourceError, ProfileError
+from romwiki.util.json_io import json_round_trip, write_json_atomic
 
-CACHE_REVISION = 5
+CACHE_REVISION = 6
 _LOG = logging.getLogger("romwiki")
 
 
@@ -191,7 +191,7 @@ class GameBuildContext:
         # a detached archive that must be attached to items separately.
         engine = get_engine(self.profile.engine)
         if (
-            "detached-npc-trades" not in engine.capabilities
+            DETACHED_NPC_TRADES not in engine.capabilities
             or "npc_trades" not in self.profile.layout
         ):
             return None
@@ -381,11 +381,16 @@ class GameBuildContext:
             reason = "refresh" if self.refresh else "miss"
             _LOG.debug("Extraction cache %s for %s: %s", reason, self.profile.id, key)
         _LOG.debug("Extracting %s for %s", key, self.profile.id)
-        value = extractor(self.result)
+        # Cache hits are JSON-decoded, so fresh extractions take the same form
+        # (lists, string keys); otherwise rendered pages and comparisons would
+        # depend on whether this run happened to refresh the cache.
+        value = json_round_trip(extractor(self.result))
         validate_dataset_envelope(value, context=key)
         self._values[key] = value
         if path is not None:
-            write_json_atomic(path, value)
+            # Unsorted, because renderers present some mappings (shard costs,
+            # dual-slot games) in the order the extractor produced them.
+            write_json_atomic(path, value, sort_keys=False, compact=True)
             assert source_fingerprint is not None
             self._write_manifest(key, source_fingerprint)
             _LOG.debug("Extraction cache updated for %s: %s", self.profile.id, key)
@@ -406,14 +411,21 @@ class GameBuildContext:
             return None
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as error:
+            _LOG.warning("Ignoring unreadable extraction cache %s: %s", path, error)
             return None
-        source = value.get("source", {}) if isinstance(value, dict) else {}
+        if not isinstance(value, dict):
+            _LOG.warning("Ignoring extraction cache %s: not a JSON object", path)
+            return None
         if value.get("schema_version") != RAW_SCHEMA_VERSION_BY_CACHE_KEY[key]:
             return None
-        if source.get("rom_sha256") != self.result.image.hashes.sha256:
+        try:
+            validate_dataset_envelope(value, context=key)
+        except DataSourceError as error:
+            _LOG.warning("Ignoring extraction cache %s: %s", path, error)
             return None
-        validate_dataset_envelope(value, context=key)
+        if value["source"].get("rom_sha256") != self.result.image.hashes.sha256:
+            return None
         return value
 
     def _read_manifest(self) -> dict[str, Any]:
@@ -437,7 +449,9 @@ class GameBuildContext:
     def _write_manifest(self, key: str, source_fingerprint: str) -> None:
         if self.cache_root is not None:
             self._cached_source_fingerprints[key] = source_fingerprint
-            write_json_atomic(self.cache_root / "manifest.json", self._manifest())
+            write_json_atomic(
+                self.cache_root / "manifest.json", self._manifest(), compact=True
+            )
 
     def _manifest(self) -> dict[str, Any]:
         return {

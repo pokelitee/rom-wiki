@@ -1,11 +1,14 @@
 import romwiki.engines.gen3.shared.overworld as overworld
 from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
 from romwiki.engines.gen3.shared.constants import (
+    ALLOW_DUPLICATE_EGG_MOVES,
     COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
     EGG_GROUP_NAMES,
+    ENCOUNTER_COSMETIC_FORM_LABELS,
     ENCOUNTER_FISHING_SLOT_CHANCES,
     ENCOUNTER_FISHING_SLOT_COUNT,
+    ENCOUNTER_FORM_SLUGS,
     ENCOUNTER_HEADER_SIZE,
     ENCOUNTER_LAND_SLOT_CHANCES,
     ENCOUNTER_LAND_SLOT_COUNT,
@@ -37,6 +40,7 @@ from romwiki.engines.gen3.shared.constants import (
     PERSONAL_RECORD_SIZE,
     TM_COUNT,
     TRAINER_RECORD_SIZE,
+    TRANSFORMATION_MEMBERS,
     TYPE_NAME_COUNT,
     TYPE_NAMES,
 )
@@ -107,6 +111,10 @@ FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 BASE_SPECIES_COUNT = PERSONAL_RECORD_COUNT
 
 __all__ = [
+    "ALLOW_DUPLICATE_EGG_MOVES",
+    "ENCOUNTER_COSMETIC_FORM_LABELS",
+    "ENCOUNTER_FORM_SLUGS",
+    "TRANSFORMATION_MEMBERS",
     "ABILITY_NAME_COUNT",
     "BASE_SPECIES_COUNT",
     "COLOR_NAMES",

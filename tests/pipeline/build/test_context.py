@@ -8,7 +8,12 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from romwiki.pipeline.build.context import GameBuildContext
-from romwiki.schema.versions import ITEMS_RAW_SCHEMA_VERSION, MOVES_RAW_SCHEMA_VERSION
+from romwiki.pipeline.transforms.comparisons import compare_datasets
+from romwiki.schema.versions import (
+    ENCOUNTERS_RAW_SCHEMA_VERSION,
+    ITEMS_RAW_SCHEMA_VERSION,
+    MOVES_RAW_SCHEMA_VERSION,
+)
 
 
 def _result(rom_sha256: str) -> Mock:
@@ -173,6 +178,111 @@ class GameBuildContextCacheTests(unittest.TestCase):
             _context(cache_root)._raw("moves/raw", extractor)
 
         self.assertEqual(len(calls), 2)
+
+    def test_a_corrupted_cache_file_is_a_miss_that_self_heals(self) -> None:
+        valid = _extractor([])(_result("hash-a"))
+        wrong_envelope = {**valid, "engine": 4}
+        mismatched_records = {**valid, "record_count": 2, "records": [{}]}
+        corruptions = {
+            "list": json.dumps([valid]),
+            "truncated": json.dumps(valid)[:-10],
+            "wrong envelope": json.dumps(wrong_envelope),
+            "mismatched records": json.dumps(mismatched_records),
+        }
+        for name, content in corruptions.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as directory:
+                calls: list = []
+                extractor = _extractor(calls)
+                cache_root = Path(directory)
+                _context(cache_root)._raw("moves/raw", extractor)
+                path = cache_root / "moves" / "raw.json"
+                path.write_text(content, encoding="utf-8")
+
+                with self.assertLogs("romwiki", level="WARNING") as logs:
+                    value = _context(cache_root)._raw("moves/raw", extractor)
+                _context(cache_root)._raw("moves/raw", extractor)
+
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(value["value"], 2)
+                self.assertIn("Ignoring", "\n".join(logs.output))
+                self.assertEqual(
+                    json.loads(path.read_text(encoding="utf-8"))["value"], 2
+                )
+
+
+class GameBuildContextCanonicalFormTests(unittest.TestCase):
+    def test_fresh_and_cached_extractions_have_one_in_memory_form(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+            fresh = _context(cache_root, refresh=True)._raw(
+                "encounters/raw", _encounter_extractor(walking_rate=10)
+            )
+            cached = _context(cache_root)._raw("encounters/raw", _unreachable)
+        uncached = GameBuildContext(_result("hash-a"), Mock())._raw(
+            "encounters/raw", _encounter_extractor(walking_rate=10)
+        )
+
+        for value in (fresh, uncached):
+            self.assertEqual(json.dumps(value), json.dumps(cached))
+        self.assertEqual(fresh["records"][0]["encounter_form_rates"], [0, 0, 0, 0, 0])
+        self.assertEqual(
+            list(cached["records"][0]),
+            [
+                "area_id",
+                "locations",
+                "walking",
+                "encounter_form_rates",
+                "slots_by_level",
+                "active",
+            ],
+        )
+        self.assertEqual(fresh["records"][0]["slots_by_level"], {"5": 25})
+
+    def test_comparisons_do_not_depend_on_which_side_was_cached(self) -> None:
+        def compare(cache_root: Path, *, refresh: bool) -> str:
+            current = _context(cache_root / "current", refresh=refresh)._raw(
+                "encounters/raw", _encounter_extractor(walking_rate=20)
+            )
+            baseline = _context(cache_root / "baseline", refresh=refresh)._raw(
+                "encounters/raw", _encounter_extractor(walking_rate=10)
+            )
+            return json.dumps(compare_datasets(current, baseline))
+
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+            fresh = compare(cache_root, refresh=True)
+            cached = compare(cache_root, refresh=False)
+
+        self.assertEqual(fresh, cached)
+        self.assertEqual(json.loads(fresh)["counts"]["changed"], 1)
+
+
+def _encounter_extractor(walking_rate: int) -> callable:
+    def extract(result) -> dict:
+        return {
+            "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,
+            "game": "test-profile",
+            "engine": "gen4_platinum",
+            "dataset": "wild_encounters",
+            "source": {"rom_sha256": result.image.hashes.sha256},
+            "record_count": 1,
+            "records": [
+                {
+                    "area_id": 1,
+                    "locations": [{"header_id": 3, "name": "Route 201"}],
+                    "walking": {"slots": (), "rate": walking_rate},
+                    "encounter_form_rates": (0, 0, 0, 0, 0),
+                    "slots_by_level": {5: 25},
+                    "active": True,
+                }
+            ],
+        }
+
+    return extract
+
+
+def _unreachable(result) -> dict:
+    raise AssertionError("expected a cache hit")
 
 
 if __name__ == "__main__":

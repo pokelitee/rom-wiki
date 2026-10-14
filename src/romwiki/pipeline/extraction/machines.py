@@ -26,29 +26,19 @@ def extract_machine_dataset(result: InspectionResult) -> dict[str, Any]:
 def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
     assert result.match is not None
     profile = result.match.profile
-    try:
-        # Unlike sibling extractors' ARM9-relative offsets (e.g. locations.py's
-        # `map_header_offset`), `machine_move_offset` is an absolute ROM-image
-        # file offset, bounds-checked against `result.image.size` below.
-        offset = profile.parameters["machine_move_offset"]
-    except KeyError as error:
-        raise ProfileError(
-            f"Profile {profile.id} does not define a machine move table"
-        ) from error
+    # Unlike sibling extractors' ARM9-relative offsets (e.g. locations.py's
+    # `map_header_offset`), `machine_move_offset` is an absolute ROM-image
+    # file offset, bounds-checked against `result.image.size` below.
+    offset = profile.optional_int_parameter("machine_move_offset")
+    if offset is None:
+        raise ProfileError(f"Profile {profile.id} does not define a machine move table")
     engine = get_engine(profile.engine).machines
-    machine_count = profile.parameters.get("machine_count", engine.MACHINE_COUNT)
-    # `GEN4_TM_COUNT` is a Generation IV-specific engine attribute, not part
-    # of every "profile-offset" engine's namespace (e.g. `gen3_frlg` has no
-    # such name) -- looked up lazily so engines that always declare
-    # `tm_count` in their profile TOML (this format's normal case) never
-    # need to define it.
-    tm_count = profile.parameters.get("tm_count")
-    if tm_count is None:
-        tm_count = engine.GEN4_TM_COUNT
+    machine_count = profile.int_parameter("machine_count", engine.MACHINE_COUNT)
+    tm_count = profile.int_parameter("tm_count", engine.TM_COUNT)
 
     size = machine_count * 2
     if offset < 0 or offset + size > result.image.size:
-        raise InvalidRomError("Gen IV machine move table is outside the ROM image")
+        raise InvalidRomError("Machine move table is outside the ROM image")
     with result.image.path.open("rb") as stream:
         stream.seek(offset)
         data = stream.read(size)
@@ -98,9 +88,7 @@ def _extract_from_arm9_prefix(result: InspectionResult) -> dict[str, Any]:
     ) + len(prefix)
     size = engine.MACHINE_COUNT * 2
     if offset + size > len(arm9):
-        raise InvalidRomError(
-            "Gen V machine move table is outside the decompressed ARM9"
-        )
+        raise InvalidRomError("Machine move table is outside the decompressed ARM9")
     data = arm9[offset : offset + size]
     records = [machine.to_dict() for machine in engine.parse_machine_move_table(data)]
     return dataset_envelope(

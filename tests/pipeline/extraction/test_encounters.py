@@ -84,7 +84,9 @@ def _platform(
 
 def _fake_engine_adapter(*, encounters_format: str, concern: SimpleNamespace):
     return SimpleNamespace(
-        formats=SimpleNamespace(encounters=encounters_format), encounters=concern
+        formats=SimpleNamespace(encounters=encounters_format),
+        encounters=concern,
+        capabilities=frozenset(),
     )
 
 

@@ -52,7 +52,8 @@ Examples:
   need mostly profile data and verification.
 - A Diamond or Pearl hack can reuse the NDS platform and some Generation IV parsers,
   but Platinum-specific tables and scripts must be audited.
-- FireRed Omega needs a GBA platform reader and a Generation III engine decoder.
+- A FireRed hack such as FireRed Omega can reuse the GBA platform and the
+  `gen3_frlg` engine, but must audit every table the hack relocates or expands.
 - An Omega Ruby hack needs a legal user-supplied 3DS input strategy and a
   Generation VI engine decoder. Hacks that preserve Omega Ruby's formats should
   then share that engine through separate exact-release profiles.
@@ -182,16 +183,13 @@ filesystem/archive types, and header-matching function as a new entry in
 `src/romwiki/platforms/registry.py`'s `_PLATFORMS` dict, and give the profile a
 matching `platform` key.
 
-This filesystem/archive shape is what Nintendo DS needs (NitroFS + NARC
-members), not a platform-agnostic guarantee — see [Current
-limitations](architecture.md#current-limitations). A platform whose ROM is a
-flat binary addressed by fixed offsets, with no filesystem or archive concept
-(e.g. Game Boy Advance), cannot implement `archive_cls` as given. Decide the
-right shape from that platform's real format rather than forcing an archive
-abstraction around flat reads: extend `PlatformAdapter` with the read
-primitive that platform actually needs, and expect to add a platform-aware
-branch or sibling function at each `pipeline/extraction/*` call site that
-currently assumes `platform.archive_cls`/`filesystem`.
+A platform provides either archive primitives (`archive_cls` and
+`filesystem_from_image`, as Nintendo DS does for NitroFS + NARC members) or
+flat reads (`read_bytes`, as Game Boy Advance does) — see [Current
+limitations](architecture.md#current-limitations). Choose from that platform's
+real format rather than forcing an archive abstraction around flat reads. When an
+extractor's storage differs, declare a format variant for it (for example
+`flat-offset-table` egg moves) instead of branching on the platform name.
 
 Add engine parsers under
 `src/romwiki/engines/<generation>/<family>/` for each supported record type.

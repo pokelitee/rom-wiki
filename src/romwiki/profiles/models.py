@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from romwiki.platforms.registry import RomImage, get_platform
+from romwiki.util.errors import ProfileError
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +49,31 @@ class GameProfile:
     )
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, Any] = field(default_factory=dict)
+
+    def int_parameter(self, name: str, default: int | None = None) -> int:
+        """Return an integer parameter, or `default` when the profile omits it.
+
+        Raises `ProfileError` when the value is missing without a default or
+        is not an integer.
+        """
+        value = self.optional_int_parameter(name)
+        if value is not None:
+            return value
+        if default is None:
+            raise ProfileError(f"Profile {self.id!r} is missing parameter {name!r}")
+        return default
+
+    def optional_int_parameter(self, name: str) -> int | None:
+        """Return an integer parameter, or None when the profile omits it."""
+        value = self.parameters.get(name)
+        if value is None:
+            return None
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ProfileError(
+                f"Profile {self.id!r} parameter {name!r} must be an integer, "
+                f"not {type(value).__name__}"
+            )
+        return value
 
     def match(self, image: RomImage) -> HashMatch | None:
         platform = get_platform(self.platform)

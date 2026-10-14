@@ -22,7 +22,7 @@ romwiki site build --all --dev
 romwiki site serve --all --dev
 ```
 
-This previews the tracked ROM-free snapshots without extracting games. To generate new datasets, supply local inputs through the ignored `.local/games.toml` registry and follow [Operations](docs/operations.md). PokéDB reference data defaults to the sibling checkout's `.output/gen<N>` directory.
+This previews the published ROM-free snapshots without extracting games: `restore-snapshot` downloads the archives referenced by the tracked `sites/generated-wiki/manifest.json` from the repository's `snapshots` release and verifies their checksums. To generate new datasets, supply local inputs through the ignored `.local/games.toml` registry and follow [Operations](docs/operations.md). PokéDB reference data defaults to the sibling checkout's `.output/gen<N>` directory.
 
 ## Architecture
 

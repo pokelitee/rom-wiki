@@ -24,6 +24,7 @@ from romwiki.renderers.mkdocs.components import (
     description_table_source,
     display_name,
     empty_state,
+    escape_heading,
     escape_table_cell,
     fact_grid,
     machine_html_link,
@@ -234,7 +235,7 @@ def _render_record(
     if record["effect_chance"]:
         additional_properties.append(("Effect chance", f"{record['effect_chance']}%"))
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *version_availability_note(record),
         *_move_summary(record),

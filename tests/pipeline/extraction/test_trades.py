@@ -131,6 +131,7 @@ class ExtractNpcTradeDatasetTests(unittest.TestCase):
             SimpleNamespace(
                 parse_english_message_archive=Mock(),
                 parse_npc_trade_record=_parse_npc_trade_record,
+                NPC_TRADE_INTERACTION_BY_ID={},
             )
         )
 
@@ -148,6 +149,7 @@ class ExtractNpcTradeDatasetTests(unittest.TestCase):
                     return_value=("Nick1", "OT1", "Nick2", "OT2")
                 ),
                 parse_npc_trade_record=_parse_npc_trade_record,
+                NPC_TRADE_INTERACTION_BY_ID={},
             )
         )
 
@@ -182,6 +184,7 @@ class ExtractNpcTradeDatasetTests(unittest.TestCase):
                     return_value=("Nick1", "OT1", "Nick2", "OT2")
                 ),
                 parse_npc_trade_record=_parse_npc_trade_record,
+                NPC_TRADE_INTERACTION_BY_ID={},
             )
         )
 
@@ -218,6 +221,7 @@ class ExtractNpcTradeDatasetTests(unittest.TestCase):
                     return_value=("Nick1", "OT1", "Nick2")
                 ),
                 parse_npc_trade_record=_parse_npc_trade_record,
+                NPC_TRADE_INTERACTION_BY_ID={},
             )
         )
 

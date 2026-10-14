@@ -8,6 +8,7 @@ from romwiki.pipeline.semantics.location_sections import location_reference_labe
 from romwiki.renderers.mkdocs.components import (
     badge_requirement,
     display_name,
+    escape_heading,
     escape_table_cell,
     markdown_section,
     markdown_table,
@@ -187,7 +188,7 @@ def append_shops(
         if shop.get("dynamic"):
             lines.extend(
                 [
-                    f"### {label}",
+                    f"### {escape_heading(label)}",
                     "",
                     shop.get("availability")
                     or "Stock changes with badge progression and is selected "
@@ -200,7 +201,7 @@ def append_shops(
             label += f" — {shop['schedule']}"
         elif not shop.get("name") and kind_counts[shop["kind"]] > 1:
             label += f" {kind_indices[shop['kind']]}"
-        lines.extend([f"### {label}", ""])
+        lines.extend([f"### {escape_heading(label)}", ""])
         if shop.get("availability"):
             lines.extend([f"Availability: {shop['availability']}", ""])
         lines.extend(

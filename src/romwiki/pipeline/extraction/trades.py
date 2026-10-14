@@ -30,7 +30,7 @@ def extract_npc_trade_dataset(result: InspectionResult) -> dict[str, Any]:
             f"Platform {profile.platform!r} does not support archive-based extraction"
         )
     engine = get_engine(profile.engine).trades
-    interaction_by_id = getattr(engine, "NPC_TRADE_INTERACTION_BY_ID", {})
+    interaction_by_id = engine.NPC_TRADE_INTERACTION_BY_ID
     filesystem = platform.filesystem_from_image(result.image)
     trades = platform.archive_cls.from_bytes(filesystem.read(trades_path))
     messages = platform.archive_cls.from_bytes(

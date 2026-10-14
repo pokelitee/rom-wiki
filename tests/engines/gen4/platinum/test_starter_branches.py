@@ -231,6 +231,12 @@ class Gen4StarterBranchBlockTests(unittest.TestCase):
             (),
         )
 
+    def test_skips_a_file_without_a_valid_script_table(self) -> None:
+        self.assertEqual(
+            parse_starter_branch_families(b"\x00", script_file_id=1, trainer_count=928),
+            (),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

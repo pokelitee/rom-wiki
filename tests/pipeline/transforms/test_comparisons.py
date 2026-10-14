@@ -277,6 +277,30 @@ class DatasetComparisonTests(unittest.TestCase):
         self.assertEqual(change["field"], "grass_cave")
         self.assertEqual(change["label"], "Grass/Cave")
 
+    def test_compares_only_encounter_areas_a_map_header_points_at(self) -> None:
+        route = [{"header_id": 4, "name": "Route 201"}]
+        baseline = [
+            {"area_id": 60, "name": "Area 060", "active": True, "locations": []},
+            {"area_id": 61, "name": "Route 201", "active": True, "locations": route},
+            {"area_id": 62, "name": "Area 062", "active": True, "locations": []},
+        ]
+        current = [
+            {**baseline[0], "walking": {"rate": 10}},
+            {**baseline[1], "locations": []},
+            {**baseline[2], "locations": route},
+        ]
+
+        comparison = compare_datasets(
+            {**_dataset("wild_encounters", "hack", current), "engine": "gen4_hgss"},
+            {**_dataset("wild_encounters", "base", baseline), "engine": "gen4_hgss"},
+        )
+        records = comparison_by_key(comparison)
+
+        self.assertNotIn(60, records)
+        self.assertEqual(records[61]["status"], "removed")
+        self.assertEqual(records[62]["status"], "added")
+        self.assertTrue(records[62]["detail_available"])
+
     def test_conditional_wild_encounters_get_their_own_catalog_slug(self) -> None:
         baseline = {
             "area_id": 174,

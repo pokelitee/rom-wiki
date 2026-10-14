@@ -32,7 +32,7 @@ class LocationConnection:
 class LocationTrainerReference:
     trainer_id: int
     name: str
-    class_name: str
+    class_name: str | None
     source: str
 
 

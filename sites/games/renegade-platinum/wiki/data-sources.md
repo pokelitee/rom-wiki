@@ -71,3 +71,12 @@ Manaphy (retail Platinum configures only the first two).
 The [Changes](changes/index.md) page compares every dataset above against
 Renegade Platinum's base game, Pokémon Platinum, identified by ROM checksum
 rather than assumed from its name.
+
+Renegade Platinum points several map headers at different wild-encounter
+tables. All 17 Turnback Cave rooms (map headers 271–273 and 518–531) share
+encounter area 61, a table unused in retail Platinum, and Lake Verity's second
+map header (312) uses area 134, the same table as header 311. The retail tables
+63–79 and 135 remain in the ROM unchanged, but no map header references them,
+so they cannot be encountered. The Changes page therefore lists those areas as
+removed, even though both locations still have wild encounters through areas
+61 and 134.

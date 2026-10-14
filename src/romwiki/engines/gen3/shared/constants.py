@@ -371,3 +371,11 @@ ENCOUNTER_LAND_SLOT_CHANCES = (20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1)
 ENCOUNTER_WATER_SLOT_CHANCES = (60, 30, 5, 4, 1)
 ENCOUNTER_ROCK_SMASH_SLOT_CHANCES = (60, 30, 5, 4, 1)
 ENCOUNTER_FISHING_SLOT_CHANCES = (70, 30, 60, 20, 20, 40, 40, 15, 4, 1)
+
+# Explicit "nothing stored" declarations for adapter members other engines
+# populate: no battle-transformation personal records, no form-specific wild
+# encounters, and duplicate egg moves are malformed rather than tolerated.
+TRANSFORMATION_MEMBERS: dict[int, dict[str, str]] = {}
+ENCOUNTER_FORM_SLUGS: dict[tuple[int, int], str] = {}
+ENCOUNTER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {}
+ALLOW_DUPLICATE_EGG_MOVES = False

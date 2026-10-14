@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
 
+from romwiki.engines.common.script_control_flow import (
+    OpcodeTable,
+    ScriptControlFlow,
+    ScriptInstruction,
+    disassemble_reachable,
+)
 from romwiki.engines.gen5.shared.script_opcode_table import OPCODE_TABLE
 
 # A real, control-flow-aware disassembler for Gen V field-script bytecode,
@@ -43,15 +48,13 @@ _CALL_IF_OPCODE = 0x20
 _HALT_OPCODE = 0x02
 _RETURN_OPCODE = 0x05
 _FUNCTION_TABLE_END = 0xFD13
+_CONTROL_FLOW = ScriptControlFlow(
+    jumps=frozenset({_JUMP_OPCODE}),
+    branches=frozenset({_JUMP_IF_OPCODE, _CALL_OPCODE, _CALL_IF_OPCODE}),
+    terminators=frozenset({_HALT_OPCODE, _RETURN_OPCODE}),
+)
 
-
-@dataclass(frozen=True, slots=True)
-class Gen5Instruction:
-    offset: int
-    opcode: int
-    name: str
-    params: tuple[int, ...]
-    next_offset: int
+Gen5Instruction = ScriptInstruction
 
 
 def parse_function_offsets(data: bytes) -> tuple[int, ...]:
@@ -76,7 +79,7 @@ def disassemble_function(
     data: bytes,
     start: int,
     *,
-    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+    opcode_table: OpcodeTable = OPCODE_TABLE,
 ) -> dict[int, Gen5Instruction]:
     """Disassemble every statically-reachable instruction from `start`.
 
@@ -85,64 +88,15 @@ def disassemble_function(
     without raising -- a dead end in one branch doesn't invalidate the
     instructions already found on other branches.
     """
-    instructions: dict[int, Gen5Instruction] = {}
-    worklist = [start]
-
-    while worklist:
-        cursor = worklist.pop()
-        # Walk a straight-line run from `cursor`, stopping at a branch,
-        # halt/return, dead end, or code already decoded from another path.
-        while 0 <= cursor < len(data) and cursor not in instructions:
-            if cursor + 2 > len(data):
-                break
-            opcode = struct.unpack_from("<H", data, cursor)[0]
-            entry = opcode_table.get(opcode)
-            if entry is None:
-                break
-            name, widths = entry
-            opstart = cursor
-            cursor += 2
-            params = []
-            truncated = False
-            for width in widths:
-                if cursor + width > len(data):
-                    truncated = True
-                    break
-                if width == 4:
-                    value = struct.unpack_from("<i", data, cursor)[0]
-                elif width == 2:
-                    value = struct.unpack_from("<H", data, cursor)[0]
-                else:
-                    value = data[cursor]
-                params.append(value)
-                cursor += width
-            if truncated:
-                break
-
-            instructions[opstart] = Gen5Instruction(
-                offset=opstart,
-                opcode=opcode,
-                name=name,
-                params=tuple(params),
-                next_offset=cursor,
-            )
-
-            if opcode == _JUMP_OPCODE:
-                worklist.append(cursor + params[-1])
-                break
-            if opcode in (_JUMP_IF_OPCODE, _CALL_OPCODE, _CALL_IF_OPCODE):
-                worklist.append(cursor + params[-1])
-                continue
-            if opcode in (_HALT_OPCODE, _RETURN_OPCODE):
-                break
-
-    return instructions
+    return disassemble_reachable(
+        data, start, opcode_table=opcode_table, control_flow=_CONTROL_FLOW
+    )
 
 
 def disassemble_script(
     data: bytes,
     *,
-    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+    opcode_table: OpcodeTable = OPCODE_TABLE,
 ) -> tuple[Gen5Instruction, ...]:
     """Return every instruction reachable from a script's function table."""
     instructions = {

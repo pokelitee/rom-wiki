@@ -12,6 +12,7 @@ from romwiki.renderers.mkdocs.components import (
     display_name,
     effectiveness_table_cell,
     effectiveness_value,
+    escape_heading,
     evolution_condition,
     fact_grid,
     heading_anchor,
@@ -225,6 +226,47 @@ class ComponentEscapingTests(unittest.TestCase):
             summary_section_link("A & B", 'facts" onclick="alert(1)'),
             '<a href="#facts&quot; onclick=&quot;alert(1)">A &amp; B</a>',
         )
+
+
+class HeadingEscapingTests(unittest.TestCase):
+    _EXTENSIONS = ("attr_list", "md_in_html", "toc")
+
+    def test_renders_hostile_names_as_heading_text(self) -> None:
+        cases = {
+            "<img src=x onerror=alert(1)>": "&lt;img src=x onerror=alert(1)&gt;",
+            "Evil {: onclick=alert(1) }": "Evil {: onclick=alert(1) }",
+            "Trailing ##": "Trailing ##",
+            "*a* _b_ `c` [d](e) \\f": "*a* _b_ `c` [d](e) \\f",
+            "&lt;tag&gt;": "&amp;lt;tag&amp;gt;",
+        }
+        for name, expected in cases.items():
+            with self.subTest(name=name):
+                html = markdown.markdown(
+                    f"# {escape_heading(name)}", extensions=list(self._EXTENSIONS)
+                )
+                self.assertEqual(
+                    html, f'<h1 id="{heading_anchor(name)}">{expected}</h1>'
+                )
+
+    def test_renders_ordinary_names_identically(self) -> None:
+        for name in (
+            "Farfetch'd",
+            "Nidoran♀",
+            "Mr. Mime",
+            "Poké Ball",
+            "X Sp. Atk",
+            'Say "Hi"',
+            "Backers Masa & Yas",
+            "Route 201 — North",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    markdown.markdown(
+                        f"# {escape_heading(name)}",
+                        extensions=list(self._EXTENSIONS),
+                    ),
+                    markdown.markdown(f"# {name}", extensions=list(self._EXTENSIONS)),
+                )
 
 
 class HeadingAnchorTests(unittest.TestCase):

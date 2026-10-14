@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
 
-from romwiki.engines.gen5.shared.script_disassembler import disassemble_function
 from romwiki.engines.gen5.shared.vendors import (
     Gen5SpecialVendor,
     Gen5SpecialVendorItem,
@@ -137,19 +135,6 @@ SHOP_SELECTOR_TO_INVENTORY_ID = {
     18: 22,
     19: 5,
 }
-_SHOP_SELECTOR_VARIABLE = 0x8000
-_SHOP_MODE_VARIABLE = 0x8001
-_SHOP_GLOBAL_SCRIPT_ID = 10110
-STANDARD_SHOP_SELECTOR = 255
-
-
-@dataclass(frozen=True, slots=True)
-class Gen5ShopDispatch:
-    selector_id: int
-    mode: int
-    command_offset: int
-
-
 _BW_BP_TM_ITEMS = (
     (350, 36),
     (375, 36),
@@ -257,34 +242,6 @@ def resolve_special_vendor(selector_id: int) -> Gen5SpecialVendor | None:
             items=fixed_vendor_items(_BW_BP_ITEM_ITEMS),
             is_main_game=True,
         )
-    return None
-
-
-def parse_shop_dispatch(script: bytes, function_offset: int) -> Gen5ShopDispatch | None:
-    """Decode a local function that invokes BW1's global shop dispatcher."""
-    selector_id = None
-    mode = None
-    for instruction in sorted(
-        disassemble_function(script, function_offset).values(),
-        key=lambda value: value.offset,
-    ):
-        if instruction.name in {"WorkSet", "WorkSetConst"}:
-            variable, value = instruction.params
-            if variable == _SHOP_SELECTOR_VARIABLE:
-                selector_id = value
-            elif variable == _SHOP_MODE_VARIABLE:
-                mode = value
-        elif (
-            instruction.name == "RTCallGlobal"
-            and instruction.params == (_SHOP_GLOBAL_SCRIPT_ID,)
-            and selector_id is not None
-            and mode is not None
-        ):
-            return Gen5ShopDispatch(
-                selector_id=selector_id,
-                mode=mode,
-                command_offset=instruction.offset,
-            )
     return None
 
 

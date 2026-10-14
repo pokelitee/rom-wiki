@@ -87,7 +87,7 @@ class Item:
 class ItemPartyUseEffects:
     # This narrower format stores confirmed party-use effects in dedicated
     # byte-per-concept fields rather than one shared flag word. See
-    # gen5/bw/items.py's module comment for exactly how each field below was
+    # gen5/shared/items.py's module comment for exactly how each field below was
     # verified against real ROM data.
     heal_sleep: bool
     heal_poison: bool

@@ -4,13 +4,15 @@ import struct
 import unittest
 
 from romwiki.engines.gen5.bw.overworld import (
+    resolve_common_script_member,
+    resolve_common_script_trainer_id,
+)
+from romwiki.engines.gen5.shared.overworld import (
     parse_hidden_item_script_table,
     parse_overworld_furniture,
     parse_overworld_npcs,
     parse_overworld_warps,
     parse_visible_item_script_table,
-    resolve_common_script_member,
-    resolve_common_script_trainer_id,
     resolve_hidden_item_id,
     resolve_visible_item_id,
 )

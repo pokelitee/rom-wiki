@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
 
 from romwiki.engines.gen5.shared.static_encounter_dedup import (
     deduplicate_exact_paths,
@@ -22,6 +23,11 @@ _FOSSIL_SPECIES_VARIABLE = 32803
 # not be excluded by a blanket form check.
 _KYUREM_SPECIES_ID = 646
 _UNCATCHABLE_STORY_FORMS = frozenset({(_KYUREM_SPECIES_ID, 1), (_KYUREM_SPECIES_ID, 2)})
+# Item and static-encounter extraction each disassemble every script of each
+# version's archive. Scripts are cached by content: the ~1,300-member archive
+# holds about 600 distinct scripts, largely shared by both versions of a pair,
+# so this bound leaves later passes nothing to disassemble again.
+_DISASSEMBLY_CACHE_SIZE = 8192
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,10 +43,7 @@ def find_fossil_revival_script(
     species_count: int,
     item_count: int,
 ) -> tuple[int, tuple[Gen5FossilRevival, ...]]:
-    instructions_by_member = {
-        member: disassemble_script(read_script_member(member))
-        for member in range(member_count)
-    }
+    instructions_by_member = _disassemble_archive(read_script_member, member_count)
     candidates = _fossil_candidates(
         instructions_by_member,
         species_count=species_count,
@@ -73,12 +76,7 @@ def discover_static_encounters(
     remain distinct. Form-specific Kyurem story battles are not catchable and
     are excluded; the form-zero shiny Haxorus command is catchable.
     """
-    data_by_member = {
-        member: read_script_member(member) for member in range(member_count)
-    }
-    instructions_by_member = {
-        member: disassemble_script(data) for member, data in data_by_member.items()
-    }
+    instructions_by_member = _disassemble_archive(read_script_member, member_count)
 
     wild: list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]] = []
     gifts: list[tuple[tuple[int, int | None, bool], int, Gen5Instruction]] = []
@@ -119,6 +117,20 @@ def discover_static_encounters(
         )
         for encounter_id, (fact, member, instruction) in enumerate(discovered)
     )
+
+
+def _disassemble_archive(
+    read_script_member: Callable[[int], bytes], member_count: int
+) -> dict[int, tuple[Gen5Instruction, ...]]:
+    return {
+        member: _disassemble_script(read_script_member(member))
+        for member in range(member_count)
+    }
+
+
+@lru_cache(maxsize=_DISASSEMBLY_CACHE_SIZE)
+def _disassemble_script(data: bytes) -> tuple[Gen5Instruction, ...]:
+    return disassemble_script(data)
 
 
 def _static_fact(

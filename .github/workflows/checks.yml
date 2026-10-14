@@ -39,6 +39,12 @@ jobs:
         run: python -m mypy src/romwiki
       - name: Run offline tests
         run: python -m pytest -q
+      - name: Restore snapshot download cache
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .romwiki/snapshot-cache
+          key: snapshots-${{ hashFiles('sites/generated-wiki/manifest.json') }}
       - name: Validate publication snapshots
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         run: romwiki site restore-snapshot

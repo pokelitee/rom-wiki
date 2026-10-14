@@ -193,7 +193,7 @@ def _extract_locator_tables(result: InspectionResult) -> dict[str, Any]:
 def _extract_sliding_table(result: InspectionResult) -> dict[str, Any]:
     # Unlike Generation IV's fixed absolute overlay offsets, this
     # generation's pickup item table has no stable location: it's found by
-    # byte-pattern search (see gen5/bw/pickup.py's own module comment), the
+    # byte-pattern search (see gen5/shared/pickup.py's own module comment), the
     # same technique used for the TM/HM move table.
     assert result.match is not None
     profile = result.match.profile

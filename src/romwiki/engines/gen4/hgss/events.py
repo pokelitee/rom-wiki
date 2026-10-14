@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 from collections.abc import Sequence
 
+from romwiki.engines.gen4.hgss.script_opcode_table import OPCODE_TABLE
 from romwiki.engines.gen4.shared.events import (
     HIDDEN_ITEM_EVENT_TYPE,
     HIDDEN_ITEM_SCRIPT_BASE,
@@ -56,13 +57,15 @@ def parse_item_ball_table(data: bytes) -> tuple[int | None, ...]:
     entries: list[int | None] = []
     for function_offset in parse_script_function_offsets(data):
         instructions = sorted(
-            disassemble_function(data, function_offset).values(),
+            disassemble_function(
+                data, function_offset, opcode_table=OPCODE_TABLE
+            ).values(),
             key=lambda value: value.offset,
         )
         item_id = None
         for instruction in instructions[:4]:
             if (
-                instruction.name == "SetVarFromVar"
+                instruction.name == "SetVar"
                 and instruction.params[0] == _ITEM_WORK_VARIABLE
             ):
                 item_id = instruction.params[1]

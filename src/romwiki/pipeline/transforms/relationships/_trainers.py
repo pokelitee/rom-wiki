@@ -17,7 +17,7 @@ class TrainerAppearance:
     pokemon_slug: str
     trainer_id: int
     trainer_name: str
-    class_name: str
+    class_name: str | None
     party_position: int
     level: int
     held_item_id: int | None

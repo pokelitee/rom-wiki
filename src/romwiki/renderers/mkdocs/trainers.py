@@ -23,6 +23,7 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     content_tabs,
     display_name,
+    escape_heading,
     escape_table_cell,
     provenance_fact_table,
     provenance_section,
@@ -318,7 +319,7 @@ def _render_trainer(
     source_url = f"trainers/trainer-{record['trainer_id']:04}/"
     grouped_ai_items = _group_ai_battle_items(record)
     lines = [
-        f"# {label}",
+        f"# {escape_heading(label)}",
         "",
         *_trainer_summary(record, grouped_ai_items, source_url, features=features),
     ]
@@ -428,7 +429,7 @@ def _trainer_provenance(record: dict[str, Any]) -> list[str]:
         facts.append(("Battle mode", f"`{record['battle_mode']}`"))
     if "unknown_byte" in record:
         facts.append(("Unknown byte", f"`0x{record['unknown_byte']:02X}`"))
-    if "victory_money_multiplier" in record:
+    if record.get("victory_money_multiplier") is not None:
         facts.append(
             ("Victory money multiplier", f"`{record['victory_money_multiplier']}`")
         )
@@ -614,7 +615,7 @@ def _trainer_summary(
         "rw-trainer-summary",
         [
             f"<div><dt>Trainer ID</dt><dd>trainer-{record['trainer_id']:04}</dd></div>",
-            f"<div><dt>Class</dt><dd>{display_name(record['class_name'])}</dd></div>",
+            f"<div><dt>Class</dt><dd>{display_name(record['class_name'] or '')}</dd></div>",
             (
                 "<div><dt>Location</dt><dd>"
                 f"{_location_summary_value(record, location_names)}</dd></div>"

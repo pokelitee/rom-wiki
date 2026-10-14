@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
+from romwiki.sites import audit as audit_module
 from romwiki.sites.audit import _PARALLEL_PAGE_THRESHOLD, audit_site
 from romwiki.util.errors import SiteError
 
@@ -22,6 +25,52 @@ class SiteAuditTests(unittest.TestCase):
 
         self.assertTrue(report.ok)
         parse.assert_not_called()
+
+    def test_reparses_only_corrupt_cached_pages_without_repeating_pages(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / "audit.sqlite3"
+            _write_page(root / "index.html", '<p><a href="other.html">Other</a></p>')
+            _write_page(root / "other.html", "<p>Other</p>")
+            first = audit_site(root, cache_path=cache, jobs=1)
+            with closing(sqlite3.connect(cache)) as database:
+                database.execute(
+                    "UPDATE pages SET payload = ? WHERE path = ?",
+                    ('{"size": 1}', "other.html"),
+                )
+                database.commit()
+
+            with (
+                patch(
+                    "romwiki.sites.audit._parse_page", wraps=audit_module._parse_page
+                ) as parse,
+                self.assertLogs("romwiki", level="WARNING") as logs,
+            ):
+                report = audit_site(root, cache_path=cache, jobs=1)
+
+        self.assertTrue(report.ok)
+        self.assertEqual(report.page_count, first.page_count)
+        self.assertEqual(report.total_html_bytes, first.total_html_bytes)
+        self.assertEqual(
+            [call.args[1] for call in parse.call_args_list], ["other.html"]
+        )
+        self.assertIn("1 invalid entries", "\n".join(logs.output))
+
+    def test_falls_back_to_parsing_when_the_cache_is_not_a_database(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / "audit.sqlite3"
+            cache.write_bytes(b"not a database" * 100)
+            _write_page(root / "index.html", "<p>Index</p>")
+
+            with self.assertLogs("romwiki", level="WARNING") as logs:
+                report = audit_site(root, cache_path=cache, jobs=1)
+
+        self.assertTrue(report.ok)
+        self.assertEqual(report.page_count, 1)
+        self.assertIn("parsing all pages without reuse", "\n".join(logs.output))
 
     def test_validates_the_expected_artifact_file_set(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import struct
-from dataclasses import dataclass
+from romwiki.engines.common.script_control_flow import (
+    OpcodeTable,
+    ScriptControlFlow,
+    ScriptInstruction,
+    disassemble_reachable,
+)
 
-from romwiki.engines.gen4.shared.script_opcode_table import OPCODE_TABLE
-
-# A real, control-flow-aware disassembler for Gen IV field-script bytecode,
-# using `script_opcode_table.py`'s pret/pokeplatinum-derived table. Mirrors
+# A real, control-flow-aware disassembler for Gen IV field-script bytecode.
+# Each engine leaf supplies its own opcode table (`gen4/platinum/` and
+# `gen4/hgss/script_opcode_table.py`): only the low-numbered VM control-flow
+# opcodes below are shared, while the game-specific commands are numbered
+# independently per family. Mirrors
 # `gen5.script_disassembler`'s design: `GoTo` ends the current straight-line
 # run (only its target is reachable next); `GoToIf`/`CallIf` continue the
 # straight-line run *and* queue the branch/call target (both paths are
@@ -23,81 +28,28 @@ _CALL_IF_OPCODE = 0x1D
 _END_OPCODE = 0x02
 _RETURN_OPCODE = 0x1B
 _RETURN_COMMON_SCRIPT_OPCODE = 0x15
+_CONTROL_FLOW = ScriptControlFlow(
+    jumps=frozenset({_GOTO_OPCODE}),
+    branches=frozenset({_GOTO_IF_OPCODE, _CALL_OPCODE, _CALL_IF_OPCODE}),
+    terminators=frozenset({_END_OPCODE, _RETURN_OPCODE, _RETURN_COMMON_SCRIPT_OPCODE}),
+)
 
-
-@dataclass(frozen=True, slots=True)
-class Gen4Instruction:
-    offset: int
-    opcode: int
-    name: str
-    params: tuple[int, ...]
-    next_offset: int
+Gen4Instruction = ScriptInstruction
 
 
 def disassemble_function(
     data: bytes,
     start: int,
     *,
-    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+    opcode_table: OpcodeTable,
 ) -> dict[int, Gen4Instruction]:
     """Disassemble every statically-reachable instruction from `start`.
 
     Returns a dict keyed by instruction start offset. Unknown opcodes (not
-    in `OPCODE_TABLE`, or falling off the end of `data`) end that path
+    in `opcode_table`, or falling off the end of `data`) end that path
     without raising -- a dead end in one branch doesn't invalidate the
     instructions already found on other branches.
     """
-    instructions: dict[int, Gen4Instruction] = {}
-    worklist = [start]
-
-    while worklist:
-        cursor = worklist.pop()
-        while 0 <= cursor < len(data) and cursor not in instructions:
-            if cursor + 2 > len(data):
-                break
-            opcode = struct.unpack_from("<H", data, cursor)[0]
-            entry = opcode_table.get(opcode)
-            if entry is None:
-                break
-            name, widths = entry
-            opstart = cursor
-            cursor += 2
-            params = []
-            truncated = False
-            for width in widths:
-                if cursor + width > len(data):
-                    truncated = True
-                    break
-                if width == 4:
-                    value = struct.unpack_from("<i", data, cursor)[0]
-                elif width == 2:
-                    value = struct.unpack_from("<H", data, cursor)[0]
-                else:
-                    value = data[cursor]
-                params.append(value)
-                cursor += width
-            if truncated:
-                break
-
-            instructions[opstart] = Gen4Instruction(
-                offset=opstart,
-                opcode=opcode,
-                name=name,
-                params=tuple(params),
-                next_offset=cursor,
-            )
-
-            if opcode == _GOTO_OPCODE:
-                worklist.append(cursor + params[-1])
-                break
-            if opcode in (_GOTO_IF_OPCODE, _CALL_OPCODE, _CALL_IF_OPCODE):
-                worklist.append(cursor + params[-1])
-                continue
-            if opcode in (
-                _END_OPCODE,
-                _RETURN_OPCODE,
-                _RETURN_COMMON_SCRIPT_OPCODE,
-            ):
-                break
-
-    return instructions
+    return disassemble_reachable(
+        data, start, opcode_table=opcode_table, control_flow=_CONTROL_FLOW
+    )

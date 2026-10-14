@@ -596,13 +596,13 @@ def _encounter_pokemon(
     if species_id in {None, 0}:
         return None
     form_slug = (
-        getattr(engine, "ENCOUNTER_FORM_SLUGS", {}).get((species_id, form_id))
-        if form_id
+        engine.ENCOUNTER_FORM_SLUGS.get((species_id, form_id))
+        if form_id and engine is not None
         else None
     )
     form_label = (
-        getattr(engine, "ENCOUNTER_COSMETIC_FORM_LABELS", {}).get((species_id, form_id))
-        if form_id
+        engine.ENCOUNTER_COSMETIC_FORM_LABELS.get((species_id, form_id))
+        if form_id and engine is not None
         else None
     )
     # `id` stays the raw, engine-native species identifier (not the

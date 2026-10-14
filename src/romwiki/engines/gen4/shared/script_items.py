@@ -7,7 +7,6 @@ from romwiki.engines.gen4.shared.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
-from romwiki.engines.gen4.shared.script_opcode_table import OPCODE_TABLE
 from romwiki.engines.gen4.shared.script_table import parse_script_function_offsets
 
 # Some NPC gifts and custom shops don't call the literal `AddItem` opcode
@@ -50,8 +49,8 @@ from romwiki.engines.gen4.shared.script_table import parse_script_function_offse
 # a guess: a genuine variable reference would fail the item/quantity bounds
 # check in `_record` below just as reliably as an unrelated literal would.
 #
-# These are Platinum's own opcode *names* (from `gen4/script_opcode_table.py`,
-# the pret/pokeplatinum-derived default `opcode_table`) -- HeartGold/SoulSilver
+# These are Platinum's own opcode *names* (from
+# `gen4/platinum/script_opcode_table.py`) -- HeartGold/SoulSilver
 # renumbers and renames several of these same-shaped commands (its own table,
 # from pret/pokeheartgold, calls the identical two-operand literal-write
 # opcode `SetVar` and the var-to-var copy `CopyVar`/`SetOrCopyVar`, and its
@@ -85,7 +84,7 @@ def find_script_awarded_items(
     *,
     item_count: int,
     give_item_common_script_ids: frozenset[int],
-    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+    opcode_table: dict[int, tuple[str, tuple[int, ...]]],
     item_write_commands: frozenset[str] = _ITEM_WRITE_COMMANDS,
     call_common_script_command: str = _CALL_COMMON_SCRIPT_COMMAND,
     terminal_commands: frozenset[str] = _TERMINAL_COMMANDS,
@@ -103,11 +102,11 @@ def find_script_awarded_items(
     targets that are real give-item routines for this specific engine leaf
     -- the underlying opcode is a general-purpose call to any of the
     engine's global subroutines, so accepting every target would match
-    unrelated common scripts en masse. `opcode_table`, `item_write_commands`,
-    `call_common_script_command`, and `terminal_commands` default to
-    Platinum's own opcode table and instruction names; other engine leaves
-    (e.g. HeartGold/SoulSilver, whose opcode numbering and instruction names
-    differ -- see module docstring) must supply their own.
+    unrelated common scripts en masse. `opcode_table` is the engine leaf's
+    own table. `item_write_commands`, `call_common_script_command`, and
+    `terminal_commands` default to Platinum's instruction names; other engine
+    leaves (e.g. HeartGold/SoulSilver, whose instruction names differ -- see
+    module docstring) must supply their own.
     """
     awards: dict[tuple[int, int], ScriptAwardedItem] = {}
     for function_offset in parse_script_function_offsets(data):

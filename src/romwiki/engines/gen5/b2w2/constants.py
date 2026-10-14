@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-GEN5_BASE_SPECIES_COUNT = 649
+from romwiki.engines.gen5.shared.constants import (
+    GEN5_BASE_SPECIES_COUNT as GEN5_BASE_SPECIES_COUNT,
+)
 
 # B2W2's personal archive has members 0-708 followed by a regional-Pokédex
 # table at member 709. Members 650-684 are internal Pokéstar Studios actors;

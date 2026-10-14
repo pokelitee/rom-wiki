@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, cast
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.concerns import TrainerConcern
+from romwiki.engines.registry import DIFFICULTY_BRANCHES, get_engine
 from romwiki.engines.trainer_variants import (
     TrainerVariantResolver,
     resolve_trainer_variants,
@@ -157,7 +158,7 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
 
 
 def _extract_battle_mode_trainer_locations(
-    engine: Any,
+    engine: TrainerConcern,
     platform: Any,
     result: InspectionResult,
     filesystem: Any,
@@ -172,7 +173,7 @@ def _extract_battle_mode_trainer_locations(
     """Resolve Gen5 trainer battle triggers' map locations.
 
     Two independent, literal-fact-only mechanisms (see
-    `gen5/bw/overworld.py` and `gen5/bw/scripts.py` for the full verification
+    `gen5/shared/overworld.py` and `gen5/bw/scripts.py` for the full verification
     against real Black ROM data):
 
     - Sight-triggered ("walk into view") battles: each map's overworld NPC
@@ -241,8 +242,8 @@ def _extract_battle_mode_trainer_locations(
     script_references: dict[int, list[TrainerScriptReference]] = {}
     script_command_cache: dict[int, tuple[Any, ...]] = {}
     difficulty_branch_families = []
-    parse_difficulty_branches = getattr(
-        engine, "parse_difficulty_branch_families", None
+    has_difficulty_branches = (
+        DIFFICULTY_BRANCHES in get_engine(profile.engine).capabilities
     )
 
     for header in headers:
@@ -288,9 +289,9 @@ def _extract_battle_mode_trainer_locations(
             script_command_cache[script_file_id] = engine.parse_trainer_battle_commands(
                 script_data, trainer_count=trainer_count
             )
-            if parse_difficulty_branches is not None:
+            if has_difficulty_branches:
                 difficulty_branch_families.extend(
-                    parse_difficulty_branches(
+                    engine.parse_difficulty_branch_families(
                         script_data,
                         script_file_id=script_file_id,
                         trainer_count=trainer_count,

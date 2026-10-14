@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.concerns import ItemConcern
+from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import read_code_binary
 from romwiki.pipeline.extraction.reference_names import extract_reference_descriptions
@@ -92,7 +93,7 @@ def _extract_item_dataset_flat(
 
 
 def _decode_item_description(
-    engine: Any, platform: Any, result: InspectionResult, record_bytes: bytes
+    engine: ItemConcern, platform: Any, result: InspectionResult, record_bytes: bytes
 ) -> str:
     # Each item's description lives at its own inline ROM pointer (see
     # `engines/gen3/frlg/items.py`'s `item_description_pointer`), not a
@@ -164,7 +165,12 @@ def _extract_item_dataset_archive(
     }
 
     if item_archive_format == "arm9-map":
-        arm9_data = read_code_binary(platform, result.image, engine)
+        arm9_data = read_code_binary(
+            platform,
+            result.image,
+            compressed=COMPRESSED_CODE_BINARY
+            in get_engine(profile.engine).capabilities,
+        )
         map_offset, data_members = engine.find_item_archive_members(
             arm9_data,
             item_count=len(item_names),
@@ -192,7 +198,12 @@ def _extract_item_dataset_archive(
     revives_into_by_item: dict[int, int] = {}
     if fossil_revival_table_offset is not None:
         if arm9_data is None:
-            arm9_data = read_code_binary(platform, result.image, engine)
+            arm9_data = read_code_binary(
+                platform,
+                result.image,
+                compressed=COMPRESSED_CODE_BINARY
+                in get_engine(profile.engine).capabilities,
+            )
         fossil_revivals = engine.parse_fossil_revival_table(
             arm9_data,
             offset=fossil_revival_table_offset,
@@ -333,7 +344,7 @@ def _extract_berry_data(
     profile: Any,
     platform: Any,
     filesystem: Any,
-    engine: Any,
+    engine: ItemConcern,
     berry_data_path: str,
     first_berry_item_id: int | None,
 ) -> dict[int, dict[str, Any]]:

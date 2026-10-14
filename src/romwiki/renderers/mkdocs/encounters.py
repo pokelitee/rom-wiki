@@ -5,7 +5,6 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, cast
 
-from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
 from romwiki.pipeline.semantics.encounter_identity import (
     CONDITIONAL_ENCOUNTER_SOURCES,
@@ -13,7 +12,9 @@ from romwiki.pipeline.semantics.encounter_identity import (
     SAFARI_ZONE_ROUTE,
     EncounterSourceType,
     conditional_encounter_key,
+    encounter_dataset_format,
     encounter_route_key,
+    is_unlinked_encounter_area,
 )
 from romwiki.pipeline.transforms.relationships import (
     EncounterLocationReference,
@@ -35,6 +36,7 @@ from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     aggregate_slots,
     display_name,
+    escape_heading,
     heading_anchor,
     level_range,
     markdown_table,
@@ -99,10 +101,7 @@ def render_encounter_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    engine_id = dataset.get("engine")
-    encounter_format = (
-        get_engine(engine_id).formats.encounters if isinstance(engine_id, str) else None
-    )
+    encounter_format = encounter_dataset_format(dataset)
     seasonal = (
         encounter_format == "seasonal"
         if encounter_format is not None
@@ -146,10 +145,11 @@ def render_encounter_pages(
         for record in records
         if record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES
     ]
-    # Encounter table entries with no map header pointing at them are ROM
-    # padding/unused data -- not a place a player can reach -- so they're
-    # dropped rather than rendered under a fallback "Encounter Area NNN" name.
-    linked = [record for record in records if record.get("locations")]
+    linked = [
+        record
+        for record in records
+        if not is_unlinked_encounter_area(record, encounter_format)
+    ]
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -913,7 +913,7 @@ def _render_area(
 ) -> str:
     source_file = f"encounters/area-{record['area_id']:03}.md"
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *_area_summary(record),
     ]
@@ -967,7 +967,7 @@ def _render_area(
                         ("Unown table ID", f"`{record['unown_table_id']}`"),
                         (
                             "Encounter form rates",
-                            f"`{record['encounter_form_rates']}`",
+                            f"`[{', '.join(map(str, record['encounter_form_rates']))}]`",
                         ),
                     )
                 ),
@@ -1365,7 +1365,7 @@ def _render_method_table_area(
 ) -> str:
     source_file = f"encounters/area-{record['area_id']:03}.md"
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *_method_table_area_summary(record),
     ]
@@ -1654,7 +1654,7 @@ def _render_seasonal_area(
     record = records[0]
     source_file = f"encounters/{encounter_route_key(record)}.md"
     lines = [
-        f"# {_seasonal_display_name(record, locations)}",
+        f"# {escape_heading(_seasonal_display_name(record, locations))}",
         "",
         *_seasonal_area_summary(records, locations),
     ]

@@ -139,3 +139,13 @@ EVOLUTION_PARAMETER_KINDS = {
     20: "move",
     21: "pokemon",
 }
+
+# Explicit "nothing stored" declarations for adapter members other engines
+# populate. Generation IV personal archives are indexed by National Dex ID,
+# store no battle-transformation records, and wild encounters carry no forms;
+# Pokédex descriptions are not decoded.
+GEN4_INTERNAL_TO_NATIONAL_DEX: dict[int, int] = {}
+GEN4_TRANSFORMATION_MEMBERS: dict[int, dict[str, str]] = {}
+GEN4_ENCOUNTER_FORM_SLUGS: dict[tuple[int, int], str] = {}
+GEN4_ENCOUNTER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {}
+GEN4_POKEMON_DESCRIPTION_COUNT: int | None = None

@@ -18,6 +18,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
+    escape_heading,
     escape_table_cell,
     markdown_table,
     markdown_table_from_cells,
@@ -181,7 +182,7 @@ def _render_location(
 ) -> str:
     source_file = f"locations/{location_filename(record['header_id'])}"
     lines = [
-        f"# {location_label(record)}",
+        f"# {escape_heading(location_label(record))}",
         "",
         *_location_summary(record),
     ]
@@ -271,7 +272,8 @@ def _render_location(
                         f"Trade `{trade['trade_id']}` "
                         f"({escape_markdown(trade['nickname'])}) "
                         f"personality value: `0x{trade['personality']:08X}`, "
-                        f"unused record values: `{trade['unused_values']}`."
+                        "unused record values: "
+                        f"`[{', '.join(map(str, trade['unused_values']))}]`."
                     )
                     for trade in record.get("npc_trades", [])
                 ),

@@ -14,16 +14,6 @@ from romwiki.profiles.models import GameProfile
 
 
 class ReadStarterBranchFamiliesTests(unittest.TestCase):
-    def test_returns_none_without_an_engine_decoder(self) -> None:
-        profile = _profile(layout={"scripts": "scripts.narc"})
-        engine = SimpleNamespace()
-
-        result = read_starter_branch_families(
-            profile, Mock(), engine, Mock(), trainer_count=5, starter_species=(1, 2)
-        )
-
-        self.assertIsNone(result)
-
     def test_returns_none_without_a_scripts_archive_path(self) -> None:
         profile = _profile(layout={})
         engine = SimpleNamespace(parse_starter_branch_families=Mock())
@@ -107,20 +97,6 @@ class ReadStarterSpeciesTests(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    def test_returns_none_without_an_engine_decoder(self) -> None:
-        profile = _profile(
-            parameters={
-                "starter_species_overlay_id": 3,
-                "starter_species_offset": 16,
-                "starter_species_count": 3,
-            }
-        )
-        engine = SimpleNamespace()
-
-        result = read_starter_species(profile, Mock(), engine, Mock())
-
-        self.assertIsNone(result)
-
     def test_prefers_the_decompressing_overlay_reader_when_available(self) -> None:
         profile = _profile(
             parameters={
@@ -191,13 +167,21 @@ class ReadRematchTableTests(unittest.TestCase):
         self.assertIsNone(source)
         self.assertIsNone(chains)
 
+    def test_returns_none_pair_when_the_engine_has_no_rematch_table(self) -> None:
+        profile = _profile(parameters=_REMATCH_PARAMETERS)
+        parse = Mock()
+        engine = SimpleNamespace(parse_rematch_table=parse, REMATCH_RECORD_SIZE=8)
+
+        source, chains = read_rematch_table(
+            profile, Mock(), engine, Mock(), trainer_count=5
+        )
+
+        self.assertEqual((source, chains), (None, None))
+        parse.assert_not_called()
+
     def test_decodes_the_rematch_table_from_the_configured_overlay(self) -> None:
-        profile = _profile(
-            parameters={
-                "trainer_rematch_overlay_id": 7,
-                "trainer_rematch_offset": 4,
-                "trainer_rematch_count": 2,
-            }
+        profile = replace(
+            _profile(parameters=_REMATCH_PARAMETERS), engine="gen4_platinum"
         )
         overlay_bytes = bytes(range(64))
         platform = SimpleNamespace(read_overlay=Mock(return_value=(7, overlay_bytes)))
@@ -211,6 +195,13 @@ class ReadRematchTableTests(unittest.TestCase):
         self.assertEqual(source, {"overlay_id": 7, "offset": 4, "count": 2})
         self.assertEqual(chains, ("chain-a", "chain-b"))
         parse.assert_called_once_with(overlay_bytes[4:20], count=2, trainer_count=9)
+
+
+_REMATCH_PARAMETERS = {
+    "trainer_rematch_overlay_id": 7,
+    "trainer_rematch_offset": 4,
+    "trainer_rematch_count": 2,
+}
 
 
 def _profile(

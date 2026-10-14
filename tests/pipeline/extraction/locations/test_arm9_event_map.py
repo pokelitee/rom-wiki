@@ -37,6 +37,10 @@ class _Engine:
     ROAMING_SLOT_COUNT = 2
     ROAMING_SLOT_SPECIES_IDS = {0: 1, 1: 0}
     MAP_HEADER_SIZE = 1
+    HONEY_TREE_HEADER_IDS = ()
+    GREAT_MARSH_HEADER_IDS = ()
+    TROPHY_GARDEN_HEADER_ID = None
+    GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID = None
 
     def __init__(self, *, headers, message_archives):
         self._headers = headers
@@ -69,6 +73,15 @@ class _Engine:
 
     def parse_map_matrix(self, data, matrix_id):
         return self.matrices_by_id.get(matrix_id, SimpleNamespace(header_ids=None))
+
+    def find_script_awarded_items(self, data, *, item_count):
+        return ()
+
+    def is_visible_item_candidate(self, event):
+        return False
+
+    def is_hidden_item_candidate(self, event):
+        return False
 
     def resolve_visible_item_id(self, event, item_count):
         return getattr(event, "visible_item_id", None)

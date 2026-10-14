@@ -93,7 +93,7 @@ class Gen5LocationsTests(unittest.TestCase):
         # Real Black ROM fact: map header 7 (Striaton City) points at script
         # archive member 14, whose function-table entry 4 (NPC scriptUsed=4,
         # 1-indexed) is Cilan's tutorial `CallTrainerBattle` -- see
-        # gen5/bw/overworld.py's module docstring for the full cross-check.
+        # gen5/shared/overworld.py's module docstring for the full cross-check.
         data = _map_header(name_index=0, wild_set=5, script_file=14) + _map_header(
             name_index=1, wild_set=6, script_file=310
         )
@@ -110,7 +110,7 @@ class Gen5LocationsTests(unittest.TestCase):
     def test_parses_each_header_s_own_matrix_id(self) -> None:
         # Real Black ROM fact: header 317 (Route 1), 319 (Route 2), and 389
         # (Nuvema Town's outdoor plaza) all report matrix 0 -- see
-        # gen5/bw/map_matrices.py's module docstring for the full
+        # gen5/shared/map_matrices.py's module docstring for the full
         # cross-check against that matrix's own header-ID grid.
         data = _map_header(name_index=0, wild_set=5, matrix_id=0) + _map_header(
             name_index=1, wild_set=6, matrix_id=39

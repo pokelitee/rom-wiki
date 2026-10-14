@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict, replace
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.concerns import EncounterConcern
+from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
     read_code_binary,
@@ -105,7 +106,7 @@ def extract_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
 
 def _extract_headbutt_encounters(
     result: InspectionResult,
-    engine: Any,
+    engine: EncounterConcern,
     platform: Any,
     filesystem: Any,
     *,
@@ -130,7 +131,12 @@ def _extract_headbutt_encounters(
     )
     headers, location_names = resolve_map_headers(
         engine,
-        read_code_binary(platform, result.image, engine),
+        read_code_binary(
+            platform,
+            result.image,
+            compressed=COMPRESSED_CODE_BINARY
+            in get_engine(profile.engine).capabilities,
+        ),
         filesystem,
         messages,
         map_names_path=profile.layout["map_names"],
@@ -166,7 +172,7 @@ def _extract_headbutt_encounters(
 
 def _extract_safari_encounters(
     result: InspectionResult,
-    engine: Any,
+    engine: EncounterConcern,
     platform: Any,
     filesystem: Any,
     *,
@@ -292,7 +298,7 @@ def _extract_gen3_encounter_locations(
     platform: Any,
     result: InspectionResult,
     profile: Any,
-    engine: Any,
+    engine: EncounterConcern,
     parsed_records: list[Any],
 ) -> dict[int, tuple[EncounterLocation, ...]]:
     """Link each Generation III wild-encounter map (`map_group`/`map_num`,
@@ -467,7 +473,7 @@ def _extract_seasonal_encounter_dataset(result: InspectionResult) -> dict[str, A
 
 
 def _extract_seasonal_wild_map_names(
-    result: InspectionResult, engine: Any, platform: Any, filesystem: Any
+    result: InspectionResult, engine: EncounterConcern, platform: Any, filesystem: Any
 ) -> tuple[dict[int, list[str]], dict[str, Any]]:
     # Optional: a profile that doesn't declare this yet (or a future
     # generation reusing this path) simply gets unnamed encounter areas,
@@ -506,7 +512,7 @@ def _extract_seasonal_wild_map_names(
 
 def _extract_hidden_grottos(
     result: InspectionResult,
-    engine: Any,
+    engine: EncounterConcern,
     platform: Any,
     filesystem: Any,
     *,
@@ -621,7 +627,7 @@ def _extract_hidden_grottos(
 
 def _extract_swarms(
     result: InspectionResult,
-    engine: Any,
+    engine: EncounterConcern,
     platform: Any,
     filesystem: Any,
     *,
@@ -689,7 +695,7 @@ def _extract_swarms(
 
 
 def _extract_encounter_locations(
-    engine: Any,
+    engine: EncounterConcern,
     platform: Any,
     result: InspectionResult,
     filesystem: Any,
@@ -716,7 +722,11 @@ def _extract_encounter_locations(
     count = parameters["map_header_count"]
     table_offset = parameters["map_header_offset"]
     member = parameters["location_names_member"]
-    arm9_data = read_code_binary(platform, result.image, engine)
+    arm9_data = read_code_binary(
+        platform,
+        result.image,
+        compressed=COMPRESSED_CODE_BINARY in get_engine(profile.engine).capabilities,
+    )
     messages = platform.archive_cls.from_bytes(
         filesystem.read(layout["messages"]),
         allow_truncated=profile.parameters.get("messages_allow_truncated", False),

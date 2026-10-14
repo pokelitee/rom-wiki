@@ -13,14 +13,14 @@ _SCRIPT_TABLE_END = 0xFD13
 
 
 def _build_item_ball_table_script(entries: list[tuple[int, int]]) -> bytes:
-    """Build a minimal Gen IV script with one `SetVarFromVar`+End function per entry.
+    """Build a minimal Gen IV script with one `SetVar`+End function per entry.
 
     Mirrors the real HGSS item-ball table's own shape (see
     `gen4/hgss/events.py`'s module docstring): each function stages an item
     ID and quantity into the two scratch variables the table's shared
     give-item tail reads, then returns.
     """
-    function_size = 14  # two 6-byte SetVarFromVar instructions + 2-byte End
+    function_size = 14  # two 6-byte SetVar instructions + 2-byte End
     table_size = len(entries) * 4 + 2  # one offset per entry, plus terminator
     code = b""
     offsets = b""

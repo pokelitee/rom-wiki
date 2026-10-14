@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
+from romwiki.engines.gen4.platinum.script_opcode_table import OPCODE_TABLE
 from romwiki.engines.gen4.shared.script_disassembler import disassemble_function
 
 _COMPARE_VAR_TO_VALUE = 0x0011
@@ -18,7 +19,7 @@ class Gen4ScriptDisassemblerTests(unittest.TestCase):
             "<H", _RETURN
         )
 
-        instructions = disassemble_function(data, 0)
+        instructions = disassemble_function(data, 0, opcode_table=OPCODE_TABLE)
 
         self.assertEqual(len(instructions), 2)
         self.assertEqual(instructions[0].name, "CompareVarToValue")
@@ -28,7 +29,7 @@ class Gen4ScriptDisassemblerTests(unittest.TestCase):
     def test_stops_at_end(self) -> None:
         data = struct.pack("<H", _END) + struct.pack("<H", _RETURN)
 
-        instructions = disassemble_function(data, 0)
+        instructions = disassemble_function(data, 0, opcode_table=OPCODE_TABLE)
 
         self.assertEqual(set(instructions), {0})
 
@@ -37,7 +38,7 @@ class Gen4ScriptDisassemblerTests(unittest.TestCase):
         goto = struct.pack("<H", _GOTO) + struct.pack("<i", 4)
         data = goto + b"\x00\x00\x00\x00" + struct.pack("<H", _RETURN)
 
-        instructions = disassemble_function(data, 0)
+        instructions = disassemble_function(data, 0, opcode_table=OPCODE_TABLE)
 
         self.assertEqual(set(instructions), {0, 10})
         self.assertEqual(instructions[10].name, "Return")
@@ -53,14 +54,14 @@ class Gen4ScriptDisassemblerTests(unittest.TestCase):
             + struct.pack("<H", _RETURN)  # 10: branch-target Return
         )
 
-        instructions = disassemble_function(data, 0)
+        instructions = disassemble_function(data, 0, opcode_table=OPCODE_TABLE)
 
         self.assertEqual(set(instructions), {0, 7, 10})
 
     def test_stops_on_an_unknown_opcode(self) -> None:
         data = struct.pack("<H", 0xFFFF)
 
-        instructions = disassemble_function(data, 0)
+        instructions = disassemble_function(data, 0, opcode_table=OPCODE_TABLE)
 
         self.assertEqual(instructions, {})
 

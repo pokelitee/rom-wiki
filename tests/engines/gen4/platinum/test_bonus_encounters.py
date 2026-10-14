@@ -17,6 +17,14 @@ class Gen4BonusEncountersTests(unittest.TestCase):
     def test_parses_single_entry_table(self) -> None:
         self.assertEqual(parse_species_list(struct.pack("<I", 446)), (446,))
 
+    def test_parses_an_empty_table(self) -> None:
+        self.assertEqual(parse_species_list(b""), ())
+
+    def test_ignores_a_trailing_partial_entry(self) -> None:
+        data = struct.pack("<I", 446) + b"\x01\x02"
+
+        self.assertEqual(parse_species_list(data), (446,))
+
 
 if __name__ == "__main__":
     unittest.main()
