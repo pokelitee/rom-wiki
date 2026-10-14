@@ -248,17 +248,28 @@ class LoadComparisonsTests(unittest.TestCase):
         self.assertEqual(set(comparisons), {"encounters", "pokemon"})
         self.assertEqual(comparisons["encounters"]["kind"], "wild_encounters")
 
-    def test_ignores_malformed_or_non_comparison_json_files(self) -> None:
+    def test_skips_malformed_or_non_comparison_json_files_with_warnings(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "broken.json").write_text("not json", encoding="utf-8")
             (root / "unrelated.json").write_text(
                 json.dumps([1, 2, 3]), encoding="utf-8"
             )
+            (root / "pokemon.json").write_text(
+                json.dumps({"kind": "pokemon", "counts": {}}),
+                encoding="utf-8",
+            )
 
-            comparisons = load_comparisons(root)
+            with self.assertLogs("romwiki", level="WARNING") as logs:
+                comparisons = load_comparisons(root)
 
-        self.assertEqual(comparisons, {})
+        self.assertEqual(set(comparisons), {"pokemon"})
+        messages = "\n".join(logs.output)
+        self.assertEqual(len(logs.output), 2)
+        self.assertIn("broken.json: it cannot be read", messages)
+        self.assertIn("unrelated.json: it is not a dataset comparison", messages)
 
 
 def _build_dataset(kind: str, game: str) -> dict:

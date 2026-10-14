@@ -544,18 +544,36 @@ def current_relationship_datasets(
 
 
 def load_comparisons(root: Path) -> dict[str, dict[str, Any]]:
-    """Load comparisons written by earlier builds, keyed by workflow kind."""
+    """Load comparisons written by earlier builds, keyed by workflow kind.
+
+    Focused section builds read these only to fill in other sections' Changes
+    content; full and regenerated builds recompute every comparison instead.
+    An unusable file therefore degrades the focused build with a warning rather
+    than failing it.
+    """
     comparisons: dict[str, dict[str, Any]] = {}
     if not root.is_dir():
         return comparisons
     for path in root.glob("*.json"):
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as error:
+            _warn_skipped_comparison(path, f"it cannot be read ({error})")
             continue
-        if isinstance(value, dict) and isinstance(value.get("kind"), str):
-            comparisons[comparison_workflow_kind(value["kind"])] = value
+        if not isinstance(value, dict) or not isinstance(value.get("kind"), str):
+            _warn_skipped_comparison(path, "it is not a dataset comparison")
+            continue
+        comparisons[comparison_workflow_kind(value["kind"])] = value
     return comparisons
+
+
+def _warn_skipped_comparison(path: Path, reason: str) -> None:
+    _LOG.warning(
+        "Skipping comparison %s: %s; its changes are omitted until "
+        "`romwiki build game` rewrites it",
+        path,
+        reason,
+    )
 
 
 def comparison_workflow_kind(kind: str) -> str:
