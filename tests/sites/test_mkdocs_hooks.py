@@ -34,10 +34,10 @@ class MkDocsHooksTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             config.site_dir = directory
             mkdocs_hooks.on_post_build(config)
-            catalog = json.loads(
-                (Path(directory) / "games.json").read_text(encoding="utf-8")
-            )
+            content = (Path(directory) / "games.json").read_bytes()
+            catalog = json.loads(content.decode("utf-8"))
 
+        self.assertNotIn(b"\r", content)
         self.assertEqual(catalog["schema_version"], 1)
         self.assertIn("renegade-platinum", {game["id"] for game in catalog["games"]})
 

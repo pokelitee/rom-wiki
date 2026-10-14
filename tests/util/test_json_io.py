@@ -5,7 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from romwiki.util.json_io import write_bytes_atomic, write_json_atomic
+from romwiki.util.json_io import (
+    write_bytes_atomic,
+    write_json_atomic,
+    write_text_atomic,
+)
 
 
 class WriteJsonAtomicTests(unittest.TestCase):
@@ -23,16 +27,30 @@ class WriteJsonAtomicTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), b"second")
             self.assertFalse(path.with_suffix(".bin.tmp").exists())
 
+    def test_text_uses_lf_newlines_on_every_platform(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "page.md"
+
+            write_text_atomic(path, "# Title\n\nBody\n")
+
+            self.assertEqual(path.read_bytes(), b"# Title\n\nBody\n")
+
+    def test_text_rewrites_a_crlf_file_with_the_same_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "page.md"
+            path.write_bytes(b"# Title\r\n")
+
+            write_text_atomic(path, "# Title\n")
+
+            self.assertEqual(path.read_bytes(), b"# Title\n")
+
     def test_writes_pretty_sorted_json(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "data.json"
 
             write_json_atomic(path, {"b": 1, "a": 2})
 
-            self.assertEqual(
-                path.read_text(encoding="utf-8"),
-                '{\n  "a": 2,\n  "b": 1\n}\n',
-            )
+            self.assertEqual(path.read_bytes(), b'{\n  "a": 2,\n  "b": 1\n}\n')
 
     def test_writes_non_ascii_text_as_utf8_rather_than_escapes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

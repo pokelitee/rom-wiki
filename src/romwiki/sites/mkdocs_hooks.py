@@ -81,6 +81,7 @@ def on_post_build(config: MkDocsConfig) -> None:
     destination.write_text(
         json.dumps({"schema_version": 1, "games": games}, sort_keys=True) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
