@@ -55,6 +55,38 @@ class MoveRenderingTests(unittest.TestCase):
         self.assertNotIn("<img src=x", page)
         self.assertEqual(catalog["records"][0]["label"], HOSTILE_NAME)
 
+    def test_escapes_rom_names_in_tutor_headings_and_learner_links(self) -> None:
+        record = {
+            **_move(85, "thunderbolt", "Thunderbolt"),
+            "tutors": [
+                {
+                    "kind": "special",
+                    "location": {"id": 7, "name": "<i>Route</i> & Co"},
+                    "minimum_friendship": 255,
+                    "compatible_pokemon": [
+                        {"slug": "dragonite", "name": "<b>Dragonite</b>"}
+                    ],
+                },
+                {
+                    "kind": "special",
+                    "location": {"name": "<i>Nowhere</i>"},
+                    "minimum_friendship": 1,
+                    "compatible_pokemon": [],
+                },
+            ],
+        }
+        page, _, _ = _render([record], "thunderbolt")
+
+        self.assertIn(
+            "#### [&lt;i&gt;Route&lt;/i&gt; &amp; Co](../locations/header-007.md)"
+            " — Friendship 255",
+            page,
+        )
+        self.assertIn("#### &lt;i&gt;Nowhere&lt;/i&gt; — Friendship 1", page)
+        self.assertIn("[&lt;b&gt;Dragonite&lt;/b&gt;](../pokemon/dragonite.md)", page)
+        self.assertNotIn("<i>", page)
+        self.assertNotIn("<b>", page)
+
 
 def _render(
     records: list[dict[str, Any]], slug: str

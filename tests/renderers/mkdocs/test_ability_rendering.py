@@ -47,6 +47,21 @@ class AbilityRenderingTests(unittest.TestCase):
         self.assertNotIn("<img src=x", page)
         self.assertEqual(catalog["records"][0]["label"], HOSTILE_NAME)
 
+    def test_escapes_rom_names_in_link_labels(self) -> None:
+        pokemon = {**_bulbasaur(slots=[1]), "name": "<b>Bulba</b>"}
+        page, index, _ = _render(
+            [_ability(65, "overgrow", HOSTILE_NAME, [pokemon])], "overgrow"
+        )
+
+        self.assertIn(
+            "[#065 &lt;img src=x onerror=alert(1)&gt; {: onclick=alert(1) }]"
+            "(overgrow.md)",
+            index,
+        )
+        self.assertNotIn("<img src=x", index)
+        self.assertIn("[&lt;b&gt;Bulba&lt;/b&gt;](../pokemon/bulbasaur.md)", page)
+        self.assertNotIn("<b>", page)
+
 
 def _render(
     records: list[dict[str, Any]], slug: str

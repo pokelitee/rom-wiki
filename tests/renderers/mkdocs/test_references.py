@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import unittest
 
+import markdown
+
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
     ReferenceIndex,
     encounter_route_kind,
     entity_reference,
+    escape_markdown,
 )
 
 
@@ -130,6 +133,33 @@ class RouteResolverTests(unittest.TestCase):
         self.assertEqual(ROUTES.markdown_link(unresolved, "items/test.md"), "Unknown")
         self.assertEqual(ROUTES.html_link(unresolved, "items/test/"), "Unknown")
         self.assertNotIn("url", ROUTES.catalog_reference(unresolved, "items/"))
+
+    def test_markdown_labels_render_rom_text_without_raw_html(self) -> None:
+        hostile = "</td><img src=x onerror=alert(1)> [x] | y"
+        linked = entity_reference("pokemon", 1, hostile, "bulbasaur")
+        unresolved = entity_reference("pokemon", 0, hostile, None)
+        expected = "&lt;/td&gt;&lt;img src=x onerror=alert(1)&gt; \\[x\\] &#124; y"
+
+        self.assertEqual(escape_markdown(hostile), expected)
+        self.assertEqual(
+            ROUTES.markdown_link(linked, "items/test.md"),
+            f"[{expected}](../pokemon/bulbasaur.md)",
+        )
+        self.assertEqual(ROUTES.markdown_link(unresolved, "items/test.md"), expected)
+
+    def test_markdown_labels_render_ordinary_names_unchanged(self) -> None:
+        extensions = ["attr_list", "md_in_html", "tables"]
+        for name in ("Farfetch'd", "Nidoran♀", 'Say "Hi"', "Backers Masa & Yas"):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    markdown.markdown(
+                        f"| A |\n| - |\n| {escape_markdown(name)} |",
+                        extensions=extensions,
+                    ),
+                    markdown.markdown(
+                        f"| A |\n| - |\n| {name} |", extensions=extensions
+                    ),
+                )
 
     def test_resolves_only_matching_labels_when_requested(self) -> None:
         index = ReferenceIndex(

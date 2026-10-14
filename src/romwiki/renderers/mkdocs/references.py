@@ -388,8 +388,15 @@ def _record_types(
 
 
 def escape_markdown(value: str) -> str:
+    # `md_in_html` passes raw HTML through, so ROM text is entity-escaped
+    # first; quotes stay literal because Markdown text renders them unchanged.
     # `|` also needs neutralizing (not just `[`/`]`) since this value commonly
     # ends up inside a raw Markdown table cell via `markdown_link()`, where an
     # unescaped `|` would split the row — same rationale as
     # `components.escape_table_cell`.
-    return value.replace("[", "\\[").replace("]", "\\]").replace("|", "&#124;")
+    return (
+        escape(value, quote=False)
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("|", "&#124;")
+    )
