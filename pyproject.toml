@@ -44,6 +44,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# pytest's defaults minus "build", which would otherwise skip tests/pipeline/build.
+norecursedirs = ["*.egg", ".*", "_darcs", "CVS", "dist", "node_modules", "venv", "{arch}"]
 addopts = "-ra"
 cache_dir = ".romwiki/pytest-cache"
 

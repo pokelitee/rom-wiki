@@ -176,6 +176,7 @@ def _inspection(profile_id: str) -> Mock:
 def _profile(profile_id: str, *, optional: bool = False) -> Mock:
     profile = Mock()
     profile.id = profile_id
+    profile.parameters = {}
     profile.layout = {
         "personal": "personal",
         "messages": "messages",
