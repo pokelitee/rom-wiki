@@ -7,6 +7,7 @@ from pathlib import Path
 SOURCE_ROOT = Path(__file__).resolve().parents[2] / "src" / "romwiki"
 ENGINE_ROOT = SOURCE_ROOT / "engines"
 REGISTRY_PATH = ENGINE_ROOT / "registry.py"
+COMMON_ENGINE_ROOT = ENGINE_ROOT / "common"
 SEMANTIC_DISPATCH_PATHS = (
     SOURCE_ROOT / "pipeline" / "extraction" / "encounters.py",
     SOURCE_ROOT / "pipeline" / "extraction" / "locations" / "dispatcher.py",
@@ -107,6 +108,18 @@ class EnginePackageBoundaryTests(unittest.TestCase):
                         f"{path.relative_to(SOURCE_ROOT)} imports another generation: "
                         f"{imported}"
                     )
+
+        self.assertEqual(violations, [])
+
+    def test_common_package_is_generation_neutral(self) -> None:
+        # Every generation may import `engines/common/`, so it must not depend
+        # on any generation itself.
+        violations = [
+            f"{path.relative_to(SOURCE_ROOT)} imports {imported}"
+            for path in COMMON_ENGINE_ROOT.rglob("*.py")
+            for imported in _imports(path)
+            if imported.startswith("romwiki.engines.gen")
+        ]
 
         self.assertEqual(violations, [])
 

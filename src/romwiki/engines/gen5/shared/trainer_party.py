@@ -5,10 +5,16 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from romwiki.engines.common.stats import (
+    STAT_NAMES,
+    hp_stat,
+    nature_decreased_stat,
+    nature_increased_stat,
+    neutral_stat,
+)
 from romwiki.schema.trainers import NormalizedTrainerPokemon, TrainerAttribute
 from romwiki.util.errors import DataSourceError
 
-_STATS = ("hp", "attack", "defense", "special_attack", "special_defense", "speed")
 _FORCED_GENDER_NAMES = {1: "Male", 2: "Female"}
 
 
@@ -53,8 +59,8 @@ def normalize_trainer_party_member(
             if forced_gender_flag in _FORCED_GENDER_NAMES
             else None
         ),
-        "ivs": {"source": "derived", "values": dict.fromkeys(_STATS, iv)},
-        "evs": {"source": "engine-default", "values": dict.fromkeys(_STATS, 0)},
+        "ivs": {"source": "derived", "values": dict.fromkeys(STAT_NAMES, iv)},
+        "evs": {"source": "engine-default", "values": dict.fromkeys(STAT_NAMES, 0)},
         "calculated_stats": None,
         "source_fields": {
             "iv_strength": iv_strength,
@@ -100,25 +106,28 @@ def _calculated_stat_ranges(
 ) -> TrainerAttribute:
     if any(
         not isinstance(base_stats.get(stat), int) or base_stats[stat] <= 0
-        for stat in _STATS
+        for stat in STAT_NAMES
     ):
         raise DataSourceError("Gen V trainer Pokemon has invalid base stats")
     if not isinstance(level, int) or not 1 <= level <= 100:
         raise DataSourceError("Gen V trainer Pokemon level must be from 1 to 100")
 
-    hp = (
-        1
-        if species_id == 292
-        else ((2 * base_stats["hp"] + ivs["hp"] + evs["hp"] // 4) * level) // 100
-        + level
-        + 10
+    hp = hp_stat(
+        species_id=species_id,
+        base=base_stats["hp"],
+        iv=ivs["hp"],
+        ev=evs["hp"],
+        level=level,
     )
     values: dict[str, Any] = {"hp": hp}
-    for stat in _STATS[1:]:
-        neutral = (
-            (2 * base_stats[stat] + ivs[stat] + evs[stat] // 4) * level
-        ) // 100 + 5
-        values[stat] = {"minimum": neutral * 90 // 100, "maximum": neutral * 110 // 100}
+    for stat in STAT_NAMES[1:]:
+        neutral = neutral_stat(
+            base=base_stats[stat], iv=ivs[stat], ev=evs[stat], level=level
+        )
+        values[stat] = {
+            "minimum": nature_decreased_stat(neutral),
+            "maximum": nature_increased_stat(neutral),
+        }
     return {
         "source": "derived",
         "values": values,

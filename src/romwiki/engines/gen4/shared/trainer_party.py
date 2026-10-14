@@ -3,12 +3,18 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from romwiki.engines.common.stats import (
+    STAT_NAMES,
+    hp_stat,
+    nature_decreased_stat,
+    nature_increased_stat,
+    neutral_stat,
+)
 from romwiki.schema.trainers import NormalizedTrainerPokemon, TrainerAttribute
 from romwiki.util.errors import DataSourceError
 
 from .constants import NATURE_NAMES
 
-_STATS = ("hp", "attack", "defense", "special_attack", "special_defense", "speed")
 _LCRNG_MULTIPLIER = 0x41C64E6D
 _LCRNG_INCREMENT = 0x6073
 
@@ -53,13 +59,13 @@ def normalize_trainer_party_member(
         "nature": None,
         "gender": None,
         "ivs": (
-            {"source": "derived", "values": dict.fromkeys(_STATS, iv)}
+            {"source": "derived", "values": dict.fromkeys(STAT_NAMES, iv)}
             if iv <= 31
             else None
         ),
         "evs": {
             "source": "engine-default",
-            "values": dict.fromkeys(_STATS, 0),
+            "values": dict.fromkeys(STAT_NAMES, 0),
         },
         "calculated_stats": None,
         "source_fields": {
@@ -142,7 +148,7 @@ def _trainer_personality(
 def _trainer_ivs(difficulty: int, rng_seed: int) -> TrainerAttribute:
     iv = _fixed_iv_from_difficulty(difficulty)
     if iv <= 31:
-        return {"source": "derived", "values": dict.fromkeys(_STATS, iv)}
+        return {"source": "derived", "values": dict.fromkeys(STAT_NAMES, iv)}
     # Pokémon creation consumes two RNG calls before regenerating an invalid
     # fixed IV value, then packs three five-bit IVs into each of two calls.
     seed = rng_seed
@@ -194,30 +200,32 @@ def _calculated_stats(
         return None
     if any(
         not isinstance(base_stats.get(stat), int) or base_stats[stat] <= 0
-        for stat in _STATS
+        for stat in STAT_NAMES
     ):
         raise DataSourceError("Gen IV trainer Pokémon has invalid base stats")
     if not isinstance(level, int) or not 1 <= level <= 100:
         raise DataSourceError("Gen IV trainer Pokémon level must be from 1 to 100")
 
     values = {
-        "hp": (
-            1
-            if species_id == 292
-            else ((2 * base_stats["hp"] + ivs["hp"] + evs["hp"] // 4) * level) // 100
-            + level
-            + 10
+        "hp": hp_stat(
+            species_id=species_id,
+            base=base_stats["hp"],
+            iv=ivs["hp"],
+            ev=evs["hp"],
+            level=level,
         )
     }
     nature_stats = ("attack", "defense", "speed", "special_attack", "special_defense")
     increased = nature_stats[nature_index // 5]
     decreased = nature_stats[nature_index % 5]
     for stat in nature_stats:
-        value = ((2 * base_stats[stat] + ivs[stat] + evs[stat] // 4) * level) // 100 + 5
+        value = neutral_stat(
+            base=base_stats[stat], iv=ivs[stat], ev=evs[stat], level=level
+        )
         if increased != decreased:
             if stat == increased:
-                value = value * 110 // 100
+                value = nature_increased_stat(value)
             elif stat == decreased:
-                value = value * 90 // 100
+                value = nature_decreased_stat(value)
         values[stat] = value
     return {"source": "derived", "values": values}
