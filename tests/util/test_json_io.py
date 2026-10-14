@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -32,6 +33,17 @@ class WriteJsonAtomicTests(unittest.TestCase):
                 path.read_text(encoding="utf-8"),
                 '{\n  "a": 2,\n  "b": 1\n}\n',
             )
+
+    def test_writes_non_ascii_text_as_utf8_rather_than_escapes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "data.json"
+
+            write_json_atomic(path, {"name": "Pokémon ♂"})
+
+            content = path.read_bytes()
+            self.assertIn("Pokémon ♂".encode(), content)
+            self.assertNotIn(b"\\u", content)
+            self.assertEqual(json.loads(content.decode("utf-8")), {"name": "Pokémon ♂"})
 
     def test_leaves_an_unchanged_file_untouched(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

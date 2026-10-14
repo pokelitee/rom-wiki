@@ -35,5 +35,7 @@ def write_bytes_atomic(path: Path, content: bytes) -> None:
 
 
 def write_json_atomic(path: Path, value: Any) -> None:
-    """Write ``value`` to ``path`` as pretty-printed, sorted JSON."""
-    write_text_atomic(path, json.dumps(value, indent=2, sort_keys=True) + "\n")
+    """Write ``value`` to ``path`` as pretty-printed, sorted UTF-8 JSON."""
+    write_text_atomic(
+        path, json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    )
