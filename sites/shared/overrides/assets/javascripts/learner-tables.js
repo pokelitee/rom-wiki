@@ -78,6 +78,7 @@ function initializeLearnerTable(root) {
     fallback.hidden = true;
     root.classList.add("rw-learner-table--ready");
   } catch (error) {
+    console.warn("Could not load the interactive learner table", error);
     root.classList.remove("rw-learner-table--ready");
     root.classList.add("rw-learner-table--failed");
     if (interactive) interactive.hidden = true;

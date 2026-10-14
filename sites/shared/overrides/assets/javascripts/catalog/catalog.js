@@ -28,6 +28,7 @@ async function loadCatalog(root) {
     const fallback = document.querySelector("[data-rw-catalog-fallback]");
     if (fallback) fallback.hidden = true;
   } catch (error) {
+    console.warn("Could not load the interactive catalog", error);
     if (status) {
       status.textContent = "Interactive catalog unavailable. The complete static list is shown below.";
     }
