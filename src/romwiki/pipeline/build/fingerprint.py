@@ -33,18 +33,6 @@ GENERATION_EXTRACTOR_MODULES = (
 
 
 @cache
-def extraction_source_fingerprint(
-    engine_id: str,
-    extractor_module: str,
-    cache_key: str,
-) -> str:
-    """Hash the local code used by one engine/dataset extraction path."""
-    return combined_extraction_source_fingerprint(
-        engine_id, (extractor_module,), cache_key
-    )
-
-
-@cache
 def combined_extraction_source_fingerprint(
     engine_id: str,
     extractor_modules: tuple[str, ...],

@@ -5,7 +5,6 @@ import unittest
 from romwiki.pipeline.build.fingerprint import (
     combined_extraction_source_fingerprint,
     extraction_source_files,
-    extraction_source_fingerprint,
 )
 
 
@@ -73,15 +72,20 @@ class ExtractionSourceFilesTests(unittest.TestCase):
 
 
 class CombinedExtractionSourceFingerprintTests(unittest.TestCase):
-    def test_matches_the_single_module_fingerprint_for_one_source(self) -> None:
-        single = extraction_source_fingerprint(
-            "gen4_hgss", "romwiki.pipeline.extraction.moves", "moves/raw"
-        )
-        combined = combined_extraction_source_fingerprint(
-            "gen4_hgss", ("romwiki.pipeline.extraction.moves",), "moves/raw"
+    def test_is_scoped_to_the_cache_key_and_engine(self) -> None:
+        moves = ("romwiki.pipeline.extraction.moves",)
+        reference = combined_extraction_source_fingerprint(
+            "gen4_hgss", moves, "moves/raw"
         )
 
-        self.assertEqual(single, combined)
+        self.assertNotEqual(
+            reference,
+            combined_extraction_source_fingerprint("gen4_hgss", moves, "items/raw"),
+        )
+        self.assertNotEqual(
+            reference,
+            combined_extraction_source_fingerprint("gen4_platinum", moves, "moves/raw"),
+        )
 
     def test_changes_when_an_embedded_datasets_extractor_module_is_added(self) -> None:
         # locations/raw embeds trainer/static-encounter/item/mart/trade
