@@ -15,6 +15,7 @@ from romwiki.renderers.mkdocs.encounters import (
 )
 from romwiki.renderers.mkdocs.pokemon import _append_availability
 from romwiki.util.errors import SiteError
+from romwiki.util.json_io import json_round_trip
 
 
 class EncounterRenderingTests(unittest.TestCase):
@@ -943,6 +944,49 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertIn("| 45–65 | 100% |", page)
         self.assertEqual(catalog["records"][0]["label"], "Icirrus City")
         self.assertEqual(catalog["records"][0]["locations"], ["Icirrus City"])
+
+    def test_renders_tuple_and_list_raw_values_identically(self) -> None:
+        location = {
+            "header_id": 3,
+            "internal_name": "R201",
+            "name": "Route 201",
+            "location_name_id": 3,
+        }
+        record = _walking_area(7, [location], 25, "pikachu")
+        del record["walking_variants"]
+        record.update(
+            special={
+                "swarm": [],
+                "day": [],
+                "night": [],
+                "radar": [],
+                "unown_forms": [],
+                "dual_slot": {},
+            },
+            bonus_slot_methodology_source="the documented engine weights",
+            encounter_form_rates=(0, 0, 0, 0, 0),
+            unown_table_id=0,
+        )
+        dataset = {
+            "game": "test",
+            "engine": "gen4_platinum",
+            "dataset": "wild_encounters",
+            "records": [record],
+        }
+
+        rendered = []
+        for value in (dataset, json_round_trip(dataset)):
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory)
+                render_encounter_pages(value, output)
+                rendered.append(
+                    {path.name: path.read_bytes() for path in sorted(output.iterdir())}
+                )
+
+        self.assertEqual(rendered[0], rendered[1])
+        self.assertIn(
+            b"| Encounter form rates | `[0, 0, 0, 0, 0]` |", rendered[0]["area-007.md"]
+        )
 
 
 def _dataset(kind: str, records: list[dict]) -> dict:
