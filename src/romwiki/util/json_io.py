@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -24,11 +25,25 @@ def write_text_atomic(path: Path, content: str) -> None:
 
 def write_bytes_atomic(path: Path, content: bytes) -> None:
     """Atomically write bytes unless ``path`` already has identical content."""
-    if path.is_file() and path.read_bytes() == content:
+    try:
+        metadata = path.stat()
+    except FileNotFoundError:
+        metadata = None
+    if (
+        metadata is not None
+        and stat.S_ISREG(metadata.st_mode)
+        and metadata.st_size == len(content)
+        and path.read_bytes() == content
+    ):
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
-    temporary_path.write_bytes(content)
+    try:
+        temporary_path.write_bytes(content)
+    except FileNotFoundError:
+        # Creating the parent only when it's missing avoids a directory
+        # syscall per file; most writes land in an existing directory.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path.write_bytes(content)
     temporary_path.replace(path)
 
 

@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from romwiki.util.json_io import (
     write_bytes_atomic,
@@ -26,6 +27,34 @@ class WriteJsonAtomicTests(unittest.TestCase):
             write_bytes_atomic(path, b"second")
             self.assertEqual(path.read_bytes(), b"second")
             self.assertFalse(path.with_suffix(".bin.tmp").exists())
+
+    def test_creates_missing_parent_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "nested" / "deeper" / "page.md"
+
+            write_bytes_atomic(path, b"content")
+
+            self.assertEqual(path.read_bytes(), b"content")
+
+    def test_rewrites_same_size_content_that_differs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "archive.bin"
+            write_bytes_atomic(path, b"first")
+
+            write_bytes_atomic(path, b"fifth")
+
+            self.assertEqual(path.read_bytes(), b"fifth")
+
+    def test_skips_reading_an_existing_file_whose_size_differs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "archive.bin"
+            write_bytes_atomic(path, b"first")
+
+            with mock.patch.object(Path, "read_bytes") as read_bytes:
+                write_bytes_atomic(path, b"longer content")
+
+            read_bytes.assert_not_called()
+            self.assertEqual(path.read_bytes(), b"longer content")
 
     def test_text_uses_lf_newlines_on_every_platform(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
