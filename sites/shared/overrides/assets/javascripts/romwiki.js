@@ -22,10 +22,11 @@ function initializeColorSchemePreference() {
   });
 }
 
-// navigation.instant swaps page content without reloading the document, so
-// module-level init only runs once. document$ emits on every page render
-// (including the first), which keeps filters/tables/etc. working after
-// in-app navigation. See https://squidfunk.github.io/mkdocs-material/customization/#additional-javascript
+// document$ is Material's supported hook for per-page initialization: it emits
+// once the document is ready after Material's bundle has loaded. Instant
+// navigation is intentionally disabled (see docs/development/frontend.md), but
+// if it were enabled document$ would also emit after each in-place page swap.
+// See https://squidfunk.github.io/mkdocs-material/customization/#additional-javascript
 document$.subscribe(() => {
   const theme = document.querySelector('meta[name="romwiki-theme"]');
   if (theme) document.documentElement.dataset.romwikiTheme = theme.content;
