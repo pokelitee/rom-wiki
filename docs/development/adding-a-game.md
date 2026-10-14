@@ -383,13 +383,13 @@ Create:
 
 ```text
 sites/games/<game-id>/
-|-- dev-pages.toml
-|-- game.toml
-|-- mkdocs.dev.yml
-|-- mkdocs.yml
-`-- wiki/
-    |-- index.md
-    `-- data-sources.md
+├── dev-pages.toml
+├── game.toml
+├── mkdocs.dev.yml
+├── mkdocs.yml
+└── wiki/
+    ├── index.md
+    └── data-sources.md
 ```
 
 Register the profile in `game.toml`, choose a stable URL slug, and document the
