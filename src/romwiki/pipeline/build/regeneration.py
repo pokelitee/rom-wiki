@@ -115,6 +115,7 @@ def write_regeneration_state(
             "input_fingerprint": fingerprint,
             "files": generated_inventory(site),
         },
+        compact=True,
     )
 
 

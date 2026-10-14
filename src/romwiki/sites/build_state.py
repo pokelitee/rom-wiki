@@ -147,7 +147,7 @@ def read_site_build_state(path: Path) -> SiteBuildState | None:
 
 
 def write_site_build_state(path: Path, state: SiteBuildState) -> None:
-    write_json_atomic(path, state.to_dict())
+    write_json_atomic(path, state.to_dict(), compact=True)
 
 
 def can_reuse_site_output(

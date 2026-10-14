@@ -81,6 +81,14 @@ class WriteJsonAtomicTests(unittest.TestCase):
 
             self.assertEqual(path.read_bytes(), b'{\n  "a": 2,\n  "b": 1\n}\n')
 
+    def test_writes_compact_json_on_request(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "data.json"
+
+            write_json_atomic(path, {"b": [1, 2], "a": "é"}, compact=True)
+
+            self.assertEqual(path.read_bytes(), '{"a":"é","b":[1,2]}\n'.encode())
+
     def test_writes_non_ascii_text_as_utf8_rather_than_escapes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "data.json"

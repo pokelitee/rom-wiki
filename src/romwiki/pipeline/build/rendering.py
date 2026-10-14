@@ -179,10 +179,10 @@ def write_section(
     context: RenderContext,
 ) -> None:
     """Write one section's dataset, comparison, public download, and pages."""
-    write_dataset(dataset, data_output)
+    write_dataset(dataset, data_output, compact=True)
     if comparison is not None:
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
-        write_dataset(comparison, comparison_output)
+        write_dataset(comparison, comparison_output, compact=True)
     write_public_dataset(wiki_output.parent, kind, dataset)
     page_count = _SECTION_RENDERERS[kind](
         dataset,
@@ -206,7 +206,7 @@ def write_type_section(
     wiki_root: Path,
 ) -> None:
     data_output = dataset_output(data_root, "types")
-    write_dataset(dataset, data_output)
+    write_dataset(dataset, data_output, compact=True)
     write_public_dataset(wiki_root, "types", dataset)
     page_count = render_type_chart(dataset, wiki_root / "types")
     _LOG.info("Wrote %s types: %s", len(dataset["records"]), data_output)

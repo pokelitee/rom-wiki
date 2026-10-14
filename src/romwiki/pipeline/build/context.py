@@ -390,7 +390,7 @@ class GameBuildContext:
         if path is not None:
             # Unsorted, because renderers present some mappings (shard costs,
             # dual-slot games) in the order the extractor produced them.
-            write_json_atomic(path, value, sort_keys=False)
+            write_json_atomic(path, value, sort_keys=False, compact=True)
             assert source_fingerprint is not None
             self._write_manifest(key, source_fingerprint)
             _LOG.debug("Extraction cache updated for %s: %s", self.profile.id, key)
@@ -449,7 +449,9 @@ class GameBuildContext:
     def _write_manifest(self, key: str, source_fingerprint: str) -> None:
         if self.cache_root is not None:
             self._cached_source_fingerprints[key] = source_fingerprint
-            write_json_atomic(self.cache_root / "manifest.json", self._manifest())
+            write_json_atomic(
+                self.cache_root / "manifest.json", self._manifest(), compact=True
+            )
 
     def _manifest(self) -> dict[str, Any]:
         return {

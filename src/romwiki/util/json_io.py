@@ -47,12 +47,21 @@ def write_bytes_atomic(path: Path, content: bytes) -> None:
     temporary_path.replace(path)
 
 
-def write_json_atomic(path: Path, value: Any, *, sort_keys: bool = True) -> None:
-    """Write ``value`` to ``path`` as pretty-printed UTF-8 JSON."""
-    write_text_atomic(
-        path,
-        json.dumps(value, indent=2, sort_keys=sort_keys, ensure_ascii=False) + "\n",
-    )
+def write_json_atomic(
+    path: Path, value: Any, *, sort_keys: bool = True, compact: bool = False
+) -> None:
+    """Write ``value`` to ``path`` as UTF-8 JSON.
+
+    Output is pretty-printed unless ``compact``, which suits internal caches
+    and state that are only read back by the tool itself.
+    """
+    if compact:
+        content = json.dumps(
+            value, sort_keys=sort_keys, ensure_ascii=False, separators=(",", ":")
+        )
+    else:
+        content = json.dumps(value, indent=2, sort_keys=sort_keys, ensure_ascii=False)
+    write_text_atomic(path, content + "\n")
 
 
 def json_round_trip(value: Any) -> Any:
