@@ -20,17 +20,31 @@
       root.dataset.romwikiTheme = "{{ romwiki_theme }}";
       root.classList.add("rw-js");
 
+      {#- Material accepts a single palette mapping or a list of toggles and
+          defaults unset colors to indigo; mirror its partials/palette.html. -#}
+      {%- set rw_palettes = config.theme.palette or [] -%}
+      {%- if rw_palettes is mapping %}{% set rw_palettes = [rw_palettes] %}{% endif %}
+      var paletteColors = {
+        {%- for option in rw_palettes %}
+        {{ option.scheme | d("default", true) | tojson }}: {
+          primary: {{ option.primary | d("indigo", true) | replace(" ", "-") | tojson }},
+          accent: {{ option.accent | d("indigo", true) | replace(" ", "-") | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {%- endfor %}
+      };
+
       try {
         var scheme = localStorage.getItem("romwiki.color-scheme");
-        if (scheme === "default" || scheme === "slate") {
+        var colors = paletteColors.hasOwnProperty(scheme) && paletteColors[scheme];
+        if (colors && (scheme === "default" || scheme === "slate")) {
           __md_set("__palette", {
             color: {
               media: scheme === "slate"
                 ? "(prefers-color-scheme: dark)"
                 : "(prefers-color-scheme: light)",
               scheme: scheme,
-              primary: "indigo",
-              accent: "indigo"
+              primary: colors.primary,
+              accent: colors.accent
             }
           });
         }

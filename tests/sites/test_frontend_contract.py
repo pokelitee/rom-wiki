@@ -229,8 +229,10 @@ class FrontendContractTests(unittest.TestCase):
         )
         self.assertIn('localStorage.getItem("romwiki.color-scheme")', template)
         self.assertIn('__md_set("__palette"', template)
-        self.assertIn('primary: "indigo"', template)
-        self.assertIn('accent: "indigo"', template)
+        self.assertIn("config.theme.palette", template)
+        self.assertIn("primary: colors.primary", template)
+        self.assertIn("accent: colors.accent", template)
+        self.assertNotIn('primary: "indigo"', template)
         self.assertIn('"romwiki.color-scheme"', entrypoint)
         self.assertIn("localStorage.setItem", entrypoint)
 
