@@ -31,15 +31,9 @@ class RegenerationStateTests(unittest.TestCase):
                 image=SimpleNamespace(hashes=SimpleNamespace(sha256="rom")),
             )
 
-            with (
-                patch(
-                    "romwiki.pipeline.build.regeneration.profile_fingerprint",
-                    return_value="profile",
-                ),
-                patch(
-                    "romwiki.pipeline.build.regeneration.extraction_source_files",
-                    return_value=(),
-                ),
+            with patch(
+                "romwiki.pipeline.build.regeneration.profile_fingerprint",
+                return_value="profile",
             ):
                 production = regeneration_fingerprint(root, site, (result,), (), root)
                 development = regeneration_fingerprint(
@@ -54,6 +48,53 @@ class RegenerationStateTests(unittest.TestCase):
 
         self.assertNotEqual(production, development)
         self.assertNotEqual(development, changed)
+
+    def test_fingerprint_tracks_every_package_source_module(self) -> None:
+        modules = (
+            "sources/pokedb.py",
+            "util/text.py",
+            "engines/registry.py",
+            "sites/catalog.py",
+            "pipeline/build/regeneration.py",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site = _site_with_game_toml(root)
+            package_root = root / "src" / "romwiki"
+            for module in modules:
+                path = package_root / module
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("VALUE = 1\n", encoding="utf-8")
+
+            def fingerprint() -> str:
+                return regeneration_fingerprint(root, site, (), (), root / "pokedb")
+
+            baseline = fingerprint()
+            for module in modules:
+                with self.subTest(module=module):
+                    path = package_root / module
+                    path.write_text("VALUE = 22\n", encoding="utf-8")
+                    self.assertNotEqual(fingerprint(), baseline)
+                    path.write_text("VALUE = 1\n", encoding="utf-8")
+                    self.assertEqual(fingerprint(), baseline)
+
+            (package_root / "util" / "new_helper.py").write_text("", encoding="utf-8")
+            self.assertNotEqual(fingerprint(), baseline)
+
+    def test_fingerprint_tracks_pokedb_data(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site = _site_with_game_toml(root)
+            pokedb = root / "pokedb"
+            pokedb.mkdir()
+            data = pokedb / "pokemon.json"
+            data.write_text("[]", encoding="utf-8")
+
+            before = regeneration_fingerprint(root, site, (), (), pokedb)
+            data.write_text('[{"id": 1}]', encoding="utf-8")
+            after = regeneration_fingerprint(root, site, (), (), pokedb)
+
+        self.assertNotEqual(before, after)
 
     def test_reuses_only_an_exact_generated_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -70,6 +111,13 @@ class RegenerationStateTests(unittest.TestCase):
             generated.write_text("changed\n", encoding="utf-8")
             self.assertFalse(can_reuse_generation(state, "input", site))
             self.assertFalse(can_reuse_generation(state, "other", site))
+
+
+def _site_with_game_toml(root: Path) -> SiteDefinition:
+    site_root = root / "site"
+    site_root.mkdir()
+    (site_root / "game.toml").write_text("[game]\n", encoding="utf-8")
+    return _site(site_root)
 
 
 def _site(site_root: Path) -> SiteDefinition:

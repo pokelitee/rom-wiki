@@ -7,11 +7,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, Protocol
 
-from romwiki.pipeline.build.fingerprint import (
-    GENERATION_EXTRACTOR_MODULES,
-    extraction_source_files,
-    profile_fingerprint,
-)
+from romwiki.pipeline.build.fingerprint import profile_fingerprint
 from romwiki.util.inventory import file_metadata_inventory
 from romwiki.util.json_io import write_json_atomic
 
@@ -39,7 +35,7 @@ class _SiteDefinition(Protocol):
 
 
 REGENERATION_STATE_SCHEMA_VERSION = 2
-_FINGERPRINT_SCHEMA_VERSION = b"2"
+_FINGERPRINT_SCHEMA_VERSION = b"3"
 
 
 def regeneration_fingerprint(
@@ -55,32 +51,17 @@ def regeneration_fingerprint(
     digest.update(_FINGERPRINT_SCHEMA_VERSION)
     digest.update(b"dev" if dev else b"production")
     values = []
-    engines: set[str] = set()
     for result in (*current, *(value for value in baselines if value is not None)):
         profile = result.match.profile
-        engines.add(profile.engine)
         values.append((result.image.hashes.sha256, profile_fingerprint(profile)))
     digest.update(json.dumps(values, sort_keys=True).encode())
     paths: set[Path] = {site.config_path.parent / "game.toml"}
     if dev:
         paths.add(site.config_path.parent / "dev-pages.toml")
-    package_root = root / "src" / "romwiki"
-    for directory in (
-        package_root / "pipeline",
-        package_root / "renderers",
-        package_root / "schema",
-    ):
-        paths.update(
-            path
-            for path in directory.rglob("*.py")
-            if path.resolve() != Path(__file__).resolve()
-        )
-    for engine in engines:
-        for module in GENERATION_EXTRACTOR_MODULES:
-            paths.update(
-                package_root / relative
-                for relative in extraction_source_files(engine, module)
-            )
+    # Every package module is hashed rather than a computed import closure:
+    # registries, PokéDB loaders, shared utilities, and site orchestration all
+    # shape generated pages, and a missed dependency would ship stale output.
+    paths.update((root / "src" / "romwiki").rglob("*.py"))
     paths.update(pokedb_root.rglob("*.json"))
     for path in sorted(paths):
         if path.is_file():
