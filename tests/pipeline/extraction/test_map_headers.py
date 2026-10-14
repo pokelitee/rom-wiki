@@ -21,7 +21,7 @@ class ReadCodeBinaryTests(unittest.TestCase):
 
         self.assertEqual(result, b"compressed-code")
 
-    def test_ignores_the_decompressed_reader_when_no_engine_is_given(self) -> None:
+    def test_ignores_the_decompressed_reader_unless_compressed(self) -> None:
         platform = SimpleNamespace(
             read_code_binary=lambda image: b"compressed-code",
             read_decompressed_code_binary=lambda image: b"decompressed-code",
@@ -31,16 +31,15 @@ class ReadCodeBinaryTests(unittest.TestCase):
 
         self.assertEqual(result, b"compressed-code")
 
-    def test_reads_the_decompressed_code_binary_when_the_engine_requests_it(
+    def test_reads_the_decompressed_code_binary_when_compressed(
         self,
     ) -> None:
         platform = SimpleNamespace(
             read_code_binary=lambda image: b"compressed-code",
             read_decompressed_code_binary=lambda image: b"decompressed-code",
         )
-        engine = SimpleNamespace(CODE_BINARY_DECOMPRESSED=True)
 
-        result = read_code_binary(platform, "image", engine)
+        result = read_code_binary(platform, "image", compressed=True)
 
         self.assertEqual(result, b"decompressed-code")
 
@@ -57,10 +56,9 @@ class ReadCodeBinaryTests(unittest.TestCase):
             read_code_binary=lambda image: b"compressed-code",
             read_decompressed_code_binary=None,
         )
-        engine = SimpleNamespace(CODE_BINARY_DECOMPRESSED=True)
 
         with self.assertRaises(DataSourceError):
-            read_code_binary(platform, "image", engine)
+            read_code_binary(platform, "image", compressed=True)
 
 
 class CodeLoadAddressTests(unittest.TestCase):

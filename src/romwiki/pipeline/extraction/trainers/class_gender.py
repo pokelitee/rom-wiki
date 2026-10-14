@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, cast
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.concerns import TrainerConcern
+from romwiki.engines.registry import (
+    COMPRESSED_CODE_BINARY,
+    TAG_BATTLES,
+    TRAINER_LOCATIONS,
+    TRAINER_SCRIPT_REFERENCES,
+    get_engine,
+)
 from romwiki.engines.trainer_variants import (
     TrainerVariantResolver,
     resolve_trainer_variants,
@@ -76,7 +83,11 @@ def extract_class_gender_trainer_dataset(
         raise InvalidRomError("Trainer data and party archives have different counts")
     names = engine.parse_english_message_archive(messages.read(names_member))
     classes = engine.parse_english_message_archive(messages.read(classes_member))
-    arm9_data = read_code_binary(platform, result.image, engine)
+    arm9_data = read_code_binary(
+        platform,
+        result.image,
+        compressed=COMPRESSED_CODE_BINARY in get_engine(profile.engine).capabilities,
+    )
     class_genders = engine.parse_trainer_class_genders(
         arm9_data[class_gender_offset : class_gender_offset + len(classes)],
         count=len(classes),
@@ -97,7 +108,7 @@ def extract_class_gender_trainer_dataset(
     if len(names) < len(trainers.members):
         raise InvalidRomError("Trainer name table is shorter than the trainer archive")
 
-    first_trainer_id = getattr(engine, "FIRST_TRAINER_ID", 0)
+    first_trainer_id = engine.FIRST_TRAINER_ID
     parsed_records = [
         engine.parse_trainer_record(
             trainers.read(member.index),
@@ -243,7 +254,7 @@ def extract_class_gender_trainer_dataset(
 
 
 def _extract_class_gender_trainer_locations(
-    engine: Any,
+    engine: TrainerConcern,
     platform: Any,
     result: InspectionResult,
     filesystem: Any,
@@ -259,7 +270,8 @@ def _extract_class_gender_trainer_locations(
 ]:
     assert result.match is not None
     profile = result.match.profile
-    if not getattr(engine, "TRAINER_LOCATION_EXTRACTION", True):
+    capabilities = get_engine(profile.engine).capabilities
+    if TRAINER_LOCATIONS not in capabilities:
         return {}, {}, {"trainer_locations": "unsupported"}, 0
     try:
         events_path = profile.layout["events"]
@@ -299,9 +311,7 @@ def _extract_class_gender_trainer_locations(
     events = platform.archive_cls.from_bytes(
         filesystem.read(events_path), **event_options
     )
-    extract_script_references = getattr(
-        engine, "TRAINER_SCRIPT_REFERENCE_EXTRACTION", True
-    )
+    extract_script_references = TRAINER_SCRIPT_REFERENCES in capabilities
     scripts = (
         platform.archive_cls.from_bytes(
             filesystem.read(scripts_path), **scripts_archive_options(profile)
@@ -383,9 +393,12 @@ def _extract_class_gender_trainer_locations(
             # partner still genuinely appears at this location, even though
             # labeling it an "opponent slot" below is an approximation this
             # schema has no separate concept for.
-            tag_parse = getattr(engine, "parse_tag_battle_commands", None)
-            if tag_parse is not None:
-                commands.extend(tag_parse(script_data, trainer_count=trainer_count))
+            if TAG_BATTLES in capabilities:
+                commands.extend(
+                    engine.parse_tag_battle_commands(
+                        script_data, trainer_count=trainer_count
+                    )
+                )
             script_cache[header.script_file_id] = tuple(commands)
         for command in script_cache[header.script_file_id]:
             for opponent_slot, trainer_id in enumerate(command.trainer_ids, start=1):

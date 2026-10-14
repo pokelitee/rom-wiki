@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from romwiki.engines.concerns import PersonalConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.reference_names import (
@@ -53,7 +54,7 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_personal_records_archive(
-    profile: Any, platform: Any, engine: Any, result: InspectionResult
+    profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any]]:
     try:
         archive_path = profile.layout["personal"]
@@ -91,7 +92,7 @@ def _extract_personal_records_archive(
 
 
 def _extract_personal_records_flat(
-    profile: Any, platform: Any, engine: Any, result: InspectionResult
+    profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     try:
         offset = profile.parameters["personal_offset"]
@@ -149,7 +150,7 @@ def _extract_personal_records_flat(
 
 
 def _extract_ability_names_flat(
-    profile: Any, platform: Any, engine: Any, result: InspectionResult
+    profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
 ) -> dict[str, Any]:
     # Optional: an engine that hasn't wired up the "abilities" domain yet
     # (or a profile that doesn't declare these parameters) simply gets no
@@ -176,7 +177,7 @@ def _extract_ability_names_flat(
 
 
 def _extract_ability_descriptions_flat(
-    profile: Any, platform: Any, engine: Any, result: InspectionResult
+    profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
 ) -> dict[str, Any]:
     # Optional, same reasoning as `_extract_ability_names_flat` above: a
     # profile that doesn't declare `ability_description_offset` simply

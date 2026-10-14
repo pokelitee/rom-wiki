@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from romwiki.engines.concerns import LocationConcern
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.trainers.dispatcher import extract_trainer_dataset
 from romwiki.schema import (
@@ -29,7 +30,7 @@ class EventMapItemScan:
 
 
 def extract_event_map_items(
-    engine: Any,
+    engine: LocationConcern,
     events: Any,
     item_names: tuple[str, ...],
     *,
@@ -38,8 +39,6 @@ def extract_event_map_items(
 ) -> EventMapItemScan:
     items = []
     unresolved_visible_count = 0
-    is_visible_candidate = getattr(engine, "is_visible_item_candidate", None)
-    is_hidden_candidate = getattr(engine, "is_hidden_item_candidate", None)
     for event in events.objects:
         item_id = (
             engine.resolve_visible_item_id(
@@ -49,7 +48,7 @@ def extract_event_map_items(
             else engine.resolve_visible_item_id(event, item_count=len(item_names))
         )
         if item_id is None:
-            if is_visible_candidate is not None and is_visible_candidate(event):
+            if engine.is_visible_item_candidate(event):
                 unresolved_visible_count += 1
             continue
         items.append(
@@ -74,7 +73,7 @@ def extract_event_map_items(
             else engine.resolve_hidden_item_id(event, item_count=len(item_names))
         )
         if item_id is None:
-            if is_hidden_candidate is not None and is_hidden_candidate(event):
+            if engine.is_hidden_item_candidate(event):
                 unresolved_hidden_count += 1
             continue
         items.append(
@@ -97,7 +96,7 @@ def extract_event_map_items(
 
 
 def extract_event_map_connections(
-    engine: Any,
+    engine: LocationConcern,
     headers: tuple[Any, ...],
     matrices: Any,
     location_names: tuple[str, ...],

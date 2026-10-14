@@ -26,7 +26,9 @@ def national_dex_id_for_member(engine: Any, member: int) -> int:
     FireRed and Emerald ROMs, while National Dex #281 is Kirlia -- the two
     numbering schemes are genuinely different starting at species 252.
     """
-    return getattr(engine, "INTERNAL_TO_NATIONAL_DEX", {}).get(member, member)
+    if engine is None:
+        return member
+    return engine.INTERNAL_TO_NATIONAL_DEX.get(member, member)
 
 
 def pokemon_display_name(
@@ -104,9 +106,7 @@ def _validate_sparse_egg_moves(
             )
         ):
             raise DataSourceError("Egg move record contains invalid move IDs")
-        if len(move_ids) != len(set(move_ids)) and not getattr(
-            engine, "ALLOW_DUPLICATE_EGG_MOVES", False
-        ):
+        if len(move_ids) != len(set(move_ids)) and not engine.ALLOW_DUPLICATE_EGG_MOVES:
             raise DataSourceError("Egg move record contains duplicate move IDs")
         result[species_id] = record
         previous_species = species_id

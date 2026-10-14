@@ -36,6 +36,7 @@ class _Engine:
     DYNAMIC_WARP_HEADER_ID = -1
     DYNAMIC_WARP_ID = -1
     MATRIX_VOID_HEADER_IDS = ()
+    ITEM_BALL_TABLE_SCRIPT_MEMBER = 0
 
     def __init__(
         self,
@@ -59,36 +60,41 @@ class _Engine:
             b"item-names": tuple(item_names),
             b"pokemon-names": tuple(pokemon_names),
         }
-        self._static_encounters_by_script = static_encounters_by_script
-        if static_encounters_by_script is not None:
-            self.parse_static_encounter_commands = self._parse_static_encounter_commands
-        self._mart_references_by_script = mart_references_by_script
-        if mart_references_by_script is not None:
-            self.parse_mart_dispatch_commands = self._parse_mart_dispatch_commands
-        self._pokemon_gifts_by_script = pokemon_gifts_by_script
-        if pokemon_gifts_by_script is not None:
-            self.parse_pokemon_gift_commands = self._parse_pokemon_gift_commands
-        self._egg_gifts_by_script = egg_gifts_by_script
-        if egg_gifts_by_script is not None:
-            self.parse_egg_gift_commands = self._parse_egg_gift_commands
-        self._togepi_egg_gifts_by_script = togepi_egg_gifts_by_script
-        if togepi_egg_gifts_by_script is not None:
-            self.parse_togepi_egg_gift_commands = self._parse_togepi_egg_gift_commands
+        self._static_encounters_by_script = static_encounters_by_script or {}
+        self._mart_references_by_script = mart_references_by_script or {}
+        self._pokemon_gifts_by_script = pokemon_gifts_by_script or {}
+        self._egg_gifts_by_script = egg_gifts_by_script or {}
+        self._togepi_egg_gifts_by_script = togepi_egg_gifts_by_script or {}
 
-    def _parse_static_encounter_commands(self, data, *, species_count):
+    def parse_static_encounter_commands(self, data, *, species_count):
         return self._static_encounters_by_script.get(data, ())
 
-    def _parse_mart_dispatch_commands(self, data):
+    def parse_mart_dispatch_commands(self, data):
         return self._mart_references_by_script.get(data, ())
 
-    def _parse_pokemon_gift_commands(self, data, *, species_count):
+    def parse_pokemon_gift_commands(self, data, *, species_count):
         return self._pokemon_gifts_by_script.get(data, ())
 
-    def _parse_egg_gift_commands(self, data, *, species_count):
+    def parse_egg_gift_commands(self, data, *, species_count):
         return self._egg_gifts_by_script.get(data, ())
 
-    def _parse_togepi_egg_gift_commands(self, data):
+    def parse_togepi_egg_gift_commands(self, data):
         return self._togepi_egg_gifts_by_script.get(data, ())
+
+    def parse_item_ball_table(self, data):
+        return ()
+
+    def parse_hidden_item_table(self, data, *, item_count):
+        return ()
+
+    def find_script_awarded_items(self, data, *, item_count):
+        return ()
+
+    def is_visible_item_candidate(self, event):
+        return False
+
+    def is_hidden_item_candidate(self, event):
+        return False
 
     def parse_map_headers(self, header_data, map_names_data, count):
         return self._headers
@@ -102,10 +108,10 @@ class _Engine:
     def parse_map_matrix(self, data, matrix_id):
         return self._matrices.get(matrix_id, SimpleNamespace(header_ids=None))
 
-    def resolve_visible_item_id(self, event, item_count):
+    def resolve_visible_item_id(self, event, item_count, item_ids):
         return getattr(event, "visible_item_id", None)
 
-    def resolve_hidden_item_id(self, event, item_count):
+    def resolve_hidden_item_id(self, event, item_count, item_ids):
         return getattr(event, "hidden_item_id", None)
 
     MAP_HEADER_SIZE = 1
@@ -172,7 +178,7 @@ def _result(profile: GameProfile) -> InspectionResult:
 
 def _patched(engine, messages, encounters, events, matrices, scripts=None):
     if scripts is None:
-        scripts = _Archive(0, lambda i: b"")
+        scripts = _Archive(1, lambda i: b"")
     platform = SimpleNamespace(
         archive_cls=SimpleNamespace(
             from_bytes=lambda data, **kwargs: {
@@ -190,7 +196,10 @@ def _patched(engine, messages, encounters, events, matrices, scripts=None):
     )
     return (
         patch(f"{_MODULE}.get_platform", return_value=platform),
-        patch(f"{_MODULE}.get_engine", return_value=SimpleNamespace(locations=engine)),
+        patch(
+            f"{_MODULE}.get_engine",
+            return_value=SimpleNamespace(locations=engine, capabilities=frozenset()),
+        ),
     )
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from romwiki.engines.concerns import TutorConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
@@ -231,7 +232,11 @@ def _slice_overlay(data: bytes, offset: int, size: int, label: str) -> bytes:
 
 
 def _extract_special_tutors(
-    engine: Any, platform: Any, result: InspectionResult, *, start_tutor_id: int
+    engine: TutorConcern,
+    platform: Any,
+    result: InspectionResult,
+    *,
+    start_tutor_id: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     assert result.match is not None
     profile = result.match.profile

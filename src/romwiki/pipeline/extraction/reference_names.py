@@ -1,32 +1,47 @@
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from typing import Any
 
+from romwiki.engines.concerns import ReferenceNameConcern
 from romwiki.engines.registry import get_engine
 from romwiki.platforms.registry import get_platform
 from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import DataSourceError, ProfileError
 
+_TableCount = Callable[[ReferenceNameConcern], int | None]
+
 # Each table's profile parameter and the engine constant naming its size.
-_NAME_TABLES = {
-    "type_names": ("type_names_member", "TYPE_NAME_COUNT"),
-    "ability_names": ("ability_names_member", "ABILITY_NAME_COUNT"),
-    "item_names": ("item_names_member", "ITEM_NAME_COUNT"),
-    "move_names": ("move_names_member", "MOVE_NAME_COUNT"),
-    "pokemon_names": ("pokemon_names_member", "POKEMON_NAME_COUNT"),
+_NAME_TABLES: dict[str, tuple[str, _TableCount]] = {
+    "type_names": ("type_names_member", lambda engine: engine.TYPE_NAME_COUNT),
+    "ability_names": (
+        "ability_names_member",
+        lambda engine: engine.ABILITY_NAME_COUNT,
+    ),
+    "item_names": ("item_names_member", lambda engine: engine.ITEM_NAME_COUNT),
+    "move_names": ("move_names_member", lambda engine: engine.MOVE_NAME_COUNT),
+    "pokemon_names": (
+        "pokemon_names_member",
+        lambda engine: engine.POKEMON_NAME_COUNT,
+    ),
 }
 
-_DESCRIPTION_TABLES = {
+_DESCRIPTION_TABLES: dict[str, tuple[str, _TableCount]] = {
     "ability_descriptions": (
         "ability_descriptions_member",
-        "ABILITY_NAME_COUNT",
+        lambda engine: engine.ABILITY_NAME_COUNT,
     ),
-    "item_descriptions": ("item_descriptions_member", "ITEM_NAME_COUNT"),
-    "move_descriptions": ("move_descriptions_member", "MOVE_NAME_COUNT"),
+    "item_descriptions": (
+        "item_descriptions_member",
+        lambda engine: engine.ITEM_NAME_COUNT,
+    ),
+    "move_descriptions": (
+        "move_descriptions_member",
+        lambda engine: engine.MOVE_NAME_COUNT,
+    ),
     "pokemon_descriptions": (
         "pokemon_descriptions_member",
-        "POKEMON_DESCRIPTION_COUNT",
+        lambda engine: engine.POKEMON_DESCRIPTION_COUNT,
     ),
 }
 
@@ -38,8 +53,8 @@ def extract_reference_names(
 ) -> dict[str, Any]:
     engine = get_engine(profile.engine).reference_names
     configured = {
-        field: (parameter, getattr(engine, count_attribute))
-        for field, (parameter, count_attribute) in _NAME_TABLES.items()
+        field: (parameter, count_of(engine))
+        for field, (parameter, count_of) in _NAME_TABLES.items()
         if parameter in profile.parameters
     }
     if not configured:
@@ -89,8 +104,8 @@ def extract_reference_descriptions(
 ) -> dict[str, Any]:
     engine = get_engine(profile.engine).reference_names
     configured = {
-        field: (parameter, getattr(engine, count_attribute))
-        for field, (parameter, count_attribute) in _DESCRIPTION_TABLES.items()
+        field: (parameter, count_of(engine))
+        for field, (parameter, count_of) in _DESCRIPTION_TABLES.items()
         if parameter in profile.parameters and (fields is None or field in fields)
     }
     if not configured:

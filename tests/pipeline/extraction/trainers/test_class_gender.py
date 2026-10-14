@@ -5,6 +5,7 @@ from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from romwiki.engines.registry import TRAINER_LOCATIONS, TRAINER_SCRIPT_REFERENCES
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.trainers.class_gender import (
     extract_class_gender_trainer_dataset,
@@ -132,7 +133,7 @@ class ExtractClassGenderTrainerDatasetTests(unittest.TestCase):
         self,
     ) -> None:
         fixture = _Fixture()
-        fixture.engine.TRAINER_LOCATION_EXTRACTION = False
+        fixture.capabilities = frozenset()
 
         with fixture.patches():
             envelope = extract_class_gender_trainer_dataset(fixture.result)
@@ -322,13 +323,18 @@ class _Fixture:
             FIRST_TRAINER_ID=1,
         )
         self.resolve_map_headers = Mock(return_value=((header,), ("Route 1",)))
+        self.capabilities = frozenset({TRAINER_LOCATIONS, TRAINER_SCRIPT_REFERENCES})
 
     def patches(self):
         return _multi_patch(
             (f"{_PATCH_TARGET}.get_platform", Mock(return_value=self.platform)),
             (
                 f"{_PATCH_TARGET}.get_engine",
-                Mock(return_value=SimpleNamespace(trainers=self.engine)),
+                Mock(
+                    return_value=SimpleNamespace(
+                        trainers=self.engine, capabilities=self.capabilities
+                    )
+                ),
             ),
             (
                 f"{_PATCH_TARGET}.extract_reference_names",

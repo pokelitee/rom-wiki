@@ -37,18 +37,11 @@ def _extract_from_offset(result: InspectionResult) -> dict[str, Any]:
         ) from error
     engine = get_engine(profile.engine).machines
     machine_count = profile.parameters.get("machine_count", engine.MACHINE_COUNT)
-    # `GEN4_TM_COUNT` is a Generation IV-specific engine attribute, not part
-    # of every "profile-offset" engine's namespace (e.g. `gen3_frlg` has no
-    # such name) -- looked up lazily so engines that always declare
-    # `tm_count` in their profile TOML (this format's normal case) never
-    # need to define it.
-    tm_count = profile.parameters.get("tm_count")
-    if tm_count is None:
-        tm_count = engine.GEN4_TM_COUNT
+    tm_count = profile.parameters.get("tm_count", engine.TM_COUNT)
 
     size = machine_count * 2
     if offset < 0 or offset + size > result.image.size:
-        raise InvalidRomError("Gen IV machine move table is outside the ROM image")
+        raise InvalidRomError("Machine move table is outside the ROM image")
     with result.image.path.open("rb") as stream:
         stream.seek(offset)
         data = stream.read(size)

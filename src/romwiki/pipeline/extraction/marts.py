@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import read_code_binary
 from romwiki.platforms.registry import get_platform
@@ -106,7 +106,11 @@ def _extract_arm9_marts(result: InspectionResult) -> dict[str, Any]:
         allow_truncated=profile.parameters.get("messages_allow_truncated", False),
     )
     item_names = engine.parse_english_message_archive(messages.read(item_names_member))
-    arm9_data = read_code_binary(platform, result.image, engine)
+    arm9_data = read_code_binary(
+        platform,
+        result.image,
+        compressed=COMPRESSED_CODE_BINARY in get_engine(profile.engine).capabilities,
+    )
     shops = engine.parse_shop_catalog(
         arm9_data,
         locator=locator,

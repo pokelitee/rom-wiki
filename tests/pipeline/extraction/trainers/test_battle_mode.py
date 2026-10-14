@@ -261,7 +261,11 @@ class _Fixture:
             (f"{_PATCH_TARGET}.get_platform", Mock(return_value=self.platform)),
             (
                 f"{_PATCH_TARGET}.get_engine",
-                Mock(return_value=SimpleNamespace(trainers=self.engine)),
+                Mock(
+                    return_value=SimpleNamespace(
+                        trainers=self.engine, capabilities=frozenset()
+                    )
+                ),
             ),
             (
                 f"{_PATCH_TARGET}.extract_reference_names",

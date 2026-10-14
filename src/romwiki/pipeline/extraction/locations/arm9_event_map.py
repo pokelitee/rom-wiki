@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from romwiki.engines.concerns import LocationConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.locations.helpers import (
@@ -255,21 +256,17 @@ def _load_event_map_source(
         profile.parameters.get("matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS)
     )
     honey_tree_header_ids = frozenset(
-        profile.parameters.get(
-            "honey_tree_header_ids", getattr(engine, "HONEY_TREE_HEADER_IDS", ())
-        )
+        profile.parameters.get("honey_tree_header_ids", engine.HONEY_TREE_HEADER_IDS)
     )
     great_marsh_header_ids = frozenset(
-        profile.parameters.get(
-            "great_marsh_header_ids", getattr(engine, "GREAT_MARSH_HEADER_IDS", ())
-        )
+        profile.parameters.get("great_marsh_header_ids", engine.GREAT_MARSH_HEADER_IDS)
     )
     trophy_garden_header_id = profile.parameters.get(
-        "trophy_garden_header_id", getattr(engine, "TROPHY_GARDEN_HEADER_ID", None)
+        "trophy_garden_header_id", engine.TROPHY_GARDEN_HEADER_ID
     )
     game_corner_header_id = profile.parameters.get(
         "game_corner_prize_exchange_header_id",
-        getattr(engine, "GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID", None),
+        engine.GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID,
     )
     arm9_load_address = code_load_address(platform, result.image)
 
@@ -391,28 +388,23 @@ def _load_event_map_source(
                 )
             )
 
-        if hasattr(engine, "GEN4_HONEY_TREE_COMMON_MEMBER"):
-            honey_tree = LocationHoneyTree(
-                common=_bonus_species(engine.GEN4_HONEY_TREE_COMMON_MEMBER),
-                uncommon=_bonus_species(engine.GEN4_HONEY_TREE_UNCOMMON_MEMBER),
-                rare=_bonus_species(engine.GEN4_HONEY_TREE_RARE_MEMBER),
-            )
-        if hasattr(engine, "GEN4_TROPHY_GARDEN_MEMBER"):
-            trophy_garden_pool = LocationDailyEncounterPool(
-                kind="trophy_garden",
-                species=_bonus_species(engine.GEN4_TROPHY_GARDEN_MEMBER),
-                pre_national_dex_species=None,
-            )
-        if hasattr(engine, "GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER"):
-            great_marsh_pool = LocationDailyEncounterPool(
-                kind="great_marsh",
-                species=_bonus_species(
-                    engine.GEN4_GREAT_MARSH_POST_NATIONAL_DEX_MEMBER
-                ),
-                pre_national_dex_species=_bonus_species(
-                    engine.GEN4_GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
-                ),
-            )
+        honey_tree = LocationHoneyTree(
+            common=_bonus_species(engine.HONEY_TREE_COMMON_MEMBER),
+            uncommon=_bonus_species(engine.HONEY_TREE_UNCOMMON_MEMBER),
+            rare=_bonus_species(engine.HONEY_TREE_RARE_MEMBER),
+        )
+        trophy_garden_pool = LocationDailyEncounterPool(
+            kind="trophy_garden",
+            species=_bonus_species(engine.TROPHY_GARDEN_MEMBER),
+            pre_national_dex_species=None,
+        )
+        great_marsh_pool = LocationDailyEncounterPool(
+            kind="great_marsh",
+            species=_bonus_species(engine.GREAT_MARSH_POST_NATIONAL_DEX_MEMBER),
+            pre_national_dex_species=_bonus_species(
+                engine.GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
+            ),
+        )
     common_mart_items = engine.parse_common_mart_inventory(
         arm9_data, offset=common_mart_inventory_offset, item_count=len(item_names)
     )
@@ -950,7 +942,7 @@ def _build_event_map_location_record(
 
 
 def _extract_event_map_location_shops(
-    engine: Any,
+    engine: LocationConcern,
     script: bytes,
     *,
     script_file_id: int,
@@ -1063,7 +1055,7 @@ def _extract_event_map_location_shops(
 
 
 def _extract_event_map_location_pokemon_gifts(
-    engine: Any,
+    engine: LocationConcern,
     script: bytes,
     *,
     script_file_id: int,
@@ -1108,7 +1100,7 @@ def _extract_event_map_location_pokemon_gifts(
 
 
 def _extract_event_map_location_static_encounters(
-    engine: Any,
+    engine: LocationConcern,
     script: bytes,
     *,
     script_file_id: int,
@@ -1147,7 +1139,7 @@ def _extract_event_map_location_static_encounters(
 
 
 def _extract_event_map_location_npc_trades(
-    engine: Any,
+    engine: LocationConcern,
     script: bytes,
     *,
     script_file_id: int,
@@ -1190,7 +1182,7 @@ def _extract_event_map_location_npc_trades(
 
 
 def _extract_event_map_location_script_awarded_items(
-    engine: Any,
+    engine: LocationConcern,
     script: bytes,
     *,
     script_file_id: int,
@@ -1202,9 +1194,6 @@ def _extract_event_map_location_script_awarded_items(
     otherwise invisible to `extract_event_map_items` (e.g. a species-
     conditional gift from an "Item Fanatic"-style NPC).
     """
-    find_awards = getattr(engine, "find_script_awarded_items", None)
-    if find_awards is None:
-        return ()
     return tuple(
         LocationScriptAwardedItem(
             item_id=award.item_id,
@@ -1214,5 +1203,7 @@ def _extract_event_map_location_script_awarded_items(
             command_offset=award.command_offset,
             command=award.command,
         )
-        for award in find_awards(script, item_count=len(item_names))
+        for award in engine.find_script_awarded_items(
+            script, item_count=len(item_names)
+        )
     )

@@ -75,7 +75,7 @@ def enrich_personal_dataset(
     item_names = resolve_item_names(engine, dataset)
     pokemon_names = resolve_pokemon_names(engine, dataset)
     pokemon_descriptions = dataset.get("pokemon_descriptions")
-    expected_description_count = getattr(engine, "POKEMON_DESCRIPTION_COUNT", None)
+    expected_description_count = engine.POKEMON_DESCRIPTION_COUNT
     if pokemon_descriptions is not None and (
         not isinstance(pokemon_descriptions, list)
         or len(pokemon_descriptions) != expected_description_count
@@ -180,7 +180,7 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
     real Sunny/Rainy/Snowy stat blocks even though those transformations
     have no PokéDB reference page or public record of their own.
     """
-    transformation_members = getattr(engine, "TRANSFORMATION_MEMBERS", {})
+    transformation_members = engine.TRANSFORMATION_MEMBERS
     if not transformation_members:
         return
     by_base_slug: dict[str, list[dict[str, Any]]] = {}
@@ -228,7 +228,7 @@ def _enrich_record(
     reference_version: str | None,
 ) -> dict[str, Any]:
     member = source["species_id"]
-    transformation_members = getattr(engine, "TRANSFORMATION_MEMBERS", {})
+    transformation_members = engine.TRANSFORMATION_MEMBERS
     is_internal = member in engine.INTERNAL_MEMBERS
     if is_internal:
         slug = engine.INTERNAL_MEMBERS[member]

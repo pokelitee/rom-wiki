@@ -4,7 +4,8 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.concerns import LocationConcern
+from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.locations.helpers import (
     EventMapItemScan,
@@ -37,20 +38,15 @@ from romwiki.util.errors import InvalidRomError, ProfileError
 
 @dataclass(frozen=True, slots=True)
 class _PokemonGiftParsers:
-    pokemon: Any | None
-    egg: Any | None
-    togepi_egg: Any | None
+    pokemon: Any
+    egg: Any
+    togepi_egg: Any
     togepi_species_id: int | None
 
 
 def _resolve_pokemon_gift_parsers(
-    engine: Any, pokemon_names: tuple[str, ...]
-) -> _PokemonGiftParsers | None:
-    pokemon = getattr(engine, "parse_pokemon_gift_commands", None)
-    egg = getattr(engine, "parse_egg_gift_commands", None)
-    togepi_egg = getattr(engine, "parse_togepi_egg_gift_commands", None)
-    if pokemon is None and egg is None and togepi_egg is None:
-        return None
+    engine: LocationConcern, pokemon_names: tuple[str, ...]
+) -> _PokemonGiftParsers:
     # `GiveTogepiEgg` carries no species operand -- species identity comes
     # only from the opcode's own name, resolved against this profile's own
     # decoded Pokémon name table rather than a hardcoded ID, so a hack that
@@ -65,9 +61,9 @@ def _resolve_pokemon_gift_parsers(
         None,
     )
     return _PokemonGiftParsers(
-        pokemon=pokemon,
-        egg=egg,
-        togepi_egg=togepi_egg,
+        pokemon=engine.parse_pokemon_gift_commands,
+        egg=engine.parse_egg_gift_commands,
+        togepi_egg=engine.parse_togepi_egg_gift_commands,
         togepi_species_id=togepi_species_id,
     )
 
@@ -80,37 +76,33 @@ def _collect_pokemon_gifts(
     script_file_id: int,
 ) -> tuple[LocationPokemonGift, ...]:
     gifts: list[LocationPokemonGift] = []
-    if parsers.pokemon is not None:
-        gifts.extend(
-            LocationPokemonGift(
-                kind="pokemon",
-                species_id=command.species_id,
-                name=pokemon_names[command.species_id],
-                level=command.level,
-                held_item_id=None,
-                held_item_name=None,
-                script_file_id=script_file_id,
-                command_offset=command.offset,
-            )
-            for command in parsers.pokemon(
-                script_data, species_count=len(pokemon_names)
-            )
+    gifts.extend(
+        LocationPokemonGift(
+            kind="pokemon",
+            species_id=command.species_id,
+            name=pokemon_names[command.species_id],
+            level=command.level,
+            held_item_id=None,
+            held_item_name=None,
+            script_file_id=script_file_id,
+            command_offset=command.offset,
         )
-    if parsers.egg is not None:
-        gifts.extend(
-            LocationPokemonGift(
-                kind="egg",
-                species_id=command.species_id,
-                name=pokemon_names[command.species_id],
-                level=1,
-                held_item_id=None,
-                held_item_name=None,
-                script_file_id=script_file_id,
-                command_offset=command.offset,
-            )
-            for command in parsers.egg(script_data, species_count=len(pokemon_names))
+        for command in parsers.pokemon(script_data, species_count=len(pokemon_names))
+    )
+    gifts.extend(
+        LocationPokemonGift(
+            kind="egg",
+            species_id=command.species_id,
+            name=pokemon_names[command.species_id],
+            level=1,
+            held_item_id=None,
+            held_item_name=None,
+            script_file_id=script_file_id,
+            command_offset=command.offset,
         )
-    if parsers.togepi_egg is not None and parsers.togepi_species_id is not None:
+        for command in parsers.egg(script_data, species_count=len(pokemon_names))
+    )
+    if parsers.togepi_species_id is not None:
         togepi_species_id = parsers.togepi_species_id
         gifts.extend(
             LocationPokemonGift(
@@ -132,19 +124,16 @@ def _script_keyed_records(
     headers: Iterable[Any],
     scripts: Any,
     *,
-    enabled: bool,
     build: Callable[[int, bytes], tuple[Any, ...]],
 ) -> dict[int, tuple[Any, ...]]:
     """Build a per-script-file record cache shared by every script-derived section.
 
     Each such section (script-awarded items, static encounters, Pokémon
-    gifts, mart references) resolves the same way: skip if the engine
-    doesn't support it, dedupe by script file, bounds-check that file, then
-    let the caller's `build` decode its own records from the script bytes.
+    gifts, mart references) resolves the same way: dedupe by script file,
+    bounds-check that file, then let the caller's `build` decode its own
+    records from the script bytes.
     """
     records_by_script: dict[int, tuple[Any, ...]] = {}
-    if not enabled:
-        return records_by_script
     for header in headers:
         script_file_id = header.script_file_id
         if script_file_id in records_by_script:
@@ -271,7 +260,11 @@ def extract_arm9_encounter_map_location_dataset(
     scripts = platform.archive_cls.from_bytes(
         filesystem.read(scripts_path), **scripts_archive_options(profile)
     )
-    arm9_data = read_code_binary(platform, result.image, engine)
+    arm9_data = read_code_binary(
+        platform,
+        result.image,
+        compressed=COMPRESSED_CODE_BINARY in get_engine(profile.engine).capabilities,
+    )
     headers, location_names = resolve_map_headers(
         engine,
         arm9_data,
@@ -312,17 +305,11 @@ def extract_arm9_encounter_map_location_dataset(
     empty_item_scan = EventMapItemScan(
         items=(), unresolved_visible_count=0, unresolved_hidden_count=0
     )
-    parse_item_ball_table = getattr(engine, "parse_item_ball_table", None)
-    visible_item_ids = (
-        parse_item_ball_table(scripts.read(engine.ITEM_BALL_TABLE_SCRIPT_MEMBER))
-        if parse_item_ball_table is not None
-        else None
+    visible_item_ids = engine.parse_item_ball_table(
+        scripts.read(engine.ITEM_BALL_TABLE_SCRIPT_MEMBER)
     )
-    parse_hidden_item_table = getattr(engine, "parse_hidden_item_table", None)
-    hidden_item_ids = (
-        parse_hidden_item_table(arm9_data, item_count=len(item_names))
-        if parse_hidden_item_table is not None
-        else None
+    hidden_item_ids = engine.parse_hidden_item_table(
+        arm9_data, item_count=len(item_names)
     )
     for header in headers:
         if header.event_file_id == null_event_id:
@@ -352,12 +339,10 @@ def extract_arm9_encounter_map_location_dataset(
         raw_warps_by_header[header.header_id] = parsed_events[
             header.event_file_id
         ].warps
-    find_script_awarded_items = getattr(engine, "find_script_awarded_items", None)
 
     def _build_script_awarded_items(
         script_file_id: int, data: bytes
     ) -> tuple[LocationScriptAwardedItem, ...]:
-        assert find_script_awarded_items is not None
         return tuple(
             LocationScriptAwardedItem(
                 item_id=award.item_id,
@@ -367,23 +352,20 @@ def extract_arm9_encounter_map_location_dataset(
                 command_offset=award.command_offset,
                 command=award.command,
             )
-            for award in find_script_awarded_items(data, item_count=len(item_names))
+            for award in engine.find_script_awarded_items(
+                data, item_count=len(item_names)
+            )
         )
 
     script_awarded_items_by_script = _script_keyed_records(
         headers,
         scripts,
-        enabled=find_script_awarded_items is not None,
         build=_build_script_awarded_items,
-    )
-    parse_static_encounter_commands = getattr(
-        engine, "parse_static_encounter_commands", None
     )
 
     def _build_static_encounters(
         script_file_id: int, data: bytes
     ) -> tuple[LocationStaticEncounter, ...]:
-        assert parse_static_encounter_commands is not None
         return tuple(
             LocationStaticEncounter(
                 species_id=command.species_id,
@@ -394,7 +376,7 @@ def extract_arm9_encounter_map_location_dataset(
                 script_file_id=script_file_id,
                 command_offset=command.offset,
             )
-            for command in parse_static_encounter_commands(
+            for command in engine.parse_static_encounter_commands(
                 data, species_count=len(pokemon_names)
             )
         )
@@ -402,7 +384,6 @@ def extract_arm9_encounter_map_location_dataset(
     static_encounters_by_script = _script_keyed_records(
         headers,
         scripts,
-        enabled=parse_static_encounter_commands is not None,
         build=_build_static_encounters,
     )
     gift_parsers = _resolve_pokemon_gift_parsers(engine, pokemon_names)
@@ -410,7 +391,6 @@ def extract_arm9_encounter_map_location_dataset(
     def _build_pokemon_gifts(
         script_file_id: int, data: bytes
     ) -> tuple[LocationPokemonGift, ...]:
-        assert gift_parsers is not None
         return _collect_pokemon_gifts(
             gift_parsers,
             data,
@@ -421,15 +401,12 @@ def extract_arm9_encounter_map_location_dataset(
     pokemon_gifts_by_script = _script_keyed_records(
         headers,
         scripts,
-        enabled=gift_parsers is not None,
         build=_build_pokemon_gifts,
     )
-    parse_mart_dispatch_commands = getattr(engine, "parse_mart_dispatch_commands", None)
 
     def _build_mart_references(
         script_file_id: int, data: bytes
     ) -> tuple[LocationMartReference, ...]:
-        assert parse_mart_dispatch_commands is not None
         return tuple(
             LocationMartReference(
                 kind=command.kind,
@@ -437,13 +414,12 @@ def extract_arm9_encounter_map_location_dataset(
                 script_file_id=script_file_id,
                 command_offset=command.offset,
             )
-            for command in parse_mart_dispatch_commands(data)
+            for command in engine.parse_mart_dispatch_commands(data)
         )
 
     mart_references_by_script = _script_keyed_records(
         headers,
         scripts,
-        enabled=parse_mart_dispatch_commands is not None,
         build=_build_mart_references,
     )
     connections = extract_event_map_connections(

@@ -10,13 +10,17 @@ import json
 import tempfile
 import types
 import unittest
-from dataclasses import replace
+from dataclasses import fields, replace
 from pathlib import Path
 
+import romwiki.engines.concerns as concerns
+import romwiki.engines.registry as registry
 from romwiki.engines.gen4.platinum import parse_encounter_record
 from romwiki.engines.profile_contracts import EngineProfileContract
 from romwiki.engines.registry import (
+    DIFFICULTY_BRANCHES,
     GEN5_B2W2_ENGINE,
+    GEN5_BW_ENGINE,
     EngineAdapter,
     EngineFormats,
     get_engine,
@@ -77,6 +81,12 @@ def _fake_engine_tables(**overrides: object) -> types.SimpleNamespace:
         "DUAL_SLOT_SLOT_INDICES": (9, 10),
         "UNOWN_FORM_NAMES": ("Q", "R"),
         "UNOWN_FORM_TABLES": ((0,), (1,)),
+        "INTERNAL_TO_NATIONAL_DEX": {},
+        "TRANSFORMATION_MEMBERS": {},
+        "POKEMON_DESCRIPTION_COUNT": None,
+        "ALLOW_DUPLICATE_EGG_MOVES": False,
+        "ENCOUNTER_FORM_SLUGS": {},
+        "ENCOUNTER_COSMETIC_FORM_LABELS": {},
     }
     values.update(overrides)
     return types.SimpleNamespace(**values)
@@ -214,6 +224,69 @@ class EngineContractTests(unittest.TestCase):
 
         with self.assertRaisesRegex(DataSourceError, "parse_personal_record"):
             register_engine(_FAKE_ENGINE_ID, adapter)
+
+    def test_registration_rejects_an_unknown_capability(self) -> None:
+        source = get_engine(GEN5_B2W2_ENGINE)
+        adapter = replace(
+            source, capabilities=source.capabilities | {"difficulty-brnaches"}
+        )
+
+        with self.assertRaisesRegex(DataSourceError, "unknown capabilities.*brnaches"):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
+    def test_registration_rejects_a_capability_without_its_members(self) -> None:
+        source = get_engine(GEN5_BW_ENGINE)
+        adapter = replace(
+            source, capabilities=source.capabilities | {DIFFICULTY_BRANCHES}
+        )
+
+        with self.assertRaisesRegex(
+            DataSourceError, "trainers concern is missing: parse_difficulty_branch"
+        ):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
+    def test_registration_rejects_a_format_without_its_explicit_members(self) -> None:
+        source = get_engine(GEN5_BW_ENGINE)
+        locations = types.SimpleNamespace(
+            **{
+                name: getattr(source.locations, name)
+                for name in dir(source.locations)
+                if name != "WARP_DESTINATION_INDEXED"
+            }
+        )
+        adapter = replace(source, locations=locations)
+
+        with self.assertRaisesRegex(
+            DataSourceError, "locations concern is missing: WARP_DESTINATION_INDEXED"
+        ):
+            register_engine(_FAKE_ENGINE_ID, adapter)
+
+    def test_every_validated_member_is_declared_by_its_concern_protocol(
+        self,
+    ) -> None:
+        tables = (
+            *registry._DATASET_REQUIRED_MEMBERS.values(),
+            *registry._FORMAT_REQUIRED_MEMBERS.values(),
+            *registry._LAYOUT_REQUIRED_MEMBERS.values(),
+            *registry._CAPABILITY_MEMBERS.values(),
+        )
+        protocols = {
+            field.name: field.type
+            for field in fields(EngineAdapter)
+            if field.name in registry._CONCERN_FIELDS
+        }
+        undeclared = sorted(
+            f"{concern}.{member}"
+            for table in tables
+            for concern, members in table.items()
+            for member in members
+            if member not in _protocol_members(getattr(concerns, protocols[concern]))
+        )
+
+        self.assertEqual(undeclared, [])
+        self.assertEqual(
+            set(registry._CAPABILITY_MEMBERS), set(registry._CAPABILITY_DATASET_KINDS)
+        )
 
     def test_registration_rejects_an_unknown_semantic_format(self) -> None:
         source = get_engine(GEN5_B2W2_ENGINE)
@@ -563,6 +636,12 @@ class EngineContractTests(unittest.TestCase):
                 },
                 _fake_pokedb(),
             )
+
+
+def _protocol_members(protocol: type) -> set[str]:
+    return {
+        name for cls in protocol.__mro__ for name in getattr(cls, "__annotations__", {})
+    }
 
 
 if __name__ == "__main__":

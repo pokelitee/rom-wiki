@@ -179,3 +179,6 @@ EVOLUTION_PARAMETER_KINDS = {
     21: "move",
     22: "pokemon",
 }
+
+# Generation V personal archives are indexed by National Dex ID.
+INTERNAL_TO_NATIONAL_DEX: dict[int, int] = {}

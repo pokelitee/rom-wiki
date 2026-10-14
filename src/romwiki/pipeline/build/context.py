@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import DETACHED_NPC_TRADES, get_engine
 from romwiki.pipeline.build.fingerprint import (
     combined_extraction_source_fingerprint,
     profile_fingerprint,
@@ -191,7 +191,7 @@ class GameBuildContext:
         # a detached archive that must be attached to items separately.
         engine = get_engine(self.profile.engine)
         if (
-            "detached-npc-trades" not in engine.capabilities
+            DETACHED_NPC_TRADES not in engine.capabilities
             or "npc_trades" not in self.profile.layout
         ):
             return None

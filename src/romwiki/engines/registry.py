@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Any, Literal, Protocol, get_args
+from typing import Any, Literal, get_args
 
 import romwiki.engines.gen3.emerald as gen3_emerald
 import romwiki.engines.gen3.frlg as gen3_frlg
@@ -10,6 +11,26 @@ import romwiki.engines.gen4.hgss as gen4_hgss
 import romwiki.engines.gen4.platinum as gen4_platinum
 import romwiki.engines.gen5.b2w2 as gen5_b2w2
 import romwiki.engines.gen5.bw as gen5_bw
+from romwiki.engines.concerns import (
+    EggMoveConcern,
+    EncounterConcern,
+    EnrichmentTables,
+    EvolutionConcern,
+    ItemConcern,
+    LearnsetConcern,
+    LocationConcern,
+    MachineConcern,
+    MartConcern,
+    MoveConcern,
+    PersonalConcern,
+    PickupConcern,
+    ReferenceNameConcern,
+    StaticEncounterConcern,
+    TradeConcern,
+    TrainerConcern,
+    TrainerPartyConcern,
+    TutorConcern,
+)
 from romwiki.engines.profile_contracts import (
     GEN3_EMERALD_PROFILE_CONTRACT,
     GEN3_FRLG_PROFILE_CONTRACT,
@@ -51,6 +72,18 @@ EggMoveFormat = Literal[
 ItemArchiveFormat = Literal["archive-index", "arm9-map"]
 MachineFormat = Literal["none", "profile-offset", "binary-prefix"]
 
+# Optional engine features that shared pipeline code checks for by name. An
+# adapter declares the ones it supports in `capabilities`; registration
+# rejects unknown names and verifies each declared feature's members.
+DETACHED_NPC_TRADES = "detached-npc-trades"
+COMPRESSED_CODE_BINARY = "compressed-code-binary"
+TRAINER_LOCATIONS = "trainer-locations"
+TRAINER_SCRIPT_REFERENCES = "trainer-script-references"
+TAG_BATTLES = "tag-battles"
+REMATCH_TABLE = "rematch-table"
+DIFFICULTY_BRANCHES = "difficulty-branches"
+LOCATION_SPECIAL_VENDORS = "location-special-vendors"
+
 DATASET_KINDS = (
     "pokemon",
     "abilities",
@@ -67,12 +100,6 @@ _DATASET_DEPENDENCIES = {
     "trainers": frozenset({"pokemon", "moves"}),
     "locations": frozenset({"items"}),
 }
-
-
-class EngineConcern(Protocol):
-    """Typed boundary for parser/constant namespaces owned by an engine."""
-
-    def __getattr__(self, name: str) -> Any: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,30 +121,31 @@ class EngineFormats:
 class EngineAdapter:
     """Namespace of everything the pipeline needs from one engine implementation.
 
-    Each field is the module (or object) providing that concern's parsers,
-    constants, and record types. A pipeline module looks up the adapter for
-    the current profile's engine and accesses names through it instead of
-    importing a specific engine package directly.
+    Each concern field is the namespace providing that concern's parsers,
+    constants, and record types, typed by the members the pipeline reads. A
+    pipeline module looks up the adapter for the current profile's engine and
+    accesses names through it instead of importing a specific engine package
+    directly.
     """
 
-    personal: EngineConcern
-    locations: EngineConcern
-    trainers: EngineConcern
-    encounters: EngineConcern
-    evolutions: EngineConcern
-    items: EngineConcern
-    machines: EngineConcern
-    moves: EngineConcern
-    tutors: EngineConcern
-    egg_moves: EngineConcern
-    learnsets: EngineConcern
-    reference_names: EngineConcern
-    enrich: EngineConcern
-    trainer_party: EngineConcern
-    trades: EngineConcern
-    marts: EngineConcern
-    static_encounters: EngineConcern
-    pickup: EngineConcern
+    personal: PersonalConcern
+    locations: LocationConcern
+    trainers: TrainerConcern
+    encounters: EncounterConcern
+    evolutions: EvolutionConcern
+    items: ItemConcern
+    machines: MachineConcern
+    moves: MoveConcern
+    tutors: TutorConcern
+    egg_moves: EggMoveConcern
+    learnsets: LearnsetConcern
+    reference_names: ReferenceNameConcern
+    enrich: EnrichmentTables
+    trainer_party: TrainerPartyConcern
+    trades: TradeConcern
+    marts: MartConcern
+    static_encounters: StaticEncounterConcern
+    pickup: PickupConcern
     formats: EngineFormats
     generation: int | None = None
     presentation_features: frozenset[str] = frozenset()
@@ -161,8 +189,12 @@ def single_namespace_adapter(
     profile_contract: EngineProfileContract,
 ) -> EngineAdapter:
     """Build an adapter whose every concern is one engine package's namespace."""
+    # A package provides only the members its declared formats, datasets, and
+    # capabilities need, so it cannot statically satisfy every concern
+    # protocol; `_validate_engine_adapter` checks those members instead.
+    concerns: Any = namespace
     return EngineAdapter(
-        **dict.fromkeys(_CONCERN_FIELDS, namespace),
+        **dict.fromkeys(_CONCERN_FIELDS, concerns),
         formats=formats,
         generation=generation,
         presentation_features=presentation_features,
@@ -262,6 +294,9 @@ _ENGINES: dict[str, EngineAdapter] = {
         ),
         generation=4,
         presentation_features=frozenset({"contests"}),
+        capabilities=frozenset(
+            {TRAINER_LOCATIONS, TRAINER_SCRIPT_REFERENCES, TAG_BATTLES, REMATCH_TABLE}
+        ),
         profile_contract=GEN4_PLATINUM_PROFILE_CONTRACT,
     ),
     GEN4_HGSS_ENGINE: single_namespace_adapter(
@@ -292,7 +327,14 @@ _ENGINES: dict[str, EngineAdapter] = {
             }
         ),
         required_dataset_kinds=frozenset({"pokemon"}),
-        capabilities=frozenset({"detached-npc-trades"}),
+        capabilities=frozenset(
+            {
+                DETACHED_NPC_TRADES,
+                COMPRESSED_CODE_BINARY,
+                TRAINER_LOCATIONS,
+                TRAINER_SCRIPT_REFERENCES,
+            }
+        ),
         profile_contract=GEN4_HGSS_PROFILE_CONTRACT,
     ),
     GEN5_BW_ENGINE: single_namespace_adapter(
@@ -317,7 +359,7 @@ _ENGINES: dict[str, EngineAdapter] = {
                 "victory-items",
             }
         ),
-        capabilities=frozenset({"detached-npc-trades"}),
+        capabilities=frozenset({DETACHED_NPC_TRADES}),
         profile_contract=GEN5_BW_PROFILE_CONTRACT,
     ),
     GEN5_B2W2_ENGINE: single_namespace_adapter(
@@ -342,7 +384,9 @@ _ENGINES: dict[str, EngineAdapter] = {
                 "victory-items",
             }
         ),
-        capabilities=frozenset({"detached-npc-trades"}),
+        capabilities=frozenset(
+            {DETACHED_NPC_TRADES, DIFFICULTY_BRANCHES, LOCATION_SPECIAL_VENDORS}
+        ),
         profile_contract=GEN5_B2W2_PROFILE_CONTRACT,
     ),
 }
@@ -368,56 +412,180 @@ _LOCATION_EXTRACTION_SHAPES = {
     "archive-encounter-map": "encounter-map",
     "flat-header-segments": "encounter-map",
 }
-_DATASET_REQUIRED_MEMBERS: dict[str, tuple[str, tuple[str, ...]]] = {
-    "pokemon": ("personal", ("parse_personal_record", "PERSONAL_RECORD_COUNT")),
-    "moves": ("moves", ("parse_move_record",)),
-    "items": ("items", ("parse_item_record",)),
-    "trainers": ("trainer_party", ("normalize_trainer_party_member",)),
+_STARTER_SELECTION_MEMBERS = (
+    "parse_starter_branch_families",
+    "parse_starter_species",
+    "STARTER_SPECIES_ENTRY_SIZE",
+    "BASE_SPECIES_COUNT",
+)
+_EVENT_MAP_ITEM_MEMBERS = (
+    "find_script_awarded_items",
+    "is_hidden_item_candidate",
+    "is_visible_item_candidate",
+)
+# Members each supported dataset reads, keyed by concern.
+_DATASET_REQUIRED_MEMBERS: dict[str, dict[str, tuple[str, ...]]] = {
+    "pokemon": {
+        "personal": ("parse_personal_record", "PERSONAL_RECORD_COUNT"),
+        "enrich": (
+            "ALLOW_DUPLICATE_EGG_MOVES",
+            "INTERNAL_TO_NATIONAL_DEX",
+            "POKEMON_DESCRIPTION_COUNT",
+            "TRANSFORMATION_MEMBERS",
+        ),
+    },
+    "moves": {"moves": ("parse_move_record",)},
+    "items": {"items": ("parse_item_record",)},
+    "encounters": {
+        "enrich": ("ENCOUNTER_COSMETIC_FORM_LABELS", "ENCOUNTER_FORM_SLUGS"),
+    },
+    "trainers": {"trainer_party": ("normalize_trainer_party_member",)},
 }
-_FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], tuple[str, ...]] = {
-    ("encounters", "conditional"): ("parse_encounter_record",),
-    ("encounters", "seasonal"): ("parse_encounter_entry",),
-    ("encounters", "method-table"): ("parse_encounter_record",),
-    ("locations", "event-map"): ("parse_map_headers",),
-    ("locations", "encounter-map"): ("parse_map_header_table",),
-    ("pickup", "split-table"): ("parse_pickup_tables",),
-    ("pickup", "sliding-table"): ("parse_pickup_table",),
-    ("trainers", "class-gender"): (
-        "parse_trainer_record",
-        "resolve_trainer_variants",
-    ),
-    ("trainers", "battle-mode"): (
-        "parse_trainer_record",
-        "resolve_trainer_variants",
-    ),
-    ("trainers", "pointer-party"): (
-        "parse_trainer_record",
-        "resolve_trainer_variants",
-    ),
-    ("tutors", "overlay-table"): ("parse_tutor_move_table",),
-    ("tutors", "personal-archive"): ("parse_tutor_move_table",),
-    ("tutors", "flat-offset-table"): ("parse_tutor_move_table",),
-    ("egg_moves", "overlay-table"): ("parse_egg_move_table",),
-    ("egg_moves", "archive-table"): ("parse_egg_move_table",),
-    ("egg_moves", "species-archive"): ("parse_egg_move_set",),
-    ("egg_moves", "flat-offset-table"): ("parse_egg_move_table",),
-    ("item_archive", "arm9-map"): ("find_item_archive_members",),
-    ("machines", "profile-offset"): ("parse_machine_move_table",),
-    ("machines", "binary-prefix"): (
-        "MACHINE_TABLE_LOCATOR",
-        "parse_machine_move_table",
-    ),
+# Members each declared format reads, keyed by (format field, format) and then
+# by concern.
+_FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
+    ("encounters", "conditional"): {"encounters": ("parse_encounter_record",)},
+    ("encounters", "seasonal"): {"encounters": ("parse_encounter_entry",)},
+    ("encounters", "method-table"): {"encounters": ("parse_encounter_record",)},
+    ("locations", "event-map"): {"locations": ("parse_map_headers",)},
+    ("locations", "encounter-map"): {"locations": ("parse_map_header_table",)},
+    ("location_extraction", "arm9-event-map"): {
+        "locations": (
+            *_EVENT_MAP_ITEM_MEMBERS,
+            "GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID",
+            "GREAT_MARSH_HEADER_IDS",
+            "GREAT_MARSH_POST_NATIONAL_DEX_MEMBER",
+            "GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER",
+            "HONEY_TREE_COMMON_MEMBER",
+            "HONEY_TREE_HEADER_IDS",
+            "HONEY_TREE_RARE_MEMBER",
+            "HONEY_TREE_UNCOMMON_MEMBER",
+            "TROPHY_GARDEN_HEADER_ID",
+            "TROPHY_GARDEN_MEMBER",
+        )
+    },
+    ("location_extraction", "arm9-encounter-map"): {
+        "locations": (
+            *_EVENT_MAP_ITEM_MEMBERS,
+            "ITEM_BALL_TABLE_SCRIPT_MEMBER",
+            "parse_egg_gift_commands",
+            "parse_hidden_item_table",
+            "parse_item_ball_table",
+            "parse_mart_dispatch_commands",
+            "parse_pokemon_gift_commands",
+            "parse_static_encounter_commands",
+            "parse_togepi_egg_gift_commands",
+        )
+    },
+    ("location_extraction", "archive-encounter-map"): {
+        "locations": (
+            "NPC_TRADE_TEXT_MEMBER_BY_ID",
+            "WARP_DESTINATION_INDEXED",
+            "is_visible_item_candidate",
+        )
+    },
+    ("pickup", "split-table"): {"pickup": ("parse_pickup_tables",)},
+    ("pickup", "sliding-table"): {"pickup": ("parse_pickup_table",)},
+    ("trainers", "class-gender"): {
+        "trainers": (
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+            "FIRST_TRAINER_ID",
+            *_STARTER_SELECTION_MEMBERS,
+        )
+    },
+    ("trainers", "battle-mode"): {
+        "trainers": (
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+            *_STARTER_SELECTION_MEMBERS,
+        )
+    },
+    ("trainers", "pointer-party"): {
+        "trainers": ("parse_trainer_record", "resolve_trainer_variants")
+    },
+    ("tutors", "overlay-table"): {"tutors": ("parse_tutor_move_table",)},
+    ("tutors", "personal-archive"): {"tutors": ("parse_tutor_move_table",)},
+    ("tutors", "flat-offset-table"): {"tutors": ("parse_tutor_move_table",)},
+    ("fossils", "script-pattern"): {"items": ("find_fossil_revival_script",)},
+    ("static_encounters", "script-commands"): {
+        "static_encounters": ("discover_static_encounters",)
+    },
+    ("egg_moves", "overlay-table"): {"egg_moves": ("parse_egg_move_table",)},
+    ("egg_moves", "archive-table"): {"egg_moves": ("parse_egg_move_table",)},
+    ("egg_moves", "species-archive"): {"egg_moves": ("parse_egg_move_set",)},
+    ("egg_moves", "flat-offset-table"): {"egg_moves": ("parse_egg_move_table",)},
+    ("item_archive", "arm9-map"): {"items": ("find_item_archive_members",)},
+    ("machines", "profile-offset"): {
+        "machines": ("MACHINE_COUNT", "TM_COUNT", "parse_machine_move_table")
+    },
+    ("machines", "binary-prefix"): {
+        "machines": ("MACHINE_TABLE_LOCATOR", "parse_machine_move_table")
+    },
 }
 # Formats whose members are only read when their dataset is supported.
 _FORMAT_DATASET_KINDS: dict[str, str | None] = {
     "encounters": "encounters",
     "locations": "locations",
+    "location_extraction": "locations",
     "pickup": None,
     "trainers": "trainers",
     "tutors": None,
+    "fossils": "items",
+    "static_encounters": "pokemon",
     "egg_moves": None,
     "item_archive": "items",
     "machines": None,
+}
+# Members read when a profile contract accepts an optional layout section.
+_LAYOUT_REQUIRED_MEMBERS: dict[str, dict[str, tuple[str, ...]]] = {
+    "npc_trades": {
+        "trades": (
+            "NPC_TRADE_INTERACTION_BY_ID",
+            "parse_english_message_archive",
+            "parse_npc_trade_record",
+        )
+    },
+}
+# Each capability's members are only read when its dataset is supported.
+_CAPABILITY_DATASET_KINDS: dict[str, str | None] = {
+    DETACHED_NPC_TRADES: None,
+    COMPRESSED_CODE_BINARY: None,
+    TRAINER_LOCATIONS: "trainers",
+    TRAINER_SCRIPT_REFERENCES: "trainers",
+    TAG_BATTLES: "trainers",
+    REMATCH_TABLE: "trainers",
+    DIFFICULTY_BRANCHES: "trainers",
+    LOCATION_SPECIAL_VENDORS: "locations",
+}
+_CAPABILITY_MEMBERS: dict[str, dict[str, tuple[str, ...]]] = {
+    DETACHED_NPC_TRADES: {},
+    COMPRESSED_CODE_BINARY: {},
+    TRAINER_LOCATIONS: {
+        "trainers": (
+            "ARCHIVE_MEMBER_NONE",
+            "TRAINER_OBJECT_ID_OFFSET",
+            "TRAINER_OBJECT_SCRIPT_END",
+            "TRAINER_OBJECT_SCRIPT_START",
+            "parse_object_events",
+        )
+    },
+    TRAINER_SCRIPT_REFERENCES: {
+        "trainers": (
+            "CHECK_WON_BATTLE",
+            "START_TRAINER_BATTLE",
+            "parse_trainer_battle_commands",
+        )
+    },
+    TAG_BATTLES: {
+        "trainers": (
+            "parse_staged_partner_battle_families",
+            "parse_tag_battle_commands",
+        )
+    },
+    REMATCH_TABLE: {"trainers": ("REMATCH_RECORD_SIZE", "parse_rematch_table")},
+    DIFFICULTY_BRANCHES: {"trainers": ("parse_difficulty_branch_families",)},
+    LOCATION_SPECIAL_VENDORS: {"locations": ("resolve_location_special_vendors",)},
 }
 
 
@@ -467,6 +635,35 @@ def _validate_engine_formats(engine: str, adapter: EngineAdapter) -> None:
         )
 
 
+def _required_members(adapter: EngineAdapter) -> dict[str, list[str]]:
+    """Collect the members each concern must provide for this adapter."""
+    required: dict[str, list[str]] = defaultdict(list)
+
+    def require(members_by_concern: dict[str, tuple[str, ...]]) -> None:
+        for concern, members in members_by_concern.items():
+            required[concern].extend(members)
+
+    for dataset, members_by_concern in _DATASET_REQUIRED_MEMBERS.items():
+        if dataset in adapter.dataset_kinds:
+            require(members_by_concern)
+    for (field, format_name), members_by_concern in _FORMAT_REQUIRED_MEMBERS.items():
+        dataset_kind = _FORMAT_DATASET_KINDS[field]
+        if (dataset_kind is None or dataset_kind in adapter.dataset_kinds) and getattr(
+            adapter.formats, field
+        ) == format_name:
+            require(members_by_concern)
+    contract = adapter.profile_contract
+    accepted_layout = contract.required_layout | contract.optional_layout
+    for layout_key, members_by_concern in _LAYOUT_REQUIRED_MEMBERS.items():
+        if layout_key in accepted_layout:
+            require(members_by_concern)
+    for capability in adapter.capabilities:
+        dataset_kind = _CAPABILITY_DATASET_KINDS[capability]
+        if dataset_kind is None or dataset_kind in adapter.dataset_kinds:
+            require(_CAPABILITY_MEMBERS[capability])
+    return required
+
+
 def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
     _validate_engine_formats(engine, adapter)
     if adapter.generation is not None and (
@@ -500,27 +697,18 @@ def _validate_engine_adapter(engine: str, adapter: EngineAdapter) -> None:
                 f"datasets: {', '.join(sorted(missing_dependencies))}"
             )
 
-    required: dict[str, tuple[str, ...]] = {
-        concern: members
-        for dataset, (concern, members) in _DATASET_REQUIRED_MEMBERS.items()
-        if dataset in adapter.dataset_kinds
-    }
-    for (concern, format_name), members in _FORMAT_REQUIRED_MEMBERS.items():
-        dataset_kind = _FORMAT_DATASET_KINDS[concern]
-        if (dataset_kind is None or dataset_kind in adapter.dataset_kinds) and getattr(
-            adapter.formats, concern
-        ) == format_name:
-            required[concern] = members
-    if "items" in adapter.dataset_kinds and adapter.formats.fossils == "script-pattern":
-        required["items"] = (*required["items"], "find_fossil_revival_script")
-    if (
-        "pokemon" in adapter.dataset_kinds
-        and adapter.formats.static_encounters == "script-commands"
-    ):
-        required["static_encounters"] = ("discover_static_encounters",)
-    for concern, members in required.items():
-        namespace = getattr(adapter, "items" if concern == "item_archive" else concern)
-        missing = [member for member in members if not hasattr(namespace, member)]
+    unknown_capabilities = adapter.capabilities - set(_CAPABILITY_MEMBERS)
+    if unknown_capabilities:
+        raise DataSourceError(
+            f"Engine {engine!r} declares unknown capabilities: "
+            f"{', '.join(sorted(unknown_capabilities))}"
+        )
+
+    for concern, members in _required_members(adapter).items():
+        namespace = getattr(adapter, concern)
+        missing = sorted(
+            {member for member in members if not hasattr(namespace, member)}
+        )
         if missing:
             names = ", ".join(missing)
             raise DataSourceError(

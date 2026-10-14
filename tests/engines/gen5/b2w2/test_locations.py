@@ -40,9 +40,7 @@ class Gen5B2W2LocationsTests(unittest.TestCase):
         self.assertTrue(callable(locations.parse_english_message_archive))
         self.assertEqual(adapter.trades.NPC_TRADE_INTERACTION_BY_ID[0], "xtransceiver")
         self.assertTrue(callable(adapter.trades.parse_npc_trade_record))
-        self.assertFalse(
-            hasattr(get_engine("gen5_bw").trades, "NPC_TRADE_INTERACTION_BY_ID")
-        )
+        self.assertEqual(get_engine("gen5_bw").trades.NPC_TRADE_INTERACTION_BY_ID, {})
 
     def test_extracts_the_encounter_index_from_the_low_twelve_bits(self) -> None:
         data = _map_header(name_index=0, wild_set=0x4052) + _map_header(

@@ -9,6 +9,7 @@ from romwiki.engines.gen5.shared.constants import (
     GEN5_MACHINE_COUNT,
     GEN5_MACHINE_TABLE_PREFIX,
     GROWTH_RATE_NAMES,
+    INTERNAL_TO_NATIONAL_DEX,
     MAX_MOVE_ID,
     MOVE_NAME_COUNT,
     MOVE_RECORD_COUNT,
@@ -131,8 +132,19 @@ MACHINE_TABLE_LOCATOR = GEN5_MACHINE_TABLE_PREFIX
 # `ITEM_FIELD_USE_NAMES` precedent.
 ITEM_POCKET_NAMES = GEN5_ITEM_POCKET_NAMES
 ITEM_FIELD_USE_NAMES = GEN5_ITEM_FIELD_USE_NAMES
+ALLOW_DUPLICATE_EGG_MOVES = False
+# Unlike Black 2/White 2, no Black/White trade runs through shared trade code
+# with separately mapped text, and warp destination IDs are warp indices.
+NPC_TRADE_INTERACTION_BY_ID: dict[int, str] = {}
+NPC_TRADE_TEXT_MEMBER_BY_ID: dict[int, int] = {}
+WARP_DESTINATION_INDEXED = True
 
 __all__ = [
+    "NPC_TRADE_INTERACTION_BY_ID",
+    "NPC_TRADE_TEXT_MEMBER_BY_ID",
+    "WARP_DESTINATION_INDEXED",
+    "ALLOW_DUPLICATE_EGG_MOVES",
+    "INTERNAL_TO_NATIONAL_DEX",
     "ABILITY_NAME_COUNT",
     "BASE_SPECIES_COUNT",
     "COLOR_NAMES",

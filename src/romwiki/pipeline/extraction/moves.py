@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from romwiki.engines.concerns import MoveConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.reference_names import (
@@ -49,7 +50,7 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
 
 
 def _extract_move_records_archive(
-    profile: Any, platform: Any, engine: Any, result: InspectionResult
+    profile: Any, platform: Any, engine: MoveConcern, result: InspectionResult
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any]]:
     try:
         archive_path = profile.layout["moves"]
@@ -76,7 +77,7 @@ def _extract_move_records_archive(
 
 
 def _extract_move_records_flat(
-    profile: Any, platform: Any, engine: Any, result: InspectionResult
+    profile: Any, platform: Any, engine: MoveConcern, result: InspectionResult
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     try:
         offset = profile.parameters["move_offset"]
