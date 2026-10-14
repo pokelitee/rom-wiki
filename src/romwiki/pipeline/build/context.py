@@ -44,7 +44,7 @@ from romwiki.schema.versions import (
     RAW_SCHEMA_VERSION_BY_CACHE_KEY,
 )
 from romwiki.sources import PokeDBGeneration
-from romwiki.util.errors import ProfileError
+from romwiki.util.errors import DataSourceError, ProfileError
 from romwiki.util.json_io import write_json_atomic
 
 CACHE_REVISION = 5
@@ -406,14 +406,21 @@ class GameBuildContext:
             return None
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as error:
+            _LOG.warning("Ignoring unreadable extraction cache %s: %s", path, error)
             return None
-        source = value.get("source", {}) if isinstance(value, dict) else {}
+        if not isinstance(value, dict):
+            _LOG.warning("Ignoring extraction cache %s: not a JSON object", path)
+            return None
         if value.get("schema_version") != RAW_SCHEMA_VERSION_BY_CACHE_KEY[key]:
             return None
-        if source.get("rom_sha256") != self.result.image.hashes.sha256:
+        try:
+            validate_dataset_envelope(value, context=key)
+        except DataSourceError as error:
+            _LOG.warning("Ignoring extraction cache %s: %s", path, error)
             return None
-        validate_dataset_envelope(value, context=key)
+        if value["source"].get("rom_sha256") != self.result.image.hashes.sha256:
+            return None
         return value
 
     def _read_manifest(self) -> dict[str, Any]:

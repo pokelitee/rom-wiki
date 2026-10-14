@@ -174,6 +174,36 @@ class GameBuildContextCacheTests(unittest.TestCase):
 
         self.assertEqual(len(calls), 2)
 
+    def test_a_corrupted_cache_file_is_a_miss_that_self_heals(self) -> None:
+        valid = _extractor([])(_result("hash-a"))
+        wrong_envelope = {**valid, "engine": 4}
+        mismatched_records = {**valid, "record_count": 2, "records": [{}]}
+        corruptions = {
+            "list": json.dumps([valid]),
+            "truncated": json.dumps(valid)[:-10],
+            "wrong envelope": json.dumps(wrong_envelope),
+            "mismatched records": json.dumps(mismatched_records),
+        }
+        for name, content in corruptions.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as directory:
+                calls: list = []
+                extractor = _extractor(calls)
+                cache_root = Path(directory)
+                _context(cache_root)._raw("moves/raw", extractor)
+                path = cache_root / "moves" / "raw.json"
+                path.write_text(content, encoding="utf-8")
+
+                with self.assertLogs("romwiki", level="WARNING") as logs:
+                    value = _context(cache_root)._raw("moves/raw", extractor)
+                _context(cache_root)._raw("moves/raw", extractor)
+
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(value["value"], 2)
+                self.assertIn("Ignoring", "\n".join(logs.output))
+                self.assertEqual(
+                    json.loads(path.read_text(encoding="utf-8"))["value"], 2
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
