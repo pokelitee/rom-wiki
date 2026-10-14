@@ -481,6 +481,6 @@ def _append_same_name_locations(
         lines.append(
             f"| {link} | {candidate.get('section_name') or '—'} | "
             f"`header-{header_id:03}` | "
-            f"{encounter_index if encounter_index is not None else 'None'} |"
+            f"{encounter_index if encounter_index is not None else '—'} |"
         )
     lines.append("")

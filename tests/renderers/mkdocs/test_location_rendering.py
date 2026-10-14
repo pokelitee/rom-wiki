@@ -493,8 +493,8 @@ class LocationRenderingTests(unittest.TestCase):
             all("(header " not in record["label"] for record in catalog["records"])
         )
         self.assertIn("## Same-name locations", first_page)
-        self.assertIn("[Route 1](header-007.md) | — | `header-007`", first_page)
-        self.assertIn("[Route 1](header-006.md) | — | `header-006`", second_page)
+        self.assertIn("[Route 1](header-007.md) | — | `header-007` | — |", first_page)
+        self.assertIn("[Route 1](header-006.md) | — | `header-006` | — |", second_page)
         self.assertIn("may represent different rooms or map sections", first_page)
 
     def test_renders_only_explicit_profile_section_names(self) -> None:
