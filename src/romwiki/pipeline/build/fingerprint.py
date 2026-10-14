@@ -144,6 +144,7 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"Cannot serialize {type(value).__name__}")
 
 
+@cache
 def _module_path(module_name: str) -> Path | None:
     if module_name == "romwiki":
         candidate = _PACKAGE_ROOT / "__init__.py"
@@ -158,7 +159,8 @@ def _module_path(module_name: str) -> Path | None:
     return package_path if package_path.is_file() else None
 
 
-def _local_imports(path: Path, module_name: str) -> set[str]:
+@cache
+def _local_imports(path: Path, module_name: str) -> frozenset[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     dependencies: set[str] = set()
     package = (
@@ -177,7 +179,7 @@ def _local_imports(path: Path, module_name: str) -> set[str]:
         for candidate in candidates:
             if candidate and _module_path(candidate) is not None:
                 dependencies.add(candidate)
-    return dependencies
+    return frozenset(dependencies)
 
 
 def _resolve_import_base(package: str, module: str | None, level: int) -> str:
