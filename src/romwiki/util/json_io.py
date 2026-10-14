@@ -32,8 +32,17 @@ def write_bytes_atomic(path: Path, content: bytes) -> None:
     temporary_path.replace(path)
 
 
-def write_json_atomic(path: Path, value: Any) -> None:
-    """Write ``value`` to ``path`` as pretty-printed, sorted UTF-8 JSON."""
+def write_json_atomic(path: Path, value: Any, *, sort_keys: bool = True) -> None:
+    """Write ``value`` to ``path`` as pretty-printed UTF-8 JSON."""
     write_text_atomic(
-        path, json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+        path,
+        json.dumps(value, indent=2, sort_keys=sort_keys, ensure_ascii=False) + "\n",
     )
+
+
+def json_round_trip(value: Any) -> Any:
+    """Return ``value`` as reading it back from unsorted JSON yields it.
+
+    Tuples become lists and mapping keys become strings; key order is kept.
+    """
+    return json.loads(json.dumps(value))

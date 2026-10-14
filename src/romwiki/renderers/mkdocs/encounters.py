@@ -967,7 +967,7 @@ def _render_area(
                         ("Unown table ID", f"`{record['unown_table_id']}`"),
                         (
                             "Encounter form rates",
-                            f"`{record['encounter_form_rates']}`",
+                            f"`[{', '.join(map(str, record['encounter_form_rates']))}]`",
                         ),
                     )
                 ),

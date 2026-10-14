@@ -45,9 +45,9 @@ from romwiki.schema.versions import (
 )
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError, ProfileError
-from romwiki.util.json_io import write_json_atomic
+from romwiki.util.json_io import json_round_trip, write_json_atomic
 
-CACHE_REVISION = 5
+CACHE_REVISION = 6
 _LOG = logging.getLogger("romwiki")
 
 
@@ -381,11 +381,16 @@ class GameBuildContext:
             reason = "refresh" if self.refresh else "miss"
             _LOG.debug("Extraction cache %s for %s: %s", reason, self.profile.id, key)
         _LOG.debug("Extracting %s for %s", key, self.profile.id)
-        value = extractor(self.result)
+        # Cache hits are JSON-decoded, so fresh extractions take the same form
+        # (lists, string keys); otherwise rendered pages and comparisons would
+        # depend on whether this run happened to refresh the cache.
+        value = json_round_trip(extractor(self.result))
         validate_dataset_envelope(value, context=key)
         self._values[key] = value
         if path is not None:
-            write_json_atomic(path, value)
+            # Unsorted, because renderers present some mappings (shard costs,
+            # dual-slot games) in the order the extractor produced them.
+            write_json_atomic(path, value, sort_keys=False)
             assert source_fingerprint is not None
             self._write_manifest(key, source_fingerprint)
             _LOG.debug("Extraction cache updated for %s: %s", self.profile.id, key)
