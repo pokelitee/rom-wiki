@@ -282,6 +282,51 @@ class PokeDBSpriteTests(unittest.TestCase):
         self.assertNotIn("types", result)
         self.assertNotIn("abilities", result)
 
+    def test_versioned_text_falls_back_to_the_earliest_version(self) -> None:
+        reference = {
+            "flavor_text": {
+                "zz-unknown": "Unknown entry.",
+                "heartgold": "HeartGold entry.",
+                "aa-unknown": "Other unknown entry.",
+                "pearl": "Pearl entry.",
+                "platinum": None,
+            }
+        }
+
+        result = self.pokedb.pokemon_reference(reference, "platinum")
+
+        self.assertEqual(result["flavor_text"], "Pearl entry.")
+        self.assertEqual(result["flavor_text_version"], "pearl")
+        del reference["flavor_text"]["pearl"]
+        del reference["flavor_text"]["heartgold"]
+        result = self.pokedb.pokemon_reference(reference, None)
+        self.assertEqual(result["flavor_text_version"], "aa-unknown")
+
+    def test_reference_effect_text_falls_back_independently_of_key_order(
+        self,
+    ) -> None:
+        pokedb = PokeDBGeneration(
+            pokemon_by_id={},
+            pokemon_by_name={},
+            pokemon_by_species={},
+            abilities_by_id={},
+            items_by_id={},
+            abilities_reference={
+                1: {
+                    "effect": {
+                        "black-2-white-2": "Later effect.",
+                        "black-white": "Earlier effect.",
+                    }
+                }
+            },
+        )
+
+        result = pokedb.ability_reference(1, "heartgold-soulsilver")
+
+        assert result is not None
+        self.assertEqual(result["version"], "black-white")
+        self.assertEqual(result["effect"], "Earlier effect.")
+
 
 def _write_json(path: Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -373,6 +418,28 @@ class PokeDBLoadTests(unittest.TestCase):
 
             with self.assertRaisesRegex(DataSourceError, "ability IDs must be unique"):
                 PokeDBGeneration.load(root)
+
+    def test_rejects_colliding_lookup_keys(self) -> None:
+        collisions = {
+            "Pokémon name": (
+                "pokemon/variant/10092.json",
+                {"id": 10092, "name": "bulbasaur", "species": "bulbasaur"},
+            ),
+            "default Pokémon species": (
+                "pokemon/default/2.json",
+                {"id": 2, "name": "ivysaur", "species": "bulbasaur"},
+            ),
+            "item name": ("item/2.json", {"id": 2, "name": "master-ball"}),
+            "share a lookup key": ("item/3.json", {"id": 3, "name": "masterball"}),
+        }
+        for message, (relative, value) in collisions.items():
+            with self.subTest(message), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                _write_minimal_pokedb(root)
+                _write_json(root / relative, value)
+
+                with self.assertRaisesRegex(DataSourceError, message):
+                    PokeDBGeneration.load(root)
 
 
 class PokeDBLookupMissTests(unittest.TestCase):

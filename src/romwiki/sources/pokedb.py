@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,36 @@ _APRICORN_COLOR_NAMES = {
 _X_ITEM_NAMES = {
     "defend": "x-defense",
     "special": "x-sp-atk",
+}
+# PokéAPI version-group order, each group followed by its individual versions.
+# Versioned PokéDB text falls back to the earliest entry here, the same release
+# order PokéDB uses for its keys.
+_VERSION_FALLBACK_ORDER = (
+    "ruby-sapphire",
+    "ruby",
+    "sapphire",
+    "emerald",
+    "firered-leafgreen",
+    "firered",
+    "leafgreen",
+    "colosseum",
+    "xd",
+    "diamond-pearl",
+    "diamond",
+    "pearl",
+    "platinum",
+    "heartgold-soulsilver",
+    "heartgold",
+    "soulsilver",
+    "black-white",
+    "black",
+    "white",
+    "black-2-white-2",
+    "black-2",
+    "white-2",
+)
+_VERSION_FALLBACK_RANK = {
+    version: rank for rank, version in enumerate(_VERSION_FALLBACK_ORDER)
 }
 
 
@@ -49,9 +80,7 @@ class PokeDBGeneration:
         self.items_reference = items_reference or {}
         self.moves_reference = moves_reference or {}
         self.items_by_id = items_by_id
-        self.items_by_lookup = items_by_lookup or {
-            _lookup_key(name): name for name in items_by_id.values()
-        }
+        self.items_by_lookup = items_by_lookup or _item_lookup(items_by_id.values())
         self.moves_by_id = moves_by_id or {}
 
     @classmethod
@@ -63,19 +92,24 @@ class PokeDBGeneration:
         items = _load_objects(resolved / "item")
         moves = _load_objects(resolved / "move")
         pokemon_by_id = {item["id"]: item for item in defaults}
-        pokemon_by_name = {item["name"]: item for item in (*defaults, *variants)}
         if len(pokemon_by_id) != len(defaults):
             raise DataSourceError("PokéDB default Pokémon IDs must be unique")
         return cls(
             pokemon_by_id=pokemon_by_id,
-            pokemon_by_name=pokemon_by_name,
-            pokemon_by_species={item["species"]: item for item in defaults},
+            pokemon_by_name=_unique_index(
+                (*defaults, *variants), lambda item: item["name"], "Pokémon name"
+            ),
+            pokemon_by_species=_unique_index(
+                defaults, lambda item: item["species"], "default Pokémon species"
+            ),
             abilities_by_id=_id_name_map(abilities, "ability"),
             items_by_id=_id_name_map(items, "item"),
-            items_by_lookup={_lookup_key(item["name"]): item["name"] for item in items},
+            items_by_lookup=_item_lookup([item["name"] for item in items]),
             moves_by_id=_id_name_map(moves, "move"),
             abilities_reference={item["id"]: item for item in abilities},
-            items_reference={item["name"]: item for item in items},
+            items_reference=_unique_index(
+                items, lambda item: item["name"], "item name"
+            ),
             moves_reference={item["id"]: item for item in moves},
         )
 
@@ -376,23 +410,9 @@ class PokeDBGeneration:
         such as stats, types, and abilities always come from the ROM and are
         deliberately not duplicated here.
         """
-        flavor_texts = reference.get("flavor_text")
-        flavor_text = None
-        flavor_version = None
-        if isinstance(flavor_texts, dict):
-            if version and isinstance(flavor_texts.get(version), str):
-                flavor_version = version
-                flavor_text = flavor_texts[version]
-            else:
-                flavor_version, flavor_text = next(
-                    (
-                        (key, value)
-                        for key, value in flavor_texts.items()
-                        if isinstance(key, str) and isinstance(value, str)
-                    ),
-                    (None, None),
-                )
-
+        flavor_version, flavor_text = _pick_versioned_text(
+            reference.get("flavor_text"), version
+        )
         return {
             "version": version,
             "source": "PokéDB / PokéAPI",
@@ -413,18 +433,31 @@ class PokeDBGeneration:
 def _pick_versioned_text(
     mapping: Any, version: str | None
 ) -> tuple[str | None, str | None]:
+    """Return ``version``'s text, else the earliest version that has text.
+
+    "Earliest" follows ``_VERSION_FALLBACK_ORDER``; unknown keys follow it
+    alphabetically. The choice therefore never depends on PokéDB's JSON key
+    order.
+    """
     if not isinstance(mapping, dict):
         return None, None
     if version and isinstance(mapping.get(version), str):
         return version, mapping[version]
-    return next(
-        (
-            (key, value)
-            for key, value in mapping.items()
-            if isinstance(key, str) and isinstance(value, str)
+    candidates = [
+        key
+        for key, value in mapping.items()
+        if isinstance(key, str) and isinstance(value, str)
+    ]
+    if not candidates:
+        return None, None
+    fallback = min(
+        candidates,
+        key=lambda key: (
+            _VERSION_FALLBACK_RANK.get(key, len(_VERSION_FALLBACK_RANK)),
+            key,
         ),
-        (None, None),
     )
+    return fallback, mapping[fallback]
 
 
 def _load_objects(directory: Path) -> list[dict[str, Any]]:
@@ -448,6 +481,34 @@ def _id_name_map(objects: list[dict[str, Any]], resource: str) -> dict[int, str]
     result = {item["id"]: item["name"] for item in objects}
     if len(result) != len(objects):
         raise DataSourceError(f"PokéDB {resource} IDs must be unique")
+    return result
+
+
+def _unique_index(
+    objects: Iterable[dict[str, Any]],
+    key: Callable[[dict[str, Any]], str],
+    description: str,
+) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for item in objects:
+        value = key(item)
+        existing = result.setdefault(value, item)
+        if existing is not item:
+            raise DataSourceError(
+                f"PokéDB {description} is not unique: {value!r} "
+                f"(IDs {existing['id']} and {item['id']})"
+            )
+    return result
+
+
+def _item_lookup(names: Iterable[str]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for name in names:
+        existing = result.setdefault(_lookup_key(name), name)
+        if existing != name:
+            raise DataSourceError(
+                f"PokéDB item names {existing!r} and {name!r} share a lookup key"
+            )
     return result
 
 
