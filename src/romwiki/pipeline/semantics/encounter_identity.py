@@ -4,6 +4,8 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
+from romwiki.engines.registry import EncounterFormat, get_engine
+
 
 class EncounterSourceType(StrEnum):
     """Normalized identities for nonstandard encounter sources."""
@@ -91,3 +93,30 @@ def encounter_route_key(record: Mapping[str, Any]) -> int | str:
     if not isinstance(map_index, int):
         return int(record["area_id"])
     return f"map-{map_index:03}"
+
+
+def encounter_dataset_format(
+    dataset: Mapping[str, Any] | None,
+) -> EncounterFormat | None:
+    """Return the encounter format declared by `dataset`'s engine, if any."""
+    engine = dataset.get("engine") if dataset is not None else None
+    return get_engine(engine).formats.encounters if isinstance(engine, str) else None
+
+
+def is_unlinked_encounter_area(
+    record: Mapping[str, Any], encounter_format: EncounterFormat | None
+) -> bool:
+    """Return whether `record` is an encounter area no map header points at.
+
+    In "conditional"-format engines map headers own their encounter tables,
+    so a table entry no header references is ROM padding/unused data that no
+    player can reach. Such areas are not published: nothing may get a page,
+    catalog entry, backlink, or change row for them. Conditional sources
+    carry their own location, and the other formats don't attach map headers
+    to area records, so an empty `locations` means nothing there.
+    """
+    return (
+        encounter_format == "conditional"
+        and record.get("source_type") not in CONDITIONAL_ENCOUNTER_SOURCES
+        and not record.get("locations")
+    )

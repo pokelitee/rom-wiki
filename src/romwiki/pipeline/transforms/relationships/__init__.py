@@ -14,6 +14,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from romwiki.pipeline.semantics.encounter_identity import encounter_dataset_format
+
 from ._acquisition import (
     AcquisitionReference,
     _acquisition_references,
@@ -80,7 +82,12 @@ def build_relationship_index(
     trade_records = _records(datasets, "trades")
     aliases = _pokemon_aliases(pokemon_records)
 
-    wild = _wild_encounters(encounter_records, location_records, aliases)
+    wild = _wild_encounters(
+        encounter_records,
+        location_records,
+        aliases,
+        encounter_dataset_format(datasets.get("encounters")),
+    )
     trainers = _trainer_appearances(trainer_records, aliases)
     acquisition = _acquisition_references(
         pokemon_records,

@@ -5,7 +5,9 @@ from typing import Any
 
 from romwiki.pipeline.semantics.encounter_identity import (
     CONDITIONAL_ENCOUNTER_SOURCES,
+    encounter_dataset_format,
     encounter_route_key,
+    is_unlinked_encounter_area,
 )
 from romwiki.schema.trainers import is_unused_trainer_slot
 from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
@@ -305,8 +307,8 @@ def compare_datasets(
     kind = current.get("dataset")
     if kind != baseline.get("dataset") or kind not in RECORD_KEY_FIELDS:
         raise DataSourceError("Comparison datasets must have the same supported kind")
-    current_records = records_by_identity(current, kind)
-    baseline_records = records_by_identity(baseline, kind)
+    current_records = _published_records(current, kind)
+    baseline_records = _published_records(baseline, kind)
     records = []
     counts = dict.fromkeys(("unchanged", "changed", "added", "removed"), 0)
     for key in sorted(
@@ -357,6 +359,22 @@ def compare_datasets(
         "coverage": list(_FIELDS[kind]),
         "counts": counts,
         "records": records,
+    }
+
+
+def _published_records(
+    dataset: dict[str, Any], kind: str
+) -> dict[int | str, dict[str, Any]]:
+    records = records_by_identity(dataset, kind)
+    if kind != "wild_encounters":
+        return records
+    # An area going from reachable to unlinked (or back) reads as removed
+    # (or added), which is what changed from a player's point of view.
+    encounter_format = encounter_dataset_format(dataset)
+    return {
+        key: record
+        for key, record in records.items()
+        if not is_unlinked_encounter_area(record, encounter_format)
     }
 
 

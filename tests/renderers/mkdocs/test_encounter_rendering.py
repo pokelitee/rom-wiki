@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ from romwiki.renderers.mkdocs.encounters import (
     _encounter_catalog_url,
     _season_version_tabs,
 )
+from romwiki.renderers.mkdocs.pokemon import _append_availability
 from romwiki.util.errors import SiteError
 
 
@@ -181,6 +183,61 @@ class EncounterRenderingTests(unittest.TestCase):
         self.assertEqual(catalog["records"][0]["id"], 61)
         self.assertNotIn("Encounter Area 060", index_page)
         self.assertIn("Route 201", index_page)
+
+    def test_no_pokemon_links_to_an_unpublished_encounter_area(self) -> None:
+        dataset = {
+            "game": "test",
+            "engine": "gen4_hgss",
+            "dataset": "wild_encounters",
+            "records": [
+                _walking_area(60, [], 25, "pikachu"),
+                _walking_area(
+                    61,
+                    [
+                        {
+                            "header_id": 4,
+                            "internal_name": "route201",
+                            "name": "Route 201",
+                            "location_name_id": 4,
+                        }
+                    ],
+                    399,
+                    "bidoof",
+                ),
+            ],
+        }
+        relationships = build_relationship_index(
+            {
+                "encounters": dataset,
+                "pokemon": {
+                    "game": "test",
+                    "records": [
+                        {"slug": "pikachu", "member": 25, "name": "Pikachu"},
+                        {"slug": "bidoof", "member": 399, "name": "Bidoof"},
+                    ],
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "encounters"
+            render_encounter_pages(dataset, output, relationships=relationships)
+            written = {path.name for path in output.iterdir()}
+            pages = {}
+            for slug, encounters in relationships.pokemon_wild_encounters.items():
+                lines: list[str] = []
+                _append_availability(lines, encounters, (), f"pokemon/{slug}.md")
+                pages[slug] = "\n".join(lines)
+
+        self.assertNotIn("pikachu", relationships.pokemon_wild_encounters)
+        self.assertIn("bidoof", relationships.pokemon_wild_encounters)
+        linked_pages = {
+            target.removeprefix("../encounters/")
+            for page in pages.values()
+            for target in re.findall(r"\]\((\.\./encounters/[^)#]+)", page)
+        }
+        self.assertEqual(linked_pages, {"area-061.md"})
+        self.assertLessEqual(linked_pages, written)
 
     def test_raises_a_site_error_for_an_unroutable_catalog_record(self) -> None:
         # A malformed/inconsistent build state (the location engine hasn't
@@ -920,6 +977,38 @@ def _encounter_record(
         "fishing": empty_method,
         "fishing_spots": empty_method,
         "provenance": {"archive": "encounters.narc", "member": map_index},
+    }
+
+
+def _walking_area(
+    area_id: int, locations: list[dict], species_id: int, slug: str
+) -> dict:
+    slot = {
+        "level": 5,
+        "species_id": species_id,
+        "chance": 100,
+        "pokemon": {"id": species_id, "slug": slug, "name": slug, "sprite": None},
+    }
+    return {
+        "area_id": area_id,
+        "name": locations[0]["name"] if locations else f"Encounter Area {area_id:03}",
+        "locations": locations,
+        "active": True,
+        "walking": {"rate": 15, "slots": [slot]},
+        "walking_variants": {
+            period: {"rate": 15, "slots": [slot]}
+            for period in ("morning", "day", "night")
+        },
+        "special": {
+            "format": "hgss",
+            "land_swarm": None,
+            "surf_swarm": None,
+            "hoenn_radio": [],
+            "sinnoh_radio": [],
+            "night_fishing": None,
+            "fishing_swarm": None,
+        },
+        "provenance": {"archive": "a/0/1/2", "member": area_id},
     }
 
 
