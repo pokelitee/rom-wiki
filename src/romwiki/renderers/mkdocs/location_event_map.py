@@ -272,7 +272,8 @@ def _render_location(
                         f"Trade `{trade['trade_id']}` "
                         f"({escape_markdown(trade['nickname'])}) "
                         f"personality value: `0x{trade['personality']:08X}`, "
-                        f"unused record values: `{trade['unused_values']}`."
+                        "unused record values: "
+                        f"`[{', '.join(map(str, trade['unused_values']))}]`."
                     )
                     for trade in record.get("npc_trades", [])
                 ),
