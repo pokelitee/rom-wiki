@@ -56,10 +56,12 @@ romwiki regenerate --all
 `regenerate` preflights every required ROM and PokéDB generation before writing,
 then builds and audits the combined artifact. Add `--refresh` to replace current
 and baseline extraction caches. After reviewing a complete build, add
-`--snapshot` to update the tracked ROM-free publication snapshot:
+`--snapshot` to update the ROM-free publication snapshot, then publish its
+archives and commit the manifest (see [Publication snapshots](#publication-snapshots)):
 
 ```console
 romwiki regenerate --all --refresh --snapshot
+romwiki site publish-snapshot
 ```
 
 For normal development, select one site and optionally reuse unchanged rendered
@@ -129,12 +131,43 @@ romwiki site build --all --output dist
 romwiki site audit dist
 ```
 
-Generated game pages are archived per site under `sites/generated-wiki/` rather than
-tracked individually. A clean checkout restores them with:
+Generated game pages are archived per site rather than tracked individually. A
+clean checkout restores them with:
 
 ```console
 romwiki site restore-snapshot
 ```
+
+## Publication snapshots
+
+Only `sites/generated-wiki/manifest.json` is tracked. The per-site archives it
+references are ignored locally and published as immutable assets of the
+`snapshots` GitHub release. Asset names are content-addressed
+(`<site>-<first 16 hex digits of the archive SHA-256>.tar.gz`), so an older
+manifest remains restorable after newer snapshots are published.
+
+`restore-snapshot` uses a local archive when its SHA-256 matches the manifest.
+Otherwise it downloads the asset into `.romwiki/snapshot-cache/` and verifies the
+checksum before extracting anything. Set `ROMWIKI_SNAPSHOT_URL` or pass
+`--snapshot-url` to restore from a fork or mirror. Restores never need PokéDB;
+the manifest records a PokéDB fingerprint only as provenance when one was
+available while snapshotting.
+
+To update the publication snapshot:
+
+1. Regenerate with `romwiki regenerate --all --refresh --snapshot`, or run
+   `romwiki site snapshot --pokedb-root ../pokedb/.output` after a verified
+   generation.
+2. Upload the new archives with `romwiki site publish-snapshot`. It requires an
+   authenticated `gh` CLI with write access, verifies every local archive against
+   the manifest, creates the release if needed, and uploads only missing assets.
+   It never replaces or deletes existing assets.
+3. Commit the updated manifest with the source and profile changes that produced
+   it, and open a PR.
+
+PR CI downloads and validates the snapshot, so publish the assets before pushing
+the manifest. Do not delete release assets that any reachable manifest still
+references.
 
 See [Frontend](development/frontend.md) for the shared design system and
 development-preview contract.
@@ -187,11 +220,11 @@ the site's data-sources page rather than a broad completion label.
 
 ## CI and GitHub Pages
 
-`.github/workflows/ci.yml` runs the reusable `checks.yml` matrix for PRs and pushes to `main`. `.github/workflows/deploy-pages.yml` deploys relevant source, profile, site, dependency, and deployment-workflow changes on `main`, and supports manual dispatch from `main` only. Contributor-documentation-only changes do not trigger a wiki build. All jobs have explicit timeouts; Actions are pinned to commit SHAs and dependencies to the requirement files.
+`.github/workflows/ci.yml` runs the reusable `checks.yml` matrix for PRs and pushes to `main`. `.github/workflows/deploy-pages.yml` runs after a successful CI run for a push to `main` and deploys exactly the commit CI validated. Rulesets block direct pushes, so each `main` commit is one PR merge; deployment compares it with its first parent and skips the build unless `src/`, `sites/`, `profiles/`, `requirements/`, `pyproject.toml`, or the deployment workflow changed. Contributor-documentation-only changes therefore do not trigger a wiki build. Manual dispatch from `main` always deploys. All jobs have explicit timeouts; Actions are pinned to commit SHAs and dependencies to the requirement files.
 
-Deployment runs offline tests, resolves the published site catalog, restores each data-driven site's tracked snapshot, builds sites in parallel, assembles their artifacts, and audits the complete rendered link graph before publishing. Site and audit caches accelerate builds but do not replace validation. The Pages source is GitHub Actions; the `github-pages` environment permits only `main`.
+Deployment does not rerun the test suite that CI already passed. It resolves the published site catalog, downloads and restores each data-driven site's published snapshot, builds sites in parallel, assembles their artifacts, and audits the complete rendered link graph before publishing. Site build caches are keyed by `romwiki site fingerprint`, which hashes source contents so checkout and restore timestamps do not defeat reuse. Site, snapshot-download, and audit caches accelerate builds but do not replace validation. The Pages source is GitHub Actions; the `github-pages` environment permits only `main`.
 
-ROM extraction is never performed in GitHub Actions. `sites/generated-wiki/` holds deterministic ROM-free archives and their manifest for publication; it is a deliberate reviewed snapshot model, not an automated `data` branch. Commit snapshot changes through PRs with the relevant source/profile/provenance changes. Keep ROM images, patches, saves, keys, and extracted copyrighted assets local and ignored.
+ROM extraction is never performed in GitHub Actions. The tracked manifest and its published release assets form a deliberate reviewed snapshot model, not an automated `data` branch. Commit manifest changes through PRs with the relevant source/profile/provenance changes. Keep ROM images, patches, saves, keys, and extracted copyrighted assets local and ignored.
 
 ```sh
 gh workflow run deploy-pages.yml --repo pokelitee/rom-wiki --ref main
@@ -207,6 +240,7 @@ Read-only default Actions permissions apply. The prepare job has Pages configura
 - **Missing PokéDB generation:** generate the required generation in the sibling checkout or select another output using the CLI's `--pokedb` / `--pokedb-root` options. Consult the CLI reference for command-specific inputs.
 - **Unexpected cached output:** use the focused workflow first. `--refresh` replaces extraction caches; `--clean` rebuilds publication output. These flags address different layers.
 - **Missing generated pages in a clean checkout:** restore the publication snapshot before building. Do not substitute incomplete local outputs for a reviewed snapshot.
+- **Snapshot asset is not published:** the manifest references archives that were never uploaded. Run `romwiki site publish-snapshot` from the checkout that created them. A checksum mismatch means the downloaded asset is not the archive the manifest describes; never replace release assets to fix it.
 - **Audit or deployment failure:** inspect the failed site, missing links, or snapshot mismatch; repair and rerun rather than skipping the audit. Failed builds do not deploy an incomplete combined artifact.
 
 To restore a previous publication, revert the relevant source and snapshot changes through a PR, pass CI, and let the normal main deployment rebuild it. Do not force-push source history or rewrite archive tags. Build caches can be discarded and regenerated; local user-supplied inputs cannot be recreated from the repository.

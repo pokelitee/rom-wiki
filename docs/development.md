@@ -18,7 +18,7 @@ python -m pytest -q
 python scripts/check_package.py
 ```
 
-CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images. One Ubuntu job also restores and validates every publication snapshot, catching stale source fingerprints before merge. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
+CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images. One Ubuntu job also downloads, restores, and validates every publication snapshot, catching stale source fingerprints and unpublished snapshot assets before merge. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
 
 The installed CLI is distributed as a Python package; profiles, site configuration, templates, and snapshots belong to the repository checkout. Wiki generation must run with those repository resources available. A wheel alone is not a bundled copy of the published wiki corpus.
 
@@ -46,6 +46,6 @@ Update schema definitions, tests, and the data-contract guide together when chan
 
 Use short-lived branches and PRs into `main`; there is no permanent `dev` branch. The existing development history was integrated through a PR and its previous head is preserved at `archive/dev-2026-10-13`. Merged PR branches are deleted automatically. The stable required check is `CI gate`, backed by the full reusable test matrix.
 
-Intended rulesets are tracked in `.github/rulesets/`: main requires PRs, passing CI, and resolved review conversations, without administrator bypass; archived development tags cannot be updated or deleted. No approving review is required while there is one maintainer. Editing the JSON files does not apply GitHub settings.
+Rulesets are tracked in `.github/rulesets/`: main requires PRs, passing CI, and resolved review conversations, without administrator bypass; archived development tags cannot be updated or deleted. No approving review is required while there is one maintainer. Editing the JSON files does not apply GitHub settings.
 
-GitHub currently rejects branch-protection and ruleset APIs for this private repository with a plan/visibility restriction. The tracked rulesets are intended policy, **not active enforcement** until the account's repository capabilities permit them. Keep the repository private; use the documented PR workflow in the meantime. After resolving the plan restriction, apply `main.json` and `tags.json` through the ruleset API and read back the live settings. Do not assume they are enabled from these files alone.
+The repository is public, and both tracked rulesets ("Protect main" and "Preserve archived development tags") are applied with active enforcement. After changing `main.json` or `tags.json`, apply the update through the ruleset API and read back the live settings; editing the files alone does not change GitHub.

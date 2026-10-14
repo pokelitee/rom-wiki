@@ -271,7 +271,12 @@ romwiki site build --all --dev
 romwiki site build renegade-platinum --output dist --incremental
 romwiki site build renegade-platinum --output dist --reuse-unchanged
 romwiki site build --all --output dist
+romwiki site fingerprint renegade-platinum --output dist
 ```
+
+`--reuse-unchanged` and `site fingerprint` identify sources by content hash, so
+reuse survives fresh checkouts and snapshot restores; `--incremental` keeps the
+faster size-and-mtime comparison for local iteration.
 
 Without an explicit `--output`, production builds use `dist/` and development
 builds use `build/mkdocs-dev/`. `site build --dev` uses the lightweight MkDocs
@@ -296,12 +301,23 @@ Create or restore the deterministic ROM-free publication snapshot:
 
 ```console
 romwiki site snapshot
+romwiki site snapshot --pokedb-root ../pokedb/.output
 romwiki site restore-snapshot
 romwiki site restore-snapshot --site renegade-platinum
+romwiki site restore-snapshot --snapshot-url https://example.com/snapshots/
+romwiki site publish-snapshot
 ```
 
-The tracked snapshot is a manifest plus deterministic per-site archives under
-`sites/generated-wiki/`. Metadata inventories avoid rereading unchanged generated
+The snapshot is a tracked manifest plus deterministic, ignored per-site archives
+under `sites/generated-wiki/`. `site publish-snapshot` uploads the archives as
+content-addressed assets of the `snapshots` GitHub release through the
+authenticated `gh` CLI; it uploads only missing assets and never replaces
+existing ones (`--repo` selects another repository). `restore-snapshot` uses a
+matching local archive or downloads the asset into `.romwiki/snapshot-cache/`,
+verifying its SHA-256 before extraction. The download base URL defaults to the
+`pokelitee/rom-wiki` release and can be overridden with `--snapshot-url` or
+`ROMWIKI_SNAPSHOT_URL`. `--pokedb-root` records a PokéDB fingerprint in the
+manifest as provenance only. Metadata inventories avoid rereading unchanged generated
 content; content hashes remain the fallback when metadata changes. Unchanged
 archives are not rewritten. Snapshot creation and restore report bounded,
 site-level progress so long hashing and archive operations remain visible without
