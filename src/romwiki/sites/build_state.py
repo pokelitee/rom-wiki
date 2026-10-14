@@ -11,7 +11,11 @@ from typing import Protocol
 
 from romwiki.sites.catalog import SiteCatalog, SiteDefinition
 from romwiki.util.errors import SiteError
-from romwiki.util.inventory import file_metadata_inventory, file_path_inventory
+from romwiki.util.inventory import (
+    file_content_inventory,
+    file_metadata_inventory,
+    file_path_inventory,
+)
 from romwiki.util.json_io import write_json_atomic
 
 BUILD_STATE_SCHEMA_VERSION = 2
@@ -57,13 +61,21 @@ def current_site_build_state(
     dev: bool,
     site_url: str | None,
     generated_source_files: dict[str, str] | None = None,
+    hash_contents: bool = False,
 ) -> SiteBuildState:
+    """Describe a site's build inputs.
+
+    Source files are identified by size and mtime unless `hash_contents` is
+    set; content hashes survive checkouts and snapshot restores, which reset
+    mtimes, so CI cache keys and reuse decisions stay stable across runs.
+    """
     site_root = site.config_path.parent
     if generated_source_files is not None and site.game is not None:
         source_files = _fingerprinted_files(
             site_root / "wiki",
             relative_to=site_root,
             excluded_top_level=frozenset((*site.game.generated_sections, "changes")),
+            hash_contents=hash_contents,
         )
         source_files.update(
             {
@@ -72,7 +84,9 @@ def current_site_build_state(
             }
         )
     else:
-        source_files = _fingerprinted_files(site_root / "wiki", relative_to=site_root)
+        source_files = _fingerprinted_files(
+            site_root / "wiki", relative_to=site_root, hash_contents=hash_contents
+        )
     return SiteBuildState(
         configuration_fingerprint=_configuration_fingerprint(
             catalog, site, dev=dev, site_url=site_url
@@ -201,7 +215,7 @@ def _configuration_fingerprint(
         root / "src" / "romwiki" / "sites" / "dev_pages.py",
         root / "src" / "romwiki" / "sites" / "mkdocs_hooks.py",
         root / "pyproject.toml",
-        root / "requirements.txt",
+        root / "requirements",
     ]
     if site.kind == "portal":
         paths.extend(sorted((root / "sites" / "games").glob("*/game.toml")))
@@ -227,11 +241,13 @@ def _fingerprinted_files(
     *,
     relative_to: Path,
     excluded_top_level: frozenset[str] = frozenset(),
+    hash_contents: bool = False,
 ) -> dict[str, str]:
     prefix = root.relative_to(relative_to).as_posix()
+    inventory = file_content_inventory if hash_contents else file_metadata_inventory
     return {
-        f"{prefix}/{path}": metadata
-        for path, metadata in file_metadata_inventory(
+        f"{prefix}/{path}": value
+        for path, value in inventory(
             root, excluded_top_level=excluded_top_level
         ).items()
     }

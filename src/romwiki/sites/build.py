@@ -40,6 +40,7 @@ def build_sites(
     reuse_unchanged: bool = False,
     reuse_generation_state: bool = False,
     defer_output_validation: bool = False,
+    hash_contents: bool = False,
     state_root: Path | None = None,
     runner: CommandRunner | None = None,
 ) -> tuple[SiteDefinition, ...]:
@@ -106,6 +107,7 @@ def build_sites(
             state_root=resolved_state_root,
             verify_output=verify_output,
             reuse_generation_state=reuse_generation_state,
+            hash_contents=hash_contents,
             known_output_files=output_inventories.get(site.id),
             defer_output_validation=defer_output_validation,
         )
@@ -125,6 +127,7 @@ def build_sites(
                 state_root=resolved_state_root,
                 verify_output=verify_output,
                 reuse_generation_state=reuse_generation_state,
+                hash_contents=hash_contents,
                 known_output_files=output_inventories.get(site.id),
                 defer_output_validation=defer_output_validation,
             )
@@ -149,6 +152,7 @@ def build_sites(
                     state_root=resolved_state_root,
                     verify_output=verify_output,
                     reuse_generation_state=reuse_generation_state,
+                    hash_contents=hash_contents,
                     known_output_files=output_inventories.get(site.id),
                     defer_output_validation=defer_output_validation,
                 )
@@ -202,6 +206,7 @@ def _build_site(
     state_root: Path,
     verify_output: bool,
     reuse_generation_state: bool,
+    hash_contents: bool,
     known_output_files: dict[str, str] | None,
     defer_output_validation: bool,
 ) -> None:
@@ -230,6 +235,7 @@ def _build_site(
             dev=dev,
             site_url=site_url,
             generated_source_files=generated_source_files,
+            hash_contents=hash_contents,
         )
         previous = read_site_build_state(state_path)
         if (
@@ -300,6 +306,7 @@ def _build_site(
             dev=dev,
             site_url=site_url,
             generated_source_files=generated_source_files,
+            hash_contents=hash_contents,
         )
     completed_state = replace(state, output_files=output_files)
     write_site_build_state(state_path, completed_state)

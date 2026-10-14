@@ -678,6 +678,7 @@ def _run_site_command(args: argparse.Namespace) -> None:
                 jobs=args.jobs,
                 incremental=args.incremental,
                 reuse_unchanged=args.reuse_unchanged,
+                hash_contents=args.reuse_unchanged,
                 site_url=os.environ.get("ROMWIKI_SITE_URL"),
             )
         for site in built:
@@ -724,6 +725,7 @@ def _run_site_command(args: argparse.Namespace) -> None:
             args.output.resolve(),
             dev=False,
             site_url=os.environ.get("ROMWIKI_SITE_URL"),
+            hash_contents=True,
         )
         print(site_build_fingerprint(state))
 

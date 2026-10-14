@@ -71,6 +71,20 @@ def file_metadata_inventory(
         }
 
 
+def file_content_inventory(
+    root: Path, *, excluded_top_level: frozenset[str] = frozenset()
+) -> dict[str, str]:
+    """Map each file under `root` to its SHA-256, independent of timestamps."""
+    if not root.is_dir():
+        return {}
+    with _INVENTORY_LOCK:
+        files = _walk_files(root, excluded_top_level)
+    return {
+        relative: hashlib.sha256(path.read_bytes()).hexdigest()
+        for relative, path, _ in files
+    }
+
+
 def _walk_files(
     root: Path, excluded_top_level: frozenset[str]
 ) -> list[tuple[str, Path, os.stat_result]]:
