@@ -106,10 +106,12 @@ comparison-only snapshot pages.
 ### Platform readers
 
 `src/romwiki/platforms/` handles game containers without interpreting Pokémon
-mechanics. The current NDS implementation validates an image, reads its header and
-filesystem, opens NARC archives, and reads overlays.
+mechanics. The NDS implementation validates an image, reads its header and
+filesystem, opens NARC archives, and reads overlays. The GBA implementation
+validates the cartridge header and exposes bounds-checked flat reads
+(`read_bytes`), because a GBA ROM has no filesystem or archive concept.
 
-A future GB/GBC, GBA, or 3DS implementation belongs in its own platform package.
+A future GB/GBC or 3DS implementation belongs in its own platform package.
 Platform readers should expose bytes and files to an engine decoder while avoiding
 game-specific concepts such as encounters or trainer parties.
 
@@ -139,11 +141,12 @@ remain narrow profile annotations rather than hard-coded pipeline branches.
 ### Engine decoders
 
 `src/romwiki/engines/` groups binary and script parsers first by generation and
-then by engine family. The current `gen4/platinum`, `gen4/hgss`, `gen5/bw`, and
-`gen5/b2w2` leaf packages decode their independently verified formats. Their
-stable profile-facing engine IDs are `gen4_platinum`, `gen4_hgss`, `gen5_bw`, and
-`gen5_b2w2`. HGSS has its own adapter for its encounter and map-header formats
-while reusing ROM-verified shared Generation IV record parsers.
+then by engine family. The current `gen3/frlg`, `gen3/emerald`, `gen4/platinum`,
+`gen4/hgss`, `gen5/bw`, and `gen5/b2w2` leaf packages decode their independently
+verified formats. Their stable profile-facing engine IDs are `gen3_frlg`,
+`gen3_emerald`, `gen4_platinum`, `gen4_hgss`, `gen5_bw`, and `gen5_b2w2`. HGSS has
+its own adapter for its encounter and map-header formats while reusing
+ROM-verified shared Generation IV record parsers.
 
 A generation package is a namespace, not a selectable engine. Each family begins
 with a separate leaf adapter. Promote a parser into the parent generation package
@@ -152,6 +155,11 @@ least two families. The shared Generation IV personal, English-message, and move
 parsers follow this rule: retail Platinum, HeartGold, and SoulSilver fixtures
 prove their formats. Leaf packages may depend on their generation's shared
 modules, but must not depend on sibling leaves.
+
+`engines/common/` holds the only cross-generation code: pure algorithms with no
+storage format, such as the summary-stat formula and the script control-flow
+worklist. Each generation still owns its opcode semantics (jumps, branches,
+terminators) and passes them in; byte layouts never move into `common`.
 
 Engine decoders should return typed facts, validate bounds and identifiers, and
 avoid page-layout decisions. Exact ROM-derived values take priority over external
@@ -314,7 +322,7 @@ the same pattern, joining normalized mechanics with item references from Pokémo
 trainers, locations, shops, gifts, trades, and evolutions.
 
 Cross-dataset reverse links used only for presentation are built once per full or
-version-family build by `pipeline/transforms/relationships.py`. Its focused
+version-family build by `pipeline/transforms/relationships/`. Its focused
 `RelationshipIndex` covers Pokémon encounters, acquisition sources and trainer
 appearances; move learners; and location-to-encounter variants. It preserves stable
 IDs, forms, versions, deterministic ordering, and deduplication before a renderer
@@ -453,6 +461,28 @@ regeneration can reuse valid raw datasets without rebuilding other sites; adding
 complete `--all` workflow remains the release boundary rather than a prerequisite
 for ordinary game or engine development.
 
+### Cache invalidation
+
+Each cache layer is keyed by the inputs that can change its output:
+
+| Input | Raw extraction cache | Regeneration skip | Site build reuse | Snapshot staleness | Audit cache |
+| --- | --- | --- | --- | --- | --- |
+| ROM SHA-256 | yes | yes | via pages | via pages | via HTML |
+| Resolved profile values | yes | yes | via pages | yes | via HTML |
+| Extractor import closure and engine adapter descriptor | yes, per dataset | yes | via pages | yes | via HTML |
+| Any other `src/romwiki/**/*.py` | no | yes | via pages | yes, except publishing-only modules | via HTML |
+| Raw schema version and `CACHE_REVISION` | yes | yes | via pages | yes | via HTML |
+| PokéDB JSON | no | yes | via pages | recorded as provenance only | via HTML |
+| `game.toml`, `dev-pages.toml` | no | yes | yes | yes | via HTML |
+| Templates, assets, hooks, package versions, site URL | no | no | yes | no | via HTML |
+| Generated page files | no | yes | yes | yes | yes |
+
+Raw extraction caches live under `build/data/`; the others live under
+`.romwiki/`. Site build reuse compares file metadata locally and file content for
+`site fingerprint` and `site build --reuse-unchanged`, so CI checkouts that reset
+modification times still hit the cache. `--refresh` bypasses extraction caches,
+and `--clean` bypasses regeneration skips, site reuse, and the audit cache.
+
 ## Reuse boundaries
 
 There are three common extension cases:
@@ -492,6 +522,17 @@ entry in the relevant registry dict, and a profile that declares the matching
 it. Platform and engine registration validate their callable/parser surfaces
 before an adapter becomes selectable, so incomplete integrations fail at the
 boundary instead of during an unrelated build step.
+
+Engine adapter fields are typed with the per-concern protocols in
+`engines/concerns.py`, which list every member shared pipeline code reads, so
+mypy checks those reads. Members that only some engines provide are gated by an
+explicit declaration rather than probed with `getattr` defaults: a semantic
+format, a dataset kind, or a named capability (the `registry.py` constants such
+as `TAG_BATTLES`, `REMATCH_TABLE`, and `COMPRESSED_CODE_BINARY`). Registration
+rejects unknown capabilities and any declared capability whose required members
+are missing, so a misspelled constant fails at startup instead of silently
+disabling a feature. Capability and member names consumed by shared code describe
+the mechanic, not the generation that introduced it.
 
 Each engine also owns its public section contract. `dataset_kinds` lists the
 normalized sections the engine can emit, while `required_dataset_kinds` identifies
@@ -545,26 +586,20 @@ references from direct overworld trainer events are available, but scripted batt
 references and trainer-class payout multipliers remain explicitly unavailable
 pending exact ROM locators. Generation-specific binary decoding stays in each
 engine package; optional presentation behavior is advertised through dataset
-capabilities. A second physical platform remains proven only by
-`tests/platforms/test_contract.py`'s fake adapter. A real platform addition should
-still add profile-identification, parser, and normalized-output fixtures following
-[Adding a game](adding-a-game.md).
+capabilities.
 
-Because that boundary has never been exercised by a second real platform, its
-current shape is a single data point, not a proven contract: `PlatformAdapter`
-(`platforms/registry.py`) models a platform as filesystem + named archive
-members, and roughly twenty `pipeline/extraction/*` modules call
-`platform.archive_cls.from_bytes(filesystem.read(path))` directly against that
-shape. That fits Nintendo DS's NitroFS/NARC layout, but not every platform has
-a filesystem or archive concept — a flat ROM addressed by fixed byte offsets
-(e.g. Game Boy Advance) cannot satisfy `archive_cls` as written. Follow the
-same rule as the engine boundary above: don't redesign `PlatformAdapter`
-speculatively ahead of that work. When a real non-archive-based platform is
-added, decide then — informed by its actual ROM format — whether it needs a
-new read primitive alongside `archive_cls`/`filesystem` or its own extraction
-entry points; expect several of those ~20 call sites to need a platform-aware
-branch or a sibling function, the same "small, targeted fixes" pattern
-`gen5_bw` hit when it joined `gen4_platinum`.
+Game Boy Advance is the second real platform. `PlatformAdapter`
+(`platforms/registry.py`) now requires either archive primitives
+(`archive_cls`, `filesystem_from_image`) or flat reads (`read_bytes`). GBA
+support followed the "small, targeted fixes" pattern rather than a redesign:
+extractors whose storage differs declare a flat-offset format (for example the
+`flat-offset-table` egg-move format and `locations/flat_header_segments.py`),
+and the shared NDS/archive paths stay unchanged. The `gen3_frlg` and
+`gen3_emerald` engines publish a truthful partial slice; their sites are
+configured but not yet published. A further platform (GB/GBC, 3DS) should add
+profile-identification, parser, and normalized-output fixtures following
+[Adding a game](adding-a-game.md) and choose its read primitive from its real
+format.
 
 Normalized schemas are implemented as Python dataclasses and typed contracts
 serialized to JSON.
