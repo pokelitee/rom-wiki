@@ -306,78 +306,113 @@ def _cached_parsed_pages(
     cache_path: Path,
     refresh: bool,
 ) -> Iterator[tuple[str, int, _ParsedPage]]:
+    # The cache is fully read and validated before anything is yielded, so a
+    # corrupt cache can fall back to a full parse without repeating pages.
+    try:
+        pages = _load_cached_parsed_pages(
+            tasks, jobs=jobs, cache_path=cache_path, refresh=refresh
+        )
+    except sqlite3.DatabaseError as error:
+        _LOG.warning(
+            "Audit cache %s is invalid (%s); parsing all pages without reuse",
+            cache_path,
+            error,
+        )
+        yield from _parsed_pages(tasks, jobs=jobs)
+        return
+    yield from pages
+
+
+def _load_cached_parsed_pages(
+    tasks: Sequence[tuple[str, str]],
+    *,
+    jobs: int | None,
+    cache_path: Path,
+    refresh: bool,
+) -> list[tuple[str, int, _ParsedPage]]:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     parser_fingerprint = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    try:
-        with closing(sqlite3.connect(cache_path)) as database:
-            database.execute(
-                "CREATE TABLE IF NOT EXISTS pages (path TEXT PRIMARY KEY, digest TEXT NOT NULL, parser TEXT NOT NULL, payload TEXT NOT NULL)"
-            )
-            cached = (
-                {}
-                if refresh
-                else {
-                    path: (digest, parser, payload)
-                    for path, digest, parser, payload in database.execute(
-                        "SELECT path, digest, parser, payload FROM pages"
-                    )
-                }
-            )
-            worker_count = _parse_worker_count(jobs, len(tasks))
-            if len(cached) < len(tasks) // 2:
-                fresh = _read_and_parse_tasks(tasks, worker_count)
-                fingerprints = {relative: digest for relative, _, digest, _ in fresh}
-                parsed_misses = {
-                    relative: (size, parsed) for relative, size, _, parsed in fresh
-                }
+    with closing(sqlite3.connect(cache_path)) as database:
+        database.execute(
+            "CREATE TABLE IF NOT EXISTS pages (path TEXT PRIMARY KEY, digest TEXT NOT NULL, parser TEXT NOT NULL, payload TEXT NOT NULL)"
+        )
+        cached = (
+            {}
+            if refresh
+            else {
+                path: (digest, parser, payload)
+                for path, digest, parser, payload in database.execute(
+                    "SELECT path, digest, parser, payload FROM pages"
+                )
+            }
+        )
+        worker_count = _parse_worker_count(jobs, len(tasks))
+        reused: dict[str, tuple[int, _ParsedPage]] = {}
+        if len(cached) < len(tasks) // 2:
+            fresh = _read_and_parse_tasks(tasks, worker_count)
+            fingerprints = {relative: digest for relative, _, digest, _ in fresh}
+        else:
+            if worker_count <= 1:
+                fingerprints = dict(map(_read_digest, tasks))
             else:
-                if worker_count <= 1:
-                    fingerprints = dict(map(_read_digest, tasks))
-                else:
-                    with ProcessPoolExecutor(max_workers=worker_count) as pool:
-                        fingerprints = dict(
-                            pool.map(
-                                _read_digest,
-                                tasks,
-                                chunksize=_PARSE_CHUNK_SIZE,
-                            )
+                with ProcessPoolExecutor(max_workers=worker_count) as pool:
+                    fingerprints = dict(
+                        pool.map(
+                            _read_digest,
+                            tasks,
+                            chunksize=_PARSE_CHUNK_SIZE,
                         )
-                misses = [
-                    task
-                    for task in tasks
-                    if task[1] not in cached
-                    or cached[task[1]][0] != fingerprints[task[1]]
-                    or cached[task[1]][1] != parser_fingerprint
-                ]
-                fresh = _read_and_parse_tasks(misses, worker_count)
-                parsed_misses = {
-                    relative: (size, parsed) for relative, size, _, parsed in fresh
-                }
-            for relative, (size, parsed) in parsed_misses.items():
-                payload = json.dumps(
-                    _parsed_page_to_dict(size, parsed), separators=(",", ":")
-                )
-                database.execute(
-                    "INSERT OR REPLACE INTO pages VALUES (?, ?, ?, ?)",
-                    (relative, fingerprints[relative], parser_fingerprint, payload),
-                )
-            current_paths = {relative for _, relative in tasks}
-            database.executemany(
-                "DELETE FROM pages WHERE path = ?",
-                ((path,) for path in cached if path not in current_paths),
-            )
-            database.commit()
-            for _, relative in tasks:
-                if relative in parsed_misses:
-                    size, parsed = parsed_misses[relative]
-                else:
-                    size, parsed = _parsed_page_from_dict(
-                        json.loads(cached[relative][2])
                     )
-                yield relative, size, parsed
-    except (sqlite3.DatabaseError, json.JSONDecodeError, OSError, KeyError, TypeError):
-        _LOG.warning("Audit cache is invalid; parsing all pages without reuse")
-        yield from _parsed_pages(tasks, jobs=jobs)
+            corrupt = 0
+            for _, relative in tasks:
+                entry = cached.get(relative)
+                if (
+                    entry is None
+                    or entry[0] != fingerprints[relative]
+                    or entry[1] != parser_fingerprint
+                ):
+                    continue
+                page = _decode_cached_page(entry[2])
+                if page is None:
+                    corrupt += 1
+                else:
+                    reused[relative] = page
+            if corrupt:
+                _LOG.warning(
+                    "Audit cache %s has %s invalid entries; reparsing them",
+                    cache_path,
+                    f"{corrupt:,}",
+                )
+            misses = [task for task in tasks if task[1] not in reused]
+            fresh = _read_and_parse_tasks(misses, worker_count)
+        parsed_misses = {
+            relative: (size, parsed) for relative, size, _, parsed in fresh
+        }
+        for relative, (size, parsed) in parsed_misses.items():
+            payload = json.dumps(
+                _parsed_page_to_dict(size, parsed), separators=(",", ":")
+            )
+            database.execute(
+                "INSERT OR REPLACE INTO pages VALUES (?, ?, ?, ?)",
+                (relative, fingerprints[relative], parser_fingerprint, payload),
+            )
+        current_paths = {relative for _, relative in tasks}
+        database.executemany(
+            "DELETE FROM pages WHERE path = ?",
+            ((path,) for path in cached if path not in current_paths),
+        )
+        database.commit()
+    pages = reused | parsed_misses
+    return [(relative, *pages[relative]) for _, relative in tasks]
+
+
+def _decode_cached_page(payload: str) -> tuple[int, _ParsedPage] | None:
+    try:
+        return _parsed_page_from_dict(json.loads(payload))
+    except (ValueError, KeyError, TypeError):
+        # Covers malformed JSON (JSONDecodeError is a ValueError) and payloads
+        # whose shape no longer matches `_ParsedPageDict`.
+        return None
 
 
 class _ParsedPageDict(TypedDict):
