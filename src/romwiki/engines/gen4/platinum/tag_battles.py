@@ -7,7 +7,6 @@ from romwiki.engines.gen4.shared.script_disassembler import (
     Gen4Instruction,
     disassemble_function,
 )
-from romwiki.engines.gen4.shared.script_opcode_table import OPCODE_TABLE
 from romwiki.engines.gen4.shared.script_table import (
     SCRIPT_COMMAND_COUNT,
     Gen4TrainerBattleCommand,
@@ -15,6 +14,8 @@ from romwiki.engines.gen4.shared.script_table import (
 )
 from romwiki.engines.gen4.shared.starter_branches import Gen4StarterBranchFamily
 from romwiki.util.errors import InvalidRomError
+
+from .script_opcode_table import OPCODE_TABLE
 
 # Platinum's tag-battle command (partner, enemy1, enemy2), found and verified
 # against real Platinum ROM data: it does not appear in `scrcmd.py`'s shared
@@ -132,7 +133,7 @@ def parse_staged_partner_battle_families(
         if call is None:
             continue
         _, target = call
-        instructions = disassemble_function(data, target)
+        instructions = disassemble_function(data, target, opcode_table=OPCODE_TABLE)
         pairs = _parse_staged_subroutine(
             instructions,
             target,

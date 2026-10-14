@@ -3,10 +3,11 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from romwiki.engines.gen4.shared.script_opcode_table import OPCODE_TABLE
-
-# A real, control-flow-aware disassembler for Gen IV field-script bytecode,
-# using `script_opcode_table.py`'s pret/pokeplatinum-derived table. Mirrors
+# A real, control-flow-aware disassembler for Gen IV field-script bytecode.
+# Each engine leaf supplies its own opcode table (`gen4/platinum/` and
+# `gen4/hgss/script_opcode_table.py`): only the low-numbered VM control-flow
+# opcodes below are shared, while the game-specific commands are numbered
+# independently per family. Mirrors
 # `gen5.script_disassembler`'s design: `GoTo` ends the current straight-line
 # run (only its target is reachable next); `GoToIf`/`CallIf` continue the
 # straight-line run *and* queue the branch/call target (both paths are
@@ -38,12 +39,12 @@ def disassemble_function(
     data: bytes,
     start: int,
     *,
-    opcode_table: dict[int, tuple[str, tuple[int, ...]]] = OPCODE_TABLE,
+    opcode_table: dict[int, tuple[str, tuple[int, ...]]],
 ) -> dict[int, Gen4Instruction]:
     """Disassemble every statically-reachable instruction from `start`.
 
     Returns a dict keyed by instruction start offset. Unknown opcodes (not
-    in `OPCODE_TABLE`, or falling off the end of `data`) end that path
+    in `opcode_table`, or falling off the end of `data`) end that path
     without raising -- a dead end in one branch doesn't invalidate the
     instructions already found on other branches.
     """

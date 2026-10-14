@@ -1,4 +1,4 @@
-"""Generation IV field-script opcode table (through opcode 0x33A).
+"""Platinum field-script opcode table (through opcode 0x33A).
 
 Adopted from pret/pokeplatinum's decompilation of the real Platinum
 source (`include/data/scripts/scrcmd.h` for the opcode-to-function
