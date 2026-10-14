@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from romwiki.pipeline.transforms.relationships import build_relationship_index
 from romwiki.renderers.mkdocs import render_location_pages
@@ -687,7 +688,9 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertIn("| Black |", page)
 
     @staticmethod
-    def _render_feature_rich_location() -> tuple[int, bool, str, dict]:
+    def _render_feature_rich_location(
+        npc_trades: list[dict[str, Any]] | None = None,
+    ) -> tuple[int, bool, str, dict]:
         record = {
             "header_id": 45,
             "internal_name": "C03",
@@ -838,6 +841,8 @@ class LocationRenderingTests(unittest.TestCase):
                 {"item_id": 17, "name": "Potion", "price": 1000},
             ],
         }
+        if npc_trades is not None:
+            record["npc_trades"] = npc_trades
         dataset = {"records": [record]}
         references = ReferenceIndex.from_datasets(
             {
@@ -940,6 +945,33 @@ class LocationRenderingTests(unittest.TestCase):
         self.assertEqual(
             catalog["records"][0]["feature_anchors"]["encounters"],
             "wild-encounters",
+        )
+
+    def test_formats_npc_trade_unused_values_as_a_plain_list(self) -> None:
+        trade = {
+            "trade_id": 3,
+            "requested_species_id": 175,
+            "requested_species_name": "Togepi",
+            "offered_species_id": 479,
+            "offered_species_name": "Rotom",
+            "nickname": "Volty",
+            "held_item_id": None,
+            "held_item_name": None,
+            "ivs": [20, 20, 20, 20, 20, 20],
+            "contest_stats": [0, 0, 0, 0, 0],
+            "ot_id": 1234,
+            "ot_name": "Mira",
+            "versions": ["platinum"],
+            "personality": 0x1234ABCD,
+            "unused_values": (0, 65535),
+        }
+
+        _, _, page, _ = self._render_feature_rich_location(npc_trades=[trade])
+
+        self.assertIn(
+            "Trade `3` (Volty) personality value: `0x1234ABCD`, "
+            "unused record values: `[0, 65535]`.",
+            page,
         )
 
     def test_renders_location_items_shops_and_encounters(self) -> None:
