@@ -169,6 +169,41 @@ class GeneratedWikiSnapshotTests(unittest.TestCase):
             "\n".join(restore_logs.output),
         )
 
+    def test_snapshot_accepts_dev_pages_present_in_generated_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            page = _make_site(root).with_name("bulbasaur.md")
+            page.write_text("# Bulbasaur", encoding="utf-8")
+            _write_dev_pages(root, 'pokemon = ["bulbasaur"]')
+            snapshot = root / "snapshot"
+
+            count = create_generated_wiki_snapshot(root, snapshot)
+            restored = restore_generated_wiki_snapshot(
+                root, snapshot, site_ids=("test-game",)
+            )
+
+        self.assertEqual(restored, count)
+
+    def test_snapshot_rejects_dev_pages_missing_from_generated_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            _write_dev_pages(root, 'pokemon = ["bulbasaur"]')
+
+            with self.assertRaisesRegex(SiteError, "pokemon/bulbasaur.md"):
+                create_generated_wiki_snapshot(root, root / "snapshot")
+
+    def test_restore_rejects_dev_pages_missing_from_the_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            snapshot = root / "snapshot"
+            create_generated_wiki_snapshot(root, snapshot)
+            _write_dev_pages(root, 'pokemon = ["bulbasaur"]')
+
+            with self.assertRaisesRegex(SiteError, "pokemon/bulbasaur.md"):
+                restore_generated_wiki_snapshot(root, snapshot, site_ids=("test-game",))
+
     def test_type_chart_is_required_generated_content(self) -> None:
         self.assertIn("types", REQUIRED_WIKI_SECTIONS)
 
@@ -560,6 +595,12 @@ def _published_snapshot(root: Path) -> tuple[Path, Path]:
     asset = snapshot_asset_name("test-game", str(entry["archive_sha256"]))
     archive.replace(release / asset)
     return snapshot, release
+
+
+def _write_dev_pages(root: Path, pages: str) -> None:
+    (root / "sites" / "games" / "test-game" / "dev-pages.toml").write_text(
+        f"[pages]\n{pages}\n", encoding="utf-8"
+    )
 
 
 def _make_site(

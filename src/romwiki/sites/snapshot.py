@@ -27,6 +27,7 @@ from romwiki.sites.catalog import (
     SiteDefinition,
 )
 from romwiki.sites.data_exports import validate_public_data
+from romwiki.sites.dev_pages import DevPages
 from romwiki.util.errors import SiteError
 from romwiki.util.inventory import inventory_fingerprint
 from romwiki.util.json_io import write_json_atomic
@@ -40,6 +41,7 @@ _RAW_HTML_MARKDOWN_LINK = re.compile(
 
 REQUIRED_WIKI_SECTIONS = DEFAULT_GENERATED_SECTIONS
 SNAPSHOT_MANIFEST = ".romwiki-generated-wiki.json"
+DEV_PAGES_MANIFEST = "dev-pages.toml"
 SNAPSHOT_SCHEMA_VERSION = 2
 DIRECTORY_SNAPSHOT_SCHEMA_VERSION = 4
 SNAPSHOT_RELEASE_REPOSITORY = "pokelitee/rom-wiki"
@@ -198,6 +200,10 @@ def _create_snapshot_directory(
         progress = f"{site_number}/{len(data_sites)}"
         _LOG.info("Snapshot [%s] %s: scanning generated files", progress, site.id)
         files = _generated_files_for_site(site)
+        wiki_root = site.config_path.parent / "wiki"
+        _validate_dev_page_selections(
+            site, {path.relative_to(wiki_root).as_posix() for path in files}
+        )
         metadata_fingerprint = _metadata_fingerprint(catalog.root, files)
         source_fingerprint = _site_source_fingerprint(catalog, site)
         archive_path = output / f"{site.id}.tar.gz"
@@ -762,8 +768,36 @@ def _restore_site_archive(
             count += 1
     if count != expected_count:
         raise SiteError(f"Generated snapshot file count does not match: {archive_path}")
-    validate_public_data(site.config_path.parent / "wiki")
+    wiki_root = site.config_path.parent / "wiki"
+    validate_public_data(wiki_root)
+    wiki_prefix = PurePosixPath(wiki_root.relative_to(catalog.root).as_posix())
+    _validate_dev_page_selections(
+        site,
+        {
+            target.relative_to(wiki_prefix).as_posix()
+            for target in targets
+            if target.is_relative_to(wiki_prefix)
+        },
+    )
     return count
+
+
+def _validate_dev_page_selections(site: SiteDefinition, wiki_paths: set[str]) -> None:
+    manifest = site.config_path.parent / DEV_PAGES_MANIFEST
+    if not manifest.is_file():
+        return
+    pages = DevPages.load(manifest)
+    missing = sorted(
+        page
+        for section, slugs in pages.sections.items()
+        for page in (f"{section}/{slug}.md" for slug in slugs)
+        if page not in wiki_paths
+    )
+    if missing:
+        raise SiteError(
+            f"{manifest} selects pages missing from the generated wiki for "
+            f"{site.id}: {', '.join(missing)}"
+        )
 
 
 def _validate_site_archive_manifest(
