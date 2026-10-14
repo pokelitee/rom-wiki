@@ -27,6 +27,10 @@ sites/games/*/wiki/changes/
 sites/games/*/wiki/data/
 sites/games/*/wiki/types/
 
+# Snapshot archives are published as `snapshots` release assets; only the
+# manifest that pins their checksums is tracked.
+sites/generated-wiki/*.tar.gz
+
 # User-supplied game images and related emulator data must remain local.
 *.nds
 *.3ds
