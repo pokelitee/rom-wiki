@@ -14,6 +14,7 @@ from romwiki.engines.gen4.shared.script_table import (
     parse_script_table,
 )
 from romwiki.engines.gen4.shared.starter_branches import Gen4StarterBranchFamily
+from romwiki.util.errors import InvalidRomError
 
 # Platinum's tag-battle command (partner, enemy1, enemy2), found and verified
 # against real Platinum ROM data: it does not appear in `scrcmd.py`'s shared
@@ -115,7 +116,7 @@ def parse_staged_partner_battle_families(
     species_set = set(starter_species)
     try:
         code_offset = parse_script_table(data)
-    except Exception:  # noqa: BLE001 - a script this decoder cannot walk is skipped
+    except InvalidRomError:
         return ()
     signature = struct.pack("<H", START_TAG_BATTLE)
     families = []

@@ -168,6 +168,16 @@ class Gen4TagBattleTests(unittest.TestCase):
         self.assertEqual(sorted(family.selected), [(387, 101), (390, 102)])
         self.assertEqual(family.fallthrough_trainer_id, 103)
 
+    def test_skips_a_file_without_a_valid_script_table(self) -> None:
+        families = parse_staged_partner_battle_families(
+            b"\x00",
+            script_file_id=7,
+            trainer_count=1000,
+            starter_species=(387, 390, 393),
+        )
+
+        self.assertEqual(families, ())
+
     def test_rejects_a_subroutine_gated_by_something_else_first(self) -> None:
         # A GetPlayerGender-style pre-check (or any opcode other than
         # GetPlayerStarterSpecies) before the staged blocks must not match:
