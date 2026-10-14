@@ -90,20 +90,6 @@ class EngineFormats:
 
 
 @dataclass(frozen=True, slots=True)
-class _EngineNamespaceOverlay:
-    """Use family-specific facts while retaining verified shared Gen V facts."""
-
-    primary: Any
-    fallback: Any
-
-    def __getattr__(self, name: str) -> Any:
-        try:
-            return getattr(self.primary, name)
-        except AttributeError:
-            return getattr(self.fallback, name)
-
-
-@dataclass(frozen=True, slots=True)
 class EngineAdapter:
     """Namespace of everything the pipeline needs from one engine implementation.
 
@@ -377,23 +363,23 @@ _ENGINES: dict[str, EngineAdapter] = {
     ),
     GEN5_B2W2_ENGINE: EngineAdapter(
         personal=gen5_b2w2,
-        locations=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        trainers=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        encounters=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        evolutions=gen5_bw,
-        items=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        machines=gen5_bw,
-        moves=gen5_bw,
+        locations=gen5_b2w2,
+        trainers=gen5_b2w2,
+        encounters=gen5_b2w2,
+        evolutions=gen5_b2w2,
+        items=gen5_b2w2,
+        machines=gen5_b2w2,
+        moves=gen5_b2w2,
         tutors=gen5_b2w2,
-        egg_moves=gen5_bw,
-        learnsets=gen5_bw,
-        reference_names=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        enrich=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
+        egg_moves=gen5_b2w2,
+        learnsets=gen5_b2w2,
+        reference_names=gen5_b2w2,
+        enrich=gen5_b2w2,
         trainer_party=gen5_b2w2,
-        trades=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
-        marts=_EngineNamespaceOverlay(gen5_b2w2, gen5_bw),
+        trades=gen5_b2w2,
+        marts=gen5_b2w2,
         static_encounters=gen5_b2w2,
-        pickup=gen5_bw,
+        pickup=gen5_b2w2,
         formats=EngineFormats(
             encounters="seasonal",
             locations="encounter-map",

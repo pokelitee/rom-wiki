@@ -109,12 +109,6 @@ def _engine_source_modules(engine_id: str) -> tuple[str, ...]:
     def collect(value: Any) -> None:
         if isinstance(value, ModuleType):
             modules.add(value.__name__)
-            return
-        primary = getattr(value, "primary", None)
-        fallback = getattr(value, "fallback", None)
-        if primary is not None and fallback is not None:
-            collect(primary)
-            collect(fallback)
 
     adapter = get_engine(engine_id)
     for field in fields(adapter):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen5.shared.constants import GEN5_MACHINE_COUNT
 from romwiki.schema import (
     PokemonPersonalData,
     RecordProvenance,
@@ -11,7 +12,6 @@ from romwiki.schema import (
 from romwiki.util.errors import InvalidRomError
 
 from .constants import (
-    GEN5_MACHINE_COUNT,
     PERSONAL_PLACEHOLDER_MEMBER,
     PERSONAL_PLACEHOLDER_RECORD_SIZE,
     PERSONAL_RECORD_SIZE,

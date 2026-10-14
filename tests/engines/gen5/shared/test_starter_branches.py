@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.starter_branches import (
+from romwiki.engines.gen5.shared.starter_branches import (
     parse_starter_branch_families,
     parse_starter_species,
 )

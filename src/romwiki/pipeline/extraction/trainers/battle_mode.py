@@ -172,7 +172,7 @@ def _extract_battle_mode_trainer_locations(
     """Resolve Gen5 trainer battle triggers' map locations.
 
     Two independent, literal-fact-only mechanisms (see
-    `gen5/bw/overworld.py` and `gen5/bw/scripts.py` for the full verification
+    `gen5/shared/overworld.py` and `gen5/bw/scripts.py` for the full verification
     against real Black ROM data):
 
     - Sight-triggered ("walk into view") battles: each map's overworld NPC

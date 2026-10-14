@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.trades import parse_npc_trade_record
+from romwiki.engines.gen5.shared.trades import parse_npc_trade_record
 from romwiki.util.errors import InvalidRomError
 
 

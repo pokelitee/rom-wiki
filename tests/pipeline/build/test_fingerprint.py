@@ -21,13 +21,16 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         self.assertFalse(any(path.startswith("engines/gen5/") for path in files))
         self.assertNotIn("engines/registry.py", files)
 
-    def test_includes_overlay_fallback_engine_dependencies(self) -> None:
+    def test_includes_shared_generation_dependencies_but_no_sibling_leaf(
+        self,
+    ) -> None:
         files = extraction_source_files(
             "gen5_b2w2", "romwiki.pipeline.extraction.items"
         )
 
         self.assertTrue(any(path.startswith("engines/gen5/b2w2/") for path in files))
-        self.assertTrue(any(path.startswith("engines/gen5/bw/") for path in files))
+        self.assertTrue(any(path.startswith("engines/gen5/shared/") for path in files))
+        self.assertFalse(any(path.startswith("engines/gen5/bw/") for path in files))
 
     def test_scopes_dependencies_to_the_selected_extractor(self) -> None:
         files = extraction_source_files(

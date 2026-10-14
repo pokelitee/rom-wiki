@@ -21,7 +21,7 @@ class SplitPickupTable:
 class SlidingPickupTable:
     # The 29-word table found by byte-pattern search in the Battle overlay
     # (`PickupOvlNumber`). This format packs every level range's items into one shared,
-    # sliding-window array (see `gen5/bw/pickup.py`).
+    # sliding-window array (see `gen5/shared/pickup.py`).
     item_ids: tuple[int, ...]
     provenance: RecordProvenance
 

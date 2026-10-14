@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen5.shared.constants import MAX_MOVE_ID
 from romwiki.schema import ArchiveEggMoveSet, RecordProvenance
 from romwiki.util.errors import InvalidRomError
-
-from .constants import MAX_MOVE_ID
 
 
 def parse_egg_move_set(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.machines import (
+from romwiki.engines.gen5.shared.machines import (
     machine_id_for_table_index,
     machine_name,
     parse_machine_move_table,

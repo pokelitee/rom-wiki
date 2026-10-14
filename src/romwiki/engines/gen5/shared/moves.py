@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen5.shared.constants import MOVE_RECORD_SIZE
 from romwiki.schema import Move, RecordProvenance
 from romwiki.util.errors import InvalidRomError
-
-from .constants import MOVE_RECORD_SIZE
 
 
 def parse_move_record(

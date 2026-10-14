@@ -3,12 +3,12 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.marts import parse_shop_dispatch
 from romwiki.engines.gen5.shared.script_disassembler import (
     disassemble_function,
     find_calls,
     parse_function_offsets,
 )
+from romwiki.engines.gen5.shared.vendors import parse_shop_dispatch
 
 
 def _vmnop() -> bytes:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.pickup import (
+from romwiki.engines.gen5.shared.pickup import (
     PICKUP_SLOT_CHANCES,
     parse_pickup_table,
     pickup_level_range_item_ids,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.map_matrices import parse_map_matrix
+from romwiki.engines.gen5.shared.map_matrices import parse_map_matrix
 from romwiki.util.errors import InvalidRomError
 
 

@@ -1,27 +1,81 @@
-from romwiki.engines.gen5.shared.script_disassembler import (
-    disassemble_function,
-    parse_function_offsets,
-)
-from romwiki.engines.gen5.shared.script_items import find_script_awarded_items
-
-from .battle_variants import resolve_trainer_variants
-from .constants import (
+from romwiki.engines.gen5.shared.constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
     EGG_GROUP_NAMES,
-    ENCOUNTER_COSMETIC_FORM_LABELS,
-    ENCOUNTER_FORM_SLUGS,
     EVOLUTION_METHOD_NAMES,
     EVOLUTION_PARAMETER_KINDS,
     GEN5_BASE_SPECIES_COUNT,
     GEN5_MACHINE_COUNT,
     GEN5_MACHINE_TABLE_PREFIX,
     GROWTH_RATE_NAMES,
-    ITEM_NAME_COUNT,
     MAX_MOVE_ID,
     MOVE_NAME_COUNT,
     MOVE_RECORD_COUNT,
+    TYPE_NAME_COUNT,
+    TYPE_NAMES,
+)
+from romwiki.engines.gen5.shared.egg_moves import parse_egg_move_set
+from romwiki.engines.gen5.shared.encounters import (
+    METHOD_NAMES as ENCOUNTER_METHOD_NAMES,
+)
+from romwiki.engines.gen5.shared.encounters import (
+    METHOD_SLOT_CHANCES as ENCOUNTER_METHOD_SLOT_CHANCES,
+)
+from romwiki.engines.gen5.shared.encounters import parse_encounter_entry
+from romwiki.engines.gen5.shared.evolutions import parse_evolution_record
+from romwiki.engines.gen5.shared.items import (
+    GEN5_ITEM_FIELD_USE_NAMES,
+    GEN5_ITEM_POCKET_NAMES,
+    NATURAL_GIFT_TYPE_NONE,
+    parse_item_record,
+)
+from romwiki.engines.gen5.shared.learnsets import parse_level_up_learnset
+from romwiki.engines.gen5.shared.machines import machine_name, parse_machine_move_table
+from romwiki.engines.gen5.shared.map_matrices import parse_map_matrix
+from romwiki.engines.gen5.shared.messages import parse_english_message_archive
+from romwiki.engines.gen5.shared.moves import parse_move_record
+from romwiki.engines.gen5.shared.overworld import (
+    is_visible_item_candidate,
+    parse_hidden_item_script_table,
+    parse_overworld_furniture,
+    parse_overworld_npcs,
+    parse_overworld_warps,
+    parse_visible_item_script_table,
+    resolve_hidden_item_id,
+    resolve_visible_item_id,
+)
+from romwiki.engines.gen5.shared.pickup import (
+    PICKUP_LEVEL_RANGE_COUNT,
+    PICKUP_LEVEL_RANGE_SIZE,
+    PICKUP_SLOT_CHANCES,
+    PICKUP_TABLE_LOCATOR,
+    parse_pickup_table,
+    pickup_level_range_item_ids,
+)
+from romwiki.engines.gen5.shared.script_disassembler import (
+    disassemble_function,
+    parse_function_offsets,
+)
+from romwiki.engines.gen5.shared.script_items import find_script_awarded_items
+from romwiki.engines.gen5.shared.starter_branches import (
+    STARTER_SPECIES_ENTRY_SIZE,
+    Gen5StarterBranchFamily,
+    parse_starter_branch_families,
+    parse_starter_species,
+)
+from romwiki.engines.gen5.shared.trades import parse_npc_trade_record
+from romwiki.engines.gen5.shared.vendors import (
+    STANDARD_SHOP_SELECTOR,
+    Gen5SpecialVendor,
+    parse_shop_dispatch,
+)
+
+from .battle_variants import resolve_trainer_variants
+from .constants import (
+    ENCOUNTER_COSMETIC_FORM_LABELS,
+    ENCOUNTER_FORM_SLUGS,
+    ITEM_NAME_COUNT,
     PERSONAL_FORM_MEMBERS,
     PERSONAL_INTERNAL_MEMBERS,
     PERSONAL_RECORD_COUNT,
@@ -30,77 +84,29 @@ from .constants import (
     POKEMON_NAME_COUNT,
     TRAINER_COSMETIC_FORM_LABELS,
     TRAINER_FORM_SLUGS,
-    TYPE_NAME_COUNT,
-    TYPE_NAMES,
 )
-from .egg_moves import parse_egg_move_set
-from .encounters import (
-    METHOD_NAMES as ENCOUNTER_METHOD_NAMES,
-)
-from .encounters import (
-    METHOD_SLOT_CHANCES as ENCOUNTER_METHOD_SLOT_CHANCES,
-)
-from .encounters import parse_encounter_entry
-from .evolutions import parse_evolution_record
-from .items import (
-    GEN5_ITEM_FIELD_USE_NAMES,
-    GEN5_ITEM_POCKET_NAMES,
-    NATURAL_GIFT_TYPE_NONE,
-    parse_item_record,
-)
-from .learnsets import parse_level_up_learnset
 from .locations import (
     parse_map_header_script_files,
     parse_map_header_table,
     parse_map_header_text_files,
     parse_wild_map_names,
 )
-from .machines import machine_name, parse_machine_move_table
-from .map_matrices import parse_map_matrix
 from .marts import (
     SHOP_SELECTOR_TO_INVENTORY_ID,
-    STANDARD_SHOP_SELECTOR,
-    Gen5SpecialVendor,
     parse_shop_catalog,
-    parse_shop_dispatch,
     resolve_special_vendor,
 )
-from .messages import parse_english_message_archive
-from .moves import parse_move_record
 from .overworld import (
-    is_visible_item_candidate,
-    parse_hidden_item_script_table,
-    parse_overworld_furniture,
-    parse_overworld_npcs,
-    parse_overworld_warps,
-    parse_visible_item_script_table,
     resolve_common_script_member,
     resolve_common_script_trainer_id,
-    resolve_hidden_item_id,
-    resolve_visible_item_id,
 )
 from .personal import parse_personal_record
-from .pickup import (
-    PICKUP_LEVEL_RANGE_COUNT,
-    PICKUP_LEVEL_RANGE_SIZE,
-    PICKUP_SLOT_CHANCES,
-    PICKUP_TABLE_LOCATOR,
-    parse_pickup_table,
-    pickup_level_range_item_ids,
-)
 from .scripts import (
     find_fossil_revival_script,
     parse_fossil_revival_table,
     parse_trainer_battle_commands,
 )
-from .starter_branches import (
-    STARTER_SPECIES_ENTRY_SIZE,
-    Gen5StarterBranchFamily,
-    parse_starter_branch_families,
-    parse_starter_species,
-)
 from .static_encounters import discover_static_encounters
-from .trades import parse_npc_trade_record
 from .trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,

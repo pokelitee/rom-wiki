@@ -278,7 +278,7 @@ class ArchiveMartExtractionTests(unittest.TestCase):
                 "romwiki.pipeline.extraction.marts.get_platform", return_value=platform
             ),
             patch(
-                "romwiki.engines.gen5.bw.parse_english_message_archive",
+                "romwiki.engines.gen5.b2w2.parse_english_message_archive",
                 return_value=item_names,
             ),
             patch(

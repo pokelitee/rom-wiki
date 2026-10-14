@@ -67,7 +67,7 @@ def parse_trainer_battle_commands(
 
     Battles whose trainer ID is supplied through a script variable (the
     generic sight-triggered-battle convention -- see
-    `gen5/bw/overworld.py`) are intentionally not resolved here; only
+    `gen5/shared/overworld.py`) are intentionally not resolved here; only
     literal, in-script trainer IDs are returned, matching this project's
     "decode, don't guess" principle.
     """

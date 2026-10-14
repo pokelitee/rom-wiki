@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 
+from romwiki.engines.gen5.shared.constants import GEN5_BASE_SPECIES_COUNT
 from romwiki.schema import (
     RecordProvenance,
     SeasonalEncounterArea,
@@ -9,8 +10,6 @@ from romwiki.schema import (
     SeasonalEncounterSlot,
 )
 from romwiki.util.errors import InvalidRomError
-
-from .constants import GEN5_BASE_SPECIES_COUNT
 
 # Confirmed against the real `a/1/2/6` (WildPokemon) archive: entries are
 # either one 232-byte block (no seasonal variation) or four consecutive

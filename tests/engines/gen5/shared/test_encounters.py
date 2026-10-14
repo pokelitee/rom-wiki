@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.encounters import (
+from romwiki.engines.gen5.shared.encounters import (
     SEASON_BLOCK_SIZE,
     SEASONS,
     parse_encounter_entry,
@@ -14,7 +14,7 @@ from romwiki.util.errors import InvalidRomError
 def _make_block(
     rates: dict[str, int], slots: dict[str, list[tuple[int, int, int, int]]]
 ) -> bytes:
-    from romwiki.engines.gen5.bw.encounters import METHOD_NAMES, METHOD_SLOT_COUNTS
+    from romwiki.engines.gen5.shared.encounters import METHOD_NAMES, METHOD_SLOT_COUNTS
 
     block = bytearray(SEASON_BLOCK_SIZE)
     cursor = 8

@@ -3,14 +3,14 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.b2w2.overworld import parse_overworld_npcs
+from romwiki.engines.gen5.shared.overworld import parse_overworld_npcs
 
 
 def _npc_record(
     *, script_used: int, sight_range: int, x: int, y: int, z: int, sprite: int = 0
 ) -> bytes:
     # 18 signed 16-bit fields, the same real-ROM layout as BW's own overworld
-    # NPC records (see gen5/bw/overworld.py's module docstring): id, sprite,
+    # NPC records (see gen5/shared/overworld.py's module docstring): id, sprite,
     # movementPermissions, permissions2, flag, scriptUsed, defaultDirection,
     # sightRange, unknown1, unknown2, horizontalLeash, verticalLeash,
     # unknown3, unknown4, x, y, unknown5, z.

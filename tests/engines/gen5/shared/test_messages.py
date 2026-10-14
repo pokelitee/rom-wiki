@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen5.bw.messages import parse_english_message_archive
+from romwiki.engines.gen5.shared.messages import parse_english_message_archive
 from romwiki.util.errors import InvalidRomError
 
 _BASE = 16  # header (12 bytes) + one section_offset entry (4 bytes)

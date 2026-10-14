@@ -2,12 +2,32 @@ from __future__ import annotations
 
 import ast
 import unittest
+from dataclasses import fields
 from pathlib import Path
+from types import ModuleType
+
+from romwiki.engines.registry import (
+    GEN3_EMERALD_ENGINE,
+    GEN3_FRLG_ENGINE,
+    GEN4_HGSS_ENGINE,
+    GEN4_PLATINUM_ENGINE,
+    GEN5_B2W2_ENGINE,
+    GEN5_BW_ENGINE,
+    get_engine,
+)
 
 SOURCE_ROOT = Path(__file__).resolve().parents[2] / "src" / "romwiki"
 ENGINE_ROOT = SOURCE_ROOT / "engines"
 REGISTRY_PATH = ENGINE_ROOT / "registry.py"
 COMMON_ENGINE_ROOT = ENGINE_ROOT / "common"
+ENGINE_IDS = (
+    GEN3_FRLG_ENGINE,
+    GEN3_EMERALD_ENGINE,
+    GEN4_PLATINUM_ENGINE,
+    GEN4_HGSS_ENGINE,
+    GEN5_BW_ENGINE,
+    GEN5_B2W2_ENGINE,
+)
 SEMANTIC_DISPATCH_PATHS = (
     SOURCE_ROOT / "pipeline" / "extraction" / "encounters.py",
     SOURCE_ROOT / "pipeline" / "extraction" / "locations" / "dispatcher.py",
@@ -79,8 +99,6 @@ class EnginePackageBoundaryTests(unittest.TestCase):
         leaves = _engine_leaves()
         violations = []
         for path in SOURCE_ROOT.rglob("*.py"):
-            if path == REGISTRY_PATH:
-                continue
             current_leaf = _containing_leaf(path, leaves)
             current_generation = current_leaf.split(".")[2] if current_leaf else None
             for imported in _imports(path):
@@ -92,6 +110,10 @@ class EnginePackageBoundaryTests(unittest.TestCase):
                     ),
                     None,
                 )
+                # The registry is the plug-in boundary: it may name each leaf's
+                # public namespace, but never reach into a leaf's modules.
+                if path == REGISTRY_PATH and imported == target_leaf:
+                    continue
                 if target_leaf is not None and target_leaf != current_leaf:
                     violations.append(
                         f"{path.relative_to(SOURCE_ROOT)} imports leaf {target_leaf}"
@@ -108,6 +130,21 @@ class EnginePackageBoundaryTests(unittest.TestCase):
                         f"{path.relative_to(SOURCE_ROOT)} imports another generation: "
                         f"{imported}"
                     )
+
+        self.assertEqual(violations, [])
+
+    def test_each_engine_adapter_uses_one_leaf_namespace(self) -> None:
+        leaves = _engine_leaves()
+        violations = []
+        for engine_id in ENGINE_IDS:
+            adapter = get_engine(engine_id)
+            namespaces = {
+                getattr(adapter, field.name).__name__
+                for field in fields(adapter)
+                if isinstance(getattr(adapter, field.name), ModuleType)
+            }
+            if len(namespaces) != 1 or not namespaces <= set(leaves):
+                violations.append(f"{engine_id} uses {sorted(namespaces)}")
 
         self.assertEqual(violations, [])
 
