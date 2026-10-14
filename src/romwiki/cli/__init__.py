@@ -48,7 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+EXIT_FAILURE = 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
+    # argparse exits with status 2 for usage errors before a handler runs, so
+    # domain failures use a distinct status.
     args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
     configure_logging(verbose=args.verbose, quiet=args.quiet)
     try:
@@ -56,4 +61,4 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     except RomWikiError as error:
         LOG.error("%s", error)
-        return 2
+        return EXIT_FAILURE

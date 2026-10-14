@@ -26,6 +26,11 @@ Individual records and files are not logged. `--verbose` adds diagnostic detail;
 `--quiet` retains warnings and errors while suppressing routine progress. Lifecycle
 messages consistently use `started`, `completed in`, and `failed after` wording.
 
+Commands exit with status `0` on success and `1` when a ROM Wiki error, such as a
+missing ROM, an unmatched profile, or a failed audit, stops the command. Status
+`2` is reserved for usage errors reported by argument parsing, such as an unknown
+option.
+
 ## ROM inputs
 
 Commands that operate on one ROM accept a configured game or explicit path:

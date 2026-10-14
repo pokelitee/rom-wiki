@@ -36,9 +36,20 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class MainErrorHandlingTests(unittest.TestCase):
     def test_a_rom_wiki_error_is_reported_and_exits_nonzero(self) -> None:
-        exit_code = main(["inspect", "--rom", "/no/such/rom.nds"])
+        with self.assertLogs("romwiki", level="ERROR") as logs:
+            exit_code = main(["inspect", "--rom", "/no/such/rom.nds"])
 
-        self.assertEqual(exit_code, 2)
+        self.assertEqual(exit_code, 1)
+        self.assertIn("ROM image does not exist", "\n".join(logs.output))
+
+    def test_usage_errors_keep_the_argparse_exit_status(self) -> None:
+        with (
+            patch("sys.stderr"),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            main(["inspect", "--no-such-option"])
+
+        self.assertEqual(raised.exception.code, 2)
 
     def test_combined_dev_server_arguments_are_forwarded(self) -> None:
         catalog = object()
