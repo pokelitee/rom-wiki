@@ -595,6 +595,13 @@ combined artifact. Snapshot creation is an optional final step restricted to
 complete `--all` runs. This orchestration layer does not reimplement extraction,
 merging, rendering, site building, auditing, or snapshot behavior.
 
+Sites are generated in a process pool bounded by `--jobs`. Each site writes only
+its own data, wiki, and state directories, but clean-ROM baseline caches can be
+shared between hacks of one base game, and cache writes are not safe across
+processes. Sites connected through any current or baseline cache directory are
+therefore generated sequentially by one worker, keeping output identical to a
+serial run.
+
 Schema-versioned state under `.romwiki/` binds each site to its ROMs, resolved
 profiles, selected engine, PokéDB input, generation sources, and generated-file
 metadata. Unchanged sites skip generation; changed sites are clean-built for

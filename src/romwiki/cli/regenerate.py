@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
+from collections.abc import Sequence
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
 
@@ -41,8 +45,10 @@ from romwiki.sites import (
 from romwiki.sites.build_state import combined_artifact_files
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import LocalConfigError, SiteError
-from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
-from romwiki.util.logging import timed_operation
+from romwiki.util.local_config import LocalGameRegistry
+from romwiki.util.logging import DATE_FORMAT, LOG_FORMAT, timed_operation
+
+_GENERATION_JOBS_HELP = "parallel site generation workers"
 
 
 def add_regenerate_parser(subparsers: SubParsers) -> None:
@@ -104,7 +110,10 @@ def add_regenerate_parser(subparsers: SubParsers) -> None:
     regenerate_parser.add_argument("--max-images", type=int, default=150)
     regenerate_parser.add_argument("--base-url")
     add_dev_argument(regenerate_parser)
-    add_jobs_argument(regenerate_parser)
+    add_jobs_argument(
+        regenerate_parser,
+        workers=f"{_GENERATION_JOBS_HELP}, MkDocs builds, and audit page-parse workers",
+    )
     add_site_root_argument(regenerate_parser)
     regenerate_parser.set_defaults(handler=run_regeneration)
 
@@ -143,6 +152,7 @@ def add_generate_parser(subparsers: SubParsers) -> None:
         help="ignore generation reuse state and render selected content again",
     )
     add_dev_argument(generate_parser)
+    add_jobs_argument(generate_parser, workers=_GENERATION_JOBS_HELP)
     add_site_root_argument(generate_parser)
     generate_parser.set_defaults(handler=run_generation)
 
@@ -157,13 +167,29 @@ def run_generation(args: argparse.Namespace) -> None:
         _run_regeneration_steps(args, build_artifact=False)
 
 
-_PreparedRegenerationSite = tuple[
-    SiteDefinition,
-    tuple[LocalGamePaths, ...],
-    tuple[InspectionResult, ...],
-    tuple[InspectionResult | None, ...],
-    PokeDBGeneration,
-]
+@dataclass(frozen=True, slots=True)
+class _PreparedSite:
+    site: SiteDefinition
+    current: tuple[InspectionResult, ...]
+    baselines: tuple[InspectionResult | None, ...]
+    pokedb_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class _SiteGeneration:
+    """A preflighted site whose inputs changed, ready for a generation worker."""
+
+    prepared: _PreparedSite
+    progress: str
+    state_path: Path
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class _GenerationOptions:
+    data_root: Path
+    refresh: bool
+    dev: bool
 
 
 def validate_regeneration_flags(args: argparse.Namespace) -> tuple[bool, bool]:
@@ -183,7 +209,7 @@ def validate_regeneration_flags(args: argparse.Namespace) -> tuple[bool, bool]:
 
 def _prepare_regeneration_sites(
     args: argparse.Namespace, catalog: SiteCatalog, *, build_artifact: bool
-) -> list[_PreparedRegenerationSite]:
+) -> list[_PreparedSite]:
     """Preflight every selected site: identify its ROMs/baselines against
     their profiles before any (expensive) extraction begins.
     """
@@ -204,10 +230,9 @@ def _prepare_regeneration_sites(
             )
     registry = LocalGameRegistry.load(args.games_config) if data_sites else None
     profiles = regeneration_profiles(catalog, args.profiles_dir) if data_sites else None
-    pokedb_generations: dict[Path, PokeDBGeneration] = {}
     inspections: dict[Path, InspectionResult] = {}
 
-    prepared: list[_PreparedRegenerationSite] = []
+    prepared: list[_PreparedSite] = []
     preflight_started = perf_counter()
     LOG.info("Generation preflight: %s sites", f"{len(data_sites):,}")
     for site_number, site in enumerate(data_sites, start=1):
@@ -225,10 +250,6 @@ def _prepare_regeneration_sites(
                 f"PokéDB generation output does not exist for {site.id}: "
                 f"{pokedb_path.resolve()}"
             )
-        resolved_pokedb = pokedb_path.resolve()
-        if resolved_pokedb not in pokedb_generations:
-            pokedb_generations[resolved_pokedb] = PokeDBGeneration.load(resolved_pokedb)
-        pokedb = pokedb_generations[resolved_pokedb]
         assert registry is not None
         paths = tuple(registry.get(profile) for profile in site.game.profiles)
         current = []
@@ -263,7 +284,9 @@ def _prepare_regeneration_sites(
                         f"Base ROM for {game_paths.game_id} does not match a profile"
                     )
                 baselines[index] = baseline
-        prepared.append((site, paths, tuple(current), tuple(baselines), pokedb))
+        prepared.append(
+            _PreparedSite(site, tuple(current), tuple(baselines), pokedb_path.resolve())
+        )
 
     LOG.info(
         "Generation preflight completed in %.1fs for %s sites",
@@ -275,26 +298,24 @@ def _prepare_regeneration_sites(
 
 def _generate_prepared_sites(
     args: argparse.Namespace,
-    prepared: list[_PreparedRegenerationSite],
+    prepared: list[_PreparedSite],
     *,
     dev: bool,
 ) -> None:
-    """Extract, enrich, and render each preflighted site in turn."""
-    for site_number, (site, _paths, current, baselines, pokedb) in enumerate(
-        prepared, start=1
-    ):
-        game = site.game
-        assert game is not None
-        site_started = perf_counter()
+    """Extract, enrich, and render every preflighted site with changed inputs."""
+    pending = []
+    for site_number, prepared_site in enumerate(prepared, start=1):
+        site = prepared_site.site
+        assert site.game is not None
         progress = f"{site_number}/{len(prepared)}"
         LOG.info("Generation [%s] %s: checking inputs", progress, site.id)
         state_path = args.root / ".romwiki" / "generation-state" / f"{site.id}.json"
         input_fingerprint = regeneration_fingerprint(
             args.root.resolve(),
             site,
-            current,
-            baselines,
-            args.pokedb_root / f"gen{game.generation}",
+            prepared_site.current,
+            prepared_site.baselines,
+            args.pokedb_root / f"gen{site.game.generation}",
             dev=dev,
         )
         if not getattr(args, "clean", False) and can_reuse_generation(
@@ -306,43 +327,165 @@ def _generate_prepared_sites(
                 site.id,
             )
             continue
-        workflows = [
-            GameBuildWorkflow(
-                result,
-                pokedb,
-                baseline=baseline,
-                baseline_cache_root=args.data_root / "baselines",
-                refresh_baseline=args.refresh,
-                current_cache_root=args.data_root / "cache",
-                refresh_current=args.refresh,
-            )
-            for result, baseline in zip(current, baselines, strict=True)
-        ]
-        wiki_root = site.config_path.parent / "wiki"
-        if len(game.profiles) == 1:
-            render_game_build(
-                workflows[0],
-                data_root=args.data_root / game.profiles[0],
-                wiki_root=wiki_root,
-                dev=dev,
-            )
-        else:
-            _, versions = version_family_inputs(game.profiles, game.versions)
-            render_version_family_build(
-                site.id,
-                dict(zip(versions, workflows, strict=True)),
-                versions,
-                data_root=args.data_root / site.id,
-                wiki_root=wiki_root,
-                dev=dev,
-            )
-        write_regeneration_state(state_path, input_fingerprint, site)
-        LOG.info(
-            "Generation [%s] %s completed in %.1fs",
-            progress,
-            site.id,
-            perf_counter() - site_started,
+        pending.append(
+            _SiteGeneration(prepared_site, progress, state_path, input_fingerprint)
         )
+
+    options = _GenerationOptions(args.data_root, args.refresh, dev)
+    groups = _cache_sharing_groups(pending)
+    worker_count = _generation_worker_count(getattr(args, "jobs", None), len(groups))
+    if worker_count <= 1:
+        pokedb_cache: dict[Path, PokeDBGeneration] = {}
+        for generation in pending:
+            _generate_site(generation, options, pokedb_cache)
+        return
+
+    LOG.info(
+        "Generating %s sites with %s parallel workers",
+        f"{len(pending):,}",
+        worker_count,
+    )
+    with ProcessPoolExecutor(max_workers=worker_count) as pool:
+        futures = [
+            pool.submit(
+                _generate_site_group_in_worker,
+                group,
+                options,
+                logging.getLogger().level,
+            )
+            for group in groups
+        ]
+        # Like parallel site builds, report the first failure only after every
+        # worker has settled so no site is left half-written by an early exit.
+        errors = [future.exception() for future in futures]
+    for error in errors:
+        if error is not None:
+            raise error
+
+
+def _cache_sharing_groups(
+    generations: Sequence[_SiteGeneration],
+) -> list[tuple[_SiteGeneration, ...]]:
+    """Group sites that share an extraction cache directory.
+
+    Sites such as a hack and its sibling hack can use the same clean-ROM
+    baseline cache. Cache writes are not safe across processes, so each group
+    is generated sequentially by one worker, in catalog order.
+    """
+    groups: list[tuple[set[tuple[str, str]], list[int]]] = []
+    for index, generation in enumerate(generations):
+        keys = _cache_keys(generation.prepared)
+        merged_keys = set(keys)
+        merged_indexes = [index]
+        remaining = []
+        for group_keys, indexes in groups:
+            if group_keys & keys:
+                merged_keys |= group_keys
+                merged_indexes.extend(indexes)
+            else:
+                remaining.append((group_keys, indexes))
+        groups = [*remaining, (merged_keys, merged_indexes)]
+    return [
+        tuple(generations[index] for index in sorted(indexes))
+        for _, indexes in sorted(groups, key=lambda group: min(group[1]))
+    ]
+
+
+def _cache_keys(prepared: _PreparedSite) -> set[tuple[str, str]]:
+    keys = set()
+    for root, results in (
+        ("cache", prepared.current),
+        ("baselines", prepared.baselines),
+    ):
+        for result in results:
+            if result is not None and result.match is not None:
+                keys.add((root, result.match.profile.id))
+    return keys
+
+
+def _generation_worker_count(jobs: int | None, group_count: int) -> int:
+    if jobs is not None and jobs < 1:
+        raise SiteError(f"Parallel job count must be at least 1: {jobs}")
+    if group_count <= 1:
+        return 1
+    return min(jobs or os.cpu_count() or 1, group_count)
+
+
+_WORKER_POKEDB: dict[Path, PokeDBGeneration] = {}
+
+
+def _generate_site_group_in_worker(
+    group: tuple[_SiteGeneration, ...],
+    options: _GenerationOptions,
+    log_level: int,
+) -> None:
+    for generation in group:
+        site_id = generation.prepared.site.id
+        logging.basicConfig(
+            level=log_level,
+            format=LOG_FORMAT.replace("%(message)s", f"[{site_id}] %(message)s"),
+            datefmt=DATE_FORMAT,
+            force=True,
+        )
+        try:
+            _generate_site(generation, options, _WORKER_POKEDB)
+        except Exception as error:
+            LOG.error(
+                "Generation [%s] %s failed: %s", generation.progress, site_id, error
+            )
+            raise
+
+
+def _generate_site(
+    generation: _SiteGeneration,
+    options: _GenerationOptions,
+    pokedb_cache: dict[Path, PokeDBGeneration],
+) -> None:
+    prepared = generation.prepared
+    site = prepared.site
+    game = site.game
+    assert game is not None
+    site_started = perf_counter()
+    if prepared.pokedb_path not in pokedb_cache:
+        pokedb_cache[prepared.pokedb_path] = PokeDBGeneration.load(prepared.pokedb_path)
+    pokedb = pokedb_cache[prepared.pokedb_path]
+    workflows = [
+        GameBuildWorkflow(
+            result,
+            pokedb,
+            baseline=baseline,
+            baseline_cache_root=options.data_root / "baselines",
+            refresh_baseline=options.refresh,
+            current_cache_root=options.data_root / "cache",
+            refresh_current=options.refresh,
+        )
+        for result, baseline in zip(prepared.current, prepared.baselines, strict=True)
+    ]
+    wiki_root = site.config_path.parent / "wiki"
+    if len(game.profiles) == 1:
+        render_game_build(
+            workflows[0],
+            data_root=options.data_root / game.profiles[0],
+            wiki_root=wiki_root,
+            dev=options.dev,
+        )
+    else:
+        _, versions = version_family_inputs(game.profiles, game.versions)
+        render_version_family_build(
+            site.id,
+            dict(zip(versions, workflows, strict=True)),
+            versions,
+            data_root=options.data_root / site.id,
+            wiki_root=wiki_root,
+            dev=options.dev,
+        )
+    write_regeneration_state(generation.state_path, generation.fingerprint, site)
+    LOG.info(
+        "Generation [%s] %s completed in %.1fs",
+        generation.progress,
+        site.id,
+        perf_counter() - site_started,
+    )
 
 
 def _run_regeneration_steps(

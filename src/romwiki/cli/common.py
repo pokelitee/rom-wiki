@@ -105,14 +105,15 @@ def add_site_root_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_jobs_argument(parser: argparse.ArgumentParser) -> None:
+def add_jobs_argument(
+    parser: argparse.ArgumentParser,
+    *,
+    workers: str = "parallel MkDocs builds and audit page-parse workers",
+) -> None:
     parser.add_argument(
         "--jobs",
         type=int,
-        help=(
-            "parallel MkDocs builds and audit page-parse workers "
-            "(default: one per CPU; 1 disables parallelism)"
-        ),
+        help=f"{workers} (default: one per CPU; 1 disables parallelism)",
     )
 
 

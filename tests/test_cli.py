@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -19,7 +20,15 @@ from romwiki.cli.common import (
     version_family_uses_baselines,
 )
 from romwiki.cli.extract import extract
-from romwiki.cli.regenerate import run_regeneration, validate_regeneration_flags
+from romwiki.cli.regenerate import (
+    _cache_sharing_groups,
+    _generate_prepared_sites,
+    _generate_site_group_in_worker,
+    _PreparedSite,
+    _SiteGeneration,
+    run_regeneration,
+    validate_regeneration_flags,
+)
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import (
     GameMetadata,
@@ -659,7 +668,7 @@ patched_rom = "roms/white-us.nds"
                 max_page_kb=512,
                 max_images=150,
                 base_url=None,
-                jobs=None,
+                jobs=1,
             )
 
             def inspection(
@@ -768,6 +777,105 @@ patched_rom = "roms/white-us.nds"
             self.assertIn("Generation [2/2] black-white: checking inputs", messages)
             self.assertIn("Complete regeneration completed in", messages)
 
+    def test_sites_sharing_an_extraction_cache_are_generated_together(
+        self,
+    ) -> None:
+        def generation(site_id: str, current: str, base: str | None) -> object:
+            return _site_generation(site_id, (current,), (base,))
+
+        retail = generation("platinum", "platinum-us", None)
+        hack = generation("renegade-platinum", "renegade-platinum", "platinum-us")
+        other = generation("emerald", "emerald-us", None)
+        sibling = _site_generation(
+            "blaze-black-2-volt-white-2",
+            ("blaze-black-2", "volt-white-2"),
+            ("black-2-us", "white-2-us"),
+        )
+        redux = _site_generation(
+            "redux",
+            ("blaze-black-2-redux", "volt-white-2-redux"),
+            ("black-2-us", "white-2-us"),
+        )
+
+        groups = _cache_sharing_groups([retail, hack, sibling, other, redux])
+
+        self.assertEqual(
+            [[item.prepared.site.id for item in group] for group in groups],
+            [
+                ["platinum"],
+                ["renegade-platinum"],
+                ["blaze-black-2-volt-white-2", "redux"],
+                ["emerald"],
+            ],
+        )
+
+    def test_parallel_generation_reports_failures_after_every_site_settles(
+        self,
+    ) -> None:
+        generations = [
+            _site_generation("first", ("first-us",), (None,)),
+            _site_generation("second", ("second-us",), (None,)),
+        ]
+        attempted = []
+
+        def generate_group(group: tuple, options: object, log_level: int) -> None:
+            del options, log_level
+            attempted.append(group[0].prepared.site.id)
+            if group[0].prepared.site.id == "first":
+                raise SiteError("first failed")
+
+        args = SimpleNamespace(
+            root=Path("."),
+            pokedb_root=Path("pokedb"),
+            data_root=Path("data"),
+            refresh=False,
+            clean=True,
+            jobs=2,
+        )
+        with (
+            patch(
+                "romwiki.cli.regenerate.regeneration_fingerprint",
+                return_value="fingerprint",
+            ),
+            patch("romwiki.cli.regenerate.ProcessPoolExecutor", ThreadPoolExecutor),
+            patch(
+                "romwiki.cli.regenerate._generate_site_group_in_worker",
+                side_effect=generate_group,
+            ),
+            patch("romwiki.cli.regenerate.LOG"),
+            self.assertRaisesRegex(SiteError, "first failed"),
+        ):
+            _generate_prepared_sites(
+                args,
+                [generation.prepared for generation in generations],
+                dev=False,
+            )
+
+        self.assertEqual(sorted(attempted), ["first", "second"])
+
+    def test_generation_worker_names_the_failed_site(self) -> None:
+        generation = _site_generation("broken", ("broken-us",), (None,))
+
+        with (
+            patch("romwiki.cli.regenerate.logging.basicConfig") as configure,
+            patch(
+                "romwiki.cli.regenerate._generate_site",
+                side_effect=LocalConfigError("missing input"),
+            ),
+            self.assertLogs("romwiki", level="ERROR") as logs,
+            self.assertRaisesRegex(LocalConfigError, "missing input"),
+        ):
+            _generate_site_group_in_worker((generation,), object(), 20)
+
+        self.assertIn("[broken]", configure.call_args.kwargs["format"])
+        self.assertIn("broken failed: missing input", "\n".join(logs.output))
+
+    def test_generation_rejects_non_positive_job_counts(self) -> None:
+        args = SimpleNamespace(data_root=Path("data"), refresh=False, jobs=0)
+
+        with self.assertRaisesRegex(SiteError, "at least 1"):
+            _generate_prepared_sites(args, [], dev=False)
+
     def test_snapshot_requires_complete_regeneration(self) -> None:
         args = SimpleNamespace(
             snapshot=True,
@@ -820,6 +928,28 @@ patched_rom = "roms/white-us.nds"
         self.assertIn("css-unused=1", output)
         self.assertIn("image-count=2", output)
         self.assertNotIn("one.html", output)
+
+
+def _site_generation(
+    site_id: str,
+    current: tuple[str, ...],
+    baselines: tuple[str | None, ...],
+) -> _SiteGeneration:
+    def inspection(profile_id: str | None) -> SimpleNamespace | None:
+        if profile_id is None:
+            return None
+        return SimpleNamespace(
+            match=SimpleNamespace(profile=SimpleNamespace(id=profile_id))
+        )
+
+    site = _site(Path("root"), site_id, "game", _game(current, (), 4))
+    prepared = _PreparedSite(
+        site,
+        tuple(inspection(profile_id) for profile_id in current),
+        tuple(inspection(profile_id) for profile_id in baselines),
+        Path("pokedb/gen4"),
+    )
+    return _SiteGeneration(prepared, "1/1", Path(f"{site_id}.json"), "fingerprint")
 
 
 def _game(

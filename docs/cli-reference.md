@@ -192,6 +192,15 @@ representative detail pages declared by each site's `dev-pages.toml`. Valid
 extraction caches are reused. Use `--refresh` to replace extraction caches or
 `--clean` to bypass unchanged-generation reuse.
 
+Selected sites are generated in parallel worker processes, one per CPU by
+default; `--jobs` caps the worker count and `--jobs 1` generates sites one after
+another in the current process. Sites that share an extraction cache, such as two
+hacks of the same clean base ROM, are generated in sequence by one worker. Each
+worker's log lines are prefixed with its site ID. A failing site does not stop the
+other workers; the command reports the first failure once every site has settled.
+Each worker loads only the PokéDB generations its sites need, so peak memory grows
+with the worker count.
+
 ## Regenerate
 
 `regenerate` is the complete catalog-driven workflow:
@@ -207,7 +216,8 @@ It:
 
 1. validates every selected site, local ROM registration, profile match, and
    PokéDB generation;
-2. dispatches single-profile and version-family data builds;
+2. dispatches single-profile and version-family data builds, in parallel as
+   described for `generate`;
 3. builds the selected MkDocs sites into one artifact;
 4. audits the combined artifact.
 
