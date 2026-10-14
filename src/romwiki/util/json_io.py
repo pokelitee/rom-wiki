@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import json
 import stat
+import sys
+import time
 from pathlib import Path
 from typing import Any
+
+_REPLACE_ATTEMPTS = 5
+_REPLACE_RETRY_SECONDS = 0.05
 
 
 def write_text_atomic(path: Path, content: str) -> None:
@@ -44,7 +49,21 @@ def write_bytes_atomic(path: Path, content: bytes) -> None:
         # syscall per file; most writes land in an existing directory.
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path.write_bytes(content)
-    temporary_path.replace(path)
+    _replace(temporary_path, path)
+
+
+def _replace(source: Path, destination: Path) -> None:
+    # On Windows, antivirus and search indexers briefly open freshly written
+    # files without delete sharing, which makes the rename fail with "Access is
+    # denied" until they let go.
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            source.replace(destination)
+            return
+        except PermissionError:
+            if sys.platform != "win32" or attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(_REPLACE_RETRY_SECONDS * (attempt + 1))
 
 
 def write_json_atomic(

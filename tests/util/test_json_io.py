@@ -56,6 +56,44 @@ class WriteJsonAtomicTests(unittest.TestCase):
             read_bytes.assert_not_called()
             self.assertEqual(path.read_bytes(), b"longer content")
 
+    def test_retries_a_rename_briefly_blocked_on_windows(self) -> None:
+        original_replace = Path.replace
+        calls = []
+
+        def flaky_replace(source: Path, target: Path) -> Path:
+            calls.append(source)
+            if len(calls) == 1:
+                raise PermissionError("Access is denied")
+            return original_replace(source, target)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "manifest.json"
+            with (
+                mock.patch("romwiki.util.json_io.sys.platform", "win32"),
+                mock.patch("romwiki.util.json_io.time.sleep"),
+                mock.patch.object(Path, "replace", flaky_replace),
+            ):
+                write_bytes_atomic(path, b"content")
+            content = path.read_bytes()
+
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(content, b"content")
+
+    def test_gives_up_on_a_rename_that_stays_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "manifest.json"
+            with (
+                mock.patch("romwiki.util.json_io.sys.platform", "win32"),
+                mock.patch("romwiki.util.json_io.time.sleep") as sleep,
+                mock.patch.object(
+                    Path, "replace", side_effect=PermissionError("denied")
+                ),
+                self.assertRaises(PermissionError),
+            ):
+                write_bytes_atomic(path, b"content")
+
+        self.assertEqual(sleep.call_count, 4)
+
     def test_text_uses_lf_newlines_on_every_platform(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "page.md"
