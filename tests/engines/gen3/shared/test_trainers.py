@@ -103,6 +103,19 @@ class Gen3TrainerDataTests(unittest.TestCase):
         self.assertFalse(record.has_held_items)
         self.assertIsNone(record.party[0].held_item_id)
 
+    def test_reports_undecoded_fields_as_none_rather_than_zero(self) -> None:
+        header = _header(party_flags=0, party_size=1)
+        party = _party_member(iv=0, level=5, species=23, held_item=0)
+
+        record = parse_trainer_record(
+            header, party, trainer_id=1, archive_path="offset:0x0"
+        )
+
+        self.assertIsNone(record.class_name)
+        self.assertIsNone(record.healer)
+        self.assertIsNone(record.victory_money_multiplier)
+        self.assertIsNone(record.victory_item_id)
+
     def test_rejects_an_unexpected_header_size(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_trainer_record(b"short", b"", trainer_id=1, archive_path="offset:0x0")

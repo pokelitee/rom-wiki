@@ -119,9 +119,9 @@ def parse_trainer_record(
         name=name,
         class_id=class_id,
         # Gen III trainer class display names require a separate,
-        # not-yet-implemented lookup table (`gTrainerClassNames`); no ROM
-        # text extraction for this pass.
-        class_name="",
+        # not-yet-implemented lookup table (`gTrainerClassNames`), so the
+        # class name is undecoded rather than blank.
+        class_name=None,
         battle_mode=1 if double_battle else 0,
         double_battle=double_battle,
         has_custom_moves=has_custom_moves,
@@ -129,12 +129,12 @@ def parse_trainer_record(
         party_count=party_count,
         reward_item_ids=reward_item_ids,
         ai_flags=ai_flags,
-        # Not verified against real ROM data this pass -- Generation III has
-        # no confirmed per-trainer healer/victory-item/money-multiplier
-        # fields in the struct decoded above.
-        healer=False,
-        victory_money_multiplier=0,
-        victory_item_id=0,
+        # Generation III has no confirmed per-trainer healer, victory-item,
+        # or money-multiplier field in the struct decoded above, so these are
+        # undecoded rather than zero.
+        healer=None,
+        victory_money_multiplier=None,
+        victory_item_id=None,
         party=tuple(party),
         provenance=RecordProvenance(
             source="rom", archive=archive_path, member=trainer_id

@@ -314,7 +314,9 @@ class BattleModeTrainer:
     trainer_id: int
     name: str
     class_id: int
-    class_name: str
+    # None marks a field the engine has not decoded, as opposed to a stored
+    # zero or blank value.
+    class_name: str | None
     # 0=single, 1=double, 2=triple, 3=rotation (Gen5RomHandler.java's own
     # comment on the Trainer Data record) -- unlike Generation IV's
     # single/double-only battle_type.
@@ -325,9 +327,9 @@ class BattleModeTrainer:
     party_count: int
     reward_item_ids: tuple[int, int, int, int]
     ai_flags: int
-    healer: bool
-    victory_money_multiplier: int
-    victory_item_id: int
+    healer: bool | None
+    victory_money_multiplier: int | None
+    victory_item_id: int | None
     party: tuple[AbilitySlotTrainerPokemon, ...]
     provenance: RecordProvenance
     party_provenance: RecordProvenance
@@ -381,4 +383,8 @@ UNUSED_TRAINER_CLASS_NAME = "no data"
 def is_unused_trainer_slot(record: Mapping[str, Any]) -> bool:
     """Report whether a trainer record is a reserved-but-never-filled-in slot."""
 
-    return record["class_name"].strip().lower() == UNUSED_TRAINER_CLASS_NAME
+    class_name = record["class_name"]
+    return (
+        class_name is not None
+        and class_name.strip().lower() == UNUSED_TRAINER_CLASS_NAME
+    )
