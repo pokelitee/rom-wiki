@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from romwiki.engines.registry import DATASET_KINDS
 from romwiki.pipeline.build.context import GameBuildContext
 from romwiki.pipeline.build.sections import (
     dataset_enabled,
@@ -182,7 +183,9 @@ def write_section(
     write_dataset(dataset, data_output, compact=True)
     if comparison is not None:
         comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
-        write_dataset(comparison, comparison_output, compact=True)
+        # Unsorted, so focused builds that load this back render removed-record
+        # snapshots in the same field order as the full build that wrote it.
+        write_dataset(comparison, comparison_output, sort_keys=False, compact=True)
     write_public_dataset(wiki_output.parent, kind, dataset)
     page_count = _SECTION_RENDERERS[kind](
         dataset,
@@ -514,7 +517,12 @@ def render_section_build(
             comparison_path = data_root / "comparisons" / f"{kind}.json"
             if comparison_path.is_file():
                 comparison_path.unlink()
-    render_changes_pages(comparisons, wiki_root, relationship_index)
+    # Match full builds, which compare sections in dataset order, rather than
+    # the order stored comparisons happened to be listed and updated in.
+    ordered = {
+        kind: comparisons[kind] for kind in sorted(comparisons, key=_dataset_kind_order)
+    }
+    render_changes_pages(ordered, wiki_root, relationship_index)
 
 
 def current_relationship_datasets(
@@ -573,6 +581,13 @@ def _warn_skipped_comparison(path: Path, reason: str) -> None:
         "`romwiki build game` rewrites it",
         path,
         reason,
+    )
+
+
+def _dataset_kind_order(kind: str) -> tuple[int, str]:
+    return (
+        DATASET_KINDS.index(kind) if kind in DATASET_KINDS else len(DATASET_KINDS),
+        kind,
     )
 
 

@@ -101,6 +101,48 @@ class FocusedSectionBuildTests(unittest.TestCase):
         )
         self.assertIsNotNone(context.reference_index)
 
+    def test_changes_follow_full_build_section_and_field_order(self) -> None:
+        items = {"game": "test", "records": []}
+        pokemon = {"game": "test", "records": []}
+        current = SimpleNamespace(
+            profile=SimpleNamespace(id="test"),
+            pokemon=lambda: pokemon,
+            locations=lambda: None,
+        )
+        comparison = {"kind": "items", "zeta": 1, "alpha": 2}
+        workflow = SimpleNamespace(
+            current=current,
+            build=lambda kind: SimpleNamespace(current=items, comparison=comparison),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stored = root / "data" / "comparisons"
+            stored.mkdir(parents=True)
+            for kind in ("trainers", "pokemon"):
+                (stored / f"{kind}.json").write_text(
+                    json.dumps({"kind": kind}), encoding="utf-8"
+                )
+            with (
+                patch("romwiki.pipeline.build.rendering.write_public_dataset"),
+                patch.dict(
+                    "romwiki.pipeline.build.rendering._SECTION_RENDERERS",
+                    {"items": lambda *_args: 0},
+                ),
+                patch(
+                    "romwiki.pipeline.build.rendering.render_changes_pages"
+                ) as render_changes,
+            ):
+                render_section_build(
+                    "items", workflow, data_root=root / "data", wiki_root=root / "wiki"
+                )
+            written = (stored / "items.json").read_text(encoding="utf-8")
+
+        self.assertEqual(
+            list(render_changes.call_args.args[0]), ["pokemon", "items", "trainers"]
+        )
+        self.assertEqual(list(json.loads(written)), ["kind", "zeta", "alpha"])
+
 
 class RelationshipDatasetTests(unittest.TestCase):
     def test_collects_companions_and_omits_unsupported_datasets(self) -> None:
