@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import json
 import re
+import tempfile
 import unittest
 from pathlib import Path
+
+from mkdocs.commands.build import build
+from mkdocs.config import load_config
 
 from romwiki.schema.versions import CATALOG_SCHEMA_VERSION
 from romwiki.sites import SUPPORTED_THEMES, SiteCatalog
@@ -23,6 +28,30 @@ def _rule_properties(css: str, selector: str) -> dict[str, str]:
             css[block_start + 1 : block_end],
         )
     }
+
+
+def _build_index_html(theme: dict[str, object]) -> str:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        (root / "docs").mkdir()
+        (root / "docs" / "index.md").write_text("# Home\n", encoding="utf-8")
+        config_path = root / "mkdocs.yml"
+        config_path.write_text(
+            json.dumps(
+                {
+                    "site_name": "Test",
+                    "theme": {
+                        "name": "material",
+                        "custom_dir": str(OVERRIDES),
+                        **theme,
+                    },
+                    "extra": {"romwiki_site": {"theme": "portal"}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        build(load_config(config_file=str(config_path)))
+        return (root / "site" / "index.html").read_text(encoding="utf-8")
 
 
 def _relative_luminance(color: str) -> float:
@@ -244,6 +273,30 @@ class FrontendContractTests(unittest.TestCase):
             '{{ page.title | striptags | replace("<", "&lt;") }}',
             template,
         )
+
+    def test_stored_color_scheme_uses_configured_palette_colors(self) -> None:
+        palettes = {
+            "single mapping": (
+                {"scheme": "slate", "primary": "deep purple"},
+                '"slate": {primary: "deep-purple", accent: "indigo"}',
+            ),
+            "toggle list": (
+                [{"scheme": "default", "accent": "teal"}, {"scheme": "slate"}],
+                '"default": {primary: "indigo", accent: "teal"},'
+                '"slate": {primary: "indigo", accent: "indigo"}',
+            ),
+        }
+        for label, (palette, expected) in palettes.items():
+            with self.subTest(palette=label):
+                html = _build_index_html({"palette": palette})
+                colors = re.search(r"var paletteColors = (\{.*?\});", html, re.S)
+
+                self.assertIsNotNone(colors)
+                assert colors is not None
+                self.assertEqual(
+                    re.sub(r"\s+", "", colors.group(1)),
+                    ("{" + re.sub(r"\s+", "", expected) + "}"),
+                )
 
     def test_interactive_and_dense_components_keep_accessibility_states(self) -> None:
         css = "\n".join(
