@@ -8,20 +8,13 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from romwiki.cli import (
-    _comparison_workflow_kind,
-    _current_relationship_datasets,
-    _dataset_output,
-    _load_comparisons,
     _profile_wiki_root,
     _report_site_audit,
     _resolve_build_baseline,
     _resolve_input_rom,
     _resolve_pokedb_path,
-    _run_full_game_build,
     _run_regeneration,
     _run_rom_command,
-    _run_section_build,
-    _run_version_family_build,
     _site_wiki_root,
     _validate_regeneration_flags,
     _version_family_inputs,
@@ -400,28 +393,6 @@ class VersionFamilyInputTests(unittest.TestCase):
             _version_family_uses_baselines(paths)
 
 
-class DatasetOutputPathTests(unittest.TestCase):
-    def test_locations_use_the_raw_filename(self) -> None:
-        self.assertEqual(
-            _dataset_output(Path("build/data/game"), "locations"),
-            Path("build/data/game/locations/raw.json"),
-        )
-
-    def test_every_other_kind_uses_the_enriched_filename(self) -> None:
-        for kind in (
-            "pokemon",
-            "abilities",
-            "moves",
-            "items",
-            "encounters",
-            "trainers",
-        ):
-            self.assertEqual(
-                _dataset_output(Path("build/data/game"), kind),
-                Path(f"build/data/game/{kind}/enriched.json"),
-            )
-
-
 class WikiOutputPathTests(unittest.TestCase):
     def test_resolves_profile_to_its_catalog_site(self) -> None:
         self.assertEqual(
@@ -444,197 +415,6 @@ class WikiOutputPathTests(unittest.TestCase):
             _site_wiki_root("black-white", root=REPOSITORY_ROOT),
             REPOSITORY_ROOT / "sites/games/black-white/wiki",
         )
-
-
-class FocusedSectionBuildTests(unittest.TestCase):
-    def test_encounter_build_includes_location_relationships(self) -> None:
-        encounters = {
-            "game": "test",
-            "records": [
-                {
-                    "area_id": 8,
-                    "map_index": 3,
-                    "season": "spring",
-                    "name": "Route 1",
-                }
-            ],
-        }
-        locations = {
-            "game": "test",
-            "records": [
-                {
-                    "header_id": 6,
-                    "name": "Route 1",
-                    "encounter_map_index": 3,
-                }
-            ],
-        }
-        pokemon = {"game": "test", "records": []}
-        current = SimpleNamespace(
-            profile=SimpleNamespace(id="test"),
-            encounters=lambda: encounters,
-            locations=lambda: locations,
-            pokemon=lambda: pokemon,
-        )
-        workflow = SimpleNamespace(
-            current=current,
-            build=lambda kind: SimpleNamespace(
-                current=encounters,
-                comparison=None,
-            ),
-        )
-
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            args = SimpleNamespace(
-                command="build-encounters",
-                dev=False,
-                wiki_output=root / "wiki" / "encounters",
-                data_output=root / "data" / "encounters" / "enriched.json",
-            )
-            with (
-                patch("romwiki.cli._create_build_workflow", return_value=workflow),
-                patch("romwiki.cli._write_dataset_build") as write_build,
-                patch("romwiki.cli.render_changes_pages"),
-            ):
-                _run_section_build(args, SimpleNamespace())
-
-        relationships = write_build.call_args.kwargs["relationship_index"]
-        self.assertEqual(
-            relationships.encounter_locations["map-003"][0].header_id,
-            6,
-        )
-        self.assertIsNotNone(write_build.call_args.kwargs["reference_index"])
-
-
-class RelationshipDatasetTests(unittest.TestCase):
-    def test_collects_companions_and_omits_unsupported_datasets(self) -> None:
-        datasets = {
-            kind: {"game": "test", "records": []}
-            for kind in ("pokemon", "encounters", "items")
-        }
-        context = SimpleNamespace(
-            profile=SimpleNamespace(
-                layout={
-                    "personal": "personal",
-                    "moves": "moves",
-                    "item_data": "items",
-                    "messages": "messages",
-                    "encounters": "encounters",
-                },
-                parameters={},
-            ),
-            pokemon=lambda: datasets["pokemon"],
-            encounters=lambda: datasets["encounters"],
-            trainers=lambda: None,
-            locations=lambda: None,
-            items=lambda: datasets["items"],
-            trades=lambda: None,
-        )
-
-        self.assertEqual(_current_relationship_datasets(context), datasets)
-
-
-class OptionalSectionBuildTests(unittest.TestCase):
-    def test_full_game_build_writes_only_enabled_datasets(self) -> None:
-        kinds = ("pokemon", "abilities", "moves", "items", "encounters")
-        builds = {
-            kind: SimpleNamespace(
-                current=_build_dataset(kind, "partial"),
-                comparison=None,
-            )
-            for kind in kinds
-        }
-        current = SimpleNamespace(
-            profile=SimpleNamespace(id="partial"),
-            trades=lambda: None,
-        )
-        workflow = SimpleNamespace(current=current, build_all=lambda: builds)
-
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            args = SimpleNamespace(
-                data_root=root / "data",
-                wiki_root=root / "wiki",
-                dev=False,
-            )
-            with (
-                patch(
-                    "romwiki.cli.build_type_dataset",
-                    return_value=_build_dataset("types", "partial"),
-                ),
-                patch("romwiki.cli._write_type_build"),
-                patch("romwiki.cli._write_dataset_build") as write_dataset,
-                patch("romwiki.cli.render_changes_pages", return_value=0),
-            ):
-                _run_full_game_build(args, SimpleNamespace(), workflow=workflow)
-
-        self.assertEqual(
-            [call.args[0] for call in write_dataset.call_args_list],
-            list(kinds),
-        )
-
-    def test_version_family_rejects_mismatched_optional_sections(self) -> None:
-        partial = _section_profile("partial")
-        complete = _section_profile("complete", optional=True)
-        workflows = {
-            "one": SimpleNamespace(current=SimpleNamespace(profile=partial)),
-            "two": SimpleNamespace(current=SimpleNamespace(profile=complete)),
-        }
-        args = SimpleNamespace(
-            site_id="test-family",
-            games=["partial", "complete"],
-            versions=["one", "two"],
-        )
-
-        with self.assertRaisesRegex(
-            LocalConfigError,
-            "different dataset sections.*one omits locations, trainers",
-        ):
-            _run_version_family_build(args, workflows=workflows)
-
-
-class ComparisonWorkflowKindTests(unittest.TestCase):
-    def test_wild_encounters_maps_to_the_encounters_workflow_key(self) -> None:
-        self.assertEqual(_comparison_workflow_kind("wild_encounters"), "encounters")
-
-    def test_every_other_kind_passes_through_unchanged(self) -> None:
-        for kind in ("pokemon", "abilities", "moves", "items", "trainers", "locations"):
-            self.assertEqual(_comparison_workflow_kind(kind), kind)
-
-
-class LoadComparisonsTests(unittest.TestCase):
-    def test_missing_directory_yields_no_comparisons(self) -> None:
-        self.assertEqual(_load_comparisons(Path("/no/such/comparisons/dir")), {})
-
-    def test_reads_and_reindexes_comparison_files_by_workflow_kind(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "wild_encounters.json").write_text(
-                json.dumps({"kind": "wild_encounters", "counts": {}}),
-                encoding="utf-8",
-            )
-            (root / "pokemon.json").write_text(
-                json.dumps({"kind": "pokemon", "counts": {}}),
-                encoding="utf-8",
-            )
-
-            comparisons = _load_comparisons(root)
-
-        self.assertEqual(set(comparisons), {"encounters", "pokemon"})
-        self.assertEqual(comparisons["encounters"]["kind"], "wild_encounters")
-
-    def test_ignores_malformed_or_non_comparison_json_files(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "broken.json").write_text("not json", encoding="utf-8")
-            (root / "unrelated.json").write_text(
-                json.dumps([1, 2, 3]), encoding="utf-8"
-            )
-
-            comparisons = _load_comparisons(root)
-
-        self.assertEqual(comparisons, {})
 
 
 class CliInputResolutionTests(unittest.TestCase):
@@ -1000,39 +780,6 @@ patched_rom = "roms/white-us.nds"
         self.assertIn("css-unused=1", output)
         self.assertIn("image-count=2", output)
         self.assertNotIn("one.html", output)
-
-
-def _build_dataset(kind: str, game: str) -> dict:
-    return {
-        "schema_version": 1,
-        "dataset": "wild_encounters" if kind == "encounters" else kind,
-        "game": game,
-        "source": {"rom_sha256": game},
-        "records": [],
-    }
-
-
-def _section_profile(profile_id: str, *, optional: bool = False) -> SimpleNamespace:
-    return SimpleNamespace(
-        id=profile_id,
-        parameters={},
-        layout={
-            "personal": "personal",
-            "messages": "messages",
-            "moves": "moves",
-            "item_data": "items",
-            "encounters": "encounters",
-            **(
-                {
-                    "trainer_data": "trainers",
-                    "trainer_parties": "parties",
-                    "map_headers": "headers",
-                }
-                if optional
-                else {}
-            ),
-        },
-    )
 
 
 def _game(

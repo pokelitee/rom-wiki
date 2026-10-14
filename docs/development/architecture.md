@@ -83,6 +83,14 @@ the normalized outputs. A focused section build still extracts that section's
 baseline before its patched equivalent. The escape hatch `--hack-only` is explicit;
 configured builds fail clearly when their clean base image is missing.
 
+`pipeline/build/rendering.py` publishes what a workflow builds. Focused section,
+complete game, and version-family builds all use it to write normalized datasets,
+comparisons, and public downloads, to assemble the shared reference and
+relationship indexes, and to invoke each section renderer through one uniform
+adapter. Optional companion inputs such as moves follow the profile's enabled
+sections, so a partial vertical slice renders without them. The CLI only resolves
+inputs and output paths before handing a workflow to this service.
+
 Comparisons operate on stable normalized keys: Pokémon personal member, numeric
 ability/move/item/trainer IDs, encounter area ID, and location header ID. They
 classify records as unchanged, changed, added, or removed and retain exact field

@@ -6,10 +6,9 @@ import logging
 import os
 import sys
 from collections import Counter
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from time import perf_counter
-from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.build.context import GameBuildContext
@@ -19,14 +18,13 @@ from romwiki.pipeline.build.regeneration import (
     regeneration_fingerprint,
     write_regeneration_state,
 )
-from romwiki.pipeline.build.sections import (
-    DATASET_KINDS,
-    dataset_enabled,
-    describe_section_mismatch,
-    enabled_dataset_kinds,
+from romwiki.pipeline.build.rendering import (
+    render_game_build,
+    render_section_build,
+    render_version_family_build,
 )
+from romwiki.pipeline.build.sections import DATASET_KINDS
 from romwiki.pipeline.build.workflow import GameBuildWorkflow
-from romwiki.pipeline.enrichment.type_charts import build_type_dataset
 from romwiki.pipeline.extraction.egg_moves import extract_egg_move_dataset
 from romwiki.pipeline.extraction.encounters import extract_encounter_dataset
 from romwiki.pipeline.extraction.evolutions import extract_evolution_dataset
@@ -46,28 +44,8 @@ from romwiki.pipeline.extraction.trades import extract_npc_trade_dataset
 from romwiki.pipeline.extraction.trainers.dispatcher import extract_trainer_dataset
 from romwiki.pipeline.extraction.tutors import extract_tutor_dataset
 from romwiki.pipeline.io import write_dataset
-from romwiki.pipeline.transforms.relationships import (
-    RelationshipIndex,
-    build_relationship_index,
-)
-from romwiki.pipeline.transforms.version_merge import (
-    merge_version_family_comparisons,
-    merge_version_family_datasets,
-)
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.profiles.models import GameProfile
-from romwiki.renderers.mkdocs import (
-    render_ability_pages,
-    render_encounter_pages,
-    render_item_pages,
-    render_location_pages,
-    render_move_pages,
-    render_pokemon_pages,
-    render_trainer_pages,
-    render_type_chart,
-)
-from romwiki.renderers.mkdocs.comparisons import render_changes_pages
-from romwiki.renderers.mkdocs.references import ReferenceIndex
 from romwiki.sites import (
     SiteAuditReport,
     SiteCatalog,
@@ -84,8 +62,6 @@ from romwiki.sites.build_state import (
     current_site_build_state,
     site_build_fingerprint,
 )
-from romwiki.sites.data_exports import prune_public_datasets, write_public_dataset
-from romwiki.sites.dev_pages import DevPages
 from romwiki.sites.snapshot import DEFAULT_SNAPSHOT_URL, SNAPSHOT_RELEASE_REPOSITORY
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import (
@@ -1057,142 +1033,25 @@ def _resolve_build_baseline(args: argparse.Namespace) -> Path | None:
 
 
 def _run_section_build(args: argparse.Namespace, result: InspectionResult) -> None:
-    kinds = {
-        "build-pokemon": ("pokemon", "abilities"),
-        "build-encounters": ("encounters",),
-        "build-trainers": ("trainers",),
-        "build-locations": ("locations",),
-        "build-moves": ("moves",),
-        "build-items": ("items",),
-    }[args.command]
     workflow = _create_build_workflow(args, result)
-    move_dataset = None
-    # Cross-linking Pokémon/Ability pages to move names is a nice-to-have, not
-    # a requirement: an engine that hasn't implemented moves yet (e.g. a new
-    # generation's first vertical slice) should still be able to build its
-    # Pokémon section. Gated declaratively on the profile, matching
-    # GameBuildContext's optional-input accessors, rather than probing with a
-    # try/except around the build.
-    if args.command == "build-pokemon" and "moves" in workflow.current.profile.layout:
-        move_dataset = workflow.build("moves").current
     game = workflow.current.profile.id
-    wiki_root = (
-        args.wiki_output.parent
-        if args.wiki_output is not None
-        else _profile_wiki_root(game)
+    render_section_build(
+        args.command.removeprefix("build-"),
+        workflow,
+        data_root=(
+            args.data_output.parent.parent
+            if args.data_output is not None
+            else DEFAULT_DATA_ROOT / game
+        ),
+        wiki_root=(
+            args.wiki_output.parent
+            if args.wiki_output is not None
+            else _profile_wiki_root(game)
+        ),
+        data_output=args.data_output,
+        wiki_output=args.wiki_output,
+        dev=args.dev,
     )
-    dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
-    data_root = (
-        args.data_output.parent.parent
-        if args.data_output is not None
-        else DEFAULT_DATA_ROOT / game
-    )
-    comparisons = _load_comparisons(data_root / "comparisons")
-    # An engine's Abilities section needs ROM-decoded ability names with no
-    # PokéDB fallback (unlike Pokémon page names); an engine whose first
-    # vertical slice implements only personal data (no ability-name table
-    # decoding yet) can still build its Pokémon section without one. Gated
-    # declaratively via `dataset_enabled`, the same "personal_offset or
-    # personal layout, per platform" check `pipeline/build/context.py`'s
-    # `items_raw`/`trainers_raw` accessors already use -- checking for a
-    # `"messages"` layout entry specifically would only ever be true for
-    # NDS/archive-shaped profiles, never for flat-offset (GBA) ones.
-    abilities_dataset = None
-    if args.command == "build-pokemon" and dataset_enabled(
-        workflow.current.profile, "abilities"
-    ):
-        abilities_dataset = workflow.build("abilities")
-    relationship_index = None
-    type_dataset = None
-    relationship_datasets: dict[str, dict] = {}
-    if args.command == "build-pokemon":
-        relationship_datasets = _current_relationship_datasets(workflow.current)
-        relationship_index = build_relationship_index(relationship_datasets)
-        type_dataset = build_type_dataset(workflow.current.profile)
-        _write_type_build(type_dataset, data_root, wiki_root)
-    elif args.command == "build-moves":
-        relationship_datasets = {"pokemon": workflow.current.pokemon()}
-        relationship_index = build_relationship_index(relationship_datasets)
-    elif args.command == "build-encounters":
-        relationship_datasets = {"encounters": workflow.current.encounters()}
-        locations = workflow.current.locations()
-        if locations is not None:
-            relationship_datasets["locations"] = locations
-        relationship_index = build_relationship_index(relationship_datasets)
-    elif args.command in {"build-items", "build-trainers"}:
-        locations = workflow.current.locations()
-        if locations is not None:
-            relationship_datasets = {"locations": locations}
-            relationship_index = build_relationship_index(relationship_datasets)
-    reference_datasets = {}
-    if args.command == "build-locations":
-        current_locations = workflow.current.locations()
-        if current_locations is None:
-            raise LocalConfigError(
-                "The build-locations command requires a profile with a "
-                "locations dataset"
-            )
-        relationship_datasets = {
-            "locations": current_locations,
-            "encounters": workflow.current.encounters(),
-        }
-        relationship_index = build_relationship_index(relationship_datasets)
-        reference_datasets = {
-            "pokemon": workflow.current.pokemon(),
-            "items": workflow.current.items(),
-        }
-    elif args.command == "build-pokemon":
-        reference_datasets = dict(relationship_datasets)
-        if abilities_dataset is not None:
-            reference_datasets["abilities"] = abilities_dataset.current
-        if move_dataset is not None:
-            reference_datasets["moves"] = move_dataset
-    elif args.command == "build-moves":
-        reference_datasets = dict(relationship_datasets)
-    elif args.command in {"build-encounters", "build-items", "build-trainers"}:
-        reference_datasets = {"pokemon": workflow.current.pokemon()}
-    reference_index = (
-        ReferenceIndex.from_datasets(reference_datasets) if reference_datasets else None
-    )
-    kinds = tuple(
-        kind for kind in kinds if kind != "abilities" or abilities_dataset is not None
-    )
-    for index, kind in enumerate(kinds):
-        build = abilities_dataset if kind == "abilities" else workflow.build(kind)
-        # `kinds` was filtered above to drop "abilities" when
-        # `abilities_dataset` is None, so `build` is always set here.
-        assert build is not None
-        data_output = (
-            args.data_output
-            if index == 0 and args.data_output is not None
-            else _dataset_output(data_root, kind)
-        )
-        wiki_output = (
-            args.wiki_output
-            if index == 0 and args.wiki_output is not None
-            else wiki_root / kind
-        )
-        _write_dataset_build(
-            kind,
-            build.current,
-            build.comparison,
-            data_output,
-            wiki_output,
-            move_dataset=move_dataset,
-            reference_index=reference_index,
-            relationship_index=relationship_index,
-            type_dataset=type_dataset,
-            related_comparisons=comparisons,
-            only_pages=dev_pages.pages_for(kind) if dev_pages else None,
-        )
-        if build.comparison is not None:
-            comparisons[kind] = build.comparison
-        else:
-            comparisons.pop(kind, None)
-            comparison_path = data_root / "comparisons" / f"{kind}.json"
-            if comparison_path.is_file():
-                comparison_path.unlink()
-    render_changes_pages(comparisons, wiki_root, relationship_index)
 
 
 def _run_full_game_build(
@@ -1203,48 +1062,11 @@ def _run_full_game_build(
 ) -> None:
     workflow = workflow or _create_build_workflow(args, result)
     game = workflow.current.profile.id
-    data_root = args.data_root / game
-    wiki_root = args.wiki_root or _profile_wiki_root(game)
-    dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
-    builds = workflow.build_all()
-    current_datasets = {kind: build.current for kind, build in builds.items()}
-    trades = workflow.current.trades()
-    if trades is not None:
-        current_datasets["trades"] = trades
-    reference_index = ReferenceIndex.from_datasets(current_datasets)
-    relationship_index = build_relationship_index(current_datasets)
-    type_dataset = build_type_dataset(workflow.current.profile)
-    prune_public_datasets(wiki_root, {*builds, "types"}, game)
-    _write_type_build(type_dataset, data_root, wiki_root)
-    comparisons = {
-        kind: build.comparison
-        for kind, build in builds.items()
-        if build.comparison is not None
-    }
-    for kind, build in builds.items():
-        _write_dataset_build(
-            kind,
-            build.current,
-            build.comparison,
-            _dataset_output(data_root, kind),
-            wiki_root / kind,
-            move_dataset=builds["moves"].current,
-            reference_index=reference_index,
-            relationship_index=relationship_index,
-            type_dataset=type_dataset,
-            related_comparisons=comparisons,
-            only_pages=dev_pages.pages_for(kind) if dev_pages else None,
-        )
-    if not comparisons:
-        comparison_root = data_root / "comparisons"
-        if comparison_root.is_dir():
-            for path in comparison_root.glob("*.json"):
-                path.unlink()
-    page_count = render_changes_pages(comparisons, wiki_root, relationship_index)
-    _LOG.info(
-        "Rendered %s change overview pages: %s",
-        page_count,
-        wiki_root / "changes",
+    render_game_build(
+        workflow,
+        data_root=args.data_root / game,
+        wiki_root=args.wiki_root or _profile_wiki_root(game),
+        dev=args.dev,
     )
 
 
@@ -1316,96 +1138,16 @@ def _run_version_family_build(
                 current_cache_root=args.data_root / "cache",
                 refresh_current=args.refresh_cache,
             )
-    elif set(workflows) != set(versions):
-        raise LocalConfigError(
-            "Prepared version-family workflows do not match configured versions"
-        )
-
-    enabled_by_version = {
-        version: enabled_dataset_kinds(workflows[version].current.profile)
-        for version in versions
-    }
-    enabled_sets = set(enabled_by_version.values())
-    if len(enabled_sets) != 1:
-        raise LocalConfigError(
-            "Version-family profiles enable different dataset sections: "
-            f"{describe_section_mismatch(enabled_by_version)}"
-        )
-    kinds = next(iter(enabled_sets))
-
-    merged_datasets: dict[str, dict] = {}
-    merged_comparisons: dict[str, dict] = {}
-    for kind in kinds:
-        builds = {version: workflows[version].build(kind) for version in versions}
-        merged_datasets[kind] = merge_version_family_datasets(
-            {version: build.current for version, build in builds.items()}
-        )
-        comparisons = {
-            version: build.comparison
-            for version, build in builds.items()
-            if build.comparison is not None
-        }
-        if comparisons:
-            merged_comparisons[kind] = merge_version_family_comparisons(comparisons)
-
-    trade_datasets = {
-        version: trade
-        for version, workflow in workflows.items()
-        if (trade := workflow.current.trades()) is not None
-    }
-    relationship_datasets = dict(merged_datasets)
-    if trade_datasets:
-        if len(trade_datasets) != len(workflows):
-            raise LocalConfigError(
-                "Version-family games must have matching trade capabilities"
-            )
-        relationship_datasets["trades"] = merge_version_family_datasets(trade_datasets)
 
     site_id = args.site_id
-    wiki_root = args.wiki_root or _site_wiki_root(site_id)
-    data_root = args.data_root / site_id
-    dev_pages = DevPages.load(wiki_root.parent / "dev-pages.toml") if args.dev else None
-    reference_index = ReferenceIndex.from_datasets(merged_datasets)
-    relationship_index = build_relationship_index(relationship_datasets)
-    move_dataset = merged_datasets.get("moves")
-    type_datasets = [
-        build_type_dataset(workflows[version].current.profile, game=site_id)
-        for version in versions
-    ]
-    if any(
-        dataset["records"] != type_datasets[0]["records"]
-        for dataset in type_datasets[1:]
-    ):
-        raise LocalConfigError(
-            "Version-family profiles must declare matching type charts"
-        )
-    type_dataset = type_datasets[0]
-    prune_public_datasets(wiki_root, {*merged_datasets, "types"}, site_id)
-    _write_type_build(type_dataset, data_root, wiki_root)
-    for kind, dataset in merged_datasets.items():
-        comparison = merged_comparisons.get(kind)
-        _write_dataset_build(
-            kind,
-            dataset,
-            comparison,
-            _dataset_output(data_root, kind),
-            wiki_root / kind,
-            move_dataset=move_dataset,
-            reference_index=reference_index,
-            relationship_index=relationship_index,
-            type_dataset=type_dataset,
-            related_comparisons=merged_comparisons,
-            only_pages=dev_pages.pages_for(kind) if dev_pages else None,
-        )
-    if merged_comparisons:
-        page_count = render_changes_pages(
-            merged_comparisons, wiki_root, relationship_index
-        )
-        _LOG.info(
-            "Rendered %s change overview pages: %s",
-            page_count,
-            wiki_root / "changes",
-        )
+    render_version_family_build(
+        site_id,
+        workflows,
+        versions,
+        data_root=args.data_root / site_id,
+        wiki_root=args.wiki_root or _site_wiki_root(site_id),
+        dev=args.dev,
+    )
 
 
 def _run_regeneration(args: argparse.Namespace) -> None:
@@ -1896,150 +1638,6 @@ def _site_wiki_root(site_id: str, *, root: Path = Path(".")) -> Path:
         if matches:
             return matches[0].config_path.parent / "wiki"
     return Path("sites/games") / site_id / "wiki"
-
-
-def _write_dataset_build(
-    kind: str,
-    dataset: dict,
-    comparison: dict | None,
-    data_output: Path,
-    wiki_output: Path,
-    *,
-    move_dataset: dict | None = None,
-    reference_index: ReferenceIndex | None = None,
-    relationship_index: RelationshipIndex | None = None,
-    type_dataset: dict | None = None,
-    related_comparisons: Mapping[str, dict] | None = None,
-    only_pages: frozenset[str] | None = None,
-) -> None:
-    write_dataset(dataset, data_output)
-    if comparison is not None:
-        comparison_output = data_output.parent.parent / "comparisons" / f"{kind}.json"
-        write_dataset(comparison, comparison_output)
-    write_public_dataset(wiki_output.parent, kind, dataset)
-    # Each renderer takes a different, kind-specific argument list (branched
-    # below), so this can only be typed as a loose callable.
-    renderers: dict[str, Callable[..., int]] = {
-        "pokemon": render_pokemon_pages,
-        "abilities": render_ability_pages,
-        "moves": render_move_pages,
-        "items": render_item_pages,
-        "encounters": render_encounter_pages,
-        "trainers": render_trainer_pages,
-        "locations": render_location_pages,
-    }
-    renderer = renderers[kind]
-    if kind == "pokemon":
-        page_count = renderer(
-            dataset,
-            wiki_output,
-            comparison,
-            move_dataset,
-            reference_index,
-            relationship_index,
-            type_dataset,
-            only_pages=only_pages,
-        )
-    elif kind == "locations":
-        page_count = renderer(
-            dataset,
-            wiki_output,
-            comparison,
-            reference_index,
-            relationship_index,
-            (related_comparisons or {}).get("encounters"),
-            only_pages=only_pages,
-        )
-    elif kind in {"moves", "items", "encounters", "trainers"}:
-        page_count = renderer(
-            dataset,
-            wiki_output,
-            comparison,
-            reference_index,
-            relationship_index,
-            only_pages=only_pages,
-        )
-    else:
-        page_count = renderer(
-            dataset,
-            wiki_output,
-            comparison,
-            reference_index,
-            only_pages=only_pages,
-        )
-    _LOG.info(
-        "Wrote %s %s records: %s",
-        len(dataset["records"]),
-        kind,
-        data_output,
-    )
-    _LOG.info("Rendered %s %s pages: %s", page_count, kind, wiki_output)
-
-
-def _write_type_build(
-    dataset: dict,
-    data_root: Path,
-    wiki_root: Path,
-) -> None:
-    data_output = _dataset_output(data_root, "types")
-    write_dataset(dataset, data_output)
-    write_public_dataset(wiki_root, "types", dataset)
-    page_count = render_type_chart(dataset, wiki_root / "types")
-    _LOG.info("Wrote %s types: %s", len(dataset["records"]), data_output)
-    _LOG.info(
-        "Rendered %s type chart page: %s",
-        page_count,
-        wiki_root / "types",
-    )
-
-
-def _current_relationship_datasets(
-    context: GameBuildContext,
-) -> dict[str, dict]:
-    # "trades" has no dedicated dataset_kind (it's an optional per-engine
-    # detail, always None-safe) so it's never gated here; the rest correspond
-    # 1:1 to a DATASET_KINDS entry and are only built when the profile's
-    # engine actually declares support for it -- a personal-data-only
-    # vertical slice (an engine's first onboarding step, per
-    # adding-a-game.md) has nothing to build for the others yet.
-    enabled = set(enabled_dataset_kinds(context.profile))
-    accessors: dict[str, tuple[str | None, Callable[[], dict[str, Any] | None]]] = {
-        "pokemon": ("pokemon", context.pokemon),
-        "encounters": ("encounters", context.encounters),
-        "trainers": ("trainers", context.trainers),
-        "locations": ("locations", context.locations),
-        "items": ("items", context.items),
-        "trades": (None, context.trades),
-    }
-    datasets = {
-        name: accessor()
-        for name, (kind, accessor) in accessors.items()
-        if kind is None or kind in enabled
-    }
-    return {kind: dataset for kind, dataset in datasets.items() if dataset is not None}
-
-
-def _dataset_output(data_root: Path, kind: str) -> Path:
-    filename = "raw.json" if kind == "locations" else "enriched.json"
-    return data_root / kind / filename
-
-
-def _load_comparisons(root: Path) -> dict[str, dict]:
-    comparisons: dict[str, dict] = {}
-    if not root.is_dir():
-        return comparisons
-    for path in root.glob("*.json"):
-        try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        if isinstance(value, dict) and isinstance(value.get("kind"), str):
-            comparisons[_comparison_workflow_kind(value["kind"])] = value
-    return comparisons
-
-
-def _comparison_workflow_kind(kind: str) -> str:
-    return "encounters" if kind == "wild_encounters" else kind
 
 
 def _resolve_input_rom(args: argparse.Namespace) -> Path:
