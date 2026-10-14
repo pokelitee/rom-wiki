@@ -1,5 +1,15 @@
 {% extends "base.html" %}
 
+{% block htmltitle %}
+  {%- if page.title and not page.is_homepage and not (page.meta and page.meta.title) %}
+    {#- Material's striptags decodes entities, so an escaped "</title>" in a
+        ROM-derived heading would otherwise close the element. -#}
+    <title>{{ page.title | striptags | replace("<", "&lt;") }} - {{ config.site_name }}</title>
+  {%- else %}
+    {{ super() }}
+  {%- endif %}
+{% endblock %}
+
 {% block extrahead %}
   {{ super() }}
   {% set romwiki_theme = romwiki.current.theme if romwiki else config.extra.romwiki_site.theme | default("portal") %}

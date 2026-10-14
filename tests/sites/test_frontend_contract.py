@@ -234,6 +234,15 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn('"romwiki.color-scheme"', entrypoint)
         self.assertIn("localStorage.setItem", entrypoint)
 
+    def test_page_title_cannot_close_the_title_element(self) -> None:
+        template = (OVERRIDES / "main.html").read_text(encoding="utf-8")
+
+        self.assertIn("{% block htmltitle %}", template)
+        self.assertIn(
+            '{{ page.title | striptags | replace("<", "&lt;") }}',
+            template,
+        )
+
     def test_interactive_and_dense_components_keep_accessibility_states(self) -> None:
         css = "\n".join(
             path.read_text(encoding="utf-8") for path in sorted(STYLES.glob("*.css"))
