@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import subprocess
 import tarfile
 import tempfile
@@ -530,6 +531,23 @@ class PublishedSnapshotTests(unittest.TestCase):
             site = catalog.get("test-game")
             original = _site_source_fingerprint(catalog, site)
             registry.write_text("VALUE = 2\n", encoding="utf-8")
+            updated = _site_source_fingerprint(catalog, site)
+
+        self.assertNotEqual(updated, original)
+
+    def test_site_source_fingerprint_detects_a_same_timestamp_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _make_site(root)
+            registry = root / "src" / "romwiki" / "engines" / "registry.py"
+            registry.parent.mkdir(parents=True)
+            registry.write_text("VALUE = 1\n", encoding="utf-8")
+            catalog = SiteCatalog.load(root)
+            site = catalog.get("test-game")
+            original = _site_source_fingerprint(catalog, site)
+            timestamp = registry.stat().st_mtime_ns
+            registry.write_text("VALUE = 2\n", encoding="utf-8")
+            os.utime(registry, ns=(timestamp, timestamp))
             updated = _site_source_fingerprint(catalog, site)
 
         self.assertNotEqual(updated, original)

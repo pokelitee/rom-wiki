@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from romwiki.pipeline.build.fingerprint import profile_fingerprint
-from romwiki.util.inventory import file_metadata_inventory
+from romwiki.util.inventory import file_metadata_inventory, modified_too_recently
 from romwiki.util.json_io import write_json_atomic
 
 
@@ -85,16 +85,25 @@ def regeneration_fingerprint(
         )
         key = str(path.absolute())
         entry = stored.get(key)
-        if entry is not None and entry[:2] == [
-            metadata.st_size,
-            metadata.st_mtime_ns,
-        ]:
-            file_digest = bytes.fromhex(entry[2])
+        if modified_too_recently(metadata.st_mtime_ns):
+            # Not stored either, so the next run re-reads it once its
+            # timestamp can be trusted.
+            file_digest = hashlib.sha256(path.read_bytes()).digest()
         else:
-            file_digest = _cached_file_digest(
-                path, metadata.st_size, metadata.st_mtime_ns
-            )
-        computed[key] = [metadata.st_size, metadata.st_mtime_ns, file_digest.hex()]
+            if entry is not None and entry[:2] == [
+                metadata.st_size,
+                metadata.st_mtime_ns,
+            ]:
+                file_digest = bytes.fromhex(entry[2])
+            else:
+                file_digest = _cached_file_digest(
+                    path, metadata.st_size, metadata.st_mtime_ns
+                )
+            computed[key] = [
+                metadata.st_size,
+                metadata.st_mtime_ns,
+                file_digest.hex(),
+            ]
         digest.update(label.encode())
         digest.update(b"\0")
         digest.update(file_digest)

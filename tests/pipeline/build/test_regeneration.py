@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
+import time
 import unittest
+from collections.abc import Iterable
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -140,6 +143,7 @@ class RegenerationStateTests(unittest.TestCase):
                 )
             removed = pokedb / "gen4" / "moves.json"
             removed.write_text("[]", encoding="utf-8")
+            _backdate(pokedb.rglob("*.json"))
             digest_cache = root / "file-digests.json"
             regeneration_fingerprint(
                 root, site, (), (), pokedb / "gen5", digest_cache=digest_cache
@@ -158,6 +162,28 @@ class RegenerationStateTests(unittest.TestCase):
             self.assertIn(str((pokedb / "gen4" / "pokemon.json").absolute()), cached)
             self.assertNotIn(str(removed.absolute()), cached)
 
+    def test_detects_a_same_size_edit_that_keeps_its_timestamp(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site = _site_with_game_toml(root)
+            pokedb = root / "pokedb"
+            pokedb.mkdir()
+            data = pokedb / "pokemon.json"
+            data.write_text("[1]", encoding="utf-8")
+            digest_cache = root / "file-digests.json"
+            original = regeneration_fingerprint(
+                root, site, (), (), pokedb, digest_cache=digest_cache
+            )
+            timestamp = data.stat().st_mtime_ns
+            data.write_text("[2]", encoding="utf-8")
+            os.utime(data, ns=(timestamp, timestamp))
+
+            updated = regeneration_fingerprint(
+                root, site, (), (), pokedb, digest_cache=digest_cache
+            )
+
+        self.assertNotEqual(updated, original)
+
     def test_reuses_only_an_exact_generated_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -173,6 +199,13 @@ class RegenerationStateTests(unittest.TestCase):
             generated.write_text("changed\n", encoding="utf-8")
             self.assertFalse(can_reuse_generation(state, "input", site))
             self.assertFalse(can_reuse_generation(state, "other", site))
+
+
+def _backdate(paths: Iterable[Path]) -> None:
+    """Age files past the window in which cached digests are not trusted."""
+    timestamp = time.time() - 3600
+    for path in paths:
+        os.utime(path, (timestamp, timestamp))
 
 
 def _site_with_game_toml(root: Path) -> SiteDefinition:
