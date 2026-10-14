@@ -5,6 +5,7 @@ from typing import Any
 from romwiki.engines.concerns import TrainerConcern
 from romwiki.engines.registry import REMATCH_TABLE, TAG_BATTLES, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.profiles.models import GameProfile
 
 
 def scripts_archive_options(profile: Any) -> dict[str, bool]:
@@ -107,7 +108,10 @@ def read_staged_partner_battle_families(
 
 
 def read_starter_species(
-    profile: Any, platform: Any, engine: TrainerConcern, result: InspectionResult
+    profile: GameProfile,
+    platform: Any,
+    engine: TrainerConcern,
+    result: InspectionResult,
 ) -> tuple[int, ...] | None:
     """Decode the species this profile's starter accessor can return.
 
@@ -115,9 +119,9 @@ def read_starter_species(
     unrelated one sharing the same scratch variable, so it falls back to the
     stricter direct-target rule.
     """
-    overlay_id = profile.parameters.get("starter_species_overlay_id")
-    offset = profile.parameters.get("starter_species_offset")
-    count = profile.parameters.get("starter_species_count")
+    overlay_id = profile.optional_int_parameter("starter_species_overlay_id")
+    offset = profile.optional_int_parameter("starter_species_offset")
+    count = profile.optional_int_parameter("starter_species_count")
     if overlay_id is None or offset is None or count is None:
         return None
 
@@ -134,7 +138,7 @@ def read_starter_species(
 
 
 def read_rematch_table(
-    profile: Any,
+    profile: GameProfile,
     platform: Any,
     engine: TrainerConcern,
     result: InspectionResult,
@@ -147,9 +151,9 @@ def read_rematch_table(
     where the ROM image is still available. Profiles that declare no table get
     `None` and the resolver reports the mechanic as unresolved.
     """
-    overlay_id = profile.parameters.get("trainer_rematch_overlay_id")
-    offset = profile.parameters.get("trainer_rematch_offset")
-    count = profile.parameters.get("trainer_rematch_count")
+    overlay_id = profile.optional_int_parameter("trainer_rematch_overlay_id")
+    offset = profile.optional_int_parameter("trainer_rematch_offset")
+    count = profile.optional_int_parameter("trainer_rematch_count")
     if (
         REMATCH_TABLE not in get_engine(profile.engine).capabilities
         or overlay_id is None
