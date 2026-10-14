@@ -14,6 +14,7 @@ from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     aggregate_slots,
     display_name,
+    escape_heading,
     level_range,
     markdown_table_from_cells,
     reference_sprite_cell,
@@ -177,7 +178,7 @@ def append_hidden_grotto(
     grotto_id = record["grotto_id"]
     lines.extend(
         [
-            f"{'#' * heading_level} {heading} {{ #{hidden_grotto_anchor(grotto_id)} }}",
+            f"{'#' * heading_level} {escape_heading(heading)} {{ #{hidden_grotto_anchor(grotto_id)} }}",
             "",
             "The ROM chooses one of four groups independently from the listed pool. "
             "Pool chance and group chance are kept separate.",
@@ -275,7 +276,7 @@ def append_safari_area(
     anchor = name_slug(record["area_name"])
     lines.extend(
         [
-            f"{'#' * heading_level} {record['area_name']} {{ #{anchor} }}",
+            f"{'#' * heading_level} {escape_heading(record['area_name'])} {{ #{anchor} }}",
             "",
         ]
     )

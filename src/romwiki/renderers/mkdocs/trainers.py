@@ -23,6 +23,7 @@ from romwiki.renderers.mkdocs.components import (
     class_badge,
     content_tabs,
     display_name,
+    escape_heading,
     escape_table_cell,
     provenance_fact_table,
     provenance_section,
@@ -318,7 +319,7 @@ def _render_trainer(
     source_url = f"trainers/trainer-{record['trainer_id']:04}/"
     grouped_ai_items = _group_ai_battle_items(record)
     lines = [
-        f"# {label}",
+        f"# {escape_heading(label)}",
         "",
         *_trainer_summary(record, grouped_ai_items, source_url, features=features),
     ]

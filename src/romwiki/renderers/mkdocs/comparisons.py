@@ -16,6 +16,7 @@ from romwiki.renderers.mkdocs.components import (
     content_tabs,
     display_name,
     empty_state,
+    escape_heading,
     escape_table_cell,
     evolution_condition,
 )
@@ -343,7 +344,7 @@ def _render_removed_page(
     path.parent.mkdir(parents=True, exist_ok=True)
     snapshot = record["baseline_record"]
     lines = [
-        f"# {record['label']}",
+        f"# {escape_heading(record['label'])}",
         "",
         '!!! warning "Removed in this hack"',
         f"    This record exists in **{comparison['baseline']}** but not in "

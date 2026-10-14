@@ -65,6 +65,21 @@ def escape_table_cell(value: str) -> str:
     return escape(value).replace("|", "&#124;")
 
 
+_HEADING_MARKDOWN_RE = re.compile(r"([\\`*_\[\]{}#])")
+
+
+def escape_heading(value: str) -> str:
+    """Escape free-text ROM data for a Markdown ATX heading.
+
+    `md_in_html` lets raw HTML through and `attr_list` turns a trailing
+    ``{...}`` into element attributes, so a hack's name could otherwise inject
+    markup or attributes. Quotes stay literal because Python-Markdown already
+    renders them unchanged and entity-encoding them would alter titles and the
+    search index.
+    """
+    return _HEADING_MARKDOWN_RE.sub(r"\\\1", escape(value, quote=False))
+
+
 def type_badges(types: list[dict[str, Any]]) -> str:
     badges = []
     seen = set()

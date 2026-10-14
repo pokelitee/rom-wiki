@@ -30,6 +30,7 @@ from romwiki.renderers.mkdocs.components import (
     display_name,
     effectiveness_value,
     empty_state,
+    escape_heading,
     escape_table_cell,
     evolution_condition,
     fact_grid,
@@ -271,7 +272,7 @@ def _render_record(
     evolutions = record.get("evolutions", [])
     baseline_stats = _comparison_base_stats(change, stats)
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *version_availability_note(record),
         *pokemon_summary(record),

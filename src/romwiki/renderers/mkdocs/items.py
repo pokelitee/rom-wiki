@@ -21,6 +21,7 @@ from romwiki.renderers.mkdocs.components import (
     content_tabs,
     description_table_source,
     display_name,
+    escape_heading,
     escape_table_cell,
     fact_grid,
     markdown_table,
@@ -252,7 +253,7 @@ def _render_record(
     if party_effects:
         mechanics.append(("Party-use effects", escape(", ".join(party_effects))))
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *version_availability_note(record),
         *_item_summary(record),

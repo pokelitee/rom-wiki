@@ -19,6 +19,7 @@ from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     description_table_source,
     empty_state,
+    escape_heading,
     markdown_table,
     markdown_table_from_cells,
     name_table_source,
@@ -162,7 +163,7 @@ def _render_record(
 ) -> str:
     source_file = f"abilities/{record['slug']}.md"
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *version_availability_note(record),
         *_ability_summary(record),

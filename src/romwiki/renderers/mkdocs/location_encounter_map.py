@@ -26,6 +26,7 @@ from romwiki.renderers.mkdocs.comparisons import (
 )
 from romwiki.renderers.mkdocs.components import (
     display_name,
+    escape_heading,
     escape_table_cell,
     provenance_fact_table,
     provenance_section,
@@ -244,7 +245,7 @@ def _render_encounter_map_location(
             f"{summary_section_link(display_value, anchor)}</dd></div>"
         )
     lines = [
-        f"# {location_label(record)}",
+        f"# {escape_heading(location_label(record))}",
         "",
         *summary_section("rw-location-summary", facts),
     ]

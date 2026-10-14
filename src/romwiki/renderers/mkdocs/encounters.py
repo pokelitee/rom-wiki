@@ -35,6 +35,7 @@ from romwiki.renderers.mkdocs.components import (
     MarkdownColumn,
     aggregate_slots,
     display_name,
+    escape_heading,
     heading_anchor,
     level_range,
     markdown_table,
@@ -913,7 +914,7 @@ def _render_area(
 ) -> str:
     source_file = f"encounters/area-{record['area_id']:03}.md"
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *_area_summary(record),
     ]
@@ -1365,7 +1366,7 @@ def _render_method_table_area(
 ) -> str:
     source_file = f"encounters/area-{record['area_id']:03}.md"
     lines = [
-        f"# {record['name']}",
+        f"# {escape_heading(record['name'])}",
         "",
         *_method_table_area_summary(record),
     ]
@@ -1654,7 +1655,7 @@ def _render_seasonal_area(
     record = records[0]
     source_file = f"encounters/{encounter_route_key(record)}.md"
     lines = [
-        f"# {_seasonal_display_name(record, locations)}",
+        f"# {escape_heading(_seasonal_display_name(record, locations))}",
         "",
         *_seasonal_area_summary(records, locations),
     ]
