@@ -4,17 +4,18 @@ from collections.abc import Mapping
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.util.errors import DataSourceError
+
+# Battle-mode (Gen V) trainer records store the victory-money multiplier as a
+# single byte at this offset within each trainer data member; the Gen V trainer
+# record decoder reads the same byte.
+BATTLE_MODE_VICTORY_MONEY_MULTIPLIER_OFFSET = 17
 
 
 def calculate_base_prize_money(
     trainer: Mapping[str, Any], *, engine: str
 ) -> dict[str, Any] | None:
     """Return an exact, engine-neutral base payout when all inputs are known."""
-    try:
-        trainer_format = get_engine(engine).formats.trainers
-    except DataSourceError:
-        return None
+    trainer_format = get_engine(engine).formats.trainers
 
     party = trainer.get("party")
     multiplier = trainer.get("victory_money_multiplier")
@@ -37,7 +38,7 @@ def calculate_base_prize_money(
                 "source": "rom",
                 "archive": record_provenance["archive"],
                 "member": record_provenance.get("member"),
-                "offset": 17,
+                "offset": BATTLE_MODE_VICTORY_MONEY_MULTIPLIER_OFFSET,
             }
     return {
         "amount": final_level * multiplier * base_factor * battle_format_multiplier,

@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.pipeline.enrichment.trainer_rewards import calculate_base_prize_money
+from romwiki.engines.gen5.shared.trainer_records import (
+    TRAINER_RECORD_SIZE,
+    parse_trainer_record,
+)
+from romwiki.pipeline.enrichment.trainer_rewards import (
+    BATTLE_MODE_VICTORY_MONEY_MULTIPLIER_OFFSET,
+    calculate_base_prize_money,
+)
+from romwiki.util.errors import DataSourceError
 
 
 class TrainerRewardTests(unittest.TestCase):
@@ -38,7 +46,10 @@ class TrainerRewardTests(unittest.TestCase):
         )
 
         self.assertEqual(payout["amount"], 1000)
-        self.assertEqual(payout["multiplier_provenance"]["offset"], 17)
+        self.assertEqual(
+            payout["multiplier_provenance"]["offset"],
+            BATTLE_MODE_VICTORY_MONEY_MULTIPLIER_OFFSET,
+        )
 
     def test_omits_payout_when_an_exact_input_is_missing(self) -> None:
         self.assertIsNone(
@@ -74,10 +85,24 @@ class TrainerRewardTests(unittest.TestCase):
             },
         )
 
-    def test_omits_unsupported_engine(self) -> None:
-        self.assertIsNone(
+    def test_unknown_engine_is_an_error_rather_than_a_missing_payout(self) -> None:
+        with self.assertRaises(DataSourceError):
             calculate_base_prize_money(
                 {"victory_money_multiplier": 12, "party": [{"level": 20}]},
                 engine="future",
             )
+
+    def test_records_the_gen5_multiplier_byte_the_decoder_reads(self) -> None:
+        record = bytearray(TRAINER_RECORD_SIZE)
+        record[BATTLE_MODE_VICTORY_MONEY_MULTIPLIER_OFFSET] = 0xA5
+        trainer = parse_trainer_record(
+            bytes(record),
+            b"",
+            trainer_id=1,
+            name="Trainer",
+            class_names=("Class",),
+            trainer_archive="a/0/9/1",
+            party_archive="a/0/9/2",
         )
+
+        self.assertEqual(trainer.victory_money_multiplier, 0xA5)
