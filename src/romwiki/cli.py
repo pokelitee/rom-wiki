@@ -75,6 +75,7 @@ from romwiki.sites import (
     audit_site,
     build_sites,
     create_generated_wiki_snapshot,
+    publish_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
     serve_sites,
 )
@@ -85,6 +86,7 @@ from romwiki.sites.build_state import (
 )
 from romwiki.sites.data_exports import prune_public_datasets, write_public_dataset
 from romwiki.sites.dev_pages import DevPages
+from romwiki.sites.snapshot import DEFAULT_SNAPSHOT_URL, SNAPSHOT_RELEASE_REPOSITORY
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import (
     LocalConfigError,
@@ -560,6 +562,12 @@ def _add_site_parser(
         type=Path,
         default=Path("sites/generated-wiki"),
     )
+    snapshot_parser.add_argument(
+        "--pokedb-root",
+        type=Path,
+        help="directory containing the gen<N> PokéDB outputs used for generation; "
+        "recorded as provenance in the snapshot manifest",
+    )
     _add_site_root_argument(snapshot_parser)
     restore_parser = site_subparsers.add_parser(
         "restore-snapshot", help="restore generated wiki Markdown"
@@ -573,7 +581,28 @@ def _add_site_parser(
     restore_parser.add_argument(
         "--site", action="append", default=[], help="restore only this site"
     )
+    restore_parser.add_argument(
+        "--snapshot-url",
+        help="base URL of published snapshot archives (default: "
+        "$ROMWIKI_SNAPSHOT_URL, or the pokelitee/rom-wiki snapshots release)",
+    )
     _add_site_root_argument(restore_parser)
+    publish_parser = site_subparsers.add_parser(
+        "publish-snapshot",
+        help="upload snapshot archives to the GitHub snapshots release",
+    )
+    publish_parser.add_argument(
+        "directory",
+        type=Path,
+        nargs="?",
+        default=Path("sites/generated-wiki"),
+    )
+    publish_parser.add_argument(
+        "--repo",
+        default=SNAPSHOT_RELEASE_REPOSITORY,
+        help=f"GitHub repository that hosts the release "
+        f"(default: {SNAPSHOT_RELEASE_REPOSITORY})",
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -700,7 +729,9 @@ def _run_site_command(args: argparse.Namespace) -> None:
         )
     elif args.site_command == "snapshot":
         with timed_operation(_LOG, "Generated wiki snapshot"):
-            count = create_generated_wiki_snapshot(args.root, args.output)
+            count = create_generated_wiki_snapshot(
+                args.root, args.output, pokedb_root=args.pokedb_root
+            )
         _LOG.info(
             "Archived %s generated wiki files: %s",
             f"{count:,}",
@@ -709,12 +740,24 @@ def _run_site_command(args: argparse.Namespace) -> None:
     elif args.site_command == "restore-snapshot":
         with timed_operation(_LOG, "Generated wiki snapshot restore"):
             count = restore_generated_wiki_snapshot(
-                args.root, args.archive, site_ids=tuple(args.site)
+                args.root,
+                args.archive,
+                site_ids=tuple(args.site),
+                download_url=(
+                    args.snapshot_url
+                    or os.environ.get("ROMWIKI_SNAPSHOT_URL")
+                    or DEFAULT_SNAPSHOT_URL
+                ),
             )
         _LOG.info(
             "Restored %s generated wiki files: %s",
             f"{count:,}",
             args.archive,
+        )
+    elif args.site_command == "publish-snapshot":
+        uploaded = publish_generated_wiki_snapshot(args.directory, repository=args.repo)
+        _LOG.info(
+            "Uploaded %s snapshot archives to %s", f"{len(uploaded):,}", args.repo
         )
     elif args.site_command == "fingerprint":
         catalog = SiteCatalog.load(args.root)
@@ -1651,6 +1694,7 @@ def _run_regeneration_steps(
                 args.root,
                 args.snapshot_output,
                 catalog=catalog,
+                pokedb_root=args.pokedb_root,
             )
         _LOG.info(
             "Archived %s generated wiki files: %s",

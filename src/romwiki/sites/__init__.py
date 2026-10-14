@@ -9,6 +9,7 @@ from romwiki.sites.catalog import (
 from romwiki.sites.server import serve_sites
 from romwiki.sites.snapshot import (
     create_generated_wiki_snapshot,
+    publish_generated_wiki_snapshot,
     restore_generated_wiki_snapshot,
 )
 
@@ -22,6 +23,7 @@ __all__ = [
     "audit_site",
     "build_sites",
     "create_generated_wiki_snapshot",
+    "publish_generated_wiki_snapshot",
     "restore_generated_wiki_snapshot",
     "serve_sites",
 ]
