@@ -480,8 +480,11 @@ Each cache layer is keyed by the inputs that can change its output:
 Raw extraction caches live under `build/data/`; the others live under
 `.romwiki/`. Site build reuse compares file metadata locally and file content for
 `site fingerprint` and `site build --reuse-unchanged`, so CI checkouts that reset
-modification times still hit the cache. `--refresh` bypasses extraction caches,
-and `--clean` bypasses regeneration skips, site reuse, and the audit cache.
+modification times still hit the cache. The regeneration fingerprint reuses file
+digests recorded in `.romwiki/file-digests.json` while a file's size and
+modification time are unchanged, and hashes the content otherwise. `--refresh`
+bypasses extraction caches, and `--clean` bypasses regeneration skips, site reuse,
+and the audit cache.
 
 ## Reuse boundaries
 

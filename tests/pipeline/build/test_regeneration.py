@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -95,6 +96,67 @@ class RegenerationStateTests(unittest.TestCase):
             after = regeneration_fingerprint(root, site, (), (), pokedb)
 
         self.assertNotEqual(before, after)
+
+    def test_digest_cache_reuses_unchanged_files_without_changing_the_value(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site = _site_with_game_toml(root)
+            module = root / "src" / "romwiki" / "module.py"
+            module.parent.mkdir(parents=True)
+            module.write_text("VALUE = 1\n", encoding="utf-8")
+            pokedb = root / "pokedb"
+            pokedb.mkdir()
+            (pokedb / "pokemon.json").write_text("[]", encoding="utf-8")
+            digest_cache = root / ".romwiki" / "file-digests.json"
+
+            def fingerprint(cache: Path | None) -> str:
+                return regeneration_fingerprint(
+                    root, site, (), (), pokedb, digest_cache=cache
+                )
+
+            uncached = fingerprint(None)
+            self.assertEqual(fingerprint(digest_cache), uncached)
+            with patch(
+                "romwiki.pipeline.build.regeneration._cached_file_digest"
+            ) as file_digest:
+                self.assertEqual(fingerprint(digest_cache), uncached)
+            file_digest.assert_not_called()
+
+            module.write_text("VALUE = 22\n", encoding="utf-8")
+            self.assertEqual(fingerprint(digest_cache), fingerprint(None))
+            self.assertNotEqual(fingerprint(digest_cache), uncached)
+
+    def test_digest_cache_drops_deleted_files_but_keeps_other_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site = _site_with_game_toml(root)
+            pokedb = root / "pokedb"
+            for generation in ("gen4", "gen5"):
+                (pokedb / generation).mkdir(parents=True)
+                (pokedb / generation / "pokemon.json").write_text(
+                    "[]", encoding="utf-8"
+                )
+            removed = pokedb / "gen4" / "moves.json"
+            removed.write_text("[]", encoding="utf-8")
+            digest_cache = root / "file-digests.json"
+            regeneration_fingerprint(
+                root, site, (), (), pokedb / "gen5", digest_cache=digest_cache
+            )
+            regeneration_fingerprint(
+                root, site, (), (), pokedb / "gen4", digest_cache=digest_cache
+            )
+            removed.unlink()
+
+            regeneration_fingerprint(
+                root, site, (), (), pokedb / "gen4", digest_cache=digest_cache
+            )
+
+            cached = json.loads(digest_cache.read_text(encoding="utf-8"))["files"]
+            self.assertIn(str((pokedb / "gen5" / "pokemon.json").absolute()), cached)
+            self.assertIn(str((pokedb / "gen4" / "pokemon.json").absolute()), cached)
+            self.assertNotIn(str(removed.absolute()), cached)
 
     def test_reuses_only_an_exact_generated_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

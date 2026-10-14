@@ -317,6 +317,7 @@ def _generate_prepared_sites(
             prepared_site.baselines,
             args.pokedb_root / f"gen{site.game.generation}",
             dev=dev,
+            digest_cache=args.root / ".romwiki" / "file-digests.json",
         )
         if not getattr(args, "clean", False) and can_reuse_generation(
             state_path, input_fingerprint, site
