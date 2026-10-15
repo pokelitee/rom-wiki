@@ -68,6 +68,7 @@ class LocationRenderingTests(unittest.TestCase):
         dataset = {
             "game": "heartgold-us",
             "engine": "gen4_hgss",
+            "location_format": "encounter-map",
             "records": [record],
         }
         relationships = build_relationship_index(
@@ -137,6 +138,7 @@ class LocationRenderingTests(unittest.TestCase):
         dataset = {
             "game": "heartgold-us",
             "engine": "gen4_hgss",
+            "location_format": "encounter-map",
             "records": [location],
         }
         relationships = build_relationship_index(

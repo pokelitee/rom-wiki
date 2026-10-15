@@ -53,6 +53,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         )
 
         self.assertEqual(enriched["active_record_count"], 1)
+        self.assertEqual(enriched["encounter_format"], "conditional")
         pokemon = enriched["records"][0]["walking"]["slots"][0]["pokemon"]
         self.assertEqual(pokemon["name"], "Bulbasaur")
         enriched["records"][0]["special"]["radar"][0] = {

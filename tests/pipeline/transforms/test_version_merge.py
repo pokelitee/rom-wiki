@@ -355,6 +355,30 @@ class VersionMergeTests(unittest.TestCase):
         with self.assertRaisesRegex(DataSourceError, "feature capabilities"):
             merge_version_family_datasets({"black": black, "white": white})
 
+    def test_keeps_matching_semantic_formats(self) -> None:
+        black = {
+            **_dataset("locations", "black-us", []),
+            "location_format": "event-map",
+        }
+        white = {
+            **_dataset("locations", "white-us", []),
+            "location_format": "event-map",
+        }
+
+        merged = merge_version_family_datasets({"black": black, "white": white})
+
+        self.assertEqual(merged["location_format"], "event-map")
+
+    def test_rejects_mismatched_semantic_formats(self) -> None:
+        for field in ("encounter_format", "location_format"):
+            with self.subTest(field=field):
+                kind = "wild_encounters" if field == "encounter_format" else "locations"
+                black = {**_dataset(kind, "black-us", []), field: "conditional"}
+                white = {**_dataset(kind, "white-us", []), field: "seasonal"}
+
+                with self.assertRaisesRegex(DataSourceError, "semantic formats"):
+                    merge_version_family_datasets({"black": black, "white": white})
+
     def test_merges_shared_and_version_specific_comparisons(self) -> None:
         black = _comparison(
             "items",

@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from romwiki.engines.registry import get_engine
 from romwiki.pipeline.transforms.relationships import RelationshipIndex
 from romwiki.renderers.mkdocs.location_encounter_map import (
     render_encounter_map_location_pages,
@@ -23,10 +22,10 @@ def render_location_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    engine_id = dataset.get("engine")
+    location_format = dataset.get("location_format")
     encounter_map = (
-        get_engine(engine_id).formats.locations == "encounter-map"
-        if isinstance(engine_id, str)
+        location_format == "encounter-map"
+        if location_format is not None
         else bool(dataset.get("records"))
         and "encounter_map_index" in dataset["records"][0]
     )

@@ -173,6 +173,7 @@ def enrich_encounter_dataset(
         "game": dataset["game"],
         "engine": dataset["engine"],
         "dataset": "wild_encounters",
+        "encounter_format": adapter.formats.encounters,
         "record_count": len(records),
         "active_record_count": sum(record["active"] for record in records),
         "source": dataset["source"],

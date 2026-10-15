@@ -22,6 +22,13 @@ Published enriched datasets also carry a sorted `features` list. A feature means
 the exact engine/profile combination supports that mechanic. Record-level emptiness
 is separate: an empty list means the mechanic exists but this record has no entries.
 
+Encounter and location envelopes also name the semantic shape of their records:
+`wild_encounters` carries `encounter_format` (`conditional`, `seasonal`,
+`method-table`, or `unsupported`) and `locations` carries `location_format`
+(`event-map`, `encounter-map`, or `unsupported`). Both come from the engine
+adapter's declared formats, so consumers select a record shape from the dataset
+itself rather than resolving the engine that produced it.
+
 ## Compatibility
 
 Schema constants live in `src/romwiki/schema/versions.py`. Increment the affected
@@ -41,8 +48,13 @@ schemas above. A version constant for an actual dataset field, shape, or
 required presence belongs in `schema/versions.py` regardless of which module
 emits it.
 
-Sibling-version merging requires the same dataset kind, schema version, and
-feature contract on every side. Differing current records are retained only for
+Enriched encounter schema 7 added `encounter_format`. Published locations
+previously used the raw locations schema version (15); they now have their own
+enriched version, starting at 16 when `location_format` was added, so the
+published number keeps increasing.
+
+Sibling-version merging requires the same dataset kind, schema version, feature
+contract, and semantic format on every side. Differing current records are retained only for
 dataset kinds whose renderers explicitly support version variants.
 
 ## Public downloads

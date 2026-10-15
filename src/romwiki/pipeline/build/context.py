@@ -16,6 +16,7 @@ from romwiki.pipeline.enrichment.abilities import build_ability_dataset
 from romwiki.pipeline.enrichment.encounters import enrich_encounter_dataset
 from romwiki.pipeline.enrichment.features import attach_features
 from romwiki.pipeline.enrichment.items import build_item_dataset
+from romwiki.pipeline.enrichment.locations import enrich_location_dataset
 from romwiki.pipeline.enrichment.moves import enrich_move_dataset
 from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.pipeline.enrichment.trades import enrich_npc_trade_dataset
@@ -325,7 +326,10 @@ class GameBuildContext:
         dataset = self.locations_raw()
         if dataset is None:
             return None
-        return attach_features(cast(LocationDataset, dataset), self.profile)
+        return attach_features(
+            self._memo("locations/enriched", lambda: enrich_location_dataset(dataset)),
+            self.profile,
+        )
 
     def items(self) -> ItemDataset:
         return attach_features(

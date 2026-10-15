@@ -168,6 +168,7 @@ class EncounterRenderingTests(unittest.TestCase):
             "game": "test",
             "engine": "gen4_hgss",
             "dataset": "wild_encounters",
+            "encounter_format": "conditional",
             "records": [unlinked, linked],
         }
 
@@ -190,6 +191,7 @@ class EncounterRenderingTests(unittest.TestCase):
             "game": "test",
             "engine": "gen4_hgss",
             "dataset": "wild_encounters",
+            "encounter_format": "conditional",
             "records": [
                 _walking_area(60, [], 25, "pikachu"),
                 _walking_area(

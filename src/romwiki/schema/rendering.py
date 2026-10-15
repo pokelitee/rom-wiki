@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, NotRequired, Required, TypedDict
+from typing import Any, Literal, NotRequired, Required, TypedDict
 
 from romwiki.schema.trainers import TrainerBattleFamily, TrainerVariantSupport
+
+# Semantic shapes declared by an engine adapter. Encounter and location
+# envelopes publish theirs so consumers never resolve the engine to dispatch.
+EncounterFormat = Literal["unsupported", "conditional", "seasonal", "method-table"]
+LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 
 
 class RenderReference(TypedDict, total=False):
@@ -458,8 +463,9 @@ class TrainerDataset(RenderDataset[TrainerRenderRecord], total=False):
 
 
 class EncounterDataset(RenderDataset[EncounterRenderRecord], total=False):
+    encounter_format: Required[EncounterFormat]
     active_record_count: Required[int]
 
 
 class LocationDataset(RenderDataset[LocationRenderRecord], total=False):
-    pass
+    location_format: Required[LocationFormat]

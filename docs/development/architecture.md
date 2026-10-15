@@ -238,7 +238,10 @@ dataset metadata, not part of the normalized type name.
 Shared pipeline and renderer dispatch follows the adapter's semantic format
 metadata (`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and
 so on). Generation numbers and particular engine IDs must not select a shared code
-path.
+path. Enrichment copies the encounter and location formats onto their dataset
+envelopes (`encounter_format` and `location_format`), and renderers read them
+there: no module under `renderers/` imports `romwiki.engines`. Like features,
+version families may merge only datasets with identical formats.
 
 Storage choices are declared beside those semantic formats. Egg moves distinguish
 overlay tables, single-table archives, and per-species archives; item extraction
