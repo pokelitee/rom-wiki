@@ -1,4 +1,4 @@
-ast-serialize==0.12.1
+ast-serialize==0.13.0
 build==1.6.1
 capstone==5.0.9
 colorama==0.4.6
