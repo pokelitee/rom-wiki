@@ -280,7 +280,6 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("# Youngster Tristan", page)
         self.assertNotIn("Trainer location coverage", index)
         self.assertNotIn("Trainer variant coverage", index)
-        self.assertIn("[Route 202](../locations/header-343.md)", page)
         self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
         self.assertIn('src="https://example.test/bulbasaur.png"', page)
         self.assertIn('width="48" height="48" loading="lazy"', page)
@@ -294,8 +293,9 @@ class TrainerEnrichmentTests(unittest.TestCase):
         self.assertIn("<dt>Nature</dt><dd>Timid</dd>", page)
         self.assertIn('aria-label="Male" title="Male">♂</span>', page)
         self.assertIn(
-            "| [Route 202](../locations/header-343.md) | `header-343` | `R202` | "
-            "(181, 818) | `329:0` |",
+            '<tr><td><a href="../../locations/header-343/">Route 202</a></td>'
+            "<td><code>header-343</code></td><td><code>R202</code></td>"
+            "<td>(181, 818)</td><td><code>329:0</code></td></tr>",
             page,
         )
         self.assertNotIn("<dt>After victory</dt>", page)

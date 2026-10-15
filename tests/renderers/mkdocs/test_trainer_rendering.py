@@ -2,23 +2,27 @@ from __future__ import annotations
 
 import unittest
 
-from romwiki.renderers.mkdocs.trainers import (
-    _append_ai_battle_items,
-    _append_party,
-    _append_same_name_trainers,
-    _group_ai_battle_items,
-    _party_cards,
-    _party_gender,
-    _trainer_provenance,
-    _trainer_summary,
-    _variant_tab_label,
+import markdown
+
+from romwiki.renderers.mkdocs.trainers.pages import _render_trainer
+from romwiki.renderers.mkdocs.trainers.party import _party_gender, party_cards
+from romwiki.renderers.mkdocs.trainers.records import group_ai_battle_items
+from romwiki.renderers.mkdocs.trainers.rewards import ai_battle_items_section
+from romwiki.renderers.mkdocs.trainers.sections import (
+    provenance,
+    same_name_trainers_section,
+)
+from romwiki.renderers.mkdocs.trainers.summary import trainer_summary
+from romwiki.renderers.mkdocs.trainers.variants import (
+    party_section,
+    variant_tab_label,
 )
 
 
 class TrainerRenderingTests(unittest.TestCase):
     def test_uses_only_named_public_axes_and_generic_fallback(self) -> None:
         self.assertEqual(
-            _variant_tab_label(
+            variant_tab_label(
                 {
                     "conditions": [
                         {"kind": "season", "value": "winter"},
@@ -31,7 +35,7 @@ class TrainerRenderingTests(unittest.TestCase):
             "Winter · Rematch · White 2",
         )
         self.assertEqual(
-            _variant_tab_label(
+            variant_tab_label(
                 {"conditions": [{"kind": "story-stage", "value": "late-game"}]},
                 3,
             ),
@@ -75,23 +79,23 @@ class TrainerRenderingTests(unittest.TestCase):
                 },
             ],
         }
-        lines: list[str] = []
-
-        _append_party(
-            lines,
+        lines = party_section(
             current,
             [(family, family["variants"][0])],
             {161: current, 162: related},
-            "trainers/trainer-0161.md",
             "trainers/trainer-0161/",
         )
         page = "\n".join(lines)
 
         self.assertIn("## Party", page)
-        self.assertIn('=== "Snivy"', page)
-        self.assertIn('=== "Tepig"', page)
-        self.assertIn("Exact record: [trainer-0161]", page)
-        self.assertIn("Exact record: [trainer-0162]", page)
+        self.assertIn('<div class="tabbed-set tabbed-alternate" data-tabs="1:2">', page)
+        self.assertIn('<label for="__tabbed_1_1">Snivy</label>', page)
+        self.assertIn('<label for="__tabbed_1_2">Tepig</label>', page)
+        self.assertIn('<p>Exact record: <a href="./">trainer-0161</a></p>', page)
+        self.assertIn(
+            '<p>Exact record: <a href="../trainer-0162/">trainer-0162</a></p>', page
+        )
+        self.assertNotIn('=== "', page)
         self.assertNotIn("Battle Variants", page)
         self.assertIn("Tepig", page)
         self.assertIn("Oshawott", page)
@@ -116,25 +120,21 @@ class TrainerRenderingTests(unittest.TestCase):
                 )
             ],
         }
-        lines: list[str] = []
-
-        _append_party(
-            lines,
+        lines = party_section(
             current,
             [(family, family["variants"][0])],
             {161: current, 162: related},
-            "trainers/trainer-0161.md",
             "trainers/trainer-0161/",
         )
         page = "\n".join(lines)
 
-        self.assertNotIn('=== "', page)
-        self.assertIn("Selections: [Snivy (trainer-0161)]", page)
-        self.assertIn("[Tepig (trainer-0162)]", page)
+        self.assertNotIn("tabbed-set", page)
+        self.assertIn('<p>Selections: <a href="./">Snivy (trainer-0161)</a>', page)
+        self.assertIn('<a href="../trainer-0162/">Tepig (trainer-0162)</a></p>', page)
         self.assertEqual(page.count('class="rw-party-grid"'), 1)
 
     def test_consolidates_location_methods_in_data_provenance(self) -> None:
-        lines = _trainer_provenance(
+        lines = provenance(
             {
                 "class_id": 1,
                 "class_gender": "female",
@@ -160,15 +160,26 @@ class TrainerRenderingTests(unittest.TestCase):
                 "script_references": [{"name": "Route 203"}],
             }
         )
-        provenance = "\n".join(lines)
+        section = "\n".join(lines)
 
-        self.assertIn("Source: exact ROM trainer record from", provenance)
-        self.assertIn("Overworld locations:", provenance)
-        self.assertIn("Scripted battle locations:", provenance)
-        self.assertIn("`StartTrainerBattle`", provenance)
-        self.assertIn("| Unknown byte | `0x30` |", provenance)
-        self.assertIn("| Class gender | Female |", provenance)
-        self.assertIn("ARM9 overlay `16` at byte offset `0x35A00`", provenance)
+        self.assertIn('<details class="rw-source-details">', section)
+        self.assertIn("<summary>Data provenance</summary>", section)
+        self.assertIn(
+            "<p>Source: exact ROM trainer record from <code>trdata.narc</code>",
+            section,
+        )
+        self.assertIn("Overworld locations:", section)
+        self.assertIn("Scripted battle locations:", section)
+        self.assertIn("<code>StartTrainerBattle</code>", section)
+        self.assertIn(
+            "<tr><td>Unknown byte</td><td><code>0x30</code></td></tr>", section
+        )
+        self.assertIn("<tr><td>Class gender</td><td>Female</td></tr>", section)
+        self.assertIn(
+            "ARM9 overlay <code>16</code> at byte offset <code>0x35A00</code>",
+            section,
+        )
+        self.assertNotIn("`", section)
 
     def test_renders_same_name_trainers_without_assuming_identity(self) -> None:
         current = _related_trainer(5, "Route 202", 8, "Starly")
@@ -186,23 +197,18 @@ class TrainerRenderingTests(unittest.TestCase):
                 )
             ]
         )
-        lines: list[str] = []
-
-        _append_same_name_trainers(
-            lines,
-            current,
-            [current, related],
-            "trainers/trainer-0005.md",
+        lines = same_name_trainers_section(
+            current, [current, related], "trainers/trainer-0005/"
         )
         page = "\n".join(lines)
 
         self.assertIn("## Same-name trainers", page)
         self.assertNotIn("<details", page)
         self.assertIn("does not establish that they represent the same character", page)
-        self.assertIn("`trainer-0019`", page)
-        self.assertIn("[Route 204](../locations/header-019.md)", page)
-        self.assertIn("[Staravia](../pokemon/staravia.md)", page)
-        self.assertIn("[Machop](../pokemon/machop.md)", page)
+        self.assertIn('<td style="text-align: right;"><code>trainer-0019</code>', page)
+        self.assertIn('<a href="../../locations/header-019/">Route 204</a>', page)
+        self.assertIn('<a href="../../pokemon/staravia/">Staravia</a>', page)
+        self.assertIn('<a href="../../pokemon/machop/">Machop</a>', page)
         self.assertNotIn("more", page)
 
     def test_renders_each_difficulty_variant_with_its_own_battle_details(self) -> None:
@@ -236,21 +242,17 @@ class TrainerRenderingTests(unittest.TestCase):
                 )
             ],
         }
-        lines: list[str] = []
-
-        _append_party(
-            lines,
+        lines = party_section(
             normal,
             [(family, family["variants"][0])],
             {156: normal, 764: challenge},
-            "trainers/trainer-0156.md",
             "trainers/trainer-0156/",
         )
         page = "\n".join(lines)
 
-        self.assertIn('=== "Easy"', page)
-        self.assertIn('=== "Normal"', page)
-        self.assertIn('=== "Challenge"', page)
+        self.assertIn('<label for="__tabbed_1_1">Easy</label>', page)
+        self.assertIn('<label for="__tabbed_1_2">Normal</label>', page)
+        self.assertIn('<label for="__tabbed_1_3">Challenge</label>', page)
         self.assertIn("Single battle", page)
         self.assertIn("Triple battle", page)
         self.assertIn("0x000000B7", page)
@@ -263,18 +265,13 @@ class TrainerRenderingTests(unittest.TestCase):
             _related_trainer(trainer_id, "Galactic HQ", 20, "Zubat")
             for trainer_id in range(2, 8)
         ]
-        lines: list[str] = []
-
-        _append_same_name_trainers(
-            lines,
-            current,
-            [current, *related],
-            "trainers/trainer-0001.md",
+        lines = same_name_trainers_section(
+            current, [current, *related], "trainers/trainer-0001/"
         )
         page = "\n".join(lines)
 
-        self.assertIn('<details markdown="1">', page)
-        self.assertIn("<summary>6 other parties</summary>", page)
+        self.assertIn("<details>\n<summary>6 other parties</summary>\n<table>", page)
+        self.assertNotIn("markdown=", page)
 
     def test_groups_ai_battle_item_slots_and_renders_icons(self) -> None:
         record = {
@@ -293,23 +290,19 @@ class TrainerRenderingTests(unittest.TestCase):
                 },
             ]
         }
-        lines: list[str] = []
-
-        _append_ai_battle_items(
-            lines, _group_ai_battle_items(record), "trainers/trainer-0005.md"
+        lines = ai_battle_items_section(
+            group_ai_battle_items(record), "trainers/trainer-0005/"
         )
         page = "\n".join(lines)
 
-        self.assertEqual(page.count("[Full Restore](../items/full-restore.md)"), 1)
+        self.assertEqual(
+            page.count('<a href="../../items/full-restore/">Full Restore</a>'), 1
+        )
         self.assertIn('src="https://example.test/full-restore.png"', page)
-        self.assertIn("| 2 |", page)
+        self.assertIn('<td style="text-align: right;">2</td>', page)
 
     def test_omits_empty_ai_battle_item_section(self) -> None:
-        lines: list[str] = []
-
-        _append_ai_battle_items(lines, [], "trainers/test.md")
-
-        self.assertEqual(lines, [])
+        self.assertEqual(ai_battle_items_section([], "trainers/test/"), [])
 
     def test_summarizes_grouped_ai_battle_items(self) -> None:
         record = {
@@ -326,9 +319,9 @@ class TrainerRenderingTests(unittest.TestCase):
         }
 
         page = "\n".join(
-            _trainer_summary(
+            trainer_summary(
                 record,
-                _group_ai_battle_items(record),
+                group_ai_battle_items(record),
                 "trainers/trainer-0005/",
             )
         )
@@ -356,7 +349,7 @@ class TrainerRenderingTests(unittest.TestCase):
             },
         }
 
-        page = "\n".join(_trainer_summary(record, [], "trainers/trainer-0005/"))
+        page = "\n".join(trainer_summary(record, [], "trainers/trainer-0005/"))
 
         self.assertIn("Heals the player's party", page)
         self.assertIn("<dt>Victory item</dt>", page)
@@ -380,7 +373,7 @@ class TrainerRenderingTests(unittest.TestCase):
         }
 
         page = "\n".join(
-            _trainer_summary(
+            trainer_summary(
                 record,
                 [],
                 "trainers/trainer-0005/",
@@ -409,14 +402,14 @@ class TrainerRenderingTests(unittest.TestCase):
             },
         }
 
-        page = "\n".join(_trainer_summary(record, [], "trainers/trainer-0005/"))
+        page = "\n".join(trainer_summary(record, [], "trainers/trainer-0005/"))
 
         self.assertIn("<dt>Base prize money</dt><dd>&#8381;2,400</dd>", page)
 
     def test_numbers_explicit_moves_in_rom_order(self) -> None:
         party = [_party_member(["tackle", "growl"])]
 
-        page = "\n".join(_party_cards(party, "trainers/trainer-0001/"))
+        page = "\n".join(party_cards(party, "trainers/trainer-0001/"))
 
         self.assertIn('<ol class="rw-party-card__moves"', page)
         self.assertIn('aria-label="Bulbasaur moves"', page)
@@ -440,7 +433,7 @@ class TrainerRenderingTests(unittest.TestCase):
         for key in ("ability", "nature", "gender", "ivs", "evs", "calculated_stats"):
             member.pop(key)
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn("Bulbasaur", page)
         self.assertNotIn("<dt>Nature</dt>", page)
@@ -448,7 +441,7 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertNotIn('<h4 class="rw-party-card__section-title">Stats</h4>', page)
 
     def test_formats_default_moves_without_a_numbered_slot(self) -> None:
-        page = "\n".join(_party_cards([_party_member([])], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([_party_member([])], "trainers/trainer-0001/"))
 
         self.assertNotIn('<ol class="rw-party-card__moves"', page)
         self.assertIn("Uses default level-up moves.", page)
@@ -457,7 +450,7 @@ class TrainerRenderingTests(unittest.TestCase):
         member = _party_member(["Tackle", "Growl"])
         member["moves_source"] = "level-up"
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn("Tackle", page)
         self.assertIn("Growl", page)
@@ -485,7 +478,7 @@ class TrainerRenderingTests(unittest.TestCase):
             }
         )
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn('href="../../abilities/overgrow/">Overgrow</a>', page)
         self.assertIn('<span class="rw-party-card__level">Lv. 5</span>', page)
@@ -507,7 +500,7 @@ class TrainerRenderingTests(unittest.TestCase):
         member["ivs"] = {"source": "derived", "values": _stats(12)}
         member["evs"] = {"source": "engine-default", "values": _stats(0)}
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn('<tr><th scope="row">Min</th><td>42</td><td>38</td>', page)
         self.assertIn('<tr><th scope="row">Max</th><td>42</td><td>45</td>', page)
@@ -523,7 +516,7 @@ class TrainerRenderingTests(unittest.TestCase):
         member["ivs"] = {"source": "derived", "values": _stats(12)}
         member["evs"] = {"source": "engine-default", "values": _stats(0)}
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn(
             '<tr><th scope="row">Value</th>'
@@ -542,7 +535,7 @@ class TrainerRenderingTests(unittest.TestCase):
         member["nature"] = {"name": "Hardy", "value": 0}
         member["calculated_stats"] = {"source": "derived", "values": _stats(42)}
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertNotIn("rw-party-card__stat--up", page)
         self.assertNotIn("rw-party-card__stat--down", page)
@@ -558,7 +551,7 @@ class TrainerRenderingTests(unittest.TestCase):
             "source": "derived",
         }
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0001/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0001/"))
 
         self.assertIn(
             'href="../../abilities/chlorophyll/">Chlorophyll</a>'
@@ -577,7 +570,7 @@ class TrainerRenderingTests(unittest.TestCase):
             ],
         }
 
-        page = "\n".join(_party_cards([member], "trainers/trainer-0099/"))
+        page = "\n".join(party_cards([member], "trainers/trainer-0099/"))
 
         self.assertIn("<dt>Ability</dt>", page)
         self.assertNotIn("Engine-selected", page)
@@ -585,6 +578,142 @@ class TrainerRenderingTests(unittest.TestCase):
         self.assertIn('href="../../abilities/stench/">Stench</a>', page)
         self.assertIn("</a> / <a", page)
         self.assertIn('href="../../abilities/aftermath/">Aftermath</a>', page)
+
+
+class TrainerPageMarkupTests(unittest.TestCase):
+    """Whole pages go through Python-Markdown the way MkDocs renders them."""
+
+    _EXTENSIONS = (
+        "attr_list",
+        "md_in_html",
+        "tables",
+        "admonition",
+        "pymdownx.tabbed",
+        "toc",
+    )
+    _CONFIGS = {
+        "pymdownx.tabbed": {"alternate_style": True},
+        "toc": {"permalink": True},
+    }
+
+    def _convert(self, page: str) -> tuple[str, list[str]]:
+        converter = markdown.Markdown(
+            extensions=list(self._EXTENSIONS), extension_configs=self._CONFIGS
+        )
+        html = converter.convert(page)
+        headings = [token["id"] for token in _flatten_toc(converter.toc_tokens)]
+        return html, headings
+
+    def _family_page(self, change: dict[str, object] | None = None) -> str:
+        current = _page_record(161, "Tepig")
+        related = _page_record(162, "Oshawott")
+        hidden = {
+            "id": 66,
+            "name": "Blaze",
+            "slug": "blaze",
+            "is_hidden": True,
+        }
+        for record in (current, related):
+            record["party"][0]["ability"] = hidden  # type: ignore[index]
+        family = {
+            "id": "rival",
+            "order": 0,
+            "variants": [
+                {
+                    "trainer_id": trainer_id,
+                    "order": order,
+                    "conditions": [{"kind": "starter-choice", "value": starter}],
+                }
+                for order, (trainer_id, starter) in enumerate(
+                    ((161, "snivy"), (162, "tepig"))
+                )
+            ],
+        }
+        return _render_trainer(
+            current,
+            change,
+            "Black 2",
+            same_name_records=[current, related],
+            family_memberships=[(family, family["variants"][0])],
+            records_by_id={161: current, 162: related},
+        )
+
+    def test_keeps_headings_in_the_toc_and_bodies_as_raw_html(self) -> None:
+        html, headings = self._convert(self._family_page())
+
+        self.assertEqual(
+            headings,
+            [
+                "ace-trainer-sam",
+                "party",
+                "locations",
+                "same-name-trainers",
+            ],
+        )
+        self.assertIn('<h2 id="party">Party<a class="headerlink"', html)
+        self.assertNotIn("<p><section", html)
+        self.assertNotIn("<p><div", html)
+        self.assertNotIn("<em>", html)
+        self.assertEqual(
+            html.count(
+                '<abbr class="rw-hidden-ability" title="Hidden Ability">*</abbr>'
+            ),
+            2,
+        )
+        self.assertIn('<a href="../trainer-0162/">trainer-0162</a>', html)
+        self.assertNotIn(".md", html)
+
+    def test_numbers_party_tabs_after_markdown_comparison_tabs(self) -> None:
+        change = {
+            "status": "unchanged",
+            "version_comparisons": {
+                "black-2": {"status": "unchanged"},
+                "white-2": {"status": "unchanged"},
+            },
+        }
+
+        html, headings = self._convert(self._family_page(change))
+
+        self.assertIn("hack-changes", headings)
+        self.assertEqual(html.count('data-tabs="1:2"'), 1)
+        self.assertEqual(html.count('data-tabs="2:2"'), 1)
+        self.assertEqual(html.count('id="__tabbed_1_1"'), 1)
+        self.assertEqual(html.count('id="__tabbed_2_1"'), 1)
+        self.assertLess(html.index("__tabbed_2_1"), html.index("__tabbed_1_1"))
+
+
+def _flatten_toc(tokens: list[dict[str, object]]) -> list[dict[str, object]]:
+    flattened = []
+    for token in tokens:
+        flattened.append(token)
+        flattened.extend(_flatten_toc(token["children"]))  # type: ignore[arg-type]
+    return flattened
+
+
+def _page_record(trainer_id: int, pokemon: str) -> dict[str, object]:
+    record = _related_trainer(trainer_id, "Aspertia City", 5, pokemon)
+    record["locations"] = [
+        {
+            "header_id": 427,
+            "name": "Aspertia City",
+            "internal_name": "T01",
+            "x": 3,
+            "z": 9,
+            "event_file_id": 427,
+            "object_index": 2,
+        }
+    ]
+    record.update(
+        {
+            "class_id": 1,
+            "ai_flags": 0x10,
+            "battle_type": 0,
+            "double_battle": False,
+            "provenance": {"archive": "trdata.narc", "member": trainer_id},
+            "party_provenance": {"archive": "trpoke.narc", "member": trainer_id},
+        }
+    )
+    return record
 
 
 def _party_member(moves: list[str]) -> dict[str, object]:
