@@ -49,7 +49,7 @@ Update schema definitions, tests, and the data-contract guide together when chan
 
 ## Contributing and repository settings
 
-Use short-lived branches and PRs into `main`; there is no permanent `dev` branch. The existing development history was integrated through a PR and its previous head is preserved at `archive/dev-2026-10-13`. Merged PR branches are deleted automatically. The stable required check is `CI gate`, backed by the full reusable test matrix.
+Use short-lived branches and PRs into `main`; there is no permanent `dev` branch. The existing development history was integrated through a PR and its previous head is preserved at `archive/dev-2026-10-13`. Merged PR branches are deleted automatically. The stable required check is `CI gate`, backed by the full reusable test matrix and a complete publication build from the pinned frontend snapshot.
 
 Rulesets are tracked in `.github/rulesets/`: main requires PRs, passing CI, and resolved review conversations, without administrator bypass; archived development tags cannot be updated or deleted. No approving review is required while there is one maintainer. Editing the JSON files does not apply GitHub settings.
 
