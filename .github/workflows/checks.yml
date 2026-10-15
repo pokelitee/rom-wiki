@@ -39,15 +39,6 @@ jobs:
         run: python -m mypy src/romwiki
       - name: Run offline tests
         run: python -m pytest -q
-      - name: Restore snapshot download cache
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .romwiki/snapshot-cache
-          key: snapshots-${{ hashFiles('sites/generated-wiki/manifest.json') }}
-      - name: Validate publication snapshots
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        run: romwiki site restore-data
       - name: Build and verify installed package
         run: python scripts/check_package.py
 
@@ -64,7 +55,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
           cache: npm

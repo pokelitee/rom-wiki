@@ -17,14 +17,18 @@ jobs:
   checks:
     uses: ./.github/workflows/checks.yml
 
+  publication:
+    uses: ./.github/workflows/pages-build.yml
+
   required:
     name: CI gate
     if: always()
-    needs: checks
+    needs: [checks, publication]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Require every check to pass
         env:
           CHECK_RESULT: ${{ needs.checks.result }}
-        run: test "$CHECK_RESULT" = success
+          PUBLICATION_RESULT: ${{ needs.publication.result }}
+        run: test "$CHECK_RESULT" = success && test "$PUBLICATION_RESULT" = success

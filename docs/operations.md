@@ -202,11 +202,17 @@ the site's data-sources page rather than a broad completion label.
 
 ## CI and GitHub Pages
 
-Publishing is frozen during the React migration. The deployment workflow has no automatic trigger and manual dispatch exits without publishing. The previously deployed MkDocs site continues to serve. Do not dispatch this workflow to preview React.
+Publishing remains manual during the React cutover. The previously deployed MkDocs site continues to serve until an authorized React deployment. Every PR and main-branch CI run restores the checksum-pinned complete frontend snapshot, checks coverage, builds React, runs desktop/mobile browser tests across every game, and uploads a Pages artifact. These CI runs do not deploy.
 
-CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. The historical archive check imports only normalized downloads using `romwiki site restore-data`; those archives are historical publications, not evidence that current extractor code produced them. Source-sensitive legacy restoration remains available separately.
+CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot rather than restoring retired wiki archives. `romwiki site restore-data` remains available for historical recovery of normalized downloads; those archives are historical publications, not evidence that current extractor code produced them.
 
-Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged locally with `romwiki site snapshot-web`. Verify restoration, all published games, comparisons, guides, and downloads before cutover. Publishing frontend release assets and reenabling deployment require separate authorization. No release or archive tag was created by this migration.
+Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged locally with `romwiki site snapshot-web`. The reviewed archive is uploaded under its unique content-addressed name to the existing `snapshots` release; `sites/frontend-snapshot/manifest.json` pins the archive and every resource checksum. No new release or archive tag is needed. See the [frontend guide](development/frontend.md) for restoration from a clean checkout.
+
+For review, download the `github-pages` artifact from a successful CI run and extract its `artifact.tar` into a temporary directory. Serve it below `/rom-wiki/` using `python scripts/serve_frontend.py --directory PATH_TO_EXTRACTED_ARTIFACT`, then open `http://127.0.0.1:4173/rom-wiki/`.
+
+After cutover authorization and a successful PR merge, manually run `Deploy Pages` from `main` with `publish=true`. The workflow repeats both the checks and the complete publication build before deployment to the existing `github-pages` environment. `publish=false` is the default and builds without deploying; other branches cannot deploy. There is no automatic deployment on push or CI completion.
+
+For rollback, revert the frontend source and/or snapshot manifest through a PR and repeat the reviewed manual deployment. The pre-migration MkDocs implementation is preserved at `04b72f2`; restoring that stack requires a separate change, not merely a React snapshot rollback.
 
 ## Troubleshooting and recovery
 
