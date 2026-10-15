@@ -13,7 +13,7 @@ RENDERER_PACKAGE = "romwiki.renderers.mkdocs."
 class RendererPackageBoundaryTests(unittest.TestCase):
     def test_renderer_modules_do_not_import_private_sibling_names(self) -> None:
         violations = []
-        for path in RENDERER_ROOT.glob("*.py"):
+        for path in RENDERER_ROOT.rglob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 if not isinstance(node, ast.ImportFrom):
