@@ -536,63 +536,16 @@ def _extract_hidden_grottos(
             f"Hidden Grotto archive has {len(archive.members)} members, expected "
             f"{grotto_count}"
         )
-    map_headers_path = profile.layout["map_headers"]
-    map_headers = platform.archive_cls.from_bytes(
-        filesystem.read(map_headers_path),
-        allow_trailing_data=profile.parameters.get(
-            "map_headers_allow_trailing_data", False
-        ),
-        allow_incorrect_data_block_size=profile.parameters.get(
-            "map_headers_allow_incorrect_data_block_size", False
-        ),
+    headers = _load_hidden_grotto_map_headers(profile, engine, platform, filesystem)
+    owners = _resolve_hidden_grotto_owners(
+        profile,
+        engine,
+        platform,
+        filesystem,
+        headers,
+        grotto_count=grotto_count,
+        member_count=len(archive.members),
     )
-    messages = platform.archive_cls.from_bytes(
-        filesystem.read(profile.layout["messages"])
-    )
-    map_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["map_names_member"])
-    )
-    headers = engine.parse_map_header_table(
-        map_headers.read(0),
-        map_names=tuple(map_names),
-        archive_path=map_headers_path,
-    )
-    overworlds = platform.archive_cls.from_bytes(
-        filesystem.read(profile.layout["overworld_objects"]),
-        allow_incorrect_data_block_size=profile.parameters.get(
-            "field_archives_allow_incorrect_data_block_size", False
-        ),
-        allow_trailing_data=profile.parameters.get(
-            "field_archives_allow_trailing_data", False
-        ),
-    )
-    unused = frozenset(profile.parameters.get("overworld_objects_unused", ()))
-    owners: dict[int, set[int]] = {}
-    for header in headers:
-        member = header.overworld_file_id
-        if member is None or member >= len(overworlds.members) or member in unused:
-            continue
-        for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
-            grotto_id = engine.hidden_grotto_id_for_dispatch(
-                furniture.script_used,
-                dispatch_base=profile.parameters["hidden_grotto_dispatch_base"],
-                grotto_count=grotto_count,
-            )
-            if grotto_id is not None:
-                owners.setdefault(grotto_id, set()).add(header.header_id)
-    expected = set(range(len(archive.members)))
-    if set(owners) != expected:
-        missing = sorted(expected - set(owners))
-        extra = sorted(set(owners) - expected)
-        raise InvalidRomError(
-            f"Hidden Grotto dispatch mapping is incomplete (missing={missing}, "
-            f"extra={extra})"
-        )
-    ambiguous = {key: sorted(value) for key, value in owners.items() if len(value) != 1}
-    if ambiguous:
-        raise InvalidRomError(
-            f"Hidden Grotto dispatch mapping is ambiguous: {ambiguous}"
-        )
 
     records = []
     valid_forms = frozenset(
@@ -623,6 +576,82 @@ def _extract_hidden_grottos(
             }
         )
     return records
+
+
+def _load_hidden_grotto_map_headers(
+    profile: Any, engine: EncounterConcern, platform: Any, filesystem: Any
+) -> Any:
+    map_headers_path = profile.layout["map_headers"]
+    map_headers = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["messages"])
+    )
+    map_names = engine.parse_english_message_archive(
+        messages.read(profile.parameters["map_names_member"])
+    )
+    return engine.parse_map_header_table(
+        map_headers.read(0),
+        map_names=tuple(map_names),
+        archive_path=map_headers_path,
+    )
+
+
+def _resolve_hidden_grotto_owners(
+    profile: Any,
+    engine: EncounterConcern,
+    platform: Any,
+    filesystem: Any,
+    headers: Any,
+    *,
+    grotto_count: int,
+    member_count: int,
+) -> dict[int, set[int]]:
+    """Map each grotto to the one map header whose furniture dispatches to it."""
+    overworlds = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["overworld_objects"]),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "field_archives_allow_incorrect_data_block_size", False
+        ),
+        allow_trailing_data=profile.parameters.get(
+            "field_archives_allow_trailing_data", False
+        ),
+    )
+    unused = frozenset(profile.parameters.get("overworld_objects_unused", ()))
+    owners: dict[int, set[int]] = {}
+    for header in headers:
+        member = header.overworld_file_id
+        if member is None or member >= len(overworlds.members) or member in unused:
+            continue
+        for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
+            grotto_id = engine.hidden_grotto_id_for_dispatch(
+                furniture.script_used,
+                dispatch_base=profile.parameters["hidden_grotto_dispatch_base"],
+                grotto_count=grotto_count,
+            )
+            if grotto_id is not None:
+                owners.setdefault(grotto_id, set()).add(header.header_id)
+    expected = set(range(member_count))
+    if set(owners) != expected:
+        missing = sorted(expected - set(owners))
+        extra = sorted(set(owners) - expected)
+        raise InvalidRomError(
+            f"Hidden Grotto dispatch mapping is incomplete (missing={missing}, "
+            f"extra={extra})"
+        )
+    ambiguous = {key: sorted(value) for key, value in owners.items() if len(value) != 1}
+    if ambiguous:
+        raise InvalidRomError(
+            f"Hidden Grotto dispatch mapping is ambiguous: {ambiguous}"
+        )
+    return owners
 
 
 def _extract_swarms(
