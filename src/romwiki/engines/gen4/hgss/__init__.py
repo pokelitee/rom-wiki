@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from romwiki.engines.gen4.shared.constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
@@ -314,8 +316,8 @@ def parse_starter_branch_families(
     *,
     script_file_id: int,
     trainer_count: int,
-    starter_species=None,
-):
+    starter_species: Sequence[int] | None = None,
+) -> tuple[Gen4StarterBranchFamily, ...]:
     """Decode this leaf's starter-selected battles (see `gen4.starter_branches`)."""
     return _parse_starter_branch_families(
         data,

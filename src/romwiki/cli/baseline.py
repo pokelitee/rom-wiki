@@ -11,8 +11,8 @@ from romwiki.cli.common import (
     SubParsers,
     resolve_pokedb_path,
 )
+from romwiki.engines.registry import DATASET_KINDS
 from romwiki.pipeline.build.context import GameBuildContext
-from romwiki.pipeline.build.sections import DATASET_KINDS
 from romwiki.pipeline.extraction.identify import inspect_rom
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import LocalConfigError

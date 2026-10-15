@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from romwiki.engines.registry import DATASET_KINDS
 from romwiki.pipeline.build.context import GameBuildContext
 from romwiki.pipeline.build.sections import (
-    DATASET_KINDS,
     describe_section_mismatch,
     enabled_dataset_kinds,
 )

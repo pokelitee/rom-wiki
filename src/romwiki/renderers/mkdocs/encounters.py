@@ -65,6 +65,7 @@ from romwiki.renderers.mkdocs.conditional_encounters import (
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
+    EntityReference,
     ReferenceIndex,
     encounter_route_kind,
     entity_reference,
@@ -882,7 +883,7 @@ def _unique_pokemon(pokemon: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _pokemon_reference(
     pokemon: dict[str, Any], references: ReferenceIndex | None = None
-):
+) -> EntityReference:
     identifier = pokemon.get("id", pokemon["slug"])
     name = pokemon["name"]
     if references is not None:
