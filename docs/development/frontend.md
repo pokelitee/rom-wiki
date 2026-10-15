@@ -389,6 +389,36 @@ inside HTML. Normal Markdown links use source filenames so MkDocs can validate a
 rewrite them. Both forms must resolve through the shared route registry; the output
 syntax follows the surrounding component rather than defining link identity.
 
+## HTML detail-page bodies
+
+Parsing generated Markdown, especially large tables, dominates MkDocs build time,
+so detail renderers are moving to raw HTML bodies. Trainer pages are converted;
+other sections still emit Markdown and migrate one renderer at a time. Pages stay
+`.md` files so MkDocs keeps owning navigation, hooks, templates, and the page
+table of contents.
+
+- Headings stay Markdown (`markdown_section`, `# Title`). The `toc` extension
+  only indexes headings it parses, so a raw `<h2>` would disappear from the page
+  table of contents and lose its id and permalink. Raw `<h3>`/`<h4>` inside
+  components remain intentionally outside the table of contents.
+- Bodies between headings are block-level HTML starting at column 0 and followed
+  by a blank line. Python-Markdown stashes such blocks without parsing them.
+  Indented HTML is not a raw block: it is re-parsed as paragraph text, which
+  wraps blocks in `<p>` and turns `*` markers into emphasis.
+- `renderers/mkdocs/html.py` provides the builders: `html_table` matches the
+  `tables` extension output (including right-alignment styles),
+  `html_content_tabs` emits `pymdownx.tabbed` alternate-style markup,
+  `html_details` and `html_provenance_section` replace `markdown="1"`
+  disclosures, and `html_paragraph`/`html_code` cover prose and code spans.
+  `tests/renderers/mkdocs/test_html.py` checks each builder against the
+  Markdown it replaces.
+- Text inside HTML is HTML-escaped, never Markdown-escaped, and links use
+  `ROUTES.html_link` with the page's published URL.
+- `pymdownx.tabbed` numbers only the tab sets it parses. A page mixing raw-HTML
+  tabs with Markdown tabs (such as a comparison section) must give its raw sets
+  indexes after `count_markdown_tab_sets` of the Markdown portion so input ids
+  stay unique.
+
 ## Review checklist
 
 - Run the unit suite and `romwiki site audit` against the combined artifact.
