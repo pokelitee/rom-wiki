@@ -7,7 +7,9 @@ from romwiki.engines.concerns import EncounterConcern
 from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
+    iter_segment_map_headers,
     read_code_binary,
+    read_region_names,
     resolve_map_headers,
 )
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
@@ -332,28 +334,22 @@ def _extract_gen3_encounter_locations(
     region_name_count = profile.parameters["region_name_count"]
     gmapgroups_offset = profile.parameters["gmapgroups_offset"]
 
-    region_name_data = platform.read_bytes(
-        result.image, region_name_offset, region_name_count * 32
+    region_names = read_region_names(
+        engine,
+        platform,
+        result.image,
+        offset=region_name_offset,
+        count=region_name_count,
     )
-    region_names = engine.decode_gen3_text_sequence(
-        region_name_data, offset=0, count=region_name_count
-    )
-
-    header_size = engine.MAP_HEADER_SIZE
-    header_by_address: dict[int, tuple[int, str]] = {}
-    header_id = 0
-    for segment_offset, segment_count in segments:
-        segment_data = platform.read_bytes(
-            result.image, segment_offset, header_size * segment_count
+    header_by_address = {
+        engine.gba_pointer_for_offset(header.rom_offset): (
+            header.header_id,
+            header.name,
         )
-        for slot in range(segment_count):
-            raw = segment_data[slot * header_size : (slot + 1) * header_size]
-            _music, _layout_id, region_id = engine.parse_map_header(
-                raw, header_id=header_id
-            )
-            address = engine.gba_pointer_for_offset(segment_offset + slot * header_size)
-            header_by_address[address] = (header_id, region_names[region_id])
-            header_id += 1
+        for header in iter_segment_map_headers(
+            engine, platform, result.image, segments, region_names
+        )
+    }
 
     group_pointer_data = platform.read_bytes(
         result.image, gmapgroups_offset, engine.GMAPGROUPS_GROUP_COUNT * 4

@@ -10,6 +10,10 @@ from romwiki.engines.trainer_variants import (
     resolve_trainer_variants,
 )
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.pipeline.extraction.map_headers import (
+    iter_segment_map_headers,
+    read_region_names,
+)
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.trainers import TrainerLocation
@@ -147,37 +151,28 @@ def _extract_gen3_trainer_locations(
     if segments is None or region_name_offset is None or region_name_count is None:
         return {}
 
-    region_name_data = platform.read_bytes(
-        result.image, region_name_offset, region_name_count * 32
+    region_names = read_region_names(
+        engine,
+        platform,
+        result.image,
+        offset=region_name_offset,
+        count=region_name_count,
     )
-    region_names = engine.decode_gen3_text_sequence(
-        region_name_data, offset=0, count=region_name_count
-    )
-
-    header_size = engine.MAP_HEADER_SIZE
     locations: dict[int, list[TrainerLocation]] = {}
-    header_id = 0
-    for segment_offset, segment_count in segments:
-        segment_data = platform.read_bytes(
-            result.image, segment_offset, header_size * segment_count
-        )
-        for slot in range(segment_count):
-            raw = segment_data[slot * header_size : (slot + 1) * header_size]
-            _music, _layout_id, region_id = engine.parse_map_header(
-                raw, header_id=header_id
+    for header in iter_segment_map_headers(
+        engine, platform, result.image, segments, region_names
+    ):
+        events_pointer = struct.unpack_from("<I", header.data, 0x04)[0]
+        if events_pointer != 0:
+            _link_gen3_trainer_objects(
+                platform,
+                result,
+                engine,
+                events_pointer,
+                header_id=header.header_id,
+                name=header.name,
+                locations=locations,
             )
-            events_pointer = struct.unpack_from("<I", raw, 0x04)[0]
-            if events_pointer != 0:
-                _link_gen3_trainer_objects(
-                    platform,
-                    result,
-                    engine,
-                    events_pointer,
-                    header_id=header_id,
-                    name=region_names[region_id],
-                    locations=locations,
-                )
-            header_id += 1
     return {trainer_id: tuple(entries) for trainer_id, entries in locations.items()}
 
 

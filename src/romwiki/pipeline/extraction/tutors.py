@@ -7,8 +7,10 @@ from romwiki.engines.concerns import TutorConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
+    iter_segment_map_headers,
     parse_map_header_table,
     read_code_binary,
+    read_region_names,
 )
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
@@ -446,14 +448,19 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
     engine = get_engine(profile.engine).tutors
 
-    location_names = _decode_segment_location_names(
+    region_names = read_region_names(
         engine,
         platform,
         result.image,
-        segments,
-        region_name_offset=region_name_offset,
-        region_name_count=region_name_count,
+        offset=region_name_offset,
+        count=region_name_count,
     )
+    location_names = [
+        header.name
+        for header in iter_segment_map_headers(
+            engine, platform, result.image, segments, region_names
+        )
+    ]
     location_ids = _resolve_tutor_location_ids(engine, location_names)
     move_data = platform.read_bytes(
         result.image, move_offset, engine.TUTOR_MOVE_COUNT * 2
@@ -483,36 +490,6 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
     envelope["special_records"] = []
     envelope["special_compatibility"] = []
     return envelope
-
-
-def _decode_segment_location_names(
-    engine: TutorConcern,
-    platform: Any,
-    image: Any,
-    segments: Any,
-    *,
-    region_name_offset: int,
-    region_name_count: int,
-) -> list[str]:
-    region_name_data = platform.read_bytes(
-        image, region_name_offset, region_name_count * 32
-    )
-    region_names = engine.decode_gen3_text_sequence(
-        region_name_data, offset=0, count=region_name_count
-    )
-    header_size = engine.MAP_HEADER_SIZE
-    location_names: list[str] = []
-    for segment_offset, segment_count in segments:
-        segment_data = platform.read_bytes(
-            image, segment_offset, header_size * segment_count
-        )
-        for slot in range(segment_count):
-            raw = segment_data[slot * header_size : (slot + 1) * header_size]
-            _music, _layout_id, region_id = engine.parse_map_header(
-                raw, header_id=len(location_names)
-            )
-            location_names.append(region_names[region_id])
-    return location_names
 
 
 def _resolve_tutor_location_ids(
