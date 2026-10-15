@@ -197,7 +197,10 @@ state. `semantics/` owns stable identities and labels shared across lifecycle
 stages. Location and trainer strategies are nested beneath their extraction
 dispatchers. Shared dataset serialization lives in `pipeline/io.py`. Schema and
 renderer packages remain flat because their files map directly to public dataset
-concepts and rendered sections. Pipeline tests mirror these ownership boundaries.
+concepts and rendered sections; a section renderer too large for one module
+becomes a package named after its section (such as `renderers/mkdocs/trainers/`)
+that keeps the same public entry point. Pipeline tests mirror these ownership
+boundaries.
 
 Simple extractors construct those required fields through `dataset_envelope()` and
 then add only dataset-specific summaries. Companion joins keep mechanic-specific
@@ -404,6 +407,8 @@ dicts; raw fields spread through from engine-specific extraction are typed only
 where the shared contract defines them. Reusable Markdown framing lives in `components.py`: table
 specifications own headers and alignment while preserving already-rendered cells,
 and section framing owns heading separation without interpreting section content.
+`html.py` holds the raw-HTML equivalents that converted detail pages use for their
+bodies (see the HTML detail-page bodies section of `frontend.md`).
 Location presentation shared by event-map and encounter-map records lives in the
 neutral `location_components.py` (rendering helpers) and `location_features.py`
 (the shared per-section feature/anchor table each family's summary card and

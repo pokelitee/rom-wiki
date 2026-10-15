@@ -51,7 +51,7 @@ class MkDocsHooksTests(unittest.TestCase):
         )
         page = Page("ROM Wiki", file, config)
 
-        mkdocs_hooks.on_page_context({}, page, config, nav=None)
+        mkdocs_hooks._add_site_context({}, page, config, nav=None)
 
         games = page.toc.items[0]
         generations = sorted(
@@ -194,7 +194,7 @@ class MkDocsHooksTests(unittest.TestCase):
         )
         page = Page("Bulbasaur", file, config)
 
-        context = mkdocs_hooks.on_page_context({}, page, config, nav=None)
+        context = mkdocs_hooks._add_site_context({}, page, config, nav=None)
 
         self.assertEqual(context["romwiki"]["current"]["id"], "renegade-platinum")
         self.assertEqual(
@@ -202,6 +202,58 @@ class MkDocsHooksTests(unittest.TestCase):
             ["renegade-platinum"],
         )
         self.assertTrue(context["romwiki"]["games"][0]["url"].endswith("/"))
+
+    def test_search_indexes_generated_record_pages_by_title_only(self) -> None:
+        content = (
+            '<h1 id="garchomp">Garchomp</h1>'
+            '<section class="rw-summary"><div><p>Mach Pokémon</p></div>'
+            "<p>Hero text</p></section>"
+            '<h2 id="base-stats">Base stats</h2><table><tr><td>HP</td></tr></table>'
+        )
+
+        page, entries = self._index_page("pokemon/garchomp.md", "Garchomp", content)
+
+        self.assertEqual(
+            entries,
+            [{"location": "pokemon/garchomp/", "title": "Garchomp", "text": ""}],
+        )
+        self.assertEqual(page.content, content)
+
+    def test_search_fully_indexes_section_and_handwritten_pages(self) -> None:
+        content = (
+            '<h1 id="pokemon">Pokémon</h1><p>Browse species.</p>'
+            '<h2 id="notes">Notes</h2><p>Details.</p>'
+        )
+        for src_uri in ("pokemon/index.md", "data-sources.md", "guides/pokemon.md"):
+            with self.subTest(src_uri=src_uri):
+                page, entries = self._index_page(src_uri, "Pokémon", content)
+
+                self.assertEqual(
+                    [(entry["title"], entry["text"]) for entry in entries],
+                    [
+                        ("Pokémon", "<p>Browse species.</p>"),
+                        ("Notes", "<p>Details.</p>"),
+                    ],
+                )
+                self.assertEqual(page.content, content)
+
+    def _index_page(
+        self, src_uri: str, title: str, content: str
+    ) -> tuple[Page, list[dict[str, str]]]:
+        # Runs the real plugin event chain so the hook's ordering around
+        # Material's search plugin is exercised, not just the hook functions.
+        config = load_config(config_file=str(GAME_CONFIG))
+        config = config.plugins.on_config(config)
+        file = File(
+            src_uri, config.docs_dir, config.site_dir, config.use_directory_urls
+        )
+        page = Page(title, file, config)
+        page.content = content
+
+        config.plugins.on_page_context({}, page=page, config=config, nav=None)
+
+        search = config.plugins["material/search"]
+        return page, search.search_index.entries
 
 
 if __name__ == "__main__":

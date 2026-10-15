@@ -36,6 +36,18 @@ and adds the current site, portal URL, and published games to template context. 
 calculates links from each page depth, so navigation works both with `mkdocs serve`
 and when the combined artifact is hosted below a GitHub Pages repository path.
 
+Site search indexes generated record pages by title only. Every page directly
+inside a generated section (the site's `generated_sections` plus `changes`) other
+than the section's `index.md` contributes a single entry for its `<h1>`; its body
+is not indexed, because catalogs already provide filtering over record data and
+full record text made each site's search index over 10 MB. Section index pages
+and hand-written pages remain fully indexed. The hook implements this by giving
+Material's search plugin only the title heading during `on_page_context` and
+restoring the full content afterwards, so published HTML is unchanged. Material's
+`data-search-exclude` attribute is not used: its parser ends an excluded block at
+the first nested element with the same tag, and headings inside the block still
+produce entries.
+
 Appearance tokens are declared in every site descriptor's `[appearance]` table,
 including the portal. Shared CSS maps a token to custom properties such as
 `--rw-accent`; components consume the variables rather than game names. Components
@@ -376,6 +388,36 @@ Raw HTML links use final directory URLs because MkDocs does not rewrite `.md` pa
 inside HTML. Normal Markdown links use source filenames so MkDocs can validate and
 rewrite them. Both forms must resolve through the shared route registry; the output
 syntax follows the surrounding component rather than defining link identity.
+
+## HTML detail-page bodies
+
+Parsing generated Markdown, especially large tables, dominates MkDocs build time,
+so detail renderers are moving to raw HTML bodies. Trainer pages are converted;
+other sections still emit Markdown and migrate one renderer at a time. Pages stay
+`.md` files so MkDocs keeps owning navigation, hooks, templates, and the page
+table of contents.
+
+- Headings stay Markdown (`markdown_section`, `# Title`). The `toc` extension
+  only indexes headings it parses, so a raw `<h2>` would disappear from the page
+  table of contents and lose its id and permalink. Raw `<h3>`/`<h4>` inside
+  components remain intentionally outside the table of contents.
+- Bodies between headings are block-level HTML starting at column 0 and followed
+  by a blank line. Python-Markdown stashes such blocks without parsing them.
+  Indented HTML is not a raw block: it is re-parsed as paragraph text, which
+  wraps blocks in `<p>` and turns `*` markers into emphasis.
+- `renderers/mkdocs/html.py` provides the builders: `html_table` matches the
+  `tables` extension output (including right-alignment styles),
+  `html_content_tabs` emits `pymdownx.tabbed` alternate-style markup,
+  `html_details` and `html_provenance_section` replace `markdown="1"`
+  disclosures, and `html_paragraph`/`html_code` cover prose and code spans.
+  `tests/renderers/mkdocs/test_html.py` checks each builder against the
+  Markdown it replaces.
+- Text inside HTML is HTML-escaped, never Markdown-escaped, and links use
+  `ROUTES.html_link` with the page's published URL.
+- `pymdownx.tabbed` numbers only the tab sets it parses. A page mixing raw-HTML
+  tabs with Markdown tabs (such as a comparison section) must give its raw sets
+  indexes after `count_markdown_tab_sets` of the Markdown portion so input ids
+  stay unique.
 
 ## Review checklist
 
