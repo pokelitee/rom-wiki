@@ -5,7 +5,6 @@ kind = "game"
 slug = "blaze-black-2-redux-volt-white-2-redux"
 published = true
 order = 50
-mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon Blaze Black 2 Redux and Volt White 2 Redux v1.4.1 Complete"
 
 [game]

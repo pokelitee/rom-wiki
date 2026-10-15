@@ -1,5 +1,4 @@
 ---
-template: portal.html
 title: ROM Wiki
 ---
 

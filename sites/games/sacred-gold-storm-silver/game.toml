@@ -5,13 +5,12 @@ kind = "game"
 slug = "sacred-gold-storm-silver"
 published = true
 order = 40
-mkdocs_config = "mkdocs.yml"
 description = "An exact, data-driven reference for Pokémon Sacred Gold and Storm Silver v1.05"
 
 [game]
 profiles = ["sacred-gold", "storm-silver"]
 versions = ["sacred-gold", "storm-silver"]
-generated_sections = ["pokemon", "abilities", "moves", "items", "encounters", "trainers", "locations", "types", "data"]
+generated_sections = ["pokemon", "abilities", "moves", "items", "encounters", "trainers", "locations", "types"]
 generation = 4
 base_game = "heart-gold-soul-silver"
 platform = "nintendo-ds"

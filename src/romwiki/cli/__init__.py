@@ -21,7 +21,7 @@ __all__ = ["build_parser", "main"]
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="romwiki",
-        description="Extract structured Pokémon ROM data for static wikis.",
+        description="Extract structured Pokémon ROM data for a shared React reference app.",
     )
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument(

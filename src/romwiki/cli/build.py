@@ -11,7 +11,6 @@ from romwiki.cli.common import (
     SubParsers,
     add_cache_argument,
     add_comparison_arguments,
-    add_dev_argument,
     add_input_arguments,
     inspect_input,
     profile_wiki_root,
@@ -20,10 +19,10 @@ from romwiki.cli.common import (
     version_family_inputs,
     version_family_uses_baselines,
 )
-from romwiki.pipeline.build.rendering import (
-    render_game_build,
-    render_section_build,
-    render_version_family_build,
+from romwiki.pipeline.build.outputs import (
+    write_game_build,
+    write_section_build,
+    write_version_family_build,
 )
 from romwiki.pipeline.build.workflow import GameBuildWorkflow
 from romwiki.pipeline.extraction.identify import InspectionResult, inspect_rom
@@ -42,16 +41,12 @@ def add_parser(subparsers: SubParsers) -> None:
     )
 
     build_specs = (
-        ("pokemon", "extract, enrich, and render Pokémon pages", "enriched"),
-        (
-            "encounters",
-            "extract, enrich, and render wild encounter pages",
-            "enriched",
-        ),
-        ("trainers", "extract, enrich, and render trainer pages", "enriched"),
-        ("locations", "extract and render location navigation pages", "normalized"),
-        ("moves", "extract, enrich, and render move pages", "enriched"),
-        ("items", "extract, enrich, and render item pages", "enriched"),
+        ("pokemon", "extract and enrich Pokémon and ability data", "enriched"),
+        ("encounters", "extract and enrich wild encounter data", "enriched"),
+        ("trainers", "extract and enrich trainer data", "enriched"),
+        ("locations", "extract location data", "normalized"),
+        ("moves", "extract and enrich move data", "enriched"),
+        ("items", "extract and enrich item data", "enriched"),
     )
     for kind, help_text, data_label in build_specs:
         section_parser = build_subparsers.add_parser(kind, help=help_text)
@@ -70,21 +65,22 @@ def add_parser(subparsers: SubParsers) -> None:
             help=f"{data_label} dataset JSON output file",
         )
         section_parser.add_argument(
-            "--wiki-output",
+            "--wiki-root",
             type=Path,
-            help="generated section directory",
+            help=(
+                "game wiki root receiving public data downloads "
+                "(default: site catalog entry for the matched profile)"
+            ),
         )
         add_comparison_arguments(section_parser)
-        add_dev_argument(section_parser)
         add_cache_argument(section_parser)
         section_parser.set_defaults(handler=run_section_build)
 
     build_game_parser = build_subparsers.add_parser(
-        "game", help="build every dataset and wiki section for one game"
+        "game", help="build every dataset and public data download for one game"
     )
     add_input_arguments(build_game_parser)
     add_comparison_arguments(build_game_parser)
-    add_dev_argument(build_game_parser)
     add_cache_argument(build_game_parser)
     build_game_parser.add_argument(
         "--pokedb",
@@ -106,7 +102,7 @@ def add_parser(subparsers: SubParsers) -> None:
 
     family_parser = build_subparsers.add_parser(
         "family",
-        help="build one merged wiki for a sibling game-version family",
+        help="build merged data for a sibling game-version family",
     )
     family_parser.add_argument(
         "--games",
@@ -124,7 +120,7 @@ def add_parser(subparsers: SubParsers) -> None:
     family_parser.add_argument(
         "--site-id",
         required=True,
-        help=("merged site identifier used for data and wiki output"),
+        help="merged site identifier used for data and wiki output",
     )
     family_parser.add_argument(
         "--games-config", type=Path, default=Path(".local/games.toml")
@@ -151,7 +147,6 @@ def add_parser(subparsers: SubParsers) -> None:
         action="store_true",
         help="ignore and replace cached clean-ROM extraction data",
     )
-    add_dev_argument(family_parser)
     add_cache_argument(family_parser)
     family_parser.set_defaults(handler=run_family_build)
 
@@ -161,7 +156,7 @@ def run_section_build(args: argparse.Namespace) -> None:
     with timed_operation(LOG, "Section build"):
         workflow = create_build_workflow(args, result)
         game = workflow.current.profile.id
-        render_section_build(
+        write_section_build(
             args.build_command,
             workflow,
             data_root=(
@@ -169,14 +164,8 @@ def run_section_build(args: argparse.Namespace) -> None:
                 if args.data_output is not None
                 else DEFAULT_DATA_ROOT / game
             ),
-            wiki_root=(
-                args.wiki_output.parent
-                if args.wiki_output is not None
-                else profile_wiki_root(game)
-            ),
+            wiki_root=args.wiki_root or profile_wiki_root(game),
             data_output=args.data_output,
-            wiki_output=args.wiki_output,
-            dev=args.dev,
         )
 
 
@@ -185,11 +174,10 @@ def run_game_build(args: argparse.Namespace) -> None:
     with timed_operation(LOG, "Game build"):
         workflow = create_build_workflow(args, result)
         game = workflow.current.profile.id
-        render_game_build(
+        write_game_build(
             workflow,
             data_root=args.data_root / game,
             wiki_root=args.wiki_root or profile_wiki_root(game),
-            dev=args.dev,
         )
 
 
@@ -258,13 +246,12 @@ def _run_family_build(args: argparse.Namespace) -> None:
         )
 
     site_id = args.site_id
-    render_version_family_build(
+    write_version_family_build(
         site_id,
         workflows,
         versions,
         data_root=args.data_root / site_id,
         wiki_root=args.wiki_root or site_wiki_root(site_id),
-        dev=args.dev,
     )
 
 

@@ -11,13 +11,70 @@ from unittest.mock import patch
 
 from romwiki.sites.data_exports import (
     prune_public_datasets,
+    validate_public_comparisons,
     validate_public_data,
+    write_public_comparison,
     write_public_dataset,
 )
 from romwiki.util.errors import SiteError
 
 
 class PublicDataExportTests(unittest.TestCase):
+    def test_dataset_updates_preserve_separate_comparisons(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = {
+                "schema_version": 1,
+                "game": "test-game",
+                "dataset": "moves",
+                "records": [],
+            }
+            comparison = {
+                "schema_version": 1,
+                "game": "test-game",
+                "kind": "moves",
+                "records": [],
+            }
+            write_public_dataset(root, "moves", dataset)
+            write_public_comparison(root, "moves", comparison)
+            write_public_dataset(root, "moves", dataset)
+            self.assertEqual(len(validate_public_comparisons(root)), 1)
+            self.assertEqual(len(validate_public_data(root)), 1)
+            manifest = json.loads(
+                (root / "data/manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                [entry["path"] for entry in manifest["files"]], ["moves.json.gz"]
+            )
+            write_public_comparison(root, "moves", None)
+            self.assertEqual(validate_public_comparisons(root), ())
+
+    def test_comparison_validation_rejects_another_game(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_public_dataset(
+                root,
+                "moves",
+                {
+                    "schema_version": 1,
+                    "game": "test-game",
+                    "dataset": "moves",
+                    "records": [],
+                },
+            )
+            write_public_comparison(
+                root,
+                "moves",
+                {
+                    "schema_version": 1,
+                    "game": "another-game",
+                    "kind": "moves",
+                    "records": [],
+                },
+            )
+            with self.assertRaisesRegex(SiteError, "Invalid comparison resource"):
+                validate_public_comparisons(root)
+
     def test_writes_deterministic_dataset_and_manifest(self) -> None:
         dataset = {
             "schema_version": 3,
@@ -139,16 +196,12 @@ class PublicDataExportTests(unittest.TestCase):
                     },
                 )
             manifest_path = root / "data/manifest.json"
-            index_path = root / "data/index.md"
-            incremental = (manifest_path.read_bytes(), index_path.read_bytes())
+            incremental = manifest_path.read_bytes()
 
             manifest_path.unlink()
-            index_path.unlink()
             prune_public_datasets(root, {"pokemon", "trainers", "moves"}, "test-game")
 
-            self.assertEqual(
-                (manifest_path.read_bytes(), index_path.read_bytes()), incremental
-            )
+            self.assertEqual(manifest_path.read_bytes(), incremental)
 
     def test_writing_one_dataset_does_not_reread_other_archives(self) -> None:
         def dataset(kind: str) -> dict[str, object]:

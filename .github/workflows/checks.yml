@@ -47,6 +47,48 @@ jobs:
           key: snapshots-${{ hashFiles('sites/generated-wiki/manifest.json') }}
       - name: Validate publication snapshots
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        run: romwiki site restore-snapshot
+        run: romwiki site restore-data
       - name: Build and verify installed package
         run: python scripts/check_package.py
+
+  frontend:
+    name: React frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Set up Python for synthetic browser fixtures
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Export synthetic browser fixtures
+        working-directory: .
+        env:
+          PYTHONPATH: src
+        run: python scripts/frontend_fixture.py
+      - name: Build application
+        run: npm run build
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Browser regression tests
+        run: npm run test:e2e -- --workers=2

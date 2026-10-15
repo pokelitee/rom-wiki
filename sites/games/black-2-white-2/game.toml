@@ -5,7 +5,6 @@ kind = "game"
 slug = "black-2-white-2"
 published = true
 order = 30
-mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon Black 2 and White 2 (USA/Europe)"
 
 [game]

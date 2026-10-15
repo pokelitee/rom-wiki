@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import json
-import tempfile
 import unittest
-from pathlib import Path
 
 from romwiki.pipeline.enrichment.trainers import (
     _default_level_up_move_ids,
     enrich_trainer_dataset,
     enrich_trainer_record,
 )
-from romwiki.pipeline.transforms.relationships import build_relationship_index
-from romwiki.renderers.mkdocs import render_trainer_pages
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 
@@ -138,7 +133,7 @@ class TrainerEnrichmentTests(unittest.TestCase):
         with self.assertRaises(DataSourceError):
             enrich_trainer_record(source, pokedb, None, None, engine="gen4_platinum")
 
-    def test_enriches_and_renders_a_trainer_party(self) -> None:
+    def test_enriches_a_trainer_party(self) -> None:
         source = {
             "trainer_id": 0,
             "name": "Tristan",
@@ -248,61 +243,8 @@ class TrainerEnrichmentTests(unittest.TestCase):
                 ],
             },
         )
-        enriched["features"] = []
-        relationships = build_relationship_index(
-            {
-                "locations": {
-                    "game": "test",
-                    "records": [
-                        {
-                            "header_id": 343,
-                            "name": "Route 202",
-                            "section_name": "Route 202 south",
-                        }
-                    ],
-                }
-            }
-        )
 
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            stale_page = output / "trainer-9999.md"
-            stale_page.parent.mkdir(parents=True, exist_ok=True)
-            stale_page.write_text("stale", encoding="utf-8")
-            count = render_trainer_pages(enriched, output, relationships=relationships)
-            page = (output / "trainer-0000.md").read_text(encoding="utf-8")
-            index = (output / "index.md").read_text(encoding="utf-8")
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-
-        self.assertEqual(count, 1)
         self.assertEqual(enriched["party_schema_version"], 6)
-        self.assertFalse(stale_page.exists())
-        self.assertIn("# Youngster Tristan", page)
-        self.assertNotIn("Trainer location coverage", index)
-        self.assertNotIn("Trainer variant coverage", index)
-        self.assertIn('href="../../pokemon/bulbasaur/">Bulbasaur</a>', page)
-        self.assertIn('src="https://example.test/bulbasaur.png"', page)
-        self.assertIn('width="48" height="48" loading="lazy"', page)
-        self.assertIn("Master Ball", page)
-        self.assertIn("Play Rough", page)
-        self.assertIn("rw-type--grass", page)
-        self.assertIn("rw-type--poison", page)
-        self.assertIn("rw-type--normal", page)
-        self.assertIn("rw-class--physical", page)
-        self.assertIn('<span class="rw-party-card__level">Lv. 5</span>', page)
-        self.assertIn("<dt>Nature</dt><dd>Timid</dd>", page)
-        self.assertIn('aria-label="Male" title="Male">♂</span>', page)
-        self.assertIn(
-            '<tr><td><a href="../../locations/header-343/">Route 202</a></td>'
-            "<td><code>header-343</code></td><td><code>R202</code></td>"
-            "<td>(181, 818)</td><td><code>329:0</code></td></tr>",
-            page,
-        )
-        self.assertNotIn("<dt>After victory</dt>", page)
-        self.assertNotIn("<dt>Victory item</dt>", page)
-        self.assertEqual(catalog["kind"], "trainers")
-        self.assertEqual(catalog["records"][0]["route_id"], "trainer-0000")
-        self.assertEqual(catalog["records"][0]["min_level"], 5)
         party_member = enriched["records"][0]["party"][0]
         self.assertEqual(party_member["moves_source"], "explicit")
         self.assertEqual(party_member["pokemon"]["types"][0]["name"], "grass")
@@ -337,25 +279,6 @@ class TrainerEnrichmentTests(unittest.TestCase):
                 "special_defense": 11,
                 "speed": 9,
             },
-        )
-        self.assertEqual(
-            catalog["records"][0]["party"],
-            [
-                {
-                    "name": "Bulbasaur",
-                    "level": 5,
-                    "pokemon_ref": {
-                        "kind": "pokemon",
-                        "id": 1,
-                        "label": "Bulbasaur",
-                        "url": "../pokemon/bulbasaur/",
-                    },
-                }
-            ],
-        )
-        self.assertEqual(
-            catalog["records"][0]["location_refs"][0]["url"],
-            "../locations/header-343/",
         )
 
 
@@ -672,7 +595,7 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
         self.assertEqual(trainer["party"][0]["pokemon"]["name"], "Unown (M)")
         self.assertEqual(trainer["party"][1]["pokemon"]["name"], "Stunfisk (Form 5)")
 
-    def test_enriches_and_renders_a_triple_battle_trainer(self) -> None:
+    def test_enriches_a_triple_battle_trainer(self) -> None:
         source = {
             "trainer_id": 1,
             "name": "Burgh",
@@ -726,8 +649,6 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
             },
             pokedb,
         )
-        enriched["features"] = ["post-battle-healing", "victory-items"]
-
         party_member = enriched["records"][0]["party"][0]
         # A forced-female gender flag is stored data, unlike nature/calculated
         # stats, which stay unavailable since Gen V doesn't derive them from a
@@ -751,28 +672,6 @@ class Gen5TrainerEnrichmentTests(unittest.TestCase):
                     "offset": 17,
                 },
             },
-        )
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            render_trainer_pages(enriched, output)
-            page = (output / "trainer-0001.md").read_text(encoding="utf-8")
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-
-        self.assertIn("# Gym Leader Burgh", page)
-        self.assertIn("Triple battle", page)
-        self.assertEqual(catalog["records"][0]["battle_format"], "triple")
-        self.assertIn("Emolga", page)
-        self.assertIn("Battle mode", page)
-        self.assertNotIn("Battle type", page)
-        self.assertIn(
-            '<dt>After victory</dt><dd><span class="rw-summary__empty">'
-            "No healing</span></dd>",
-            page,
-        )
-        self.assertIn(
-            '<dt>Victory item</dt><dd><span class="rw-summary__empty">None</span></dd>',
-            page,
         )
 
 

@@ -5,7 +5,6 @@ kind = "game"
 slug = "emerald"
 published = false
 order = 50
-mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon Emerald (USA, Europe)"
 
 [game]
@@ -19,8 +18,8 @@ creator = "Game Freak"
 # abilities, wild encounters, and locations are implemented so far (see
 # engines/registry.py's GEN3_EMERALD_ENGINE entry). Battle Frontier and a
 # handful of other Emerald-exclusive systems aren't covered yet. Restricted
-# to what the profile actually supports -- "types"/"data" are always-
-# available, non-dataset-kind sections, required for every data-driven site.
+# to what the profile actually supports -- "types" is an always-available,
+# non-dataset-kind section, required for every data-driven site.
 generated_sections = [
     "pokemon",
     "moves",
@@ -30,11 +29,9 @@ generated_sections = [
     "encounters",
     "locations",
     "types",
-    "data",
 ]
 
 [appearance]
 # Placeholder: reusing the neutral "platinum" theme (already shared by
-# several unrelated sites) until Emerald gets its own designed palette -- a
-# real theme needs CSS work in sites/shared/overrides, out of scope here.
+# several unrelated sites) until Emerald gets its own designed palette.
 theme = "platinum"

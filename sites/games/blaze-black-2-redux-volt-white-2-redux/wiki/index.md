@@ -1,5 +1,4 @@
 ---
-template: game-home.html
 title: Pokémon Blaze Black 2 Redux & Volt White 2 Redux
 ---
 

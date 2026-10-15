@@ -229,9 +229,9 @@ verified slice, then add required or optional keys only when their extractor is
 implemented. Unknown keys are rejected so a misspelled locator cannot be silently
 ignored.
 
-The shared workflow renders only declared sections. Adding a section is an
+The shared workflow writes only declared sections. Adding a section is an
 explicit engine-contract change plus the corresponding profile layout, parser,
-normalized-contract, and renderer tests; an unrelated layout key cannot silently
+and normalized-contract tests; an unrelated layout key cannot silently
 enable a section the engine does not claim. Registry validation also requires
 every required section to be supported by that engine and rejects impossible
 dependencies such as trainers without Pokémon and moves, or locations without
@@ -381,10 +381,7 @@ Create:
 
 ```text
 sites/games/<game-id>/
-├── dev-pages.toml
 ├── game.toml
-├── mkdocs.dev.yml
-├── mkdocs.yml
 └── wiki/
     ├── index.md
     └── data-sources.md
@@ -395,8 +392,7 @@ exact input version and extraction limitations in `data-sources.md`.
 
 Keep ROM- and hack-specific provenance on that game page. If multiple sites use
 the same engine-family formats, put the reusable public explanation under
-`sites/shared/partials/genN/` and include it from each explicit consumer. Keep
-frontend templates and assets in `sites/shared/overrides/`.
+`sites/shared/partials/genN/` and include it from each explicit consumer.
 
 Every game descriptor also provides the portal and shared frontend metadata:
 
@@ -408,7 +404,6 @@ kind = "game"
 slug = "renegade-platinum"
 published = true
 order = 10
-mkdocs_config = "mkdocs.yml"
 description = "An exact, data-driven reference for Pokémon Renegade Platinum"
 
 [game]
@@ -423,11 +418,8 @@ creator = "Drayano"
 theme = "platinum"
 ```
 
-IDs, platform names, and theme tokens use lowercase hyphenated values. Add the
-theme token to `SUPPORTED_THEMES` and define its light and dark CSS variables in the
-shared stylesheet only when the existing palettes are unsuitable. The frontend
-contract derives published tokens from the site catalog and verifies both selector
-coverage and contrast. Do not create a game-specific copy of the shared templates.
+IDs, platform names, and theme tokens use lowercase hyphenated values. Add a
+theme token to `SUPPORTED_THEMES` only when the existing palettes are unsuitable.
 Reuse the base game's theme for a hack unless a distinct maintained identity is
 intentional. Choose an `order` that places base games before their related hacks
 within that generation; the catalog supplies generation grouping automatically,
@@ -435,23 +427,10 @@ so order values may repeat across generations.
 The descriptor's generation must match the generation declared by its registered
 engine adapter.
 
-The game MkDocs configuration inherits `sites/shared/mkdocs.base.yml`, points
-`theme.custom_dir` at the shared overrides, and registers the repository-local
-MkDocs hook. Copy the relative-path pattern from the existing game site.
-Its development configuration inherits the game configuration and loads
-`dev-pages.toml`. Keep a non-empty representative selection for every generated
-detail section enabled by the engine and profile. Do not add empty navigation or
-development-page entries for sections the engine does not yet support.
-
 Documentation-only sites may set `data_driven = false` in `[game]` and omit
-`profile`/`profiles`. They remain first-class catalog and deployment entries but
-skip generated-data snapshot validation and data-section cards. Add real profiles
-and remove the flag when ROM extraction support is ready.
-
-Renderers should emit the current catalog schema version beside each supported
-section index. Catalog records contain only the fields needed for browsing and
-filtering; the normalized dataset remains authoritative. Preserve a complete
-Markdown link fallback so new categories remain usable without JavaScript.
+`profile`/`profiles`. They remain first-class catalog entries but skip generation
+and generated-data snapshot validation. Add real profiles and remove the flag when
+ROM extraction support is ready.
 
 ### Sibling game versions (e.g. Black/White)
 
@@ -480,10 +459,9 @@ The `romwiki build family --games black-us white-us --versions black white
 and merges each section with
 `pipeline.version_merge.merge_version_family_datasets`. Every record is tagged
 with the `versions` it appears in -- `["black", "white"]` for shared content
-or a single entry for an exclusive -- before the merged dataset is rendered
-into that one site. Renderers surface a "Black only"/"White only" callout
-automatically via `components.version_availability_note` whenever a record's
-`versions` list has exactly one entry; shared records get no callout. Do not use
+or a single entry for an exclusive -- before the merged dataset is written for
+that one site. A record whose `versions` list has exactly one entry is exclusive
+to that version; shared records list every version. Do not use
 this pattern for a ROM hack and its base game (e.g. Renegade Platinum vs.
 Platinum) -- those are deliberately different games and keep their existing
 separate-sites-plus-comparison-diff treatment (`pipeline.comparisons`).
@@ -491,7 +469,7 @@ separate-sites-plus-comparison-diff treatment (`pipeline.comparisons`).
 When sibling profiles are themselves a hack family, define `base_rom` for every
 local game registration. The same command then compares each hack
 with its corresponding clean base and merges those results with
-`merge_version_family_comparisons`. Detail pages preserve separate per-version
+`merge_version_family_comparisons`, which preserves separate per-version
 comparisons wherever their values differ. Every registration must define a
 base or none may do so; a partially configured family comparison is rejected.
 `--site-id` is required, preventing a new family from accidentally overwriting an
@@ -499,17 +477,16 @@ existing site.
 
 Same-key records whose current values differ retain all complete records under
 `version_variants`. Only dataset kinds registered as variant-capable may contain
-them; merging fails rather than silently publishing the first value when a
-renderer lacks that support. The Generation V encounter and item renderers are
-the current examples for version-specific encounter tables and NPC trade
-references.
+them; merging fails rather than silently publishing the first value for any
+other kind. Generation V encounters and items are the current examples, for
+version-specific encounter tables and NPC trade references.
 
 ## 7. Validate before publication
 
 - Add unit tests for every new binary record and script parser.
 - Add profile identification tests for supported hashes and rejection tests for
   near matches.
-- Add normalized contract and renderer tests.
+- Add normalized contract tests.
 - Test explicit type-chart selection and any hack overrides, including single- and
   dual-type defensive calculations, immunities, and fractional multipliers.
 - For trainer support, test explicit/default move provenance, unavailable optional
@@ -520,39 +497,33 @@ references.
 - Add baseline-versus-hack comparison fixtures for every supported dataset.
 - Extract the complete target and reconcile record counts against its archives.
 - Manually verify representative records from every content category.
-- Run the full test suite and build the individual site and combined Pages artifact.
+- Run the full test suite.
 - Run `romwiki site snapshot` after validating the complete generated output,
   then test `romwiki site restore-snapshot` from a clean checkout.
 - Run `romwiki regenerate --all` to verify the descriptor-driven complete workflow.
-- During development, run `romwiki regenerate <site-id> --incremental`; unrelated
-  games are not extracted or rendered. Reserve `--all` for integrated validation.
+- During development, run `romwiki regenerate <site-id>`; unrelated games are
+  not extracted. Reserve `--all` for integrated validation.
 - Run `romwiki build game --game <id>` twice and confirm the second run reuses both
   current and baseline extraction caches. Change one extractor and confirm only
   its dependent raw datasets rebuild.
 - Before a major release, run `romwiki regenerate --all --clean --refresh
   --snapshot`. Routine complete runs reuse verified per-site state and update only
   changed snapshot archives.
-- Test catalogs with missing optional values, duplicate labels, and enough records
-  to exercise progressive rendering.
-- Review representative pages at desktop and narrow mobile widths in light and dark
-  modes, including sprite and catalog failure fallbacks.
 - Confirm no ROM, patch, key, save, or copyrighted extracted asset is tracked.
-
-See [Frontend](frontend.md) for the shared component and catalog contracts.
 
 Trainer-enabled engines must expose `resolve_trainer_variants` through their
 trainer concern. Decode each owning selector or dispatch table once and enumerate
 its exact records; do not infer Starter, Difficulty, Season, Rematch, or Version
 from names, adjacent IDs, levels, or party similarity. Declare unresolved coverage
-on the Data Sources page. Seasonal encounter engines publish one `map-NNN` route
-per map index while preserving all seasonal normalized records.
+on the Data Sources page. Seasonal encounter engines preserve every seasonal
+normalized record.
 
 ## Recommended implementation order
 
-Implement one vertical slice first: identification, a small engine parser, a
-normalized dataset, and a rendered page. Pokémon personal data is usually a useful
-first slice because it exercises IDs, external name resolution, schema mapping, and
-rendering without requiring map-script control-flow analysis.
+Implement one vertical slice first: identification, a small engine parser, and
+a normalized dataset with its public download. Pokémon personal data is usually a
+useful first slice because it exercises IDs, external name resolution, and schema
+mapping without requiring map-script control-flow analysis.
 
 After that slice proves the adapter boundary, add moves, learnsets and evolutions,
 encounters, trainers, and locations incrementally. Expand `dataset_kinds` only as

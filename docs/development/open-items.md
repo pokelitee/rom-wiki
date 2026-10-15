@@ -318,100 +318,13 @@ unanchored byte scans cannot improve confidence.
 
 ## 3. Release validation
 
-Routine development uses the full unit suite and focused site generation; it does
-not regenerate or snapshot every site after each renderer change. Before the next
-snapshot or deployment:
+Routine development uses the Python suite and focused data generation. Before preparing a complete React publication:
 
-1. Regenerate all nine sites and the portal together, without incremental or
-   development-page filtering.
-2. Confirm stale seasonal encounter routes are removed.
-3. Build the combined production artifact.
-4. Run the combined site audit and require zero errors.
-5. Record generated page count, checked link count, and audit result.
-6. Update the deterministic generated-wiki snapshot only after a clean audit.
-7. Verify the new snapshot restores successfully.
+1. Regenerate all nine published game datasets and their comparisons without reuse when inputs changed.
+2. Export the frontend with `romwiki site export-web` and build the production application.
+3. Run browser checks across every published game, section, guide, and download. Verify typed encounter routes, seasons, trainer families, sibling versions, and exact comparisons.
+4. Check desktop/mobile layouts, keyboard navigation, light/dark themes, failed requests, direct hash links, and a plain static host under `/rom-wiki/`.
+5. Prepare deterministic data and frontend snapshots, then verify restoration and every checksum in a clean directory.
+6. Publish release assets and enable cutover only after separate authorization. The deployment workflow remains frozen until then.
 
-Run the combined audit against a clean output directory. A locked pre-existing
-artifact, especially the root `404.html` on Windows, can prevent cleanup or audit
-reads even when every selected site generated and built successfully.
-
-The nine sites are Platinum, Renegade Platinum, HeartGold/SoulSilver, Sacred
-Gold/Storm Silver, Black/White, Blaze Black/Volt White, Black 2/White 2, Blaze
-Black 2/Volt White 2, and Blaze Black 2 Redux/Volt White 2 Redux.
-
-Snapshot generation is not deployment.
-
-## Appendix: bounded Generation V (and IV) script awards
-
-Reachable `ItemAdd` commands are published when item ID and quantity are
-literal validated operands. Dedicated script ownership comes directly from map
-headers; common-script ownership comes from verified NPC/furniture callers, and
-all callers are retained.
-
-Work-variable-driven grants are no longer categorically skipped: a second,
-control-flow-aware convention is now decoded too, where the item/quantity are
-staged into two known scratch registers before a shared give-item call
-(`RTCallGlobal` for Generation V, `CallCommonScript` for Generation IV). Only
-target IDs independently confirmed against a real, doc-matched item grant are
-accepted, since the opcode itself is a general-purpose call reused by many
-unrelated global routines — widening it to every call of that opcode produces
-mass false positives (verified: pulls in dozens of unrelated common scripts).
-Confirmed sets so far: Generation V's Black/White and Black 2/White 2 engines
-share `RTCallGlobal` targets `2805`, `2806`, `2807`, and `2814`; Generation IV's
-Platinum-based engine uses `CallCommonScript` targets `2016` and `2044`;
-HeartGold/SoulSilver's engine uses its own independently-assigned `2033`
-(confirmed distinct — Platinum and HeartGold/SoulSilver do not share one ARM9
-codebase, so a target ID confirmed for one is never assumed to carry over to
-the other). Grants that resolve their item/quantity through some other,
-unconfirmed mechanism remain unavailable. The current extractor therefore adds
-exact script facts without claiming a complete NPC-gift or item-obtainability
-guide — known real gaps remain:
-
-- A still-unidentified vanilla Generation V mechanism behind a handful of
-  items at Route 7 and elsewhere. Not yet attempted.
-- A still-unlinked Sacred Gold/Storm Silver held-item dispatch table for its
-  own hack-added items. A bounded first check (ARM9 diff between Sacred Gold
-  and unmodified HeartGold) found only 212 byte differences across 1.12 MB
-  of ARM9, meaning any added held-item table is almost certainly in an
-  overlay, not ARM9 code. No unanchored full-overlay byte scan was attempted
-  for it — this project's own precedent (the B2W2 difficulty band table
-  above) already shows that kind of scan without a code anchor doesn't pay
-  off, and no anchor exists here yet.
-
-## Appendix: HGSS script decoding
-
-Retained because it is hard-won, not because it is scheduled. It is no longer
-needed for starter branches — those turned out to require only one opcode, not
-the whole table — but it is the groundwork for any future attempt at HGSS's
-script-only trainer-battle locations.
-
-- **Command dispatch tables are located** by scanning for long runs of
-  word-aligned pointers into loaded code: Platinum at `arm9+0x0EAC58` (840
-  entries), HeartGold at `arm9+0x0FAD00` (853). Validated by Platinum, whose
-  command count is independently known to be `0x033A`.
-- **Operand readers are identified.** Three per game advance the VM's script
-  cursor; Platinum's `0x0203E838` reads 2 bytes and serves 547 handlers, and is
-  byte-identical to HeartGold's `0x0203FE2C`.
-- **A script walker works, fitted to the scripts rather than the handlers.**
-  Learning each command's operand width by which candidate sustains the longest
-  chain of valid successors reaches **90.8%** agreement with Platinum's 98 known
-  battle sites, against 1% for handler-derived counts.
-- **Handler fingerprinting does not work** — only 6 of the 840/853 handlers are
-  byte-identical between the games.
-- **HGSS's battle command resisted this byte-scanning approach specifically —
-  not proof the command itself was unreachable.** Over 166,313 aligned HGSS
-  command positions, no opcode had the right shape via this technique: the
-  highest distinct operand counts were ~50 across 3,000–4,000 occurrences,
-  while opcodes at 100% "operand is a valid trainer" had as few as two
-  distinct values and were therefore flags.
-
-**Resolved since, by a different route, not this walker:** cross-referencing
-against the already-decoded sight-triggered trainer set (not a byte scan)
-found HGSS's talk-triggered battle opcode directly — `0x00D5`, distinct from
-Platinum's `0x00E5` (see `gen4/hgss/scripts.py`'s own derivation and
-`gen4/hgss/__init__.py`'s two-independent-methods note). This is now decoded
-and published (see the HGSS site doc's own Trainers section). The
-script-walker/handler-fingerprinting groundwork above remains unused for this
-purpose and is retained only in case a future need for a general HGSS
-instruction decoder (e.g. HGSS specialty-shop map placement, still open
-above) revives it.
+The nine published wikis are Platinum, Renegade Platinum, HeartGold/SoulSilver, Sacred Gold/Storm Silver, Black/White, Blaze Black/Volt White, Black 2/White 2, Blaze Black 2/Volt White 2, and Blaze Black 2 Redux/Volt White 2 Redux.

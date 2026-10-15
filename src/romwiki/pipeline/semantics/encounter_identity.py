@@ -25,7 +25,6 @@ MAP_OWNED_CONDITIONAL_SOURCES = frozenset(
 )
 CONDITIONAL_ENCOUNTER_SOURCES = frozenset(EncounterSourceType)
 DAILY_SWARM_ANCHOR = "daily-swarm"
-HEADBUTT_ANCHOR = "headbutt-encounters"
 HIDDEN_GROTTO_ANCHOR_PREFIX = "hidden-grotto"
 SAFARI_ZONE_ROUTE = "safari-zone"
 
@@ -82,12 +81,8 @@ def encounter_route_key(record: Mapping[str, Any]) -> int | str:
     """
     source_type = record.get("source_type")
     if source_type in CONDITIONAL_ENCOUNTER_SOURCES:
-        # Every conditional source (grotto/swarm/headbutt/safari) renders
-        # its own page under the encounters section, the same way Safari
-        # Zone areas already did (split out to keep pages under the site
-        # audit's page-size limit), so its render identity is the same
-        # per-record catalog identity rather than an anchor into the owning
-        # location page.
+        # Conditional pools have independent identities even when they share
+        # a map header with ordinary wild slots.
         return conditional_encounter_key(record)
     map_index = record.get("map_index")
     if not isinstance(map_index, int):

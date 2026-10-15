@@ -1,43 +1,43 @@
 # ROM Wiki
 
-ROM Wiki extracts structured Pokémon data from locally supplied ROM images and produces normalized datasets and static MkDocs wikis.
+ROM Wiki extracts structured Pokémon data from locally supplied ROM images and publishes normalized datasets for one shared React reference app.
 
-## Live wikis
+Browse the last deployed site at [pokelitee.github.io/rom-wiki](https://pokelitee.github.io/rom-wiki/). Publishing is frozen during migration; the local React replacement has not been deployed.
 
-Browse [pokelitee.github.io/rom-wiki](https://pokelitee.github.io/rom-wiki/). Each game's data-sources page records its input revisions, provenance, supported mechanics, and limitations. Data-driven publication does not imply exhaustive extraction.
+## Development
 
-## Getting started
-
-Use Python 3.12+. Activate the environment with `.venv\Scripts\Activate.ps1` in PowerShell or `source .venv/bin/activate` in bash.
+Use Python 3.12+ and Node 22.12+. Activate a Python virtual environment, then run:
 
 ```sh
-git clone https://github.com/pokelitee/rom-wiki.git
-cd rom-wiki
-python -m venv .venv
-# Activate the environment using your shell's command.
-python -m pip install -r requirements/docs.txt
+python -m pip install -r requirements/dev.txt
 python -m pip install --no-deps --no-build-isolation -e .
-romwiki site restore-snapshot
-romwiki site build --all --dev
-romwiki site serve --all --dev
+python -m romwiki site export-web --data-root build/data
+npm --prefix web ci
+npm --prefix web run dev
 ```
 
-This previews the published ROM-free snapshots without extracting games: `restore-snapshot` downloads the archives referenced by the tracked `sites/generated-wiki/manifest.json` from the repository's `snapshots` release and verifies their checksums. To generate new datasets, supply local inputs through the ignored `.local/games.toml` registry and follow [Operations](docs/operations.md). PokéDB reference data defaults to the sibling checkout's `.output/gen<N>` directory.
+Open `http://127.0.0.1:5173/rom-wiki/`. Export requires complete locally generated datasets and comparison outputs. Alternatively, restore a complete reviewed frontend snapshot with `python -m romwiki site restore-web SNAPSHOT_DIRECTORY`. No new frontend snapshot has been uploaded yet; the existing historical release archives contain normalized downloads but omit comparison JSON.
+
+Extraction uses the ignored `.local/games.toml` registry. See [Operations](docs/operations.md) for local inputs and generation. ROM inputs are never needed to restore a complete frontend snapshot or to run synthetic tests.
 
 ## Architecture
 
-`src/romwiki/` separates platform readers, generation-specific engines, normalized schemas, pipelines, renderers, and site tooling. `profiles/` contains committed decoding configuration; `sites/` owns authored content, shared presentation, and reviewed publication snapshots. Tests mirror those layers.
+`src/romwiki/` owns platform readers, engines, normalized schemas, extraction, enrichment, comparisons, relationships, and data publication. `web/` owns routing and presentation through shared React/TypeScript components, Tailwind, and selected shadcn/ui controls. `sites/` owns game descriptors, authored Markdown, shared prose, and historical snapshot references; no MkDocs application or generated record bodies are tracked.
+
+The app uses hash routes below `/rom-wiki/`, compact section indexes, and content-addressed detail chunks. Generated data and build artifacts are ignored. The previous MkDocs implementation remains available in Git history at `04b72f2`.
 
 ## Documentation
 
-- [Development](docs/development.md): setup, checks, architecture references, dependencies, and repository policy.
-- [Operations](docs/operations.md): local inputs, generation, snapshots, deployment, and recovery.
-- [CLI reference](docs/cli-reference.md): command arguments, input selection, and output options.
-- [Data contracts](docs/development/data-contracts.md): normalized and published JSON guarantees.
+- [Development](docs/development.md): setup, checks, dependencies, and repository policy.
+- [Architecture](docs/development/architecture.md): layer ownership and data flow.
+- [Frontend](docs/development/frontend.md): React development, snapshots, and validation.
+- [Operations](docs/operations.md): local inputs, generation, snapshots, and recovery.
+- [CLI reference](docs/cli-reference.md): command arguments and output options.
+- [Data contracts](docs/development/data-contracts.md): normalized and frontend publication guarantees.
 
 ## Contributing
 
-Follow the [organization contribution guide](https://github.com/pokelitee/.github/blob/main/CONTRIBUTING.md) and the [development guide](docs/development.md). Use a short-lived branch and a PR into `main`.
+Follow the [organization contribution guide](https://github.com/pokelitee/.github/blob/main/CONTRIBUTING.md) and the development guide. Use a short-lived branch and a PR into `main`.
 
 ## License and local inputs
 

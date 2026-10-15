@@ -1,5 +1,4 @@
 ---
-template: game-home.html
 title: Pokémon Black & White
 ---
 

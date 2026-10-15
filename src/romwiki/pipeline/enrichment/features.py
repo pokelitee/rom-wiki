@@ -9,8 +9,6 @@ from romwiki.profiles.models import GameProfile
 EGG_MOVES = "egg-moves"
 MOVE_TUTORS = "move-tutors"
 CONTESTS = "contests"
-POST_BATTLE_HEALING = "post-battle-healing"
-VICTORY_ITEMS = "victory-items"
 
 
 def effective_features(profile: GameProfile) -> tuple[str, ...]:

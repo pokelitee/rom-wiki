@@ -5,7 +5,6 @@ kind = "portal"
 slug = ""
 published = true
 order = 0
-mkdocs_config = "mkdocs.yml"
 description = "Data-driven references for Pokémon ROM hacks"
 
 [appearance]
