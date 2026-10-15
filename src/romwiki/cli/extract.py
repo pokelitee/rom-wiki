@@ -11,7 +11,7 @@ from romwiki.cli.common import (
     add_input_arguments,
     inspect_input,
 )
-from romwiki.engines.registry import get_engine
+from romwiki.engines.registry import DETACHED_NPC_TRADES, get_engine
 from romwiki.pipeline.extraction.egg_moves import extract_egg_move_dataset
 from romwiki.pipeline.extraction.encounters import extract_encounter_dataset
 from romwiki.pipeline.extraction.evolutions import extract_evolution_dataset
@@ -122,7 +122,7 @@ def extract(kind: str, result: InspectionResult, output: Path | None) -> None:
             ),
             trade_dataset=(
                 extract_npc_trade_dataset(result)
-                if "detached-npc-trades" in engine.capabilities
+                if DETACHED_NPC_TRADES in engine.capabilities
                 and "npc_trades" in profile.layout
                 else None
             ),
