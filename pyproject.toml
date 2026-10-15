@@ -28,7 +28,7 @@ Issues = "https://github.com/pokelitee/rom-wiki/issues"
 # capstone is an analysis-only tool: it is used to verify ROM code paths when
 # decoding a new selector (it identified the starter accessor behind
 # `starter_species_offset`). Nothing under src/ imports it at runtime.
-dev = ["pytest>=8", "ruff==0.15.22", "capstone>=5,<6", "mypy==2.3.1"]
+dev = ["pytest>=8", "ruff==0.17.0", "capstone>=5,<6", "mypy==2.4.0"]
 docs = [
     "mkdocs>=1.6.1,<2",
     "mkdocs-material>=9.7.6,<10",
