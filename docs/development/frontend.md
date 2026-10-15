@@ -36,6 +36,18 @@ and adds the current site, portal URL, and published games to template context. 
 calculates links from each page depth, so navigation works both with `mkdocs serve`
 and when the combined artifact is hosted below a GitHub Pages repository path.
 
+Site search indexes generated record pages by title only. Every page directly
+inside a generated section (the site's `generated_sections` plus `changes`) other
+than the section's `index.md` contributes a single entry for its `<h1>`; its body
+is not indexed, because catalogs already provide filtering over record data and
+full record text made each site's search index over 10 MB. Section index pages
+and hand-written pages remain fully indexed. The hook implements this by giving
+Material's search plugin only the title heading during `on_page_context` and
+restoring the full content afterwards, so published HTML is unchanged. Material's
+`data-search-exclude` attribute is not used: its parser ends an excluded block at
+the first nested element with the same tag, and headings inside the block still
+produce entries.
+
 Appearance tokens are declared in every site descriptor's `[appearance]` table,
 including the portal. Shared CSS maps a token to custom properties such as
 `--rw-accent`; components consume the variables rather than game names. Components
