@@ -11,7 +11,7 @@ from romwiki.pipeline.extraction.locations.arm9_event_map import (
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
 from romwiki.util.errors import InvalidRomError, ProfileError
 
-_MODULE = "romwiki.pipeline.extraction.locations.arm9_event_map"
+_MODULE = "romwiki.pipeline.extraction.locations.arm9_event_map_source"
 
 _NULL = 65535
 

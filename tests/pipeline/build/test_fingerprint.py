@@ -95,6 +95,9 @@ class ExtractionSourceFilesTests(unittest.TestCase):
             "gen4_platinum", "romwiki.pipeline.extraction.locations.dispatcher"
         )
         self.assertIn("pipeline/extraction/locations/arm9_event_map.py", dppt_files)
+        self.assertIn(
+            "pipeline/extraction/locations/arm9_event_map_source.py", dppt_files
+        )
         self.assertIn("pipeline/extraction/locations/helpers.py", dppt_files)
 
         gen5_files = extraction_source_files(
