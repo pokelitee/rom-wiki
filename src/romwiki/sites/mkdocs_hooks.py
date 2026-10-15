@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.plugins import CombinedEvent, event_priority
 from mkdocs.structure.files import Files
 from mkdocs.structure.pages import Page
 from mkdocs.structure.toc import AnchorLink, TableOfContents
@@ -21,11 +22,15 @@ _catalog: SiteCatalog | None = None
 _current_site: SiteDefinition | None = None
 _current_sections: set[str] = set()
 _dev_pages: DevPages | None = None
+_title_only_sections: frozenset[str] = frozenset()
+_deferred_page_content: dict[str, str] = {}
+_H1_END = re.compile(r"</h1\s*>", re.IGNORECASE)
 _HREF = re.compile(r"""(\bhref\s*=\s*)(["'])(.*?)\2""", re.IGNORECASE)
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
     global _catalog, _current_site, _current_sections, _dev_pages
+    global _title_only_sections
     config_path = Path(config.config_file_path).resolve()
     root = _find_repository_root(config_path.parent)
     catalog = SiteCatalog.load(root)
@@ -43,6 +48,11 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
     _catalog = catalog
     _current_site = current
     _current_sections = _nav_sections(config.nav)
+    _title_only_sections = (
+        frozenset((*current.game.generated_sections, "changes"))
+        if current.game
+        else frozenset()
+    )
     dev_pages_path = config.extra.get("romwiki_dev_pages")
     _dev_pages = (
         DevPages.load(config_path.parent / dev_pages_path)
@@ -103,7 +113,52 @@ def on_page_content(
     return _rewrite_filtered_markdown_links(html, page.file.src_uri, page.url)
 
 
-def on_page_context(
+@event_priority(100)
+def _index_generated_page_title_only(
+    context: dict[str, Any],
+    page: Page,
+    config: MkDocsConfig,
+    nav: Any,
+) -> dict[str, Any]:
+    """Hide a generated record page's body from the search plugin.
+
+    Material search indexes `page.content` during its own `on_page_context`.
+    Running first and handing it only the title heading keeps thousands of
+    record pages findable by name without indexing their tables; the full
+    content is restored once search has run. Material's `data-search-exclude`
+    markup cannot do this: its parser matches excluded elements by tag name,
+    so the first nested `</div>` ends the exclusion, and every heading inside
+    the excluded block still yields a title entry.
+    """
+    if page.content and _is_generated_record_page(page.file.src_uri):
+        heading_end = _H1_END.search(page.content)
+        if heading_end:
+            _deferred_page_content[page.file.src_uri] = page.content
+            page.content = page.content[: heading_end.end()]
+    return context
+
+
+@event_priority(-100)
+def _restore_generated_page_content(
+    context: dict[str, Any],
+    page: Page,
+    config: MkDocsConfig,
+    nav: Any,
+) -> dict[str, Any]:
+    content = _deferred_page_content.pop(page.file.src_uri, None)
+    if content is not None:
+        page.content = content
+    return context
+
+
+def _is_generated_record_page(src_uri: str) -> bool:
+    parts = src_uri.split("/")
+    return (
+        len(parts) == 2 and parts[0] in _title_only_sections and parts[1] != "index.md"
+    )
+
+
+def _add_site_context(
     context: dict[str, Any],
     page: Page,
     config: MkDocsConfig,
@@ -135,6 +190,13 @@ def on_page_context(
         ],
     }
     return context
+
+
+on_page_context = CombinedEvent(
+    _index_generated_page_title_only,
+    _add_site_context,
+    _restore_generated_page_content,
+)
 
 
 def _add_portal_toc(page: Page, sites: tuple[SiteDefinition, ...]) -> None:
