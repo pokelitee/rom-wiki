@@ -177,7 +177,7 @@ class PublicDataExportTests(unittest.TestCase):
             ["moves.json.gz", "pokemon.json.gz"],
         )
 
-    def test_archive_changed_after_the_manifest_is_described_from_disk(self) -> None:
+    def test_archive_with_unchanged_size_and_mtime_is_rehashed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for kind in ("moves", "pokemon"):
@@ -192,19 +192,28 @@ class PublicDataExportTests(unittest.TestCase):
                         "records": [],
                     },
                 )
-            replacement = {
-                "schema_version": 2,
-                "game": "test-game",
-                "dataset": "pokemon",
-                "record_count": 7,
-                "records": [],
-            }
             archive = root / "data/pokemon.json.gz"
-            archive.write_bytes(
-                gzip.compress(json.dumps(replacement).encode("utf-8"), mtime=0)
+            original = archive.read_bytes()
+            original_stat = archive.stat()
+            source = gzip.decompress(original)
+            replacement = next(
+                candidate
+                for digit in b"123456789"
+                if len(
+                    candidate := gzip.compress(
+                        source.replace(
+                            b'"record_count":0', b'"record_count":%c' % digit
+                        ),
+                        mtime=0,
+                    )
+                )
+                == len(original)
             )
-            later = (root / "data/manifest.json").stat().st_mtime_ns + 1_000_000_000
-            os.utime(archive, ns=(later, later))
+            self.assertNotEqual(replacement, original)
+            archive.write_bytes(replacement)
+            os.utime(archive, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+            self.assertEqual(archive.stat().st_size, original_stat.st_size)
+            self.assertEqual(archive.stat().st_mtime_ns, original_stat.st_mtime_ns)
 
             prune_public_datasets(root, {"moves", "pokemon"}, "test-game")
             manifest = json.loads(
@@ -213,8 +222,8 @@ class PublicDataExportTests(unittest.TestCase):
             validate_public_data(root)
 
         pokemon = manifest["files"][1]
-        self.assertEqual(pokemon["record_count"], 7)
-        self.assertEqual(pokemon["schema_version"], 2)
+        self.assertNotEqual(pokemon["record_count"], 0)
+        self.assertEqual(pokemon["sha256"], hashlib.sha256(replacement).hexdigest())
 
     def test_validation_rejects_a_modified_archive(self) -> None:
         dataset = {

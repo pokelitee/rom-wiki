@@ -96,18 +96,16 @@ def _describe_archive(data_root: Path, relative_path: str) -> dict[str, Any]:
 
 
 def _reusable_manifest_entries(data_root: Path) -> dict[str, dict[str, Any]]:
-    """Existing manifest entries for archives not rewritten since that manifest.
+    """Existing manifest entries whose archives still match their checksum.
 
     Each section build rewrites one archive, so every other archive is
-    normally still described by the previous manifest. An archive written
-    after that manifest (an interrupted build, or a hand edit) is described
-    from disk again instead of being trusted. Equal timestamps still count as
-    unchanged because filesystem timestamps can be coarser than the gap
-    between writing an archive and its manifest.
+    normally still described by the previous manifest. Hashing the
+    compressed bytes proves an entry still describes its archive without
+    decompressing it; timestamps are deliberately not trusted because they
+    can be coarser than the interval between writes.
     """
     manifest_path = data_root / PUBLIC_DATA_MANIFEST
     try:
-        manifest_mtime = manifest_path.stat().st_mtime_ns
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
@@ -125,13 +123,10 @@ def _reusable_manifest_entries(data_root: Path) -> dict[str, dict[str, Any]]:
         if not isinstance(relative_path, str):
             continue
         try:
-            archive = (data_root / relative_path).stat()
+            compressed = (data_root / relative_path).read_bytes()
         except OSError:
             continue
-        if (
-            archive.st_mtime_ns <= manifest_mtime
-            and archive.st_size == entry["compressed_bytes"]
-        ):
+        if hashlib.sha256(compressed).hexdigest() == entry["sha256"]:
             reusable[relative_path] = entry
     return reusable
 
