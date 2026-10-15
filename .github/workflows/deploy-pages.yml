@@ -2,17 +2,39 @@ name: Deploy Pages
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the reviewed React site (requires cutover authorization)"
+        type: boolean
+        default: false
+        required: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  frozen:
-    name: Publishing frozen during React migration
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  build:
+    uses: ./.github/workflows/pages-build.yml
+
+  deploy:
+    if: inputs.publish && github.ref == 'refs/heads/main'
+    needs: [checks, build]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Keep the last published site available
-        run: |
-          echo "Publishing is frozen during the React migration. Validate the complete frontend snapshot and obtain cutover authorization before restoring deployment."
-          exit 1
+      - name: Deploy verified artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

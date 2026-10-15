@@ -16,7 +16,7 @@ npm --prefix web ci
 npm --prefix web run dev
 ```
 
-Open `http://127.0.0.1:5173/rom-wiki/`. Export requires complete locally generated datasets and comparison outputs. Alternatively, restore a complete reviewed frontend snapshot with `python -m romwiki site restore-web SNAPSHOT_DIRECTORY`. No new frontend snapshot has been uploaded yet; the existing historical release archives contain normalized downloads but omit comparison JSON.
+Open `http://127.0.0.1:5173/rom-wiki/`. Export requires complete locally generated datasets and comparison outputs. Alternatively, download and restore the pinned complete frontend snapshot using the [frontend guide](docs/development/frontend.md). It includes comparison JSON; the older per-game release archives contain only normalized downloads.
 
 Extraction uses the ignored `.local/games.toml` registry. See [Operations](docs/operations.md) for local inputs and generation. ROM inputs are never needed to restore a complete frontend snapshot or to run synthetic tests.
 
