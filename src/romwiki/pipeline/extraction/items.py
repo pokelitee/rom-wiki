@@ -119,7 +119,7 @@ def _extract_item_dataset_archive(
         raise ProfileError(
             f"Profile {profile.id} is missing item metadata: {error.args[0]}"
         ) from error
-    type_names_member = profile.parameters.get("type_names_member")
+    type_names_member = profile.optional_int_parameter("type_names_member")
 
     adapter = get_engine(profile.engine)
     engine = adapter.items
@@ -290,12 +290,14 @@ def _extract_fossil_revivals(
     *,
     item_count: int,
 ) -> tuple[dict[int, int], dict[str, Any] | None]:
-    fossil_revival_table_offset = profile.parameters.get("fossil_revival_table_offset")
+    fossil_revival_table_offset = profile.optional_int_parameter(
+        "fossil_revival_table_offset"
+    )
     if fossil_revival_table_offset is not None:
         fossil_revivals = engine.parse_fossil_revival_table(
             code_binary.read(),
             offset=fossil_revival_table_offset,
-            count=profile.parameters.get("fossil_revival_count"),
+            count=profile.int_parameter("fossil_revival_count"),
             item_count=item_count,
             species_count=engine.POKEMON_NAME_COUNT,
         )
@@ -407,7 +409,7 @@ def _extract_berry_data(
     berry_data_path = profile.layout.get("berry_data")
     if berry_data_path is None:
         return {}, None
-    first_berry_item_id = profile.parameters.get("first_berry_item_id")
+    first_berry_item_id = profile.optional_int_parameter("first_berry_item_id")
     if first_berry_item_id is None:
         raise ProfileError(
             f"Profile {profile.id} defines berry_data without first_berry_item_id"

@@ -120,9 +120,9 @@ def _extract_personal_records_flat(
     # profile that doesn't declare this (or an engine with no such concept)
     # simply gets every record's `machine_ids`/`machine_masks` left at
     # `parse_personal_record`'s own empty default.
-    tmhm_learnset_offset = profile.parameters.get("tmhm_learnset_offset")
+    tmhm_learnset_offset = profile.optional_int_parameter("tmhm_learnset_offset")
     tmhm_learnset_kwargs: dict[int, dict[str, Any]] = {}
-    if isinstance(tmhm_learnset_offset, int):
+    if tmhm_learnset_offset is not None:
         learnset_size = engine.MACHINE_LEARNSET_SIZE
         learnset_data = platform.read_bytes(
             result.image, tmhm_learnset_offset, learnset_size * count
@@ -157,12 +157,10 @@ def _extract_ability_names_flat(
     # ability_names key, matching `resolve_ability_names`'s None-tolerant
     # fallback -- mirrors `moves.py`'s flat move-name decode, but this one
     # is optional rather than required since abilities is itself optional.
-    name_offset = profile.parameters.get("ability_name_offset")
-    name_stride = profile.parameters.get("ability_name_stride")
-    name_count = profile.parameters.get("ability_name_count")
-    if not all(
-        isinstance(value, int) for value in (name_offset, name_stride, name_count)
-    ):
+    name_offset = profile.optional_int_parameter("ability_name_offset")
+    name_stride = profile.optional_int_parameter("ability_name_stride")
+    name_count = profile.optional_int_parameter("ability_name_count")
+    if name_offset is None or name_stride is None or name_count is None:
         return {}
     name_data = platform.read_bytes(result.image, name_offset, name_stride * name_count)
     ability_names = engine.decode_gen3_text_table(
@@ -182,8 +180,8 @@ def _extract_ability_descriptions_flat(
     # Optional, same reasoning as `_extract_ability_names_flat` above: a
     # profile that doesn't declare `ability_description_offset` simply
     # skips ability descriptions rather than failing.
-    description_offset = profile.parameters.get("ability_description_offset")
-    if not isinstance(description_offset, int):
+    description_offset = profile.optional_int_parameter("ability_description_offset")
+    if description_offset is None:
         return {}
     count = engine.ABILITY_NAME_COUNT
     pointer_data = platform.read_bytes(result.image, description_offset, count * 4)

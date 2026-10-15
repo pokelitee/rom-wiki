@@ -355,7 +355,7 @@ def _load_battle_mode_map_source(
         filesystem.read(profile.layout["messages"])
     )
     map_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["map_names_member"])
+        messages.read(profile.int_parameter("map_names_member"))
     )
     headers = engine.parse_map_header_table(
         map_headers_data, map_names=tuple(map_names), archive_path=map_headers_path

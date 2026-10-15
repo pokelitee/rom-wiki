@@ -294,7 +294,7 @@ def _load_special_tutor_source(
     assert result.match is not None
     profile = result.match.profile
     try:
-        minimum_friendship = profile.parameters.get(
+        minimum_friendship = profile.int_parameter(
             "special_tutor_minimum_friendship", engine.MAX_FRIENDSHIP
         )
         script_path = profile.layout["scripts"]

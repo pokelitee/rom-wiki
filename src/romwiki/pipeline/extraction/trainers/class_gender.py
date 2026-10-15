@@ -255,8 +255,8 @@ def _read_class_prize_table(
     *,
     class_count: int,
 ) -> _ClassPrizeTable:
-    overlay_id = profile.parameters.get("trainer_class_prize_overlay_id")
-    offset = profile.parameters.get("trainer_class_prize_offset")
+    overlay_id = profile.optional_int_parameter("trainer_class_prize_overlay_id")
+    offset = profile.optional_int_parameter("trainer_class_prize_offset")
     multipliers = None
     if overlay_id is not None and offset is not None:
         if platform.read_overlay is None:
@@ -501,14 +501,16 @@ def _read_trainer_location_layout(
         count=count,
         table_offset=table_offset,
         location_names_member=location_names_member,
-        null_event_id=parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE),
-        script_start=parameters.get(
+        null_event_id=profile.int_parameter(
+            "null_event_id", engine.ARCHIVE_MEMBER_NONE
+        ),
+        script_start=profile.int_parameter(
             "trainer_script_start", engine.TRAINER_OBJECT_SCRIPT_START
         ),
-        script_end=parameters.get(
+        script_end=profile.int_parameter(
             "trainer_script_end", engine.TRAINER_OBJECT_SCRIPT_END
         ),
-        trainer_id_offset=parameters.get(
+        trainer_id_offset=profile.int_parameter(
             "trainer_script_id_offset", engine.TRAINER_OBJECT_ID_OFFSET
         ),
     )

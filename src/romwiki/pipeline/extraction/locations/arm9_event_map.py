@@ -376,14 +376,18 @@ def _resolve_event_map_features(
         engine, platform, filesystem, profile.layout.get("bonus_encounters"), names
     )
     return _EventMapFeatures(
-        null_event_id=parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE),
-        null_encounter_id=parameters.get(
+        null_event_id=profile.int_parameter(
+            "null_event_id", engine.ARCHIVE_MEMBER_NONE
+        ),
+        null_encounter_id=profile.int_parameter(
             "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
         ),
-        dynamic_warp_header_id=parameters.get(
+        dynamic_warp_header_id=profile.int_parameter(
             "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
         ),
-        dynamic_warp_id=parameters.get("dynamic_warp_id", engine.DYNAMIC_WARP_ID),
+        dynamic_warp_id=profile.int_parameter(
+            "dynamic_warp_id", engine.DYNAMIC_WARP_ID
+        ),
         honey_tree_header_ids=frozenset(
             parameters.get("honey_tree_header_ids", engine.HONEY_TREE_HEADER_IDS)
         ),
@@ -412,7 +416,9 @@ def _decode_game_corner_prizes(
     arm9_data: bytes,
     item_names: tuple[str, ...],
 ) -> tuple[LocationGameCornerPrize, ...]:
-    prize_table_offset = profile.parameters.get("game_corner_prize_table_offset")
+    prize_table_offset = profile.optional_int_parameter(
+        "game_corner_prize_table_offset"
+    )
     if prize_table_offset is None:
         return ()
     return tuple(
@@ -424,7 +430,7 @@ def _decode_game_corner_prizes(
         for prize in engine.parse_game_corner_prizes(
             arm9_data,
             offset=prize_table_offset,
-            count=profile.parameters.get("game_corner_prize_count", 0),
+            count=profile.int_parameter("game_corner_prize_count", 0),
             item_count=len(item_names),
         )
     )

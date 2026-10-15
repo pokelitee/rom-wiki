@@ -120,7 +120,7 @@ def _extract_headbutt_encounters(
     if archive_path is None:
         return []
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
-    map_header_count = profile.parameters["map_header_count"]
+    map_header_count = profile.int_parameter("map_header_count")
     if len(archive.members) != map_header_count:
         raise InvalidRomError(
             f"Headbutt archive has {len(archive.members)} members, expected "
@@ -142,9 +142,9 @@ def _extract_headbutt_encounters(
         filesystem,
         messages,
         map_names_path=profile.layout["map_names"],
-        table_offset=profile.parameters["map_header_offset"],
+        table_offset=profile.int_parameter("map_header_offset"),
         count=map_header_count,
-        location_names_member=profile.parameters["location_names_member"],
+        location_names_member=profile.int_parameter("location_names_member"),
     )
     records: list[dict[str, Any]] = []
     for member in archive.members:
@@ -330,9 +330,9 @@ def _extract_gen3_encounter_locations(
     if not all(name in profile.parameters for name in location_params):
         return {}
     segments = profile.parameters["map_header_segments"]
-    region_name_offset = profile.parameters["region_name_offset"]
-    region_name_count = profile.parameters["region_name_count"]
-    gmapgroups_offset = profile.parameters["gmapgroups_offset"]
+    region_name_offset = profile.int_parameter("region_name_offset")
+    region_name_count = profile.int_parameter("region_name_count")
+    gmapgroups_offset = profile.int_parameter("gmapgroups_offset")
 
     region_names = read_region_names(
         engine,
@@ -482,7 +482,7 @@ def _extract_seasonal_wild_map_names(
     ):
         return {}, {}
     map_headers_path = profile.layout["map_headers"]
-    map_names_member = profile.parameters["map_names_member"]
+    map_names_member = profile.int_parameter("map_names_member")
     messages_path = profile.layout["messages"]
     map_headers = platform.archive_cls.from_bytes(
         filesystem.read(map_headers_path),
@@ -519,14 +519,14 @@ def _extract_hidden_grottos(
     archive_path = profile.layout.get("hidden_grottos")
     if archive_path is None:
         return []
-    version_group = profile.parameters.get("hidden_grotto_version_group")
-    if not isinstance(version_group, int):
+    version_group = profile.optional_int_parameter("hidden_grotto_version_group")
+    if version_group is None:
         raise ProfileError(
             f"Profile {profile.id} does not define a Hidden Grotto version group"
         )
 
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
-    grotto_count = profile.parameters["hidden_grotto_record_count"]
+    grotto_count = profile.int_parameter("hidden_grotto_record_count")
     if len(archive.members) != grotto_count:
         raise InvalidRomError(
             f"Hidden Grotto archive has {len(archive.members)} members, expected "
@@ -591,7 +591,7 @@ def _load_hidden_grotto_map_headers(
         filesystem.read(profile.layout["messages"])
     )
     map_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["map_names_member"])
+        messages.read(profile.int_parameter("map_names_member"))
     )
     return engine.parse_map_header_table(
         map_headers.read(0),
@@ -629,7 +629,7 @@ def _resolve_hidden_grotto_owners(
         for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
             grotto_id = engine.hidden_grotto_id_for_dispatch(
                 furniture.script_used,
-                dispatch_base=profile.parameters["hidden_grotto_dispatch_base"],
+                dispatch_base=profile.int_parameter("hidden_grotto_dispatch_base"),
                 grotto_count=grotto_count,
             )
             if grotto_id is not None:
@@ -663,9 +663,9 @@ def _extract_swarms(
     required = ("swarm_overlay_id", "swarm_table_offset", "swarm_record_count")
     if not all(name in profile.parameters for name in required):
         return []
-    overlay_id = profile.parameters["swarm_overlay_id"]
-    table_offset = profile.parameters["swarm_table_offset"]
-    record_count = profile.parameters["swarm_record_count"]
+    overlay_id = profile.int_parameter("swarm_overlay_id")
+    table_offset = profile.int_parameter("swarm_table_offset")
+    record_count = profile.int_parameter("swarm_record_count")
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     table_size = record_count * engine.SWARM_RECORD_SIZE
     table_end = table_offset + table_size
@@ -689,7 +689,7 @@ def _extract_swarms(
         filesystem.read(profile.layout["messages"])
     )
     map_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["map_names_member"])
+        messages.read(profile.int_parameter("map_names_member"))
     )
     headers = engine.parse_map_header_table(
         map_headers.read(0),
@@ -768,7 +768,7 @@ def _extract_encounter_locations(
     )
 
     locations: dict[int, list[EncounterLocation]] = {}
-    null_encounter_id = profile.parameters.get(
+    null_encounter_id = profile.int_parameter(
         "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
     )
     for header in headers:

@@ -372,7 +372,7 @@ def _load_arm9_encounter_map_source(
     item_names = tuple(
         record["name"] for record in (item_dataset or {}).get("records", ())
     ) or engine.parse_english_message_archive(messages.read(layout.item_names_member))
-    pokemon_names_member = profile.parameters.get("pokemon_names_member")
+    pokemon_names_member = profile.optional_int_parameter("pokemon_names_member")
     return _Arm9EncounterMapSource(
         profile=profile,
         engine=engine,
@@ -397,18 +397,23 @@ def _load_arm9_encounter_map_source(
 def _resolve_arm9_encounter_map_sentinels(
     profile: Any, engine: LocationConcern
 ) -> _Arm9EncounterMapSentinels:
-    parameters = profile.parameters
     return _Arm9EncounterMapSentinels(
-        null_encounter_id=parameters.get(
+        null_encounter_id=profile.int_parameter(
             "null_encounter_id", engine.ENCOUNTER_MEMBER_NONE
         ),
-        null_event_id=parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE),
-        dynamic_warp_header_id=parameters.get(
+        null_event_id=profile.int_parameter(
+            "null_event_id", engine.ARCHIVE_MEMBER_NONE
+        ),
+        dynamic_warp_header_id=profile.int_parameter(
             "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
         ),
-        dynamic_warp_id=parameters.get("dynamic_warp_id", engine.DYNAMIC_WARP_ID),
+        dynamic_warp_id=profile.int_parameter(
+            "dynamic_warp_id", engine.DYNAMIC_WARP_ID
+        ),
         matrix_void_header_ids=frozenset(
-            parameters.get("matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS)
+            profile.parameters.get(
+                "matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS
+            )
         ),
     )
 

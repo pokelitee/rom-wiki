@@ -146,8 +146,8 @@ def _extract_gen3_trainer_locations(
     """
     engine = get_engine(profile.engine).trainers
     segments = profile.parameters.get("map_header_segments")
-    region_name_offset = profile.parameters.get("region_name_offset")
-    region_name_count = profile.parameters.get("region_name_count")
+    region_name_offset = profile.optional_int_parameter("region_name_offset")
+    region_name_count = profile.optional_int_parameter("region_name_count")
     if segments is None or region_name_offset is None or region_name_count is None:
         return {}
 
@@ -253,9 +253,9 @@ def _item_names(
     build (which itself depends on the enriched trainers dataset for
     cross-referencing; depending on it here would be circular).
     """
-    item_offset = profile.parameters.get("item_offset")
-    item_count = profile.parameters.get("item_count")
-    if not isinstance(item_offset, int) or not isinstance(item_count, int):
+    item_offset = profile.optional_int_parameter("item_offset")
+    item_count = profile.optional_int_parameter("item_count")
+    if item_offset is None or item_count is None:
         return None
     record_size = engine.items.ITEM_RECORD_SIZE
     decoded_count = min(item_count, engine.items.ITEM_RECORD_COUNT)

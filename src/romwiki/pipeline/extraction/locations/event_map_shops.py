@@ -82,19 +82,37 @@ def _read_shop_parameters(profile: Any) -> _ShopParameters:
         common_inventory_offset=common_inventory_offset,
         specialty_pointer_table_offset=specialty_pointer_table_offset,
         specialty_inventory_count=specialty_inventory_count,
-        decoration_names_member=parameters.get("decoration_names_member"),
-        decoration_name_count=parameters.get("decoration_name_count", 0),
-        decoration_price_table_offset=parameters.get("decoration_price_table_offset"),
-        decoration_inventory_start=parameters.get("decoration_mart_inventory_start", 0),
-        decoration_inventory_count=parameters.get("decoration_mart_inventory_count", 0),
-        seal_names_member=parameters.get("seal_names_member"),
-        seal_price_table_offset=parameters.get("seal_price_table_offset"),
-        seal_inventory_start=parameters.get("seal_mart_inventory_start", 0),
-        seal_inventory_count=parameters.get("seal_mart_inventory_count", 0),
-        frontier_inventory_count=parameters.get("frontier_mart_inventory_count", 0),
-        frontier_price_overlay_id=parameters.get("frontier_price_overlay_id"),
-        frontier_price_table_offset=parameters.get("frontier_price_table_offset"),
-        frontier_price_record_count=parameters.get("frontier_price_record_count", 0),
+        decoration_names_member=profile.optional_int_parameter(
+            "decoration_names_member"
+        ),
+        decoration_name_count=profile.int_parameter("decoration_name_count", 0),
+        decoration_price_table_offset=profile.optional_int_parameter(
+            "decoration_price_table_offset"
+        ),
+        decoration_inventory_start=profile.int_parameter(
+            "decoration_mart_inventory_start", 0
+        ),
+        decoration_inventory_count=profile.int_parameter(
+            "decoration_mart_inventory_count", 0
+        ),
+        seal_names_member=profile.optional_int_parameter("seal_names_member"),
+        seal_price_table_offset=profile.optional_int_parameter(
+            "seal_price_table_offset"
+        ),
+        seal_inventory_start=profile.int_parameter("seal_mart_inventory_start", 0),
+        seal_inventory_count=profile.int_parameter("seal_mart_inventory_count", 0),
+        frontier_inventory_count=profile.int_parameter(
+            "frontier_mart_inventory_count", 0
+        ),
+        frontier_price_overlay_id=profile.optional_int_parameter(
+            "frontier_price_overlay_id"
+        ),
+        frontier_price_table_offset=profile.optional_int_parameter(
+            "frontier_price_table_offset"
+        ),
+        frontier_price_record_count=profile.int_parameter(
+            "frontier_price_record_count", 0
+        ),
     )
 
 

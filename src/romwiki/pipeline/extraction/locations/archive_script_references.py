@@ -107,7 +107,7 @@ def extract_npc_trade_references(
     if not records_by_id:
         return {}
     pokemon_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["pokemon_names_member"])
+        messages.read(profile.int_parameter("pokemon_names_member"))
     )
     item_names = {
         record["item_id"]: record["name"]
@@ -218,7 +218,7 @@ def extract_static_encounter_references(
     """
     if static_encounter_dataset is None:
         return {}
-    pokemon_names_member = profile.parameters.get("pokemon_names_member")
+    pokemon_names_member = profile.optional_int_parameter("pokemon_names_member")
     if pokemon_names_member is None:
         return {}
     pokemon_names = engine.parse_english_message_archive(
