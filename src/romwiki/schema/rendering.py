@@ -367,6 +367,18 @@ class SlottedSpecialEncounters(TypedDict):
     dual_slot: dict[str, list[ReplacementSlot]]
 
 
+class DirectSpecialEncounters(TypedDict):
+    """Special-condition species named directly rather than as slot swaps."""
+
+    format: Literal["direct-species"]
+    land_swarm: EncounterPokemon | None
+    surf_swarm: EncounterPokemon | None
+    hoenn_radio: list[EncounterPokemon | None]
+    sinnoh_radio: list[EncounterPokemon | None]
+    night_fishing: EncounterPokemon | None
+    fishing_swarm: EncounterPokemon | None
+
+
 class EncounterRenderRecord(VersionedRenderRecord, total=False):
     """One wild-encounter area or conditional encounter source.
 
@@ -387,7 +399,7 @@ class EncounterRenderRecord(VersionedRenderRecord, total=False):
     old_rod: EncounterMethodTable
     good_rod: EncounterMethodTable
     super_rod: EncounterMethodTable
-    special: dict[str, Any]
+    special: SlottedSpecialEncounters | DirectSpecialEncounters
     bonus_slot_methodology_source: str
     encounter_form_rates: list[int]
     unown_table_id: int

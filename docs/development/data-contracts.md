@@ -48,7 +48,13 @@ schemas above. A version constant for an actual dataset field, shape, or
 required presence belongs in `schema/versions.py` regardless of which module
 emits it.
 
-Enriched encounter schema 7 added `encounter_format`. Published locations
+Enriched encounter schema 7 added `encounter_format` and renamed the marker on
+the `special` object of areas whose walking slots vary by time of day:
+`"format": "hgss"` became `"format": "direct-species"`, describing its shape
+(special-condition species named directly rather than as walking-slot
+replacements) instead of the engine family that introduced it. Consumers of
+schema 6 archives that matched the old value should match the new one; the
+object's other fields are unchanged. Published locations
 previously used the raw locations schema version (15); they now have their own
 enriched version, starting at 16 when `location_format` was added, so the
 published number keeps increasing.

@@ -15,6 +15,7 @@ from romwiki.pipeline.semantics.encounter_identity import (
     encounter_route_key,
 )
 from romwiki.schema.rendering import (
+    DirectSpecialEncounters,
     EncounterDataset,
     EncounterPokemon,
     EncounterRenderRecord,
@@ -189,7 +190,7 @@ def enrich_conditional_encounter_area(
     pokemon_names: list[str] | None = None,
 ) -> EncounterRenderRecord:
     if "walking_variants" in source:
-        return _enrich_hgss_encounter_area(
+        return _enrich_timed_walking_encounter_area(
             engine, source, pokedb, sprite_version, pokemon_names
         )
     walking = {
@@ -321,13 +322,18 @@ def enrich_conditional_encounter_area(
     )
 
 
-def _enrich_hgss_encounter_area(
+def _enrich_timed_walking_encounter_area(
     engine: EnrichmentTables,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None,
     pokemon_names: list[str] | None,
 ) -> EncounterRenderRecord:
+    """Enrich a conditional area whose walking slots vary by time of day.
+
+    Its special encounters name species directly instead of replacing walking
+    slots, which the `direct-species` marker records.
+    """
     walking_variants = {
         period: {
             "rate": source["walking_rate"],
@@ -374,8 +380,8 @@ def _enrich_hgss_encounter_area(
             ("super_rod", engine.FISHING_SLOT_CHANCES),
         )
     }
-    special = {
-        "format": "hgss",
+    special: DirectSpecialEncounters = {
+        "format": "direct-species",
         "land_swarm": _encounter_pokemon(
             source["swarm_species_ids"][0],
             pokedb,

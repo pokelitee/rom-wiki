@@ -126,7 +126,7 @@ class EncounterRenderingTests(unittest.TestCase):
                 for period in ("morning", "day", "night")
             },
             "special": {
-                "format": "hgss",
+                "format": "direct-species",
                 "land_swarm": None,
                 "surf_swarm": None,
                 "hoenn_radio": [],
@@ -154,7 +154,7 @@ class EncounterRenderingTests(unittest.TestCase):
                 for period in ("morning", "day", "night")
             },
             "special": {
-                "format": "hgss",
+                "format": "direct-species",
                 "land_swarm": None,
                 "surf_swarm": None,
                 "hoenn_radio": [],
@@ -622,7 +622,7 @@ class EncounterRenderingTests(unittest.TestCase):
             "good_rod": empty,
             "super_rod": empty,
             "special": {
-                "format": "hgss",
+                "format": "direct-species",
                 "land_swarm": pokemon,
                 "surf_swarm": None,
                 "hoenn_radio": [pokemon],
@@ -1046,7 +1046,7 @@ def _walking_area(
             for period in ("morning", "day", "night")
         },
         "special": {
-            "format": "hgss",
+            "format": "direct-species",
             "land_swarm": None,
             "surf_swarm": None,
             "hoenn_radio": [],
