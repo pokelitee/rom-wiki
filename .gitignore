@@ -36,9 +36,8 @@ sites/games/*/wiki/types/
 # Normalized public datasets and comparison sidecars are generated locally.
 sites/games/*/wiki/data/
 
-# Snapshot archives are published as `snapshots` release assets; only the
-# manifest that pins their checksums is tracked.
-sites/generated-wiki/*.tar.gz
+# The frontend snapshot archive is a `snapshots` release asset; only the
+# manifest that pins its checksums is tracked.
 sites/frontend-snapshot/*.tar.gz
 
 # User-supplied game images and related emulator data must remain local.

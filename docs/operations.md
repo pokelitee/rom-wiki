@@ -55,14 +55,8 @@ romwiki regenerate --all
 
 `regenerate` preflights every required ROM and PokéDB generation before writing,
 then generates the selected sites. Add `--refresh` to replace current and
-baseline extraction caches. After reviewing a complete generation, add
-`--snapshot` to update the ROM-free publication snapshot, then publish its
-archives and commit the manifest (see [Publication snapshots](#publication-snapshots)):
-
-```console
-romwiki regenerate --all --refresh --snapshot
-romwiki site publish-snapshot
-```
+baseline extraction caches. After reviewing a complete generation, update the
+frontend snapshot (see [Publication snapshots](#publication-snapshots)).
 
 For normal development, select one site; valid raw caches are reused per dataset
 and engine. Adding another engine does not invalidate existing engines'
@@ -120,45 +114,17 @@ List the site catalog:
 romwiki site list
 ```
 
-Generated data downloads are archived per site rather than tracked individually.
-A clean checkout restores them with:
-
-```console
-romwiki site restore-snapshot
-```
-
 ## Publication snapshots
 
-Each per-site snapshot archive contains that site's generated public data: the
-`wiki/data/manifest.json` download manifest and every archive it lists. Only
-`sites/generated-wiki/manifest.json` is tracked. The per-site archives it
-references are ignored locally and published as immutable assets of the
-`snapshots` GitHub release. Asset names are content-addressed
-(`<site>-<first 16 hex digits of the archive SHA-256>.tar.gz`), so an older
-manifest remains restorable after newer snapshots are published.
+The only publication snapshot is the complete frontend snapshot pinned by
+`sites/frontend-snapshot/manifest.json`. It includes every published game's
+sections, guides, downloads, and comparisons, so a clean checkout can restore the
+site without ROMs or PokéDB. See the [frontend guide](development/frontend.md)
+for restoring and updating it.
 
-`restore-snapshot` uses a local archive when its SHA-256 matches the manifest.
-Otherwise it downloads the asset into `.romwiki/snapshot-cache/` and verifies the
-checksum before extracting anything. Set `ROMWIKI_SNAPSHOT_URL` or pass
-`--snapshot-url` to restore from a fork or mirror. Restores never need PokéDB;
-the manifest records a PokéDB fingerprint only as provenance when one was
-available while snapshotting.
-
-To update the publication snapshot:
-
-1. Regenerate with `romwiki regenerate --all --refresh --snapshot`, or run
-   `romwiki site snapshot --pokedb-root ../pokedb/.output` after a verified
-   generation.
-2. Upload the new archives with `romwiki site publish-snapshot`. It requires an
-   authenticated `gh` CLI with write access, verifies every local archive against
-   the manifest, creates the release if needed, and uploads only missing assets.
-   It never replaces or deletes existing assets.
-3. Commit the updated manifest with the source and profile changes that produced
-   it, and open a PR.
-
-Publish the assets before pushing the manifest so a clean checkout can restore
-it. CI does not restore snapshots. Do not delete release assets that any
-reachable manifest still references.
+Earlier per-site data archives (`sites/generated-wiki/`) are retired. Their
+release assets stay on the `snapshots` release; restore them with the tooling
+and manifests from an earlier commit in Git history.
 
 ## PokéDB reference data
 
@@ -204,7 +170,7 @@ the site's data-sources page rather than a broad completion label.
 
 The React site is live on GitHub Pages; publishing remains manual. Every PR and main-branch CI run restores the checksum-pinned complete frontend snapshot, checks coverage, builds React, runs desktop/mobile browser tests across every game, and uploads a Pages artifact. These CI runs do not deploy.
 
-CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot rather than restoring retired wiki archives. `romwiki site restore-data` remains available for historical recovery of normalized downloads; those archives are historical publications, not evidence that current extractor code produced them.
+CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot.
 
 Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged locally with `romwiki site snapshot-web`. The reviewed archive is uploaded under its unique content-addressed name to the existing `snapshots` release; `sites/frontend-snapshot/manifest.json` pins the archive and every resource checksum. No new release or archive tag is needed. See the [frontend guide](development/frontend.md) for restoration from a clean checkout.
 
@@ -221,6 +187,6 @@ For rollback, revert the frontend source and/or snapshot manifest through a PR a
 - **Missing PokéDB generation:** generate the required generation in the sibling checkout or select another output using the CLI's `--pokedb` / `--pokedb-root` options. Consult the CLI reference for command-specific inputs.
 - **Unexpected cached output:** use the focused workflow first. `--refresh` replaces extraction caches; `--clean` regenerates sites whose inputs are unchanged. These flags address different layers.
 - **Missing generated data in a clean checkout:** restore the publication snapshot. Do not substitute incomplete local outputs for a reviewed snapshot.
-- **Snapshot asset is not published:** the manifest references archives that were never uploaded. Run `romwiki site publish-snapshot` from the checkout that created them. A checksum mismatch means the downloaded asset is not the archive the manifest describes; never replace release assets to fix it.
+- **Snapshot asset is not published:** the manifest references an archive that was never uploaded. Upload it from the checkout that created it under its content-addressed name. A checksum mismatch means the downloaded asset is not the archive the manifest describes; never replace release assets to fix it.
 
 To restore a previous snapshot, revert the relevant source and manifest changes through a PR. Do not force-push source history or rewrite archive tags. Build caches can be discarded and regenerated; local user-supplied inputs cannot be recreated from the repository.

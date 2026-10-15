@@ -16,13 +16,13 @@ npm --prefix web ci
 npm --prefix web run dev
 ```
 
-Open `http://127.0.0.1:5173/rom-wiki/`. Export requires complete locally generated datasets and comparison outputs. Alternatively, download and restore the pinned complete frontend snapshot using the [frontend guide](docs/development/frontend.md). It includes comparison JSON; the older per-game release archives contain only normalized downloads.
+Open `http://127.0.0.1:5173/rom-wiki/`. Export requires complete locally generated datasets and comparison outputs. Alternatively, download and restore the pinned complete frontend snapshot using the [frontend guide](docs/development/frontend.md).
 
 Extraction uses the ignored `.local/games.toml` registry. See [Operations](docs/operations.md) for local inputs and generation. ROM inputs are never needed to restore a complete frontend snapshot or to run synthetic tests.
 
 ## Architecture
 
-`src/romwiki/` owns platform readers, engines, normalized schemas, extraction, enrichment, comparisons, relationships, and data publication. `web/` owns routing and presentation through shared React/TypeScript components, Tailwind, and selected shadcn/ui controls. `sites/` owns game descriptors, authored Markdown, shared prose, and historical snapshot references; no MkDocs application or generated record bodies are tracked.
+`src/romwiki/` owns platform readers, engines, normalized schemas, extraction, enrichment, comparisons, relationships, and data publication. `web/` owns routing and presentation through shared React/TypeScript components, Tailwind, and selected shadcn/ui controls. `sites/` owns game descriptors, authored Markdown, shared prose, and the pinned frontend snapshot manifest; no MkDocs application or generated record bodies are tracked.
 
 The app uses hash routes below `/rom-wiki/`, compact section indexes, and content-addressed detail chunks. Generated data and build artifacts are ignored. The previous MkDocs implementation remains available in Git history at `04b72f2`.
 

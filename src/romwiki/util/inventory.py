@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import os
 import time
 from pathlib import Path
@@ -14,16 +13,6 @@ _RACY_MTIME_WINDOW_NS = 2_000_000_000
 def modified_too_recently(mtime_ns: int) -> bool:
     """Whether a (size, mtime) cache entry for this file could be stale."""
     return time.time_ns() - mtime_ns < _RACY_MTIME_WINDOW_NS
-
-
-def inventory_fingerprint(inventory: dict[str, str]) -> str:
-    digest = hashlib.sha256()
-    for path, value in sorted(inventory.items()):
-        digest.update(path.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(value.encode("ascii"))
-        digest.update(b"\0")
-    return digest.hexdigest()
 
 
 def file_metadata_inventory(root: Path) -> dict[str, str]:
