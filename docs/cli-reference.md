@@ -5,10 +5,10 @@ ROM Wiki exposes six top-level command groups:
 ```text
 inspect     identify one ROM and optionally write an input manifest
 extract     write one normalized single-ROM audit dataset
-build       extract, enrich, compare, and render game data
+build       extract, enrich, compare, and export game data
 regenerate  regenerate sites from the site catalog
 baseline    manage clean-ROM extraction caches
-site        list, build, serve, audit, snapshot, and restore sites
+site        list sites and snapshot, restore, or publish generated data
 ```
 
 Use `romwiki <command> --help` and nested help such as
@@ -21,13 +21,13 @@ romwiki --verbose regenerate --all
 ```
 
 Default informational logs report command lifecycles and bounded progress for
-long-running work at the ROM, dataset, site, page, link, and snapshot levels.
+long-running work at the ROM, dataset, site, and snapshot levels.
 Individual records and files are not logged. `--verbose` adds diagnostic detail;
 `--quiet` retains warnings and errors while suppressing routine progress. Lifecycle
 messages consistently use `started`, `completed in`, and `failed after` wording.
 
 Commands exit with status `0` on success and `1` when a ROM Wiki error, such as a
-missing ROM, an unmatched profile, or a failed audit, stops the command. Status
+missing ROM, an unmatched profile, or a stale snapshot, stops the command. Status
 `2` is reserved for usage errors reported by argument parsing, such as an unknown
 option.
 
@@ -74,7 +74,7 @@ stages maintain their own manifests and do not consume this file.
 ## Extract
 
 `extract` writes one normalized single-ROM audit dataset without enrichment,
-comparison, or rendering:
+comparison, or export:
 
 ```console
 romwiki extract personal --game platinum-us
@@ -114,10 +114,10 @@ The normal per-game workflow is:
 romwiki build game --game renegade-platinum
 ```
 
-It builds all normalized datasets, comparisons, public downloads, and rendered
-sections. When the profile belongs to one catalog site, that site's wiki root is
-selected automatically. Use `--wiki-root` only for an intentional alternative
-destination.
+It builds all normalized datasets, comparisons, and public data downloads. When
+the profile belongs to one catalog site, that site's wiki root is selected
+automatically and the downloads are written to its `wiki/data/`. Use
+`--wiki-root` only for an intentional alternative destination.
 
 Configured builds use `base_rom` when the registration defines one. Registrations
 without a base build as standalone games. For explicit paths, supply `--base-rom`;
@@ -138,7 +138,7 @@ cache. Cache manifest schema upgrades also cause a one-time complete rebuild.
 
 ### One section
 
-Focused section builds remain available for renderer and extraction development:
+Focused section builds remain available for extraction development:
 
 ```console
 romwiki build pokemon --game renegade-platinum
@@ -149,19 +149,10 @@ romwiki build moves --game renegade-platinum
 romwiki build items --game renegade-platinum
 ```
 
-They follow the same baseline policy as a full game build. `--data-output` names
-the primary dataset file, while `--wiki-output` names the generated section
-directory. `--dev` renders only the representative detail pages declared by the
-site's `dev-pages.toml`, while retaining complete catalog data.
-
-The same flag is available for a complete single-game or sibling-family data
-build. This regenerates the lightweight Markdown selected by the manifest
-without building or serving MkDocs:
-
-```console
-romwiki build game --game renegade-platinum --dev
-romwiki build family --games black-us white-us --versions black white --site-id black-white --dev
-```
+They follow the same baseline policy as a full game build and write the section's
+dataset, comparison, and public download. `build pokemon` also writes the
+abilities and type-chart datasets. `--data-output` names the primary dataset
+file, and `--wiki-root` replaces the wiki root that receives the download.
 
 ### Sibling-version family
 
@@ -177,20 +168,18 @@ define one so comparisons can be merged consistently.
 
 ## Generate
 
-`generate` is the catalog-driven ROM-to-data-and-Markdown workflow. It reads each
-site's `game.toml` and automatically dispatches a single-profile or version-family
+`generate` is the catalog-driven ROM-to-data workflow. It reads each site's
+`game.toml` and automatically dispatches a single-profile or version-family
 build:
 
 ```console
 romwiki generate renegade-platinum
-romwiki generate black-white --dev
-romwiki generate --all --dev
+romwiki generate black-white
+romwiki generate --all
 ```
 
-`--dev` retains complete datasets and catalog indexes while rendering only the
-representative detail pages declared by each site's `dev-pages.toml`. Valid
-extraction caches are reused. Use `--refresh` to replace extraction caches or
-`--clean` to bypass unchanged-generation reuse.
+Valid extraction caches are reused. Use `--refresh` to replace extraction caches
+or `--clean` to bypass unchanged-generation reuse.
 
 Selected sites are generated in parallel worker processes, one per CPU by
 default; `--jobs` caps the worker count and `--jobs 1` generates sites one after
@@ -208,54 +197,22 @@ with the worker count.
 ```console
 romwiki regenerate platinum renegade-platinum
 romwiki regenerate --all
-romwiki regenerate heart-gold-soul-silver --incremental
-romwiki regenerate --all --dev
-```
-
-It:
-
-1. validates every selected site, local ROM registration, profile match, and
-   PokéDB generation;
-2. dispatches single-profile and version-family data builds, in parallel as
-   described for `generate`;
-3. builds the selected MkDocs sites into one artifact;
-4. audits the combined artifact.
-
-Normal runs reuse validated caches. `--refresh` replaces current and baseline
-caches. `--snapshot` is restricted to `--all` and archives the successfully
-audited generated content:
-
-```console
 romwiki regenerate --all --refresh --snapshot
 ```
 
-Development regeneration uses each site's `dev-pages.toml` and `mkdocs.dev.yml`,
-defaults to `build/mkdocs-dev/`, and performs an audit that permits links to
-intentionally filtered detail pages. `--dev` cannot be combined with `--snapshot`.
+It validates every selected site, local ROM registration, profile match, and
+PokéDB generation, then dispatches single-profile and version-family data builds
+in parallel as described for `generate`. `--snapshot` is restricted to `--all`
+and archives the successfully generated public data afterward.
 
-Complete regeneration safely reuses metadata-verified generation and build source
-state by default. The complete workflow verifies the exact output path set, hashes
-every HTML file, and validates the full link graph. `--clean` bypasses publication
-reuse and reparses the audit while repopulating its cache; `--refresh` separately
-replaces ROM extraction caches. Use `site audit --no-cache` to bypass only the
-audit parse cache.
-
-`--incremental` retains the selected site's existing artifact and asks MkDocs to
-process only added or changed source files. ROM extraction caches and deterministic
-rendering still run normally; unchanged generated files retain their modification
-times, so MkDocs can skip them. A metadata inventory under
-`.romwiki/build-state/` binds reuse to the output path, production/development
-mode, site URL, MkDocs versions, site configuration, shared templates and hooks,
-and the complete source-file set. Missing output, changed build inputs, or deleted
-or renamed sources automatically select a clean site build.
+Normal runs reuse validated caches and skip sites whose generation inputs and
+generated files are unchanged. `--clean` bypasses that reuse; `--refresh`
+separately replaces current and baseline extraction caches.
 
 Use a site ID without `--all` while developing a new game or generation. This
-extracts and renders only that selection, reuses valid per-dataset caches, and
+extracts and writes only that selection, reuses valid per-dataset caches, and
 leaves unrelated games untouched. Reserve `regenerate --all` for final integrated
 validation and snapshot publication.
-
-Snapshot creation rejects `--incremental`. Publication snapshots must always come
-from the complete audited `--all` workflow; verified unchanged sites may be reused.
 
 ## Baseline caches
 
@@ -277,42 +234,7 @@ romwiki site list
 romwiki site list --published --json
 ```
 
-Build one or every published site:
-
-```console
-romwiki site build renegade-platinum --output dist
-romwiki site build renegade-platinum --dev
-romwiki site build --all --dev
-romwiki site build renegade-platinum --output dist --incremental
-romwiki site build renegade-platinum --output dist --reuse-unchanged
-romwiki site build --all --output dist
-romwiki site fingerprint renegade-platinum --output dist
-```
-
-`--reuse-unchanged` and `site fingerprint` identify sources by content hash, so
-reuse survives fresh checkouts and snapshot restores; `--incremental` keeps the
-faster size-and-mtime comparison for local iteration.
-
-Without an explicit `--output`, production builds use `dist/` and development
-builds use `build/mkdocs-dev/`. `site build --dev` uses the lightweight MkDocs
-configurations but does not regenerate ROM data or Markdown; run `generate --dev`
-first when renderer output has changed.
-
-Serve a focused selection or every published site with live reload:
-
-```console
-romwiki site serve renegade-platinum --dev
-romwiki site serve --all --dev
-```
-
-Audit a combined artifact:
-
-```console
-romwiki site audit dist
-romwiki site audit dist --max-page-kb 512 --max-images 150
-```
-
-Create or restore the deterministic ROM-free publication snapshot:
+Create, restore, or publish the deterministic ROM-free publication snapshot:
 
 ```console
 romwiki site snapshot
@@ -324,22 +246,31 @@ romwiki site publish-snapshot
 ```
 
 The snapshot is a tracked manifest plus deterministic, ignored per-site archives
-under `sites/generated-wiki/`. `site publish-snapshot` uploads the archives as
-content-addressed assets of the `snapshots` GitHub release through the
-authenticated `gh` CLI; it uploads only missing assets and never replaces
-existing ones (`--repo` selects another repository). `restore-snapshot` uses a
-matching local archive or downloads the asset into `.romwiki/snapshot-cache/`,
-verifying its SHA-256 before extraction. The download base URL defaults to the
-`pokelitee/rom-wiki` release and can be overridden with `--snapshot-url` or
-`ROMWIKI_SNAPSHOT_URL`. `--pokedb-root` records a PokéDB fingerprint in the
-manifest as provenance only. Metadata inventories avoid rereading unchanged generated
-content; content hashes remain the fallback when metadata changes. Unchanged
-archives are not rewritten. Snapshot creation and restore report bounded,
-site-level progress so long hashing and archive operations remain visible without
-logging individual files. Restore continues to accept the former monolithic archive
-during migration. For compatibility, an explicit `.tar.gz` output keeps `site
-snapshot` in the monolithic format.
+under `sites/generated-wiki/`. Each archive holds one published data site's
+`wiki/data/manifest.json` and every download it lists; a site missing the
+download for any of its `generated_sections` cannot be snapshotted.
+`site publish-snapshot` uploads the archives as content-addressed assets of the
+`snapshots` GitHub release through the authenticated `gh` CLI; it uploads only
+missing assets and never replaces existing ones (`--repo` selects another
+repository). `restore-snapshot` uses a matching local archive or downloads the
+asset into `.romwiki/snapshot-cache/`, verifying its SHA-256 before extraction.
+The download base URL defaults to the `pokelitee/rom-wiki` release and can be
+overridden with `--snapshot-url` or `ROMWIKI_SNAPSHOT_URL`. `--pokedb-root`
+records a PokéDB fingerprint in the manifest as provenance only. Metadata
+fingerprints avoid rereading unchanged generated data; content hashes remain the
+fallback when metadata changes. Unchanged archives are not rewritten. Snapshot
+creation and restore report bounded, site-level progress.
 
 Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
-because it guarantees generation, site building, and auditing succeeded before
-the snapshot is replaced.
+because it guarantees generation succeeded before the snapshot is replaced.
+
+### React frontend data
+
+```sh
+romwiki site restore-data
+romwiki site export-web --data-root build/data
+romwiki site snapshot-web
+romwiki site restore-web .romwiki/frontend-snapshot
+```
+
+`restore-data` imports normalized downloads from pinned historical wiki archives. `export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract. `snapshot-web` packages only referenced resources into a deterministic local archive and checksum manifest. `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. These commands do not publish releases or deploy the site.

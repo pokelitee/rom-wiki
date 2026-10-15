@@ -4,7 +4,7 @@ See the [README](../README.md) for quick start and the [organization contributio
 
 ## Environment and checks
 
-Use Python 3.12+ and a virtual environment. Activate it with `.venv\Scripts\Activate.ps1` in PowerShell or `source .venv/bin/activate` in bash.
+Use Python 3.12+, Node 22.12+, and a virtual environment. Activate it with `.venv\Scripts\Activate.ps1` in PowerShell or `source .venv/bin/activate` in bash.
 
 ```sh
 python -m venv .venv
@@ -16,29 +16,34 @@ python -m ruff check .
 python -m mypy src/romwiki
 python -m pytest -q
 python scripts/check_package.py
+npm --prefix web ci
+npm --prefix web run lint
+npm --prefix web run typecheck
+npm --prefix web test
+npm --prefix web run build
 ```
 
-CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images. One Ubuntu job also downloads, restores, and validates every publication snapshot, catching stale source fingerprints and unpublished snapshot assets before merge. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
+CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
 
-The installed CLI is distributed as a Python package; profiles, site configuration, templates, and snapshots belong to the repository checkout. Wiki generation must run with those repository resources available. A wheel alone is not a bundled copy of the published wiki corpus.
+The installed CLI is distributed as a Python package; profiles, site configuration, authored content, and snapshots belong to the repository checkout. Wiki generation must run with those repository resources available. A wheel alone is not a bundled copy of the published wiki corpus.
 
 ## Architecture and reference guides
 
-Platform readers open containers, engines decode records, pipelines normalize/enrich/compare data, and renderers consume normalized records. Keep ROM offsets and engine encodings out of rendering code.
+Platform readers open containers, engines decode records, and pipelines normalize, enrich, compare, and publish data. Keep ROM offsets and engine encodings out of published data consumers.
 
 - [Architecture](development/architecture.md): repository layout, orchestration, caches, and ownership boundaries.
 - [Adding a game](development/adding-a-game.md): profiles, engines, tests, and publication checklist.
 - [Data contracts](development/data-contracts.md): normalized and published JSON guarantees.
-- [Frontend](development/frontend.md): shared MkDocs templates, styling, and preview behavior.
+- [Frontend](development/frontend.md): React architecture, local preview, snapshots, and browser checks.
 - [Open items](development/open-items.md): unresolved selector research and known limitations.
 - [CLI reference](cli-reference.md): commands and arguments.
-- [Operations](operations.md): local inputs, generation, snapshots, deployment, and recovery.
+- [Operations](operations.md): local inputs, generation, snapshots, publishing, and recovery.
 
-Keep game-specific provenance and limitations in `sites/games/<site-id>/wiki/data-sources.md`. Shared publication prose belongs in `sites/shared/partials/`; frontend templates and assets belong in `sites/shared/overrides/`. The deeper reference guides remain separate because they cover different maintainers' tasks.
+Keep game-specific provenance and limitations in `sites/games/<site-id>/wiki/data-sources.md`. Shared publication prose belongs in `sites/shared/partials/`. The deeper reference guides remain separate because they cover different maintainers' tasks.
 
 ## Dependencies and contract changes
 
-`pyproject.toml` declares supported package extras. `requirements/docs.txt` pins documentation/build dependencies; `requirements/dev.txt` includes those pins plus test, typing, analysis, and package-verification tools. CI and deployment use these exact versions. Update the pins together, keep transitive dependencies consistent, and run checks before merging. Dependabot opens grouped weekly Python and GitHub Actions updates.
+`pyproject.toml` declares supported package extras. `requirements/dev.txt` pins the complete development environment: packaging, test, typing, analysis, and package-verification tools. CI uses these exact versions. Update the pins together, keep transitive dependencies consistent, and run checks before merging. Dependabot opens grouped weekly Python, npm, and GitHub Actions updates.
 
 Update schema definitions, tests, and the data-contract guide together when changing normalized or published fields. Use synthetic ROM fixtures for parser regressions. Complete generation needs local inputs; report when verification was limited to offline tests or restored publication snapshots.
 

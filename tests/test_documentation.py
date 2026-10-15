@@ -88,11 +88,11 @@ class DocumentationTests(unittest.TestCase):
             data_sources = (site_root / "wiki/data-sources.md").read_text(
                 encoding="utf-8"
             )
-            navigation = site.config_path.read_text(encoding="utf-8")
             normalized_index = " ".join(index.split())
 
             with self.subTest(site=site.id):
-                self.assertTrue(index.startswith("---\ntemplate: game-home.html\n"))
+                self.assertTrue(index.startswith("---\ntitle: "))
+                self.assertNotIn("template:", index)
                 self.assertIn("This wiki covers", index)
                 self.assertIn("published as", index)
                 self.assertIn(
@@ -107,20 +107,6 @@ class DocumentationTests(unittest.TestCase):
                     "## Engine notes",
                 ):
                     self.assertIn(heading, data_sources)
-                for entry in (
-                    "Home: index.md",
-                    "Data Sources: data-sources.md",
-                    "Data Downloads: data/index.md",
-                    "Game Data:",
-                ):
-                    self.assertIn(entry, navigation)
-                self.assertIn(
-                    "  - World:\n"
-                    "      - Wild Encounters: encounters/index.md\n"
-                    "      - Trainers: trainers/index.md\n"
-                    "      - Locations: locations/index.md\n",
-                    navigation,
-                )
 
     def test_generation_five_coverage_notes_match_supported_links(self) -> None:
         shared_bw_notes = (

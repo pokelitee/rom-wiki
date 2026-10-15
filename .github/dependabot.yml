@@ -1,5 +1,12 @@
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: "/web"
+    schedule:
+      interval: weekly
+    groups:
+      frontend-dependencies:
+        patterns: ["*"]
   - package-ecosystem: pip
     directory: "/"
     schedule:

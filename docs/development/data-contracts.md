@@ -1,20 +1,14 @@
 # Data contracts
 
-ROM Wiki has three publication layers with different responsibilities:
+Each site's `wiki/data/*.json.gz` downloads contain the complete normalized
+datasets, including ROM facts, provenance, relationships, and PokéDB reference
+objects. Comparison/diff data is not published there; it's changelog data, not
+part of the dataset itself.
 
-- Detail Markdown is curated for people. It presents every supported mechanic
-  that is useful on the page, but does not mirror normalized JSON field-for-field.
-- `catalog.json` is a compact, versioned presentation index used by the local
-  filters and static fallback. It is not a bulk-data API.
-- `data/*.json.gz` contains the complete normalized datasets used by renderers,
-  including ROM facts, provenance, relationships, and PokéDB reference objects.
-  Comparison/diff data is not published here; it's changelog data, not part of
-  the dataset itself.
-
-The in-memory `RelationshipIndex` is not a fourth publication layer. It derives
-reverse references needed by pages and catalogs from normalized datasets once per
-build. Its encounter, acquisition, trainer, learner, and location references are
-presentation-only views of facts already present in public downloads.
+The in-memory `RelationshipIndex` is not a publication layer. It derives reverse
+references for presentation from normalized datasets. Its encounter, acquisition,
+trainer, learner, and location references are presentation-only views of facts
+already present in public downloads.
 
 Every dataset envelope contains a dataset name, game and engine identity, schema
 version, top-level record count, source metadata, and its dataset-specific payload.
@@ -37,12 +31,11 @@ required presence. Do not invalidate unrelated datasets.
 
 Local orchestration and publication-tooling formats keep their own version
 constants beside their owning module instead of `schema/versions.py` — for
-example `sites/build_state.py`'s `BUILD_STATE_SCHEMA_VERSION`,
-`sites/snapshot.py`'s `SNAPSHOT_SCHEMA_VERSION` and
-`DIRECTORY_SNAPSHOT_SCHEMA_VERSION`, `sites/data_exports.py`'s
+example `sites/snapshot.py`'s `DIRECTORY_SNAPSHOT_SCHEMA_VERSION`,
+`sites/data_exports.py`'s
 `PUBLIC_DATA_MANIFEST_SCHEMA_VERSION`, and
 `pipeline/build/regeneration.py`'s `REGENERATION_STATE_SCHEMA_VERSION`. These
-version an ignored local cache, snapshot archive, or manifest shape, not a
+version an ignored local state file, snapshot archive, or manifest shape, not a
 public dataset contract, so they change independently of the raw/enriched
 schemas above. A version constant for an actual dataset field, shape, or
 required presence belongs in `schema/versions.py` regardless of which module
@@ -61,7 +54,7 @@ published number keeps increasing.
 
 Sibling-version merging requires the same dataset kind, schema version, feature
 contract, and semantic format on every side. Differing current records are retained only for
-dataset kinds whose renderers explicitly support version variants.
+dataset kinds registered as supporting version variants.
 
 ## Public downloads
 
@@ -118,22 +111,10 @@ stay unrelated rather than being grouped by names, adjacent IDs, levels, or part
 similarity. Runtime selectors without a code or table anchor remain explicit
 capability gaps rather than an excuse to publish inferred relationships.
 
-The public renderer names only Starter, Difficulty, Season, Rematch, and Version.
-Story-stage-only and other neutral relationships render as `Variant N`. The
-resolver and renderer never combine exact trainer records. Encounter row
-aggregation and canonical seasonal pages are likewise presentation-only: all
-source slots, seasonal records, weights, provenance, and `version_variants` stay
-intact in normalized downloads and comparisons. Typed public routes
-(`trainer-NNNN`, `header-NNN`, and `map-NNN`) are distinct from raw numeric IDs
-and native names such as `map_191`.
-
-Conditional encounter sources (Headbutt, Hidden Grotto, Daily Swarm, Safari
-Zone) each render their own page under the encounters section, keyed by their
-own catalog identity rather than an anchor on the owning `header-NNN` location
-page. The owning location page links to that page instead of embedding its
-table. Catalog entries and Pokémon or item backlinks use those same typed
-routes; presentation placement never merges conditional pools into ordinary
-wild slots.
+The resolver never combines exact trainer records. All source slots, seasonal
+records, weights, provenance, and `version_variants` stay intact in normalized
+downloads and comparisons, and conditional encounter pools (Headbutt, Hidden
+Grotto, Daily Swarm, Safari Zone) are never merged into ordinary wild slots.
 
 `version_variants` describe different values stored in sibling ROM datasets.
 Battle-family conditions describe runtime selection among trainer records. The
@@ -143,5 +124,13 @@ indexed by Pokémon appearances, items, locations, and other backlinks.
 
 Reference prose is presentation metadata rather than a mechanical record
 difference. When sibling ROMs provide different effect or flavor text, merging
-retains it under `reference_variants` and renderers show version content tabs.
+retains it under `reference_variants`.
 Identical prose remains one shared reference object.
+
+## React publication contract
+
+The frontend contract is versioned independently by `FRONTEND_SCHEMA_VERSION`. The top-level manifest describes published games, section indexes and metadata resources, authored documents, comparison resources, and complete normalized downloads. Index entries contain a stable route ID, label, search fields, filter/sort fields, and a content-addressed detail chunk path. Each chunk maps route IDs to an unchanged normalized record plus derived reverse relationships. Up to 50 records share a chunk; seasonal encounters share a route and retain each exact season record.
+
+Frontend comparisons are separate presentation resources. They retain comparison statuses, changes, removed-record snapshots, and baseline identity, with a current detail route where available. Normalized downloads do not acquire comparison fields. Unsupported capabilities remain distinct from supported mechanics with no entries.
+
+Frontend snapshot schema 1 pins the complete gzip archive and every resource checksum. Restoration validates the entire inventory and member checksums before writing files, then verifies all manifest references and downloadable archives. Resource filenames are content-addressed; stale unreferenced build resources are excluded from snapshots.

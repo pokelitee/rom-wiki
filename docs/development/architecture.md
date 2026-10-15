@@ -1,7 +1,8 @@
 # Architecture
 
-ROM Wiki turns game-specific binary data into normalized records and then renders
-those records as static documentation. The intended flow is:
+ROM Wiki turns game-specific binary data into normalized records and then
+publishes those records as deterministic data downloads for its wikis. The
+intended flow is:
 
 ```text
 configured clean ROM                configured patched ROM
@@ -17,11 +18,12 @@ identify -> decode -> normalized raw cache  identify -> decode -> normalized raw
               semantic dataset comparison
                          |
                          v
-                 renderer -> MkDocs site
+            public data downloads (wiki/data)
 ```
 
-The key design rule is that renderers consume normalized data. They must not read
-ROM offsets, archive members, script opcodes, or other engine-specific structures.
+The key design rule is that publication and its consumers use normalized data.
+They must not read ROM offsets, archive members, script opcodes, or other
+engine-specific structures.
 Engine-specific encodings are translated before enrichment; enrichment resolves
 cross-dataset identities and optional reference media without interpreting binary
 mechanics.
@@ -33,21 +35,20 @@ The top-level directories follow their owning layer:
 ```text
 config/                 local-registry examples
 profiles/               committed ROM and hack identification contracts
-src/romwiki/            extraction, normalization, rendering, and site tooling
+src/romwiki/            extraction, normalization, publication, and site tooling
 tests/                   source-aligned automated coverage
 sites/games/            per-game configuration and authored wiki content
 sites/portal/           catalog landing site
-sites/shared/           common frontend and reusable publication partials
-sites/generated-wiki/   deterministic generated-page snapshot archives
+sites/shared/           reusable publication partials
+sites/generated-wiki/   historical data snapshot references
+web/                    shared React frontend and generated local data
 docs/development/       contributor documentation
 ```
 
-`sites/shared/overrides/` owns the frontend templates and assets, while
-`sites/shared/partials/genN/` owns publication prose reused by games with the same
-generation and engine-family formats. ROM- or hack-specific provenance remains in
-each game's `wiki/data-sources.md`. Generated pages, build artifacts, caches, and
-local ROM registrations remain ignored working state except for the explicit
-archives under `sites/generated-wiki/`.
+`sites/shared/partials/genN/` owns publication prose reused by games with the
+same generation and engine-family formats. ROM- or hack-specific provenance
+remains in each game's `wiki/data-sources.md`. Generated data, build artifacts,
+caches, local ROM registrations, and generated archives remain ignored; reviewed snapshot manifests pin immutable release assets.
 
 ## Local input registry
 
@@ -83,13 +84,11 @@ the normalized outputs. A focused section build still extracts that section's
 baseline before its patched equivalent. The escape hatch `--hack-only` is explicit;
 configured builds fail clearly when their clean base image is missing.
 
-`pipeline/build/rendering.py` publishes what a workflow builds. Focused section,
+`pipeline/build/outputs.py` writes what a workflow builds. Focused section,
 complete game, and version-family builds all use it to write normalized datasets,
-comparisons, and public downloads, to assemble the shared reference and
-relationship indexes, and to invoke each section renderer through one uniform
-adapter. Optional companion inputs such as moves follow the profile's enabled
-sections, so a partial vertical slice renders without them. The CLI only resolves
-inputs and output paths before handing a workflow to this service.
+comparisons, and public downloads. Written sections follow the profile's enabled
+sections, so a partial vertical slice publishes only what it supports. The CLI
+only resolves inputs and output paths before handing a workflow to this service.
 
 Comparisons operate on stable normalized keys: Pokémon personal member, numeric
 ability/move/item/trainer IDs, encounter area ID, and location header ID. They
@@ -98,8 +97,8 @@ deltas. Presentation-only reference objects, sprites, provenance, and engine-onl
 `source_fields` do not count as game-mechanic changes. Nested relationships compare
 stable numeric identities,
 so spelling, spacing, or slug changes are reported on the referenced entity rather
-than falsely changing every record that links to it. Removed records receive
-comparison-only snapshot pages.
+than falsely changing every record that links to it. Removed records retain a
+snapshot of their last values in the comparison.
 
 ## Layers
 
@@ -185,7 +184,7 @@ engine layer where format-specific rules are declared.
 `src/romwiki/schema/` define canonical extraction contracts for both raw and
 enriched concepts such as Pokémon personal data, moves, encounters, trainers, and
 locations. Raw contracts may retain storage coordinates needed for auditing;
-enriched contracts expose the normalized values consumed by renderers. Every
+enriched contracts expose the normalized values consumers read. Every
 dataset uses the shared envelope validated by `schema/datasets.py`: a
 `schema_version`, game and engine identifiers, semantic dataset name, record count,
 source metadata, and record-level provenance where appropriate.
@@ -195,12 +194,9 @@ raw normalized datasets, `enrichment/` resolves cross-dataset facts, `transforms
 compares and relates normalized datasets, and `build/` owns orchestration and cache
 state. `semantics/` owns stable identities and labels shared across lifecycle
 stages. Location and trainer strategies are nested beneath their extraction
-dispatchers. Shared dataset serialization lives in `pipeline/io.py`. Schema and
-renderer packages remain flat because their files map directly to public dataset
-concepts and rendered sections; a section renderer too large for one module
-becomes a package named after its section (such as `renderers/mkdocs/trainers/`)
-that keeps the same public entry point. Pipeline tests mirror these ownership
-boundaries.
+dispatchers. Shared dataset serialization lives in `pipeline/io.py`. Schema
+modules remain flat because their files map directly to public dataset concepts.
+Pipeline tests mirror these ownership boundaries.
 
 Simple extractors construct those required fields through `dataset_envelope()` and
 then add only dataset-specific summaries. Companion joins keep mechanic-specific
@@ -213,7 +209,7 @@ there is no compatibility facade. Shared ROM-derived name and entity-reference
 helpers live in neutral enrichment modules rather than being duplicated.
 
 Enriched datasets also carry a normalized `features` list derived from the engine
-adapter and exact profile configuration. Renderers use this contract to distinguish
+adapter and exact profile configuration. Consumers use this contract to distinguish
 "this game does not have this mechanic" from "this record has no entries." Version
 families may merge only datasets with identical feature contracts; a mismatch fails
 at the pipeline boundary instead of producing an internally inconsistent site.
@@ -238,13 +234,13 @@ versus `SeasonalEncounterArea`, or `SplitPickupTable` versus
 `SlidingPickupTable`). Generation and game identity remain engine/profile and
 dataset metadata, not part of the normalized type name.
 
-Shared pipeline and renderer dispatch follows the adapter's semantic format
-metadata (`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and
-so on). Generation numbers and particular engine IDs must not select a shared code
-path. Enrichment copies the encounter and location formats onto their dataset
-envelopes (`encounter_format` and `location_format`), and renderers read them
-there: no module under `renderers/` imports `romwiki.engines`. Like features,
-version families may merge only datasets with identical formats.
+Shared pipeline dispatch follows the adapter's semantic format metadata
+(`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and so on).
+Generation numbers and particular engine IDs must not select a shared code path.
+Enrichment copies the encounter and location formats onto their dataset envelopes
+(`encounter_format` and `location_format`), and consumers read them there rather
+than resolving the engine. Like features, version families may merge only
+datasets with identical formats.
 
 Storage choices are declared beside those semantic formats. Egg moves distinguish
 overlay tables, single-table archives, and per-species archives; item extraction
@@ -255,13 +251,13 @@ locator members required by each declaration before extraction begins.
 Conditional special encounters retain their versioned serialized shape, but shared
 consumers traverse them through `pipeline/enrichment/special_encounters.py`. That semantic
 view supplies method, condition, slots, and display grouping without requiring
-renderers or relationship indexes to inspect an engine-family marker.
+consumers or relationship indexes to inspect an engine-family marker.
 
-Location output shape and storage strategy are separate contracts. Renderers select
-the normalized `event-map` or `encounter-map` shape, while extraction selects the
-corresponding ARM9-table or archive-backed strategy. A new family can therefore
-reuse an existing renderer without pretending its map data uses another game's
-storage layout.
+Location output shape and storage strategy are separate contracts. Consumers
+select the normalized `event-map` or `encounter-map` shape, while extraction
+selects the corresponding ARM9-table or archive-backed strategy. A new family can
+therefore reuse existing consumers without pretending its map data uses another
+game's storage layout.
 
 The shared location contract also carries `section_name` and
 `section_name_source` fields. The resolver prefers labels explicitly owned by the
@@ -269,10 +265,8 @@ matched profile, keyed by exact header ID or a native internal map name, then us
 the extracted internal map name verbatim. It does not decode semantic floor or
 room names from structural ROM identifiers. Records without an internal name
 retain a null section. Relationship construction exposes one header-keyed
-location-name index to every renderer, keeping the player-facing name consistent
-across location pages, warps, connections, encounters, trainer locations, and
-item backlinks. Rendered tables keep Section, Map header, Location-name index,
-and Internal map values in dedicated columns.
+location-name index, keeping the player-facing name consistent across locations,
+warps, connections, encounters, trainer locations, and item backlinks.
 
 Trainer party data has its own `party_schema_version` because its optional mechanics
 will expand independently of the surrounding trainer dataset. The shared contract
@@ -287,10 +281,10 @@ table read from ARM9; Pokémon gender also uses the current game's species ratio
 The two-byte Gen IV difficulty value also reproduces the deterministic random-IV
 fallback used when its scaled value exceeds 31. The adapter calculates unmodified
 summary stats from the current game's base stats, level, IVs, EVs, and nature;
-renderers consume those normalized values without implementing a generation's
+consumers read those normalized values without implementing a generation's
 stat formula.
-Raw bytes such as Gen IV `difficulty` remain under `source_fields`; renderers and
-semantic comparisons never consume that mapping.
+Raw bytes such as Gen IV `difficulty` remain under `source_fields`; consumers and
+semantic comparisons never read that mapping.
 
 Trainer enrichment resolves Pokémon through the current game's enriched Pokémon
 dataset. This is required for hacks that change forms, names, sprites, or ability
@@ -317,53 +311,39 @@ Exact trainer rewards use a shared normalized contract while retaining
 generation-specific decoding. Engine parsers expose the stored multiplier and its
 provenance; `pipeline/enrichment/trainer_rewards.py` calculates a payout only when every
 required input is exact. AI battle items, post-victory items, and prize money are
-separate concepts throughout extraction and rendering. An unsupported or
+separate concepts throughout extraction and publication. An unsupported or
 incomplete payout is omitted rather than estimated.
 
 Derived datasets may invert normalized relationships without parsing the ROM again.
 For example, the ability dataset combines the ROM ability-name table with ability
-assignments already present in normalized Pokémon records, producing ability pages
-and Pokémon backlinks from one authoritative extraction. The item dataset follows
+assignments already present in normalized Pokémon records, producing ability
+records and Pokémon backlinks from one authoritative extraction. The item dataset follows
 the same pattern, joining normalized mechanics with item references from Pokémon,
 trainers, locations, shops, gifts, trades, and evolutions.
 
-Cross-dataset reverse links used only for presentation are built once per full or
-version-family build by `pipeline/transforms/relationships/`. Its focused
-`RelationshipIndex` covers Pokémon encounters, acquisition sources and trainer
-appearances; move learners; and location-to-encounter variants. It preserves stable
-IDs, forms, versions, deterministic ordering, and deduplication before a renderer
-sees the data. Renderers format those references but do not rescan unrelated
-datasets to recreate joins. Focused single-section commands may construct the same
-index from companion datasets made available by the build context.
+`pipeline/transforms/relationships/` derives cross-dataset reverse links for
+presentation. Its focused `RelationshipIndex` covers Pokémon encounters,
+acquisition sources and trainer appearances; move learners; and
+location-to-encounter variants. It preserves stable IDs, forms, versions,
+deterministic ordering, and deduplication so consumers do not rescan unrelated
+datasets to recreate joins. Data generation does not currently invoke it.
 
 The relationship index is deliberately a presentation artifact, not a normalized
 download. Its source facts and forward relationships already exist in the public
 datasets; publishing the reverse index would create a second contract that could
-drift without adding ROM facts.
-
-Normalized relationships identify entities by stable IDs, not page paths. The
-MkDocs reference resolver maps those identities and resolved route keys to Markdown
-source links or published directory URLs. This keeps routing out of extraction and
-ensures catalog and detail-page links share one implementation.
-
-Encounter aggregation is presentation-only: renderers group exact slots by
-species and form inside one method, season, and version, sum their weights, and
-show their level envelope. Generation V retains each seasonal record while
-publishing one `map-NNN` page with season tabs. Public routes use typed IDs such
-as `trainer-0782`, `header-191`, and `map-002`; native ROM identifiers remain in
-their named audit fields.
+drift without adding ROM facts. Normalized relationships identify entities by
+stable IDs, not page paths, which keeps routing out of extraction.
 
 Type effectiveness follows a separate engine/profile contract. Each data-driven
 profile must explicitly select a chart registered by its engine. A hack may declare
 additional types and validated sparse matchup overrides; it cannot silently inherit
 its parent's chart selection. `pipeline/enrichment/type_charts.py` validates the complete
 effective matrix, represents multipliers exactly, emits the normalized public
-`types` dataset, and provides the single defensive calculator reused by Pokémon
-pages. Generation-specific registrations point to immutable chart-family data, so
+`types` dataset, and provides a single defensive-effectiveness calculator. Generation-specific registrations point to immutable chart-family data, so
 Generations II through V share one authoritative matrix while retaining explicit
 `gen2`, `gen3`, `gen4`, or `gen5` profile identity as their engines are added. A
 future changed chart receives a new family rather than conditionals in the shared
-calculator. This keeps generation mechanics out of renderers while allowing future
+calculator. This keeps generation mechanics out of consumers while allowing future
 ROM-native chart extraction without changing their contract.
 
 `src/romwiki/sources/` enriches normalized ROM facts with external reference data.
@@ -395,107 +375,49 @@ values remain authoritative; the `_clean()` comparison step strips every
 `reference`/`sprite`/`sprites` object before diffing so presentation data never
 produces a false "changed" result.
 
-### Renderers and sites
+### Sites and public data
 
-`src/romwiki/renderers/` turns normalized datasets into documentation. The MkDocs
-renderer has no responsibility for identifying or parsing a ROM.
+Enrichment entry points return the shared enriched dataset and record contracts in
+`schema/rendering.py`. They are `TypedDict`s, so mypy checks field access without
+changing the serialized dicts; raw fields spread through from engine-specific
+extraction are typed only where the shared contract defines them.
 
-Enrichment entry points return, and renderer entry points accept, the shared
-enriched dataset and record contracts in `schema/rendering.py`. They are
-`TypedDict`s, so mypy checks field access without changing the serialized
-dicts; raw fields spread through from engine-specific extraction are typed only
-where the shared contract defines them. Reusable Markdown framing lives in `components.py`: table
-specifications own headers and alignment while preserving already-rendered cells,
-and section framing owns heading separation without interpreting section content.
-`html.py` holds the raw-HTML equivalents that converted detail pages use for their
-bodies (see the HTML detail-page bodies section of `frontend.md`).
-Location presentation shared by event-map and encounter-map records lives in the
-neutral `location_components.py` (rendering helpers) and `location_features.py`
-(the shared per-section feature/anchor table each family's summary card and
-locations-catalog builder both read from); sibling renderers must not import
-each other's private helpers.
+`sites/games/<slug>/` contains one independently configurable game wiki: its
+`game.toml` descriptor and authored content under `wiki/`. `sites/portal/` holds
+the catalog landing site. `sites/catalog.py` loads and validates those
+descriptors, including each data-driven site's profiles, generation, and declared
+`generated_sections`. Reusable engine-family data-source prose lives under the
+generation-grouped `sites/shared/partials/` subdirectories and is included only by
+explicit game consumers.
 
-`sites/games/<slug>/` contains one independently configurable game wiki. The site
-catalog builds those wikis and the portal into one GitHub Pages artifact while
-preserving stable per-game URLs.
+Every build publishes each complete normalized dataset as deterministic
+`wiki/data/<kind>.json.gz`. A machine-readable `manifest.json` records schema
+versions, record counts, compressed sizes, and SHA-256 checksums. Comparisons stay
+under `build/data/` and are exported separately under `wiki/data/comparisons/`; they are not entries in the normalized-download manifest. React consumes compact indexes and detail chunks derived from these data contracts. Snapshot creation and restoration validate the manifest
+and every archive.
 
-All sites inherit their Material configuration and design system from
-`sites/shared/`. Reusable engine-family data-source prose lives under its
-generation-grouped `partials/` subdirectory and is included only by explicit game
-consumers. A repository-local MkDocs hook loads the site catalog and exposes the
-current site plus every published game to the shared templates. The portal and
-game selector are therefore generated from site descriptors rather than a second
-maintained game list.
-
-Section renderers emit both Markdown and a compact, versioned `catalog.json`.
-Shared JavaScript progressively renders searchable and filterable catalog tables;
-the Markdown index retains a complete static fallback. Catalog JSON is a
-presentation index and does not replace the normalized datasets. Comparative
-catalogs share a Change status filter and column. Every current detail page has an
-explicit base-game section, including a verified-unchanged state, and the generated
-Changes page summarizes all sections.
-
-Full builds also publish each complete normalized dataset as deterministic
-`wiki/data/<kind>.json.gz`, plus comparison datasets when present. A
-machine-readable manifest records schema versions, record counts, compressed sizes,
-and SHA-256 checksums. These archives are the complete data interface; Markdown is
-the curated human interface and catalog JSON remains a small presentation index.
-Snapshot creation and restoration validate the manifest and every archive.
-
-### Incremental site builds
-
-Incremental publication is a site-rendering concern, separate from extraction and
-normalized dataset contracts. Renderers always receive complete normalized inputs
-and continue to prune stale Markdown. Content-aware atomic writes preserve the
-modification time of unchanged output, allowing an explicit `--incremental` site
-build to use MkDocs dirty mode for only added or changed files.
-
-Reuse is conservative. `.romwiki/build-state/` records the complete wiki source
-set and fingerprints every non-content input that can affect HTML: the selected
-site configuration and descriptor, shared templates and assets, MkDocs
-hooks, relevant package versions, build mode, site URL, and output root. A missing
-artifact path, incompatible fingerprint, source deletion, or source rename falls
-back to `mkdocs build --clean`. Complete regeneration defers the combined output
-path-set comparison to the audit's existing artifact discovery pass, which then
-hashes the output content. Additions and edits use `--dirty`; renderers are
-responsible for updating all transitively affected pages such as catalogs,
-backlinks, and navigation neighbors before MkDocs runs.
-
-This state is an ignored local optimization, not a publication artifact or data
-cache. Complete snapshot builds use verified reuse and cannot use dirty incremental
-mode. The combined artifact audit also remains complete, so incremental development
-does not weaken the release correctness boundary.
-
-Extraction and publication reuse are intentionally independent. A selected-site
-regeneration can reuse valid raw datasets without rebuilding other sites; adding
-`--incremental` additionally reuses unchanged HTML for that selected site. The
-complete `--all` workflow remains the release boundary rather than a prerequisite
-for ordinary game or engine development.
+The former page renderer remains in Git history at `04b72f2`. React presentation lives in `web/`; see [Frontend](frontend.md).
 
 ### Cache invalidation
 
 Each cache layer is keyed by the inputs that can change its output:
 
-| Input | Raw extraction cache | Regeneration skip | Site build reuse | Snapshot staleness | Audit cache |
-| --- | --- | --- | --- | --- | --- |
-| ROM SHA-256 | yes | yes | via pages | via pages | via HTML |
-| Resolved profile values | yes | yes | via pages | yes | via HTML |
-| Extractor import closure and engine adapter descriptor | yes, per dataset | yes | via pages | yes | via HTML |
-| Any other `src/romwiki/**/*.py` | no | yes | via pages | yes, except publishing-only modules | via HTML |
-| Raw schema version and `CACHE_REVISION` | yes | yes | via pages | yes | via HTML |
-| PokéDB JSON | no | yes | via pages | recorded as provenance only | via HTML |
-| `game.toml`, `dev-pages.toml` | no | yes | yes | yes | via HTML |
-| Templates, assets, hooks, package versions, site URL | no | no | yes | no | via HTML |
-| Generated page files | no | yes | yes | yes | yes |
+| Input | Raw extraction cache | Regeneration skip | Snapshot staleness |
+| --- | --- | --- | --- |
+| ROM SHA-256 | yes | yes | via data |
+| Resolved profile values | yes | yes | yes |
+| Extractor import closure and engine adapter descriptor | yes, per dataset | yes | yes |
+| Any other `src/romwiki/**/*.py` | no | yes | yes, except snapshot-only modules |
+| Raw schema version and `CACHE_REVISION` | yes | yes | yes |
+| PokéDB JSON | no | yes | recorded as provenance only |
+| `game.toml` | no | yes | yes |
+| Generated data files | no | yes | yes |
 
 Raw extraction caches live under `build/data/`; the others live under
-`.romwiki/`. Site build reuse compares file metadata locally and file content for
-`site fingerprint` and `site build --reuse-unchanged`, so CI checkouts that reset
-modification times still hit the cache. The regeneration fingerprint reuses file
-digests recorded in `.romwiki/file-digests.json` while a file's size and
-modification time are unchanged, and hashes the content otherwise. `--refresh`
-bypasses extraction caches, and `--clean` bypasses regeneration skips, site reuse,
-and the audit cache.
+`.romwiki/`. The regeneration fingerprint reuses file digests recorded in
+`.romwiki/file-digests.json` while a file's size and modification time are
+unchanged, and hashes the content otherwise. `--refresh` bypasses extraction
+caches, and `--clean` bypasses regeneration skips.
 
 ## Reuse boundaries
 
@@ -508,11 +430,11 @@ There are three common extension cases:
    game differs.
 3. **Another platform or generation:** add a platform reader when necessary, a new
    engine decoder, and a pipeline adapter that emits the existing normalized
-   contracts. Existing renderers can then be reused for compatible concepts.
+   contracts. Existing consumers can then be reused for compatible concepts.
 
 A new engine should not be forced into Generation IV assumptions. If a game has a
 real concept that the schemas cannot represent, extend the normalized schema with
-an optional or versioned field and update renderers to degrade gracefully for games
+an optional or versioned field and update consumers to degrade gracefully for games
 that do not provide it.
 
 ## Platform and engine registries
@@ -557,9 +479,8 @@ parsers. Profile layout still decides which supported optional sections are
 enabled; it cannot enable a section the engine has not declared.
 
 Data-driven sites may publish a truthful partial vertical slice. The site always
-includes Pokémon, the type chart, and public data downloads; its remaining
-generated sections must exactly match the datasets enabled by the engine and
-profile contracts.
+publishes Pokémon and type-chart downloads; its remaining generated sections must
+exactly match the datasets enabled by the engine and profile contracts.
 
 But a pipeline
 module that has only ever run against one engine can still carry that engine's
@@ -577,8 +498,8 @@ configures it, mirroring `pipeline/extraction/reference_names.py`
 adding a second engine, not evidence the registry boundary is wrong.
 
 `tests/engines/test_contract.py` is the regression guard for this boundary: it
-registers a throwaway fake engine at test time and asserts that enrichment and
-rendering consume its output correctly, with no gen4-specific branching. Extend
+registers a throwaway fake engine at test time and asserts that enrichment
+consumes its output correctly, with no gen4-specific branching. Extend
 that test file, rather than adding a first real second engine's assumptions to it,
 if the contract needs to grow.
 
@@ -592,10 +513,10 @@ throwaway fake platform, the same pattern `tests/engines/test_contract.py`
 uses for the engine boundary above.
 
 The `gen4_platinum` and `gen5_bw` engines exercise the complete normalized pipeline
-and shared renderer system against two real generations, including retail games,
-single-version hacks, and sibling-version hack families. The `gen4_hgss` adapter
-independently exercises Pokémon, ability, move, item, encounter, trainer, and
-location pipelines and renderers against HeartGold and SoulSilver. Trainer-to-map
+against two real generations, including retail games, single-version hacks, and
+sibling-version hack families. The `gen4_hgss` adapter independently exercises
+Pokémon, ability, move, item, encounter, trainer, and location pipelines against
+HeartGold and SoulSilver. Trainer-to-map
 references from direct overworld trainer events are available, but scripted battle
 references and trainer-class payout multipliers remain explicitly unavailable
 pending exact ROM locators. Generation-specific binary decoding stays in each
@@ -618,31 +539,28 @@ format.
 Normalized schemas are implemented as Python dataclasses and typed contracts
 serialized to JSON.
 
-These are known extension tasks, not reasons to combine extraction and rendering.
+These are known extension tasks, not reasons to combine extraction and publication.
 The existing boundary remains the intended long-term design.
 
 ## Generated publication snapshot
 
-ROM-derived Markdown remains ignored as individual files, but deployment must be
-reproducible without distributing ROM inputs. `romwiki site snapshot` packs all
-generated game sections and public data archives into the deterministic, tracked
-`sites/generated-wiki/` manifest and deterministic per-site archives. Each Pages
-job restores only its site's archive before invoking MkDocs. Their manifests use
-file metadata as a fast unchanged check and content hashes as the fallback, and
-fingerprint the parser, pipeline, renderer, and profile sources. A stale snapshot
-is therefore rejected; publishing-only
-build, audit, and MkDocs hook changes do not invalidate generated content.
-Required Pokémon, ability, item, move, encounter, trainer, location, type-chart,
-and public-data sections are validated before a site build, preventing an absent
-publication input from degrading into a successful partial deployment.
+Generated data remains ignored as individual files, but restoring it must be
+reproducible without distributing ROM inputs. `romwiki site snapshot` packs each
+published data site's `wiki/data/manifest.json`, every download it lists, and its separate comparison resources into a
+deterministic per-site archive, tracked through `sites/generated-wiki/manifest.json`.
+Unreferenced files are excluded. Comparative sites must include every declared section comparison. Schema-4 historical releases remain readable through a data-only compatibility path; current schema-5 archives retain source-fingerprint validation. The snapshot
+manifest uses file metadata as a fast unchanged check and content hashes as the
+fallback, and fingerprints the parser, pipeline, and profile sources, so a stale
+snapshot is rejected on restore; snapshot-only modules do not invalidate it. A
+site whose downloads omit any declared generated section cannot be snapshotted,
+preventing an absent input from degrading into a partial publication.
 
 `romwiki regenerate` is the catalog-driven owner of complete local regeneration.
 It preflights all selected ROM registrations and generation-specific PokéDB
-outputs before writing, dispatches single-profile and version-family sites through
-their existing build workflows, builds the selected MkDocs sites, and audits the
-combined artifact. Snapshot creation is an optional final step restricted to
-complete `--all` runs. This orchestration layer does not reimplement extraction,
-merging, rendering, site building, auditing, or snapshot behavior.
+outputs before writing, then dispatches single-profile and version-family sites
+through their existing build workflows. Snapshot creation is an optional final
+step restricted to complete `--all` runs. This orchestration layer does not
+reimplement extraction, merging, or snapshot behavior.
 
 Sites are generated in a process pool bounded by `--jobs`. Each site writes only
 its own data, wiki, and state directories, but clean-ROM baseline caches can be
@@ -652,12 +570,5 @@ therefore generated sequentially by one worker, keeping output identical to a
 serial run.
 
 Schema-versioned state under `.romwiki/` binds each site to its ROMs, resolved
-profiles, selected engine, PokéDB input, generation sources, and generated-file
-metadata. Unchanged sites skip generation; changed sites are clean-built for
-release output. Audit parsing is cached by HTML content hash, but every run still
-validates the complete file set and every local, fragment, and cross-site link.
-`--clean` bypasses reuse without weakening normal validation.
-
-The game picker loads its catalog from the portal's validated `games.json`; game
-pages retain current-game and portal fallbacks without JavaScript. Adding a catalog
-entry therefore changes the portal and new game rather than all existing HTML.
+profiles, selected engine, PokéDB input, generation sources, and generated-data
+file metadata. Unchanged sites skip generation; `--clean` bypasses that reuse.
