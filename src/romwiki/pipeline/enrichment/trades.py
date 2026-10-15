@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
-from romwiki.schema.rendering import PokemonDataset, PokemonRenderRecord
+from romwiki.schema.enriched import PokemonDataset, PokemonEnrichedRecord
 from romwiki.util.errors import DataSourceError
 
 
@@ -61,7 +61,7 @@ def enrich_npc_trade_dataset(
 
 
 def _pokemon_reference(
-    record: PokemonRenderRecord | None,
+    record: PokemonEnrichedRecord | None,
     species_id: int,
 ) -> dict[str, Any]:
     if record is None:

@@ -40,7 +40,7 @@ from romwiki.engines.profile_contracts import (
     GEN5_BW_PROFILE_CONTRACT,
     EngineProfileContract,
 )
-from romwiki.schema.rendering import EncounterFormat, LocationFormat
+from romwiki.schema.enriched import EncounterFormat, LocationFormat
 from romwiki.util.errors import DataSourceError
 
 # Canonical engine identifiers used by registration and contract tests.
@@ -600,7 +600,7 @@ def register_engine(
 ) -> None:
     """Register an engine adapter under `engine`, replacing any existing entry.
 
-    Intended for tests exercising the enrichment/rendering contract against a
+    Intended for tests exercising the enrichment contract against a
     throwaway fake engine; real engines register themselves in `_ENGINES` above.
     """
     if validate:

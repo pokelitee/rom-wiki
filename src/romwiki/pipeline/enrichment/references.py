@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from romwiki.schema.rendering import EntityLink, MoveLink
+from romwiki.schema.enriched import EntityLink, MoveLink
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug

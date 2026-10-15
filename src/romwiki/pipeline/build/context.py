@@ -40,7 +40,7 @@ from romwiki.pipeline.extraction.trades import extract_npc_trade_dataset
 from romwiki.pipeline.extraction.trainers.dispatcher import extract_trainer_dataset
 from romwiki.pipeline.extraction.tutors import extract_tutor_dataset
 from romwiki.schema.datasets import validate_dataset_envelope
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     AbilityDataset,
     EncounterDataset,
     ItemDataset,

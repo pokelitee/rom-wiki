@@ -14,11 +14,11 @@ from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
     encounter_route_key,
 )
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     DirectSpecialEncounters,
     EncounterDataset,
+    EncounterEnrichedRecord,
     EncounterPokemon,
-    EncounterRenderRecord,
     ReplacementSlot,
     SlottedSpecialEncounters,
 )
@@ -49,7 +49,7 @@ def enrich_encounter_dataset(
         enrich_area = enrich_conditional_encounter_area
 
     # Conditional sources keep their raw fields, which vary by source type.
-    records: list[EncounterRenderRecord] = []
+    records: list[EncounterEnrichedRecord] = []
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
@@ -74,7 +74,7 @@ def enrich_encounter_dataset(
             )
             records.append(
                 cast(
-                    EncounterRenderRecord,
+                    EncounterEnrichedRecord,
                     {
                         **source,
                         "name": source["location"]["name"],
@@ -86,7 +86,7 @@ def enrich_encounter_dataset(
         elif source.get("source_type") == EncounterSourceType.HEADBUTT:
             records.append(
                 cast(
-                    EncounterRenderRecord,
+                    EncounterEnrichedRecord,
                     {
                         **source,
                         "name": source["location"]["name"],
@@ -114,7 +114,7 @@ def enrich_encounter_dataset(
         elif source.get("source_type") == EncounterSourceType.SAFARI_ZONE:
             records.append(
                 cast(
-                    EncounterRenderRecord,
+                    EncounterEnrichedRecord,
                     {
                         **source,
                         "name": f"Safari Zone — {source['area_name']}",
@@ -188,7 +188,7 @@ def enrich_conditional_encounter_area(
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
-) -> EncounterRenderRecord:
+) -> EncounterEnrichedRecord:
     if "walking_variants" in source:
         return _enrich_timed_walking_encounter_area(
             engine, source, pokedb, sprite_version, pokemon_names
@@ -305,7 +305,7 @@ def enrich_conditional_encounter_area(
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
     return cast(
-        EncounterRenderRecord,
+        EncounterEnrichedRecord,
         {
             "area_id": source["area_id"],
             "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
@@ -328,7 +328,7 @@ def _enrich_timed_walking_encounter_area(
     pokedb: PokeDBGeneration,
     sprite_version: str | None,
     pokemon_names: list[str] | None,
-) -> EncounterRenderRecord:
+) -> EncounterEnrichedRecord:
     """Enrich a conditional area whose walking slots vary by time of day.
 
     Its special encounters name species directly instead of replacing walking
@@ -428,7 +428,7 @@ def _enrich_timed_walking_encounter_area(
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
     return cast(
-        EncounterRenderRecord,
+        EncounterEnrichedRecord,
         {
             "area_id": source["area_id"],
             "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
@@ -453,7 +453,7 @@ def enrich_seasonal_encounter_area(
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
-) -> EncounterRenderRecord:
+) -> EncounterEnrichedRecord:
     methods = {
         name: {
             "rate": source[name]["rate"],
@@ -485,7 +485,7 @@ def enrich_seasonal_encounter_area(
     if source.get("season"):
         label += f" ({source['season'].title()})"
     return cast(
-        EncounterRenderRecord,
+        EncounterEnrichedRecord,
         {
             "area_id": source["area_id"],
             "map_index": source["map_index"],
@@ -506,7 +506,7 @@ def enrich_method_table_encounter_area(
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
-) -> EncounterRenderRecord:
+) -> EncounterEnrichedRecord:
     """Enrich a Generation III `MethodEncounterArea` record: up to four
     independent methods (land/water/rock-smash/fishing), each an explicit
     min/max level range per slot -- no season system, no swarm/day/night/
@@ -548,7 +548,7 @@ def enrich_method_table_encounter_area(
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
     return cast(
-        EncounterRenderRecord,
+        EncounterEnrichedRecord,
         {
             "area_id": source["area_id"],
             "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
@@ -567,7 +567,7 @@ def _enrich_hidden_grotto(
     sprite_version: str | None,
     pokemon_names: list[str] | None,
     item_names: list[str] | None,
-) -> EncounterRenderRecord:
+) -> EncounterEnrichedRecord:
     if item_names is None:
         raise DataSourceError("Hidden Grotto enrichment requires ROM item names")
 
@@ -596,7 +596,7 @@ def _enrich_hidden_grotto(
         for slot in source["pokemon"]
     ]
     return cast(
-        EncounterRenderRecord,
+        EncounterEnrichedRecord,
         {
             **source,
             "name": source["location"]["name"],

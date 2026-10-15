@@ -13,7 +13,7 @@ from romwiki.pipeline.semantics.encounter_identity import (
     encounter_route_key,
     is_unlinked_encounter_area,
 )
-from romwiki.schema.rendering import EncounterFormat
+from romwiki.schema.enriched import EncounterFormat
 
 from ._shared import _location_display_name, _pokemon_slug, _record_variants
 

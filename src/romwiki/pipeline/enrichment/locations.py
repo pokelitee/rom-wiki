@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
-from romwiki.schema.rendering import LocationDataset
+from romwiki.schema.enriched import LocationDataset
 from romwiki.schema.versions import LOCATIONS_ENRICHED_SCHEMA_VERSION
 
 

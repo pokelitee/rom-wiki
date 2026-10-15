@@ -378,7 +378,7 @@ produces a false "changed" result.
 ### Sites and public data
 
 Enrichment entry points return the shared enriched dataset and record contracts in
-`schema/rendering.py`. They are `TypedDict`s, so mypy checks field access without
+`schema/enriched.py`. They are `TypedDict`s, so mypy checks field access without
 changing the serialized dicts; raw fields spread through from engine-specific
 extraction are typed only where the shared contract defines them.
 

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
-from romwiki.schema.rendering import EncounterFormat
+from romwiki.schema.enriched import EncounterFormat
 
 
 class EncounterSourceType(StrEnum):

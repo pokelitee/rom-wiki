@@ -4,10 +4,10 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.references import with_rom_description
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     AbilityDataset,
+    AbilityEnrichedRecord,
     AbilityPokemon,
-    AbilityRenderRecord,
     PokemonDataset,
 )
 from romwiki.schema.versions import ABILITIES_ENRICHED_SCHEMA_VERSION
@@ -77,7 +77,7 @@ def build_ability_dataset(
         if pickup_dataset is not None and not is_sliding_pickup
         else None
     )
-    records: list[AbilityRenderRecord] = []
+    records: list[AbilityEnrichedRecord] = []
     for ability_id in range(1, len(ability_names)):
         slug = pokedb.ability_name(ability_id)
         pickup = None

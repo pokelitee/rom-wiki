@@ -29,7 +29,7 @@ from romwiki.pipeline.enrichment.references import (
     move_reference,
     with_rom_description,
 )
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     EntityLink,
     EvolutionParameter,
     LevelUpMove,
@@ -37,13 +37,13 @@ from romwiki.schema.rendering import (
     MoveLink,
     PokemonBattleForm,
     PokemonDataset,
+    PokemonEnrichedRecord,
     PokemonEvolution,
     PokemonEvolutionFields,
     PokemonHeldItem,
     PokemonIdentityFields,
     PokemonLearnsetFields,
     PokemonMoveCompatibility,
-    PokemonRenderRecord,
     PokemonSpeciesTraits,
     TutorMoveCompatibility,
 )
@@ -198,7 +198,7 @@ def enrich_personal_dataset(
 
 
 def _attach_battle_forms(
-    engine: EnrichmentTables, records: list[PokemonRenderRecord]
+    engine: EnrichmentTables, records: list[PokemonEnrichedRecord]
 ) -> None:
     """Attach each battle-only transformation record's stats/types to its
     base species' record as `battle_forms`, e.g. Castform's page gains its
@@ -268,7 +268,7 @@ def _enrich_record(
     tutor_ids: list[int],
     egg_move_set: dict[str, Any] | None,
     static_encounters: list[dict[str, Any]],
-) -> PokemonRenderRecord:
+) -> PokemonEnrichedRecord:
     member = source["species_id"]
     is_internal = member in lookups.engine.INTERNAL_MEMBERS
     return {
