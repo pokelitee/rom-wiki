@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from romwiki.util.errors import ProfileError
@@ -8,7 +8,9 @@ from romwiki.util.errors import ProfileError
 _CONTRACTS = {"bw-retail-v1", "blaze-black-volt-white-v3.1"}
 
 
-def _species_name(species_names, species_id: int) -> str:
+def _species_name(
+    species_names: Mapping[int, str] | Sequence[str], species_id: int
+) -> str:
     """Name a species from this profile's own name table, indexed or mapped."""
     if isinstance(species_names, Mapping):
         name = species_names.get(species_id)
@@ -19,7 +21,9 @@ def _species_name(species_names, species_id: int) -> str:
     return name.title() if name else f"species-{species_id}"
 
 
-def _resolved_battle_location(records_by_id, trainer_ids) -> str | None:
+def _resolved_battle_location(
+    records_by_id: Mapping[int, Mapping[str, Any]], trainer_ids: Iterable[int]
+) -> str | None:
     """The map every variant resolves to, if they agree."""
     names = set()
     for trainer_id in trainer_ids:

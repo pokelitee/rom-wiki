@@ -10,7 +10,7 @@ from romwiki.pipeline.semantics.location_sections import location_reference_labe
 from romwiki.util.errors import DataSourceError
 
 
-def _validate_datasets(datasets: Mapping[str, dict[str, Any]]) -> None:
+def _validate_datasets(datasets: Mapping[str, Mapping[str, Any]]) -> None:
     games = {
         str(dataset["game"])
         for dataset in datasets.values()
@@ -22,7 +22,10 @@ def _validate_datasets(datasets: Mapping[str, dict[str, Any]]) -> None:
         raise DataSourceError("Relationship datasets must be for the same game")
 
 
-def _records(datasets: Mapping[str, dict[str, Any]], kind: str) -> list[dict[str, Any]]:
+def _records(
+    datasets: Mapping[str, Mapping[str, Any]], kind: str
+) -> list[dict[str, Any]]:
+
     dataset = datasets.get(kind)
     if dataset is None:
         return []

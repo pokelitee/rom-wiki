@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from romwiki.schema.rendering import EntityLink, MoveLink
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug
@@ -30,7 +31,7 @@ def item_reference(
     item_names: list[str] | None,
     *,
     page_slugs: Mapping[int, str | None] | None = None,
-) -> dict[str, Any]:
+) -> EntityLink:
     if item_id == 0:
         return {"id": 0, "slug": None, "name": None}
     if item_names is None:
@@ -70,7 +71,7 @@ def move_reference(
     move_names: Mapping[int, str] | None,
     *,
     page_slugs: Mapping[int, str] | None = None,
-) -> dict[str, Any] | None:
+) -> MoveLink | None:
     """Build a `{id, slug, name}` cross-reference to a move page.
 
     `slug` drives the display name (`title_case_slug`, preferring PokeDB's

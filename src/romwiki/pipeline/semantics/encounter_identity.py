@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
-from romwiki.engines.registry import EncounterFormat, get_engine
+from romwiki.schema.rendering import EncounterFormat
 
 
 class EncounterSourceType(StrEnum):
@@ -98,9 +98,8 @@ def encounter_route_key(record: Mapping[str, Any]) -> int | str:
 def encounter_dataset_format(
     dataset: Mapping[str, Any] | None,
 ) -> EncounterFormat | None:
-    """Return the encounter format declared by `dataset`'s engine, if any."""
-    engine = dataset.get("engine") if dataset is not None else None
-    return get_engine(engine).formats.encounters if isinstance(engine, str) else None
+    """Return the encounter format published on `dataset`'s envelope, if any."""
+    return dataset.get("encounter_format") if dataset is not None else None
 
 
 def is_unlinked_encounter_area(

@@ -3,9 +3,11 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from romwiki.sites.data_exports import (
     prune_public_datasets,
@@ -116,6 +118,112 @@ class PublicDataExportTests(unittest.TestCase):
             [entry["path"] for entry in manifest["files"]],
             ["pokemon.json.gz"],
         )
+
+    def test_incremental_manifest_matches_one_described_from_disk(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for kind, extra in (
+                ("pokemon", {"record_count": 2}),
+                ("trainers", {"kind": "trainer_battles"}),
+                ("moves", {}),
+            ):
+                write_public_dataset(
+                    root,
+                    kind,
+                    {
+                        "schema_version": 4,
+                        "game": "test-game",
+                        "dataset": kind,
+                        "records": [{"id": 1}, {"id": 2}],
+                        **extra,
+                    },
+                )
+            manifest_path = root / "data/manifest.json"
+            index_path = root / "data/index.md"
+            incremental = (manifest_path.read_bytes(), index_path.read_bytes())
+
+            manifest_path.unlink()
+            index_path.unlink()
+            prune_public_datasets(root, {"pokemon", "trainers", "moves"}, "test-game")
+
+            self.assertEqual(
+                (manifest_path.read_bytes(), index_path.read_bytes()), incremental
+            )
+
+    def test_writing_one_dataset_does_not_reread_other_archives(self) -> None:
+        def dataset(kind: str) -> dict[str, object]:
+            return {
+                "schema_version": 1,
+                "game": "test-game",
+                "dataset": kind,
+                "record_count": 0,
+                "records": [],
+            }
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_public_dataset(root, "pokemon", dataset("pokemon"))
+            with patch(
+                "romwiki.sites.data_exports.gzip.decompress",
+                side_effect=AssertionError("archive was decompressed"),
+            ):
+                write_public_dataset(root, "moves", dataset("moves"))
+            manifest = json.loads(
+                (root / "data/manifest.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(
+            [entry["path"] for entry in manifest["files"]],
+            ["moves.json.gz", "pokemon.json.gz"],
+        )
+
+    def test_archive_with_unchanged_size_and_mtime_is_rehashed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for kind in ("moves", "pokemon"):
+                write_public_dataset(
+                    root,
+                    kind,
+                    {
+                        "schema_version": 1,
+                        "game": "test-game",
+                        "dataset": kind,
+                        "record_count": 0,
+                        "records": [],
+                    },
+                )
+            archive = root / "data/pokemon.json.gz"
+            original = archive.read_bytes()
+            original_stat = archive.stat()
+            source = gzip.decompress(original)
+            replacement = next(
+                candidate
+                for digit in b"123456789"
+                if len(
+                    candidate := gzip.compress(
+                        source.replace(
+                            b'"record_count":0', b'"record_count":%c' % digit
+                        ),
+                        mtime=0,
+                    )
+                )
+                == len(original)
+            )
+            self.assertNotEqual(replacement, original)
+            archive.write_bytes(replacement)
+            os.utime(archive, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+            self.assertEqual(archive.stat().st_size, original_stat.st_size)
+            self.assertEqual(archive.stat().st_mtime_ns, original_stat.st_mtime_ns)
+
+            prune_public_datasets(root, {"moves", "pokemon"}, "test-game")
+            manifest = json.loads(
+                (root / "data/manifest.json").read_text(encoding="utf-8")
+            )
+            validate_public_data(root)
+
+        pokemon = manifest["files"][1]
+        self.assertNotEqual(pokemon["record_count"], 0)
+        self.assertEqual(pokemon["sha256"], hashlib.sha256(replacement).hexdigest())
 
     def test_validation_rejects_a_modified_archive(self) -> None:
         dataset = {

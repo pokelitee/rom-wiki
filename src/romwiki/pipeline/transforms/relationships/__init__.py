@@ -70,7 +70,7 @@ class RelationshipIndex:
 
 
 def build_relationship_index(
-    datasets: Mapping[str, dict[str, Any]],
+    datasets: Mapping[str, Mapping[str, Any]],
 ) -> RelationshipIndex:
     """Derive renderer-facing cross-dataset relationships once per build."""
     _validate_datasets(datasets)

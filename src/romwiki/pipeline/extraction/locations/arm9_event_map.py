@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 from romwiki.engines.concerns import LocationConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.pipeline.extraction.locations.event_map_shops import (
+    EventMapShopCatalogs,
+    EventMapShopSource,
+    extract_event_map_location_shops,
+    load_event_map_shop_source,
+)
 from romwiki.pipeline.extraction.locations.helpers import (
     EventMapItemScan,
     extract_event_map_connections,
@@ -36,7 +42,6 @@ from romwiki.schema import (
     LocationRoamingActivation,
     LocationScriptAwardedItem,
     LocationShop,
-    LocationShopItem,
     LocationStaticEncounter,
     LocationWarp,
     RecordProvenance,
@@ -46,28 +51,36 @@ from romwiki.util.errors import InvalidRomError, ProfileError
 
 
 @dataclass(frozen=True)
+class _EventMapLayout:
+    events_path: str
+    matrices_path: str
+    map_names_path: str
+    messages_path: str
+    scripts_path: str
+    item_data_path: str
+    npc_trades_path: str
+    count: int
+    table_offset: int
+    location_names_member: int
+    item_names_member: int
+    pokemon_names_member: int
+    npc_trade_names_member: int
+    static_encounter_location_metadata: list[dict[str, int]]
+
+
+@dataclass(frozen=True)
 class _EventMapNames:
     location: tuple[str, ...]
     item: tuple[str, ...]
     pokemon: tuple[str, ...]
     npc_trade: tuple[str, ...]
-    decoration: tuple[str, ...]
-    seal: tuple[str, ...]
 
 
 @dataclass(frozen=True)
-class _EventMapShopCatalogs:
-    common_items: tuple[Any, ...]
-    specialty_inventories: tuple[tuple[int, ...], ...]
-    decoration_inventory_start: int
-    decoration_inventory_count: int
-    seal_inventory_start: int
-    seal_inventory_count: int
-    frontier_inventory_count: int
-    item_prices: tuple[int, ...]
-    decoration_prices: tuple[int, ...]
-    seal_prices: tuple[int, ...]
-    frontier_prices: dict[int, int]
+class _EventMapBonusPools:
+    honey_tree: LocationHoneyTree | None
+    trophy_garden_pool: LocationDailyEncounterPool | None
+    great_marsh_pool: LocationDailyEncounterPool | None
 
 
 @dataclass(frozen=True)
@@ -93,7 +106,7 @@ class _EventMapRecordContext:
     headers: tuple[Any, ...]
     scripts: Any
     names: _EventMapNames
-    shops: _EventMapShopCatalogs
+    shops: EventMapShopCatalogs
     features: _EventMapFeatures
     npc_trade_records: tuple[Any, ...]
     roaming_by_script: dict[int, tuple[LocationRoamingActivation, ...]]
@@ -113,7 +126,7 @@ class _EventMapLoadedSource:
     headers: tuple[Any, ...]
     scripts: Any
     names: _EventMapNames
-    shops: _EventMapShopCatalogs
+    shops: EventMapShopCatalogs
     features: _EventMapFeatures
     npc_trade_records: tuple[Any, ...]
     roaming_by_script: dict[int, tuple[LocationRoamingActivation, ...]]
@@ -132,6 +145,14 @@ class _EventMapRelationships:
     raw_items_by_header: dict[int, tuple[LocationItem, ...]]
     connections: dict[int, list[Any]]
     trainers: dict[int, list[Any]]
+
+
+@dataclass(frozen=True)
+class _EventMapScriptSections:
+    shops: tuple[LocationShop, ...]
+    gifts: tuple[LocationPokemonGift, ...]
+    npc_trades: tuple[LocationNpcTrade, ...]
+    script_awarded_items: tuple[LocationScriptAwardedItem, ...]
 
 
 def extract_arm9_event_map_location_dataset(
@@ -167,259 +188,163 @@ def extract_arm9_event_map_location_dataset(
     return _build_event_map_location_envelope(source, relationships, records)
 
 
-def _load_event_map_source(
-    result: InspectionResult,
-) -> _EventMapLoadedSource:
-    assert result.match is not None
-    profile = result.match.profile
+def _read_event_map_layout(profile: Any) -> _EventMapLayout:
     try:
-        events_path = profile.layout["events"]
-        matrices_path = profile.layout["map_matrices"]
-        map_names_path = profile.layout["map_names"]
-        messages_path = profile.layout["messages"]
-        scripts_path = profile.layout["scripts"]
-        item_data_path = profile.layout["item_data"]
-        npc_trades_path = profile.layout["npc_trades"]
-        count = profile.parameters["map_header_count"]
-        table_offset = profile.parameters["map_header_offset"]
-        location_names_member = profile.parameters["location_names_member"]
-        item_names_member = profile.parameters["item_names_member"]
-        pokemon_names_member = profile.parameters["pokemon_names_member"]
-        npc_trade_names_member = profile.parameters["npc_trade_names_member"]
-        common_mart_inventory_offset = profile.parameters[
-            "common_mart_inventory_offset"
-        ]
-        specialty_mart_pointer_table_offset = profile.parameters[
-            "specialty_mart_pointer_table_offset"
-        ]
-        specialty_mart_inventory_count = profile.parameters[
-            "specialty_mart_inventory_count"
-        ]
-        static_encounter_location_metadata = profile.parameters.get(
-            "static_encounter_locations", []
+        return _EventMapLayout(
+            events_path=profile.layout["events"],
+            matrices_path=profile.layout["map_matrices"],
+            map_names_path=profile.layout["map_names"],
+            messages_path=profile.layout["messages"],
+            scripts_path=profile.layout["scripts"],
+            item_data_path=profile.layout["item_data"],
+            npc_trades_path=profile.layout["npc_trades"],
+            count=profile.parameters["map_header_count"],
+            table_offset=profile.parameters["map_header_offset"],
+            location_names_member=profile.parameters["location_names_member"],
+            item_names_member=profile.parameters["item_names_member"],
+            pokemon_names_member=profile.parameters["pokemon_names_member"],
+            npc_trade_names_member=profile.parameters["npc_trade_names_member"],
+            static_encounter_location_metadata=profile.parameters.get(
+                "static_encounter_locations", []
+            ),
         )
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} is missing location metadata: {error.args[0]}"
         ) from error
 
-    # The following features are Platinum-specific (decorations, seals, and the
-    # Battle Frontier were never in Diamond/Pearl; honey trees, Trophy Garden,
-    # and the Great Marsh are Sinnoh-only and have no Unova equivalent). They
-    # are optional per profile/engine so a future non-Sinnoh engine or a
-    # Diamond/Pearl profile can omit them entirely instead of crashing.
-    bonus_encounters_path = profile.layout.get("bonus_encounters")
-    decoration_names_member = profile.parameters.get("decoration_names_member")
-    decoration_name_count = profile.parameters.get("decoration_name_count", 0)
-    seal_names_member = profile.parameters.get("seal_names_member")
-    decoration_mart_inventory_start = profile.parameters.get(
-        "decoration_mart_inventory_start", 0
-    )
-    decoration_mart_inventory_count = profile.parameters.get(
-        "decoration_mart_inventory_count", 0
-    )
-    decoration_price_table_offset = profile.parameters.get(
-        "decoration_price_table_offset"
-    )
-    seal_mart_inventory_start = profile.parameters.get("seal_mart_inventory_start", 0)
-    seal_mart_inventory_count = profile.parameters.get("seal_mart_inventory_count", 0)
-    seal_price_table_offset = profile.parameters.get("seal_price_table_offset")
-    frontier_mart_inventory_count = profile.parameters.get(
-        "frontier_mart_inventory_count", 0
-    )
-    frontier_price_overlay_id = profile.parameters.get("frontier_price_overlay_id")
-    frontier_price_table_offset = profile.parameters.get("frontier_price_table_offset")
-    frontier_price_record_count = profile.parameters.get(
-        "frontier_price_record_count", 0
-    )
-    game_corner_prize_table_offset = profile.parameters.get(
-        "game_corner_prize_table_offset"
-    )
-    game_corner_prize_count = profile.parameters.get("game_corner_prize_count", 0)
 
+def _load_event_map_source(
+    result: InspectionResult,
+) -> _EventMapLoadedSource:
+    assert result.match is not None
+    profile = result.match.profile
+    layout = _read_event_map_layout(profile)
     platform = get_platform(profile.platform)
     if platform.filesystem_from_image is None or platform.archive_cls is None:
         raise ProfileError(
             f"Platform {profile.platform!r} does not support archive-based extraction"
         )
     engine = get_engine(profile.engine).locations
-
-    null_event_id = profile.parameters.get("null_event_id", engine.ARCHIVE_MEMBER_NONE)
-    null_encounter_id = profile.parameters.get(
-        "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
-    )
-    dynamic_warp_header_id = profile.parameters.get(
-        "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
-    )
-    dynamic_warp_id = profile.parameters.get("dynamic_warp_id", engine.DYNAMIC_WARP_ID)
-    matrix_void_header_ids = frozenset(
-        profile.parameters.get("matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS)
-    )
-    honey_tree_header_ids = frozenset(
-        profile.parameters.get("honey_tree_header_ids", engine.HONEY_TREE_HEADER_IDS)
-    )
-    great_marsh_header_ids = frozenset(
-        profile.parameters.get("great_marsh_header_ids", engine.GREAT_MARSH_HEADER_IDS)
-    )
-    trophy_garden_header_id = profile.parameters.get(
-        "trophy_garden_header_id", engine.TROPHY_GARDEN_HEADER_ID
-    )
-    game_corner_header_id = profile.parameters.get(
-        "game_corner_prize_exchange_header_id",
-        engine.GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID,
-    )
-    arm9_load_address = code_load_address(platform, result.image)
-
     filesystem = platform.filesystem_from_image(result.image)
     arm9_data = read_code_binary(platform, result.image)
-    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
+    messages = platform.archive_cls.from_bytes(filesystem.read(layout.messages_path))
     headers, location_names = resolve_map_headers(
         engine,
         arm9_data,
         filesystem,
         messages,
-        map_names_path=map_names_path,
-        table_offset=table_offset,
-        count=count,
-        location_names_member=location_names_member,
+        map_names_path=layout.map_names_path,
+        table_offset=layout.table_offset,
+        count=layout.count,
+        location_names_member=layout.location_names_member,
     )
     validate_location_sections(
         profile,
         ((header.header_id, header.internal_name) for header in headers),
     )
-    item_names = engine.parse_english_message_archive(messages.read(item_names_member))
-    if game_corner_prize_table_offset is not None:
-        game_corner_prizes = tuple(
-            LocationGameCornerPrize(
-                item_id=prize.item_id,
-                name=item_names[prize.item_id],
-                price=prize.price,
+    names = _decode_event_map_names(engine, messages, layout, location_names)
+    shop_source = load_event_map_shop_source(
+        profile,
+        engine,
+        platform,
+        result.image,
+        filesystem=filesystem,
+        arm9_data=arm9_data,
+        arm9_load_address=code_load_address(platform, result.image),
+        messages=messages,
+        item_names=names.item,
+        item_data_path=layout.item_data_path,
+        scripts_path=layout.scripts_path,
+        messages_path=layout.messages_path,
+    )
+    npc_trade_records = _decode_npc_trade_records(
+        engine,
+        platform.archive_cls.from_bytes(filesystem.read(layout.npc_trades_path)),
+        names,
+    )
+    scripts = platform.archive_cls.from_bytes(
+        filesystem.read(layout.scripts_path), allow_truncated=True
+    )
+    roaming_by_script = _decode_roaming_activations(
+        engine, headers, scripts, names.pokemon
+    )
+    return _EventMapLoadedSource(
+        profile=profile,
+        engine=engine,
+        platform=platform,
+        filesystem=filesystem,
+        headers=headers,
+        scripts=scripts,
+        names=names,
+        shops=shop_source.catalogs,
+        features=_resolve_event_map_features(
+            profile, engine, platform, filesystem, arm9_data, names
+        ),
+        npc_trade_records=npc_trade_records,
+        roaming_by_script=roaming_by_script,
+        roaming_activation_count=sum(
+            len(activations) for activations in roaming_by_script.values()
+        ),
+        events_path=layout.events_path,
+        matrices_path=layout.matrices_path,
+        matrix_void_header_ids=frozenset(
+            profile.parameters.get(
+                "matrix_void_header_ids", engine.MATRIX_VOID_HEADER_IDS
             )
-            for prize in engine.parse_game_corner_prizes(
-                arm9_data,
-                offset=game_corner_prize_table_offset,
-                count=game_corner_prize_count,
-                item_count=len(item_names),
-            )
-        )
-    else:
-        game_corner_prizes = ()
-    pokemon_names = engine.parse_english_message_archive(
-        messages.read(pokemon_names_member)
+        ),
+        static_encounter_location_metadata=layout.static_encounter_location_metadata,
+        source_metadata=_build_event_map_source_metadata(
+            result, engine, layout, shop_source
+        ),
     )
-    npc_trade_names = engine.parse_english_message_archive(
-        messages.read(npc_trade_names_member)
+
+
+def _decode_event_map_names(
+    engine: LocationConcern,
+    messages: Any,
+    layout: _EventMapLayout,
+    location_names: tuple[str, ...],
+) -> _EventMapNames:
+    return _EventMapNames(
+        location=location_names,
+        item=engine.parse_english_message_archive(
+            messages.read(layout.item_names_member)
+        ),
+        pokemon=engine.parse_english_message_archive(
+            messages.read(layout.pokemon_names_member)
+        ),
+        npc_trade=engine.parse_english_message_archive(
+            messages.read(layout.npc_trade_names_member)
+        ),
     )
-    if decoration_names_member is not None:
-        decoration_names = engine.parse_english_message_archive(
-            messages.read(decoration_names_member), limit=decoration_name_count
-        )
-        decoration_prices = engine.parse_decoration_price_table(
-            arm9_data,
-            offset=decoration_price_table_offset,
-            decoration_count=len(decoration_names),
-        )
-    else:
-        decoration_names = ()
-        decoration_prices = ()
-    if seal_names_member is not None:
-        seal_names = engine.parse_english_message_archive(
-            messages.read(seal_names_member)
-        )
-        seal_prices = engine.parse_seal_price_table(
-            arm9_data, offset=seal_price_table_offset, seal_count=len(seal_names)
-        )
-    else:
-        seal_names = ()
-        seal_prices = ()
-    if frontier_price_overlay_id is not None:
-        if platform.read_overlay is None:
-            raise ProfileError(
-                f"Platform {profile.platform!r} does not support overlays"
-            )
-        _, frontier_overlay = platform.read_overlay(
-            result.image, frontier_price_overlay_id
-        )
-        frontier_prices = engine.parse_frontier_price_table(
-            frontier_overlay,
-            offset=frontier_price_table_offset,
-            record_count=frontier_price_record_count,
-        )
-    else:
-        frontier_prices = {}
-    item_data = platform.archive_cls.from_bytes(filesystem.read(item_data_path))
-    item_archive_map_offset, item_data_members = engine.find_item_archive_members(
-        arm9_data,
-        item_count=len(item_names),
-        data_member_count=len(item_data.members),
-    )
-    item_prices = tuple(
-        engine.parse_item_price(item_data.read(data_member))
-        for data_member in item_data_members
-    )
-    npc_trades = platform.archive_cls.from_bytes(filesystem.read(npc_trades_path))
-    if len(npc_trade_names) != len(npc_trades.members) * 2:
+
+
+def _decode_npc_trade_records(
+    engine: LocationConcern, npc_trades: Any, names: _EventMapNames
+) -> tuple[Any, ...]:
+    if len(names.npc_trade) != len(npc_trades.members) * 2:
         raise InvalidRomError(
             "NPC trade name bank must contain one nickname and OT name per trade"
         )
-    npc_trade_records = tuple(
+    return tuple(
         engine.parse_npc_trade_record(
             npc_trades.read(index),
-            species_count=len(pokemon_names),
-            item_count=len(item_names),
+            species_count=len(names.pokemon),
+            item_count=len(names.item),
         )
         for index in range(len(npc_trades.members))
     )
-    honey_tree: LocationHoneyTree | None = None
-    trophy_garden_pool: LocationDailyEncounterPool | None = None
-    great_marsh_pool: LocationDailyEncounterPool | None = None
-    if bonus_encounters_path is not None:
-        bonus_encounters = platform.archive_cls.from_bytes(
-            filesystem.read(bonus_encounters_path)
-        )
 
-        def _bonus_species(member: int) -> tuple[BonusEncounterSpecies, ...]:
-            return tuple(
-                BonusEncounterSpecies(
-                    species_id=species_id, name=pokemon_names[species_id]
-                )
-                for species_id in engine.parse_species_list(
-                    bonus_encounters.read(member)
-                )
-            )
 
-        honey_tree = LocationHoneyTree(
-            common=_bonus_species(engine.HONEY_TREE_COMMON_MEMBER),
-            uncommon=_bonus_species(engine.HONEY_TREE_UNCOMMON_MEMBER),
-            rare=_bonus_species(engine.HONEY_TREE_RARE_MEMBER),
-        )
-        trophy_garden_pool = LocationDailyEncounterPool(
-            kind="trophy_garden",
-            species=_bonus_species(engine.TROPHY_GARDEN_MEMBER),
-            pre_national_dex_species=None,
-        )
-        great_marsh_pool = LocationDailyEncounterPool(
-            kind="great_marsh",
-            species=_bonus_species(engine.GREAT_MARSH_POST_NATIONAL_DEX_MEMBER),
-            pre_national_dex_species=_bonus_species(
-                engine.GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
-            ),
-        )
-    common_mart_items = engine.parse_common_mart_inventory(
-        arm9_data, offset=common_mart_inventory_offset, item_count=len(item_names)
-    )
-    specialty_mart_inventories = engine.parse_specialty_mart_inventories(
-        arm9_data,
-        pointer_table_offset=specialty_mart_pointer_table_offset,
-        inventory_count=specialty_mart_inventory_count,
-        load_address=arm9_load_address,
-        item_count=len(item_names),
-    )
-    scripts = platform.archive_cls.from_bytes(
-        filesystem.read(scripts_path), allow_truncated=True
-    )
+def _decode_roaming_activations(
+    engine: LocationConcern,
+    headers: tuple[Any, ...],
+    scripts: Any,
+    pokemon_names: tuple[str, ...],
+) -> dict[int, tuple[LocationRoamingActivation, ...]]:
     referenced_script_ids = {header.script_file_id for header in headers}
-    roaming_by_script = {
+    return {
         script_file_id: tuple(
             LocationRoamingActivation(
                 slot=command.slot,
@@ -436,70 +361,165 @@ def _load_event_map_source(
         )
         for script_file_id in referenced_script_ids
     }
-    roaming_activation_count = sum(
-        len(activations) for activations in roaming_by_script.values()
+
+
+def _resolve_event_map_features(
+    profile: Any,
+    engine: LocationConcern,
+    platform: Any,
+    filesystem: Any,
+    arm9_data: bytes,
+    names: _EventMapNames,
+) -> _EventMapFeatures:
+    parameters = profile.parameters
+    bonus_pools = _decode_bonus_encounter_pools(
+        engine, platform, filesystem, profile.layout.get("bonus_encounters"), names
     )
-    names = _EventMapNames(
-        location=location_names,
-        item=item_names,
-        pokemon=pokemon_names,
-        npc_trade=npc_trade_names,
-        decoration=decoration_names,
-        seal=seal_names,
+    return _EventMapFeatures(
+        null_event_id=profile.int_parameter(
+            "null_event_id", engine.ARCHIVE_MEMBER_NONE
+        ),
+        null_encounter_id=profile.int_parameter(
+            "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
+        ),
+        dynamic_warp_header_id=profile.int_parameter(
+            "dynamic_warp_header_id", engine.DYNAMIC_WARP_HEADER_ID
+        ),
+        dynamic_warp_id=profile.int_parameter(
+            "dynamic_warp_id", engine.DYNAMIC_WARP_ID
+        ),
+        honey_tree_header_ids=frozenset(
+            parameters.get("honey_tree_header_ids", engine.HONEY_TREE_HEADER_IDS)
+        ),
+        great_marsh_header_ids=frozenset(
+            parameters.get("great_marsh_header_ids", engine.GREAT_MARSH_HEADER_IDS)
+        ),
+        trophy_garden_header_id=parameters.get(
+            "trophy_garden_header_id", engine.TROPHY_GARDEN_HEADER_ID
+        ),
+        game_corner_header_id=parameters.get(
+            "game_corner_prize_exchange_header_id",
+            engine.GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID,
+        ),
+        honey_tree=bonus_pools.honey_tree,
+        trophy_garden_pool=bonus_pools.trophy_garden_pool,
+        great_marsh_pool=bonus_pools.great_marsh_pool,
+        game_corner_prizes=_decode_game_corner_prizes(
+            profile, engine, arm9_data, names.item
+        ),
     )
-    shops = _EventMapShopCatalogs(
-        common_items=common_mart_items,
-        specialty_inventories=specialty_mart_inventories,
-        decoration_inventory_start=decoration_mart_inventory_start,
-        decoration_inventory_count=decoration_mart_inventory_count,
-        seal_inventory_start=seal_mart_inventory_start,
-        seal_inventory_count=seal_mart_inventory_count,
-        frontier_inventory_count=frontier_mart_inventory_count,
-        item_prices=item_prices,
-        decoration_prices=decoration_prices,
-        seal_prices=seal_prices,
-        frontier_prices=frontier_prices,
+
+
+def _decode_game_corner_prizes(
+    profile: Any,
+    engine: LocationConcern,
+    arm9_data: bytes,
+    item_names: tuple[str, ...],
+) -> tuple[LocationGameCornerPrize, ...]:
+    prize_table_offset = profile.optional_int_parameter(
+        "game_corner_prize_table_offset"
     )
-    features = _EventMapFeatures(
-        null_event_id=null_event_id,
-        null_encounter_id=null_encounter_id,
-        dynamic_warp_header_id=dynamic_warp_header_id,
-        dynamic_warp_id=dynamic_warp_id,
-        honey_tree_header_ids=honey_tree_header_ids,
-        great_marsh_header_ids=great_marsh_header_ids,
-        trophy_garden_header_id=trophy_garden_header_id,
-        game_corner_header_id=game_corner_header_id,
-        honey_tree=honey_tree,
-        trophy_garden_pool=trophy_garden_pool,
-        great_marsh_pool=great_marsh_pool,
-        game_corner_prizes=game_corner_prizes,
+    if prize_table_offset is None:
+        return ()
+    return tuple(
+        LocationGameCornerPrize(
+            item_id=prize.item_id,
+            name=item_names[prize.item_id],
+            price=prize.price,
+        )
+        for prize in engine.parse_game_corner_prizes(
+            arm9_data,
+            offset=prize_table_offset,
+            count=profile.int_parameter("game_corner_prize_count", 0),
+            item_count=len(item_names),
+        )
     )
-    source_metadata = {
+
+
+def _decode_bonus_encounter_pools(
+    engine: LocationConcern,
+    platform: Any,
+    filesystem: Any,
+    bonus_encounters_path: str | None,
+    names: _EventMapNames,
+) -> _EventMapBonusPools:
+    # Honey trees, the Trophy Garden, and the Great Marsh are Sinnoh-only and
+    # have no Unova equivalent, so a profile can omit their archive entirely.
+    if bonus_encounters_path is None:
+        return _EventMapBonusPools(
+            honey_tree=None, trophy_garden_pool=None, great_marsh_pool=None
+        )
+    bonus_encounters = platform.archive_cls.from_bytes(
+        filesystem.read(bonus_encounters_path)
+    )
+    species = partial(_decode_bonus_species, engine, bonus_encounters, names.pokemon)
+    return _EventMapBonusPools(
+        honey_tree=LocationHoneyTree(
+            common=species(engine.HONEY_TREE_COMMON_MEMBER),
+            uncommon=species(engine.HONEY_TREE_UNCOMMON_MEMBER),
+            rare=species(engine.HONEY_TREE_RARE_MEMBER),
+        ),
+        trophy_garden_pool=LocationDailyEncounterPool(
+            kind="trophy_garden",
+            species=species(engine.TROPHY_GARDEN_MEMBER),
+            pre_national_dex_species=None,
+        ),
+        great_marsh_pool=LocationDailyEncounterPool(
+            kind="great_marsh",
+            species=species(engine.GREAT_MARSH_POST_NATIONAL_DEX_MEMBER),
+            pre_national_dex_species=species(
+                engine.GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER
+            ),
+        ),
+    )
+
+
+def _decode_bonus_species(
+    engine: LocationConcern,
+    bonus_encounters: Any,
+    pokemon_names: tuple[str, ...],
+    member: int,
+) -> tuple[BonusEncounterSpecies, ...]:
+    return tuple(
+        BonusEncounterSpecies(species_id=species_id, name=pokemon_names[species_id])
+        for species_id in engine.parse_species_list(bonus_encounters.read(member))
+    )
+
+
+def _build_event_map_source_metadata(
+    result: InspectionResult,
+    engine: LocationConcern,
+    layout: _EventMapLayout,
+    shop_source: EventMapShopSource,
+) -> dict[str, Any]:
+    messages_path = layout.messages_path
+    scripts_path = layout.scripts_path
+    return {
         "rom_sha256": result.image.hashes.sha256,
-        "events_archive": events_path,
-        "map_matrices_archive": matrices_path,
-        "map_headers": {"arm9_offset": table_offset, "count": count},
-        "internal_names": map_names_path,
+        "events_archive": layout.events_path,
+        "map_matrices_archive": layout.matrices_path,
+        "map_headers": {"arm9_offset": layout.table_offset, "count": layout.count},
+        "internal_names": layout.map_names_path,
         "location_names": {
             "archive": messages_path,
-            "member": location_names_member,
+            "member": layout.location_names_member,
         },
-        "item_names": {"archive": messages_path, "member": item_names_member},
+        "item_names": {"archive": messages_path, "member": layout.item_names_member},
         "pokemon_names": {
             "archive": messages_path,
-            "member": pokemon_names_member,
+            "member": layout.pokemon_names_member,
         },
         "pokemon_gifts": {
             "scripts_archive": scripts_path,
             "egg_command_discovery": "party-capacity-signature",
         },
         "npc_trades": {
-            "archive": npc_trades_path,
+            "archive": layout.npc_trades_path,
             "scripts_archive": scripts_path,
             "command": "InitNPCTrade",
             "names": {
                 "archive": messages_path,
-                "member": npc_trade_names_member,
+                "member": layout.npc_trade_names_member,
             },
         },
         "static_encounters": {
@@ -510,67 +530,17 @@ def _load_event_map_source(
                 "FatefulEncounter",
                 "GiratinaOriginBattle",
             ],
-            "location_overrides": static_encounter_location_metadata,
+            "location_overrides": layout.static_encounter_location_metadata,
         },
         "roaming_pokemon": {
             "scripts_archive": scripts_path,
             "command": "ActivateRoamingPokemon",
             "slot_count": engine.ROAMING_SLOT_COUNT,
         },
-        "decoration_names": (
-            {
-                "archive": messages_path,
-                "member": decoration_names_member,
-                "count": decoration_name_count,
-            }
-            if decoration_names_member is not None
-            else None
-        ),
-        "seal_names": (
-            {"archive": messages_path, "member": seal_names_member}
-            if seal_names_member is not None
-            else None
-        ),
-        "shops": {
-            "scripts_archive": scripts_path,
-            "item_data_archive": item_data_path,
-            "item_archive_map_arm9_offset": item_archive_map_offset,
-            "common_inventory_arm9_offset": common_mart_inventory_offset,
-            "specialty_pointer_table_arm9_offset": (
-                specialty_mart_pointer_table_offset
-            ),
-            "decoration_price_table_arm9_offset": decoration_price_table_offset,
-            "seal_price_table_arm9_offset": seal_price_table_offset,
-            "frontier_price_table": (
-                {
-                    "overlay_id": frontier_price_overlay_id,
-                    "offset": frontier_price_table_offset,
-                    "record_count": frontier_price_record_count,
-                }
-                if frontier_price_overlay_id is not None
-                else None
-            ),
-        },
+        "decoration_names": shop_source.decoration_names_metadata,
+        "seal_names": shop_source.seal_names_metadata,
+        "shops": shop_source.shops_metadata,
     }
-    return _EventMapLoadedSource(
-        profile=profile,
-        engine=engine,
-        platform=platform,
-        filesystem=filesystem,
-        headers=headers,
-        scripts=scripts,
-        names=names,
-        shops=shops,
-        features=features,
-        npc_trade_records=npc_trade_records,
-        roaming_by_script=roaming_by_script,
-        roaming_activation_count=roaming_activation_count,
-        events_path=events_path,
-        matrices_path=matrices_path,
-        matrix_void_header_ids=matrix_void_header_ids,
-        static_encounter_location_metadata=static_encounter_location_metadata,
-        source_metadata=source_metadata,
-    )
 
 
 def _collect_event_map_relationships(
@@ -690,28 +660,16 @@ def _build_event_map_location_envelope(
 def _build_event_map_location_records(
     context: _EventMapRecordContext,
 ) -> list[dict[str, Any]]:
-    shops_by_script: dict[int, tuple[LocationShop, ...]] = {}
-    gifts_by_script: dict[int, tuple[LocationPokemonGift, ...]] = {}
-    npc_trades_by_script: dict[int, tuple[LocationNpcTrade, ...]] = {}
-    script_awarded_items_by_script: dict[
-        int, tuple[LocationScriptAwardedItem, ...]
-    ] = {}
+    sections_by_script: dict[int, _EventMapScriptSections] = {}
     static_encounters_by_location: dict[
         tuple[int, int], tuple[LocationStaticEncounter, ...]
     ] = {}
     header_ids_by_script: dict[int, list[int]] = defaultdict(list)
     for header in context.headers:
         header_ids_by_script[header.script_file_id].append(header.header_id)
-    static_encounter_header_by_command = {
-        (metadata["script_member"], metadata["command_offset"]): metadata[
-            "map_header_id"
-        ]
-        for metadata in context.static_encounter_location_metadata
-    }
-    if len(static_encounter_header_by_command) != len(
+    static_encounter_header_by_command = _static_encounter_header_by_command(
         context.static_encounter_location_metadata
-    ):
-        raise ProfileError("Static encounter location metadata contains duplicates")
+    )
 
     records = []
     for header in context.headers:
@@ -726,55 +684,10 @@ def _build_event_map_location_records(
                 f"{header.script_file_id}"
             )
         script = context.scripts.read(header.script_file_id)
-        if header.script_file_id not in shops_by_script:
-            shops_by_script[header.script_file_id] = _extract_event_map_location_shops(
-                context.engine,
-                script,
-                script_file_id=header.script_file_id,
-                common_items=context.shops.common_items,
-                specialty_inventories=context.shops.specialty_inventories,
-                decoration_inventory_start=(context.shops.decoration_inventory_start),
-                decoration_inventory_count=context.shops.decoration_inventory_count,
-                seal_inventory_start=context.shops.seal_inventory_start,
-                seal_inventory_count=context.shops.seal_inventory_count,
-                frontier_inventory_count=context.shops.frontier_inventory_count,
-                item_names=context.names.item,
-                item_prices=context.shops.item_prices,
-                decoration_names=context.names.decoration,
-                seal_names=context.names.seal,
-                decoration_prices=context.shops.decoration_prices,
-                seal_prices=context.shops.seal_prices,
-                frontier_prices=context.shops.frontier_prices,
-            )
-        if header.script_file_id not in gifts_by_script:
-            gifts_by_script[header.script_file_id] = (
-                _extract_event_map_location_pokemon_gifts(
-                    context.engine,
-                    script,
-                    script_file_id=header.script_file_id,
-                    pokemon_names=context.names.pokemon,
-                    item_names=context.names.item,
-                )
-            )
-        if header.script_file_id not in npc_trades_by_script:
-            npc_trades_by_script[header.script_file_id] = (
-                _extract_event_map_location_npc_trades(
-                    context.engine,
-                    script,
-                    script_file_id=header.script_file_id,
-                    trade_records=context.npc_trade_records,
-                    trade_names=context.names.npc_trade,
-                    pokemon_names=context.names.pokemon,
-                    item_names=context.names.item,
-                )
-            )
-        if header.script_file_id not in script_awarded_items_by_script:
-            script_awarded_items_by_script[header.script_file_id] = (
-                _extract_event_map_location_script_awarded_items(
-                    context.engine,
-                    script,
-                    script_file_id=header.script_file_id,
-                    item_names=context.names.item,
+        if header.script_file_id not in sections_by_script:
+            sections_by_script[header.script_file_id] = (
+                _extract_event_map_script_sections(
+                    context, script, script_file_id=header.script_file_id
                 )
             )
         static_key = (header.script_file_id, header.header_id)
@@ -792,24 +705,67 @@ def _build_event_map_location_records(
                     pokemon_names=context.names.pokemon,
                 )
             )
-        warps = _build_event_map_location_warps(context, header)
         records.append(
             _build_event_map_location_record(
                 context,
                 header,
-                warps,
-                shops=shops_by_script[header.script_file_id],
-                gifts=gifts_by_script[header.script_file_id],
+                _build_event_map_location_warps(context, header),
+                sections=sections_by_script[header.script_file_id],
                 static_encounters=static_encounters_by_location[static_key],
-                npc_trades=npc_trades_by_script[header.script_file_id],
-                script_awarded_items=script_awarded_items_by_script[
-                    header.script_file_id
-                ],
                 section_name=section_name,
                 section_name_source=section_name_source,
             )
         )
     return records
+
+
+def _static_encounter_header_by_command(
+    static_encounter_location_metadata: list[dict[str, int]],
+) -> dict[tuple[int, int], int]:
+    header_by_command = {
+        (metadata["script_member"], metadata["command_offset"]): metadata[
+            "map_header_id"
+        ]
+        for metadata in static_encounter_location_metadata
+    }
+    if len(header_by_command) != len(static_encounter_location_metadata):
+        raise ProfileError("Static encounter location metadata contains duplicates")
+    return header_by_command
+
+
+def _extract_event_map_script_sections(
+    context: _EventMapRecordContext, script: bytes, *, script_file_id: int
+) -> _EventMapScriptSections:
+    return _EventMapScriptSections(
+        shops=extract_event_map_location_shops(
+            context.engine,
+            script,
+            script_file_id=script_file_id,
+            catalogs=context.shops,
+        ),
+        gifts=_extract_event_map_location_pokemon_gifts(
+            context.engine,
+            script,
+            script_file_id=script_file_id,
+            pokemon_names=context.names.pokemon,
+            item_names=context.names.item,
+        ),
+        npc_trades=_extract_event_map_location_npc_trades(
+            context.engine,
+            script,
+            script_file_id=script_file_id,
+            trade_records=context.npc_trade_records,
+            trade_names=context.names.npc_trade,
+            pokemon_names=context.names.pokemon,
+            item_names=context.names.item,
+        ),
+        script_awarded_items=_extract_event_map_location_script_awarded_items(
+            context.engine,
+            script,
+            script_file_id=script_file_id,
+            item_names=context.names.item,
+        ),
+    )
 
 
 def _build_event_map_location_warps(
@@ -873,11 +829,8 @@ def _build_event_map_location_record(
     header: Any,
     warps: list[LocationWarp],
     *,
-    shops: tuple[LocationShop, ...],
-    gifts: tuple[LocationPokemonGift, ...],
+    sections: _EventMapScriptSections,
     static_encounters: tuple[LocationStaticEncounter, ...],
-    npc_trades: tuple[LocationNpcTrade, ...],
-    script_awarded_items: tuple[LocationScriptAwardedItem, ...],
     section_name: str | None,
     section_name_source: dict[str, str] | None,
 ) -> dict[str, Any]:
@@ -910,12 +863,12 @@ def _build_event_map_location_record(
         connections=tuple(context.connections.get(header.header_id, ())),
         trainers=tuple(context.trainers.get(header.header_id, ())),
         items=context.raw_items_by_header[header.header_id],
-        shops=shops,
-        pokemon_gifts=gifts,
+        shops=sections.shops,
+        pokemon_gifts=sections.gifts,
         static_encounters=static_encounters,
         roaming_activations=context.roaming_by_script[header.script_file_id],
-        npc_trades=npc_trades,
-        script_awarded_items=script_awarded_items,
+        npc_trades=sections.npc_trades,
+        script_awarded_items=sections.script_awarded_items,
         honey_tree=(
             features.honey_tree
             if header.header_id in features.honey_tree_header_ids
@@ -939,119 +892,6 @@ def _build_event_map_location_record(
         section_name=section_name,
         section_name_source=section_name_source,
     ).to_dict()
-
-
-def _extract_event_map_location_shops(
-    engine: LocationConcern,
-    script: bytes,
-    *,
-    script_file_id: int,
-    common_items: tuple[Any, ...],
-    specialty_inventories: tuple[tuple[int, ...], ...],
-    decoration_inventory_start: int,
-    decoration_inventory_count: int,
-    seal_inventory_start: int,
-    seal_inventory_count: int,
-    frontier_inventory_count: int,
-    item_names: tuple[str, ...],
-    item_prices: tuple[int, ...],
-    decoration_names: tuple[str, ...],
-    seal_names: tuple[str, ...],
-    decoration_prices: tuple[int, ...],
-    seal_prices: tuple[int, ...],
-    frontier_prices: dict[int, int],
-) -> tuple[LocationShop, ...]:
-    shops = []
-    for command in engine.parse_mart_commands(script):
-        price_by_item: dict[int, int] | None = None
-        currency = "money"
-        if command.kind == "common":
-            source_items: Iterable[tuple[int, Any]] = (
-                (item.item_id, item.required_badges) for item in common_items
-            )
-            names = item_names
-            prices: tuple[int, ...] | None = item_prices
-        else:
-            inventory_index = command.inventory_id
-            names = item_names
-            prices = item_prices
-            if command.kind == "decoration":
-                if command.inventory_id >= decoration_inventory_count:
-                    raise InvalidRomError(
-                        f"Script {script_file_id} references missing decoration mart "
-                        f"{command.inventory_id}"
-                    )
-                inventory_index += decoration_inventory_start
-                names = decoration_names
-                prices = decoration_prices
-            elif command.kind == "seal":
-                if command.inventory_id >= seal_inventory_count:
-                    raise InvalidRomError(
-                        f"Script {script_file_id} references missing seal mart "
-                        f"{command.inventory_id}"
-                    )
-                inventory_index += seal_inventory_start
-                names = seal_names
-                prices = seal_prices
-            elif command.kind == "frontier":
-                if command.inventory_id >= frontier_inventory_count:
-                    raise InvalidRomError(
-                        f"Script {script_file_id} references missing Battle Frontier "
-                        f"mart {command.inventory_id}"
-                    )
-                names = item_names
-                prices = None
-                price_by_item = frontier_prices
-                currency = "bp"
-            if inventory_index >= len(specialty_inventories):
-                raise InvalidRomError(
-                    f"Script {script_file_id} references missing {command.kind} mart "
-                    f"inventory {inventory_index}"
-                )
-            source_items = (
-                (item_id, None) for item_id in specialty_inventories[inventory_index]
-            )
-        source_items = tuple(source_items)
-        for item_id, _required_badges in source_items:
-            if not 0 < item_id < len(names):
-                raise InvalidRomError(
-                    f"Script {script_file_id} {command.kind} mart references "
-                    f"missing catalog entry {item_id}"
-                )
-            if price_by_item is not None and item_id not in price_by_item:
-                raise InvalidRomError(
-                    f"Script {script_file_id} Battle Frontier mart item {item_id} "
-                    "has no BP price"
-                )
-        items = tuple(
-            LocationShopItem(
-                item_id=item_id,
-                name=names[item_id],
-                price=(
-                    price_by_item[item_id]
-                    if price_by_item is not None
-                    else (
-                        prices[item_id]
-                        if prices is not None and item_id < len(prices)
-                        else None
-                    )
-                ),
-                required_badges=required_badges,
-            )
-            for item_id, required_badges in source_items
-        )
-        shops.append(
-            LocationShop(
-                kind=command.kind,
-                currency=currency,
-                inventory_id=command.inventory_id,
-                script_file_id=script_file_id,
-                command_offset=command.offset,
-                items=items,
-                schedule=engine.shop_schedule_label(command.kind, command.inventory_id),
-            )
-        )
-    return tuple(shops)
 
 
 def _extract_event_map_location_pokemon_gifts(

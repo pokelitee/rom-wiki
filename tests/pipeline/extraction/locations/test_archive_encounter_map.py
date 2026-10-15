@@ -4,9 +4,9 @@ import unittest
 from types import SimpleNamespace
 
 from romwiki.engines.gen5.bw.overworld import resolve_common_script_member
-from romwiki.pipeline.extraction.locations.archive_encounter_map import (
-    _extract_script_awarded_items,
-    _resolve_script_locations,
+from romwiki.pipeline.extraction.locations.archive_script_references import (
+    extract_script_awarded_items,
+    resolve_script_locations,
 )
 from romwiki.pipeline.transforms.relationships import build_relationship_index
 
@@ -32,7 +32,7 @@ class Gen5ScriptLocationTests(unittest.TestCase):
             find_script_awarded_items=lambda _data, item_count: (award,)
         )
 
-        references = _extract_script_awarded_items(
+        references = extract_script_awarded_items(
             engine,
             _Archive(20),
             {7: (3, 9)},
@@ -57,7 +57,7 @@ class Gen5ScriptLocationTests(unittest.TestCase):
             SimpleNamespace(header_id=1, overworld_file_id=0),
         )
 
-        owners = _resolve_script_locations(
+        owners = resolve_script_locations(
             engine,
             headers,
             (10, 11),

@@ -7,6 +7,12 @@ from typing import Any
 from romwiki.engines.concerns import LocationConcern
 from romwiki.engines.registry import LOCATION_SPECIAL_VENDORS, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.pipeline.extraction.locations.archive_script_references import (
+    extract_npc_trade_references,
+    extract_script_awarded_items,
+    extract_static_encounter_references,
+    resolve_script_locations,
+)
 from romwiki.pipeline.extraction.locations.helpers import extract_trainer_references
 from romwiki.pipeline.semantics.location_sections import (
     resolve_location_section,
@@ -233,7 +239,7 @@ def _collect_archive_location_relationships(
     trade_dataset: dict[str, Any] | None,
     item_dataset: dict[str, Any] | None,
 ) -> _ArchiveLocationRelationships:
-    script_headers = _resolve_script_locations(
+    script_headers = resolve_script_locations(
         source.engine,
         source.headers,
         source.script_file_ids,
@@ -243,14 +249,14 @@ def _collect_archive_location_relationships(
     )
     return _ArchiveLocationRelationships(
         trainers_by_header=extract_trainer_references(result, trainer_dataset),
-        static_encounters_by_header=_extract_static_encounter_references(
+        static_encounters_by_header=extract_static_encounter_references(
             source.engine,
             source.profile,
             source.messages,
             script_headers,
             static_encounter_dataset,
         ),
-        npc_trades_by_header=_extract_npc_trade_references(
+        npc_trades_by_header=extract_npc_trade_references(
             source.engine,
             source.profile,
             source.messages,
@@ -260,7 +266,7 @@ def _collect_archive_location_relationships(
             trade_dataset,
             item_dataset,
         ),
-        script_awarded_items_by_header=_extract_script_awarded_items(
+        script_awarded_items_by_header=extract_script_awarded_items(
             source.engine,
             source.scripts,
             script_headers,
@@ -525,24 +531,26 @@ def _extract_script_shops(
         if dispatch.selector_id != source.engine.STANDARD_SHOP_SELECTOR:
             unsupported_shop_selectors.append(dispatch.selector_id)
             continue
-        shops.append(
-            LocationShop(
-                kind="common",
-                currency="money",
-                inventory_id=dispatch.selector_id,
-                script_file_id=script_file_id,
-                command_offset=dispatch.command_offset,
-                items=(),
-                name="Standard Poké Mart",
-                is_main_game=True,
-                selector_id=dispatch.selector_id,
-                mode=dispatch.mode,
-                dynamic=True,
-                inventory_source="runtime",
-                availability="Stock changes with badge progression.",
-            )
-        )
+        shops.append(_build_standard_mart_shop(script_file_id, dispatch))
     return shops, seen_vendor_ids, unsupported_shop_selectors
+
+
+def _build_standard_mart_shop(script_file_id: int, dispatch: Any) -> LocationShop:
+    return LocationShop(
+        kind="common",
+        currency="money",
+        inventory_id=dispatch.selector_id,
+        script_file_id=script_file_id,
+        command_offset=dispatch.command_offset,
+        items=(),
+        name="Standard Poké Mart",
+        is_main_game=True,
+        selector_id=dispatch.selector_id,
+        mode=dispatch.mode,
+        dynamic=True,
+        inventory_source="runtime",
+        availability="Stock changes with badge progression.",
+    )
 
 
 def _build_catalog_shop(
@@ -783,221 +791,3 @@ def _extract_encounter_map_connections(
                 )
             )
     return result
-
-
-def _resolve_script_locations(
-    engine: LocationConcern,
-    headers: tuple[Any, ...],
-    script_file_ids: tuple[int, ...],
-    scripts: Any,
-    overworld_objects: Any,
-    *,
-    unused_overworld_members: frozenset[int] = frozenset(),
-) -> dict[int, tuple[int, ...]]:
-    """Map dedicated and common script members to every proven map caller."""
-    member_count = len(scripts.members)
-    owners: dict[int, set[int]] = defaultdict(set)
-    for header in headers:
-        owners[script_file_ids[header.header_id]].add(header.header_id)
-        if (
-            header.overworld_file_id >= len(overworld_objects.members)
-            or header.overworld_file_id in unused_overworld_members
-        ):
-            continue
-        overworld = overworld_objects.read(header.overworld_file_id)
-        references = [npc.script_used for npc in engine.parse_overworld_npcs(overworld)]
-        references.extend(
-            furniture.script_used
-            for furniture in engine.parse_overworld_furniture(overworld)
-        )
-        for reference in references:
-            member = engine.resolve_common_script_member(
-                reference, member_count=member_count
-            )
-            if member is not None:
-                owners[member].add(header.header_id)
-
-    return {
-        member: tuple(sorted(header_ids))
-        for member, header_ids in owners.items()
-        if header_ids
-    }
-
-
-def _extract_script_awarded_items(
-    engine: LocationConcern,
-    scripts: Any,
-    script_headers: dict[int, tuple[int, ...]],
-    item_dataset: dict[str, Any] | None,
-) -> dict[int, list[LocationScriptAwardedItem]]:
-    item_names = {
-        record["item_id"]: record["name"]
-        for record in (item_dataset or {}).get("records", ())
-    }
-    if not item_names:
-        return {}
-    item_count = max(item_names) + 1
-    references: dict[int, list[LocationScriptAwardedItem]] = defaultdict(list)
-    seen: set[tuple[int, int, int]] = set()
-    for member, header_ids in script_headers.items():
-        for award in engine.find_script_awarded_items(
-            scripts.read(member), item_count=item_count
-        ):
-            if award.item_id not in item_names:
-                continue
-            for header_id in header_ids:
-                identity = (header_id, member, award.command_offset)
-                if identity in seen:
-                    continue
-                seen.add(identity)
-                references[header_id].append(
-                    LocationScriptAwardedItem(
-                        item_id=award.item_id,
-                        name=item_names[award.item_id],
-                        quantity=award.quantity,
-                        script_file_id=member,
-                        command_offset=award.command_offset,
-                        command=award.command,
-                    )
-                )
-    for values in references.values():
-        values.sort(key=lambda item: (item.script_file_id, item.command_offset))
-    return references
-
-
-def _extract_npc_trade_references(
-    engine: LocationConcern,
-    profile: Any,
-    messages: Any,
-    map_header_data: bytes,
-    scripts: Any,
-    script_headers: dict[int, tuple[int, ...]],
-    trade_dataset: dict[str, Any] | None,
-    item_dataset: dict[str, Any] | None,
-) -> dict[int, list[dict[str, Any]]]:
-    if trade_dataset is None:
-        return {}
-    records_by_id = {
-        record["trade_id"]: record for record in trade_dataset.get("records", ())
-    }
-    if not records_by_id:
-        return {}
-    pokemon_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["pokemon_names_member"])
-    )
-    item_names = {
-        record["item_id"]: record["name"]
-        for record in (item_dataset or {}).get("records", ())
-    }
-    references: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    seen: set[tuple[int, int]] = set()
-
-    def add(trade_id: int, header_id: int, member: int, offset: int) -> None:
-        record = records_by_id.get(trade_id)
-        identity = (trade_id, header_id)
-        if record is None or identity in seen:
-            return
-        seen.add(identity)
-        held_item_id = record.get("held_item_id")
-        references[header_id].append(
-            {
-                **record,
-                "requested_species_name": pokemon_names[record["requested_species_id"]],
-                "offered_species_name": pokemon_names[record["offered_species_id"]],
-                "held_item_name": item_names.get(held_item_id),
-                "script_file_id": member,
-                "command_offset": offset,
-            }
-        )
-
-    trade_count = max(records_by_id) + 1
-    for member, header_ids in script_headers.items():
-        script = scripts.read(member)
-        for function_offset in engine.parse_function_offsets(script):
-            instructions = tuple(
-                engine.disassemble_function(script, function_offset).values()
-            )
-            assignments: dict[int, set[int]] = defaultdict(set)
-            for instruction in instructions:
-                if instruction.name in {"WorkSet", "WorkSetConst"}:
-                    assignments[instruction.params[0]].add(instruction.params[1])
-            for instruction in instructions:
-                if instruction.name != "FieldTradeStart":
-                    continue
-                operand = instruction.params[0]
-                candidates = (
-                    {operand}
-                    if 0 <= operand < trade_count
-                    else assignments.get(operand, set())
-                )
-                for trade_id in candidates:
-                    if trade_id not in records_by_id:
-                        continue
-                    for header_id in header_ids:
-                        add(trade_id, header_id, member, instruction.offset)
-
-    text_mapping = engine.NPC_TRADE_TEXT_MEMBER_BY_ID
-    if text_mapping:
-        text_file_ids = engine.parse_map_header_text_files(map_header_data)
-        headers_by_text: dict[int, list[int]] = defaultdict(list)
-        for header_id, text_file_id in enumerate(text_file_ids):
-            headers_by_text[text_file_id].append(header_id)
-        for trade_id, text_file_id in text_mapping.items():
-            for header_id in headers_by_text.get(text_file_id, ()):
-                add(trade_id, header_id, -1, -1)
-
-    for values in references.values():
-        values.sort(key=lambda value: value["trade_id"])
-    return references
-
-
-def _extract_static_encounter_references(
-    engine: LocationConcern,
-    profile: Any,
-    messages: Any,
-    script_headers: dict[int, tuple[int, ...]],
-    static_encounter_dataset: dict[str, Any] | None,
-) -> dict[int, list[LocationStaticEncounter]]:
-    """Resolve static (gift/single) Pokémon encounters to a real map header.
-
-    Each fact is a `[script-file, byte-offset]` pair into `layout.scripts`
-    (see `pipeline/extraction/static_encounters.py`); this cross-references the same
-    script file against each map header's own dedicated script file (the
-    same field §4's trainer-battle-trigger work decoded) rather than
-    guessing. Dedicated scripts resolve through map headers; secondary/common
-    scripts resolve through proven overworld references. The latter includes
-    the museum's shared fossil-revival script.
-    """
-    if static_encounter_dataset is None:
-        return {}
-    pokemon_names_member = profile.parameters.get("pokemon_names_member")
-    if pokemon_names_member is None:
-        return {}
-    pokemon_names = engine.parse_english_message_archive(
-        messages.read(pokemon_names_member)
-    )
-    references: dict[int, list[LocationStaticEncounter]] = defaultdict(list)
-    for record in static_encounter_dataset["records"]:
-        provenance = record.get("provenance", {})
-        species_file = provenance.get("member")
-        species_offset = record.get("command_offset")
-        if not isinstance(species_file, int) or not isinstance(species_offset, int):
-            continue
-        header_ids = script_headers.get(species_file, ())
-        if not header_ids:
-            continue
-        for header_id in header_ids:
-            references[header_id].append(
-                LocationStaticEncounter(
-                    species_id=record["species_id"],
-                    name=pokemon_names[record["species_id"]],
-                    level=record["level"],
-                    is_egg=record["is_egg"],
-                    command=record.get("command") or "StaticPokemon",
-                    script_file_id=species_file,
-                    command_offset=species_offset,
-                )
-            )
-    for values in references.values():
-        values.sort(key=lambda item: (item.name, item.level or 0))
-    return references

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
+from romwiki.engines.concerns import EnrichmentTables
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
     national_dex_id_for_member,
@@ -12,6 +13,14 @@ from romwiki.pipeline.enrichment.special_encounters import special_encounter_gro
 from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
     encounter_route_key,
+)
+from romwiki.schema.rendering import (
+    DirectSpecialEncounters,
+    EncounterDataset,
+    EncounterPokemon,
+    EncounterRenderRecord,
+    ReplacementSlot,
+    SlottedSpecialEncounters,
 )
 from romwiki.schema.versions import ENCOUNTERS_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
@@ -24,7 +33,7 @@ def enrich_encounter_dataset(
     pokedb: PokeDBGeneration,
     *,
     sprite_version: str | None = None,
-) -> dict[str, Any]:
+) -> EncounterDataset:
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
         raise DataSourceError("Encounter dataset records must be a list")
@@ -39,7 +48,8 @@ def enrich_encounter_dataset(
     else:
         enrich_area = enrich_conditional_encounter_area
 
-    records = []
+    # Conditional sources keep their raw fields, which vary by source type.
+    records: list[EncounterRenderRecord] = []
     for expected_area, source in enumerate(source_records):
         if source.get("area_id") != expected_area:
             raise DataSourceError("Encounter records must be ordered by area ID")
@@ -63,68 +73,58 @@ def enrich_encounter_dataset(
                 engine=engine,
             )
             records.append(
-                {
-                    **source,
-                    "name": source["location"]["name"],
-                    "active": True,
-                    "pokemon": pokemon,
-                }
+                cast(
+                    EncounterRenderRecord,
+                    {
+                        **source,
+                        "name": source["location"]["name"],
+                        "active": True,
+                        "pokemon": pokemon,
+                    },
+                )
             )
         elif source.get("source_type") == EncounterSourceType.HEADBUTT:
             records.append(
-                {
-                    **source,
-                    "name": source["location"]["name"],
-                    "locations": [source["location"]],
-                    "active": True,
-                    "pools": {
-                        kind: [
-                            {
-                                **slot,
-                                "pokemon": _encounter_pokemon(
-                                    slot["species_id"],
-                                    pokedb,
-                                    sprite_version,
-                                    pokemon_names,
-                                    engine=engine,
-                                ),
-                            }
-                            for slot in slots
-                        ]
-                        for kind, slots in source["pools"].items()
+                cast(
+                    EncounterRenderRecord,
+                    {
+                        **source,
+                        "name": source["location"]["name"],
+                        "locations": [source["location"]],
+                        "active": True,
+                        "pools": {
+                            kind: [
+                                {
+                                    **slot,
+                                    "pokemon": _encounter_pokemon(
+                                        slot["species_id"],
+                                        pokedb,
+                                        sprite_version,
+                                        pokemon_names,
+                                        engine=engine,
+                                    ),
+                                }
+                                for slot in slots
+                            ]
+                            for kind, slots in source["pools"].items()
+                        },
                     },
-                }
+                )
             )
         elif source.get("source_type") == EncounterSourceType.SAFARI_ZONE:
             records.append(
-                {
-                    **source,
-                    "name": f"Safari Zone — {source['area_name']}",
-                    "locations": [],
-                    "active": True,
-                    "methods": {
-                        method_name: {
-                            "base_pools": {
-                                time_name: [
-                                    {
-                                        **slot,
-                                        "pokemon": _encounter_pokemon(
-                                            slot["species_id"],
-                                            pokedb,
-                                            sprite_version,
-                                            pokemon_names,
-                                            engine=engine,
-                                        ),
-                                    }
-                                    for slot in slots
-                                ]
-                                for time_name, slots in method["base_pools"].items()
-                            },
-                            "block_encounters": [
-                                {
-                                    **encounter,
-                                    "times": {
-                                        time_name: {
+                cast(
+                    EncounterRenderRecord,
+                    {
+                        **source,
+                        "name": f"Safari Zone — {source['area_name']}",
+                        "locations": [],
+                        "active": True,
+                        "methods": {
+                            method_name: {
+                                "base_pools": {
+                                    time_name: [
+                                        {
                                             **slot,
                                             "pokemon": _encounter_pokemon(
                                                 slot["species_id"],
@@ -134,17 +134,36 @@ def enrich_encounter_dataset(
                                                 engine=engine,
                                             ),
                                         }
-                                        for time_name, slot in encounter[
-                                            "times"
-                                        ].items()
-                                    },
-                                }
-                                for encounter in method["block_encounters"]
-                            ],
-                        }
-                        for method_name, method in source["methods"].items()
+                                        for slot in slots
+                                    ]
+                                    for time_name, slots in method["base_pools"].items()
+                                },
+                                "block_encounters": [
+                                    {
+                                        **encounter,
+                                        "times": {
+                                            time_name: {
+                                                **slot,
+                                                "pokemon": _encounter_pokemon(
+                                                    slot["species_id"],
+                                                    pokedb,
+                                                    sprite_version,
+                                                    pokemon_names,
+                                                    engine=engine,
+                                                ),
+                                            }
+                                            for time_name, slot in encounter[
+                                                "times"
+                                            ].items()
+                                        },
+                                    }
+                                    for encounter in method["block_encounters"]
+                                ],
+                            }
+                            for method_name, method in source["methods"].items()
+                        },
                     },
-                }
+                )
             )
         else:
             records.append(
@@ -155,6 +174,7 @@ def enrich_encounter_dataset(
         "game": dataset["game"],
         "engine": dataset["engine"],
         "dataset": "wild_encounters",
+        "encounter_format": adapter.formats.encounters,
         "record_count": len(records),
         "active_record_count": sum(record["active"] for record in records),
         "source": dataset["source"],
@@ -163,14 +183,14 @@ def enrich_encounter_dataset(
 
 
 def enrich_conditional_encounter_area(
-    engine: Any,
+    engine: EnrichmentTables,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any]:
+) -> EncounterRenderRecord:
     if "walking_variants" in source:
-        return _enrich_hgss_encounter_area(
+        return _enrich_timed_walking_encounter_area(
             engine, source, pokedb, sprite_version, pokemon_names
         )
     walking = {
@@ -215,7 +235,7 @@ def enrich_conditional_encounter_area(
             ("super_rod", source["super_rod"], engine.FISHING_SLOT_CHANCES),
         )
     }
-    special: dict[str, Any] = {
+    special: SlottedSpecialEncounters = {
         "swarm": _encounter_special_slots(
             source["swarm_species_ids"],
             source["walking_slots"],
@@ -284,28 +304,36 @@ def enrich_conditional_encounter_area(
     )
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
-    return {
-        "area_id": source["area_id"],
-        "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
-        "locations": locations,
-        "active": active,
-        "walking": walking,
-        **methods,
-        "special": special,
-        "bonus_slot_methodology_source": engine.BONUS_SLOT_METHODOLOGY_SOURCE,
-        "encounter_form_rates": source["encounter_form_rates"],
-        "unown_table_id": source["unown_table_id"],
-        "provenance": source["provenance"],
-    }
+    return cast(
+        EncounterRenderRecord,
+        {
+            "area_id": source["area_id"],
+            "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
+            "locations": locations,
+            "active": active,
+            "walking": walking,
+            **methods,
+            "special": special,
+            "bonus_slot_methodology_source": engine.BONUS_SLOT_METHODOLOGY_SOURCE,
+            "encounter_form_rates": source["encounter_form_rates"],
+            "unown_table_id": source["unown_table_id"],
+            "provenance": source["provenance"],
+        },
+    )
 
 
-def _enrich_hgss_encounter_area(
-    engine: Any,
+def _enrich_timed_walking_encounter_area(
+    engine: EnrichmentTables,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None,
     pokemon_names: list[str] | None,
-) -> dict[str, Any]:
+) -> EncounterRenderRecord:
+    """Enrich a conditional area whose walking slots vary by time of day.
+
+    Its special encounters name species directly instead of replacing walking
+    slots, which the `direct-species` marker records.
+    """
     walking_variants = {
         period: {
             "rate": source["walking_rate"],
@@ -352,8 +380,8 @@ def _enrich_hgss_encounter_area(
             ("super_rod", engine.FISHING_SLOT_CHANCES),
         )
     }
-    special = {
-        "format": "hgss",
+    special: DirectSpecialEncounters = {
+        "format": "direct-species",
         "land_swarm": _encounter_pokemon(
             source["swarm_species_ids"][0],
             pokedb,
@@ -399,30 +427,33 @@ def _enrich_hgss_encounter_area(
     }
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
-    return {
-        "area_id": source["area_id"],
-        "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
-        "locations": locations,
-        "active": bool(
-            source["walking_rate"]
-            or any(method["rate"] for method in methods.values())
-            or bool(special_encounter_groups(special))
-        ),
-        "walking": walking_variants["day"],
-        "walking_variants": walking_variants,
-        **methods,
-        "special": special,
-        "provenance": source["provenance"],
-    }
+    return cast(
+        EncounterRenderRecord,
+        {
+            "area_id": source["area_id"],
+            "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
+            "locations": locations,
+            "active": bool(
+                source["walking_rate"]
+                or any(method["rate"] for method in methods.values())
+                or bool(special_encounter_groups(special))
+            ),
+            "walking": walking_variants["day"],
+            "walking_variants": walking_variants,
+            **methods,
+            "special": special,
+            "provenance": source["provenance"],
+        },
+    )
 
 
 def enrich_seasonal_encounter_area(
-    engine: Any,
+    engine: EnrichmentTables,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any]:
+) -> EncounterRenderRecord:
     methods = {
         name: {
             "rate": source[name]["rate"],
@@ -453,26 +484,29 @@ def enrich_seasonal_encounter_area(
     label = f"Map {source['map_index']:03}"
     if source.get("season"):
         label += f" ({source['season'].title()})"
-    return {
-        "area_id": source["area_id"],
-        "map_index": source["map_index"],
-        "season": source.get("season"),
-        "slug": encounter_route_key(source),
-        "name": " / ".join(location_names) or label,
-        "location_names": location_names,
-        "active": active,
-        **methods,
-        "provenance": source["provenance"],
-    }
+    return cast(
+        EncounterRenderRecord,
+        {
+            "area_id": source["area_id"],
+            "map_index": source["map_index"],
+            "season": source.get("season"),
+            "slug": encounter_route_key(source),
+            "name": " / ".join(location_names) or label,
+            "location_names": location_names,
+            "active": active,
+            **methods,
+            "provenance": source["provenance"],
+        },
+    )
 
 
 def enrich_method_table_encounter_area(
-    engine: Any,
+    engine: EnrichmentTables,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any]:
+) -> EncounterRenderRecord:
     """Enrich a Generation III `MethodEncounterArea` record: up to four
     independent methods (land/water/rock-smash/fishing), each an explicit
     min/max level range per slot -- no season system, no swarm/day/night/
@@ -513,24 +547,27 @@ def enrich_method_table_encounter_area(
         }
     locations = source.get("locations", [])
     names = list(dict.fromkeys(location["name"] for location in locations))
-    return {
-        "area_id": source["area_id"],
-        "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
-        "locations": locations,
-        "active": any(method["rate"] for method in methods.values()),
-        **methods,
-        "provenance": source["provenance"],
-    }
+    return cast(
+        EncounterRenderRecord,
+        {
+            "area_id": source["area_id"],
+            "name": " / ".join(names) or f"Encounter Area {source['area_id']:03}",
+            "locations": locations,
+            "active": any(method["rate"] for method in methods.values()),
+            **methods,
+            "provenance": source["provenance"],
+        },
+    )
 
 
 def _enrich_hidden_grotto(
-    engine: Any,
+    engine: EnrichmentTables,
     source: dict[str, Any],
     pokedb: PokeDBGeneration,
     sprite_version: str | None,
     pokemon_names: list[str] | None,
     item_names: list[str] | None,
-) -> dict[str, Any]:
+) -> EncounterRenderRecord:
     if item_names is None:
         raise DataSourceError("Hidden Grotto enrichment requires ROM item names")
 
@@ -558,14 +595,17 @@ def _enrich_hidden_grotto(
         }
         for slot in source["pokemon"]
     ]
-    return {
-        **source,
-        "name": source["location"]["name"],
-        "active": True,
-        "pokemon": pokemon,
-        "visible_items": [enrich_item(slot) for slot in source["visible_items"]],
-        "hidden_items": [enrich_item(slot) for slot in source["hidden_items"]],
-    }
+    return cast(
+        EncounterRenderRecord,
+        {
+            **source,
+            "name": source["location"]["name"],
+            "active": True,
+            "pokemon": pokemon,
+            "visible_items": [enrich_item(slot) for slot in source["visible_items"]],
+            "hidden_items": [enrich_item(slot) for slot in source["hidden_items"]],
+        },
+    )
 
 
 def _encounter_pokemon_list(
@@ -574,8 +614,8 @@ def _encounter_pokemon_list(
     sprite_version: str | None = None,
     pokemon_names: list[str] | None = None,
     *,
-    engine: Any | None = None,
-) -> list[dict[str, Any] | None]:
+    engine: EnrichmentTables | None = None,
+) -> list[EncounterPokemon | None]:
     return [
         _encounter_pokemon(
             species_id, pokedb, sprite_version, pokemon_names, engine=engine
@@ -591,8 +631,8 @@ def _encounter_pokemon(
     pokemon_names: list[str] | None = None,
     *,
     form_id: int = 0,
-    engine: Any | None = None,
-) -> dict[str, Any] | None:
+    engine: EnrichmentTables | None = None,
+) -> EncounterPokemon | None:
     if species_id in {None, 0}:
         return None
     form_slug = (
@@ -644,8 +684,8 @@ def _encounter_special_slots(
     sprite_version: str | None,
     pokemon_names: list[str] | None,
     *,
-    engine: Any | None = None,
-) -> list[dict[str, Any]]:
+    engine: EnrichmentTables | None = None,
+) -> list[ReplacementSlot]:
     """Apply special species replacements without changing slot odds or levels."""
     return [
         {
@@ -659,7 +699,7 @@ def _encounter_special_slots(
     ]
 
 
-def _resolve_unown_forms(engine: Any, unown_table_id: int) -> list[str]:
+def _resolve_unown_forms(engine: EnrichmentTables, unown_table_id: int) -> list[str]:
     index = unown_table_id - 1
     if not (0 <= index < len(engine.UNOWN_FORM_TABLES)):
         return []

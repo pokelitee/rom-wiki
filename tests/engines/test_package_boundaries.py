@@ -44,6 +44,7 @@ NORMALIZED_ENCOUNTER_CONSUMERS = (
     SOURCE_ROOT / "renderers" / "mkdocs" / "encounters.py",
 )
 PIPELINE_ROOT = SOURCE_ROOT / "pipeline"
+RENDERER_ROOT = SOURCE_ROOT / "renderers"
 PIPELINE_DEPENDENCIES = {
     "semantics": frozenset(),
     "extraction": frozenset({"semantics"}),
@@ -74,6 +75,18 @@ class EnginePackageBoundaryTests(unittest.TestCase):
                     violations.append(
                         f"{relative} imports {target_group} from {source_group}"
                     )
+
+        self.assertEqual(violations, [])
+
+    def test_renderers_do_not_import_engines(self) -> None:
+        # Renderers dispatch on the semantic formats published on dataset
+        # envelopes, never by resolving the engine that produced them.
+        violations = [
+            f"{path.relative_to(SOURCE_ROOT)} imports {imported}"
+            for path in RENDERER_ROOT.rglob("*.py")
+            for imported in sorted(_imports(path))
+            if imported == "romwiki.engines" or imported.startswith("romwiki.engines.")
+        ]
 
         self.assertEqual(violations, [])
 

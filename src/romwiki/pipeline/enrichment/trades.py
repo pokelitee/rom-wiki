@@ -3,12 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.schema.rendering import PokemonDataset, PokemonRenderRecord
 from romwiki.util.errors import DataSourceError
 
 
 def enrich_npc_trade_dataset(
     dataset: dict[str, Any],
-    pokemon_dataset: dict[str, Any],
+    pokemon_dataset: PokemonDataset,
     location_dataset: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Resolve detached trade species to the game's public Pokémon records."""
@@ -60,7 +61,7 @@ def enrich_npc_trade_dataset(
 
 
 def _pokemon_reference(
-    record: dict[str, Any] | None,
+    record: PokemonRenderRecord | None,
     species_id: int,
 ) -> dict[str, Any]:
     if record is None:

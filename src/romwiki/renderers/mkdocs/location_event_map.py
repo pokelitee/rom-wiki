@@ -54,7 +54,7 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     escape_markdown,
 )
-from romwiki.schema.rendering import LocationRenderRecord, RenderDataset
+from romwiki.schema.rendering import LocationDataset
 
 _POKEMON_TYPE_CHANCE_COLUMNS = (
     MarkdownColumn("Pokémon"),
@@ -64,7 +64,7 @@ _POKEMON_TYPE_CHANCE_COLUMNS = (
 
 
 def render_event_map_location_pages(
-    dataset: RenderDataset[LocationRenderRecord],
+    dataset: LocationDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,

@@ -36,6 +36,15 @@ def merge_version_family_datasets(
         raise DataSourceError(
             "Version-family datasets must have matching feature capabilities"
         )
+    for format_field in ("encounter_format", "location_format"):
+        semantic_format = first_dataset.get(format_field)
+        if any(
+            dataset.get(format_field) != semantic_format
+            for dataset in datasets.values()
+        ):
+            raise DataSourceError(
+                "Version-family datasets must have matching semantic formats"
+            )
     trainer_variant_support = first_dataset.get("trainer_variant_support")
     if kind == "trainers" and any(
         dataset.get("trainer_variant_support") != trainer_variant_support

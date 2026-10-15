@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import national_dex_id_for_member
@@ -9,6 +10,13 @@ from romwiki.pipeline.enrichment.references import with_rom_description
 from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
     encounter_route_key,
+)
+from romwiki.schema.rendering import (
+    ItemDataset,
+    ItemEnrichedFields,
+    ItemRenderRecord,
+    PokemonDataset,
+    TrainerDataset,
 )
 from romwiki.schema.versions import ITEMS_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
@@ -34,7 +42,7 @@ def _merge_relationships(target: ItemRelationships, source: ItemRelationships) -
 
 
 def _collect_pokemon_relationships(
-    pokemon_dataset: dict[str, Any],
+    pokemon_dataset: PokemonDataset,
 ) -> tuple[
     ItemRelationships,
     dict[int, dict[str, Any]],
@@ -79,10 +87,10 @@ def _collect_pokemon_relationships(
 
 
 def _collect_trainer_relationships(
-    trainer_dataset: dict[str, Any] | None,
+    trainer_dataset: TrainerDataset | None,
 ) -> ItemRelationships:
     relationships: ItemRelationships = {}
-    for trainer in (trainer_dataset or {}).get("records", []):
+    for trainer in trainer_dataset["records"] if trainer_dataset is not None else []:
         if not trainer["party"]:
             continue
         trainer_reference = {
@@ -123,7 +131,7 @@ def _collect_trainer_relationships(
 
 def _collect_location_relationships(
     item_dataset: dict[str, Any],
-    location_dataset: dict[str, Any] | None,
+    location_dataset: Mapping[str, Any] | None,
 ) -> tuple[ItemRelationships, set[int], set[int], dict[int, list[dict[str, Any]]]]:
     relationships: ItemRelationships = {}
     linked_shop_ids: set[int] = set()
@@ -240,7 +248,7 @@ def _collect_location_relationships(
 
 
 def _collect_hidden_grotto_relationships(
-    encounter_dataset: dict[str, Any] | None,
+    encounter_dataset: Mapping[str, Any] | None,
 ) -> ItemRelationships:
     relationships: ItemRelationships = {}
     for merged_record in (encounter_dataset or {}).get("records", []):
@@ -281,7 +289,7 @@ def _collect_hidden_grotto_relationships(
 
 def _collect_detached_trade_relationships(
     trade_dataset: dict[str, Any] | None,
-    pokemon_dataset: dict[str, Any],
+    pokemon_dataset: PokemonDataset,
     pokemon_by_species: dict[int, dict[str, Any]],
     pokemon_by_slug: dict[str, dict[str, Any]],
     linked_trade_ids: set[int],
@@ -354,15 +362,15 @@ def _collect_mart_relationships(
 def build_item_dataset(
     item_dataset: dict[str, Any],
     pokedb: PokeDBGeneration,
-    pokemon_dataset: dict[str, Any],
-    trainer_dataset: dict[str, Any] | None,
-    location_dataset: dict[str, Any] | None,
+    pokemon_dataset: PokemonDataset,
+    trainer_dataset: TrainerDataset | None,
+    location_dataset: Mapping[str, Any] | None,
     *,
-    encounter_dataset: dict[str, Any] | None = None,
+    encounter_dataset: Mapping[str, Any] | None = None,
     trade_dataset: dict[str, Any] | None = None,
     mart_dataset: dict[str, Any] | None = None,
     reference_version: str | None = None,
-) -> dict[str, Any]:
+) -> ItemDataset:
     game = item_dataset.get("game")
     engine_name = item_dataset.get("engine")
     engine_tables = get_engine(engine_name).enrich if engine_name else None
@@ -436,7 +444,7 @@ def build_item_dataset(
             page_slug = pokedb.item_slug(source["name"])
             slug_counts[page_slug] = slug_counts.get(page_slug, 0) + 1
 
-    records = []
+    records: list[ItemRenderRecord] = []
     for source in item_dataset["records"]:
         if not source["public"]:
             continue
@@ -445,46 +453,40 @@ def build_item_dataset(
         page_slug = pokedb.item_slug(source["name"])
         reference_slug = pokedb.item_reference_slug(source["name"])
         slug = f"{page_slug}-{item_id}" if slug_counts[page_slug] > 1 else page_slug
-        records.append(
-            {
-                **source,
-                "slug": slug,
-                "reference": with_rom_description(
-                    pokedb.item_reference(reference_slug, reference_version),
-                    descriptions[item_id] if descriptions is not None else None,
-                ),
-                "wild_held_by": relation.get("wild_held_by", []),
-                "trainer_held_by": relation.get("trainer_held_by", []),
-                "trainer_battle_items": relation.get("trainer_battle_items", []),
-                "trainer_rewards": relation.get("trainer_rewards", []),
-                "locations": relation.get("locations", []),
-                "shops": relation.get("shops", []),
-                "gifts": relation.get("gifts", []),
-                "trades": relation.get("trades", []),
-                "evolutions": relation.get("evolutions", []),
-                "revives_into": (
-                    pokemon_by_species.get(
-                        national_dex_id_for_member(
-                            engine_tables, revives_into_species_id
-                        )
-                    )
-                    if (
-                        revives_into_species_id := source.get("revives_into_species_id")
-                    )
-                    is not None
-                    else None
-                ),
-                "revives_at": fossil_locations_by_species.get(
-                    source.get("revives_into_species_id"), []
-                ),
-            }
-        )
+        enriched_fields: ItemEnrichedFields = {
+            "slug": slug,
+            "reference": with_rom_description(
+                pokedb.item_reference(reference_slug, reference_version),
+                descriptions[item_id] if descriptions is not None else None,
+            ),
+            "wild_held_by": relation.get("wild_held_by", []),
+            "trainer_held_by": relation.get("trainer_held_by", []),
+            "trainer_battle_items": relation.get("trainer_battle_items", []),
+            "trainer_rewards": relation.get("trainer_rewards", []),
+            "locations": relation.get("locations", []),
+            "shops": relation.get("shops", []),
+            "gifts": relation.get("gifts", []),
+            "trades": relation.get("trades", []),
+            "evolutions": relation.get("evolutions", []),
+            "revives_into": (
+                pokemon_by_species.get(
+                    national_dex_id_for_member(engine_tables, revives_into_species_id)
+                )
+                if (revives_into_species_id := source.get("revives_into_species_id"))
+                is not None
+                else None
+            ),
+            "revives_at": fossil_locations_by_species.get(
+                source.get("revives_into_species_id"), []
+            ),
+        }
+        records.append(cast(ItemRenderRecord, {**source, **enriched_fields}))
     slugs = [record["slug"] for record in records]
     if len(slugs) != len(set(slugs)):
         raise DataSourceError("ROM item names do not produce unique page slugs")
-    enriched = {
+    enriched: ItemDataset = {
         "schema_version": ITEMS_ENRICHED_SCHEMA_VERSION,
-        "game": game,
+        "game": item_dataset["game"],
         "engine": item_dataset.get("engine", pokemon_dataset.get("engine", "unknown")),
         "dataset": "items",
         "record_count": len(records),
@@ -506,7 +508,8 @@ def build_item_dataset(
     return enriched
 
 
-def _item_is_referenced(record: dict[str, Any]) -> bool:
+def _item_is_referenced(record: ItemRenderRecord) -> bool:
+
     return any(
         record[field]
         for field in (

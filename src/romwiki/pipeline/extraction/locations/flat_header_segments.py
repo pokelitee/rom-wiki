@@ -4,6 +4,7 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.pipeline.extraction.map_headers import read_region_names
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import LOCATIONS_RAW_SCHEMA_VERSION
@@ -60,15 +61,12 @@ def extract_flat_header_segments_location_dataset(
     total_count = sum(count for _offset, count in segments)
     archive_path = "+".join(f"{offset:#x}" for offset, _count in segments)
 
-    # `decode_gen3_text_sequence` scans for terminators starting at `offset`
-    # within the given buffer, so the region-name table is read as one
-    # oversized chunk (worst case, every entry uses its full padding budget)
-    # rather than needing an exact byte length up front.
-    region_name_data = platform.read_bytes(
-        result.image, region_name_offset, region_name_count * 32
-    )
-    region_names = engine.decode_gen3_text_sequence(
-        region_name_data, offset=0, count=region_name_count
+    region_names = read_region_names(
+        engine,
+        platform,
+        result.image,
+        offset=region_name_offset,
+        count=region_name_count,
     )
 
     records = [

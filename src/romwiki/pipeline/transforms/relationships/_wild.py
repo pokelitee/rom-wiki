@@ -7,13 +7,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from romwiki.engines.registry import EncounterFormat
 from romwiki.pipeline.enrichment.special_encounters import special_encounter_groups
 from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
     encounter_route_key,
     is_unlinked_encounter_area,
 )
+from romwiki.schema.rendering import EncounterFormat
 
 from ._shared import _location_display_name, _pokemon_slug, _record_variants
 

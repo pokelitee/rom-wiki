@@ -79,9 +79,7 @@ def extract_reference_names(
     )
     result: dict[str, Any] = {"name_sources": {}}
     for field, (parameter, expected_count) in configured.items():
-        member = profile.parameters[parameter]
-        if not isinstance(member, int):
-            raise ProfileError(f"Profile {profile.id} has an invalid {parameter}")
+        member = profile.int_parameter(parameter)
         names = parse_english_message_archive(archive.read(member))
         if len(names) != expected_count or any(not name for name in names):
             raise DataSourceError(
@@ -129,9 +127,7 @@ def extract_reference_descriptions(
     )
     result: dict[str, Any] = {"description_sources": {}}
     for field, (parameter, expected_count) in configured.items():
-        member = profile.parameters[parameter]
-        if not isinstance(member, int):
-            raise ProfileError(f"Profile {profile.id} has an invalid {parameter}")
+        member = profile.int_parameter(parameter)
         descriptions = engine.parse_english_message_archive(archive.read(member))
         if len(descriptions) != expected_count:
             raise DataSourceError(

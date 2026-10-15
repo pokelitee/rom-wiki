@@ -291,8 +291,16 @@ class DatasetComparisonTests(unittest.TestCase):
         ]
 
         comparison = compare_datasets(
-            {**_dataset("wild_encounters", "hack", current), "engine": "gen4_hgss"},
-            {**_dataset("wild_encounters", "base", baseline), "engine": "gen4_hgss"},
+            {
+                **_dataset("wild_encounters", "hack", current),
+                "engine": "gen4_hgss",
+                "encounter_format": "conditional",
+            },
+            {
+                **_dataset("wild_encounters", "base", baseline),
+                "engine": "gen4_hgss",
+                "encounter_format": "conditional",
+            },
         )
         records = comparison_by_key(comparison)
 

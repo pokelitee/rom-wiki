@@ -1,18 +1,30 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from romwiki.engines.concerns import TutorConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
+    iter_segment_map_headers,
     parse_map_header_table,
     read_code_binary,
+    read_region_names,
 )
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.versions import TUTORS_RAW_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, InvalidRomError, ProfileError
+
+
+@dataclass(frozen=True)
+class _SpecialTutorSource:
+    scripts: Any
+    headers: Any
+    location_names: tuple[str, ...]
+    personal_records: dict[int, Any]
+    minimum_friendship: int
 
 
 def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -30,6 +42,12 @@ def extract_tutor_dataset(result: InspectionResult) -> dict[str, Any]:
         raise DataSourceError(
             f"Engine {profile.engine!r} does not provide tutor extraction"
         )
+    return _extract_overlay_table_tutors(result)
+
+
+def _extract_overlay_table_tutors(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
     required = (
         "tutor_overlay_id",
         "tutor_move_offset",
@@ -245,8 +263,38 @@ def _extract_special_tutors(
         raise ProfileError("Special tutor definitions must be a list")
     if not definitions:
         return [], []
+    source = _load_special_tutor_source(engine, platform, result)
+
+    records = []
+    compatibility: dict[int, list[int]] = {}
+    for index, definition in enumerate(definitions):
+        tutor_id = start_tutor_id + index
+        tutor, eligibility_kind, eligibility_value = _decode_special_tutor(
+            engine, source, definition, tutor_id=tutor_id
+        )
+        records.append({**tutor.to_dict(), "kind": "special"})
+        for member, personal_record in source.personal_records.items():
+            eligible = (
+                member in eligibility_value
+                if eligibility_kind == "species"
+                else eligibility_value in personal_record.type_ids
+            )
+            if eligible:
+                compatibility.setdefault(member, []).append(tutor_id)
+
+    return records, [
+        {"personal_member": member, "tutor_ids": tutor_ids}
+        for member, tutor_ids in sorted(compatibility.items())
+    ]
+
+
+def _load_special_tutor_source(
+    engine: TutorConcern, platform: Any, result: InspectionResult
+) -> _SpecialTutorSource:
+    assert result.match is not None
+    profile = result.match.profile
     try:
-        minimum_friendship = profile.parameters.get(
+        minimum_friendship = profile.int_parameter(
             "special_tutor_minimum_friendship", engine.MAX_FRIENDSHIP
         )
         script_path = profile.layout["scripts"]
@@ -279,90 +327,92 @@ def _extract_special_tutors(
         table_offset=map_header_offset,
         count=map_header_count,
     )
-
-    records = []
-    compatibility: dict[int, list[int]] = {}
     public_members = tuple(range(1, engine.BASE_SPECIES_COUNT + 1)) + tuple(
         engine.FORM_MEMBERS
     )
-    personal_records = {
-        member: engine.parse_personal_record(
-            personal.read(member), species_id=member, archive_path=personal_path
+    return _SpecialTutorSource(
+        scripts=scripts,
+        headers=headers,
+        location_names=location_names,
+        personal_records={
+            member: engine.parse_personal_record(
+                personal.read(member), species_id=member, archive_path=personal_path
+            )
+            for member in public_members
+        },
+        minimum_friendship=minimum_friendship,
+    )
+
+
+def _decode_special_tutor(
+    engine: TutorConcern,
+    source: _SpecialTutorSource,
+    definition: Any,
+    *,
+    tutor_id: int,
+) -> tuple[Any, str, Any]:
+    try:
+        script_member = definition["script_member"]
+        command_offset = definition["command_offset"]
+        map_header_id = definition["map_header_id"]
+        eligibility_kind = definition["eligibility_kind"]
+    except (KeyError, TypeError) as error:
+        raise ProfileError("Special tutor definition is incomplete") from error
+    if not 0 <= script_member < len(source.scripts.members):
+        raise ProfileError("Special tutor references an unknown script member")
+    if not 0 <= map_header_id < len(source.headers):
+        raise ProfileError("Special tutor references an unknown map header")
+    if source.headers[map_header_id].script_file_id != script_member:
+        raise InvalidRomError(
+            f"Special tutor map header {map_header_id} does not reference "
+            f"script member {script_member}"
         )
-        for member in public_members
-    }
-    for index, definition in enumerate(definitions):
+    location_name_id = source.headers[map_header_id].location_name_id
+    if location_name_id >= len(source.location_names):
+        raise InvalidRomError(
+            f"Special tutor map header {map_header_id} references missing "
+            f"location name {location_name_id}"
+        )
+    script_data = source.scripts.read(script_member)
+    eligibility_value = _special_tutor_eligibility_value(
+        engine, definition, eligibility_kind, script_data
+    )
+    tutor = engine.parse_special_tutor_move(
+        script_data,
+        tutor_id=tutor_id,
+        script_member=script_member,
+        command_offset=command_offset,
+        map_header_id=map_header_id,
+        location_name=source.location_names[location_name_id],
+        eligibility_kind=eligibility_kind,
+        eligibility_value=eligibility_value,
+        minimum_friendship=source.minimum_friendship,
+    )
+    return tutor, eligibility_kind, eligibility_value
+
+
+def _special_tutor_eligibility_value(
+    engine: TutorConcern, definition: Any, eligibility_kind: str, script_data: bytes
+) -> Any:
+    if eligibility_kind == "species":
         try:
-            script_member = definition["script_member"]
-            command_offset = definition["command_offset"]
-            map_header_id = definition["map_header_id"]
-            eligibility_kind = definition["eligibility_kind"]
-        except (KeyError, TypeError) as error:
-            raise ProfileError("Special tutor definition is incomplete") from error
-        if not 0 <= script_member < len(scripts.members):
-            raise ProfileError("Special tutor references an unknown script member")
-        if not 0 <= map_header_id < len(headers):
-            raise ProfileError("Special tutor references an unknown map header")
-        if headers[map_header_id].script_file_id != script_member:
-            raise InvalidRomError(
-                f"Special tutor map header {map_header_id} does not reference "
-                f"script member {script_member}"
+            return engine.parse_special_tutor_species(
+                script_data,
+                comparison_offset=definition["comparison_offset"],
+                species_count=definition["species_count"],
             )
-        location_name_id = headers[map_header_id].location_name_id
-        if location_name_id >= len(location_names):
-            raise InvalidRomError(
-                f"Special tutor map header {map_header_id} references missing "
-                f"location name {location_name_id}"
-            )
-        location_name = location_names[location_name_id]
-        script_data = scripts.read(script_member)
-        if eligibility_kind == "species":
-            try:
-                eligibility_value = engine.parse_special_tutor_species(
-                    script_data,
-                    comparison_offset=definition["comparison_offset"],
-                    species_count=definition["species_count"],
-                )
-            except KeyError as error:
-                raise ProfileError(
-                    "Species-based special tutor definition is incomplete"
-                ) from error
-        elif eligibility_kind == "type":
-            try:
-                eligibility_value = definition["eligibility_value"]
-            except KeyError as error:
-                raise ProfileError(
-                    "Type-based special tutor definition is incomplete"
-                ) from error
-        else:
-            raise ProfileError("Special tutor eligibility kind is unknown")
-
-        tutor_id = start_tutor_id + index
-        tutor = engine.parse_special_tutor_move(
-            script_data,
-            tutor_id=tutor_id,
-            script_member=script_member,
-            command_offset=command_offset,
-            map_header_id=map_header_id,
-            location_name=location_name,
-            eligibility_kind=eligibility_kind,
-            eligibility_value=eligibility_value,
-            minimum_friendship=minimum_friendship,
-        )
-        records.append({**tutor.to_dict(), "kind": "special"})
-        for member, personal_record in personal_records.items():
-            eligible = (
-                member in eligibility_value
-                if eligibility_kind == "species"
-                else eligibility_value in personal_record.type_ids
-            )
-            if eligible:
-                compatibility.setdefault(member, []).append(tutor_id)
-
-    return records, [
-        {"personal_member": member, "tutor_ids": tutor_ids}
-        for member, tutor_ids in sorted(compatibility.items())
-    ]
+        except KeyError as error:
+            raise ProfileError(
+                "Species-based special tutor definition is incomplete"
+            ) from error
+    if eligibility_kind == "type":
+        try:
+            return definition["eligibility_value"]
+        except KeyError as error:
+            raise ProfileError(
+                "Type-based special tutor definition is incomplete"
+            ) from error
+    raise ProfileError("Special tutor eligibility kind is unknown")
 
 
 def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
@@ -398,59 +448,27 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
     engine = get_engine(profile.engine).tutors
 
-    region_name_data = platform.read_bytes(
-        result.image, region_name_offset, region_name_count * 32
+    region_names = read_region_names(
+        engine,
+        platform,
+        result.image,
+        offset=region_name_offset,
+        count=region_name_count,
     )
-    region_names = engine.decode_gen3_text_sequence(
-        region_name_data, offset=0, count=region_name_count
-    )
-    header_size = engine.MAP_HEADER_SIZE
-    location_names: list[str] = []
-    for segment_offset, segment_count in segments:
-        segment_data = platform.read_bytes(
-            result.image, segment_offset, header_size * segment_count
+    location_names = [
+        header.name
+        for header in iter_segment_map_headers(
+            engine, platform, result.image, segments, region_names
         )
-        for slot in range(segment_count):
-            raw = segment_data[slot * header_size : (slot + 1) * header_size]
-            _music, _layout_id, region_id = engine.parse_map_header(
-                raw, header_id=len(location_names)
-            )
-            location_names.append(region_names[region_id])
-
-    location_ids = {}
-    for table_index, target_name in engine.TUTOR_LOCATIONS.items():
-        try:
-            location_ids[table_index] = location_names.index(target_name)
-        except ValueError as error:
-            raise InvalidRomError(
-                f"Gen III tutor {table_index} references location "
-                f"{target_name!r}, not present in this ROM's decoded locations"
-            ) from error
-
+    ]
+    location_ids = _resolve_tutor_location_ids(engine, location_names)
     move_data = platform.read_bytes(
         result.image, move_offset, engine.TUTOR_MOVE_COUNT * 2
     )
     tutors = engine.parse_tutor_move_table(move_data, location_ids=location_ids)
-
-    compatibility_data = platform.read_bytes(
-        result.image, compatibility_offset, personal_count * 2
+    compatibility = _decode_flat_tutor_compatibility(
+        engine, platform, result.image, compatibility_offset, personal_count
     )
-    # Bounded to the engine's exposed species count, not the table's real
-    # on-ROM size -- the same "populate what's real and currently exposed"
-    # gap `egg_moves.py`'s padding-species filter documents.
-    decoded_species_count = min(personal_count, engine.PERSONAL_RECORD_COUNT)
-    compatibility = [
-        record
-        for species_id in range(decoded_species_count)
-        if (
-            record := engine.parse_tutor_compatibility(
-                compatibility_data[species_id * 2 : species_id * 2 + 2],
-                species_id=species_id,
-                table_index=species_id,
-            )
-        )
-        is not None
-    ]
 
     envelope = dataset_envelope(
         schema_version=TUTORS_RAW_SCHEMA_VERSION,
@@ -472,3 +490,46 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
     envelope["special_records"] = []
     envelope["special_compatibility"] = []
     return envelope
+
+
+def _resolve_tutor_location_ids(
+    engine: TutorConcern, location_names: list[str]
+) -> dict[int, int]:
+    location_ids = {}
+    for table_index, target_name in engine.TUTOR_LOCATIONS.items():
+        try:
+            location_ids[table_index] = location_names.index(target_name)
+        except ValueError as error:
+            raise InvalidRomError(
+                f"Gen III tutor {table_index} references location "
+                f"{target_name!r}, not present in this ROM's decoded locations"
+            ) from error
+    return location_ids
+
+
+def _decode_flat_tutor_compatibility(
+    engine: TutorConcern,
+    platform: Any,
+    image: Any,
+    compatibility_offset: int,
+    personal_count: int,
+) -> list[Any]:
+    compatibility_data = platform.read_bytes(
+        image, compatibility_offset, personal_count * 2
+    )
+    # Bounded to the engine's exposed species count, not the table's real
+    # on-ROM size -- the same "populate what's real and currently exposed"
+    # gap `egg_moves.py`'s padding-species filter documents.
+    decoded_species_count = min(personal_count, engine.PERSONAL_RECORD_COUNT)
+    return [
+        record
+        for species_id in range(decoded_species_count)
+        if (
+            record := engine.parse_tutor_compatibility(
+                compatibility_data[species_id * 2 : species_id * 2 + 2],
+                species_id=species_id,
+                table_index=species_id,
+            )
+        )
+        is not None
+    ]

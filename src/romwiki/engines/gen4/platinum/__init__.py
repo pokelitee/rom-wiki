@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from romwiki.engines.gen4.shared.constants import (
     ABILITY_NAME_COUNT,
     COLOR_NAMES,
@@ -102,6 +104,7 @@ from romwiki.engines.gen4.shared.trainers import (
 from romwiki.engines.gen4.shared.trainers import (
     parse_trainer_class_prize_multipliers as parse_trainer_class_prize_multipliers,
 )
+from romwiki.schema.pickup import SplitPickupTable
 
 from .battle_variants import resolve_trainer_variants
 from .berries import (
@@ -192,7 +195,6 @@ from .pickup import (
     PICKUP_COMMON_RATE_COUNT,
     PICKUP_HONEY_GATHER_RATE_COUNT,
     PICKUP_RARE_ITEM_COUNT,
-    SplitPickupTable,
     parse_pickup_tables,
 )
 from .rematch import (
@@ -528,8 +530,8 @@ def parse_starter_branch_families(
     *,
     script_file_id: int,
     trainer_count: int,
-    starter_species=None,
-):
+    starter_species: Sequence[int] | None = None,
+) -> tuple[Gen4StarterBranchFamily, ...]:
     """Decode this leaf's starter-selected battles (see `gen4.starter_branches`)."""
     return _parse_starter_branch_families(
         data,

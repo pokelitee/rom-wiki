@@ -40,6 +40,7 @@ from romwiki.engines.profile_contracts import (
     GEN5_BW_PROFILE_CONTRACT,
     EngineProfileContract,
 )
+from romwiki.schema.rendering import EncounterFormat, LocationFormat
 from romwiki.util.errors import DataSourceError
 
 # Canonical engine identifiers used by registration and contract tests.
@@ -50,8 +51,6 @@ GEN4_HGSS_ENGINE = "gen4_hgss"
 GEN5_BW_ENGINE = "gen5_bw"
 GEN5_B2W2_ENGINE = "gen5_b2w2"
 
-EncounterFormat = Literal["unsupported", "conditional", "seasonal", "method-table"]
-LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 LocationExtractionFormat = Literal[
     "unsupported",
     "arm9-event-map",

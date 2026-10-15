@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import DETACHED_NPC_TRADES, get_engine
 from romwiki.pipeline.build.fingerprint import (
@@ -16,6 +16,7 @@ from romwiki.pipeline.enrichment.abilities import build_ability_dataset
 from romwiki.pipeline.enrichment.encounters import enrich_encounter_dataset
 from romwiki.pipeline.enrichment.features import attach_features
 from romwiki.pipeline.enrichment.items import build_item_dataset
+from romwiki.pipeline.enrichment.locations import enrich_location_dataset
 from romwiki.pipeline.enrichment.moves import enrich_move_dataset
 from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.pipeline.enrichment.trades import enrich_npc_trade_dataset
@@ -39,6 +40,15 @@ from romwiki.pipeline.extraction.trades import extract_npc_trade_dataset
 from romwiki.pipeline.extraction.trainers.dispatcher import extract_trainer_dataset
 from romwiki.pipeline.extraction.tutors import extract_tutor_dataset
 from romwiki.schema.datasets import validate_dataset_envelope
+from romwiki.schema.rendering import (
+    AbilityDataset,
+    EncounterDataset,
+    ItemDataset,
+    LocationDataset,
+    MoveDataset,
+    PokemonDataset,
+    TrainerDataset,
+)
 from romwiki.schema.versions import (
     CACHE_MANIFEST_SCHEMA_VERSION,
     RAW_SCHEMA_VERSION_BY_CACHE_KEY,
@@ -70,6 +80,7 @@ class GameBuildContext:
         self.refresh = refresh
         self._source_fingerprint_override = source_fingerprint
         self._values: dict[str, dict[str, Any]] = {}
+        self._enriched: dict[str, Mapping[str, Any]] = {}
         self._cache_manifest = self._read_manifest()
         self._initial_cache_valid = self._manifest_valid(self._cache_manifest)
         fingerprints = self._cache_manifest.get("source_fingerprints", {})
@@ -222,7 +233,7 @@ class GameBuildContext:
             ),
         )
 
-    def pokemon(self) -> dict[str, Any]:
+    def pokemon(self) -> PokemonDataset:
         return attach_features(
             self._memo(
                 "pokemon/enriched",
@@ -246,7 +257,7 @@ class GameBuildContext:
             self.profile,
         )
 
-    def abilities(self) -> dict[str, Any]:
+    def abilities(self) -> AbilityDataset:
         return attach_features(
             self._memo(
                 "abilities/enriched",
@@ -260,7 +271,7 @@ class GameBuildContext:
             self.profile,
         )
 
-    def moves(self) -> dict[str, Any]:
+    def moves(self) -> MoveDataset:
         return attach_features(
             self._memo(
                 "moves/enriched",
@@ -278,7 +289,7 @@ class GameBuildContext:
             self.profile,
         )
 
-    def encounters(self) -> dict[str, Any]:
+    def encounters(self) -> EncounterDataset:
         return attach_features(
             self._memo(
                 "encounters/enriched",
@@ -291,7 +302,7 @@ class GameBuildContext:
             self.profile,
         )
 
-    def trainers(self) -> dict[str, Any] | None:
+    def trainers(self) -> TrainerDataset | None:
         trainers_raw = self.trainers_raw()
         if trainers_raw is None:
             return None
@@ -311,11 +322,16 @@ class GameBuildContext:
             self.profile,
         )
 
-    def locations(self) -> dict[str, Any] | None:
+    def locations(self) -> LocationDataset | None:
         dataset = self.locations_raw()
-        return attach_features(dataset, self.profile) if dataset is not None else None
+        if dataset is None:
+            return None
+        return attach_features(
+            self._memo("locations/enriched", lambda: enrich_location_dataset(dataset)),
+            self.profile,
+        )
 
-    def items(self) -> dict[str, Any]:
+    def items(self) -> ItemDataset:
         return attach_features(
             self._memo(
                 "items/enriched",
@@ -324,7 +340,7 @@ class GameBuildContext:
             self.profile,
         )
 
-    def _build_item_dataset(self) -> dict[str, Any]:
+    def _build_item_dataset(self) -> ItemDataset:
         # Only called when dataset_enabled(profile, "items") is true (see
         # items_raw() above and its callers), so a None items_raw() here
         # would be a real bug, not a normal engine-capability gap.
@@ -354,7 +370,7 @@ class GameBuildContext:
             reference_version=self.profile.base_game,
         )
 
-    def all_datasets(self) -> dict[str, dict[str, Any]]:
+    def all_datasets(self) -> dict[str, Mapping[str, Any]]:
         return {
             kind: getattr(self, kind)() for kind in enabled_dataset_kinds(self.profile)
         }
@@ -396,11 +412,13 @@ class GameBuildContext:
             _LOG.debug("Extraction cache updated for %s: %s", self.profile.id, key)
         return value
 
-    def _memo(self, key: str, factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:
-        if key not in self._values:
-            self._values[key] = factory()
-            validate_dataset_envelope(self._values[key], context=key)
-        return self._values[key]
+    def _memo[DatasetT: Mapping[str, Any]](
+        self, key: str, factory: Callable[[], DatasetT]
+    ) -> DatasetT:
+        if key not in self._enriched:
+            self._enriched[key] = factory()
+            validate_dataset_envelope(self._enriched[key], context=key)
+        return cast(DatasetT, self._enriched[key])
 
     def _read_cache(
         self, key: str, path: Path, source_fingerprint: str

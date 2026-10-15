@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from collections.abc import Iterator
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
 from romwiki.engines.concerns import TrainerConcern
@@ -23,6 +24,17 @@ from romwiki.schema.versions import (
     TRAINERS_RAW_SCHEMA_VERSION,
 )
 from romwiki.util.errors import InvalidRomError, ProfileError
+
+
+@dataclass(frozen=True)
+class _BattleModeMapSource:
+    scripts_path: str
+    overworld_objects_path: str
+    headers: tuple[Any, ...]
+    script_file_ids: tuple[int, ...]
+    scripts: Any
+    overworld_objects: Any
+    unused_overworld_members: frozenset[int]
 
 
 def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -54,42 +66,26 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
         )
     engine = get_engine(profile.engine).trainers
     filesystem = platform.filesystem_from_image(result.image)
-    trainers = platform.archive_cls.from_bytes(filesystem.read(trainer_path))
-    parties = platform.archive_cls.from_bytes(filesystem.read(party_path))
     messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
-    reference_names = extract_reference_names(profile, filesystem, messages)
-    if len(trainers.members) != len(parties.members):
-        raise InvalidRomError("Trainer data and party archives have different counts")
-    names = engine.parse_english_message_archive(messages.read(names_member))
-    classes = engine.parse_english_message_archive(messages.read(classes_member))
-    name_indexes = {
-        member.index: engine.trainer_name_index(member.index)
-        for member in trainers.members
-        if member.index != 0
-    }
-    if any(index < 0 or index >= len(names) for index in name_indexes.values()):
-        raise InvalidRomError("Trainer name table is shorter than the trainer archive")
-
-    parsed_records = [
-        engine.parse_trainer_record(
-            trainers.read(member.index),
-            parties.read(member.index),
-            trainer_id=member.index,
-            name=names[name_indexes[member.index]],
-            class_names=classes,
-            trainer_archive=trainer_path,
-            party_archive=party_path,
-        )
-        for member in trainers.members
-        if member.index != 0
-    ]
+    parsed_records, reference_names = _decode_battle_mode_trainer_records(
+        profile,
+        engine,
+        platform,
+        filesystem,
+        messages,
+        trainer_path=trainer_path,
+        party_path=party_path,
+        names_member=names_member,
+        classes_member=classes_member,
+    )
+    trainer_count = len(parsed_records) + 1
     (
         locations_by_trainer,
         script_references_by_trainer,
         location_source,
         difficulty_branch_families,
     ) = _extract_battle_mode_trainer_locations(
-        engine, platform, result, filesystem, trainer_count=len(parsed_records) + 1
+        engine, platform, result, filesystem, trainer_count=trainer_count
     )
     records = [
         replace(
@@ -101,38 +97,20 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
         ).to_dict()
         for record in parsed_records
     ]
-    starter_species = read_starter_species(profile, platform, engine, result)
-    starter_families = read_starter_branch_families(
+    variant_contract = _resolve_battle_mode_variants(
         profile,
         platform,
         engine,
+        result,
         filesystem,
-        trainer_count=len(parsed_records) + 1,
-        starter_species=starter_species,
-    )
-    selector_data = {
-        key: value
-        for key, value in (
-            ("starter_branch_families", starter_families),
-            ("difficulty_branch_families", difficulty_branch_families),
-            ("starter_species", starter_species),
-            ("species_names", reference_names.get("pokemon_names")),
-        )
-        if value is not None
-    }
-    variant_contract = resolve_trainer_variants(
-        cast(TrainerVariantResolver, engine),
-        profile.id,
-        profile.parameters,
         records,
-        selector_data or None,
+        trainer_count=trainer_count,
+        difficulty_branch_families=difficulty_branch_families,
+        species_names=reference_names.get("pokemon_names"),
     )
-    envelope = dataset_envelope(
-        schema_version=TRAINERS_RAW_SCHEMA_VERSION,
-        game=profile.id,
-        engine=profile.engine,
-        dataset="trainers",
-        source={
+    return _build_battle_mode_envelope(
+        profile,
+        {
             "rom_sha256": result.image.hashes.sha256,
             "trainer_archive": trainer_path,
             "party_archive": party_path,
@@ -140,6 +118,26 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
             "trainer_classes": {"archive": messages_path, "member": classes_member},
             **location_source,
         },
+        records,
+        variant_contract=variant_contract,
+        reference_names=reference_names,
+    )
+
+
+def _build_battle_mode_envelope(
+    profile: Any,
+    source: dict[str, Any],
+    records: list[dict[str, Any]],
+    *,
+    variant_contract: dict[str, Any],
+    reference_names: dict[str, Any],
+) -> dict[str, Any]:
+    envelope = dataset_envelope(
+        schema_version=TRAINERS_RAW_SCHEMA_VERSION,
+        game=profile.id,
+        engine=profile.engine,
+        dataset="trainers",
+        source=source,
         records=records,
     )
     envelope["battle_family_schema_version"] = TRAINER_BATTLE_FAMILY_SCHEMA_VERSION
@@ -155,6 +153,88 @@ def extract_battle_mode_trainer_dataset(result: InspectionResult) -> dict[str, A
     )
     envelope.update(reference_names)
     return envelope
+
+
+def _decode_battle_mode_trainer_records(
+    profile: Any,
+    engine: TrainerConcern,
+    platform: Any,
+    filesystem: Any,
+    messages: Any,
+    *,
+    trainer_path: str,
+    party_path: str,
+    names_member: int,
+    classes_member: int,
+) -> tuple[list[Any], dict[str, Any]]:
+    trainers = platform.archive_cls.from_bytes(filesystem.read(trainer_path))
+    parties = platform.archive_cls.from_bytes(filesystem.read(party_path))
+    reference_names = extract_reference_names(profile, filesystem, messages)
+    if len(trainers.members) != len(parties.members):
+        raise InvalidRomError("Trainer data and party archives have different counts")
+    names = engine.parse_english_message_archive(messages.read(names_member))
+    classes = engine.parse_english_message_archive(messages.read(classes_member))
+    name_indexes = {
+        member.index: engine.trainer_name_index(member.index)
+        for member in trainers.members
+        if member.index != 0
+    }
+    if any(index < 0 or index >= len(names) for index in name_indexes.values()):
+        raise InvalidRomError("Trainer name table is shorter than the trainer archive")
+    parsed_records = [
+        engine.parse_trainer_record(
+            trainers.read(member.index),
+            parties.read(member.index),
+            trainer_id=member.index,
+            name=names[name_indexes[member.index]],
+            class_names=classes,
+            trainer_archive=trainer_path,
+            party_archive=party_path,
+        )
+        for member in trainers.members
+        if member.index != 0
+    ]
+    return parsed_records, reference_names
+
+
+def _resolve_battle_mode_variants(
+    profile: Any,
+    platform: Any,
+    engine: TrainerConcern,
+    result: InspectionResult,
+    filesystem: Any,
+    records: list[dict[str, Any]],
+    *,
+    trainer_count: int,
+    difficulty_branch_families: tuple[Any, ...],
+    species_names: Any,
+) -> dict[str, Any]:
+    starter_species = read_starter_species(profile, platform, engine, result)
+    starter_families = read_starter_branch_families(
+        profile,
+        platform,
+        engine,
+        filesystem,
+        trainer_count=trainer_count,
+        starter_species=starter_species,
+    )
+    selector_data = {
+        key: value
+        for key, value in (
+            ("starter_branch_families", starter_families),
+            ("difficulty_branch_families", difficulty_branch_families),
+            ("starter_species", starter_species),
+            ("species_names", species_names),
+        )
+        if value is not None
+    }
+    return resolve_trainer_variants(
+        cast(TrainerVariantResolver, engine),
+        profile.id,
+        profile.parameters,
+        records,
+        selector_data or None,
+    )
 
 
 def _extract_battle_mode_trainer_locations(
@@ -188,55 +268,9 @@ def _extract_battle_mode_trainer_locations(
     """
     assert result.match is not None
     profile = result.match.profile
-    required_layout = (
-        "map_headers",
-        "scripts",
-        "overworld_objects",
-        "messages",
-    )
-    if any(name not in profile.layout for name in required_layout) or (
-        "map_names_member" not in profile.parameters
-    ):
+    source = _load_battle_mode_map_source(profile, engine, platform, filesystem)
+    if source is None:
         return {}, {}, {}, ()
-    map_headers_path = profile.layout["map_headers"]
-    scripts_path = profile.layout["scripts"]
-    overworld_objects_path = profile.layout["overworld_objects"]
-    messages_path = profile.layout["messages"]
-    map_names_member = profile.parameters["map_names_member"]
-
-    map_headers_archive = platform.archive_cls.from_bytes(
-        filesystem.read(map_headers_path),
-        allow_trailing_data=profile.parameters.get(
-            "map_headers_allow_trailing_data", False
-        ),
-        allow_incorrect_data_block_size=profile.parameters.get(
-            "map_headers_allow_incorrect_data_block_size", False
-        ),
-    )
-    map_headers_data = map_headers_archive.read(0)
-    messages = platform.archive_cls.from_bytes(filesystem.read(messages_path))
-    map_names = engine.parse_english_message_archive(messages.read(map_names_member))
-    headers = engine.parse_map_header_table(
-        map_headers_data, map_names=tuple(map_names), archive_path=map_headers_path
-    )
-    script_file_ids = engine.parse_map_header_script_files(map_headers_data)
-
-    field_archive_options = {}
-    if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
-        field_archive_options["allow_incorrect_data_block_size"] = True
-    if profile.parameters.get("field_archives_allow_trailing_data", False):
-        field_archive_options["allow_trailing_data"] = True
-    scripts = platform.archive_cls.from_bytes(
-        filesystem.read(scripts_path),
-        allow_truncated=True,
-        **field_archive_options,
-    )
-    overworld_objects = platform.archive_cls.from_bytes(
-        filesystem.read(overworld_objects_path), **field_archive_options
-    )
-    unused_overworld_members = frozenset(
-        profile.parameters.get("overworld_objects_unused", ())
-    )
 
     locations: dict[int, list[TrainerLocation]] = {}
     script_references: dict[int, list[TrainerScriptReference]] = {}
@@ -246,46 +280,17 @@ def _extract_battle_mode_trainer_locations(
         DIFFICULTY_BRANCHES in get_engine(profile.engine).capabilities
     )
 
-    for header in headers:
-        header_id = header.header_id
-        overworld_file_id = header.overworld_file_id
-        internal_name = f"map_{header_id}"
-
-        if (
-            overworld_file_id < len(overworld_objects.members)
-            and overworld_file_id not in unused_overworld_members
+    for header in source.headers:
+        for trainer_id, location in _overworld_trainer_locations(
+            engine, source, header, trainer_count=trainer_count
         ):
-            npcs = engine.parse_overworld_npcs(
-                overworld_objects.read(overworld_file_id)
-            )
-            for npc in npcs:
-                trainer_id = engine.resolve_common_script_trainer_id(
-                    npc.script_used, trainer_count=trainer_count
-                )
-                if trainer_id is None:
-                    continue
-                locations.setdefault(trainer_id, []).append(
-                    TrainerLocation(
-                        header_id=header_id,
-                        internal_name=internal_name,
-                        location_name_id=header_id,
-                        name=header.name,
-                        event_file_id=overworld_file_id,
-                        object_index=npc.index,
-                        object_local_id=npc.index,
-                        script_id=npc.script_used,
-                        trainer_type=1,
-                        x=npc.x,
-                        y=npc.y,
-                        z=npc.z,
-                    )
-                )
+            locations.setdefault(trainer_id, []).append(location)
 
-        script_file_id = script_file_ids[header_id]
-        if script_file_id >= len(scripts.members):
+        script_file_id = source.script_file_ids[header.header_id]
+        if script_file_id >= len(source.scripts.members):
             continue
         if script_file_id not in script_command_cache:
-            script_data = scripts.read(script_file_id)
+            script_data = source.scripts.read(script_file_id)
             script_command_cache[script_file_id] = engine.parse_trainer_battle_commands(
                 script_data, trainer_count=trainer_count
             )
@@ -297,32 +302,143 @@ def _extract_battle_mode_trainer_locations(
                         trainer_count=trainer_count,
                     )
                 )
-        for command in script_command_cache[script_file_id]:
-            for opponent_slot, trainer_id in enumerate(command.trainer_ids, start=1):
-                script_references.setdefault(trainer_id, []).append(
-                    TrainerScriptReference(
-                        header_id=header_id,
-                        internal_name=internal_name,
-                        location_name_id=header_id,
-                        name=header.name,
-                        script_file_id=script_file_id,
-                        command_offset=command.offset,
-                        opponent_slot=opponent_slot,
-                    )
-                )
+        for trainer_id, reference in _script_trainer_references(
+            header, script_file_id, script_command_cache[script_file_id]
+        ):
+            script_references.setdefault(trainer_id, []).append(reference)
 
     return (
         locations,
         script_references,
         {
             "trainer_locations": {
-                "overworld_objects_archive": overworld_objects_path,
+                "overworld_objects_archive": source.overworld_objects_path,
                 "common_script_band_size": 1000,
             },
             "trainer_script_references": {
-                "scripts_archive": scripts_path,
+                "scripts_archive": source.scripts_path,
                 "literal_ids_only": True,
             },
         },
         tuple(difficulty_branch_families),
     )
+
+
+def _load_battle_mode_map_source(
+    profile: Any, engine: TrainerConcern, platform: Any, filesystem: Any
+) -> _BattleModeMapSource | None:
+    required_layout = (
+        "map_headers",
+        "scripts",
+        "overworld_objects",
+        "messages",
+    )
+    if any(name not in profile.layout for name in required_layout) or (
+        "map_names_member" not in profile.parameters
+    ):
+        return None
+    map_headers_path = profile.layout["map_headers"]
+    scripts_path = profile.layout["scripts"]
+    overworld_objects_path = profile.layout["overworld_objects"]
+
+    map_headers_archive = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
+    map_headers_data = map_headers_archive.read(0)
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["messages"])
+    )
+    map_names = engine.parse_english_message_archive(
+        messages.read(profile.int_parameter("map_names_member"))
+    )
+    headers = engine.parse_map_header_table(
+        map_headers_data, map_names=tuple(map_names), archive_path=map_headers_path
+    )
+    script_file_ids = engine.parse_map_header_script_files(map_headers_data)
+
+    field_archive_options = {}
+    if profile.parameters.get("field_archives_allow_incorrect_data_block_size", False):
+        field_archive_options["allow_incorrect_data_block_size"] = True
+    if profile.parameters.get("field_archives_allow_trailing_data", False):
+        field_archive_options["allow_trailing_data"] = True
+    return _BattleModeMapSource(
+        scripts_path=scripts_path,
+        overworld_objects_path=overworld_objects_path,
+        headers=headers,
+        script_file_ids=script_file_ids,
+        scripts=platform.archive_cls.from_bytes(
+            filesystem.read(scripts_path),
+            allow_truncated=True,
+            **field_archive_options,
+        ),
+        overworld_objects=platform.archive_cls.from_bytes(
+            filesystem.read(overworld_objects_path), **field_archive_options
+        ),
+        unused_overworld_members=frozenset(
+            profile.parameters.get("overworld_objects_unused", ())
+        ),
+    )
+
+
+def _overworld_trainer_locations(
+    engine: TrainerConcern,
+    source: _BattleModeMapSource,
+    header: Any,
+    *,
+    trainer_count: int,
+) -> Iterator[tuple[int, TrainerLocation]]:
+    overworld_file_id = header.overworld_file_id
+    if (
+        overworld_file_id >= len(source.overworld_objects.members)
+        or overworld_file_id in source.unused_overworld_members
+    ):
+        return
+    npcs = engine.parse_overworld_npcs(source.overworld_objects.read(overworld_file_id))
+    for npc in npcs:
+        trainer_id = engine.resolve_common_script_trainer_id(
+            npc.script_used, trainer_count=trainer_count
+        )
+        if trainer_id is None:
+            continue
+        yield (
+            trainer_id,
+            TrainerLocation(
+                header_id=header.header_id,
+                internal_name=f"map_{header.header_id}",
+                location_name_id=header.header_id,
+                name=header.name,
+                event_file_id=overworld_file_id,
+                object_index=npc.index,
+                object_local_id=npc.index,
+                script_id=npc.script_used,
+                trainer_type=1,
+                x=npc.x,
+                y=npc.y,
+                z=npc.z,
+            ),
+        )
+
+
+def _script_trainer_references(
+    header: Any, script_file_id: int, commands: tuple[Any, ...]
+) -> Iterator[tuple[int, TrainerScriptReference]]:
+    for command in commands:
+        for opponent_slot, trainer_id in enumerate(command.trainer_ids, start=1):
+            yield (
+                trainer_id,
+                TrainerScriptReference(
+                    header_id=header.header_id,
+                    internal_name=f"map_{header.header_id}",
+                    location_name_id=header.header_id,
+                    name=header.name,
+                    script_file_id=script_file_id,
+                    command_offset=command.offset,
+                    opponent_slot=opponent_slot,
+                ),
+            )

@@ -238,7 +238,10 @@ dataset metadata, not part of the normalized type name.
 Shared pipeline and renderer dispatch follows the adapter's semantic format
 metadata (`conditional` versus `seasonal`, `event-map` versus `encounter-map`, and
 so on). Generation numbers and particular engine IDs must not select a shared code
-path.
+path. Enrichment copies the encounter and location formats onto their dataset
+envelopes (`encounter_format` and `location_format`), and renderers read them
+there: no module under `renderers/` imports `romwiki.engines`. Like features,
+version families may merge only datasets with identical formats.
 
 Storage choices are declared beside those semantic formats. Egg moves distinguish
 overlay tables, single-table archives, and per-species archives; item extraction
@@ -394,8 +397,11 @@ produces a false "changed" result.
 `src/romwiki/renderers/` turns normalized datasets into documentation. The MkDocs
 renderer has no responsibility for identifying or parsing a ROM.
 
-Renderer entry points accept the shared enriched-record contracts in
-`schema/rendering.py`. Reusable Markdown framing lives in `components.py`: table
+Enrichment entry points return, and renderer entry points accept, the shared
+enriched dataset and record contracts in `schema/rendering.py`. They are
+`TypedDict`s, so mypy checks field access without changing the serialized
+dicts; raw fields spread through from engine-specific extraction are typed only
+where the shared contract defines them. Reusable Markdown framing lives in `components.py`: table
 specifications own headers and alignment while preserving already-rendered cells,
 and section framing owns heading separation without interpreting section content.
 Location presentation shared by event-map and encounter-map records lives in the

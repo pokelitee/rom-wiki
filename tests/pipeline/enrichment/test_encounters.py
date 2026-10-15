@@ -53,6 +53,7 @@ class EncounterEnrichmentTests(unittest.TestCase):
         )
 
         self.assertEqual(enriched["active_record_count"], 1)
+        self.assertEqual(enriched["encounter_format"], "conditional")
         pokemon = enriched["records"][0]["walking"]["slots"][0]["pokemon"]
         self.assertEqual(pokemon["name"], "Bulbasaur")
         enriched["records"][0]["special"]["radar"][0] = {
@@ -100,6 +101,44 @@ class EncounterEnrichmentTests(unittest.TestCase):
             },
             catalog["records"][0]["pokemon_refs"],
         )
+
+    def test_marks_timed_walking_special_encounters_by_shape(self) -> None:
+        empty_method = {"rate": 0, "slots": []}
+        source = {
+            "area_id": 0,
+            "walking_rate": 0,
+            "walking_variants": {"morning": [], "day": [], "night": []},
+            "surf": empty_method,
+            "rock_smash": empty_method,
+            "old_rod": empty_method,
+            "good_rod": empty_method,
+            "super_rod": empty_method,
+            "swarm_species_ids": [0, 0],
+            "radio_species_ids": [0, 0, 0, 0],
+            "night_fishing_species_id": 0,
+            "fishing_swarm_species_id": 0,
+            "provenance": {"archive": "encounters.narc", "member": 0},
+        }
+
+        enriched = enrich_encounter_dataset(
+            {
+                "game": "test",
+                "engine": "gen4_hgss",
+                "source": {"archive": "encounters.narc"},
+                "records": [source],
+            },
+            PokeDBGeneration(
+                pokemon_by_id={},
+                pokemon_by_name={},
+                pokemon_by_species={},
+                abilities_by_id={},
+                items_by_id={},
+            ),
+        )
+
+        record = enriched["records"][0]
+        self.assertEqual(record["special"]["format"], "direct-species")
+        self.assertEqual(set(record["walking_variants"]), {"morning", "day", "night"})
 
     def test_only_pages_skips_detail_pages_but_keeps_full_catalog(self) -> None:
         data = bytearray(424)

@@ -42,7 +42,7 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     pokemon_markdown_link,
 )
-from romwiki.schema.rendering import AbilityRenderRecord, RenderDataset
+from romwiki.schema.rendering import AbilityDataset
 
 _ITEM_COLUMNS = (
     MarkdownColumn("Item"),
@@ -51,7 +51,7 @@ _ITEM_COLUMNS = (
 
 
 def render_ability_pages(
-    dataset: RenderDataset[AbilityRenderRecord],
+    dataset: AbilityDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,

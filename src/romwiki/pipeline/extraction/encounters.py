@@ -7,7 +7,9 @@ from romwiki.engines.concerns import EncounterConcern
 from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
+    iter_segment_map_headers,
     read_code_binary,
+    read_region_names,
     resolve_map_headers,
 )
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
@@ -118,7 +120,7 @@ def _extract_headbutt_encounters(
     if archive_path is None:
         return []
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
-    map_header_count = profile.parameters["map_header_count"]
+    map_header_count = profile.int_parameter("map_header_count")
     if len(archive.members) != map_header_count:
         raise InvalidRomError(
             f"Headbutt archive has {len(archive.members)} members, expected "
@@ -140,9 +142,9 @@ def _extract_headbutt_encounters(
         filesystem,
         messages,
         map_names_path=profile.layout["map_names"],
-        table_offset=profile.parameters["map_header_offset"],
+        table_offset=profile.int_parameter("map_header_offset"),
         count=map_header_count,
-        location_names_member=profile.parameters["location_names_member"],
+        location_names_member=profile.int_parameter("location_names_member"),
     )
     records: list[dict[str, Any]] = []
     for member in archive.members:
@@ -328,32 +330,26 @@ def _extract_gen3_encounter_locations(
     if not all(name in profile.parameters for name in location_params):
         return {}
     segments = profile.parameters["map_header_segments"]
-    region_name_offset = profile.parameters["region_name_offset"]
-    region_name_count = profile.parameters["region_name_count"]
-    gmapgroups_offset = profile.parameters["gmapgroups_offset"]
+    region_name_offset = profile.int_parameter("region_name_offset")
+    region_name_count = profile.int_parameter("region_name_count")
+    gmapgroups_offset = profile.int_parameter("gmapgroups_offset")
 
-    region_name_data = platform.read_bytes(
-        result.image, region_name_offset, region_name_count * 32
+    region_names = read_region_names(
+        engine,
+        platform,
+        result.image,
+        offset=region_name_offset,
+        count=region_name_count,
     )
-    region_names = engine.decode_gen3_text_sequence(
-        region_name_data, offset=0, count=region_name_count
-    )
-
-    header_size = engine.MAP_HEADER_SIZE
-    header_by_address: dict[int, tuple[int, str]] = {}
-    header_id = 0
-    for segment_offset, segment_count in segments:
-        segment_data = platform.read_bytes(
-            result.image, segment_offset, header_size * segment_count
+    header_by_address = {
+        engine.gba_pointer_for_offset(header.rom_offset): (
+            header.header_id,
+            header.name,
         )
-        for slot in range(segment_count):
-            raw = segment_data[slot * header_size : (slot + 1) * header_size]
-            _music, _layout_id, region_id = engine.parse_map_header(
-                raw, header_id=header_id
-            )
-            address = engine.gba_pointer_for_offset(segment_offset + slot * header_size)
-            header_by_address[address] = (header_id, region_names[region_id])
-            header_id += 1
+        for header in iter_segment_map_headers(
+            engine, platform, result.image, segments, region_names
+        )
+    }
 
     group_pointer_data = platform.read_bytes(
         result.image, gmapgroups_offset, engine.GMAPGROUPS_GROUP_COUNT * 4
@@ -486,7 +482,7 @@ def _extract_seasonal_wild_map_names(
     ):
         return {}, {}
     map_headers_path = profile.layout["map_headers"]
-    map_names_member = profile.parameters["map_names_member"]
+    map_names_member = profile.int_parameter("map_names_member")
     messages_path = profile.layout["messages"]
     map_headers = platform.archive_cls.from_bytes(
         filesystem.read(map_headers_path),
@@ -523,76 +519,29 @@ def _extract_hidden_grottos(
     archive_path = profile.layout.get("hidden_grottos")
     if archive_path is None:
         return []
-    version_group = profile.parameters.get("hidden_grotto_version_group")
-    if not isinstance(version_group, int):
+    version_group = profile.optional_int_parameter("hidden_grotto_version_group")
+    if version_group is None:
         raise ProfileError(
             f"Profile {profile.id} does not define a Hidden Grotto version group"
         )
 
     archive = platform.archive_cls.from_bytes(filesystem.read(archive_path))
-    grotto_count = profile.parameters["hidden_grotto_record_count"]
+    grotto_count = profile.int_parameter("hidden_grotto_record_count")
     if len(archive.members) != grotto_count:
         raise InvalidRomError(
             f"Hidden Grotto archive has {len(archive.members)} members, expected "
             f"{grotto_count}"
         )
-    map_headers_path = profile.layout["map_headers"]
-    map_headers = platform.archive_cls.from_bytes(
-        filesystem.read(map_headers_path),
-        allow_trailing_data=profile.parameters.get(
-            "map_headers_allow_trailing_data", False
-        ),
-        allow_incorrect_data_block_size=profile.parameters.get(
-            "map_headers_allow_incorrect_data_block_size", False
-        ),
+    headers = _load_hidden_grotto_map_headers(profile, engine, platform, filesystem)
+    owners = _resolve_hidden_grotto_owners(
+        profile,
+        engine,
+        platform,
+        filesystem,
+        headers,
+        grotto_count=grotto_count,
+        member_count=len(archive.members),
     )
-    messages = platform.archive_cls.from_bytes(
-        filesystem.read(profile.layout["messages"])
-    )
-    map_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["map_names_member"])
-    )
-    headers = engine.parse_map_header_table(
-        map_headers.read(0),
-        map_names=tuple(map_names),
-        archive_path=map_headers_path,
-    )
-    overworlds = platform.archive_cls.from_bytes(
-        filesystem.read(profile.layout["overworld_objects"]),
-        allow_incorrect_data_block_size=profile.parameters.get(
-            "field_archives_allow_incorrect_data_block_size", False
-        ),
-        allow_trailing_data=profile.parameters.get(
-            "field_archives_allow_trailing_data", False
-        ),
-    )
-    unused = frozenset(profile.parameters.get("overworld_objects_unused", ()))
-    owners: dict[int, set[int]] = {}
-    for header in headers:
-        member = header.overworld_file_id
-        if member is None or member >= len(overworlds.members) or member in unused:
-            continue
-        for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
-            grotto_id = engine.hidden_grotto_id_for_dispatch(
-                furniture.script_used,
-                dispatch_base=profile.parameters["hidden_grotto_dispatch_base"],
-                grotto_count=grotto_count,
-            )
-            if grotto_id is not None:
-                owners.setdefault(grotto_id, set()).add(header.header_id)
-    expected = set(range(len(archive.members)))
-    if set(owners) != expected:
-        missing = sorted(expected - set(owners))
-        extra = sorted(set(owners) - expected)
-        raise InvalidRomError(
-            f"Hidden Grotto dispatch mapping is incomplete (missing={missing}, "
-            f"extra={extra})"
-        )
-    ambiguous = {key: sorted(value) for key, value in owners.items() if len(value) != 1}
-    if ambiguous:
-        raise InvalidRomError(
-            f"Hidden Grotto dispatch mapping is ambiguous: {ambiguous}"
-        )
 
     records = []
     valid_forms = frozenset(
@@ -625,6 +574,82 @@ def _extract_hidden_grottos(
     return records
 
 
+def _load_hidden_grotto_map_headers(
+    profile: Any, engine: EncounterConcern, platform: Any, filesystem: Any
+) -> Any:
+    map_headers_path = profile.layout["map_headers"]
+    map_headers = platform.archive_cls.from_bytes(
+        filesystem.read(map_headers_path),
+        allow_trailing_data=profile.parameters.get(
+            "map_headers_allow_trailing_data", False
+        ),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "map_headers_allow_incorrect_data_block_size", False
+        ),
+    )
+    messages = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["messages"])
+    )
+    map_names = engine.parse_english_message_archive(
+        messages.read(profile.int_parameter("map_names_member"))
+    )
+    return engine.parse_map_header_table(
+        map_headers.read(0),
+        map_names=tuple(map_names),
+        archive_path=map_headers_path,
+    )
+
+
+def _resolve_hidden_grotto_owners(
+    profile: Any,
+    engine: EncounterConcern,
+    platform: Any,
+    filesystem: Any,
+    headers: Any,
+    *,
+    grotto_count: int,
+    member_count: int,
+) -> dict[int, set[int]]:
+    """Map each grotto to the one map header whose furniture dispatches to it."""
+    overworlds = platform.archive_cls.from_bytes(
+        filesystem.read(profile.layout["overworld_objects"]),
+        allow_incorrect_data_block_size=profile.parameters.get(
+            "field_archives_allow_incorrect_data_block_size", False
+        ),
+        allow_trailing_data=profile.parameters.get(
+            "field_archives_allow_trailing_data", False
+        ),
+    )
+    unused = frozenset(profile.parameters.get("overworld_objects_unused", ()))
+    owners: dict[int, set[int]] = {}
+    for header in headers:
+        member = header.overworld_file_id
+        if member is None or member >= len(overworlds.members) or member in unused:
+            continue
+        for furniture in engine.parse_overworld_furniture(overworlds.read(member)):
+            grotto_id = engine.hidden_grotto_id_for_dispatch(
+                furniture.script_used,
+                dispatch_base=profile.int_parameter("hidden_grotto_dispatch_base"),
+                grotto_count=grotto_count,
+            )
+            if grotto_id is not None:
+                owners.setdefault(grotto_id, set()).add(header.header_id)
+    expected = set(range(member_count))
+    if set(owners) != expected:
+        missing = sorted(expected - set(owners))
+        extra = sorted(set(owners) - expected)
+        raise InvalidRomError(
+            f"Hidden Grotto dispatch mapping is incomplete (missing={missing}, "
+            f"extra={extra})"
+        )
+    ambiguous = {key: sorted(value) for key, value in owners.items() if len(value) != 1}
+    if ambiguous:
+        raise InvalidRomError(
+            f"Hidden Grotto dispatch mapping is ambiguous: {ambiguous}"
+        )
+    return owners
+
+
 def _extract_swarms(
     result: InspectionResult,
     engine: EncounterConcern,
@@ -638,9 +663,9 @@ def _extract_swarms(
     required = ("swarm_overlay_id", "swarm_table_offset", "swarm_record_count")
     if not all(name in profile.parameters for name in required):
         return []
-    overlay_id = profile.parameters["swarm_overlay_id"]
-    table_offset = profile.parameters["swarm_table_offset"]
-    record_count = profile.parameters["swarm_record_count"]
+    overlay_id = profile.int_parameter("swarm_overlay_id")
+    table_offset = profile.int_parameter("swarm_table_offset")
+    record_count = profile.int_parameter("swarm_record_count")
     overlay, overlay_data = platform.read_overlay_decompressed(result.image, overlay_id)
     table_size = record_count * engine.SWARM_RECORD_SIZE
     table_end = table_offset + table_size
@@ -664,7 +689,7 @@ def _extract_swarms(
         filesystem.read(profile.layout["messages"])
     )
     map_names = engine.parse_english_message_archive(
-        messages.read(profile.parameters["map_names_member"])
+        messages.read(profile.int_parameter("map_names_member"))
     )
     headers = engine.parse_map_header_table(
         map_headers.read(0),
@@ -743,7 +768,7 @@ def _extract_encounter_locations(
     )
 
     locations: dict[int, list[EncounterLocation]] = {}
-    null_encounter_id = profile.parameters.get(
+    null_encounter_id = profile.int_parameter(
         "null_encounter_id", engine.ARCHIVE_MEMBER_NONE
     )
     for header in headers:

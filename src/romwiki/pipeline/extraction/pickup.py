@@ -48,16 +48,16 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
             f"Platform {profile.platform!r} does not support archive-based extraction"
         )
     engine = get_engine(profile.engine).pickup
-    common_count = profile.parameters.get(
+    common_count = profile.int_parameter(
         "pickup_common_item_count", engine.PICKUP_COMMON_ITEM_COUNT
     )
-    rare_count = profile.parameters.get(
+    rare_count = profile.int_parameter(
         "pickup_rare_item_count", engine.PICKUP_RARE_ITEM_COUNT
     )
-    rate_count = profile.parameters.get(
+    rate_count = profile.int_parameter(
         "pickup_common_rate_count", engine.PICKUP_COMMON_RATE_COUNT
     )
-    honey_rate_count = profile.parameters.get(
+    honey_rate_count = profile.int_parameter(
         "pickup_honey_gather_rate_count", engine.PICKUP_HONEY_GATHER_RATE_COUNT
     )
     filesystem = platform.filesystem_from_image(result.image)

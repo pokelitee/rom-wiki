@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from functools import cache
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
@@ -20,6 +20,17 @@ from romwiki.pipeline.enrichment.trainer_party import (
     normalize_trainer_party_member,
 )
 from romwiki.pipeline.enrichment.trainer_rewards import calculate_base_prize_money
+from romwiki.schema.rendering import (
+    EntityLink,
+    MoveDataset,
+    MoveRenderRecord,
+    PokemonDataset,
+    PokemonRenderRecord,
+    TrainerDataset,
+    TrainerEnrichedFields,
+    TrainerItem,
+    TrainerRenderRecord,
+)
 from romwiki.schema.trainers import (
     TrainerAttribute,
     unresolved_trainer_variant_support,
@@ -39,12 +50,12 @@ def enrich_trainer_dataset(
     dataset: dict[str, Any],
     pokedb: PokeDBGeneration,
     *,
-    pokemon_dataset: dict[str, Any] | None = None,
-    move_dataset: dict[str, Any] | None = None,
+    pokemon_dataset: PokemonDataset | None = None,
+    move_dataset: MoveDataset | None = None,
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
     reference_version: str | None = None,
-) -> dict[str, Any]:
+) -> TrainerDataset:
     source_records = dataset.get("records")
     if not isinstance(source_records, list):
         raise DataSourceError("Trainer dataset records must be a list")
@@ -66,7 +77,7 @@ def enrich_trainer_dataset(
     move_names = resolve_move_names(engine_tables, dataset, move_names)
     item_names = resolve_item_names(engine_tables, dataset)
     pokemon_names = resolve_pokemon_names(engine_tables, dataset)
-    records = []
+    records: list[TrainerRenderRecord] = []
     # IDs are consecutive but may start above zero when an archive reserves
     # leading members for a different record shape.
     base_trainer_id = source_records[0].get("trainer_id") if source_records else 0
@@ -87,7 +98,7 @@ def enrich_trainer_dataset(
                 pokemon_names=pokemon_names,
             )
         )
-    enriched = {
+    enriched: TrainerDataset = {
         "schema_version": TRAINERS_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "engine": engine,
@@ -130,10 +141,10 @@ def enrich_trainer_record(
     reference_version: str | None = None,
     *,
     engine: str,
-    pokemon_records: Mapping[int | str, dict[str, Any]] | None = None,
-    move_records: Mapping[int, dict[str, Any]] | None = None,
+    pokemon_records: Mapping[int | str, PokemonRenderRecord] | None = None,
+    move_records: Mapping[int, MoveRenderRecord] | None = None,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any]:
+) -> TrainerRenderRecord:
     engine_tables = get_engine(engine).enrich
     party = []
     for raw_member in source["party"]:
@@ -289,8 +300,7 @@ def enrich_trainer_record(
                 ],
             }
         )
-    return {
-        **source,
+    enriched_fields: TrainerEnrichedFields = {
         "party": party,
         "base_prize_money": calculate_base_prize_money(source, engine=engine),
         "victory_item": (
@@ -312,6 +322,7 @@ def enrich_trainer_record(
             if item_id
         ],
     }
+    return cast(TrainerRenderRecord, {**source, **enriched_fields})
 
 
 def _default_level_up_move_ids(learnset: object, level: int) -> list[int]:
@@ -340,8 +351,8 @@ def _default_level_up_move_ids(learnset: object, level: int) -> list[int]:
 
 def _trainer_pokemon_index(
     trainer_dataset: Mapping[str, Any],
-    pokemon_dataset: dict[str, Any] | None,
-) -> dict[int | str, dict[str, Any]] | None:
+    pokemon_dataset: PokemonDataset | None,
+) -> dict[int | str, PokemonRenderRecord] | None:
     if pokemon_dataset is None:
         return None
     if pokemon_dataset.get("game") != trainer_dataset.get("game"):
@@ -349,7 +360,7 @@ def _trainer_pokemon_index(
     records = pokemon_dataset.get("records")
     if not isinstance(records, list):
         raise DataSourceError("Pokémon dataset records must be a list")
-    index: dict[int | str, dict[str, Any]] = {}
+    index: dict[int | str, PokemonRenderRecord] = {}
     for record in records:
         member = record.get("member")
         slug = record.get("slug")
@@ -362,8 +373,8 @@ def _trainer_pokemon_index(
 
 def _trainer_move_index(
     trainer_dataset: Mapping[str, Any],
-    move_dataset: dict[str, Any] | None,
-) -> dict[int, dict[str, Any]] | None:
+    move_dataset: MoveDataset | None,
+) -> dict[int, MoveRenderRecord] | None:
     if move_dataset is None:
         return None
     if move_dataset.get("game") != trainer_dataset.get("game"):
@@ -380,7 +391,7 @@ def _trainer_move_index(
 
 def _trainer_ability(
     value: TrainerAttribute | None,
-    pokemon_record: dict[str, Any] | None,
+    pokemon_record: PokemonRenderRecord | None,
 ) -> dict[str, Any] | None:
     if value is None or pokemon_record is None:
         return None
@@ -421,13 +432,13 @@ def _trainer_ability(
 
 
 def _with_item_sprite(
-    item: dict[str, Any], pokedb: PokeDBGeneration, reference_version: str | None
-) -> dict[str, Any]:
+    item: EntityLink, pokedb: PokeDBGeneration, reference_version: str | None
+) -> TrainerItem:
     return {**item, "sprite_url": _item_sprite_url(item, pokedb, reference_version)}
 
 
 def _item_sprite_url(
-    item: dict[str, Any], pokedb: PokeDBGeneration, reference_version: str | None
+    item: EntityLink, pokedb: PokeDBGeneration, reference_version: str | None
 ) -> str | None:
     name = item.get("name")
     if not name:

@@ -10,6 +10,16 @@ styles.
 and Markdown extensions. Each site inherits that file and points at
 `sites/shared/overrides/` for templates and assets.
 
+Per-site `mkdocs.yml` files intentionally repeat `docs_dir`, `hooks`,
+`theme.custom_dir`, and `nav`. MkDocs `INHERIT` merges the parent YAML before
+resolving paths, so relative paths in the base resolve against each leaf config;
+the portal sits one directory shallower than game sites and would need its own
+overrides anyway. Nav is not derived from `generated_sections` because placement
+is editorial: Generation III sites list Trainers under Game Data and omit Data
+Downloads, and hacks insert Changes and differently ordered Documentation
+sections. The hook's `_nav_sections` reads the explicit nav to tell templates
+which sections exist, so the nav remains the single source for that decision.
+
 The subdirectories have separate responsibilities: `overrides/` is frontend code,
 while `partials/genN/` groups publication prose reused by explicit game consumers.
 Game-specific provenance and limitations remain in the corresponding

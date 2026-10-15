@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, cast
 
+from romwiki.engines.concerns import EnrichmentTables
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
     named_id,
@@ -27,6 +29,24 @@ from romwiki.pipeline.enrichment.references import (
     move_reference,
     with_rom_description,
 )
+from romwiki.schema.rendering import (
+    EntityLink,
+    EvolutionParameter,
+    LevelUpMove,
+    MachineCompatibility,
+    MoveLink,
+    PokemonBattleForm,
+    PokemonDataset,
+    PokemonEvolution,
+    PokemonEvolutionFields,
+    PokemonHeldItem,
+    PokemonIdentityFields,
+    PokemonLearnsetFields,
+    PokemonMoveCompatibility,
+    PokemonRenderRecord,
+    PokemonSpeciesTraits,
+    TutorMoveCompatibility,
+)
 from romwiki.schema.versions import POKEMON_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -49,7 +69,7 @@ def enrich_personal_dataset(
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
     reference_version: str | None = None,
-) -> dict[str, Any]:
+) -> PokemonDataset:
     engine = get_engine(dataset["engine"]).enrich
     source_records = dataset.get("records")
     expected_count = engine.PERSONAL_RECORD_COUNT
@@ -98,38 +118,41 @@ def enrich_personal_dataset(
     static_encounters_by_species = _validate_static_encounters(
         static_encounter_dataset, dataset["game"]
     )
+    lookups = _RecordLookups(
+        engine=engine,
+        pokedb=pokedb,
+        evolution_item_names=evolution_item_names,
+        evolution_item_slugs=evolution_item_slugs,
+        machines=machines,
+        tutors=tutors,
+        tutor_locations=tutor_locations,
+        type_names=type_names,
+        move_names=move_names,
+        move_page_slugs=move_page_slugs,
+        ability_names=ability_names,
+        item_names=item_names,
+        pokemon_names=pokemon_names,
+        pokemon_descriptions=pokemon_descriptions,
+        sprite_version=sprite_version,
+        reference_version=reference_version,
+    )
     records = []
     for expected_member, source in enumerate(source_records):
         if source.get("species_id") != expected_member:
             raise DataSourceError("Personal records must be ordered by member ID")
         records.append(
             _enrich_record(
-                engine,
+                lookups,
                 source,
-                pokedb,
                 learnsets[expected_member],
                 evolutions[expected_member],
-                evolution_item_names,
-                evolution_item_slugs,
-                machines,
-                tutors,
                 tutor_ids_by_member.get(expected_member, []),
-                tutor_locations,
                 egg_moves.get(expected_member),
                 static_encounters_by_species.get(expected_member, []),
-                type_names,
-                move_names,
-                move_page_slugs,
-                ability_names,
-                item_names,
-                pokemon_names,
-                pokemon_descriptions,
-                sprite_version,
-                reference_version,
             )
         )
     _attach_battle_forms(engine, records)
-    enriched = {
+    enriched: PokemonDataset = {
         "schema_version": POKEMON_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "engine": dataset["engine"],
@@ -174,7 +197,9 @@ def enrich_personal_dataset(
     return enriched
 
 
-def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
+def _attach_battle_forms(
+    engine: EnrichmentTables, records: list[PokemonRenderRecord]
+) -> None:
     """Attach each battle-only transformation record's stats/types to its
     base species' record as `battle_forms`, e.g. Castform's page gains its
     real Sunny/Rainy/Snowy stat blocks even though those transformations
@@ -183,7 +208,7 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
     transformation_members = engine.TRANSFORMATION_MEMBERS
     if not transformation_members:
         return
-    by_base_slug: dict[str, list[dict[str, Any]]] = {}
+    by_base_slug: dict[str, list[PokemonBattleForm]] = {}
     for record in records:
         transformation = transformation_members.get(record["member"])
         if transformation is None:
@@ -203,159 +228,194 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
             record["battle_forms"] = forms
 
 
+@dataclass(frozen=True, slots=True)
+class _RecordLookups:
+    """Dataset-wide inputs shared by every personal record's enrichment."""
+
+    engine: EnrichmentTables
+    pokedb: PokeDBGeneration
+    evolution_item_names: list[str]
+    evolution_item_slugs: Mapping[int, str | None]
+    machines: dict[int, dict[str, Any]]
+    tutors: dict[int, dict[str, Any]]
+    tutor_locations: list[str]
+    type_names: Mapping[int, str] | None
+    move_names: Mapping[int, str] | None
+    move_page_slugs: Mapping[int, str] | None
+    ability_names: list[str] | None
+    item_names: list[str] | None
+    pokemon_names: list[str] | None
+    pokemon_descriptions: list[str] | None
+    sprite_version: str | None
+    reference_version: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class _MemberIdentity:
+    slug: str
+    national_dex_id: int | None
+    base_species: str | None
+    form: str | None
+    public: bool
+    pokedb_record: dict[str, Any] | None
+
+
 def _enrich_record(
-    engine: Any,
+    lookups: _RecordLookups,
     source: dict[str, Any],
-    pokedb: PokeDBGeneration,
     learnset: dict[str, Any] | None,
     evolution_set: dict[str, Any] | None,
-    evolution_item_names: list[str],
-    evolution_item_slugs: Mapping[int, str | None],
-    machines: dict[int, dict[str, Any]],
-    tutors: dict[int, dict[str, Any]],
     tutor_ids: list[int],
-    tutor_locations: list[str],
     egg_move_set: dict[str, Any] | None,
     static_encounters: list[dict[str, Any]],
-    type_names: Mapping[int, str] | None,
-    move_names: Mapping[int, str] | None,
-    move_page_slugs: Mapping[int, str] | None,
-    ability_names: list[str] | None,
-    item_names: list[str] | None,
-    pokemon_names: list[str] | None,
-    pokemon_descriptions: list[str] | None,
-    sprite_version: str | None,
-    reference_version: str | None,
-) -> dict[str, Any]:
+) -> PokemonRenderRecord:
     member = source["species_id"]
-    transformation_members = engine.TRANSFORMATION_MEMBERS
-    is_internal = member in engine.INTERNAL_MEMBERS
-    if is_internal:
-        slug = engine.INTERNAL_MEMBERS[member]
-        identity: dict[str, Any] = {
-            "national_dex_id": None,
-            "base_species": None,
-            "form": None,
-        }
-        sprite = None
-        sprites = []
-        portrait = None
-        cry = None
-        reference_data = None
-        public = False
-    elif member in engine.FORM_MEMBERS:
+    is_internal = member in lookups.engine.INTERNAL_MEMBERS
+    return {
+        **_identity_fields(lookups, member),
+        **_species_traits(lookups, source, is_internal),
+        **_move_compatibility(lookups, source, tutor_ids, is_internal),
+        **_learnset_fields(lookups, learnset, egg_move_set, is_internal),
+        "static_encounters": [
+            {"level": entry["level"], "is_egg": entry["is_egg"]}
+            for entry in (() if is_internal else static_encounters)
+        ],
+        **_evolution_fields(lookups, evolution_set, is_internal),
+        "provenance": source["provenance"],
+    }
+
+
+def _member_identity(lookups: _RecordLookups, member: int) -> _MemberIdentity:
+    engine = lookups.engine
+    pokedb = lookups.pokedb
+    if member in engine.INTERNAL_MEMBERS:
+        return _MemberIdentity(
+            slug=engine.INTERNAL_MEMBERS[member],
+            national_dex_id=None,
+            base_species=None,
+            form=None,
+            public=False,
+            pokedb_record=None,
+        )
+    if member in engine.FORM_MEMBERS:
         slug = engine.FORM_MEMBERS[member]
         reference = pokedb.pokemon_for_name(slug)
         base_species = reference["species"]
-        identity = {
-            "national_dex_id": pokedb.pokemon_for_species(base_species)["id"],
-            "base_species": base_species,
-            "form": slug.removeprefix(f"{base_species}-"),
-        }
-        sprite = pokedb.pokemon_sprite(reference, sprite_version)
-        sprites = pokedb.pokemon_sprites(reference, sprite_version)
-        portrait = pokedb.pokemon_portrait(reference) or sprite
-        cry = pokedb.pokemon_cry(reference)
-        reference_data = pokedb.pokemon_reference(reference, reference_version)
-        public = True
-    elif member in transformation_members:
-        transformation = transformation_members[member]
-        base_slug = transformation["base_slug"]
-        slug = transformation.get(
-            "slug", f"{base_slug}-{name_slug(transformation['label'])}"
+        return _MemberIdentity(
+            slug=slug,
+            national_dex_id=pokedb.pokemon_for_species(base_species)["id"],
+            base_species=base_species,
+            form=slug.removeprefix(f"{base_species}-"),
+            public=True,
+            pokedb_record=reference,
         )
-        identity = {
-            "national_dex_id": None,
-            "base_species": base_slug,
-            "form": None,
-        }
-        sprite = None
-        sprites = []
-        portrait = None
-        cry = None
-        reference_data = None
-        public = False
-    else:
-        national_dex_id = national_dex_id_for_member(engine, member)
-        reference = pokedb.pokemon_for_id(national_dex_id)
-        slug = reference["name"]
-        identity = {
-            "national_dex_id": national_dex_id,
-            "base_species": reference["species"],
-            "form": None,
-        }
-        sprite = pokedb.pokemon_sprite(reference, sprite_version)
-        sprites = pokedb.pokemon_sprites(reference, sprite_version)
-        portrait = pokedb.pokemon_portrait(reference) or sprite
-        cry = pokedb.pokemon_cry(reference)
-        reference_data = pokedb.pokemon_reference(reference, reference_version)
-        public = True
+    transformation = engine.TRANSFORMATION_MEMBERS.get(member)
+    if transformation is not None:
+        base_slug = transformation["base_slug"]
+        return _MemberIdentity(
+            slug=transformation.get(
+                "slug", f"{base_slug}-{name_slug(transformation['label'])}"
+            ),
+            national_dex_id=None,
+            base_species=base_slug,
+            form=None,
+            public=False,
+            pokedb_record=None,
+        )
+    national_dex_id = national_dex_id_for_member(engine, member)
+    reference = pokedb.pokemon_for_id(national_dex_id)
+    return _MemberIdentity(
+        slug=reference["name"],
+        national_dex_id=national_dex_id,
+        base_species=reference["species"],
+        form=None,
+        public=True,
+        pokedb_record=reference,
+    )
 
+
+def _identity_fields(lookups: _RecordLookups, member: int) -> PokemonIdentityFields:
+    """Resolve a member's page identity, display name, and reference media."""
+    engine = lookups.engine
+    pokedb = lookups.pokedb
+    identity = _member_identity(lookups, member)
     # Form and internal members keep their slug-derived labels; regular
     # species prefer the ROM's own name table ("Mr. Mime", "Farfetch'd").
     if (
         member in engine.FORM_MEMBERS
         or member in engine.INTERNAL_MEMBERS
-        or member in transformation_members
+        or member in engine.TRANSFORMATION_MEMBERS
     ):
-        display_name = title_case_slug(slug)
+        display_name = title_case_slug(identity.slug)
     else:
-        display_name = pokemon_display_name(member, slug, pokemon_names)
-
+        display_name = pokemon_display_name(
+            member, identity.slug, lookups.pokemon_names
+        )
+    record = identity.pokedb_record
+    if record is None:
+        sprite = None
+        portrait = None
+        cry = None
+        sprites = []
+        reference_data = None
+    else:
+        sprite = pokedb.pokemon_sprite(record, lookups.sprite_version)
+        sprites = pokedb.pokemon_sprites(record, lookups.sprite_version)
+        portrait = pokedb.pokemon_portrait(record) or sprite
+        cry = pokedb.pokemon_cry(record)
+        reference_data = pokedb.pokemon_reference(record, lookups.reference_version)
     return {
         "member": member,
-        "slug": slug,
+        "slug": identity.slug,
         "name": display_name,
-        "public": public,
-        **identity,
+        "public": identity.public,
+        "national_dex_id": identity.national_dex_id,
+        "base_species": identity.base_species,
+        "form": identity.form,
         "sprite": sprite,
         "portrait": portrait,
         "cry": cry,
         "sprites": sprites,
         "reference": with_rom_description(
             reference_data,
-            (
-                pokemon_descriptions[identity["national_dex_id"]]
-                if pokemon_descriptions is not None
-                and isinstance(identity["national_dex_id"], int)
-                and identity["national_dex_id"] < len(pokemon_descriptions)
-                else None
-            ),
+            _rom_pokedex_description(lookups, identity.national_dex_id),
             label="ROM Pokédex",
         ),
+    }
+
+
+def _rom_pokedex_description(
+    lookups: _RecordLookups, national_dex_id: int | None
+) -> str | None:
+    descriptions = lookups.pokemon_descriptions
+    if (
+        descriptions is None
+        or national_dex_id is None
+        or national_dex_id >= len(descriptions)
+    ):
+        return None
+    return descriptions[national_dex_id]
+
+
+def _species_traits(
+    lookups: _RecordLookups, source: dict[str, Any], is_internal: bool
+) -> PokemonSpeciesTraits:
+    """Resolve stats, types, abilities, held items, and breeding traits."""
+    engine = lookups.engine
+    return {
         "base_stats": source["base_stats"],
         "types": (
             []
             if is_internal
-            else [type_id(engine, value, type_names) for value in source["type_ids"]]
+            else [
+                type_id(engine, value, lookups.type_names)
+                for value in source["type_ids"]
+            ]
         ),
         "catch_rate": source["catch_rate"],
         "base_experience": source["base_experience"],
         "ev_yields": source["ev_yields"],
-        "held_items": (
-            []
-            if is_internal
-            else [
-                {
-                    "rarity": rarity,
-                    **item_reference(
-                        value,
-                        pokedb,
-                        item_names,
-                        page_slugs=evolution_item_slugs,
-                    ),
-                }
-                for rarity, value in (
-                    ("common", source["wild_held_items"]["common"]),
-                    ("rare", source["wild_held_items"]["rare"]),
-                    *(
-                        [("dark_grass", source["wild_held_items"]["dark_grass"])]
-                        if source["wild_held_items"].get("dark_grass") is not None
-                        else []
-                    ),
-                )
-            ]
-        ),
+        "held_items": [] if is_internal else _wild_held_items(lookups, source),
         "gender_ratio": source["gender_ratio"],
         "hatch_cycles": source["hatch_cycles"],
         "base_friendship": source["base_friendship"],
@@ -378,7 +438,10 @@ def _enrich_record(
             []
             if is_internal
             else [
-                {**_ability_id(value, pokedb, ability_names), "is_hidden": index == 2}
+                {
+                    **_ability_id(value, lookups.pokedb, lookups.ability_names),
+                    "is_hidden": index == 2,
+                }
                 for index, value in enumerate(source["ability_ids"])
             ]
         ),
@@ -389,74 +452,108 @@ def _enrich_record(
             else named_id(source["body_color_id"], engine.COLOR_NAMES, "body color")
         ),
         "flip_sprite": source["flip_sprite"],
-        "machines": (
-            []
-            if is_internal
-            else _enrich_compatible_machines(
-                engine,
-                source["machine_ids"],
-                machines,
-                pokedb,
-                move_names,
-                move_page_slugs,
-            )
+    }
+
+
+def _wild_held_items(
+    lookups: _RecordLookups, source: dict[str, Any]
+) -> list[PokemonHeldItem]:
+    held_items = source["wild_held_items"]
+    rarities = [("common", held_items["common"]), ("rare", held_items["rare"])]
+    if held_items.get("dark_grass") is not None:
+        rarities.append(("dark_grass", held_items["dark_grass"]))
+    return [
+        {
+            "rarity": rarity,
+            **item_reference(
+                value,
+                lookups.pokedb,
+                lookups.item_names,
+                page_slugs=lookups.evolution_item_slugs,
+            ),
+        }
+        for rarity, value in rarities
+    ]
+
+
+def _move_compatibility(
+    lookups: _RecordLookups,
+    source: dict[str, Any],
+    tutor_ids: list[int],
+    is_internal: bool,
+) -> PokemonMoveCompatibility:
+    if is_internal:
+        return {"machines": [], "tutor_moves": []}
+    return {
+        "machines": _enrich_compatible_machines(
+            lookups.engine,
+            source["machine_ids"],
+            lookups.machines,
+            lookups.pokedb,
+            lookups.move_names,
+            lookups.move_page_slugs,
         ),
-        "tutor_moves": (
-            []
-            if is_internal
-            else _enrich_compatible_tutors(
-                tutor_ids,
-                tutors,
-                tutor_locations,
-                pokedb,
-                move_names,
-                move_page_slugs,
-            )
+        "tutor_moves": _enrich_compatible_tutors(
+            tutor_ids,
+            lookups.tutors,
+            lookups.tutor_locations,
+            lookups.pokedb,
+            lookups.move_names,
+            lookups.move_page_slugs,
         ),
-        "level_up_moves": (
-            []
-            if is_internal
-            else _enrich_level_up_moves(learnset, pokedb, move_names, move_page_slugs)
+    }
+
+
+def _learnset_fields(
+    lookups: _RecordLookups,
+    learnset: dict[str, Any] | None,
+    egg_move_set: dict[str, Any] | None,
+    is_internal: bool,
+) -> PokemonLearnsetFields:
+    if is_internal:
+        return {
+            "level_up_moves": [],
+            "learnset_provenance": None,
+            "egg_moves": [],
+            "egg_move_provenance": None,
+        }
+    return {
+        "level_up_moves": _enrich_level_up_moves(
+            learnset, lookups.pokedb, lookups.move_names, lookups.move_page_slugs
         ),
-        "learnset_provenance": (
-            None if is_internal or learnset is None else learnset["provenance"]
+        "learnset_provenance": None if learnset is None else learnset["provenance"],
+        "egg_moves": _enrich_egg_moves(
+            egg_move_set, lookups.pokedb, lookups.move_names, lookups.move_page_slugs
         ),
-        "egg_moves": (
-            []
-            if is_internal
-            else _enrich_egg_moves(egg_move_set, pokedb, move_names, move_page_slugs)
-        ),
-        "egg_move_provenance": (
-            None if is_internal else _egg_move_provenance(egg_move_set)
-        ),
-        "static_encounters": [
-            {"level": entry["level"], "is_egg": entry["is_egg"]}
-            for entry in (() if is_internal else static_encounters)
-        ],
-        "evolutions": (
-            []
-            if is_internal
-            else _enrich_evolutions(
-                engine,
-                evolution_set,
-                pokedb,
-                evolution_item_names,
-                evolution_item_slugs,
-                move_names,
-                pokemon_names,
-            )
+        "egg_move_provenance": _egg_move_provenance(egg_move_set),
+    }
+
+
+def _evolution_fields(
+    lookups: _RecordLookups,
+    evolution_set: dict[str, Any] | None,
+    is_internal: bool,
+) -> PokemonEvolutionFields:
+    if is_internal:
+        return {"evolutions": [], "evolution_provenance": None}
+    return {
+        "evolutions": _enrich_evolutions(
+            lookups.engine,
+            evolution_set,
+            lookups.pokedb,
+            lookups.evolution_item_names,
+            lookups.evolution_item_slugs,
+            lookups.move_names,
+            lookups.pokemon_names,
         ),
         "evolution_provenance": (
-            evolution_set["provenance"]
-            if not is_internal and evolution_set is not None
-            else None
+            evolution_set["provenance"] if evolution_set is not None else None
         ),
-        "provenance": source["provenance"],
     }
 
 
 def _validate_learnsets(
-    engine: Any, dataset: dict[str, Any] | None, game: str
+    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
 ) -> list[dict[str, Any] | None]:
     expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
@@ -475,7 +572,7 @@ def _validate_learnsets(
 
 
 def _validate_evolutions(
-    engine: Any, dataset: dict[str, Any] | None, game: str
+    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
 ) -> list[dict[str, Any] | None]:
     expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
@@ -551,7 +648,7 @@ def _enrich_compatible_tutors(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
+) -> list[TutorMoveCompatibility]:
     result = []
     for tutor_id in tutor_ids:
         tutor = tutors[tutor_id]
@@ -561,28 +658,31 @@ def _enrich_compatible_tutors(
         if move is None:
             raise DataSourceError(f"Tutor {tutor_id} references move ID 0")
         result.append(
-            {
-                **tutor,
-                "move": move,
-                "location": tutor_location(tutor, location_names),
-            }
+            cast(
+                TutorMoveCompatibility,
+                {
+                    **tutor,
+                    "move": move,
+                    "location": tutor_location(tutor, location_names),
+                },
+            )
         )
     return result
 
 
 def _enrich_compatible_machines(
-    engine: Any,
+    engine: EnrichmentTables,
     machine_ids: list[int],
     machines: dict[int, dict[str, Any]],
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
+) -> list[MachineCompatibility]:
     if not machines:
         return [
             {"id": value, "name": engine.machine_name(value)} for value in machine_ids
         ]
-    result = []
+    result: list[MachineCompatibility] = []
     for machine_id in machine_ids:
         try:
             machine = machines[machine_id]
@@ -609,14 +709,14 @@ def _enrich_compatible_machines(
 
 
 def _enrich_evolutions(
-    engine: Any,
+    engine: EnrichmentTables,
     evolution_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     item_names: list[str],
     item_slugs: Mapping[int, str | None],
     move_names: Mapping[int, str] | None,
     pokemon_names: list[str] | None = None,
-) -> list[dict[str, Any]]:
+) -> list[PokemonEvolution]:
     if evolution_set is None:
         return []
     result = []
@@ -625,45 +725,46 @@ def _enrich_evolutions(
         target_member = entry["target_species_id"]
         target_national_dex_id = national_dex_id_for_member(engine, target_member)
         target = pokedb.pokemon_for_id(target_national_dex_id)
-        result.append(
-            {
-                **entry,
-                "method": named_id(
-                    method_id, engine.EVOLUTION_METHOD_NAMES, "evolution method"
+        evolution: PokemonEvolution = {
+            "method_id": method_id,
+            "parameter": entry["parameter"],
+            "target_species_id": target_member,
+            "method": named_id(
+                method_id, engine.EVOLUTION_METHOD_NAMES, "evolution method"
+            ),
+            "parameter_data": _evolution_parameter(
+                engine,
+                entry,
+                pokedb,
+                item_names,
+                item_slugs,
+                move_names,
+                pokemon_names,
+            ),
+            "target": {
+                "id": target_national_dex_id,
+                "slug": target["name"],
+                # `pokemon_names` (when present) is a ROM-extracted name
+                # table indexed the same raw way as `target_member`
+                # itself, not National Dex order.
+                "name": pokemon_display_name(
+                    target_member, target["name"], pokemon_names
                 ),
-                "parameter_data": _evolution_parameter(
-                    engine,
-                    entry,
-                    pokedb,
-                    item_names,
-                    item_slugs,
-                    move_names,
-                    pokemon_names,
-                ),
-                "target": {
-                    "id": target_national_dex_id,
-                    "slug": target["name"],
-                    # `pokemon_names` (when present) is a ROM-extracted name
-                    # table indexed the same raw way as `target_member`
-                    # itself, not National Dex order.
-                    "name": pokemon_display_name(
-                        target_member, target["name"], pokemon_names
-                    ),
-                },
-            }
-        )
+            },
+        }
+        result.append(evolution)
     return result
 
 
 def _evolution_parameter(
-    engine: Any,
+    engine: EnrichmentTables,
     entry: dict[str, Any],
     pokedb: PokeDBGeneration,
     item_names: list[str],
     item_slugs: Mapping[int, str | None],
     move_names: Mapping[int, str] | None,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any] | None:
+) -> EvolutionParameter | None:
     method_id = entry["method_id"]
     parameter = entry["parameter"]
     kind = engine.EVOLUTION_PARAMETER_KINDS.get(method_id)
@@ -704,8 +805,8 @@ def _enrich_level_up_moves(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
-    moves = []
+) -> list[LevelUpMove]:
+    moves: list[LevelUpMove] = []
     for entry in learnset["moves"] if learnset is not None else []:
         move = move_reference(
             entry["move_id"], pokedb, move_names, page_slugs=move_page_slugs
@@ -734,8 +835,8 @@ def _enrich_egg_moves(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
-    moves = []
+) -> list[MoveLink]:
+    moves: list[MoveLink] = []
     seen: set[int] = set()
     for move_id in egg_move_set["move_ids"] if egg_move_set is not None else []:
         if move_id in seen:
@@ -752,7 +853,7 @@ def _ability_id(
     ability_id: int,
     pokedb: PokeDBGeneration,
     ability_names: list[str] | None,
-) -> dict[str, Any]:
+) -> EntityLink:
     if ability_id == 0:
         return {"id": 0, "slug": None, "name": None}
     slug = pokedb.ability_name(ability_id)

@@ -1,3 +1,4 @@
+from romwiki.platforms.common import RomHashes
 from romwiki.platforms.nds.filesystem import NintendoDSFile, NintendoDSFileSystem
 from romwiki.platforms.nds.header import NintendoDSHeader
 from romwiki.platforms.nds.narc import NarcArchive, NarcMember
@@ -9,7 +10,6 @@ from romwiki.platforms.nds.overlays import (
 )
 from romwiki.platforms.nds.reader import (
     NintendoDSImage,
-    RomHashes,
     arm9_load_address,
     read_arm9_binary,
     read_arm9_binary_decompressed,

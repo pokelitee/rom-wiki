@@ -58,11 +58,11 @@ from romwiki.renderers.mkdocs.references import (
     escape_markdown,
     pokemon_record_link,
 )
-from romwiki.schema.rendering import MoveRenderRecord, RenderDataset
+from romwiki.schema.rendering import MoveDataset
 
 
 def render_move_pages(
-    dataset: RenderDataset[MoveRenderRecord],
+    dataset: MoveDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
@@ -72,7 +72,6 @@ def render_move_pages(
 ) -> int:
     all_records = cast(list[dict[str, Any]], dataset["records"])
     public_records = [record for record in all_records if record["public"]]
-    dataset_dict = cast(dict[str, Any], dataset)
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -88,13 +87,9 @@ def render_move_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    name_source = dataset_dict.get("name_sources", {}).get("move_names")
-    description_source = dataset_dict.get("description_sources", {}).get(
-        "move_descriptions"
-    )
-    dataset_features = frozenset(
-        dataset_dict.get("features", ("move-tutors", "egg-moves"))
-    )
+    name_source = dataset.get("name_sources", {}).get("move_names")
+    description_source = dataset.get("description_sources", {}).get("move_descriptions")
+    dataset_features = frozenset(dataset.get("features", ("move-tutors", "egg-moves")))
     for index, record in enumerate(public_records):
         change = record_comparison(comparison, record["move_id"])
         filename = f"{record['slug']}.md"

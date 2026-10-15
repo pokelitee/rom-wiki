@@ -65,12 +65,13 @@ from romwiki.renderers.mkdocs.conditional_encounters import (
 )
 from romwiki.renderers.mkdocs.references import (
     ROUTES,
+    EntityReference,
     ReferenceIndex,
     encounter_route_kind,
     entity_reference,
     unique_references,
 )
-from romwiki.schema.rendering import EncounterRenderRecord, RenderDataset
+from romwiki.schema.rendering import EncounterDataset
 from romwiki.util.errors import SiteError
 
 # Display labels for the seasonal encounter-method keys emitted by supporting engines.
@@ -93,7 +94,7 @@ _ENCOUNTER_SLOT_COLUMNS = (
 
 
 def render_encounter_pages(
-    dataset: RenderDataset[EncounterRenderRecord],
+    dataset: EncounterDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,
@@ -882,7 +883,7 @@ def _unique_pokemon(pokemon: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _pokemon_reference(
     pokemon: dict[str, Any], references: ReferenceIndex | None = None
-):
+) -> EntityReference:
     identifier = pokemon.get("id", pokemon["slug"])
     name = pokemon["name"]
     if references is not None:

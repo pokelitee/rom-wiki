@@ -424,7 +424,7 @@ def render_section_build(
         abilities_build = workflow.build("abilities")
     relationship_index = None
     type_dataset = None
-    relationship_datasets: dict[str, dict[str, Any]] = {}
+    relationship_datasets: dict[str, Mapping[str, Any]] = {}
     if section == "pokemon":
         relationship_datasets = current_relationship_datasets(workflow.current)
         relationship_index = build_relationship_index(relationship_datasets)
@@ -444,7 +444,7 @@ def render_section_build(
         if locations is not None:
             relationship_datasets = {"locations": locations}
             relationship_index = build_relationship_index(relationship_datasets)
-    reference_datasets = {}
+    reference_datasets: dict[str, Mapping[str, Any]] = {}
     if section == "locations":
         current_locations = workflow.current.locations()
         if current_locations is None:
@@ -527,7 +527,7 @@ def render_section_build(
 
 def current_relationship_datasets(
     context: GameBuildContext,
-) -> dict[str, dict[str, Any]]:
+) -> dict[str, Mapping[str, Any]]:
     # "trades" has no dedicated dataset_kind (it's an optional per-engine
     # detail, always None-safe) so it's never gated here; the rest correspond
     # 1:1 to a DATASET_KINDS entry and are only built when the profile's
@@ -535,7 +535,7 @@ def current_relationship_datasets(
     # vertical slice (an engine's first onboarding step, per
     # adding-a-game.md) has nothing to build for the others yet.
     enabled = set(enabled_dataset_kinds(context.profile))
-    accessors: dict[str, tuple[str | None, Callable[[], dict[str, Any] | None]]] = {
+    accessors: dict[str, tuple[str | None, Callable[[], Mapping[str, Any] | None]]] = {
         "pokemon": ("pokemon", context.pokemon),
         "encounters": ("encounters", context.encounters),
         "trainers": ("trainers", context.trainers),
