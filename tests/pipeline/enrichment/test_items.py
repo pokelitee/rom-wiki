@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import json
-import tempfile
 import unittest
-from copy import deepcopy
-from pathlib import Path
 
 from romwiki.pipeline.enrichment.items import build_item_dataset
-from romwiki.pipeline.transforms.relationships import build_relationship_index
-from romwiki.renderers.mkdocs import render_item_pages
 from romwiki.sources import PokeDBGeneration
 
 
@@ -278,7 +272,7 @@ class ItemDatasetTests(unittest.TestCase):
             [5, 6, 7],
         )
 
-    def test_builds_relationships_and_renders_item_page(self) -> None:
+    def test_builds_item_relationships(self) -> None:
         raw = {
             "game": "test",
             "source": {"archive": "items.narc"},
@@ -358,52 +352,12 @@ class ItemDatasetTests(unittest.TestCase):
         )
 
         dataset = build_item_dataset(raw, pokedb, pokemon, trainers, locations)
-        relationships = build_relationship_index({"locations": locations})
         record = dataset["records"][0]
         self.assertEqual(record["slug"], "master-ball")
         self.assertEqual(record["wild_held_by"][0]["name"], "Bulbasaur")
         self.assertEqual(record["trainer_held_by"][0]["trainer_id"], 2)
         self.assertEqual(record["trainer_rewards"][0]["trainer_id"], 2)
         self.assertEqual(record["locations"][0]["name"], "Route 1")
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            count = render_item_pages(dataset, output, relationships=relationships)
-            page = (output / "master-ball.md").read_text(encoding="utf-8")
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-
-        self.assertEqual(count, 1)
-        self.assertIn("# Master Ball", page)
-        self.assertIn("<dt>Item ID</dt><dd>1</dd>", page)
-        self.assertIn("<dt>Pocket</dt><dd>Poké Balls</dd>", page)
-        self.assertIn("<dt>Base price</dt><dd>₽0</dd>", page)
-        self.assertEqual(page.count("<dt>Fling power</dt>"), 1)
-        self.assertIn("<dt>Fling effect ID</dt><dd>7</dd>", page)
-        self.assertIn(
-            "[Route 1](../locations/header-010.md) | Route 1 north | `header-010`",
-            page,
-        )
-        self.assertIn("[Bulbasaur](../pokemon/bulbasaur.md)", page)
-        self.assertIn("trainer-0002.md", page)
-        self.assertNotIn("## Shops", page)
-        self.assertNotIn("## Gifts and trades", page)
-        self.assertNotIn("## Evolutions", page)
-        self.assertEqual(catalog["kind"], "items")
-        self.assertEqual(
-            catalog["records"][0]["features"],
-            ["overworld", "wild-held", "trainer-held", "trainer-reward"],
-        )
-        self.assertEqual(
-            catalog["records"][0]["location_refs"],
-            [
-                {
-                    "kind": "location",
-                    "id": 10,
-                    "label": "Route 1",
-                    "url": "../locations/header-010/",
-                }
-            ],
-        )
 
     def test_duplicate_page_slugs_share_the_canonical_item_reference(self) -> None:
         records = []
@@ -441,7 +395,7 @@ class ItemDatasetTests(unittest.TestCase):
 
 
 class FossilRevivalTests(unittest.TestCase):
-    def test_resolves_and_renders_fossil_revival(self) -> None:
+    def test_resolves_fossil_revival(self) -> None:
         raw = {
             "game": "test",
             "source": {
@@ -495,15 +449,6 @@ class FossilRevivalTests(unittest.TestCase):
         self.assertEqual(record["revives_into"]["name"], "Omanyte")
         self.assertEqual(record["revives_at"][0]["header_id"], 21)
 
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            render_item_pages(dataset, output)
-            page = (output / "master-ball.md").read_text(encoding="utf-8")
-
-        self.assertIn("## Fossil revival", page)
-        self.assertIn("[Omanyte](../pokemon/omanyte.md)", page)
-        self.assertIn("[Nacrene City](../locations/header-021.md)", page)
-
     def test_attaches_special_vendor_stock_without_a_mart_inventory_id(self) -> None:
         raw = {
             "game": "test",
@@ -556,104 +501,7 @@ class FossilRevivalTests(unittest.TestCase):
         self.assertEqual(record["shops"][0]["availability"], "Weekends")
 
 
-class BerryMechanicsTests(unittest.TestCase):
-    def test_renders_berry_mechanics_section(self) -> None:
-        raw = {
-            "game": "test",
-            "source": {"archive": "items.narc"},
-            "records": [
-                {
-                    **_item_record(),
-                    "item_id": 149,
-                    "name": "Cheri Berry",
-                    "berry": {
-                        "size": 20,
-                        "firmness": 2,
-                        "firmness_name": "Soft",
-                        "base_yield": 1,
-                        "stage_duration": 3,
-                        "moisture_drain_rate": 15,
-                        "spiciness": 10,
-                        "dryness": 0,
-                        "sweetness": 0,
-                        "bitterness": 0,
-                        "sourness": 0,
-                        "smoothness": 25,
-                    },
-                }
-            ],
-        }
-        pokemon = {"game": "test", "source": {}, "records": []}
-        trainers = {"game": "test", "source": {}, "records": []}
-        locations = {"game": "test", "source": {}, "records": []}
-        pokedb = PokeDBGeneration(
-            pokemon_by_id={},
-            pokemon_by_name={},
-            pokemon_by_species={},
-            abilities_by_id={},
-            items_by_id={149: "cheri-berry"},
-        )
-
-        dataset = build_item_dataset(raw, pokedb, pokemon, trainers, locations)
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            render_item_pages(dataset, output)
-            page = (output / "cheri-berry.md").read_text(encoding="utf-8")
-
-        self.assertIn("## Berry mechanics", page)
-        self.assertIn("<dt>Firmness</dt><dd>Soft</dd>", page)
-        self.assertIn("<dt>Spicy</dt><dd>10</dd>", page)
-
-
 class MinimalItemDatasetTests(unittest.TestCase):
-    def test_renders_and_indexes_version_specific_trade_references(self) -> None:
-        raw = {
-            "game": "test",
-            "source": {"archive": "itemdata.narc"},
-            "records": [_gen5_item_record()],
-        }
-        pokemon = {"game": "test", "source": {}, "records": []}
-        pokedb = PokeDBGeneration(
-            pokemon_by_id={},
-            pokemon_by_name={},
-            pokemon_by_species={},
-            abilities_by_id={},
-            items_by_id={234: "leftovers"},
-        )
-        dataset = build_item_dataset(raw, pokedb, pokemon, None, None)
-        record = dataset["records"][0]
-        blaze_record = deepcopy(record)
-        volt_record = deepcopy(record)
-        volt_record["trades"] = [
-            {
-                "name": "Kyle",
-                "nickname": "Blueeye",
-                "ot_name": "Kyle",
-                "pokemon": {
-                    "id": 459,
-                    "name": "Snover",
-                    "slug": "snover",
-                },
-                "trade_id": 3,
-            }
-        ]
-        record["version_variants"] = {
-            "blaze-black": blaze_record,
-            "volt-white": volt_record,
-        }
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            render_item_pages(dataset, output)
-            page = (output / "leftovers.md").read_text(encoding="utf-8")
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-
-        self.assertIn('=== "Blaze Black"', page)
-        self.assertIn("No gift or trade references.", page)
-        self.assertIn('=== "Volt White"', page)
-        self.assertIn("Blueeye", page)
-        self.assertIn("Kyle", catalog["records"][0]["locations"])
-
     def test_degrades_cleanly_without_trainer_and_location_datasets(self) -> None:
         raw = {
             "game": "test",
@@ -696,21 +544,6 @@ class MinimalItemDatasetTests(unittest.TestCase):
         self.assertEqual(record["wild_held_by"][0]["name"], "Bulbasaur")
         self.assertIsNone(dataset["supplemental_sources"]["trainers"])
         self.assertIsNone(dataset["supplemental_sources"]["locations"])
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            count = render_item_pages(dataset, output)
-            page = (output / "leftovers.md").read_text(encoding="utf-8")
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-
-        self.assertEqual(count, 1)
-        self.assertIn("# Leftovers", page)
-        self.assertIn("<dt>Held effect ID</dt><dd>69</dd>", page)
-        self.assertNotIn("<dt>Pocket</dt>", page)
-        self.assertNotIn("Field pocket ID", page)
-        self.assertNotIn("Usable on party", page)
-        self.assertIsNone(catalog["records"][0]["pocket"])
-        self.assertIsNone(catalog["records"][0]["field_use"])
 
     def test_attaches_a_gen5_shop_cross_reference(self) -> None:
         raw = {
@@ -756,15 +589,6 @@ class MinimalItemDatasetTests(unittest.TestCase):
         self.assertEqual(
             dataset["supplemental_sources"]["marts"], mart_dataset["source"]
         )
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            render_item_pages(dataset, output)
-            page = (output / "leftovers.md").read_text(encoding="utf-8")
-
-        self.assertIn("## Shops", page)
-        self.assertIn("Driftveil Incense Salesman", page)
-        self.assertIn("Post-game", page)
 
     def test_prefers_a_location_linked_gen5_shop_reference(self) -> None:
         raw = {
@@ -834,66 +658,6 @@ class MinimalItemDatasetTests(unittest.TestCase):
         self.assertEqual(
             dataset["records"][0]["shops"][0]["shop_name"],
             "Driftveil Incense Salesman",
-        )
-
-    def test_renders_gen5_party_effects(self) -> None:
-        record = {
-            **_gen5_item_record(),
-            "item_id": 23,
-            "name": "Full Restore",
-            "natural_gift_power": 0,
-            "field_pocket_id": 1,
-            "field_use_function_id": 1,
-            "battle_use_function_id": 2,
-            "party_use": True,
-            "party_effects": {
-                "heal_sleep": True,
-                "heal_poison": True,
-                "heal_burn": True,
-                "heal_freeze": True,
-                "heal_paralysis": True,
-                "heal_confusion": True,
-                "revive": False,
-                "revive_all": False,
-                "level_up": False,
-                "hp_restored": 255,
-                "pp_restored": 0,
-                "hp_ev_amount": 0,
-                "attack_ev_amount": 0,
-                "defense_ev_amount": 0,
-                "speed_ev_amount": 0,
-                "special_attack_ev_amount": 0,
-                "special_defense_ev_amount": 0,
-                "friendship_low_amount": 0,
-                "friendship_medium_amount": 0,
-                "friendship_high_amount": 0,
-            },
-        }
-        raw = {
-            "game": "test",
-            "source": {"archive": "itemdata.narc"},
-            "records": [record],
-        }
-        pokemon = {"game": "test", "source": {}, "records": []}
-        pokedb = PokeDBGeneration(
-            pokemon_by_id={},
-            pokemon_by_name={},
-            pokemon_by_species={},
-            abilities_by_id={},
-            items_by_id={23: "full-restore"},
-        )
-
-        dataset = build_item_dataset(raw, pokedb, pokemon, None, None)
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            render_item_pages(dataset, output)
-            page = (output / "full-restore.md").read_text(encoding="utf-8")
-
-        self.assertIn(
-            "cures sleep, cures poison, cures burn, cures freeze, "
-            "cures paralysis, cures confusion, HP amount 255",
-            page,
         )
 
 

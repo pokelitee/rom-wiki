@@ -23,11 +23,7 @@ SUPPORTED_THEMES = frozenset(
         "portal",
     }
 )
-DEFAULT_GENERATED_SECTIONS = (
-    *DATASET_KINDS,
-    "types",
-    "data",
-)
+DEFAULT_GENERATED_SECTIONS = (*DATASET_KINDS, "types")
 _GENERATED_SECTION_SET = frozenset(DEFAULT_GENERATED_SECTIONS)
 
 
@@ -56,9 +52,6 @@ class SiteDefinition:
     description: str
     theme: str
     game: GameMetadata | None = None
-
-    def output_path(self, output_root: Path) -> Path:
-        return output_root / self.slug if self.slug else output_root
 
 
 def site_display_key(site: SiteDefinition) -> tuple[bool, int, int, str]:
@@ -144,9 +137,6 @@ def _load_site(path: Path, root: Path) -> SiteDefinition:
             raise SiteError(f"Invalid theme in {path.relative_to(root)}: {theme}")
         if theme not in SUPPORTED_THEMES:
             raise SiteError(f"Unsupported theme in {path.relative_to(root)}: {theme}")
-        config_path = (path.parent / site["mkdocs_config"]).resolve()
-        if not config_path.is_relative_to(root) or not config_path.is_file():
-            raise SiteError(f"Invalid MkDocs configuration for {path}")
         return SiteDefinition(
             id=site["id"],
             name=site["name"],
@@ -154,7 +144,7 @@ def _load_site(path: Path, root: Path) -> SiteDefinition:
             slug=slug,
             published=site["published"],
             order=site["order"],
-            config_path=config_path,
+            config_path=path,
             description=site.get("description", ""),
             theme=theme,
             game=(
@@ -238,7 +228,7 @@ def _load_game_metadata(
             )
         ):
             raise SiteError(f"Invalid generated_sections in {path.relative_to(root)}")
-        for required in ("pokemon", "types", "data"):
+        for required in ("pokemon", "types"):
             if data_driven and required not in generated_sections:
                 raise SiteError(
                     f"Data-driven game in {path.relative_to(root)} must require "

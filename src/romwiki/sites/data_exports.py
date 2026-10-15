@@ -4,16 +4,12 @@ import gzip
 import hashlib
 import io
 import json
-import shutil
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import SiteError
-from romwiki.util.json_io import (
-    write_bytes_atomic,
-    write_json_atomic,
-    write_text_atomic,
-)
+from romwiki.util.json_io import write_bytes_atomic, write_json_atomic
 
 PUBLIC_DATA_MANIFEST_SCHEMA_VERSION = 1
 PUBLIC_DATA_DIRECTORY = "data"
@@ -39,7 +35,10 @@ def write_public_dataset(
     write_bytes_atomic(data_root / relative_path, compressed)
     comparisons_dir = data_root / "comparisons"
     if comparisons_dir.is_dir():
-        shutil.rmtree(comparisons_dir)
+        for path in comparisons_dir.glob("*.json.gz"):
+            path.unlink()
+        if not any(comparisons_dir.iterdir()):
+            comparisons_dir.rmdir()
     _write_manifest(
         data_root,
         str(dataset["game"]),
@@ -60,6 +59,38 @@ def prune_public_datasets(
             if kind not in enabled_kinds:
                 path.unlink()
     _write_manifest(data_root, game)
+
+
+def write_public_comparison(
+    wiki_root: Path, kind: str, comparison: dict[str, Any] | None
+) -> None:
+    """Keep comparison resources separate from normalized bulk downloads."""
+    path = wiki_root / PUBLIC_DATA_DIRECTORY / "comparisons" / f"{kind}.json"
+    if comparison is None:
+        path.unlink(missing_ok=True)
+    else:
+        write_json_atomic(path, comparison)
+
+
+def validate_public_comparisons(wiki_root: Path) -> tuple[Path, ...]:
+    root = wiki_root / PUBLIC_DATA_DIRECTORY
+    manifest = json.loads((root / PUBLIC_DATA_MANIFEST).read_text(encoding="utf-8"))
+    files = tuple(sorted((root / "comparisons").glob("*.json")))
+    for path in files:
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise SiteError(f"Invalid comparison resource: {path}") from error
+        expected_kind = "wild_encounters" if path.stem == "encounters" else path.stem
+        if (
+            not isinstance(value, dict)
+            or value.get("schema_version") != COMPARISON_SCHEMA_VERSION
+            or value.get("game") != manifest["game"]
+            or value.get("kind") != expected_kind
+            or not isinstance(value.get("records"), list)
+        ):
+            raise SiteError(f"Invalid comparison resource: {path}")
+    return files
 
 
 def _gzip_json(value: dict[str, Any]) -> bytes:
@@ -152,40 +183,13 @@ def _write_manifest(
         "files": entries,
     }
     write_json_atomic(data_root / PUBLIC_DATA_MANIFEST, manifest)
-    write_text_atomic(data_root / "index.md", _download_index(manifest))
 
 
-def _download_index(manifest: dict[str, Any]) -> str:
-    lines = [
-        "# Data downloads",
-        "",
-        "These deterministic gzip files contain the complete normalized datasets "
-        "used to build this wiki. They include ROM-derived facts and PokéDB "
-        "reference data, but never ROM or patch bytes.",
-        "",
-        "| Dataset | Download | Records | Schema |",
-        "| ------- | -------- | ------: | -----: |",
-    ]
-    for entry in manifest["files"]:
-        label = str(entry["kind"]).replace("_", " ").title()
-        record_count = entry["record_count"]
-        lines.append(
-            f"| {label} | [{entry['path']}]({entry['path']}) | "
-            f"{record_count if record_count is not None else '—'} | "
-            f"{entry['schema_version']} |"
-        )
-    lines.extend(
-        [
-            "",
-            "File sizes and SHA-256 checksums are listed in "
-            "[the machine-readable manifest](manifest.json).",
-            "",
-        ]
-    )
-    return "\n".join(lines)
+def validate_public_data(wiki_root: Path) -> tuple[Path, ...]:
+    """Verify a site's download manifest and the archives it lists.
 
-
-def validate_public_data(wiki_root: Path) -> None:
+    Returns the manifest-listed archive paths, in manifest order.
+    """
     data_root = wiki_root / PUBLIC_DATA_DIRECTORY
     manifest_path = data_root / PUBLIC_DATA_MANIFEST
     try:
@@ -198,6 +202,7 @@ def validate_public_data(wiki_root: Path) -> None:
         or not isinstance(manifest.get("files"), list)
     ):
         raise SiteError(f"Unsupported public data manifest: {manifest_path}")
+    archives = []
     for entry in manifest["files"]:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
             raise SiteError(f"Invalid public data manifest entry: {manifest_path}")
@@ -217,3 +222,5 @@ def validate_public_data(wiki_root: Path) -> None:
             raise SiteError(f"Invalid public data archive: {path}") from error
         if hashlib.sha256(content).hexdigest() != entry.get("sha256"):
             raise SiteError(f"Public data checksum mismatch: {path}")
+        archives.append(path)
+    return tuple(archives)

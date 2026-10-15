@@ -1,4 +1,4 @@
-"""Proves the enrichment and rendering layers hold no gen4_platinum-specific
+"""Proves the enrichment layer holds no gen4_platinum-specific
 branches or constants: a fake engine registered only for these tests uses
 deliberately different table shapes (4 personal records, 3 moves, 3 types)
 and must flow through unmodified, exactly as a real second engine would.
@@ -6,12 +6,9 @@ and must flow through unmodified, exactly as a real second engine would.
 
 from __future__ import annotations
 
-import json
-import tempfile
 import types
 import unittest
 from dataclasses import fields, replace
-from pathlib import Path
 
 import romwiki.engines.concerns as concerns
 import romwiki.engines.registry as registry
@@ -32,13 +29,6 @@ from romwiki.pipeline.enrichment.encounters import enrich_encounter_dataset
 from romwiki.pipeline.enrichment.moves import enrich_move_dataset
 from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.pipeline.enrichment.trainers import enrich_trainer_dataset
-from romwiki.renderers.mkdocs import (
-    render_ability_pages,
-    render_encounter_pages,
-    render_move_pages,
-    render_pokemon_pages,
-    render_trainer_pages,
-)
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 
@@ -399,10 +389,6 @@ class EngineContractTests(unittest.TestCase):
         self.assertEqual(enriched["records"][1]["growth_rate"]["name"], "steady")
         self.assertEqual(enriched["records"][1]["egg_groups"][0]["name"], "blob")
 
-        with tempfile.TemporaryDirectory() as directory:
-            count = render_pokemon_pages(enriched, Path(directory))
-        self.assertEqual(count, _FAKE_PERSONAL_COUNT - 1)
-
     def test_personal_enrichment_rejects_gen4_sized_input_for_other_engines(
         self,
     ) -> None:
@@ -437,13 +423,6 @@ class EngineContractTests(unittest.TestCase):
         self.assertEqual(enriched["public_record_count"], _FAKE_MOVE_COUNT - 1)
         self.assertEqual(enriched["records"][1]["damage_class"]["name"], "ranged")
         self.assertEqual(enriched["records"][1]["type"]["name"], "aqua")
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            count = render_move_pages(enriched, output)
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-        self.assertEqual(count, _FAKE_MOVE_COUNT - 1)
-        self.assertEqual(catalog["kind"], "moves")
 
     def test_trainer_enrichment_uses_the_engines_party_normalization(self) -> None:
         stats = (
@@ -534,10 +513,6 @@ class EngineContractTests(unittest.TestCase):
             [move["name"] for move in member["moves"]], ["bump", "splash-kick"]
         )
 
-        with tempfile.TemporaryDirectory() as directory:
-            count = render_trainer_pages(enriched, Path(directory))
-        self.assertEqual(count, 1)
-
     def test_ability_dataset_uses_the_engines_name_count(self) -> None:
         _register_fake_engine(_fake_engine_tables())
         dataset = build_ability_dataset(
@@ -566,10 +541,6 @@ class EngineContractTests(unittest.TestCase):
         self.assertEqual(dataset["record_count"], 2)
         self.assertEqual(dataset["records"][0]["name"], "Sturdy Shell")
 
-        with tempfile.TemporaryDirectory() as directory:
-            count = render_ability_pages(dataset, Path(directory))
-        self.assertEqual(count, 2)
-
     def test_encounter_enrichment_uses_the_registered_engines_slot_chances(
         self,
     ) -> None:
@@ -582,9 +553,6 @@ class EngineContractTests(unittest.TestCase):
         source = parse_encounter_record(
             bytes(data), area_id=0, archive_path="encounters.narc"
         ).to_dict()
-        # A location is required for the area to render a page at all --
-        # entries with no map header pointing at them are unused ROM data
-        # and get skipped.
         source["locations"] = [
             {
                 "header_id": 1,
@@ -609,19 +577,11 @@ class EngineContractTests(unittest.TestCase):
         self.assertEqual(enriched["records"][0]["walking"]["slots"][0]["chance"], 999)
         # Likewise for the bonus-slot methodology citation: it must come from
         # the registered engine, not a literal gen4/Platinum string baked
-        # into the renderer.
+        # into enrichment.
         self.assertEqual(
             enriched["records"][0]["bonus_slot_methodology_source"],
             "the fake test engine's own routine",
         )
-
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory)
-            count = render_encounter_pages(enriched, output)
-            catalog = json.loads((output / "catalog.json").read_text(encoding="utf-8"))
-
-        self.assertEqual(count, 1)
-        self.assertEqual(catalog["kind"], "encounters")
 
     def test_unregistered_engine_fails_clearly_instead_of_silently_using_gen4(
         self,

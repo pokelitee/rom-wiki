@@ -5,7 +5,6 @@ kind = "game"
 slug = "renegade-platinum"
 published = true
 order = 20
-mkdocs_config = "mkdocs.yml"
 description = "An exact, data-driven reference for Pokémon Renegade Platinum"
 
 [game]

@@ -5,7 +5,6 @@ kind = "game"
 slug = "firered-leafgreen"
 published = false
 order = 40
-mkdocs_config = "mkdocs.yml"
 description = "A data-driven reference for Pokémon FireRed and LeafGreen (USA)"
 
 [game]
@@ -19,8 +18,8 @@ creator = "Game Freak"
 # gen3_frlg is a vertical slice: Pokémon, moves, items, trainers, abilities,
 # encounters, and locations are implemented so far (see engines/registry.py's
 # GEN3_FRLG_ENGINE entry). Restricted to what the profiles actually support
-# -- "types"/"data" are always-available, non-dataset-kind sections,
-# required for every data-driven site.
+# -- "types" is an always-available, non-dataset-kind section, required for
+# every data-driven site.
 generated_sections = [
     "pokemon",
     "moves",
@@ -30,11 +29,9 @@ generated_sections = [
     "encounters",
     "locations",
     "types",
-    "data",
 ]
 
 [appearance]
 # Placeholder: reusing the neutral "platinum" theme (already shared by two
-# unrelated sites) until FireRed/LeafGreen gets its own designed palette --
-# a real theme needs CSS work in sites/shared/overrides, out of scope here.
+# unrelated sites) until FireRed/LeafGreen gets its own designed palette.
 theme = "platinum"

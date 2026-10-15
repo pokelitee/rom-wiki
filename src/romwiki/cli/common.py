@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import argparse
 import logging
-from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult, inspect_rom
 from romwiki.profiles.models import GameProfile
-from romwiki.sites import SiteAuditReport, SiteCatalog
+from romwiki.sites import SiteCatalog
 from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGamePaths, LocalGameRegistry
 from romwiki.util.logging import timed_operation
@@ -69,21 +68,6 @@ def add_comparison_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_dev_argument(
-    parser: argparse.ArgumentParser, *, help_text: str | None = None
-) -> None:
-    parser.add_argument(
-        "--dev",
-        action="store_true",
-        help=help_text
-        or (
-            "only render the representative detail pages in the game's "
-            "dev-pages.toml, keeping full catalog data; speeds up local "
-            "iteration on renderer changes"
-        ),
-    )
-
-
 def add_cache_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--refresh-cache",
@@ -105,11 +89,7 @@ def add_site_root_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_jobs_argument(
-    parser: argparse.ArgumentParser,
-    *,
-    workers: str = "parallel MkDocs builds and audit page-parse workers",
-) -> None:
+def add_jobs_argument(parser: argparse.ArgumentParser, *, workers: str) -> None:
     parser.add_argument(
         "--jobs",
         type=int,
@@ -218,45 +198,3 @@ def site_wiki_root(site_id: str, *, root: Path = Path(".")) -> Path:
         if matches:
             return matches[0].config_path.parent / "wiki"
     return Path("sites/games") / site_id / "wiki"
-
-
-def site_output(configured: Path | None, *, dev: bool) -> Path:
-    if configured is not None:
-        return configured
-    return Path("build/mkdocs-dev" if dev else "dist")
-
-
-def report_site_audit(report: SiteAuditReport) -> None:
-    warning_counts = Counter(issue.code for issue in report.warnings)
-    if LOG.isEnabledFor(logging.DEBUG):
-        for issue in report.warnings:
-            LOG.warning("%s", issue.format())
-    elif warning_counts:
-        summary = ", ".join(
-            f"{code}={count:,}" for code, count in sorted(warning_counts.items())
-        )
-        LOG.warning(
-            "Site audit found %s warning(s): %s; rerun with --verbose for details",
-            f"{len(report.warnings):,}",
-            summary,
-        )
-    displayed_errors = report.errors[:100]
-    for issue in displayed_errors:
-        LOG.error("%s", issue.format())
-    if len(report.errors) > len(displayed_errors):
-        LOG.error(
-            "... %s additional error(s) omitted",
-            f"{len(report.errors) - len(displayed_errors):,}",
-        )
-    largest = report.largest_page
-    largest_text = (
-        f"; largest: {largest[0]} ({largest[1] / 1024:.1f} KiB)" if largest else ""
-    )
-    LOG.info(
-        "Audited %s pages and %s links%s",
-        f"{report.page_count:,}",
-        f"{report.link_count:,}",
-        largest_text,
-    )
-    if not report.ok:
-        raise SiteError(f"site audit found {len(report.errors):,} error(s)")

@@ -7,7 +7,6 @@ import time
 import unittest
 from collections.abc import Iterable
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from romwiki.pipeline.build.regeneration import (
@@ -19,40 +18,6 @@ from romwiki.sites.catalog import GameMetadata, SiteDefinition
 
 
 class RegenerationStateTests(unittest.TestCase):
-    def test_development_fingerprint_tracks_mode_and_page_manifest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            site_root = root / "site"
-            site_root.mkdir()
-            (site_root / "game.toml").write_text("[game]\n", encoding="utf-8")
-            manifest = site_root / "dev-pages.toml"
-            manifest.write_text("[pages]\n", encoding="utf-8")
-            site = _site(site_root)
-            result = SimpleNamespace(
-                match=SimpleNamespace(
-                    profile=SimpleNamespace(engine="test", id="game")
-                ),
-                image=SimpleNamespace(hashes=SimpleNamespace(sha256="rom")),
-            )
-
-            with patch(
-                "romwiki.pipeline.build.regeneration.profile_fingerprint",
-                return_value="profile",
-            ):
-                production = regeneration_fingerprint(root, site, (result,), (), root)
-                development = regeneration_fingerprint(
-                    root, site, (result,), (), root, dev=True
-                )
-                manifest.write_text(
-                    '[pages]\npokemon = ["bulbasaur"]\n', encoding="utf-8"
-                )
-                changed = regeneration_fingerprint(
-                    root, site, (result,), (), root, dev=True
-                )
-
-        self.assertNotEqual(production, development)
-        self.assertNotEqual(development, changed)
-
     def test_fingerprint_tracks_every_package_source_module(self) -> None:
         modules = (
             "sources/pokedb.py",
@@ -188,7 +153,7 @@ class RegenerationStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             site_root = root / "site"
-            generated = site_root / "wiki" / "pokemon" / "index.md"
+            generated = site_root / "wiki" / "data" / "pokemon.json.gz"
             generated.parent.mkdir(parents=True)
             generated.write_text("# Pokemon\n", encoding="utf-8")
             site = _site(site_root)
@@ -223,7 +188,7 @@ def _site(site_root: Path) -> SiteDefinition:
         "game",
         True,
         1,
-        site_root / "mkdocs.yml",
+        site_root / "game.toml",
         "",
         "platinum",
         GameMetadata(

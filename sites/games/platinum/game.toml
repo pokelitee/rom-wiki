@@ -5,7 +5,6 @@ kind = "game"
 slug = "platinum"
 published = true
 order = 10
-mkdocs_config = "mkdocs.yml"
 description = "An exact, data-driven reference for Pokémon Platinum (USA)"
 
 [game]

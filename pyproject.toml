@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rom-wiki"
 version = "0.1.0"
-description = "Extract structured Pokémon ROM data and generate static wikis"
+description = "Extract structured Pokémon ROM data for a shared React reference app"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -29,12 +29,6 @@ Issues = "https://github.com/pokelitee/rom-wiki/issues"
 # decoding a new selector (it identified the starter accessor behind
 # `starter_species_offset`). Nothing under src/ imports it at runtime.
 dev = ["pytest>=8", "ruff==0.17.0", "capstone>=5,<6", "mypy==2.4.0"]
-docs = [
-    "mkdocs>=1.6.1,<2",
-    "mkdocs-material>=9.7.6,<10",
-    "mkdocs-minify-plugin>=0.8,<1",
-    "watchdog>=6,<7",
-]
 
 [project.scripts]
 romwiki = "romwiki.cli:main"

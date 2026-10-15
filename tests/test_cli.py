@@ -12,7 +12,6 @@ from romwiki.cli import build_parser, main
 from romwiki.cli.build import resolve_build_baseline
 from romwiki.cli.common import (
     profile_wiki_root,
-    report_site_audit,
     resolve_input_rom,
     resolve_pokedb_path,
     site_wiki_root,
@@ -30,13 +29,7 @@ from romwiki.cli.regenerate import (
     validate_regeneration_flags,
 )
 from romwiki.profiles.loader import ProfileRepository
-from romwiki.sites import (
-    GameMetadata,
-    SiteAuditIssue,
-    SiteAuditReport,
-    SiteCatalog,
-    SiteDefinition,
-)
+from romwiki.sites import GameMetadata, SiteCatalog, SiteDefinition
 from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGamePaths
 
@@ -59,57 +52,6 @@ class MainErrorHandlingTests(unittest.TestCase):
             main(["inspect", "--no-such-option"])
 
         self.assertEqual(raised.exception.code, 2)
-
-    def test_combined_dev_server_arguments_are_forwarded(self) -> None:
-        catalog = object()
-        with (
-            patch("romwiki.cli.site.SiteCatalog.load", return_value=catalog),
-            patch("romwiki.cli.site.serve_sites") as serve,
-        ):
-            exit_code = main(
-                [
-                    "site",
-                    "serve",
-                    "--all",
-                    "--dev",
-                    "--output",
-                    "build/preview",
-                    "--host",
-                    "0.0.0.0",
-                    "--port",
-                    "9000",
-                ]
-            )
-
-        self.assertEqual(exit_code, 0)
-        serve.assert_called_once_with(
-            catalog,
-            Path("build/preview"),
-            site_ids=[],
-            serve_all=True,
-            dev=True,
-            host="0.0.0.0",
-            port=9000,
-        )
-
-    def test_individual_dev_server_arguments_are_forwarded(self) -> None:
-        catalog = object()
-        with (
-            patch("romwiki.cli.site.SiteCatalog.load", return_value=catalog),
-            patch("romwiki.cli.site.serve_sites") as serve,
-        ):
-            exit_code = main(["site", "serve", "renegade-platinum", "--dev"])
-
-        self.assertEqual(exit_code, 0)
-        serve.assert_called_once_with(
-            catalog,
-            Path("build/mkdocs-dev"),
-            site_ids=["renegade-platinum"],
-            serve_all=False,
-            dev=True,
-            host="127.0.0.1",
-            port=8000,
-        )
 
     def test_an_unknown_command_is_rejected_by_argparse(self) -> None:
         with self.assertRaises(SystemExit):
@@ -134,30 +76,39 @@ class MainErrorHandlingTests(unittest.TestCase):
             },
         )
 
-    def test_generate_all_dev_is_catalog_driven(self) -> None:
+    def test_generate_all_is_catalog_driven(self) -> None:
         with patch("romwiki.cli.regenerate.run_generation") as generate:
-            exit_code = main(["generate", "--all", "--dev"])
+            exit_code = main(["generate", "--all"])
 
         self.assertEqual(exit_code, 0)
         args = generate.call_args.args[0]
         self.assertTrue(args.regenerate_all)
-        self.assertTrue(args.dev)
 
-    def test_dev_site_build_uses_the_dev_default_output(self) -> None:
-        catalog = object()
-        built = SimpleNamespace(
-            id="platinum",
-            output_path=lambda output: output / "platinum",
+    def test_site_group_exposes_data_and_frontend_commands(self) -> None:
+        parser = build_parser()
+        subparsers = next(
+            action for action in parser._actions if getattr(action, "choices", None)
         )
-        with (
-            patch("romwiki.cli.site.SiteCatalog.load", return_value=catalog),
-            patch("romwiki.cli.site.build_sites", return_value=(built,)) as build,
-        ):
-            exit_code = main(["site", "build", "--all", "--dev"])
+        site_parser = subparsers.choices["site"]
+        site_subparsers = next(
+            action
+            for action in site_parser._actions
+            if getattr(action, "choices", None)
+        )
 
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(build.call_args.args[1], Path("build/mkdocs-dev"))
-        self.assertTrue(build.call_args.kwargs["dev"])
+        self.assertEqual(
+            set(site_subparsers.choices),
+            {
+                "list",
+                "snapshot",
+                "restore-snapshot",
+                "publish-snapshot",
+                "export-web",
+                "restore-data",
+                "snapshot-web",
+                "restore-web",
+            },
+        )
 
     def test_version_family_parser_accepts_three_games_and_labels(self) -> None:
         args = build_parser().parse_args(
@@ -180,81 +131,25 @@ class MainErrorHandlingTests(unittest.TestCase):
         self.assertEqual(args.games, ["red", "blue", "yellow"])
         self.assertEqual(args.versions, ["red-hack", "blue-hack", "yellow-hack"])
 
-    def test_validate_regeneration_flags_returns_dev_and_snapshot(self) -> None:
-        args = SimpleNamespace(
-            dev=True,
-            snapshot=False,
-            regenerate_all=True,
-            incremental=False,
-            clean=False,
-        )
+    def test_validate_regeneration_flags_returns_snapshot(self) -> None:
+        args = SimpleNamespace(snapshot=True, regenerate_all=True)
 
-        self.assertEqual(validate_regeneration_flags(args), (True, False))
+        self.assertTrue(validate_regeneration_flags(args))
 
     def test_validate_regeneration_flags_defaults_missing_attributes_to_false(
         self,
     ) -> None:
-        # generate's args.Namespace has no snapshot/incremental/clean/dev
-        # attributes at all (only regenerate registers them) -- this must
-        # not raise AttributeError for that shape.
+        # generate's args.Namespace has no snapshot attribute at all (only
+        # regenerate registers it) -- this must not raise AttributeError for
+        # that shape.
         args = SimpleNamespace(regenerate_all=True)
 
-        self.assertEqual(validate_regeneration_flags(args), (False, False))
+        self.assertFalse(validate_regeneration_flags(args))
 
     def test_validate_regeneration_flags_rejects_snapshot_without_all(self) -> None:
-        args = SimpleNamespace(
-            dev=False,
-            snapshot=True,
-            regenerate_all=False,
-            incremental=False,
-            clean=False,
-        )
+        args = SimpleNamespace(snapshot=True, regenerate_all=False)
 
         with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
-            validate_regeneration_flags(args)
-
-    def test_validate_regeneration_flags_rejects_snapshot_with_incremental(
-        self,
-    ) -> None:
-        args = SimpleNamespace(
-            dev=False,
-            snapshot=True,
-            regenerate_all=True,
-            incremental=True,
-            clean=False,
-        )
-
-        with self.assertRaisesRegex(
-            SiteError, "--snapshot cannot be combined with --incremental"
-        ):
-            validate_regeneration_flags(args)
-
-    def test_validate_regeneration_flags_rejects_snapshot_with_dev(self) -> None:
-        args = SimpleNamespace(
-            dev=True,
-            snapshot=True,
-            regenerate_all=True,
-            incremental=False,
-            clean=False,
-        )
-
-        with self.assertRaisesRegex(
-            SiteError, "--snapshot cannot be combined with --dev"
-        ):
-            validate_regeneration_flags(args)
-
-    def test_validate_regeneration_flags_rejects_clean_with_incremental(self) -> None:
-        args = SimpleNamespace(
-            dev=False,
-            snapshot=False,
-            regenerate_all=True,
-            incremental=True,
-            clean=True,
-        )
-
-        with self.assertRaisesRegex(
-            SiteError, "--clean cannot be combined with --incremental"
-        ):
             validate_regeneration_flags(args)
 
     def test_regenerate_parser_exposes_complete_workflow_options(self) -> None:
@@ -265,11 +160,6 @@ class MainErrorHandlingTests(unittest.TestCase):
         self.assertTrue(args.regenerate_all)
         self.assertTrue(args.refresh)
         self.assertTrue(args.snapshot)
-
-        incremental = build_parser().parse_args(
-            ["regenerate", "heart-gold-soul-silver", "--incremental"]
-        )
-        self.assertTrue(incremental.incremental)
 
     def test_parser_exposes_global_logging_options(self) -> None:
         verbose = build_parser().parse_args(["--verbose", "regenerate", "--all"])
@@ -660,14 +550,9 @@ patched_rom = "roms/white-us.nds"
                 profiles_dir=root / "profiles",
                 pokedb_root=pokedb_root,
                 data_root=root / "data",
-                output=root / "dist",
                 refresh=True,
-                dev=True,
                 snapshot=False,
-                snapshot_output=root / "snapshot.tar.gz",
-                max_page_kb=512,
-                max_images=150,
-                base_url=None,
+                snapshot_output=root / "snapshot",
                 jobs=1,
             )
 
@@ -683,7 +568,6 @@ patched_rom = "roms/white-us.nds"
                     match=SimpleNamespace(profile=SimpleNamespace(id=profile_id))
                 )
 
-            report = SiteAuditReport(3, 10, 100, ("index.html", 50), (), ())
             with (
                 patch("romwiki.cli.regenerate.SiteCatalog.load", return_value=catalog),
                 patch(
@@ -702,29 +586,18 @@ patched_rom = "roms/white-us.nds"
                     "romwiki.cli.regenerate.GameBuildWorkflow",
                     side_effect=lambda result, *args, **kwargs: result,
                 ) as workflow,
-                patch("romwiki.cli.regenerate.render_game_build") as build_game,
+                patch("romwiki.cli.regenerate.write_game_build") as build_game,
                 patch(
-                    "romwiki.cli.regenerate.render_version_family_build"
+                    "romwiki.cli.regenerate.write_version_family_build"
                 ) as build_family,
                 patch(
                     "romwiki.cli.regenerate.regeneration_fingerprint",
                     return_value="fingerprint",
-                ) as fingerprint,
+                ),
                 patch(
                     "romwiki.cli.regenerate.can_reuse_generation", return_value=False
                 ),
                 patch("romwiki.cli.regenerate.write_regeneration_state"),
-                patch(
-                    "romwiki.cli.regenerate.build_sites",
-                    return_value=catalog.published(),
-                ) as build_all_sites,
-                patch(
-                    "romwiki.cli.regenerate.combined_artifact_files",
-                    return_value={"index.html"},
-                ),
-                patch(
-                    "romwiki.cli.regenerate.audit_site", return_value=report
-                ) as audit,
                 self.assertLogs("romwiki", level="INFO") as logs,
             ):
                 run_regeneration(args)
@@ -739,7 +612,6 @@ patched_rom = "roms/white-us.nds"
                 {
                     "data_root": root / "data" / "platinum-us",
                     "wiki_root": root / "sites" / "platinum" / "wiki",
-                    "dev": True,
                 },
             )
             self.assertEqual(
@@ -764,12 +636,8 @@ patched_rom = "roms/white-us.nds"
                 {
                     "data_root": root / "data" / "black-white",
                     "wiki_root": root / "sites" / "black-white" / "wiki",
-                    "dev": True,
                 },
             )
-            self.assertTrue(fingerprint.call_args.kwargs["dev"])
-            self.assertTrue(build_all_sites.call_args.kwargs["dev"])
-            self.assertTrue(audit.call_args.kwargs["ignore_missing_links"])
             messages = "\n".join(logs.output)
             self.assertIn("Generation preflight [1/2]: platinum", messages)
             self.assertIn("Generation preflight [2/2]: black-white", messages)
@@ -848,7 +716,6 @@ patched_rom = "roms/white-us.nds"
             _generate_prepared_sites(
                 args,
                 [generation.prepared for generation in generations],
-                dev=False,
             )
 
         self.assertEqual(sorted(attempted), ["first", "second"])
@@ -874,7 +741,7 @@ patched_rom = "roms/white-us.nds"
         args = SimpleNamespace(data_root=Path("data"), refresh=False, jobs=0)
 
         with self.assertRaisesRegex(SiteError, "at least 1"):
-            _generate_prepared_sites(args, [], dev=False)
+            _generate_prepared_sites(args, [])
 
     def test_snapshot_requires_complete_regeneration(self) -> None:
         args = SimpleNamespace(
@@ -884,50 +751,6 @@ patched_rom = "roms/white-us.nds"
 
         with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
             run_regeneration(args)
-
-    def test_snapshot_rejects_incremental_builds(self) -> None:
-        args = SimpleNamespace(
-            snapshot=True,
-            regenerate_all=True,
-            incremental=True,
-        )
-
-        with self.assertRaisesRegex(SiteError, "cannot be combined"):
-            run_regeneration(args)
-
-    def test_snapshot_rejects_development_regeneration(self) -> None:
-        args = SimpleNamespace(
-            snapshot=True,
-            regenerate_all=True,
-            incremental=False,
-            dev=True,
-        )
-
-        with self.assertRaisesRegex(SiteError, "cannot be combined with --dev"):
-            run_regeneration(args)
-
-    def test_site_audit_warnings_are_summarized_by_default(self) -> None:
-        report = SiteAuditReport(
-            1,
-            2,
-            100,
-            ("index.html", 100),
-            (),
-            (
-                SiteAuditIssue("image-count", "one.html", "too many"),
-                SiteAuditIssue("image-count", "two.html", "too many"),
-                SiteAuditIssue("css-unused", "assets", "unused"),
-            ),
-        )
-
-        with self.assertLogs("romwiki", level="WARNING") as captured:
-            report_site_audit(report)
-
-        output = "\n".join(captured.output)
-        self.assertIn("3 warning(s)", output)
-        self.assertIn("css-unused=1", output)
-        self.assertIn("image-count=2", output)
-        self.assertNotIn("one.html", output)
 
 
 def _site_generation(
@@ -982,7 +805,7 @@ def _site(
         slug="" if kind == "portal" else site_id,
         published=True,
         order=0,
-        config_path=root / "sites" / site_id / "mkdocs.yml",
+        config_path=root / "sites" / site_id / "game.toml",
         description="",
         theme="portal" if kind == "portal" else "platinum",
         game=game,

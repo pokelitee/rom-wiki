@@ -15,11 +15,6 @@ from romwiki.util.inventory import file_metadata_inventory, modified_too_recentl
 from romwiki.util.json_io import write_json_atomic
 
 
-class _GameDefinition(Protocol):
-    @property
-    def generated_sections(self) -> tuple[str, ...]: ...
-
-
 class _SiteDefinition(Protocol):
     """Structural shape `regeneration.py` needs from `sites.catalog.SiteDefinition`.
 
@@ -33,12 +28,9 @@ class _SiteDefinition(Protocol):
     @property
     def config_path(self) -> Path: ...
 
-    @property
-    def game(self) -> _GameDefinition | None: ...
 
-
-REGENERATION_STATE_SCHEMA_VERSION = 2
-_FINGERPRINT_SCHEMA_VERSION = b"3"
+REGENERATION_STATE_SCHEMA_VERSION = 3
+_FINGERPRINT_SCHEMA_VERSION = b"4"
 FILE_DIGEST_CACHE_SCHEMA_VERSION = 1
 _SHA256_HEX = re.compile("[0-9a-f]{64}")
 
@@ -50,28 +42,24 @@ def regeneration_fingerprint(
     baselines: Sequence[Any | None],
     pokedb_root: Path,
     *,
-    dev: bool = False,
     digest_cache: Path | None = None,
 ) -> str:
-    """Fingerprint every input that shapes a site's generated pages.
+    """Fingerprint every input that shapes a site's generated data.
 
     `digest_cache` persists file digests keyed by path, size, and modification
     time, so unchanged inputs are not re-read on every run.
     """
     digest = hashlib.sha256()
     digest.update(_FINGERPRINT_SCHEMA_VERSION)
-    digest.update(b"dev" if dev else b"production")
     values = []
     for result in (*current, *(value for value in baselines if value is not None)):
         profile = result.match.profile
         values.append((result.image.hashes.sha256, profile_fingerprint(profile)))
     digest.update(json.dumps(values, sort_keys=True).encode())
     paths: set[Path] = {site.config_path.parent / "game.toml"}
-    if dev:
-        paths.add(site.config_path.parent / "dev-pages.toml")
     # Every package module is hashed rather than a computed import closure:
     # registries, PokéDB loaders, shared utilities, and site orchestration all
-    # shape generated pages, and a missed dependency would ship stale output.
+    # shape generated data, and a missed dependency would ship stale output.
     source_root = root / "src" / "romwiki"
     paths.update(source_root.rglob("*.py"))
     paths.update(pokedb_root.rglob("*.json"))
@@ -123,18 +111,11 @@ def regeneration_fingerprint(
 
 
 def generated_inventory(site: _SiteDefinition) -> dict[str, str]:
-    assert site.game is not None
-    wiki_root = site.config_path.parent / "wiki"
-    inventory: dict[str, str] = {}
-    for section in (*site.game.generated_sections, "changes"):
-        section_root = wiki_root / section
-        inventory.update(
-            {
-                f"{section}/{path}": metadata
-                for path, metadata in file_metadata_inventory(section_root).items()
-            }
-        )
-    return inventory
+    data_root = site.config_path.parent / "wiki" / "data"
+    return {
+        f"data/{path}": metadata
+        for path, metadata in file_metadata_inventory(data_root).items()
+    }
 
 
 def can_reuse_generation(path: Path, fingerprint: str, site: _SiteDefinition) -> bool:
