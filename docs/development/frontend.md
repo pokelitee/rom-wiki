@@ -47,7 +47,7 @@ To update publication data, generate and review a new snapshot, upload its uniqu
 
 ### Migration boundary
 
-The last deployed MkDocs site remains available until the first authorized React deployment. CI builds and uploads a verified Pages artifact without deploying it. The `Deploy Pages` workflow has only a manual trigger; `publish` defaults to false. A run with `publish=true` can deploy only from `main`, after both the full checks and complete publication build succeed. Merging a PR does not deploy.
+The React site is deployed on GitHub Pages. CI builds and uploads a verified Pages artifact without deploying it. The `Deploy Pages` workflow has only a manual trigger; `publish` defaults to false. A run with `publish=true` can deploy only from `main`, after both the full checks and complete publication build succeed. Merging a PR does not deploy.
 
 The Python page renderers, MkDocs configuration, templates, assets, and serving/audit tooling have been removed. Their implementation remains in Git history at the last main commit before migration, `04b72f24827b557df4f8b4bf61cff8c3146fd824`.
 

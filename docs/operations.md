@@ -202,7 +202,7 @@ the site's data-sources page rather than a broad completion label.
 
 ## CI and GitHub Pages
 
-Publishing remains manual during the React cutover. The previously deployed MkDocs site continues to serve until an authorized React deployment. Every PR and main-branch CI run restores the checksum-pinned complete frontend snapshot, checks coverage, builds React, runs desktop/mobile browser tests across every game, and uploads a Pages artifact. These CI runs do not deploy.
+The React site is live on GitHub Pages; publishing remains manual. Every PR and main-branch CI run restores the checksum-pinned complete frontend snapshot, checks coverage, builds React, runs desktop/mobile browser tests across every game, and uploads a Pages artifact. These CI runs do not deploy.
 
 CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot rather than restoring retired wiki archives. `romwiki site restore-data` remains available for historical recovery of normalized downloads; those archives are historical publications, not evidence that current extractor code produced them.
 

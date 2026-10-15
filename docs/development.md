@@ -43,7 +43,7 @@ Keep game-specific provenance and limitations in `sites/games/<site-id>/wiki/dat
 
 ## Dependencies and contract changes
 
-`pyproject.toml` declares supported package extras. `requirements/dev.txt` pins the complete development environment: packaging, test, typing, analysis, and package-verification tools. CI uses these exact versions. Update the pins together, keep transitive dependencies consistent, and run checks before merging. Dependabot opens grouped weekly Python, npm, and GitHub Actions updates.
+`pyproject.toml` declares supported package extras. `requirements/dev.txt` pins the complete development environment: packaging, test, typing, analysis, and package-verification tools. CI uses these exact versions. Update the pins together, keep transitive dependencies consistent, and run checks before merging. Dependabot opens grouped weekly Python, npm, and GitHub Actions updates. Routine frontend version updates are limited to minor and patch releases; toolchain major upgrades require a separate compatibility review. Security updates remain eligible regardless of that version-update filter.
 
 Update schema definitions, tests, and the data-contract guide together when changing normalized or published fields. Use synthetic ROM fixtures for parser regressions. Complete generation needs local inputs; report when verification was limited to offline tests or restored publication snapshots.
 
