@@ -6,6 +6,13 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+.mypy_cache/
+node_modules/
+*.tsbuildinfo
+web/dist/
+web/public/data/
+web/playwright-report/
+web/test-results/
 
 /build/
 /dist/
