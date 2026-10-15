@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, TypedDict
 
 from romwiki.util.errors import DataSourceError
@@ -36,8 +37,9 @@ def dataset_envelope(
 
 
 def validate_dataset_envelope(
-    dataset: dict[str, Any], *, context: str
+    dataset: Mapping[str, Any], *, context: str
 ) -> DatasetEnvelope:
+
     required_types = {
         "schema_version": int,
         "game": str,

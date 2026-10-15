@@ -59,7 +59,7 @@ from romwiki.renderers.mkdocs.references import (
     entity_markdown_link,
     entity_reference,
 )
-from romwiki.schema.rendering import PokemonRenderRecord, RenderDataset
+from romwiki.schema.rendering import PokemonDataset
 
 _CATALOG_AVAILABILITY_METHOD_ORDER = (
     "wild",
@@ -80,7 +80,7 @@ _MOVE_DETAIL_DIVIDER_ROW = "---- | ---- | ----- | ----: | -------: | -:"
 
 
 def render_pokemon_pages(
-    dataset: RenderDataset[PokemonRenderRecord],
+    dataset: PokemonDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     move_dataset: dict[str, Any] | None = None,
@@ -90,13 +90,12 @@ def render_pokemon_pages(
     *,
     only_pages: frozenset[str] | None = None,
 ) -> int:
-    all_records = cast(list[dict[str, Any]], dataset["records"])
-    public_records = [record for record in all_records if record["public"]]
-    dataset_dict = cast(dict[str, Any], dataset)
-    dataset_features = frozenset(
-        dataset_dict.get("features", _DEFAULT_LEARNSET_FEATURES)
-    )
-    preevolutions = _index_preevolutions(public_records)
+    public_records = [record for record in dataset["records"] if record["public"]]
+    dataset_features = frozenset(dataset.get("features", _DEFAULT_LEARNSET_FEATURES))
+    # Page helpers also handle synthetic evolution-target stubs, so they take
+    # plain mappings rather than complete Pokémon records.
+    page_records = cast(list[dict[str, Any]], public_records)
+    preevolutions = _index_preevolutions(page_records)
     output_root.mkdir(parents=True, exist_ok=True)
     prune_catalog_pages(
         output_root,
@@ -112,30 +111,28 @@ def render_pokemon_pages(
     fallback_links = []
     catalog_records = []
     page_count = 0
-    type_name_source = dataset_dict.get("name_sources", {}).get("type_names")
+    type_name_source = dataset.get("name_sources", {}).get("type_names")
     move_lookup = {
         record["move_id"]: record for record in (move_dataset or {}).get("records", [])
     }
-    relationships = relationships or build_relationship_index({"pokemon": dataset_dict})
+    relationships = relationships or build_relationship_index({"pokemon": dataset})
     for index, record in enumerate(public_records):
         change = record_comparison(
             comparison, record.get("member", record["national_dex_id"])
         )
         filename = f"{record['slug']}.md"
-        previous = public_records[index - 1] if index else None
-        following = (
-            public_records[index + 1] if index + 1 < len(public_records) else None
-        )
+        previous = page_records[index - 1] if index else None
+        following = page_records[index + 1] if index + 1 < len(page_records) else None
         if only_pages is None or record["slug"] in only_pages:
             write_text(
                 output_root / filename,
                 _render_record(
-                    record,
+                    page_records[index],
                     previous,
                     following,
                     type_name_source,
                     preevolutions.get(record["slug"], []),
-                    public_records,
+                    page_records,
                     move_lookup,
                     change,
                     comparison.get("baseline") if comparison else None,
@@ -160,26 +157,24 @@ def render_pokemon_pages(
             )
         )
         stats = record["base_stats"]
-        unique_abilities = list(
-            {
-                value["name"]: value for value in record["abilities"] if value["name"]
-            }.values()
-        )
-        abilities = [value["name"] for value in unique_abilities]
+        unique_abilities = {
+            value["name"]: value for value in record["abilities"] if value["name"]
+        }
+        abilities = list(unique_abilities)
         ability_refs = [
             {
                 **ROUTES.catalog_reference(
                     entity_reference(
                         "ability",
-                        value.get("id", value["name"]),
-                        value["name"],
+                        value.get("id", name),
+                        name,
                         value.get("slug"),
                     ),
                     "pokemon/",
                 ),
                 **({"hidden": True} if value.get("is_hidden") else {}),
             }
-            for value in unique_abilities
+            for name, value in unique_abilities.items()
         ]
         types = list(dict.fromkeys(value["name"] for value in record["types"]))
         egg_groups = list(

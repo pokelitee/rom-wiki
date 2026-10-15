@@ -96,7 +96,8 @@ class ReferenceIndex:
             self.add(reference)
 
     @classmethod
-    def from_datasets(cls, datasets: Mapping[str, dict[str, Any]]) -> ReferenceIndex:
+    def from_datasets(cls, datasets: Mapping[str, Mapping[str, Any]]) -> ReferenceIndex:
+
         index = cls()
         for kind, dataset in datasets.items():
             route_kind = _DATASET_ROUTE_KINDS.get(kind)

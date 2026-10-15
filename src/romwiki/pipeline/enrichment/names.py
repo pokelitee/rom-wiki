@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from romwiki.engines.concerns import EnrichmentTables
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import name_slug, normalize_display_name
 
 
 def reference_name_table(
-    dataset: dict[str, Any], field: str, expected_count: int
+    dataset: Mapping[str, Any], field: str, expected_count: int
 ) -> list[str] | None:
     names = dataset.get(field)
     if names is None:
@@ -25,7 +26,9 @@ def reference_name_table(
 
 
 def resolve_type_names(
-    engine: Any, dataset: dict[str, Any], fallback: Mapping[int, str] | None
+    engine: EnrichmentTables,
+    dataset: Mapping[str, Any],
+    fallback: Mapping[int, str] | None,
 ) -> dict[int, str]:
     result = dict(fallback or {})
     names = reference_name_table(dataset, "type_names", engine.TYPE_NAME_COUNT)
@@ -35,7 +38,9 @@ def resolve_type_names(
 
 
 def resolve_move_names(
-    engine: Any, dataset: dict[str, Any], fallback: Mapping[int, str] | None
+    engine: EnrichmentTables,
+    dataset: Mapping[str, Any],
+    fallback: Mapping[int, str] | None,
 ) -> dict[int, str]:
     result = dict(fallback or {})
     names = reference_name_table(dataset, "move_names", engine.MOVE_NAME_COUNT)
@@ -44,16 +49,22 @@ def resolve_move_names(
     return result
 
 
-def resolve_ability_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
+def resolve_ability_names(
+    engine: EnrichmentTables, dataset: Mapping[str, Any]
+) -> list[str] | None:
     return reference_name_table(dataset, "ability_names", engine.ABILITY_NAME_COUNT)
 
 
-def resolve_pokemon_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
+def resolve_pokemon_names(
+    engine: EnrichmentTables, dataset: Mapping[str, Any]
+) -> list[str] | None:
     names = reference_name_table(dataset, "pokemon_names", engine.POKEMON_NAME_COUNT)
     if names is None:
         return None
     return [normalize_display_name(name) for name in names]
 
 
-def resolve_item_names(engine: Any, dataset: dict[str, Any]) -> list[str] | None:
+def resolve_item_names(
+    engine: EnrichmentTables, dataset: Mapping[str, Any]
+) -> list[str] | None:
     return reference_name_table(dataset, "item_names", engine.ITEM_NAME_COUNT)

@@ -70,7 +70,7 @@ from romwiki.renderers.mkdocs.references import (
     entity_reference,
     unique_references,
 )
-from romwiki.schema.rendering import EncounterRenderRecord, RenderDataset
+from romwiki.schema.rendering import EncounterDataset
 from romwiki.util.errors import SiteError
 
 # Display labels for the seasonal encounter-method keys emitted by supporting engines.
@@ -93,7 +93,7 @@ _ENCOUNTER_SLOT_COLUMNS = (
 
 
 def render_encounter_pages(
-    dataset: RenderDataset[EncounterRenderRecord],
+    dataset: EncounterDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,

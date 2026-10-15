@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
@@ -21,6 +21,13 @@ from romwiki.pipeline.enrichment.names import (
     resolve_type_names,
 )
 from romwiki.pipeline.enrichment.references import move_name, with_rom_description
+from romwiki.schema.rendering import (
+    MoveDataset,
+    MoveEnrichedFields,
+    MoveRenderRecord,
+    MoveTutor,
+    PokemonMemberLink,
+)
 from romwiki.schema.versions import MOVES_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -37,7 +44,7 @@ def enrich_move_dataset(
     type_names: Mapping[int, str] | None = None,
     move_names: Mapping[int, str] | None = None,
     reference_version: str | None = None,
-) -> dict[str, Any]:
+) -> MoveDataset:
     engine = get_engine(dataset["engine"]).enrich
     source_records = dataset.get("records")
     expected_count = engine.MOVE_RECORD_COUNT
@@ -67,25 +74,28 @@ def enrich_move_dataset(
     for member, tutor_ids in tutor_ids_by_member.items():
         for tutor_id in tutor_ids:
             members_by_tutor[tutor_id].append(member)
-    tutors_by_move: dict[int, list[dict[str, Any]]] = {}
+    tutors_by_move: dict[int, list[MoveTutor]] = {}
     for tutor_id, tutor in tutors.items():
         tutors_by_move.setdefault(tutor["move_id"], []).append(
-            {
-                **tutor,
-                "location": tutor_location(tutor, tutor_locations),
-                "compatible_pokemon": [
-                    personal_member_reference(engine, member, pokedb, pokemon_names)
-                    for member in members_by_tutor[tutor_id]
-                ],
-            }
+            cast(
+                MoveTutor,
+                {
+                    **tutor,
+                    "location": tutor_location(tutor, tutor_locations),
+                    "compatible_pokemon": [
+                        personal_member_reference(engine, member, pokedb, pokemon_names)
+                        for member in members_by_tutor[tutor_id]
+                    ],
+                },
+            )
         )
     egg_moves = validate_egg_moves(engine, egg_move_dataset, dataset["game"])
-    egg_move_pokemon: dict[int, list[dict[str, Any]]] = {}
+    egg_move_pokemon: dict[int, list[PokemonMemberLink]] = {}
     for species_id, egg_move_set in egg_moves.items():
         pokemon = personal_member_reference(engine, species_id, pokedb, pokemon_names)
         for move_id in set(egg_move_set["move_ids"]):
             egg_move_pokemon.setdefault(move_id, []).append(pokemon)
-    records = []
+    records: list[MoveRenderRecord] = []
     for expected_id, source in enumerate(source_records):
         if source.get("move_id") != expected_id:
             raise DataSourceError("Move records must be ordered by member ID")
@@ -96,39 +106,35 @@ def enrich_move_dataset(
                 raise DataSourceError(f"Unknown move ID: {expected_id}")
         else:
             slug = f"internal-move-{expected_id}"
-        records.append(
-            {
-                **source,
-                "slug": slug,
-                "name": (
-                    rom_move_names[expected_id]
-                    if public and rom_move_names is not None
-                    else title_case_slug(slug)
+        enriched_fields: MoveEnrichedFields = {
+            "slug": slug,
+            "name": (
+                rom_move_names[expected_id]
+                if public and rom_move_names is not None
+                else title_case_slug(slug)
+            ),
+            "replaces": (replaced_move(expected_id, slug, pokedb) if public else None),
+            "reference": with_rom_description(
+                (
+                    pokedb.move_reference(expected_id, reference_version)
+                    if public
+                    else None
                 ),
-                "replaces": (
-                    replaced_move(expected_id, slug, pokedb) if public else None
-                ),
-                "reference": with_rom_description(
-                    (
-                        pokedb.move_reference(expected_id, reference_version)
-                        if public
-                        else None
-                    ),
-                    descriptions[expected_id] if descriptions is not None else None,
-                ),
-                "public": public,
-                "damage_class": named_id(
-                    source["damage_class_id"],
-                    engine.DAMAGE_CLASS_NAMES,
-                    "move class",
-                ),
-                "type": type_id(engine, source["type_id"], type_names),
-                "machines": machines_by_move.get(expected_id, []),
-                "tutors": tutors_by_move.get(expected_id, []),
-                "egg_move_pokemon": egg_move_pokemon.get(expected_id, []),
-            }
-        )
-    enriched = {
+                descriptions[expected_id] if descriptions is not None else None,
+            ),
+            "public": public,
+            "damage_class": named_id(
+                source["damage_class_id"],
+                engine.DAMAGE_CLASS_NAMES,
+                "move class",
+            ),
+            "type": type_id(engine, source["type_id"], type_names),
+            "machines": machines_by_move.get(expected_id, []),
+            "tutors": tutors_by_move.get(expected_id, []),
+            "egg_move_pokemon": egg_move_pokemon.get(expected_id, []),
+        }
+        records.append(cast(MoveRenderRecord, {**source, **enriched_fields}))
+    enriched: MoveDataset = {
         "schema_version": MOVES_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "engine": dataset["engine"],

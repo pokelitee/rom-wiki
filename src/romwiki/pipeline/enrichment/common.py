@@ -3,12 +3,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from romwiki.engines.concerns import EnrichmentTables
+from romwiki.schema.rendering import (
+    NamedId,
+    PokemonMemberLink,
+    ReplacedMove,
+    TutorLocation,
+)
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import title_case_slug
 
 
-def national_dex_id_for_member(engine: Any, member: int) -> int:
+def national_dex_id_for_member(engine: EnrichmentTables | None, member: int) -> int:
     """Translate a raw, engine-native species identifier into its National
     Dex number, wherever the two diverge.
 
@@ -40,7 +47,7 @@ def pokemon_display_name(
 
 
 def validate_egg_moves(
-    engine: Any, dataset: dict[str, Any] | None, game: str
+    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
 ) -> dict[int, dict[str, Any]]:
     if dataset is None:
         return {}
@@ -60,7 +67,7 @@ def validate_egg_moves(
 
 
 def _validate_dense_egg_moves(
-    engine: Any, records: list[dict[str, Any]]
+    engine: EnrichmentTables, records: list[dict[str, Any]]
 ) -> dict[int, dict[str, Any]]:
     result = {}
     for expected_member, record in enumerate(records):
@@ -84,7 +91,7 @@ def _validate_dense_egg_moves(
 
 
 def _validate_sparse_egg_moves(
-    engine: Any, records: list[dict[str, Any]]
+    engine: EnrichmentTables, records: list[dict[str, Any]]
 ) -> dict[int, dict[str, Any]]:
     result = {}
     previous_species = 0
@@ -114,7 +121,7 @@ def _validate_sparse_egg_moves(
 
 
 def validate_machines(
-    engine: Any, dataset: dict[str, Any] | None, game: str
+    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
 ) -> dict[int, dict[str, Any]]:
     if dataset is None:
         return {}
@@ -196,7 +203,7 @@ def validate_tutors(
     return tutors, ids_by_member, location_names
 
 
-def tutor_location(tutor: dict[str, Any], location_names: list[str]) -> dict[str, Any]:
+def tutor_location(tutor: dict[str, Any], location_names: list[str]) -> TutorLocation:
     if tutor.get("kind") == "special":
         return {"id": None, "name": tutor["location_name"]}
     location_id = tutor["location_id"]
@@ -204,11 +211,11 @@ def tutor_location(tutor: dict[str, Any], location_names: list[str]) -> dict[str
 
 
 def personal_member_reference(
-    engine: Any,
+    engine: EnrichmentTables,
     member: int,
     pokedb: PokeDBGeneration,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any]:
+) -> PokemonMemberLink:
     if member in engine.FORM_MEMBERS:
         slug = engine.FORM_MEMBERS[member]
         reference = pokedb.pokemon_for_name(slug)
@@ -234,7 +241,7 @@ def personal_member_reference(
     }
 
 
-def named_id(value: int, names: tuple[str, ...], label: str) -> dict[str, Any]:
+def named_id(value: int, names: tuple[str, ...], label: str) -> NamedId:
     if not 0 <= value < len(names):
         raise DataSourceError(f"Unknown {label} ID: {value}")
     return {"id": value, "name": names[value]}
@@ -242,7 +249,7 @@ def named_id(value: int, names: tuple[str, ...], label: str) -> dict[str, Any]:
 
 def replaced_move(
     move_id: int, slug: str, pokedb: PokeDBGeneration
-) -> dict[str, Any] | None:
+) -> ReplacedMove | None:
     canonical_slug = pokedb.move_name(move_id)
     if canonical_slug is None or canonical_slug == slug:
         return None
@@ -250,8 +257,9 @@ def replaced_move(
 
 
 def type_id(
-    engine: Any, value: int, type_names: Mapping[int, str] | None
-) -> dict[str, Any]:
+    engine: EnrichmentTables, value: int, type_names: Mapping[int, str] | None
+) -> NamedId:
+
     if type_names is not None and value in type_names:
         return {"id": value, "name": type_names[value]}
     return named_id(value, engine.TYPE_NAMES, "type")

@@ -10,11 +10,11 @@ from romwiki.renderers.mkdocs.location_encounter_map import (
 )
 from romwiki.renderers.mkdocs.location_event_map import render_event_map_location_pages
 from romwiki.renderers.mkdocs.references import ReferenceIndex
-from romwiki.schema.rendering import LocationRenderRecord, RenderDataset
+from romwiki.schema.rendering import LocationDataset
 
 
 def render_location_pages(
-    dataset: RenderDataset[LocationRenderRecord],
+    dataset: LocationDataset,
     output_root: Path,
     comparison: dict[str, Any] | None = None,
     references: ReferenceIndex | None = None,

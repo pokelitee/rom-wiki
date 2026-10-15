@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
+from romwiki.engines.concerns import EnrichmentTables
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
     named_id,
@@ -28,6 +29,24 @@ from romwiki.pipeline.enrichment.references import (
     move_reference,
     with_rom_description,
 )
+from romwiki.schema.rendering import (
+    EntityLink,
+    EvolutionParameter,
+    LevelUpMove,
+    MachineCompatibility,
+    MoveLink,
+    PokemonBattleForm,
+    PokemonDataset,
+    PokemonEvolution,
+    PokemonEvolutionFields,
+    PokemonHeldItem,
+    PokemonIdentityFields,
+    PokemonLearnsetFields,
+    PokemonMoveCompatibility,
+    PokemonRenderRecord,
+    PokemonSpeciesTraits,
+    TutorMoveCompatibility,
+)
 from romwiki.schema.versions import POKEMON_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
@@ -50,7 +69,7 @@ def enrich_personal_dataset(
     move_names: Mapping[int, str] | None = None,
     sprite_version: str | None = None,
     reference_version: str | None = None,
-) -> dict[str, Any]:
+) -> PokemonDataset:
     engine = get_engine(dataset["engine"]).enrich
     source_records = dataset.get("records")
     expected_count = engine.PERSONAL_RECORD_COUNT
@@ -133,7 +152,7 @@ def enrich_personal_dataset(
             )
         )
     _attach_battle_forms(engine, records)
-    enriched = {
+    enriched: PokemonDataset = {
         "schema_version": POKEMON_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],
         "engine": dataset["engine"],
@@ -178,7 +197,9 @@ def enrich_personal_dataset(
     return enriched
 
 
-def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
+def _attach_battle_forms(
+    engine: EnrichmentTables, records: list[PokemonRenderRecord]
+) -> None:
     """Attach each battle-only transformation record's stats/types to its
     base species' record as `battle_forms`, e.g. Castform's page gains its
     real Sunny/Rainy/Snowy stat blocks even though those transformations
@@ -187,7 +208,7 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
     transformation_members = engine.TRANSFORMATION_MEMBERS
     if not transformation_members:
         return
-    by_base_slug: dict[str, list[dict[str, Any]]] = {}
+    by_base_slug: dict[str, list[PokemonBattleForm]] = {}
     for record in records:
         transformation = transformation_members.get(record["member"])
         if transformation is None:
@@ -211,7 +232,7 @@ def _attach_battle_forms(engine: Any, records: list[dict[str, Any]]) -> None:
 class _RecordLookups:
     """Dataset-wide inputs shared by every personal record's enrichment."""
 
-    engine: Any
+    engine: EnrichmentTables
     pokedb: PokeDBGeneration
     evolution_item_names: list[str]
     evolution_item_slugs: Mapping[int, str | None]
@@ -247,7 +268,7 @@ def _enrich_record(
     tutor_ids: list[int],
     egg_move_set: dict[str, Any] | None,
     static_encounters: list[dict[str, Any]],
-) -> dict[str, Any]:
+) -> PokemonRenderRecord:
     member = source["species_id"]
     is_internal = member in lookups.engine.INTERNAL_MEMBERS
     return {
@@ -313,7 +334,7 @@ def _member_identity(lookups: _RecordLookups, member: int) -> _MemberIdentity:
     )
 
 
-def _identity_fields(lookups: _RecordLookups, member: int) -> dict[str, Any]:
+def _identity_fields(lookups: _RecordLookups, member: int) -> PokemonIdentityFields:
     """Resolve a member's page identity, display name, and reference media."""
     engine = lookups.engine
     pokedb = lookups.pokedb
@@ -378,7 +399,7 @@ def _rom_pokedex_description(
 
 def _species_traits(
     lookups: _RecordLookups, source: dict[str, Any], is_internal: bool
-) -> dict[str, Any]:
+) -> PokemonSpeciesTraits:
     """Resolve stats, types, abilities, held items, and breeding traits."""
     engine = lookups.engine
     return {
@@ -436,7 +457,7 @@ def _species_traits(
 
 def _wild_held_items(
     lookups: _RecordLookups, source: dict[str, Any]
-) -> list[dict[str, Any]]:
+) -> list[PokemonHeldItem]:
     held_items = source["wild_held_items"]
     rarities = [("common", held_items["common"]), ("rare", held_items["rare"])]
     if held_items.get("dark_grass") is not None:
@@ -460,7 +481,7 @@ def _move_compatibility(
     source: dict[str, Any],
     tutor_ids: list[int],
     is_internal: bool,
-) -> dict[str, Any]:
+) -> PokemonMoveCompatibility:
     if is_internal:
         return {"machines": [], "tutor_moves": []}
     return {
@@ -488,7 +509,7 @@ def _learnset_fields(
     learnset: dict[str, Any] | None,
     egg_move_set: dict[str, Any] | None,
     is_internal: bool,
-) -> dict[str, Any]:
+) -> PokemonLearnsetFields:
     if is_internal:
         return {
             "level_up_moves": [],
@@ -512,7 +533,7 @@ def _evolution_fields(
     lookups: _RecordLookups,
     evolution_set: dict[str, Any] | None,
     is_internal: bool,
-) -> dict[str, Any]:
+) -> PokemonEvolutionFields:
     if is_internal:
         return {"evolutions": [], "evolution_provenance": None}
     return {
@@ -532,7 +553,7 @@ def _evolution_fields(
 
 
 def _validate_learnsets(
-    engine: Any, dataset: dict[str, Any] | None, game: str
+    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
 ) -> list[dict[str, Any] | None]:
     expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
@@ -551,7 +572,7 @@ def _validate_learnsets(
 
 
 def _validate_evolutions(
-    engine: Any, dataset: dict[str, Any] | None, game: str
+    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
 ) -> list[dict[str, Any] | None]:
     expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
@@ -627,7 +648,7 @@ def _enrich_compatible_tutors(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
+) -> list[TutorMoveCompatibility]:
     result = []
     for tutor_id in tutor_ids:
         tutor = tutors[tutor_id]
@@ -637,28 +658,31 @@ def _enrich_compatible_tutors(
         if move is None:
             raise DataSourceError(f"Tutor {tutor_id} references move ID 0")
         result.append(
-            {
-                **tutor,
-                "move": move,
-                "location": tutor_location(tutor, location_names),
-            }
+            cast(
+                TutorMoveCompatibility,
+                {
+                    **tutor,
+                    "move": move,
+                    "location": tutor_location(tutor, location_names),
+                },
+            )
         )
     return result
 
 
 def _enrich_compatible_machines(
-    engine: Any,
+    engine: EnrichmentTables,
     machine_ids: list[int],
     machines: dict[int, dict[str, Any]],
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
+) -> list[MachineCompatibility]:
     if not machines:
         return [
             {"id": value, "name": engine.machine_name(value)} for value in machine_ids
         ]
-    result = []
+    result: list[MachineCompatibility] = []
     for machine_id in machine_ids:
         try:
             machine = machines[machine_id]
@@ -685,14 +709,14 @@ def _enrich_compatible_machines(
 
 
 def _enrich_evolutions(
-    engine: Any,
+    engine: EnrichmentTables,
     evolution_set: dict[str, Any] | None,
     pokedb: PokeDBGeneration,
     item_names: list[str],
     item_slugs: Mapping[int, str | None],
     move_names: Mapping[int, str] | None,
     pokemon_names: list[str] | None = None,
-) -> list[dict[str, Any]]:
+) -> list[PokemonEvolution]:
     if evolution_set is None:
         return []
     result = []
@@ -701,45 +725,46 @@ def _enrich_evolutions(
         target_member = entry["target_species_id"]
         target_national_dex_id = national_dex_id_for_member(engine, target_member)
         target = pokedb.pokemon_for_id(target_national_dex_id)
-        result.append(
-            {
-                **entry,
-                "method": named_id(
-                    method_id, engine.EVOLUTION_METHOD_NAMES, "evolution method"
+        evolution: PokemonEvolution = {
+            "method_id": method_id,
+            "parameter": entry["parameter"],
+            "target_species_id": target_member,
+            "method": named_id(
+                method_id, engine.EVOLUTION_METHOD_NAMES, "evolution method"
+            ),
+            "parameter_data": _evolution_parameter(
+                engine,
+                entry,
+                pokedb,
+                item_names,
+                item_slugs,
+                move_names,
+                pokemon_names,
+            ),
+            "target": {
+                "id": target_national_dex_id,
+                "slug": target["name"],
+                # `pokemon_names` (when present) is a ROM-extracted name
+                # table indexed the same raw way as `target_member`
+                # itself, not National Dex order.
+                "name": pokemon_display_name(
+                    target_member, target["name"], pokemon_names
                 ),
-                "parameter_data": _evolution_parameter(
-                    engine,
-                    entry,
-                    pokedb,
-                    item_names,
-                    item_slugs,
-                    move_names,
-                    pokemon_names,
-                ),
-                "target": {
-                    "id": target_national_dex_id,
-                    "slug": target["name"],
-                    # `pokemon_names` (when present) is a ROM-extracted name
-                    # table indexed the same raw way as `target_member`
-                    # itself, not National Dex order.
-                    "name": pokemon_display_name(
-                        target_member, target["name"], pokemon_names
-                    ),
-                },
-            }
-        )
+            },
+        }
+        result.append(evolution)
     return result
 
 
 def _evolution_parameter(
-    engine: Any,
+    engine: EnrichmentTables,
     entry: dict[str, Any],
     pokedb: PokeDBGeneration,
     item_names: list[str],
     item_slugs: Mapping[int, str | None],
     move_names: Mapping[int, str] | None,
     pokemon_names: list[str] | None = None,
-) -> dict[str, Any] | None:
+) -> EvolutionParameter | None:
     method_id = entry["method_id"]
     parameter = entry["parameter"]
     kind = engine.EVOLUTION_PARAMETER_KINDS.get(method_id)
@@ -780,8 +805,8 @@ def _enrich_level_up_moves(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
-    moves = []
+) -> list[LevelUpMove]:
+    moves: list[LevelUpMove] = []
     for entry in learnset["moves"] if learnset is not None else []:
         move = move_reference(
             entry["move_id"], pokedb, move_names, page_slugs=move_page_slugs
@@ -810,8 +835,8 @@ def _enrich_egg_moves(
     pokedb: PokeDBGeneration,
     move_names: Mapping[int, str] | None,
     move_page_slugs: Mapping[int, str] | None,
-) -> list[dict[str, Any]]:
-    moves = []
+) -> list[MoveLink]:
+    moves: list[MoveLink] = []
     seen: set[int] = set()
     for move_id in egg_move_set["move_ids"] if egg_move_set is not None else []:
         if move_id in seen:
@@ -828,7 +853,7 @@ def _ability_id(
     ability_id: int,
     pokedb: PokeDBGeneration,
     ability_names: list[str] | None,
-) -> dict[str, Any]:
+) -> EntityLink:
     if ability_id == 0:
         return {"id": 0, "slug": None, "name": None}
     slug = pokedb.ability_name(ability_id)

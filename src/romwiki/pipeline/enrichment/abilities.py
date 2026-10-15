@@ -4,18 +4,24 @@ from typing import Any
 
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.references import with_rom_description
+from romwiki.schema.rendering import (
+    AbilityDataset,
+    AbilityPokemon,
+    AbilityRenderRecord,
+    PokemonDataset,
+)
 from romwiki.schema.versions import ABILITIES_ENRICHED_SCHEMA_VERSION
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import DataSourceError
 
 
 def build_ability_dataset(
-    pokemon_dataset: dict[str, Any],
+    pokemon_dataset: PokemonDataset,
     pokedb: PokeDBGeneration,
     pickup_dataset: dict[str, Any] | None = None,
     *,
     reference_version: str | None = None,
-) -> dict[str, Any]:
+) -> AbilityDataset:
     if pokemon_dataset.get("dataset") != "pokemon":
         raise DataSourceError("Abilities require an enriched Pokémon dataset")
     engine_id = pokemon_dataset.get("engine")
@@ -35,7 +41,7 @@ def build_ability_dataset(
             f"Expected exactly {expected_count} ROM-derived ability descriptions"
         )
 
-    pokemon_by_ability: dict[int, list[dict[str, Any]]] = {}
+    pokemon_by_ability: dict[int, list[AbilityPokemon]] = {}
     for pokemon in pokemon_dataset.get("records", []):
         if not pokemon.get("public"):
             continue
@@ -71,7 +77,7 @@ def build_ability_dataset(
         if pickup_dataset is not None and not is_sliding_pickup
         else None
     )
-    records = []
+    records: list[AbilityRenderRecord] = []
     for ability_id in range(1, len(ability_names)):
         slug = pokedb.ability_name(ability_id)
         pickup = None

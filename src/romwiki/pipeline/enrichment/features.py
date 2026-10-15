@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, cast
 
 from romwiki.engines.registry import get_engine
 from romwiki.profiles.models import GameProfile
@@ -22,5 +23,7 @@ def effective_features(profile: GameProfile) -> tuple[str, ...]:
     return tuple(sorted(features))
 
 
-def attach_features(dataset: dict[str, Any], profile: GameProfile) -> dict[str, Any]:
-    return {**dataset, "features": list(effective_features(profile))}
+def attach_features[DatasetT: Mapping[str, Any]](
+    dataset: DatasetT, profile: GameProfile
+) -> DatasetT:
+    return cast(DatasetT, {**dataset, "features": list(effective_features(profile))})
