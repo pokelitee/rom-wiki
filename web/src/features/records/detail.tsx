@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import type {
@@ -9,9 +10,11 @@ import type {
 } from "../../data/types";
 import { useResource } from "../../data/use-resource";
 import { ResourceState } from "../../components/resource-state";
+import { StatBars } from "../../components/stat-bars";
 import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
+import { Evolutions, EvYields } from "./pokemon-sections";
 import {
   isEmpty,
   isNamedReference,
@@ -77,37 +80,27 @@ function DetailChunk({
   );
 }
 
-function Stats({ stats }: { stats: DataObject }) {
-  return (
-    <section className="panel detail-section">
-      <h2>Base stats</h2>
-      <div className="stat-bars">
-        {Object.entries(stats).map(([name, value]) => (
-          <div className="stat-row" key={name}>
-            <span>{title(name)}</span>
-            <strong>{String(value)}</strong>
-            <div className="stat-track">
-              <div
-                style={{
-                  width: `${Math.min(100, (Number(value) / 255) * 100)}%`,
-                }}
-              />
-            </div>
-          </div>
-        ))}
-        <div className="stat-total">
-          Total{" "}
-          <strong>
-            {Object.values(stats).reduce<number>(
-              (sum, value) => sum + Number(value),
-              0,
-            )}
-          </strong>
-        </div>
-      </div>
-    </section>
-  );
+// Gen 4 and 5 store two type slots, repeating the type of a single-type
+// Pokémon.
+function typeNames(record: DataObject): string[] {
+  const types = Array.isArray(record.types)
+    ? record.types
+    : record.type
+      ? [record.type]
+      : [];
+  return [
+    ...new Set(types.map((value) => String(object(value).name ?? value))),
+  ];
 }
+
+// Sections whose generic rendering would hide what matters about them.
+const SECTION_RENDERERS: Record<
+  string,
+  ComponentType<{ value: Json; game: string }>
+> = {
+  "pokemon.evolutions": Evolutions,
+  "pokemon.ev_yields": EvYields,
+};
 
 function RecordPage({
   game,
@@ -150,6 +143,7 @@ function RecordPage({
     ([key]) =>
       ![
         "name",
+        "types",
         "base_stats",
         "reference",
         "version_variants",
@@ -206,16 +200,8 @@ function RecordPage({
           </p>
           <h1>{section === "types" ? title(row.label) : row.label}</h1>
           <div className="badge-list">
-            {(Array.isArray(record.types)
-              ? record.types
-              : record.type
-                ? [record.type]
-                : []
-            ).map((value, index) => (
-              <TypeBadge
-                key={index}
-                name={String(object(value).name ?? value)}
-              />
+            {typeNames(record).map((name) => (
+              <TypeBadge key={name} name={name} />
             ))}
           </div>
         </div>
@@ -267,12 +253,41 @@ function RecordPage({
           </small>
         </div>
       )}
-      {record.base_stats && <Stats stats={object(record.base_stats)} />}
+      {record.base_stats && (
+        <section className="panel detail-section">
+          <h2>Base stats</h2>
+          <StatBars stats={object(record.base_stats)} />
+        </section>
+      )}
       {facts.length > 0 && (
         <section className="panel detail-section">
           <h2>Overview</h2>
           <Value value={Object.fromEntries(facts)} game={game.id} />
         </section>
+      )}
+      {sections.map(([key, value]) => {
+        const Renderer = SECTION_RENDERERS[`${section}.${key}`];
+        return (
+          <section className="panel detail-section" key={key}>
+            <h2>{title(key)}</h2>
+            {Renderer ? (
+              <Renderer value={value} game={game.id} />
+            ) : (
+              <Value value={value} game={game.id} field={key} />
+            )}
+          </section>
+        );
+      })}
+      {Object.entries(detail.relationships)
+        .filter(([, value]) => !isEmpty(value))
+        .map(([key, value]) => (
+          <section className="panel detail-section" key={key}>
+            <h2>{title(key)}</h2>
+            <Value value={value} game={game.id} field={key} />
+          </section>
+        ))}
+      {section === "trainers" && (
+        <TrainerFamilies game={game} record={record} metadata={metadata} />
       )}
       {record.cry && typeof object(record.cry).url === "string" && (
         <section className="panel detail-section">
@@ -331,23 +346,6 @@ function RecordPage({
             game={game.id}
           />
         </section>
-      )}
-      {sections.map(([key, value]) => (
-        <section className="panel detail-section" key={key}>
-          <h2>{title(key)}</h2>
-          <Value value={value} game={game.id} field={key} />
-        </section>
-      ))}
-      {Object.entries(detail.relationships)
-        .filter(([, value]) => !isEmpty(value))
-        .map(([key, value]) => (
-          <section className="panel detail-section" key={key}>
-            <h2>{title(key)}</h2>
-            <Value value={value} game={game.id} field={key} />
-          </section>
-        ))}
-      {section === "trainers" && (
-        <TrainerFamilies game={game} record={record} metadata={metadata} />
       )}
       {metadataResource.error && (
         <ResourceState
