@@ -38,6 +38,22 @@ test("game search finds records and guides and reports misses", async ({
   ).toBeVisible();
 });
 
+test("a failed search index request offers a working retry", async ({
+  page,
+}) => {
+  let failed = false;
+  await page.route("**/data/platinum/guide-search-*.json", async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.fulfill({ status: 503, body: "Unavailable" });
+    } else await route.continue();
+  });
+  await page.goto("./#/platinum/search?q=bulbasaur");
+  await expect(page.getByRole("alert")).toContainText("503");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.locator(".results-line")).toBeVisible();
+});
+
 test("entity links on a record resolve to published records", async ({
   page,
 }) => {

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ChevronRight, Search } from "lucide-react";
 import type { Game } from "../../data/types";
 import { loadData } from "../../data/client";
+import { ResourceState } from "../../components/resource-state";
 import { title } from "../../lib/utils";
 import { matchSearch, type SearchEntry } from "./match";
 
@@ -37,24 +38,27 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
   const [results, setResults] = useState<SearchEntry[]>([]);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     const search = async () => {
-      const indexes = await Promise.all(
-        Object.entries(game.sections).map(async ([section, definition]) => {
-          const index = await loadData<{
-            records: { id: string; label: string }[];
-          }>(definition.index);
-          return index.records.map((record) => ({
-            label: record.label,
-            section,
-            path: `/${game.id}/${section}/${record.id}`,
-          }));
-        }),
-      );
-      const guides = await loadData<
-        { id: string; label: string; search: string }[]
-      >(game.search_index);
+      const [indexes, guides] = await Promise.all([
+        Promise.all(
+          Object.entries(game.sections).map(async ([section, definition]) => {
+            const index = await loadData<{
+              records: { id: string; label: string }[];
+            }>(definition.index);
+            return index.records.map((record) => ({
+              label: record.label,
+              section,
+              path: `/${game.id}/${section}/${record.id}`,
+            }));
+          }),
+        ),
+        loadData<{ id: string; label: string; search: string }[]>(
+          game.search_index,
+        ),
+      ]);
       if (active) {
         setResults([
           ...indexes.flat(),
@@ -77,8 +81,17 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
     return () => {
       active = false;
     };
-  }, [game]);
-  if (error) return <p role="alert">{error}</p>;
+  }, [game, attempt]);
+  if (error)
+    return (
+      <ResourceState
+        error={error}
+        retry={() => {
+          setError("");
+          setAttempt((value) => value + 1);
+        }}
+      />
+    );
   if (!loaded) return <p role="status">Loading this game's search index…</p>;
   const matches = matchSearch(results, query);
   return (
