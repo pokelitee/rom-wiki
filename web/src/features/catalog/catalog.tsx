@@ -5,7 +5,7 @@ import type { Game, IndexRecord } from "../../data/types";
 import { ResourceState } from "../../components/resource-state";
 import { Button } from "../../components/ui/button";
 import { title } from "../../lib/utils";
-import { filterRecords, PAGE_SIZE, pageNumber } from "./filter";
+import { defaultSort, filterRecords, PAGE_SIZE, pageNumber } from "./filter";
 import type { DataObject, RecordDetail } from "../../data/types";
 import { object } from "../../lib/json";
 
@@ -117,7 +117,7 @@ function CatalogTable({
   const numeric = fields.filter((key) =>
     records.some((row) => typeof row.fields[key] === "number"),
   );
-  const filtered = filterRecords(records, params);
+  const filtered = filterRecords(records, params, defaultSort(section));
   const page = pageNumber(params, filtered.length);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const columns = fields
@@ -201,7 +201,7 @@ function CatalogTable({
             <label>
               Sort by
               <select
-                value={params.get("sort") ?? "name"}
+                value={params.get("sort") ?? defaultSort(section)}
                 onChange={(event) => update("sort", event.target.value)}
               >
                 {["name", "id", ...numeric].map((key) => (

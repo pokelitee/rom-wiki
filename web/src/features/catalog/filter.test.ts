@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IndexRecord } from "../../data/types";
-import { filterRecords, pageNumber } from "./filter";
+import { defaultSort, filterRecords, pageNumber } from "./filter";
 
 const records: IndexRecord[] = [
   {
@@ -41,6 +41,21 @@ describe("catalog navigation state", () => {
     expect(
       filterRecords(records, new URLSearchParams("q=bulbasaur&f.types=fire")),
     ).toEqual([]);
+  });
+  it("lists Pokémon in Pokédex order unless another sort is chosen", () => {
+    const dex = records.map((record, index) => ({
+      ...record,
+      fields: { ...record.fields, national_dex_id: [1, 4, 3][index] },
+    }));
+    const order = (query: string) =>
+      filterRecords(
+        dex,
+        new URLSearchParams(query),
+        defaultSort("pokemon"),
+      ).map((row) => row.id);
+    expect(order("")).toEqual(["bulbasaur", "venusaur", "charmander"]);
+    expect(order("sort=name")).toEqual(["bulbasaur", "charmander", "venusaur"]);
+    expect(defaultSort("moves")).toBe("name");
   });
   it("handles malformed and out-of-range page parameters", () => {
     expect(pageNumber(new URLSearchParams("page=NaN"), 200)).toBe(1);

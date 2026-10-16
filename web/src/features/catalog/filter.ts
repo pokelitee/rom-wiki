@@ -3,9 +3,17 @@ import { searchText } from "../../lib/utils";
 
 export const PAGE_SIZE = 50;
 
+// Players browse Pokémon in Pokédex order; other sections read best by name.
+const DEFAULT_SORT: Record<string, string> = { pokemon: "national_dex_id" };
+
+export function defaultSort(section: string): string {
+  return DEFAULT_SORT[section] ?? "name";
+}
+
 export function filterRecords(
   records: IndexRecord[],
   params: URLSearchParams,
+  fallbackSort = "name",
 ): IndexRecord[] {
   const query = searchText((params.get("q") ?? "").trim());
   const filters = [...params.entries()].filter(
@@ -36,7 +44,7 @@ export function filterRecords(
     }
     return true;
   });
-  const sort = params.get("sort") ?? "name";
+  const sort = params.get("sort") ?? fallbackSort;
   const direction = params.get("dir") === "desc" ? -1 : 1;
   return result.sort((a, b) => {
     const left = a.fields[sort] ?? "";
