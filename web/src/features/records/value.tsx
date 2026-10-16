@@ -88,7 +88,15 @@ export function Value({
     if (entries.every(isNamedReference))
       return (
         <span className="badge-list">
-          {entries.map((entry, index) => (
+          {(TYPE_FIELDS.has(field)
+            ? entries.filter(
+                (entry, index) =>
+                  entries.findIndex(
+                    (other) => object(other).name === object(entry).name,
+                  ) === index,
+              )
+            : entries
+          ).map((entry, index) => (
             <NamedReference
               key={index}
               value={entry as DataObject}

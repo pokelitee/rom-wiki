@@ -859,6 +859,22 @@ tbody tr:hover {
   font-size: var(--text-xs);
   margin-top: 20px;
 }
+.evolution-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.evolution-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.evolution-list svg {
+  color: var(--muted-foreground);
+}
 .section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

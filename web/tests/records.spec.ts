@@ -99,6 +99,10 @@ test("record pages show readable values and keep raw data in the details", async
   await page.goto("./#/platinum/pokemon/bulbasaur");
   await expect(page.locator(".record-hero h1")).toHaveText("Bulbasaur");
   await expect(page.getByText("87.5% male")).toBeVisible();
+  await expect(page.locator(".stat-row span").first()).toHaveText("HP");
+  await expect(page.locator(".evolution-list li").first()).toContainText(
+    "Level 16",
+  );
   const headers = await page.locator("main table th").allTextContents();
   expect(headers.map((header) => header.trim().toLowerCase())).not.toContain(
     "id",
