@@ -103,9 +103,12 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         gen5_files = extraction_source_files(
             "gen5_bw", "romwiki.pipeline.extraction.locations.dispatcher"
         )
-        self.assertIn(
-            "pipeline/extraction/locations/archive_encounter_map.py", gen5_files
-        )
+        for module in (
+            "archive_encounter_map",
+            "archive_encounter_map_source",
+            "archive_location_shops",
+        ):
+            self.assertIn(f"pipeline/extraction/locations/{module}.py", gen5_files)
         self.assertIn("pipeline/extraction/locations/helpers.py", gen5_files)
 
     def test_includes_split_encounter_format_dependencies(self) -> None:
