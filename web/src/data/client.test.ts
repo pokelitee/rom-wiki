@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { dataUrl, loadData } from "./client";
+import { dataUrl, loadData, loadManifest } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -30,4 +30,15 @@ it("keeps requests inside the configured data directory", () => {
   expect(dataUrl("platinum/index.json")).toContain("data/platinum/index.json");
   for (const path of ["../private", "/outside", "https://example.com"])
     expect(() => dataUrl(path)).toThrow();
+});
+
+it("rejects manifests from an unsupported data version", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ schema_version: 2, games: [] }),
+    }),
+  );
+  await expect(loadManifest()).rejects.toThrow("not supported");
 });

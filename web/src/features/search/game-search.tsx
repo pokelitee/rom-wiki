@@ -4,6 +4,7 @@ import { ChevronRight, Search } from "lucide-react";
 import type { Game } from "../../data/types";
 import { loadData } from "../../data/client";
 import { title } from "../../lib/utils";
+import { matchSearch, type SearchEntry } from "./match";
 
 export function GameSearch({ game }: { game: Game }) {
   const [params, setParams] = useSearchParams();
@@ -33,9 +34,7 @@ export function GameSearch({ game }: { game: Game }) {
 }
 
 function SearchResults({ game, query }: { game: Game; query: string }) {
-  const [results, setResults] = useState<
-    { label: string; path: string; section: string; search?: string }[]
-  >([]);
+  const [results, setResults] = useState<SearchEntry[]>([]);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
@@ -81,10 +80,7 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
   }, [game]);
   if (error) return <p role="alert">{error}</p>;
   if (!loaded) return <p role="status">Loading this game's search index…</p>;
-  const term = query.trim().toLocaleLowerCase();
-  const matches = results.filter((result) =>
-    (result.search ?? result.label.toLocaleLowerCase()).includes(term),
-  );
+  const matches = matchSearch(results, query);
   return (
     <>
       <p className="results-line">{matches.length} results</p>
