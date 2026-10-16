@@ -9,9 +9,11 @@ on:
 permissions:
   contents: read
 
+# Superseded PR runs are cancelled, but main runs finish so a deployment is
+# never interrupted midway.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
@@ -32,3 +34,23 @@ jobs:
           CHECK_RESULT: ${{ needs.checks.result }}
           PUBLICATION_RESULT: ${{ needs.publication.result }}
         run: test "$CHECK_RESULT" = success && test "$PUBLICATION_RESULT" = success
+
+  deploy:
+    name: Deploy Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: required
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy verified artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

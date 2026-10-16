@@ -1,13 +1,9 @@
 name: Deploy Pages
 
+# CI deploys every verified push to main. This workflow redeploys main on
+# demand, for example after a failed deployment or a Pages outage.
 on:
   workflow_dispatch:
-    inputs:
-      publish:
-        description: "Publish the reviewed React site (requires cutover authorization)"
-        type: boolean
-        default: false
-        required: true
 
 permissions:
   contents: read
@@ -24,7 +20,7 @@ jobs:
     uses: ./.github/workflows/pages-build.yml
 
   deploy:
-    if: inputs.publish && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: [checks, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10

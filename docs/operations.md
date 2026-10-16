@@ -168,7 +168,7 @@ the site's data-sources page rather than a broad completion label.
 
 ## CI and GitHub Pages
 
-The React site is live on GitHub Pages; publishing remains manual. Every PR and main-branch CI run restores the checksum-pinned complete frontend snapshot, checks coverage, builds React, runs desktop/mobile browser tests across every game, and uploads a Pages artifact. These CI runs do not deploy.
+The React site is live on GitHub Pages. Every PR and main-branch CI run restores the checksum-pinned complete frontend snapshot, checks coverage, builds React, runs desktop/mobile browser tests across every game, and uploads a Pages artifact. PR runs stop there.
 
 CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot.
 
@@ -176,9 +176,9 @@ Complete React publication data is prepared with `romwiki site export-web --data
 
 For review, download the `github-pages` artifact from a successful CI run and extract its `artifact.tar` into a temporary directory. Serve it below `/rom-wiki/` using `python scripts/serve_frontend.py --directory PATH_TO_EXTRACTED_ARTIFACT`, then open `http://127.0.0.1:4173/rom-wiki/`.
 
-After cutover authorization and a successful PR merge, manually run `Deploy Pages` from `main` with `publish=true`. The workflow repeats both the checks and the complete publication build before deployment to the existing `github-pages` environment. `publish=false` is the default and builds without deploying; other branches cannot deploy. There is no automatic deployment on push or CI completion.
+A push to `main` deploys automatically: once the `CI gate` passes, CI's `Deploy Pages` job publishes the artifact that run already built and tested to the `github-pages` environment. That environment accepts deployments only from `main`. Superseded PR runs are cancelled, but `main` runs always finish, and deployments are serialized, so a newer merge never interrupts one in progress. If a deployment fails or Pages needs republishing, run the `Deploy Pages` workflow manually from `main`; it repeats the checks and publication build before deploying.
 
-For rollback, revert the frontend source and/or snapshot manifest through a PR and repeat the reviewed manual deployment. The pre-migration MkDocs implementation is preserved at `04b72f2`; restoring that stack requires a separate change, not merely a React snapshot rollback.
+For rollback, revert the frontend source and/or snapshot manifest through a PR; merging the revert redeploys the previous site. The pre-migration MkDocs implementation is preserved at `04b72f2`; restoring that stack requires a separate change, not merely a React snapshot rollback.
 
 ## Troubleshooting and recovery
 

@@ -2,7 +2,7 @@
 
 ROM Wiki extracts structured Pokémon data from locally supplied ROM images and publishes normalized datasets for one shared React reference app.
 
-Browse the React reference site at [pokelitee.github.io/rom-wiki](https://pokelitee.github.io/rom-wiki/). Publishing uses the reviewed, manual GitHub Pages workflow.
+Browse the React reference site at [pokelitee.github.io/rom-wiki](https://pokelitee.github.io/rom-wiki/). Every verified merge to `main` deploys automatically through GitHub Pages.
 
 ## Development
 
