@@ -11,12 +11,23 @@ import {
   isTechnical,
 } from "./fields";
 import { entityRoute } from "./routes";
+import { isSlotList } from "./encounter";
+import { SlotTable } from "./slot-table";
 
 const TYPE_FIELDS = new Set(["type", "types", "natural_gift_type"]);
 const NAME_KEYS = ["name", "pokemon_name", "area_name"];
 
 function visibleKeys(value: DataObject): string[] {
   return Object.keys(value).filter((key) => !isTechnical(key));
+}
+
+// Nested lists and objects with nothing in them, such as an encounter's
+// empty Unown form list, are left out of fact lists.
+function factKeys(value: DataObject): string[] {
+  return visibleKeys(value).filter((key) => {
+    const entry = value[key];
+    return !(entry && typeof entry === "object" && isEmpty(entry));
+  });
 }
 
 function NamedReference({
@@ -107,6 +118,7 @@ export function Value({
         </span>
       );
     const rows = entries.map(object);
+    if (isSlotList(rows)) return <SlotTable rows={rows} game={game} />;
     const keys = [...new Set(rows.flatMap(visibleKeys))].filter(
       (key) => !rows.every((row) => isEmpty(row[key])),
     );
@@ -194,7 +206,7 @@ export function Value({
   }
   return (
     <dl className="fact-list">
-      {visibleKeys(value).map((key) => (
+      {factKeys(value).map((key) => (
         <div key={key}>
           <dt>{title(key)}</dt>
           <dd>

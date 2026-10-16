@@ -15,7 +15,9 @@ import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
 import { Evolutions, EvYields } from "./pokemon-sections";
+import { Party } from "./trainer-sections";
 import {
+  hasNoEncounters,
   isEmpty,
   isNamedReference,
   isTechnical,
@@ -100,6 +102,7 @@ const SECTION_RENDERERS: Record<
 > = {
   "pokemon.evolutions": Evolutions,
   "pokemon.ev_yields": EvYields,
+  "trainers.party": Party,
 };
 
 function RecordPage({
@@ -175,7 +178,8 @@ function RecordPage({
         value !== null &&
         typeof value === "object" &&
         !isNamedReference(value) &&
-        !isEmpty(value),
+        !isEmpty(value) &&
+        !hasNoEncounters(value),
     ),
   );
   return (

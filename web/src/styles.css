@@ -875,6 +875,80 @@ tbody tr:hover {
 .evolution-list svg {
   color: var(--muted-foreground);
 }
+.party-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 14px;
+}
+.party-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.party-card header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.party-card header img {
+  image-rendering: pixelated;
+  background: var(--muted);
+  border-radius: 8px;
+}
+.party-card h3 {
+  margin: 0 0 4px;
+}
+.party-card .stat-bars {
+  max-width: none;
+}
+.party-card .stat-row {
+  grid-template-columns: 110px 48px 1fr;
+  margin: 6px 0;
+}
+.party-card .stat-total {
+  margin-top: 8px;
+}
+.party-card details {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+.party-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+.party-facts dt {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+.party-facts dd {
+  margin: 0;
+}
+.party-moves {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.party-moves li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.slot-pokemon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.slot-pokemon img {
+  margin: -6px 0;
+  image-rendering: pixelated;
+}
 .section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -987,12 +1061,24 @@ tbody tr:hover {
 .change-record > summary {
   font-size: var(--text-sm);
 }
+.change-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 4px 0 0 22px;
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
 .change-record > div {
   margin-top: 16px;
 }
 .section-select {
+  display: inline-flex;
+  min-width: 200px;
   max-width: 240px;
-  margin: 20px 0;
+  margin: 20px 16px 20px 0;
+  vertical-align: top;
 }
 .checksum {
   display: block;

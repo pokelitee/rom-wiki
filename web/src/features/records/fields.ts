@@ -12,7 +12,7 @@ export const OPTIONAL_FEATURES: Record<string, string> = {
 // ROM identifiers, storage details, and provenance. Record pages keep these
 // in their collapsed source details instead of the main content.
 const TECHNICAL =
-  /(?:^id$|_id$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|^internal_name$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$)/;
+  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|^internal_name$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$)/;
 
 export function isTechnical(key: string): boolean {
   return TECHNICAL.test(key);
@@ -38,6 +38,24 @@ export function isEmpty(value: Json | undefined): boolean {
       ([key, entry]) => isTechnical(key) || isBlank(entry) || isEmpty(entry),
     );
   return isBlank(value);
+}
+
+// An encounter method whose rate is zero or whose slots hold no Pokémon,
+// such as the fishing tables every map header carries.
+export function hasNoEncounters(value: Json | undefined): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const slots = value.slots;
+  if (!Array.isArray(slots)) return false;
+  return (
+    value.rate === 0 ||
+    slots.every(
+      (slot) =>
+        slot === null ||
+        typeof slot !== "object" ||
+        Array.isArray(slot) ||
+        !slot.pokemon,
+    )
+  );
 }
 
 // An object that only names something, such as {id, name, slug}.

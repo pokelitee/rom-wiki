@@ -107,6 +107,80 @@ def main() -> None:
         for kind, record in (
             ("abilities", {"id": 65, "slug": "overgrow", "name": "Overgrow"}),
             ("moves", {"id": 33, "slug": "tackle", "name": "Tackle", "power": 35}),
+            (
+                "trainers",
+                {
+                    "trainer_id": 1,
+                    "class_name": "Leader",
+                    "name": "Roark",
+                    "party": [
+                        {
+                            "level": 12,
+                            "pokemon": {
+                                "id": 1,
+                                "name": "Bulbasaur",
+                                "slug": "bulbasaur",
+                            },
+                            "ability": {
+                                "id": 65,
+                                "name": "Overgrow",
+                                "slug": "overgrow",
+                            },
+                            "held_item": None,
+                            "nature": {"name": "Lax"},
+                            "gender": {"name": "Male"},
+                            "moves": [
+                                {
+                                    "id": 33,
+                                    "name": "tackle",
+                                    "slug": "tackle",
+                                    "type": {"id": 0, "name": "normal"},
+                                    "damage_class": {"id": 1, "name": "physical"},
+                                }
+                            ],
+                            "calculated_stats": {
+                                "values": {"hp": 32, "attack": 24, "speed": 10}
+                            },
+                            "ivs": {"values": {"hp": 6, "attack": 6, "speed": 6}},
+                            "evs": {"values": {"hp": 0, "attack": 0, "speed": 0}},
+                        }
+                    ],
+                },
+            ),
+            (
+                "encounters",
+                {
+                    "area_id": 0,
+                    "name": "Route 201",
+                    "walking": {
+                        "rate": 30,
+                        "slots": [
+                            {
+                                "chance": 20,
+                                "level": 2,
+                                "pokemon": {
+                                    "id": 1,
+                                    "name": "Bulbasaur",
+                                    "slug": "bulbasaur",
+                                },
+                            },
+                            {
+                                "chance": 10,
+                                "level": 3,
+                                "pokemon": {
+                                    "id": 1,
+                                    "name": "Bulbasaur",
+                                    "slug": "bulbasaur",
+                                },
+                            },
+                        ],
+                    },
+                    "good_rod": {
+                        "rate": 0,
+                        "slots": [{"chance": 40, "minimum_level": 0, "pokemon": None}],
+                    },
+                },
+            ),
         ):
             write_public_dataset(
                 wiki,
