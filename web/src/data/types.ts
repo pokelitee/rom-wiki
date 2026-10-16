@@ -7,6 +7,7 @@ export interface IndexRecord {
   search: string;
   fields: Record<string, string | number | string[]>;
   chunk: string;
+  sprite?: string;
 }
 export interface Section {
   index: string;

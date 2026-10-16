@@ -246,7 +246,19 @@ function CatalogTable({
             {visible.map((row) => (
               <tr key={row.id}>
                 <td>
-                  <Link to={`/${game.id}/${section}/${row.id}`}>
+                  <Link
+                    className={row.sprite ? "catalog-name" : undefined}
+                    to={`/${game.id}/${section}/${row.id}`}
+                  >
+                    {row.sprite && (
+                      <img
+                        src={row.sprite}
+                        alt=""
+                        width={40}
+                        height={40}
+                        loading="lazy"
+                      />
+                    )}
                     {section === "types" ? (
                       <TypeBadge name={row.label} />
                     ) : (

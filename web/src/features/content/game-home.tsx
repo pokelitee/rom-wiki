@@ -20,7 +20,8 @@ export function GameHome({ game }: { game: Game }) {
             <Database size={19} />
             <strong>{title(kind)}</strong>
             <span>
-              {Number(section.metadata.record_count).toLocaleString()} records
+              {Number(section.metadata.published_count).toLocaleString()}{" "}
+              records
             </span>
             <ChevronRight size={16} />
           </Link>

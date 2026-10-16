@@ -413,6 +413,9 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                         ),
                     }
                     entry = _index_record(kind, record, route)
+                    sprite = record.get("sprite")
+                    if kind == "pokemon" and isinstance(sprite, dict):
+                        entry["sprite"] = sprite.get("url")
                     related = relationships.get(kind, {}).get(relationship_key, {})
                     if kind == "pokemon":
                         entry["fields"]["availability_methods"] = sorted(
@@ -470,7 +473,10 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                         "encounter_format",
                         "location_format",
                     }
-                },
+                }
+                # record_count counts every normalized record, including
+                # placeholders the index omits; visitors see the index.
+                | {"published_count": len(indexed)},
                 "metadata_path": _write_resource(
                     output, f"{site.id}/{kind}/metadata", metadata
                 ),
