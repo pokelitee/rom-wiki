@@ -253,7 +253,6 @@ function CatalogTable({
                       row.label
                     )}
                   </Link>
-                  <small>{row.id}</small>
                 </td>
                 {columns.map((key) => (
                   <td key={key}>
