@@ -34,7 +34,7 @@ These commands prepare and restore a complete local, checksum-pinned publication
 The reviewed publication is pinned by `sites/frontend-snapshot/manifest.json`. Its content-addressed archive is an asset of the existing `snapshots` release. For a clean checkout, download the archive named in that manifest, then restore and check it:
 
 ```sh
-gh release download snapshots --repo pokelitee/rom-wiki --pattern frontend-75ecaab674e80d7c.tar.gz --dir sites/frontend-snapshot
+gh release download snapshots --repo pokelitee/rom-wiki --pattern frontend-e37c2fff9414fed4.tar.gz --dir sites/frontend-snapshot
 python -m romwiki site restore-web sites/frontend-snapshot
 python scripts/check_frontend_publication.py
 ```

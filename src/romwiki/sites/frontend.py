@@ -26,6 +26,8 @@ from romwiki.util.json_io import write_json_atomic
 FRONTEND_SCHEMA_VERSION = 1
 DETAIL_CHUNK_SIZE = 50
 _SNIPPET = re.compile(r'^--8<--\s+"([^"]+)"\s*$', re.MULTILINE)
+_FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
+_FRONTMATTER_TITLE = re.compile(r"^title:\s*(.+?)\s*$", re.MULTILINE)
 _IDENTITY_FIELDS = {
     "pokemon": "member",
     "abilities": "ability_id",
@@ -241,19 +243,34 @@ def _documentation(
         return _SNIPPET.sub(snippet, text)
 
     documents = []
-    paths = sorted(wiki.glob("*.md")) + sorted((wiki / "docs").rglob("*.md"))
+    # A folder's index page introduces it, so it leads that folder's guides.
+    paths = sorted(wiki.glob("*.md")) + sorted(
+        (wiki / "docs").rglob("*.md"), key=lambda path: (path.stem != "index", path)
+    )
     for path in paths:
         relative = path.relative_to(wiki).as_posix()
         slug = relative.removesuffix(".md")
         text = expand(path.read_text(encoding="utf-8"))
-        text = re.sub(r"\A---\r?\n.*?\r?\n---\r?\n", "", text, count=1, flags=re.DOTALL)
-        heading = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-        label = heading[1] if heading else slug.replace("-", " ").title()
+        frontmatter = _FRONTMATTER.match(text)
+        if frontmatter:
+            text = text[frontmatter.end() :]
+        label = _document_label(path, frontmatter[1] if frontmatter else "", text)
         resource = _write_resource(output, f"{site.id}/docs/{slug}", {"markdown": text})
         documents.append(
             {"id": slug, "label": label, "path": resource, "search": _search_text(text)}
         )
     return documents
+
+
+def _document_label(path: Path, frontmatter: str, text: str) -> str:
+    """Title a guide by its frontmatter title, its first heading, or its file name."""
+    title = _FRONTMATTER_TITLE.search(frontmatter)
+    if title:
+        return title[1].strip("\"'")
+    heading = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
+    if heading:
+        return heading[1]
+    return path.stem.replace("-", " ").replace("_", " ").capitalize()
 
 
 def _relationships(datasets: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -396,6 +413,9 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                         ),
                     }
                     entry = _index_record(kind, record, route)
+                    sprite = record.get("sprite")
+                    if kind == "pokemon" and isinstance(sprite, dict):
+                        entry["sprite"] = sprite.get("url")
                     related = relationships.get(kind, {}).get(relationship_key, {})
                     if kind == "pokemon":
                         entry["fields"]["availability_methods"] = sorted(
@@ -453,7 +473,10 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                         "encounter_format",
                         "location_format",
                     }
-                },
+                }
+                # record_count counts every normalized record, including
+                # placeholders the index omits; visitors see the index.
+                | {"published_count": len(indexed)},
                 "metadata_path": _write_resource(
                     output, f"{site.id}/{kind}/metadata", metadata
                 ),

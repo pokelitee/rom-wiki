@@ -1,3 +1,7 @@
+---
+title: FAQ
+---
+
 ## General Info
 
 This is just a quick collection of answers to questions I've seen asked a decent amount.

@@ -104,6 +104,45 @@ def test_export_is_deterministic_chunked_and_rom_free() -> None:
         assert not list(output.rglob("*.html"))
 
 
+def test_export_titles_guides_counts_published_records_and_adds_sprites() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        wiki = make_repository(root)
+        dataset = pokemon_dataset(2)
+        dataset["records"][0]["sprite"] = {"url": "https://example.test/1.png"}
+        dataset["records"].append(
+            {"member": 0, "name": "Egg", "slug": "egg", "public": False}
+        )
+        dataset["record_count"] = 3
+        write_public_dataset(wiki, "pokemon", dataset)
+        docs = wiki / "docs"
+        docs.mkdir()
+        (docs / "faq.md").write_text("---\ntitle: FAQ\n---\n\n## Q\n")
+        (docs / "special_events.md").write_text("## Events\n")
+        (docs / "index.md").write_text("Official notes.\n")
+        output = root / "export"
+        export_frontend(root, output)
+
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        game = manifest["games"][0]
+        assert [document["label"] for document in game["documents"]] == [
+            "Test game",
+            "Index",
+            "FAQ",
+            "Special events",
+        ]
+        faq = json.loads((output / game["documents"][2]["path"]).read_text())
+        assert faq["markdown"] == "\n## Q\n"
+        pokemon = game["sections"]["pokemon"]
+        assert pokemon["metadata"]["record_count"] == 3
+        assert pokemon["metadata"]["published_count"] == 2
+        index = json.loads((output / pokemon["index"]).read_text(encoding="utf-8"))
+        assert [row.get("sprite") for row in index["records"]] == [
+            "https://example.test/1.png",
+            None,
+        ]
+
+
 def test_export_rejects_corrupt_archives_and_duplicate_routes() -> None:
     with TemporaryDirectory() as directory:
         root = Path(directory)

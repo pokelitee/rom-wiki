@@ -1,3 +1,7 @@
+---
+title: FAQ
+---
+
 ## Q: Why is the patching not working?
 
 - Make sure you're using the correct patch for the Platinum ROM you've obtained.

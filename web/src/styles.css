@@ -568,6 +568,15 @@ tbody tr:hover {
 .catalog-table td:first-child a {
   font-weight: 650;
 }
+.catalog-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.catalog-name img {
+  margin: -8px 0;
+  image-rendering: pixelated;
+}
 .badge-list {
   display: inline-flex;
   flex-wrap: wrap;
