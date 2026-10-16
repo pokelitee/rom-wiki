@@ -12,16 +12,14 @@ import { ResourceState } from "../../components/resource-state";
 import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
+import {
+  isEmpty,
+  isNamedReference,
+  isTechnical,
+  OPTIONAL_FEATURES,
+  orderEntries,
+} from "./fields";
 import { object } from "../../lib/json";
-
-const OPTIONAL_FEATURES: Record<string, string> = {
-  egg_moves: "egg-moves",
-  tutor_moves: "move-tutors",
-  victory_item: "victory-items",
-  post_battle_healing: "post-battle-healing",
-};
-const TECHNICAL =
-  /(?:_id$|_flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|^member$|^flip_sprite$)/;
 
 export function Detail({
   game,
@@ -171,7 +169,20 @@ function RecordPage({
   ];
   const facts = entries.filter(
     ([key, value]) =>
-      !TECHNICAL.test(key) && (value === null || typeof value !== "object"),
+      !isTechnical(key) &&
+      ((value !== null && typeof value !== "object") ||
+        isNamedReference(value)),
+  );
+  const sections = orderEntries(
+    section,
+    entries.filter(
+      ([key, value]) =>
+        !isTechnical(key) &&
+        value !== null &&
+        typeof value === "object" &&
+        !isNamedReference(value) &&
+        !isEmpty(value),
+    ),
   );
   return (
     <>
@@ -321,23 +332,20 @@ function RecordPage({
           />
         </section>
       )}
-      {entries
-        .filter(
-          ([key, value]) =>
-            !TECHNICAL.test(key) && value !== null && typeof value === "object",
-        )
+      {sections.map(([key, value]) => (
+        <section className="panel detail-section" key={key}>
+          <h2>{title(key)}</h2>
+          <Value value={value} game={game.id} field={key} />
+        </section>
+      ))}
+      {Object.entries(detail.relationships)
+        .filter(([, value]) => !isEmpty(value))
         .map(([key, value]) => (
           <section className="panel detail-section" key={key}>
             <h2>{title(key)}</h2>
             <Value value={value} game={game.id} field={key} />
           </section>
         ))}
-      {Object.entries(detail.relationships).map(([key, value]) => (
-        <section className="panel detail-section" key={key}>
-          <h2>{title(key)}</h2>
-          <Value value={value} game={game.id} field={key} />
-        </section>
-      ))}
       {section === "trainers" && (
         <TrainerFamilies game={game} record={record} metadata={metadata} />
       )}
@@ -349,20 +357,47 @@ function RecordPage({
       )}
       <details className="panel detail-section">
         <summary>Sources and record details</summary>
-        <Value
-          value={
-            Object.fromEntries(
-              entries.filter(([key]) => TECHNICAL.test(key)),
-            ) as Json
-          }
-          game={game.id}
+        <RawFacts
+          values={Object.fromEntries(
+            entries.filter(([key]) => isTechnical(key)),
+          )}
         />
-        <Value value={metadata.source ?? null} game={game.id} />
+        <RawFacts values={object(metadata.source)} />
+        <details className="raw-record">
+          <summary>Full record</summary>
+          <pre>{JSON.stringify(base, null, 2)}</pre>
+        </details>
         <Link to={`/${game.id}/docs/data-sources`}>
           Data sources and known limitations
         </Link>
       </details>
     </>
+  );
+}
+
+// Source details as stored, without the presentation rules that hide them
+// from the main content.
+function RawFacts({ values }: { values: DataObject }) {
+  const keys = Object.keys(values);
+  if (!keys.length) return null;
+  return (
+    <dl className="fact-list">
+      {keys.map((key) => {
+        const value = values[key];
+        return (
+          <div key={key}>
+            <dt>{title(key)}</dt>
+            <dd>
+              {value !== null && typeof value === "object" ? (
+                <pre>{JSON.stringify(value, null, 2)}</pre>
+              ) : (
+                String(value)
+              )}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 

@@ -56,6 +56,7 @@ def main() -> None:
                         "slug": "bulbasaur",
                         "name": "Bulbasaur",
                         "public": True,
+                        "gender_ratio": 31,
                         "base_stats": {
                             "hp": 45,
                             "attack": 49,

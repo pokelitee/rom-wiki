@@ -692,6 +692,21 @@ tbody tr:hover {
 .detail-section > summary {
   font-weight: 600;
 }
+.detail-section > summary + * {
+  margin-top: 16px;
+}
+.detail-section pre {
+  margin: 0;
+  max-height: 420px;
+  overflow: auto;
+  font-size: var(--text-xs);
+  background: var(--muted);
+  border-radius: 6px;
+  padding: 12px;
+}
+.raw-record {
+  margin: 16px 0;
+}
 .detail-table {
   font-size: var(--text-xs);
 }

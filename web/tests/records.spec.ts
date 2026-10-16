@@ -77,6 +77,21 @@ test("entity links on a record resolve to published records", async ({
   await expect(page.locator(".record-hero h1")).toHaveText("Overgrow");
 });
 
+test("record pages show readable values and keep raw data in the details", async ({
+  page,
+}) => {
+  await page.goto("./#/platinum/pokemon/bulbasaur");
+  await expect(page.locator(".record-hero h1")).toHaveText("Bulbasaur");
+  await expect(page.getByText("87.5% male")).toBeVisible();
+  const headers = await page.locator("main table th").allTextContents();
+  expect(headers.map((header) => header.trim().toLowerCase())).not.toContain(
+    "id",
+  );
+  await page.getByText("Sources and record details").click();
+  await page.getByText("Full record", { exact: true }).click();
+  await expect(page.locator(".raw-record pre")).toContainText('"gender_ratio"');
+});
+
 test("mobile navigation opens, navigates, and closes", async ({
   page,
   isMobile,
