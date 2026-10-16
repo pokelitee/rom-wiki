@@ -26,7 +26,6 @@ from romwiki.cli.regenerate import (
     _PreparedSite,
     _SiteGeneration,
     run_regeneration,
-    validate_regeneration_flags,
 )
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import GameMetadata, SiteCatalog, SiteDefinition
@@ -100,11 +99,7 @@ class MainErrorHandlingTests(unittest.TestCase):
             set(site_subparsers.choices),
             {
                 "list",
-                "snapshot",
-                "restore-snapshot",
-                "publish-snapshot",
                 "export-web",
-                "restore-data",
                 "snapshot-web",
                 "restore-web",
             },
@@ -131,35 +126,11 @@ class MainErrorHandlingTests(unittest.TestCase):
         self.assertEqual(args.games, ["red", "blue", "yellow"])
         self.assertEqual(args.versions, ["red-hack", "blue-hack", "yellow-hack"])
 
-    def test_validate_regeneration_flags_returns_snapshot(self) -> None:
-        args = SimpleNamespace(snapshot=True, regenerate_all=True)
-
-        self.assertTrue(validate_regeneration_flags(args))
-
-    def test_validate_regeneration_flags_defaults_missing_attributes_to_false(
-        self,
-    ) -> None:
-        # generate's args.Namespace has no snapshot attribute at all (only
-        # regenerate registers it) -- this must not raise AttributeError for
-        # that shape.
-        args = SimpleNamespace(regenerate_all=True)
-
-        self.assertFalse(validate_regeneration_flags(args))
-
-    def test_validate_regeneration_flags_rejects_snapshot_without_all(self) -> None:
-        args = SimpleNamespace(snapshot=True, regenerate_all=False)
-
-        with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
-            validate_regeneration_flags(args)
-
     def test_regenerate_parser_exposes_complete_workflow_options(self) -> None:
-        args = build_parser().parse_args(
-            ["regenerate", "--all", "--refresh", "--snapshot"]
-        )
+        args = build_parser().parse_args(["regenerate", "--all", "--refresh"])
 
         self.assertTrue(args.regenerate_all)
         self.assertTrue(args.refresh)
-        self.assertTrue(args.snapshot)
 
     def test_parser_exposes_global_logging_options(self) -> None:
         verbose = build_parser().parse_args(["--verbose", "regenerate", "--all"])
@@ -551,8 +522,6 @@ patched_rom = "roms/white-us.nds"
                 pokedb_root=pokedb_root,
                 data_root=root / "data",
                 refresh=True,
-                snapshot=False,
-                snapshot_output=root / "snapshot",
                 jobs=1,
             )
 
@@ -742,15 +711,6 @@ patched_rom = "roms/white-us.nds"
 
         with self.assertRaisesRegex(SiteError, "at least 1"):
             _generate_prepared_sites(args, [])
-
-    def test_snapshot_requires_complete_regeneration(self) -> None:
-        args = SimpleNamespace(
-            snapshot=True,
-            regenerate_all=False,
-        )
-
-        with self.assertRaisesRegex(SiteError, "--snapshot requires --all"):
-            run_regeneration(args)
 
 
 def _site_generation(

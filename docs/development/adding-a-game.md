@@ -498,17 +498,17 @@ version-specific encounter tables and NPC trade references.
 - Extract the complete target and reconcile record counts against its archives.
 - Manually verify representative records from every content category.
 - Run the full test suite.
-- Run `romwiki site snapshot` after validating the complete generated output,
-  then test `romwiki site restore-snapshot` from a clean checkout.
+- After validating the complete generated output, prepare a frontend snapshot
+  with `romwiki site export-web` and `romwiki site snapshot-web`, then test
+  `romwiki site restore-web` from a clean checkout.
 - Run `romwiki regenerate --all` to verify the descriptor-driven complete workflow.
 - During development, run `romwiki regenerate <site-id>`; unrelated games are
   not extracted. Reserve `--all` for integrated validation.
 - Run `romwiki build game --game <id>` twice and confirm the second run reuses both
   current and baseline extraction caches. Change one extractor and confirm only
   its dependent raw datasets rebuild.
-- Before a major release, run `romwiki regenerate --all --clean --refresh
-  --snapshot`. Routine complete runs reuse verified per-site state and update only
-  changed snapshot archives.
+- Before a major release, run `romwiki regenerate --all --clean --refresh`.
+  Routine complete runs reuse verified per-site state.
 - Confirm no ROM, patch, key, save, or copyrighted extracted asset is tracked.
 
 Trainer-enabled engines must expose `resolve_trainer_variants` through their

@@ -9,7 +9,6 @@ import pytest
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.frontend import (
     DETAIL_CHUNK_SIZE,
-    _portable_markdown,
     export_frontend,
     record_route,
 )
@@ -152,14 +151,6 @@ def test_typed_routes_preserve_conditional_sources() -> None:
             "encounters", {"source_type": "headbutt", "location": {"header_id": 3}}
         )
         == "headbutt-003"
-    )
-
-
-def test_mkdocs_tabs_and_notices_become_portable_markdown() -> None:
-    assert _portable_markdown('=== "Black"\n\n    Hello\n') == "### Black\n\nHello\n"
-    assert (
-        _portable_markdown('!!! warning "Limitations"\n    Unknown payout\n')
-        == "> **Limitations**\n> Unknown payout\n"
     )
 
 

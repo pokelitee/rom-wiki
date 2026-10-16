@@ -40,7 +40,7 @@ tests/                   source-aligned automated coverage
 sites/games/            per-game configuration and authored wiki content
 sites/portal/           catalog landing site
 sites/shared/           reusable publication partials
-sites/generated-wiki/   historical data snapshot references
+sites/frontend-snapshot/ pinned complete frontend publication manifest
 web/                    shared React frontend and generated local data
 docs/development/       contributor documentation
 ```
@@ -542,18 +542,14 @@ serialized to JSON.
 These are known extension tasks, not reasons to combine extraction and publication.
 The existing boundary remains the intended long-term design.
 
-## Generated publication snapshot
+## Publication snapshot
 
-Generated data remains ignored as individual files, but restoring it must be
-reproducible without distributing ROM inputs. `romwiki site snapshot` packs each
-published data site's `wiki/data/manifest.json`, every download it lists, and its separate comparison resources into a
-deterministic per-site archive, tracked through `sites/generated-wiki/manifest.json`.
-Unreferenced files are excluded. Comparative sites must include every declared section comparison. Schema-4 historical releases remain readable through a data-only compatibility path; current schema-5 archives retain source-fingerprint validation. The snapshot
-manifest uses file metadata as a fast unchanged check and content hashes as the
-fallback, and fingerprints the parser, pipeline, and profile sources, so a stale
-snapshot is rejected on restore; snapshot-only modules do not invalidate it. A
-site whose downloads omit any declared generated section cannot be snapshotted,
-preventing an absent input from degrading into a partial publication.
+Generated data remains ignored as individual files, but restoring the site must
+be reproducible without distributing ROM inputs. `romwiki site snapshot-web`
+packs every resource referenced by the exported frontend manifest into one
+deterministic archive, pinned with per-resource checksums by
+`sites/frontend-snapshot/manifest.json`. `restore-web` verifies the archive and
+every resource before writing.
 
 `romwiki regenerate` is the catalog-driven owner of complete local regeneration.
 It preflights all selected ROM registrations and generation-specific PokéDB

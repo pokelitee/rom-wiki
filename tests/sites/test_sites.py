@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from dataclasses import replace
@@ -228,6 +229,23 @@ theme = "missing-theme"
 
             with self.assertRaises(SiteError):
                 SiteCatalog.load(root)
+
+
+class AuthoredMarkdownTests(unittest.TestCase):
+    def test_authored_markdown_avoids_mkdocs_only_blocks(self) -> None:
+        # The React app renders GitHub-flavored Markdown, which would show
+        # MkDocs tabs and admonitions as literal or indented-code text.
+        mkdocs_block = re.compile(r'^(?:=== "|!!! |\?\?\?\+? )')
+        offenders = [
+            f"{path.relative_to(REPOSITORY_ROOT).as_posix()}:{number}"
+            for path in sorted((REPOSITORY_ROOT / "sites").rglob("*.md"))
+            for number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            )
+            if mkdocs_block.match(line)
+        ]
+
+        self.assertEqual(offenders, [])
 
 
 if __name__ == "__main__":

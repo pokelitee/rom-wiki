@@ -197,13 +197,12 @@ with the worker count.
 ```console
 romwiki regenerate platinum renegade-platinum
 romwiki regenerate --all
-romwiki regenerate --all --refresh --snapshot
+romwiki regenerate --all --refresh
 ```
 
 It validates every selected site, local ROM registration, profile match, and
 PokéDB generation, then dispatches single-profile and version-family data builds
-in parallel as described for `generate`. `--snapshot` is restricted to `--all`
-and archives the successfully generated public data afterward.
+in parallel as described for `generate`.
 
 Normal runs reuse validated caches and skip sites whose generation inputs and
 generated files are unchanged. `--clean` bypasses that reuse; `--refresh`
@@ -212,7 +211,7 @@ separately replaces current and baseline extraction caches.
 Use a site ID without `--all` while developing a new game or generation. This
 extracts and writes only that selection, reuses valid per-dataset caches, and
 leaves unrelated games untouched. Reserve `regenerate --all` for final integrated
-validation and snapshot publication.
+validation before preparing a frontend snapshot.
 
 ## Baseline caches
 
@@ -234,43 +233,12 @@ romwiki site list
 romwiki site list --published --json
 ```
 
-Create, restore, or publish the deterministic ROM-free publication snapshot:
-
-```console
-romwiki site snapshot
-romwiki site snapshot --pokedb-root ../pokedb/.output
-romwiki site restore-snapshot
-romwiki site restore-snapshot --site renegade-platinum
-romwiki site restore-snapshot --snapshot-url https://example.com/snapshots/
-romwiki site publish-snapshot
-```
-
-The snapshot is a tracked manifest plus deterministic, ignored per-site archives
-under `sites/generated-wiki/`. Each archive holds one published data site's
-`wiki/data/manifest.json` and every download it lists; a site missing the
-download for any of its `generated_sections` cannot be snapshotted.
-`site publish-snapshot` uploads the archives as content-addressed assets of the
-`snapshots` GitHub release through the authenticated `gh` CLI; it uploads only
-missing assets and never replaces existing ones (`--repo` selects another
-repository). `restore-snapshot` uses a matching local archive or downloads the
-asset into `.romwiki/snapshot-cache/`, verifying its SHA-256 before extraction.
-The download base URL defaults to the `pokelitee/rom-wiki` release and can be
-overridden with `--snapshot-url` or `ROMWIKI_SNAPSHOT_URL`. `--pokedb-root`
-records a PokéDB fingerprint in the manifest as provenance only. Metadata
-fingerprints avoid rereading unchanged generated data; content hashes remain the
-fallback when metadata changes. Unchanged archives are not rewritten. Snapshot
-creation and restore report bounded, site-level progress.
-
-Prefer `romwiki regenerate --all --snapshot` when ROM inputs are available,
-because it guarantees generation succeeded before the snapshot is replaced.
-
 ### React frontend data
 
 ```sh
-romwiki site restore-data
 romwiki site export-web --data-root build/data
 romwiki site snapshot-web
 romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
-`restore-data` imports normalized downloads from pinned historical wiki archives. `export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract. `snapshot-web` packages only referenced resources into a deterministic local archive and checksum manifest. `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. These commands do not publish releases or deploy the site.
+`export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract. `snapshot-web` packages only referenced resources into a deterministic local archive and checksum manifest. `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. These commands do not publish releases or deploy the site.

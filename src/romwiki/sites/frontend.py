@@ -237,7 +237,6 @@ def _documentation(
         slug = relative.removesuffix(".md")
         text = expand(path.read_text(encoding="utf-8"))
         text = re.sub(r"\A---\r?\n.*?\r?\n---\r?\n", "", text, count=1, flags=re.DOTALL)
-        text = _portable_markdown(text)
         heading = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
         label = heading[1] if heading else slug.replace("-", " ").title()
         resource = _write_resource(output, f"{site.id}/docs/{slug}", {"markdown": text})
@@ -245,32 +244,6 @@ def _documentation(
             {"id": slug, "label": label, "path": resource, "search": text.casefold()}
         )
     return documents
-
-
-def _portable_markdown(text: str) -> str:
-    lines = text.splitlines()
-    output = []
-    index = 0
-    while index < len(lines):
-        line = lines[index]
-        tab = re.match(r'^=== "(.+)"\s*$', line)
-        admonition = re.match(r'^(?:!!!|\?\?\?\+?)\s+(\w+)(?:\s+"(.+)")?\s*$', line)
-        if tab or admonition:
-            if tab:
-                output.append(f"### {tab[1]}")
-            elif admonition:
-                output.append(f"> **{admonition[2] or admonition[1].title()}**")
-            index += 1
-            while index < len(lines) and (
-                not lines[index].strip() or lines[index].startswith("    ")
-            ):
-                content = lines[index][4:] if lines[index].startswith("    ") else ""
-                output.append(content if tab else f"> {content}")
-                index += 1
-        else:
-            output.append(line)
-            index += 1
-    return "\n".join(output) + "\n"
 
 
 def _relationships(datasets: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:

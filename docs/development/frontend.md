@@ -43,8 +43,6 @@ The restore verifies the archive and every resource checksum. The coverage check
 
 To update publication data, generate and review a new snapshot, upload its uniquely named archive to the existing release without replacing assets, and update the committed manifest through a PR. Keep older archives for historical restoration.
 
-`romwiki site restore-data` imports only normalized downloads from the checksum-pinned historical wiki snapshots. It validates historical archive identity and member paths, without claiming that historical data matches current generator code. New schema-5 data snapshots retain current-source fingerprint checks. `restore-snapshot` also recognizes schema-4 historical archives and imports only their normalized downloads. Historical downloads alone cannot produce complete comparison pages; `export-web` fails if a comparative game lacks its comparison inputs.
-
 ### Migration boundary
 
 The React site is deployed on GitHub Pages. CI builds and uploads a verified Pages artifact without deploying it. The `Deploy Pages` workflow has only a manual trigger; `publish` defaults to false. A run with `publish=true` can deploy only from `main`, after both the full checks and complete publication build succeed. Merging a PR does not deploy.

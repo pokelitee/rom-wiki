@@ -32,11 +32,7 @@ from romwiki.pipeline.build.regeneration import (
 from romwiki.pipeline.build.workflow import GameBuildWorkflow
 from romwiki.pipeline.extraction.identify import InspectionResult, inspect_rom
 from romwiki.profiles.loader import ProfileRepository
-from romwiki.sites import (
-    SiteCatalog,
-    SiteDefinition,
-    create_generated_wiki_snapshot,
-)
+from romwiki.sites import SiteCatalog, SiteDefinition
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGameRegistry
@@ -48,7 +44,7 @@ _GENERATION_JOBS_HELP = "parallel site generation workers"
 def add_regenerate_parser(subparsers: SubParsers) -> None:
     regenerate_parser = subparsers.add_parser(
         "regenerate",
-        help="regenerate selected game data and optionally snapshot it",
+        help="regenerate selected game data",
     )
     regenerate_parser.add_argument("site_ids", nargs="*", help="game site identifiers")
     regenerate_parser.add_argument(
@@ -79,16 +75,6 @@ def add_regenerate_parser(subparsers: SubParsers) -> None:
         "--clean",
         action="store_true",
         help="ignore generation reuse state and rebuild generated content",
-    )
-    regenerate_parser.add_argument(
-        "--snapshot",
-        action="store_true",
-        help="update the generated-wiki snapshot after a successful generation",
-    )
-    regenerate_parser.add_argument(
-        "--snapshot-output",
-        type=Path,
-        default=Path("sites/generated-wiki"),
     )
     add_jobs_argument(regenerate_parser, workers=_GENERATION_JOBS_HELP)
     add_site_root_argument(regenerate_parser)
@@ -140,7 +126,7 @@ def run_regeneration(args: argparse.Namespace) -> None:
 
 def run_generation(args: argparse.Namespace) -> None:
     with timed_operation(LOG, "Catalog generation"):
-        _run_regeneration_steps(args, snapshot_allowed=False)
+        _run_regeneration_steps(args)
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,14 +151,6 @@ class _SiteGeneration:
 class _GenerationOptions:
     data_root: Path
     refresh: bool
-
-
-def validate_regeneration_flags(args: argparse.Namespace) -> bool:
-    """Check flag combinations upfront, returning whether to snapshot."""
-    snapshot = getattr(args, "snapshot", False)
-    if snapshot and not args.regenerate_all:
-        raise SiteError("--snapshot requires --all")
-    return snapshot
 
 
 def _prepare_regeneration_sites(
@@ -451,27 +429,10 @@ def _generate_site(
     )
 
 
-def _run_regeneration_steps(
-    args: argparse.Namespace, *, snapshot_allowed: bool = True
-) -> None:
-    snapshot = snapshot_allowed and validate_regeneration_flags(args)
+def _run_regeneration_steps(args: argparse.Namespace) -> None:
     catalog = SiteCatalog.load(args.root)
     prepared = _prepare_regeneration_sites(args, catalog)
     _generate_prepared_sites(args, prepared)
-
-    if snapshot:
-        with timed_operation(LOG, "Generated wiki snapshot"):
-            count = create_generated_wiki_snapshot(
-                args.root,
-                args.snapshot_output,
-                catalog=catalog,
-                pokedb_root=args.pokedb_root,
-            )
-        LOG.info(
-            "Archived %s generated wiki files: %s",
-            f"{count:,}",
-            args.snapshot_output,
-        )
 
 
 def _validate_regeneration_rom(
