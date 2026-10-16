@@ -1,6 +1,5 @@
-import { Link } from "react-router-dom";
+import { EntityLink } from "../../components/entity-link";
 import type { DataObject } from "../../data/types";
-import { object } from "../../lib/json";
 import { summarizeSlots } from "./encounter";
 import { formatName } from "./fields";
 
@@ -26,29 +25,17 @@ export function SlotTable({
         </thead>
         <tbody>
           {summaries.map(({ pokemon, minimumLevel, maximumLevel, chance }) => {
-            const sprite = object(pokemon.sprite).url;
             const name = formatName(String(pokemon.name));
             return (
               <tr key={String(pokemon.slug ?? pokemon.name)}>
                 <td>
-                  <span className="slot-pokemon">
-                    {typeof sprite === "string" && (
-                      <img
-                        src={sprite}
-                        alt=""
-                        width={40}
-                        height={40}
-                        loading="lazy"
-                      />
-                    )}
-                    {typeof pokemon.slug === "string" ? (
-                      <Link to={`/${game}/pokemon/${pokemon.slug}`}>
-                        {name}
-                      </Link>
-                    ) : (
-                      name
-                    )}
-                  </span>
+                  {typeof pokemon.slug === "string" ? (
+                    <EntityLink game={game} route={`pokemon/${pokemon.slug}`}>
+                      {name}
+                    </EntityLink>
+                  ) : (
+                    name
+                  )}
                 </td>
                 <td className="numeric">
                   {minimumLevel === maximumLevel

@@ -12,7 +12,7 @@ export const OPTIONAL_FEATURES: Record<string, string> = {
 // ROM identifiers, storage details, and provenance. Record pages keep these
 // in their collapsed source details instead of the main content.
 const TECHNICAL =
-  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|^internal_name$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$)/;
+  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$)/;
 
 export function isTechnical(key: string): boolean {
   return TECHNICAL.test(key);
@@ -31,6 +31,16 @@ function isBlank(value: Json | undefined): boolean {
 // True when a record section has nothing to show: no entries, or only
 // zeros, blanks, and technical fields.
 export function isEmpty(value: Json | undefined): boolean {
+  // A slot with nothing in it: an encounter slot without a Pokémon, or an
+  // unnamed reference such as a Pokémon's "common" held item when it holds
+  // none.
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value.pokemon === null || (value.name === null && value.slug === null))
+  )
+    return true;
   if (Array.isArray(value))
     return value.every((entry) => isBlank(entry) || isEmpty(entry));
   if (value && typeof value === "object")

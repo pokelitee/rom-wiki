@@ -5,6 +5,7 @@ export interface SearchEntry {
   path: string;
   section: string;
   search?: string;
+  sprite?: string;
 }
 
 export function matchSearch(

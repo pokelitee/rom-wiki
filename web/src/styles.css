@@ -72,6 +72,10 @@
   --primary-foreground: #1b1535;
   --ring: #b0a0ea;
 }
+[data-theme="platinum"] {
+  --primary: #6250ad;
+  --ring: #8d7ac5;
+}
 [data-theme="heart-gold-soul-silver"] {
   --primary: #8b641b;
   --ring: #b78b37;
@@ -83,6 +87,10 @@
 [data-theme="black-2-white-2"] {
   --primary: #1d7388;
   --ring: #3198b0;
+}
+.dark [data-theme="platinum"],
+.dark[data-theme="platinum"] {
+  --primary: #b0a0ea;
 }
 .dark [data-theme="heart-gold-soul-silver"],
 .dark[data-theme="heart-gold-soul-silver"] {
@@ -183,6 +191,7 @@ label {
   font-size: var(--text-xs);
 }
 th {
+  white-space: nowrap;
   text-align: left;
   font-size: var(--text-xs);
   letter-spacing: 0.04em;
@@ -256,11 +265,23 @@ tbody tr:hover {
   height: 22px;
   background: var(--border);
 }
-.game-picker select {
-  border: 0;
-  max-width: 370px;
-  padding-right: 28px;
-  font-size: var(--text-sm);
+.game-picker {
+  width: min(320px, 100%);
+}
+.game-picker button {
+  border-color: transparent;
+  background: transparent;
+}
+.game-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.theme-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
 }
 .header-actions {
   display: flex;
@@ -323,13 +344,6 @@ tbody tr:hover {
   padding: 18px 12px 5px;
   margin: 0;
   color: var(--muted-foreground);
-}
-.nav-dot {
-  width: 5px;
-  height: 5px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  margin: 0 5px;
 }
 .nav-chevron {
   margin-left: auto;
@@ -539,10 +553,28 @@ tbody tr:hover {
   align-items: end;
   margin-top: 15px;
 }
-.filters > label {
+.option-select {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.option-select > label {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+.filters > .option-select {
   flex: 1;
-  min-width: 130px;
+  min-width: 150px;
   max-width: 240px;
+}
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 20px 0;
+}
+.filter-row > .option-select {
+  width: 220px;
 }
 .advanced-filters {
   font-size: var(--text-xs);
@@ -837,8 +869,8 @@ tbody tr:hover {
   gap: 16px;
   margin: 20px 0;
 }
-.variant-controls label {
-  min-width: 180px;
+.variant-controls > .option-select {
+  width: 220px;
 }
 .reference-prose {
   color: var(--muted-foreground);
@@ -954,15 +986,6 @@ tbody tr:hover {
   align-items: center;
   gap: 8px;
 }
-.slot-pokemon {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.slot-pokemon img {
-  margin: -6px 0;
-  image-rendering: pixelated;
-}
 .section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1001,9 +1024,44 @@ tbody tr:hover {
   font-size: var(--text-sm);
 }
 .prose {
+  min-width: 0;
+  max-width: 78ch;
   padding: 30px;
   line-height: 1.85;
   overflow-wrap: anywhere;
+}
+.guide-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 78ch) minmax(180px, 240px);
+  gap: 28px;
+  align-items: start;
+}
+.guide-layout > .prose:only-child {
+  grid-column: 1 / -1;
+}
+.guide-contents {
+  position: sticky;
+  top: 92px;
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+}
+.guide-contents ol {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--border);
+}
+.guide-contents a {
+  display: block;
+  padding: 4px 12px;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+.guide-contents a:hover {
+  color: var(--primary);
+  text-decoration: none;
 }
 .prose h1 {
   font-size: var(--text-xl);
@@ -1087,19 +1145,6 @@ tbody tr:hover {
 .change-record > div {
   margin-top: 16px;
 }
-.section-select {
-  display: inline-flex;
-  min-width: 200px;
-  max-width: 240px;
-  margin: 20px 16px 20px 0;
-  vertical-align: top;
-}
-.checksum {
-  display: block;
-  max-width: 230px;
-  overflow-wrap: anywhere;
-  font-size: var(--text-xs);
-}
 .search-results {
   display: grid;
   gap: 8px;
@@ -1157,7 +1202,251 @@ footer > span {
 .menu-toggle {
   display: none;
 }
+/* Record links carry their sprite as an icon. */
+.entity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+.entity-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: -6px 0;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.chip-list {
+  gap: 8px;
+}
+.chip-list > .entity-link,
+.chip-list > span:not(.badge),
+.chip-list > .badge {
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: var(--text-sm);
+  color: var(--foreground);
+}
+.chip-list > .entity-link {
+  color: var(--primary);
+}
+.chip-list > .entity-link:has(.entity-icon) {
+  padding-left: 4px;
+}
+.chip-list .entity-icon {
+  width: 28px;
+  height: 28px;
+  margin: -4px 0;
+}
+
+/* Facts that are all short values read as a grid of tiles. */
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.fact-grid > div {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+}
+.fact-grid dt {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+.fact-grid dd {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Search: one ring around the whole field, icons on results. */
+.search-field:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.search-field input:focus-visible {
+  outline: none;
+}
+.search-results > a {
+  gap: 12px;
+}
+.result-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--muted);
+  color: var(--primary);
+}
+.result-icon img {
+  image-rendering: pixelated;
+}
+
+/* Downloads */
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px;
+}
+.download-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+.download-card header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.download-card h2 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+.download-card p {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+}
+.download-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.checksum-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 8px;
+  background: var(--muted);
+  font-size: var(--text-xs);
+}
+.checksum-row code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-xs);
+}
+/* Pokémon summary: profile beside base stats. */
+.pokemon-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.pokemon-summary > .detail-section {
+  margin-bottom: 0;
+}
+.summary-abilities {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: var(--text-xs);
+}
+.hidden-tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+}
+
+/* On-page section links for long record pages. */
+.record-nav {
+  position: sticky;
+  top: 68px;
+  z-index: 10;
+  display: flex;
+  gap: 4px;
+  margin: 0 -4px 18px;
+  padding: 8px 4px;
+  overflow-x: auto;
+  background: var(--background);
+  scrollbar-width: none;
+}
+.record-nav a {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+.record-nav a:hover {
+  background: var(--muted);
+  color: var(--foreground);
+  text-decoration: none;
+}
+.detail-section[id] {
+  scroll-margin-top: 124px;
+}
+
+/* Tabs */
+.tab-list {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 9px;
+  background: var(--muted);
+  overflow-x: auto;
+}
+.tab-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.tab-list button[aria-selected="true"] {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.tab-list button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.tab-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted-foreground) 14%, transparent);
+  font-size: var(--text-xs);
+}
+.move-table td {
+  vertical-align: middle;
+}
 @media (max-width: 1100px) {
+  .guide-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .guide-contents {
+    position: static;
+    order: -1;
+  }
   .main-content {
     padding: 30px 26px 0;
   }
@@ -1179,12 +1468,7 @@ footer > span {
   }
   .game-picker {
     flex: 1;
-    overflow: hidden;
-  }
-  .game-picker select {
-    max-width: 100%;
-    width: 100%;
-    font-size: var(--text-xs);
+    min-width: 0;
   }
   .header-actions {
     gap: 2px;
@@ -1253,6 +1537,50 @@ footer > span {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .pokemon-summary {
+    grid-template-columns: 1fr;
+  }
+  .catalog-table {
+    min-width: 0;
+  }
+  .catalog-table thead {
+    display: none;
+  }
+  .catalog-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .catalog-table td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+  }
+  .catalog-table td:empty {
+    display: none;
+  }
+  .catalog-table td::before {
+    content: attr(data-label);
+    flex-basis: 100%;
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+  .catalog-table td .badge {
+    margin: 0;
+  }
+  .catalog-table td:first-child {
+    grid-column: 1 / -1;
+    min-width: 0;
+    font-size: var(--text-md);
+  }
+  .catalog-table td:first-child::before {
+    content: none;
+  }
   .stat-row {
     grid-template-columns: 100px 26px 1fr;
     gap: 8px;
@@ -1260,6 +1588,9 @@ footer > span {
   }
   .prose {
     padding: 20px;
+  }
+  .guide-contents {
+    display: none;
   }
   .page-heading .count {
     display: none;

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { EntityLink } from "../../components/entity-link";
 import type { DataObject, Json } from "../../data/types";
 import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
@@ -15,19 +15,40 @@ import { isSlotList } from "./encounter";
 import { SlotTable } from "./slot-table";
 
 const TYPE_FIELDS = new Set(["type", "types", "natural_gift_type"]);
-const NAME_KEYS = ["name", "pokemon_name", "area_name"];
+const NAME_KEYS = ["name", "pokemon_name", "area_name", "destination_name"];
 
 function visibleKeys(value: DataObject): string[] {
-  return Object.keys(value).filter((key) => !isTechnical(key));
+  return Object.keys(value).filter(
+    (key) =>
+      !isTechnical(key) || (key === "source" && isNamedReference(value[key])),
+  );
 }
 
 // Nested lists and objects with nothing in them, such as an encounter's
 // empty Unown form list, are left out of fact lists.
-function factKeys(value: DataObject): string[] {
+// Nested lists and objects with nothing in them are left out. Inside a
+// record section, so are "No" and zero, which there only mean "does not
+// apply" (an item's dozens of unused party effects, an unused shard cost).
+function factKeys(value: DataObject, hideUnset: boolean): string[] {
   return visibleKeys(value).filter((key) => {
     const entry = value[key];
+    if (hideUnset && (entry === false || entry === 0 || entry === null))
+      return false;
     return !(entry && typeof entry === "object" && isEmpty(entry));
   });
+}
+
+function isScalarFact(value: Json | undefined): boolean {
+  return (
+    (value !== null && typeof value !== "object") || isNamedReference(value)
+  );
+}
+
+// A column holding the same value on every row says nothing per row.
+function isConstant(rows: DataObject[], key: string): boolean {
+  if (rows.length < 3) return false;
+  const first = JSON.stringify(rows[0][key]);
+  return rows.every((row) => JSON.stringify(row[key]) === first);
 }
 
 function NamedReference({
@@ -43,7 +64,9 @@ function NamedReference({
   if (TYPE_FIELDS.has(field)) return <TypeBadge name={name} />;
   const route = entityRoute(value, field);
   return route ? (
-    <Link to={`/${game}/${route}`}>{formatName(name)}</Link>
+    <EntityLink game={game} route={route}>
+      {formatName(name)}
+    </EntityLink>
   ) : (
     <span>{formatScalar(field, name)}</span>
   );
@@ -98,7 +121,7 @@ export function Value({
       );
     if (entries.every(isNamedReference))
       return (
-        <span className="badge-list">
+        <span className="badge-list chip-list">
           {(TYPE_FIELDS.has(field)
             ? entries.filter(
                 (entry, index) =>
@@ -120,8 +143,40 @@ export function Value({
     const rows = entries.map(object);
     if (isSlotList(rows)) return <SlotTable rows={rows} game={game} />;
     const keys = [...new Set(rows.flatMap(visibleKeys))].filter(
-      (key) => !rows.every((row) => isEmpty(row[key])),
+      (key) =>
+        !rows.every((row) => isEmpty(row[key])) &&
+        (NAME_KEYS.includes(key) || !isConstant(rows, key)),
     );
+    if (keys.length === 1 && rows.every((row) => isScalarFact(row[keys[0]])))
+      return (
+        <span className="badge-list chip-list">
+          {rows.map((row, index) => {
+            const cell = row[keys[0]];
+            if (isNamedReference(cell))
+              return (
+                <NamedReference
+                  key={index}
+                  value={cell as DataObject}
+                  game={game}
+                  field={keys[0]}
+                />
+              );
+            const route = NAME_KEYS.includes(keys[0])
+              ? entityRoute(row, field)
+              : undefined;
+            const label = formatName(String(cell));
+            return route ? (
+              <EntityLink key={index} game={game} route={route}>
+                {label}
+              </EntityLink>
+            ) : (
+              <span className="badge" key={index}>
+                {label}
+              </span>
+            );
+          })}
+        </span>
+      );
     if (keys.length && keys.length <= 9 && depth < 5)
       return (
         <div className="table-scroll">
@@ -143,9 +198,9 @@ export function Value({
                     return (
                       <td key={key}>
                         {route ? (
-                          <Link to={`/${game}/${route}`}>
+                          <EntityLink game={game} route={route}>
                             {formatName(String(row[key]))}
-                          </Link>
+                          </EntityLink>
                         ) : row[key] === undefined ? (
                           "—"
                         ) : (
@@ -181,7 +236,6 @@ export function Value({
     );
   const route = entityRoute(value, field);
   const name = value.name ?? value.pokemon_name ?? value.area_name;
-  const sprite = object(value.sprite).url;
   if (route && name) {
     const extra = Object.entries(value).filter(
       ([key, item]) =>
@@ -192,10 +246,9 @@ export function Value({
     );
     return (
       <span className="entity-value">
-        {typeof sprite === "string" && (
-          <img loading="lazy" src={sprite} alt="" width={40} height={40} />
-        )}
-        <Link to={`/${game}/${route}`}>{formatName(String(name))}</Link>
+        <EntityLink game={game} route={route}>
+          {formatName(String(name))}
+        </EntityLink>
         {extra.map(([key, item]) => (
           <span className="badge" key={key}>
             {title(key)}: {formatScalar(key, item as string | number | boolean)}
@@ -204,9 +257,11 @@ export function Value({
       </span>
     );
   }
+  const keys = factKeys(value, field !== "");
+  const grid = depth === 0 && keys.every((key) => isScalarFact(value[key]));
   return (
-    <dl className="fact-list">
-      {factKeys(value).map((key) => (
+    <dl className={grid ? "fact-grid" : "fact-list"}>
+      {keys.map((key) => (
         <div key={key}>
           <dt>{title(key)}</dt>
           <dd>

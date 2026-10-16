@@ -5,6 +5,7 @@ import { isValidElement, type ReactNode } from "react";
 import type { Game } from "../../data/types";
 import { useResource } from "../../data/use-resource";
 import { ResourceState } from "../../components/resource-state";
+import { headingSlug, outline, type OutlineEntry } from "./outline";
 
 function headingId(children: ReactNode): string {
   const text = (node: ReactNode): string =>
@@ -13,11 +14,30 @@ function headingId(children: ReactNode): string {
       : isValidElement<{ children?: ReactNode }>(node)
         ? text(node.props.children)
         : String(node ?? "");
-  return text(children)
-    .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .trim()
-    .replace(/\s/g, "-");
+  return headingSlug(text(children));
+}
+
+function Contents({ entries }: { entries: OutlineEntry[] }) {
+  return (
+    <nav className="guide-contents" aria-label="On this page">
+      <p className="nav-label">On this page</p>
+      <ol>
+        {entries.map((entry) => (
+          <li key={entry.id}>
+            <a
+              href={`#${entry.id}`}
+              onClick={(event) => {
+                event.preventDefault();
+                document.getElementById(entry.id)?.scrollIntoView();
+              }}
+            >
+              {entry.text}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
 }
 
 export function Document({ game, id }: { game: Game; id: string }) {
@@ -33,65 +53,74 @@ export function Document({ game, id }: { game: Game; id: string }) {
   return (
     <ResourceState error={resource.error} retry={resource.retry}>
       {resource.value && (
-        <article className="prose panel">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({ children }) => (
-                <h1 id={headingId(children)}>{children}</h1>
-              ),
-              h2: ({ children }) => (
-                <h2 id={headingId(children)}>{children}</h2>
-              ),
-              h3: ({ children }) => (
-                <h3 id={headingId(children)}>{children}</h3>
-              ),
-              h4: ({ children }) => (
-                <h4 id={headingId(children)}>{children}</h4>
-              ),
-              a: ({ href, children }) => {
-                if (href?.startsWith("#"))
-                  return (
-                    <a
-                      href={href}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        document
-                          .getElementById(decodeURIComponent(href.slice(1)))
-                          ?.scrollIntoView();
-                      }}
-                    >
-                      {children}
-                    </a>
-                  );
-                if (href && !/^(https?:|mailto:|#)/.test(href)) {
-                  const resolved = new URL(
-                    href,
-                    `https://romwiki.local/${id}.md`,
-                  );
-                  const doc = resolved.pathname.slice(1).replace(/\.md$/, "");
-                  const [section, record] = doc.split("/");
-                  if (section === "data")
-                    return <Link to={`/${game.id}/downloads`}>{children}</Link>;
-                  if (section === "changes")
-                    return <Link to={`/${game.id}/changes`}>{children}</Link>;
-                  if (section in game.sections)
+        <div className="guide-layout">
+          <article className="prose panel">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h1 id={headingId(children)}>{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 id={headingId(children)}>{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 id={headingId(children)}>{children}</h3>
+                ),
+                h4: ({ children }) => (
+                  <h4 id={headingId(children)}>{children}</h4>
+                ),
+                a: ({ href, children }) => {
+                  if (href?.startsWith("#"))
                     return (
-                      <Link
-                        to={`/${game.id}/${section}${record && record !== "index" ? `/${record}` : ""}`}
+                      <a
+                        href={href}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          document
+                            .getElementById(decodeURIComponent(href.slice(1)))
+                            ?.scrollIntoView();
+                        }}
                       >
                         {children}
-                      </Link>
+                      </a>
                     );
-                  return <Link to={`/${game.id}/docs/${doc}`}>{children}</Link>;
-                }
-                return <a href={href}>{children}</a>;
-              },
-            }}
-          >
-            {resource.value.markdown}
-          </ReactMarkdown>
-        </article>
+                  if (href && !/^(https?:|mailto:|#)/.test(href)) {
+                    const resolved = new URL(
+                      href,
+                      `https://romwiki.local/${id}.md`,
+                    );
+                    const doc = resolved.pathname.slice(1).replace(/\.md$/, "");
+                    const [section, record] = doc.split("/");
+                    if (section === "data")
+                      return (
+                        <Link to={`/${game.id}/downloads`}>{children}</Link>
+                      );
+                    if (section === "changes")
+                      return <Link to={`/${game.id}/changes`}>{children}</Link>;
+                    if (section in game.sections)
+                      return (
+                        <Link
+                          to={`/${game.id}/${section}${record && record !== "index" ? `/${record}` : ""}`}
+                        >
+                          {children}
+                        </Link>
+                      );
+                    return (
+                      <Link to={`/${game.id}/docs/${doc}`}>{children}</Link>
+                    );
+                  }
+                  return <a href={href}>{children}</a>;
+                },
+              }}
+            >
+              {resource.value.markdown}
+            </ReactMarkdown>
+          </article>
+          {outline(resource.value.markdown).length >= 3 && (
+            <Contents entries={outline(resource.value.markdown)} />
+          )}
+        </div>
       )}
     </ResourceState>
   );

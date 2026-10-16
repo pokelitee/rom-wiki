@@ -10,11 +10,18 @@ import type {
 } from "../../data/types";
 import { useResource } from "../../data/use-resource";
 import { ResourceState } from "../../components/resource-state";
+import { OptionSelect } from "../../components/option-select";
 import { StatBars } from "../../components/stat-bars";
 import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
-import { Evolutions, EvYields } from "./pokemon-sections";
+import {
+  Evolutions,
+  EvYields,
+  MovesPanel,
+  PokemonSummary,
+  type SectionProps,
+} from "./pokemon-sections";
 import { Party } from "./trainer-sections";
 import {
   hasNoEncounters,
@@ -96,14 +103,38 @@ function typeNames(record: DataObject): string[] {
 }
 
 // Sections whose generic rendering would hide what matters about them.
-const SECTION_RENDERERS: Record<
-  string,
-  ComponentType<{ value: Json; game: string }>
-> = {
+const SECTION_RENDERERS: Record<string, ComponentType<SectionProps>> = {
   "pokemon.evolutions": Evolutions,
   "pokemon.ev_yields": EvYields,
+  "pokemon.moves": MovesPanel,
   "trainers.party": Party,
 };
+
+// Pokémon facts shown in the summary rather than the overview.
+const POKEMON_SUMMARY_FIELDS = [
+  "abilities",
+  "egg_groups",
+  "gender_ratio",
+  "catch_rate",
+  "growth_rate",
+];
+const POKEMON_MOVE_FIELDS = [
+  "level_up_moves",
+  "machines",
+  "egg_moves",
+  "tutor_moves",
+];
+
+// The four ways a Pokémon learns moves share one tabbed section, placed
+// where the first of them would have been.
+function combineMoves(entries: [string, Json][]): [string, Json][] {
+  const moves = entries.filter(([key]) => POKEMON_MOVE_FIELDS.includes(key));
+  if (!moves.length) return entries;
+  const first = entries.indexOf(moves[0]);
+  const rest = entries.filter(([key]) => !POKEMON_MOVE_FIELDS.includes(key));
+  rest.splice(first, 0, ["moves", Object.fromEntries(moves)]);
+  return rest;
+}
 
 function RecordPage({
   game,
@@ -164,16 +195,19 @@ function RecordPage({
   const versions = [
     ...new Set([...Object.keys(variants), ...Object.keys(referenceVariants)]),
   ];
+  const summarized = section === "pokemon" ? POKEMON_SUMMARY_FIELDS : [];
   const facts = entries.filter(
     ([key, value]) =>
+      !summarized.includes(key) &&
       !isTechnical(key) &&
       ((value !== null && typeof value !== "object") ||
         isNamedReference(value)),
   );
-  const sections = orderEntries(
+  const ordered = orderEntries(
     section,
     entries.filter(
       ([key, value]) =>
+        !summarized.includes(key) &&
         !isTechnical(key) &&
         value !== null &&
         typeof value === "object" &&
@@ -182,6 +216,24 @@ function RecordPage({
         !hasNoEncounters(value),
     ),
   );
+  const sections = section === "pokemon" ? combineMoves(ordered) : ordered;
+  const relationships = Object.entries(detail.relationships).filter(
+    ([, value]) => !isEmpty(value),
+  );
+  const outline: [string, string][] = [
+    ...(section === "pokemon"
+      ? ([
+          ["section-profile", "Profile"],
+          ["section-base-stats", "Base stats"],
+        ] as [string, string][])
+      : []),
+    ...(facts.length
+      ? [["section-overview", "Overview"] as [string, string]]
+      : []),
+    ...[...sections, ...relationships].map(
+      ([key]) => [`section-${key}`, title(key)] as [string, string],
+    ),
+  ];
   return (
     <>
       <Link className="back-link" to={`/${game.id}/${section}`}>
@@ -212,35 +264,26 @@ function RecordPage({
       </div>
       <div className="variant-controls">
         {versions.length > 0 && (
-          <label>
-            Version
-            <select
-              value={version}
-              onChange={(event) => update("version", event.target.value)}
-            >
-              <option value="">Shared record</option>
-              {versions.map((value) => (
-                <option key={value} value={value}>
-                  {title(value)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <OptionSelect
+            label="Version"
+            value={version}
+            onChange={(value) => update("version", value)}
+            options={[
+              { value: "", label: "Shared record" },
+              ...versions.map((value) => ({ value, label: title(value) })),
+            ]}
+          />
         )}
         {Object.keys(seasons).length > 0 && (
-          <label>
-            Season
-            <select
-              value={season}
-              onChange={(event) => update("season", event.target.value)}
-            >
-              {Object.keys(seasons).map((value) => (
-                <option key={value} value={value}>
-                  {title(value)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <OptionSelect
+            label="Season"
+            value={season}
+            onChange={(value) => update("season", value)}
+            options={Object.keys(seasons).map((value) => ({
+              value,
+              label: title(value),
+            }))}
+          />
         )}
       </div>
       {(reference.flavor_text ||
@@ -257,14 +300,34 @@ function RecordPage({
           </small>
         </div>
       )}
-      {record.base_stats && (
-        <section className="panel detail-section">
-          <h2>Base stats</h2>
-          <StatBars stats={object(record.base_stats)} />
-        </section>
+      {outline.length >= 4 && (
+        <nav className="record-nav" aria-label="On this page">
+          {outline.map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              onClick={(event) => {
+                event.preventDefault();
+                document.getElementById(id)?.scrollIntoView();
+              }}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      )}
+      {section === "pokemon" ? (
+        <PokemonSummary record={record} reference={reference} game={game} />
+      ) : (
+        record.base_stats && (
+          <section className="panel detail-section" id="section-base-stats">
+            <h2>Base stats</h2>
+            <StatBars stats={object(record.base_stats)} />
+          </section>
+        )
       )}
       {facts.length > 0 && (
-        <section className="panel detail-section">
+        <section className="panel detail-section" id="section-overview">
           <h2>Overview</h2>
           <Value value={Object.fromEntries(facts)} game={game.id} />
         </section>
@@ -272,24 +335,30 @@ function RecordPage({
       {sections.map(([key, value]) => {
         const Renderer = SECTION_RENDERERS[`${section}.${key}`];
         return (
-          <section className="panel detail-section" key={key}>
+          <section
+            className="panel detail-section"
+            key={key}
+            id={`section-${key}`}
+          >
             <h2>{title(key)}</h2>
             {Renderer ? (
-              <Renderer value={value} game={game.id} />
+              <Renderer value={value} game={game} record={record} />
             ) : (
               <Value value={value} game={game.id} field={key} />
             )}
           </section>
         );
       })}
-      {Object.entries(detail.relationships)
-        .filter(([, value]) => !isEmpty(value))
-        .map(([key, value]) => (
-          <section className="panel detail-section" key={key}>
-            <h2>{title(key)}</h2>
-            <Value value={value} game={game.id} field={key} />
-          </section>
-        ))}
+      {relationships.map(([key, value]) => (
+        <section
+          className="panel detail-section"
+          key={key}
+          id={`section-${key}`}
+        >
+          <h2>{title(key)}</h2>
+          <Value value={value} game={game.id} field={key} />
+        </section>
+      ))}
       {section === "trainers" && (
         <TrainerFamilies game={game} record={record} metadata={metadata} />
       )}
@@ -344,6 +413,10 @@ function RecordPage({
                     "short_effect",
                     "flavor_text",
                     "sprite_url",
+                    // The Pokémon summary already shows these.
+                    ...(section === "pokemon"
+                      ? ["height_dm", "weight_hg"]
+                      : []),
                   ].includes(key),
               ),
             )}

@@ -42,6 +42,10 @@ export function title(value: string) {
     .join(" ");
 }
 
+export function countLabel(count: number, noun: string) {
+  return `${count.toLocaleString()} ${count === 1 ? noun : `${noun}s`}`;
+}
+
 // Matches the exporter's `_search_text`: locale-independent Unicode default
 // lowercasing, so queries behave the same for every viewer's language.
 export function searchText(value: string) {
