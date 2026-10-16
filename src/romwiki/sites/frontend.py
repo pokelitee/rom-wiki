@@ -28,6 +28,7 @@ DETAIL_CHUNK_SIZE = 50
 _SNIPPET = re.compile(r'^--8<--\s+"([^"]+)"\s*$', re.MULTILINE)
 _FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 _FRONTMATTER_TITLE = re.compile(r"^title:\s*(.+?)\s*$", re.MULTILINE)
+_PLACEHOLDER_NAME = re.compile(r"[－\-\s]+")
 _IDENTITY_FIELDS = {
     "pokemon": "member",
     "abilities": "ability_id",
@@ -127,8 +128,24 @@ def _encounter_facets(record: dict[str, Any]) -> dict[str, Any]:
     return fields
 
 
+def _index_sprite(kind: str, record: Mapping[str, Any]) -> str | None:
+    """The small image the app shows beside a Pokémon or item link."""
+    if kind == "pokemon":
+        sprite = record.get("sprite")
+        url = sprite.get("url") if isinstance(sprite, Mapping) else None
+    elif kind == "items":
+        reference = record.get("reference")
+        url = reference.get("sprite_url") if isinstance(reference, Mapping) else None
+    else:
+        return None
+    return url if isinstance(url, str) else None
+
+
 def _index_record(kind: str, record: dict[str, Any], route: str) -> dict[str, Any]:
     label = str(record.get("name") or route)
+    # Unused map headers keep the ROM's placeholder name, a row of dashes.
+    if _PLACEHOLDER_NAME.fullmatch(label):
+        label = f"Unnamed area ({route})"
     if kind == "trainers":
         label = " ".join(
             str(record.get(key) or "") for key in ("class_name", "name")
@@ -413,9 +430,9 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                         ),
                     }
                     entry = _index_record(kind, record, route)
-                    sprite = record.get("sprite")
-                    if kind == "pokemon" and isinstance(sprite, dict):
-                        entry["sprite"] = sprite.get("url")
+                    sprite = _index_sprite(kind, record)
+                    if sprite:
+                        entry["sprite"] = sprite
                     related = relationships.get(kind, {}).get(relationship_key, {})
                     if kind == "pokemon":
                         entry["fields"]["availability_methods"] = sorted(

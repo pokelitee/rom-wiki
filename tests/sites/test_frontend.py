@@ -9,6 +9,8 @@ import pytest
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.frontend import (
     DETAIL_CHUNK_SIZE,
+    _index_record,
+    _index_sprite,
     _search_text,
     export_frontend,
     record_route,
@@ -141,6 +143,20 @@ def test_export_titles_guides_counts_published_records_and_adds_sprites() -> Non
             "https://example.test/1.png",
             None,
         ]
+
+
+def test_index_labels_unnamed_areas_and_carries_item_sprites() -> None:
+    record = {"name": "－" * 10, "header_id": 151}
+    assert _index_record("locations", record, "header-151")["label"] == (
+        "Unnamed area (header-151)"
+    )
+    assert (
+        _index_sprite(
+            "items", {"reference": {"sprite_url": "https://example.test/i.png"}}
+        )
+        == "https://example.test/i.png"
+    )
+    assert _index_sprite("moves", {"sprite": {"url": "x"}}) is None
 
 
 def test_export_rejects_corrupt_archives_and_duplicate_routes() -> None:
