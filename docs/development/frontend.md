@@ -43,9 +43,11 @@ The restore verifies the archive and every resource checksum. The coverage check
 
 To update publication data, generate and review a new snapshot, upload its uniquely named archive to the existing release without replacing assets, and update the committed manifest through a PR. Keep older archives for historical restoration.
 
-### Migration boundary
+### Deployment
 
-The React site is deployed on GitHub Pages. CI builds and uploads a verified Pages artifact without deploying it. The `Deploy Pages` workflow has only a manual trigger; `publish` defaults to false. A run with `publish=true` can deploy only from `main`, after both the full checks and complete publication build succeed. Merging a PR does not deploy.
+The React site is deployed on GitHub Pages. Every CI run builds and verifies a Pages artifact. On a push to `main`, CI deploys that same artifact once the `CI gate` passes, so a merged PR goes live without a separate step. PR runs never deploy. See [Operations](../operations.md#ci-and-github-pages) for manual redeploys and rollback.
+
+### Migration history
 
 The Python page renderers, MkDocs configuration, templates, assets, and serving/audit tooling have been removed. Their implementation remains in Git history at the last main commit before migration, `04b72f24827b557df4f8b4bf61cff8c3146fd824`.
 
