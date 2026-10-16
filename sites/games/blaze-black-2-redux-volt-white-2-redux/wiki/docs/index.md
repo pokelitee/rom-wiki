@@ -1,3 +1,7 @@
+---
+title: Official documentation
+---
+
 This page reproduces AphexCubex's official Blaze Black 2 Redux and Volt White 2 Redux documentation and
 credits verbatim; first-person references ("I", "my", "me") refer to AphexCubex,
 the hack's creator, not this wiki.

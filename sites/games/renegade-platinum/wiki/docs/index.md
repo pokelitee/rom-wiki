@@ -1,3 +1,7 @@
+---
+title: Official documentation
+---
+
 This page reproduces Drayano's official Renegade Platinum documentation and
 credits verbatim; first-person references ("I", "my", "me") refer to Drayano,
 the hack's creator, not this wiki.
