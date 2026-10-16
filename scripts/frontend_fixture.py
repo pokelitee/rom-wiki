@@ -65,12 +65,43 @@ def main() -> None:
                             "speed": 45,
                         },
                         "types": [{"id": 12, "name": "grass"}],
-                        "abilities": [],
+                        "abilities": [
+                            {
+                                "id": 65,
+                                "is_hidden": False,
+                                "name": "Overgrow",
+                                "slug": "overgrow",
+                            }
+                        ],
+                        "level_up_moves": [
+                            {
+                                "level": 1,
+                                "move": {"id": 33, "name": "Tackle", "slug": "tackle"},
+                            }
+                        ],
                         "egg_groups": [],
                     }
                 ],
             },
         )
+        for kind, record in (
+            ("abilities", {"id": 65, "slug": "overgrow", "name": "Overgrow"}),
+            ("moves", {"id": 33, "slug": "tackle", "name": "Tackle", "power": 35}),
+        ):
+            write_public_dataset(
+                wiki,
+                kind,
+                {
+                    "dataset": kind,
+                    "game": "synthetic",
+                    "engine": "synthetic",
+                    "schema_version": 1,
+                    "features": [],
+                    "record_count": 1,
+                    "source": {"source": "synthetic"},
+                    "records": [record],
+                },
+            )
         export_frontend(root, Path("web/public/data"))
 
 
