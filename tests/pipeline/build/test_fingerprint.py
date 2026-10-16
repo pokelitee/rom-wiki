@@ -108,6 +108,14 @@ class ExtractionSourceFilesTests(unittest.TestCase):
         )
         self.assertIn("pipeline/extraction/locations/helpers.py", gen5_files)
 
+    def test_includes_split_encounter_format_dependencies(self) -> None:
+        files = extraction_source_files(
+            "gen5_b2w2", "romwiki.pipeline.extraction.encounters.dispatcher"
+        )
+
+        for strategy in ("conditional", "method_table", "seasonal"):
+            self.assertIn(f"pipeline/extraction/encounters/{strategy}.py", files)
+
     def test_includes_split_trainer_strategy_dependencies(self) -> None:
         class_gender = extraction_source_files(
             "gen4_platinum", "romwiki.pipeline.extraction.trainers.dispatcher"
