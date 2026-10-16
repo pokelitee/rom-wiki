@@ -1,4 +1,4 @@
-This page reproduces Drayano's official Blaze Black 2 and Volt White 2 documentation and
+This page reproduces Drayano's official Sacred Gold and Storm Silver documentation and
 credits verbatim; first-person references ("I", "my", "me") refer to Drayano,
 the hack's creator, not this wiki.
 
