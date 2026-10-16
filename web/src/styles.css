@@ -1,8 +1,22 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 
+/* Inter has no gender signs, and system fallbacks draw them as thin,
+   oversized glyphs. This is a subset of Noto Sans Symbols (OFL, see
+   assets/fonts/OFL.txt) holding only U+2640 and U+2642, built with
+   `pyftsubset --unicodes=U+2640,U+2642 --flavor=woff2`, keeping its weight
+   axis so the signs follow the surrounding text. */
+@font-face {
+  font-family: "Gender Signs";
+  src: url("./assets/fonts/gender-signs.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+2640, U+2642;
+}
+
 :root {
-  font-family: "Inter Variable", Inter, "Segoe UI", system-ui, sans-serif;
+  font-family:
+    "Inter Variable", "Gender Signs", Inter, "Segoe UI", system-ui, sans-serif;
   color: #242838;
   background: #f7f8fc;
   font-synthesis: none;
