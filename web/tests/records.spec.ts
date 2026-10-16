@@ -59,6 +59,7 @@ test("entity links on a record resolve to published records", async ({
   const linkedSections = new Set(targets.map(([section]) => section));
   expect(linkedSections).toContain("abilities");
   expect(linkedSections).toContain("moves");
+  expect(linkedSections).toContain("pokemon");
 
   const ids = new Map<string, Set<string>>();
   for (const section of linkedSections) {

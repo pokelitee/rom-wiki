@@ -47,7 +47,7 @@ def main() -> None:
                 "engine": "synthetic",
                 "schema_version": 1,
                 "features": [],
-                "record_count": 1,
+                "record_count": 2,
                 "source": {"source": "synthetic"},
                 "records": [
                     {
@@ -79,8 +79,27 @@ def main() -> None:
                                 "move": {"id": 33, "name": "Tackle", "slug": "tackle"},
                             }
                         ],
+                        "evolutions": [
+                            {
+                                "method": {"id": 4, "name": "level"},
+                                "parameter": 16,
+                                "target": {
+                                    "id": 2,
+                                    "name": "Ivysaur",
+                                    "slug": "ivysaur",
+                                },
+                            }
+                        ],
                         "egg_groups": [],
-                    }
+                    },
+                    {
+                        "member": 2,
+                        "national_dex_id": 2,
+                        "slug": "ivysaur",
+                        "name": "Ivysaur",
+                        "public": True,
+                        "types": [{"id": 12, "name": "grass"}],
+                    },
                 ],
             },
         )

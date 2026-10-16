@@ -16,6 +16,11 @@ export function entityRoute(
   if (typeof value.pokemon_slug === "string")
     return `pokemon/${value.pokemon_slug}`;
   if (typeof value.slug !== "string") return undefined;
+  // An evolution's parameter is an item or a species, and says which.
+  if (field === "parameter_data" && value.kind === "item")
+    return `items/${value.slug}`;
+  if (field === "parameter_data" && value.kind === "pokemon")
+    return `pokemon/${value.slug}`;
   if (field.includes("abilit")) return `abilities/${value.slug}`;
   if (field.includes("move") || field === "replaces")
     return `moves/${value.slug}`;
@@ -29,7 +34,9 @@ export function entityRoute(
     field.includes("pokemon") ||
     field.includes("species") ||
     field.includes("evolution") ||
-    field === "base_species"
+    field === "base_species" ||
+    // Evolution endpoints and revived fossils are always species.
+    ["source", "target", "revives_into"].includes(field)
   )
     return `pokemon/${value.slug}`;
   return undefined;
