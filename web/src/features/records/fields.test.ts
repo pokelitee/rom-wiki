@@ -33,7 +33,16 @@ describe("record field rules", () => {
       true,
     );
     expect(isEmpty({ attack: 0, special_attack: 1 })).toBe(false);
-    expect(isEmpty([{ chance: 40, pokemon: null }])).toBe(false);
+    expect(isEmpty([{ chance: 40, pokemon: { name: "Starly" } }])).toBe(false);
+    expect(isEmpty([{ chance: 40, pokemon: null }])).toBe(true);
+    expect(isEmpty([{ id: 0, name: null, rarity: "common", slug: null }])).toBe(
+      true,
+    );
+    expect(
+      isEmpty([
+        { id: 154, name: "Leppa Berry", rarity: "common", slug: "leppa-berry" },
+      ]),
+    ).toBe(false);
   });
 
   it("recognizes objects that only name something", () => {

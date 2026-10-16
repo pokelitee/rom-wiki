@@ -2,6 +2,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { Comparison, DataObject, Game } from "../../data/types";
 import { useResource } from "../../data/use-resource";
 import { ResourceState } from "../../components/resource-state";
+import { OptionSelect } from "../../components/option-select";
 import { title } from "../../lib/utils";
 import { Value } from "../records/value";
 import { CHANGE_STATUSES, changeSummary } from "./change-summary";
@@ -15,43 +16,33 @@ export function Changes({ game }: { game: Game }) {
     <>
       <p className="eyebrow">Compared with the base game</p>
       <h1>Changes</h1>
-      <label className="section-select">
-        Section
-        <select
+      <div className="filter-row">
+        <OptionSelect
+          label="Section"
           value={kind}
-          onChange={(event) =>
-            setParams({
-              section: event.target.value,
-              ...(status && { status }),
-            })
+          onChange={(value) =>
+            setParams({ section: value, ...(status && { status }) })
           }
-        >
-          {Object.keys(game.comparisons).map((value) => (
-            <option key={value} value={value}>
-              {title(value)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="section-select">
-        Show
-        <select
+          options={Object.keys(game.comparisons).map((value) => ({
+            value,
+            label: title(value),
+          }))}
+        />
+        <OptionSelect
+          label="Show"
           value={status}
-          onChange={(event) =>
-            setParams({
-              section: kind,
-              ...(event.target.value && { status: event.target.value }),
-            })
+          onChange={(value) =>
+            setParams({ section: kind, ...(value && { status: value }) })
           }
-        >
-          <option value="">All changes</option>
-          {CHANGE_STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {title(value)}
-            </option>
-          ))}
-        </select>
-      </label>
+          options={[
+            { value: "", label: "All changes" },
+            ...CHANGE_STATUSES.map((value) => ({
+              value,
+              label: title(value),
+            })),
+          ]}
+        />
+      </div>
       <ResourceState error={resource.error} retry={resource.retry}>
         {resource.value && (
           <ChangeRecords

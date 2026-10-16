@@ -1,12 +1,13 @@
-import { Link } from "react-router-dom";
+import { EntityLink } from "../../components/entity-link";
 import type { DataObject, Json } from "../../data/types";
 import { StatBars } from "../../components/stat-bars";
 import { TypeBadge } from "../../components/type-badge";
 import { object } from "../../lib/json";
 import { title } from "../../lib/utils";
 import { formatName, formatScalar } from "./fields";
+import type { SectionProps } from "./pokemon-sections";
 
-function EntityLink({
+function RecordName({
   value,
   section,
   game,
@@ -19,7 +20,9 @@ function EntityLink({
   if (typeof entity.name !== "string") return <span className="muted">—</span>;
   const name = formatName(entity.name);
   return typeof entity.slug === "string" ? (
-    <Link to={`/${game}/${section}/${entity.slug}`}>{name}</Link>
+    <EntityLink game={game} route={`${section}/${entity.slug}`}>
+      {name}
+    </EntityLink>
   ) : (
     <span>{name}</span>
   );
@@ -59,7 +62,7 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
         )}
         <div>
           <h3>
-            <EntityLink value={member.pokemon} section="pokemon" game={game} />
+            <RecordName value={member.pokemon} section="pokemon" game={game} />
           </h3>
           <p className="badge-list">
             <span className="badge">Level {String(member.level)}</span>
@@ -73,7 +76,7 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
         <div>
           <dt>Ability</dt>
           <dd>
-            <EntityLink
+            <RecordName
               value={member.ability}
               section="abilities"
               game={game}
@@ -83,7 +86,7 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
         <div>
           <dt>Held item</dt>
           <dd>
-            <EntityLink value={member.held_item} section="items" game={game} />
+            <RecordName value={member.held_item} section="items" game={game} />
           </dd>
         </div>
         <div>
@@ -99,7 +102,7 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
         <ul className="party-moves">
           {moves.map((move, index) => (
             <li key={index}>
-              <EntityLink value={move} section="moves" game={game} />
+              <RecordName value={move} section="moves" game={game} />
               {typeof object(move.type).name === "string" && (
                 <TypeBadge name={String(object(move.type).name)} />
               )}
@@ -133,12 +136,12 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
   );
 }
 
-export function Party({ value, game }: { value: Json; game: string }) {
+export function Party({ value, game }: SectionProps) {
   const members = Array.isArray(value) ? value.map(object) : [];
   return (
     <div className="party-grid">
       {members.map((member, index) => (
-        <PartyCard key={index} member={member} game={game} />
+        <PartyCard key={index} member={member} game={game.id} />
       ))}
     </div>
   );

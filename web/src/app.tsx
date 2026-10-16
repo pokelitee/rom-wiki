@@ -30,6 +30,9 @@ import {
 import type { Game, Manifest } from "./data/types";
 import { loadManifest } from "./data/client";
 import { Button } from "./components/ui/button";
+import { OptionSelect } from "./components/option-select";
+import { SpriteProvider } from "./components/sprite-provider";
+import { SectionIcon } from "./components/section-icon";
 import { Catalog } from "./features/catalog/catalog";
 import { Detail } from "./features/records/detail";
 import { Document } from "./features/content/document";
@@ -139,23 +142,29 @@ function Shell({ manifest }: { manifest: Manifest }) {
             ROM<span>Wiki</span>
           </Link>
           <span className="header-divider" />
-          <label className="game-picker">
-            <span className="sr-only">Choose a game</span>
-            <select
-              value={game?.id ?? ""}
-              onChange={(event) => {
-                navigate(event.target.value ? `/${event.target.value}` : "/");
-                setMenu(false);
-              }}
-            >
-              <option value="">Game library</option>
-              {manifest.games.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name.replace("Pokémon ", "")}
-                </option>
-              ))}
-            </select>
-          </label>
+          <OptionSelect
+            className="game-picker"
+            label="Choose a game"
+            hideLabel
+            value={game?.id ?? ""}
+            onChange={(value) => {
+              navigate(value ? `/${value}` : "/");
+              setMenu(false);
+            }}
+            options={[
+              { value: "", label: "Game library" },
+              ...manifest.games.map((entry) => ({
+                value: entry.id,
+                group: `Generation ${entry.generation}`,
+                label: (
+                  <span className="game-option">
+                    <span className="theme-dot" data-theme={entry.theme} />
+                    {entry.name.replace("Pokémon ", "")}
+                  </span>
+                ),
+              })),
+            ]}
+          />
           <div className="header-actions">
             <a
               className="source-link"
@@ -212,7 +221,7 @@ function Shell({ manifest }: { manifest: Manifest }) {
               <p className="nav-label">Game data</p>
               {Object.keys(game.sections).map((section) => (
                 <NavLink key={section} to={`/${game.id}/${section}`}>
-                  <span className="nav-dot" />
+                  <SectionIcon section={section} size={16} />
                   {title(section)}
                   <ChevronRight className="nav-chevron" size={13} />
                 </NavLink>
@@ -273,25 +282,30 @@ function GameRoutes({ games }: { games: Game[] }) {
   const game = games.find((entry) => entry.id === gameId);
   if (!game) return <NotFound />;
   return (
-    <Routes>
-      <Route index element={<GameHome game={game} />} />
-      <Route path="search" element={<GameSearch game={game} />} />
-      <Route path="downloads" element={<Downloads game={game} />} />
-      <Route
-        path="changes"
-        element={
-          Object.keys(game.comparisons).length ? (
-            <Changes game={game} />
-          ) : (
-            <NotFound />
-          )
-        }
-      />
-      <Route path="docs/*" element={<DocumentRoute game={game} />} />
-      <Route path=":section" element={<SectionRoute game={game} />} />
-      <Route path=":section/:recordId" element={<SectionRoute game={game} />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <SpriteProvider game={game}>
+      <Routes>
+        <Route index element={<GameHome game={game} />} />
+        <Route path="search" element={<GameSearch game={game} />} />
+        <Route path="downloads" element={<Downloads game={game} />} />
+        <Route
+          path="changes"
+          element={
+            Object.keys(game.comparisons).length ? (
+              <Changes game={game} />
+            ) : (
+              <NotFound />
+            )
+          }
+        />
+        <Route path="docs/*" element={<DocumentRoute game={game} />} />
+        <Route path=":section" element={<SectionRoute game={game} />} />
+        <Route
+          path=":section/:recordId"
+          element={<SectionRoute game={game} />}
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </SpriteProvider>
   );
 }
 

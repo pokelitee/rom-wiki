@@ -3,9 +3,10 @@ import { ArrowDownUp, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useResource } from "../../data/use-resource";
 import type { Game, IndexRecord } from "../../data/types";
 import { ResourceState } from "../../components/resource-state";
+import { OptionSelect } from "../../components/option-select";
 import { TypeBadge } from "../../components/type-badge";
 import { Button } from "../../components/ui/button";
-import { title } from "../../lib/utils";
+import { countLabel, title } from "../../lib/utils";
 import { defaultSort, filterRecords, PAGE_SIZE, pageNumber } from "./filter";
 import type { DataObject, RecordDetail } from "../../data/types";
 import { object } from "../../lib/json";
@@ -124,7 +125,10 @@ function CatalogTable({
   const page = pageNumber(params, filtered.length);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const columns = fields
-    .filter((key) => !["pokemon", "features", "egg_groups"].includes(key))
+    .filter(
+      (key) =>
+        !["pokemon", "features", "egg_groups", "section_name"].includes(key),
+    )
     .slice(0, 5);
   return (
     <>
@@ -133,7 +137,7 @@ function CatalogTable({
           <p className="eyebrow">Game reference</p>
           <h1>{title(section)}</h1>
         </div>
-        <span className="count">{records.length.toLocaleString()} records</span>
+        <span className="count">{countLabel(records.length, "record")}</span>
       </div>
       <div className="panel filter-panel">
         <label className="search-field">
@@ -154,20 +158,16 @@ function CatalogTable({
             ].sort();
             if (values.length < 2) return null;
             return (
-              <label key={key}>
-                {title(key)}
-                <select
-                  value={params.get(`f.${key}`) ?? ""}
-                  onChange={(event) => update(`f.${key}`, event.target.value)}
-                >
-                  <option value="">All</option>
-                  {values.map((value) => (
-                    <option key={value} value={value}>
-                      {title(value)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <OptionSelect
+                key={key}
+                label={title(key)}
+                value={params.get(`f.${key}`) ?? ""}
+                onChange={(value) => update(`f.${key}`, value)}
+                options={[
+                  { value: "", label: "All" },
+                  ...values.map((value) => ({ value, label: title(value) })),
+                ]}
+              />
             );
           })}
         </div>
@@ -201,19 +201,15 @@ function CatalogTable({
                 </label>
               </div>
             ))}
-            <label>
-              Sort by
-              <select
-                value={params.get("sort") ?? defaultSort(section)}
-                onChange={(event) => update("sort", event.target.value)}
-              >
-                {["name", "id", ...numeric].map((key) => (
-                  <option key={key} value={key}>
-                    {title(key)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <OptionSelect
+              label="Sort by"
+              value={params.get("sort") ?? defaultSort(section)}
+              onChange={(value) => update("sort", value)}
+              options={["name", "id", ...numeric].map((key) => ({
+                value: key,
+                label: title(key),
+              }))}
+            />
             <Button
               variant="outline"
               onClick={() =>
@@ -227,7 +223,7 @@ function CatalogTable({
         </details>
       </div>
       <div className="results-line">
-        <span>{filtered.length.toLocaleString()} results</span>
+        <span>{countLabel(filtered.length, "result")}</span>
         <Button variant="ghost" size="sm" onClick={() => setParams({})}>
           Reset filters
         </Button>
@@ -267,7 +263,7 @@ function CatalogTable({
                   </Link>
                 </td>
                 {columns.map((key) => (
-                  <td key={key}>
+                  <td key={key} data-label={title(key)}>
                     {Array.isArray(row.fields[key])
                       ? (row.fields[key] as string[]).map((value) =>
                           TYPE_FIELDS.has(key) ? (

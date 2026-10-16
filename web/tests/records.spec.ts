@@ -133,7 +133,7 @@ test("encounter pages lead with real encounters and hide empty methods", async (
     "Walking",
   );
   expect(headings).not.toContain("Good rod");
-  await expect(page.locator(".slot-pokemon").first()).toBeVisible();
+  await expect(page.locator("main table .entity-link").first()).toBeVisible();
 });
 
 const comparative = manifest.games.find(
@@ -144,12 +144,37 @@ test("changes summarize each record and filter by status", async ({ page }) => {
   test.skip(!comparative, "No published game has comparisons");
   await page.goto(`./#/${comparative!.id}/changes`);
   await expect(page.locator(".change-summary").first()).not.toBeEmpty();
-  await page.getByLabel("Show").selectOption("changed");
+  await page.getByLabel("Show").click();
+  await page.getByRole("option", { name: "Changed" }).click();
   await expect(page).toHaveURL(/status=changed/);
   const badges = await page
     .locator(".change-record > summary > .badge")
     .allTextContents();
   expect(new Set(badges)).toEqual(new Set(["Changed"]));
+});
+
+test("the game picker switches games from a styled menu", async ({ page }) => {
+  await page.goto("./#/platinum");
+  await page.getByLabel("Choose a game").click();
+  await expect(
+    page.getByRole("option", { name: "Platinum", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("option", { name: "Game library" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your games. The exact details." }),
+  ).toBeVisible();
+});
+
+test("downloads offer copyable checksums and download buttons", async ({
+  page,
+}) => {
+  await page.goto("./#/platinum/downloads");
+  const card = page.locator(".download-card").first();
+  await expect(card.getByRole("link", { name: "Download" })).toHaveAttribute(
+    "href",
+    /downloads\/.+\.json\.gz$/,
+  );
+  await expect(card.getByRole("button", { name: /SHA-256/ })).toBeVisible();
 });
 
 test("mobile navigation opens, navigates, and closes", async ({

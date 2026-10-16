@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ChevronRight, Search } from "lucide-react";
+import { BookOpen, ChevronRight, Search } from "lucide-react";
 import type { Game } from "../../data/types";
 import { loadData } from "../../data/client";
 import { ResourceState } from "../../components/resource-state";
-import { title } from "../../lib/utils";
+import { countLabel, title } from "../../lib/utils";
+import { SectionIcon } from "../../components/section-icon";
 import { matchSearch, type SearchEntry } from "./match";
 
 export function GameSearch({ game }: { game: Game }) {
@@ -46,12 +47,13 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
         Promise.all(
           Object.entries(game.sections).map(async ([section, definition]) => {
             const index = await loadData<{
-              records: { id: string; label: string }[];
+              records: { id: string; label: string; sprite?: string }[];
             }>(definition.index);
             return index.records.map((record) => ({
               label: record.label,
               section,
               path: `/${game.id}/${section}/${record.id}`,
+              sprite: record.sprite,
             }));
           }),
         ),
@@ -96,12 +98,27 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
   const matches = matchSearch(results, query);
   return (
     <>
-      <p className="results-line">{matches.length} results</p>
+      <p className="results-line">{countLabel(matches.length, "result")}</p>
       <div className="search-results">
         {matches.slice(0, 100).map((result) => (
           <Link className="panel" key={result.path} to={result.path}>
+            <span className="result-icon">
+              {result.sprite ? (
+                <img
+                  src={result.sprite}
+                  alt=""
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                />
+              ) : result.section === "Documentation" ? (
+                <BookOpen size={18} aria-hidden="true" />
+              ) : (
+                <SectionIcon section={result.section} size={18} />
+              )}
+            </span>
             <span>{result.label}</span>
-            <small>{title(result.section)}</small>
+            <small className="badge">{title(result.section)}</small>
             <ChevronRight size={15} />
           </Link>
         ))}

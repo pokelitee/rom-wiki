@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { BookOpen, ChevronRight, Database } from "lucide-react";
+import { SectionIcon } from "../../components/section-icon";
+import { BookOpen, ChevronRight } from "lucide-react";
 import type { Game } from "../../data/types";
-import { title } from "../../lib/utils";
+import { countLabel, title } from "../../lib/utils";
 import { Document } from "./document";
 
 export function GameHome({ game }: { game: Game }) {
@@ -17,11 +18,10 @@ export function GameHome({ game }: { game: Game }) {
             key={kind}
             to={`/${game.id}/${kind}`}
           >
-            <Database size={19} />
+            <SectionIcon section={kind} size={19} />
             <strong>{title(kind)}</strong>
             <span>
-              {Number(section.metadata.published_count).toLocaleString()}{" "}
-              records
+              {countLabel(Number(section.metadata.published_count), "record")}
             </span>
             <ChevronRight size={16} />
           </Link>

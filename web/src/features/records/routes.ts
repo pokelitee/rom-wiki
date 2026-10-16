@@ -11,6 +11,8 @@ export function entityRoute(
     return `encounters/${typeof value.encounter_route_key === "number" ? `area-${String(value.encounter_route_key).padStart(3, "0")}` : value.encounter_route_key}`;
   if (typeof value.trainer_id === "number")
     return `trainers/trainer-${String(value.trainer_id).padStart(4, "0")}`;
+  if (typeof value.destination_header_id === "number")
+    return `locations/header-${String(value.destination_header_id).padStart(3, "0")}`;
   if (typeof value.header_id === "number")
     return `locations/header-${String(value.header_id).padStart(3, "0")}`;
   if (typeof value.pokemon_slug === "string")
