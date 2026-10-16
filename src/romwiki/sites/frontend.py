@@ -59,6 +59,16 @@ def _names(value: Any) -> list[str]:
     return [str(value)] if value is not None else []
 
 
+def _search_text(value: str) -> str:
+    """Lowercase published search text exactly as the frontend lowercases queries.
+
+    `str.lower()` and JavaScript's `toLowerCase()` both apply Unicode default
+    lowercasing. `casefold()` also expands characters such as "ß" to "ss",
+    which a lowercased query can never match.
+    """
+    return value.lower()
+
+
 def _search(value: Any) -> str:
     if isinstance(value, dict):
         return " ".join(
@@ -179,9 +189,9 @@ def _index_record(kind: str, record: dict[str, Any], route: str) -> dict[str, An
     return {
         "id": route,
         "label": label,
-        "search": " ".join(
-            [label, route, *(_search(value) for value in fields.values())]
-        ).casefold(),
+        "search": _search_text(
+            " ".join([label, route, *(_search(value) for value in fields.values())])
+        ),
         "fields": fields,
     }
 
@@ -241,7 +251,7 @@ def _documentation(
         label = heading[1] if heading else slug.replace("-", " ").title()
         resource = _write_resource(output, f"{site.id}/docs/{slug}", {"markdown": text})
         documents.append(
-            {"id": slug, "label": label, "path": resource, "search": text.casefold()}
+            {"id": slug, "label": label, "path": resource, "search": _search_text(text)}
         )
     return documents
 
