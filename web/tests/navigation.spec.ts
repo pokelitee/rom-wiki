@@ -67,6 +67,23 @@ for (const game of manifest.games) {
         await first.click();
         await expect(page.locator(".record-hero h1")).toBeVisible();
       }
+      // Records in one section vary in shape, so also render the middle
+      // and last records rather than only the first.
+      const index = JSON.parse(
+        await readFile(
+          new URL(
+            `../public/data/${game.sections[section].index}`,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      ) as { records: { id: string }[] };
+      const ids = index.records.map((record) => record.id);
+      for (const id of new Set([ids[Math.floor(ids.length / 2)], ids.at(-1)])) {
+        if (!id) continue;
+        await page.goto(`./#/${game.id}/${section}/${id}`);
+        await expect(page.locator(".record-hero h1")).toBeVisible();
+      }
     }
     await page.goto(`./#/${game.id}/docs/data-sources`);
     await expect(page.locator("article")).toContainText("Data sources");
