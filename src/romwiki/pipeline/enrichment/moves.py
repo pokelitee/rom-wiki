@@ -21,10 +21,10 @@ from romwiki.pipeline.enrichment.names import (
     resolve_type_names,
 )
 from romwiki.pipeline.enrichment.references import move_name, with_rom_description
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     MoveDataset,
     MoveEnrichedFields,
-    MoveRenderRecord,
+    MoveEnrichedRecord,
     MoveTutor,
     PokemonMemberLink,
 )
@@ -95,7 +95,7 @@ def enrich_move_dataset(
         pokemon = personal_member_reference(engine, species_id, pokedb, pokemon_names)
         for move_id in set(egg_move_set["move_ids"]):
             egg_move_pokemon.setdefault(move_id, []).append(pokemon)
-    records: list[MoveRenderRecord] = []
+    records: list[MoveEnrichedRecord] = []
     for expected_id, source in enumerate(source_records):
         if source.get("move_id") != expected_id:
             raise DataSourceError("Move records must be ordered by member ID")
@@ -133,7 +133,7 @@ def enrich_move_dataset(
             "tutors": tutors_by_move.get(expected_id, []),
             "egg_move_pokemon": egg_move_pokemon.get(expected_id, []),
         }
-        records.append(cast(MoveRenderRecord, {**source, **enriched_fields}))
+        records.append(cast(MoveEnrichedRecord, {**source, **enriched_fields}))
     enriched: MoveDataset = {
         "schema_version": MOVES_ENRICHED_SCHEMA_VERSION,
         "game": dataset["game"],

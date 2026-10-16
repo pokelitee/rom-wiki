@@ -29,7 +29,7 @@ ENGINE_IDS = (
     GEN5_B2W2_ENGINE,
 )
 SEMANTIC_DISPATCH_PATHS = (
-    SOURCE_ROOT / "pipeline" / "extraction" / "encounters.py",
+    *sorted((SOURCE_ROOT / "pipeline" / "extraction" / "encounters").glob("*.py")),
     SOURCE_ROOT / "pipeline" / "extraction" / "locations" / "dispatcher.py",
     SOURCE_ROOT / "pipeline" / "extraction" / "pickup.py",
     SOURCE_ROOT / "pipeline" / "extraction" / "trainers" / "dispatcher.py",

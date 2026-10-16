@@ -11,15 +11,19 @@ from romwiki.engines.gen5.b2w2.hidden_grottos import (
     hidden_grotto_id_for_dispatch,
 )
 from romwiki.engines.gen5.b2w2.swarms import SwarmEncounter
-from romwiki.pipeline.extraction.encounters import (
+from romwiki.pipeline.extraction.encounters.conditional import (
     _extract_encounter_locations,
     _extract_headbutt_encounters,
-    _extract_hidden_grottos,
     _extract_safari_encounters,
-    _extract_seasonal_encounter_dataset,
+)
+from romwiki.pipeline.extraction.encounters.dispatcher import (
+    extract_encounter_dataset,
+)
+from romwiki.pipeline.extraction.encounters.seasonal import (
+    _extract_hidden_grottos,
     _extract_seasonal_wild_map_names,
     _extract_swarms,
-    extract_encounter_dataset,
+    extract_seasonal_encounter_dataset,
 )
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
@@ -164,11 +168,11 @@ class ExtractEncounterDatasetDispatchTests(unittest.TestCase):
         )
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.get_engine",
+                "romwiki.pipeline.extraction.encounters.dispatcher.get_engine",
                 return_value=adapter,
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters._extract_seasonal_encounter_dataset"
+                "romwiki.pipeline.extraction.encounters.dispatcher.extract_seasonal_encounter_dataset"
             ) as seasonal,
         ):
             seasonal.return_value = {"dataset": "wild_encounters"}
@@ -184,7 +188,7 @@ class ExtractEncounterDatasetDispatchTests(unittest.TestCase):
         )
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.get_engine",
+                "romwiki.pipeline.extraction.encounters.dispatcher.get_engine",
                 return_value=adapter,
             ),
             self.assertRaisesRegex(DataSourceError, "Unsupported encounter format"),
@@ -198,7 +202,7 @@ class ExtractEncounterDatasetDispatchTests(unittest.TestCase):
         )
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.get_engine",
+                "romwiki.pipeline.extraction.encounters.dispatcher.get_engine",
                 return_value=adapter,
             ),
             self.assertRaisesRegex(
@@ -280,23 +284,27 @@ class ConditionalEncounterDatasetIntegrationTests(unittest.TestCase):
 
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.get_platform",
+                "romwiki.pipeline.extraction.encounters.conditional.get_platform",
                 return_value=platform,
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.get_engine",
+                "romwiki.pipeline.extraction.encounters.dispatcher.get_engine",
                 return_value=adapter,
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.read_code_binary",
+                "romwiki.pipeline.extraction.encounters.conditional.get_engine",
+                return_value=adapter,
+            ),
+            patch(
+                "romwiki.pipeline.extraction.encounters.conditional.read_code_binary",
                 return_value=b"arm9",
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.resolve_map_headers",
+                "romwiki.pipeline.extraction.encounters.conditional.resolve_map_headers",
                 return_value=(headers, ("Route 1", "Route 2")),
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.extract_reference_names",
+                "romwiki.pipeline.extraction.encounters.conditional.extract_reference_names",
                 return_value={"pokemon_names": ["Bulbasaur"], "name_sources": {}},
             ),
         ):
@@ -406,11 +414,11 @@ class ExtractHeadbuttEncountersTests(unittest.TestCase):
         )
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.read_code_binary",
+                "romwiki.pipeline.extraction.encounters.conditional.read_code_binary",
                 return_value=b"arm9",
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.resolve_map_headers",
+                "romwiki.pipeline.extraction.encounters.conditional.resolve_map_headers",
                 return_value=(headers, ("Route 1", "Route 2")),
             ),
         ):
@@ -518,11 +526,11 @@ class ExtractEncounterLocationsTests(unittest.TestCase):
         headers = (_location_header(0, encounter_id=5, location_name_id=0),)
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.read_code_binary",
+                "romwiki.pipeline.extraction.encounters.conditional.read_code_binary",
                 return_value=b"arm9",
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.resolve_map_headers",
+                "romwiki.pipeline.extraction.encounters.conditional.resolve_map_headers",
                 return_value=(headers, ("Route 1",)),
             ),
             self.assertRaisesRegex(
@@ -553,11 +561,11 @@ class ExtractEncounterLocationsTests(unittest.TestCase):
         )
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.read_code_binary",
+                "romwiki.pipeline.extraction.encounters.conditional.read_code_binary",
                 return_value=b"arm9",
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.resolve_map_headers",
+                "romwiki.pipeline.extraction.encounters.conditional.resolve_map_headers",
                 return_value=(headers, ("R0", "R1", "R2")),
             ),
         ):
@@ -596,11 +604,11 @@ class ExtractEncounterLocationsTests(unittest.TestCase):
         headers = (_location_header(0, encounter_id=99, location_name_id=0),)
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.read_code_binary",
+                "romwiki.pipeline.extraction.encounters.conditional.read_code_binary",
                 return_value=b"arm9",
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.resolve_map_headers",
+                "romwiki.pipeline.extraction.encounters.conditional.resolve_map_headers",
                 return_value=(headers, ("Route 1",)),
             ),
         ):
@@ -617,7 +625,7 @@ class SeasonalEncounterDatasetTests(unittest.TestCase):
         with self.assertRaisesRegex(
             ProfileError, "does not define an encounter archive"
         ):
-            _extract_seasonal_encounter_dataset(_result(profile))
+            extract_seasonal_encounter_dataset(_result(profile))
 
     def test_success_without_grottos_swarms_or_wild_map_names(self) -> None:
         profile = _profile(engine="gen5_bw", layout={"encounters": "wild.narc"})
@@ -634,19 +642,19 @@ class SeasonalEncounterDatasetTests(unittest.TestCase):
 
         with (
             patch(
-                "romwiki.pipeline.extraction.encounters.get_platform",
+                "romwiki.pipeline.extraction.encounters.seasonal.get_platform",
                 return_value=platform,
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.get_engine",
+                "romwiki.pipeline.extraction.encounters.seasonal.get_engine",
                 return_value=adapter,
             ),
             patch(
-                "romwiki.pipeline.extraction.encounters.extract_reference_names",
+                "romwiki.pipeline.extraction.encounters.seasonal.extract_reference_names",
                 return_value={"pokemon_names": ["Snivy"], "name_sources": {}},
             ),
         ):
-            dataset = _extract_seasonal_encounter_dataset(result)
+            dataset = extract_seasonal_encounter_dataset(result)
 
         self.assertEqual(dataset["dataset"], "wild_encounters")
         self.assertEqual(dataset["record_count"], 1)

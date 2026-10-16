@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
-from romwiki.schema.rendering import EncounterFormat
+from romwiki.schema.enriched import EncounterFormat
 
 
 class EncounterSourceType(StrEnum):
@@ -59,7 +59,7 @@ def _required_location_header_id(record: Mapping[str, Any]) -> int:
 
     Every map-owned conditional source (grotto/swarm/headbutt) nests
     `header_id` under the record's own `location`, the same place
-    `extraction/encounters.py`'s `_extract_hidden_grottos`/`_extract_swarms`/
+    `extraction/encounters/`'s `_extract_hidden_grottos`/`_extract_swarms`/
     headbutt extraction put it -- never as a top-level `header_id` field.
     """
     location = record.get("location")

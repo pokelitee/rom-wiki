@@ -22,7 +22,7 @@ from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.pipeline.enrichment.trades import enrich_npc_trade_dataset
 from romwiki.pipeline.enrichment.trainers import enrich_trainer_dataset
 from romwiki.pipeline.extraction.egg_moves import extract_egg_move_dataset
-from romwiki.pipeline.extraction.encounters import extract_encounter_dataset
+from romwiki.pipeline.extraction.encounters.dispatcher import extract_encounter_dataset
 from romwiki.pipeline.extraction.evolutions import extract_evolution_dataset
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.items import extract_item_dataset
@@ -40,7 +40,7 @@ from romwiki.pipeline.extraction.trades import extract_npc_trade_dataset
 from romwiki.pipeline.extraction.trainers.dispatcher import extract_trainer_dataset
 from romwiki.pipeline.extraction.tutors import extract_tutor_dataset
 from romwiki.schema.datasets import validate_dataset_envelope
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     AbilityDataset,
     EncounterDataset,
     ItemDataset,

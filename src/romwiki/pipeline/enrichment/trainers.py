@@ -20,16 +20,16 @@ from romwiki.pipeline.enrichment.trainer_party import (
     normalize_trainer_party_member,
 )
 from romwiki.pipeline.enrichment.trainer_rewards import calculate_base_prize_money
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     EntityLink,
     MoveDataset,
-    MoveRenderRecord,
+    MoveEnrichedRecord,
     PokemonDataset,
-    PokemonRenderRecord,
+    PokemonEnrichedRecord,
     TrainerDataset,
     TrainerEnrichedFields,
+    TrainerEnrichedRecord,
     TrainerItem,
-    TrainerRenderRecord,
 )
 from romwiki.schema.trainers import (
     TrainerAttribute,
@@ -77,7 +77,7 @@ def enrich_trainer_dataset(
     move_names = resolve_move_names(engine_tables, dataset, move_names)
     item_names = resolve_item_names(engine_tables, dataset)
     pokemon_names = resolve_pokemon_names(engine_tables, dataset)
-    records: list[TrainerRenderRecord] = []
+    records: list[TrainerEnrichedRecord] = []
     # IDs are consecutive but may start above zero when an archive reserves
     # leading members for a different record shape.
     base_trainer_id = source_records[0].get("trainer_id") if source_records else 0
@@ -141,10 +141,10 @@ def enrich_trainer_record(
     reference_version: str | None = None,
     *,
     engine: str,
-    pokemon_records: Mapping[int | str, PokemonRenderRecord] | None = None,
-    move_records: Mapping[int, MoveRenderRecord] | None = None,
+    pokemon_records: Mapping[int | str, PokemonEnrichedRecord] | None = None,
+    move_records: Mapping[int, MoveEnrichedRecord] | None = None,
     pokemon_names: list[str] | None = None,
-) -> TrainerRenderRecord:
+) -> TrainerEnrichedRecord:
     engine_tables = get_engine(engine).enrich
     party = []
     for raw_member in source["party"]:
@@ -322,7 +322,7 @@ def enrich_trainer_record(
             if item_id
         ],
     }
-    return cast(TrainerRenderRecord, {**source, **enriched_fields})
+    return cast(TrainerEnrichedRecord, {**source, **enriched_fields})
 
 
 def _default_level_up_move_ids(learnset: object, level: int) -> list[int]:
@@ -352,7 +352,7 @@ def _default_level_up_move_ids(learnset: object, level: int) -> list[int]:
 def _trainer_pokemon_index(
     trainer_dataset: Mapping[str, Any],
     pokemon_dataset: PokemonDataset | None,
-) -> dict[int | str, PokemonRenderRecord] | None:
+) -> dict[int | str, PokemonEnrichedRecord] | None:
     if pokemon_dataset is None:
         return None
     if pokemon_dataset.get("game") != trainer_dataset.get("game"):
@@ -360,7 +360,7 @@ def _trainer_pokemon_index(
     records = pokemon_dataset.get("records")
     if not isinstance(records, list):
         raise DataSourceError("Pokémon dataset records must be a list")
-    index: dict[int | str, PokemonRenderRecord] = {}
+    index: dict[int | str, PokemonEnrichedRecord] = {}
     for record in records:
         member = record.get("member")
         slug = record.get("slug")
@@ -374,7 +374,7 @@ def _trainer_pokemon_index(
 def _trainer_move_index(
     trainer_dataset: Mapping[str, Any],
     move_dataset: MoveDataset | None,
-) -> dict[int, MoveRenderRecord] | None:
+) -> dict[int, MoveEnrichedRecord] | None:
     if move_dataset is None:
         return None
     if move_dataset.get("game") != trainer_dataset.get("game"):
@@ -391,7 +391,7 @@ def _trainer_move_index(
 
 def _trainer_ability(
     value: TrainerAttribute | None,
-    pokemon_record: PokemonRenderRecord | None,
+    pokemon_record: PokemonEnrichedRecord | None,
 ) -> dict[str, Any] | None:
     if value is None or pokemon_record is None:
         return None

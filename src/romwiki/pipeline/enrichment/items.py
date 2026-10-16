@@ -11,10 +11,10 @@ from romwiki.pipeline.semantics.encounter_identity import (
     EncounterSourceType,
     encounter_route_key,
 )
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     ItemDataset,
     ItemEnrichedFields,
-    ItemRenderRecord,
+    ItemEnrichedRecord,
     PokemonDataset,
     TrainerDataset,
 )
@@ -444,7 +444,7 @@ def build_item_dataset(
             page_slug = pokedb.item_slug(source["name"])
             slug_counts[page_slug] = slug_counts.get(page_slug, 0) + 1
 
-    records: list[ItemRenderRecord] = []
+    records: list[ItemEnrichedRecord] = []
     for source in item_dataset["records"]:
         if not source["public"]:
             continue
@@ -480,7 +480,7 @@ def build_item_dataset(
                 source.get("revives_into_species_id"), []
             ),
         }
-        records.append(cast(ItemRenderRecord, {**source, **enriched_fields}))
+        records.append(cast(ItemEnrichedRecord, {**source, **enriched_fields}))
     slugs = [record["slug"] for record in records]
     if len(slugs) != len(set(slugs)):
         raise DataSourceError("ROM item names do not produce unique page slugs")
@@ -508,7 +508,7 @@ def build_item_dataset(
     return enriched
 
 
-def _item_is_referenced(record: ItemRenderRecord) -> bool:
+def _item_is_referenced(record: ItemEnrichedRecord) -> bool:
 
     return any(
         record[field]

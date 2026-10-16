@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from romwiki.engines.concerns import EnrichmentTables
-from romwiki.schema.rendering import (
+from romwiki.schema.enriched import (
     NamedId,
     PokemonMemberLink,
     ReplacedMove,

@@ -22,7 +22,7 @@ GENERATION_EXTRACTOR_MODULES = (
     "romwiki.pipeline.extraction.tutors",
     "romwiki.pipeline.extraction.pickup",
     "romwiki.pipeline.extraction.moves",
-    "romwiki.pipeline.extraction.encounters",
+    "romwiki.pipeline.extraction.encounters.dispatcher",
     "romwiki.pipeline.extraction.trainers.dispatcher",
     "romwiki.pipeline.extraction.locations.dispatcher",
     "romwiki.pipeline.extraction.items",

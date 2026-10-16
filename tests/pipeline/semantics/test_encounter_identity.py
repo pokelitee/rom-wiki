@@ -64,7 +64,7 @@ class EncounterIdentityTests(unittest.TestCase):
 
     def test_rejects_a_catalog_identifier_missing_its_location(self) -> None:
         # Real extracted headbutt/daily-swarm/grotto records always nest
-        # header_id under "location" (extraction/encounters.py); a record
+        # header_id under "location" (extraction/encounters/); a record
         # with a top-level header_id instead is malformed, not a
         # differently-shaped valid record.
         with self.assertRaisesRegex(ValueError, "missing its location"):

@@ -10,7 +10,7 @@ EncounterFormat = Literal["unsupported", "conditional", "seasonal", "method-tabl
 LocationFormat = Literal["unsupported", "event-map", "encounter-map"]
 
 
-class RenderReference(TypedDict, total=False):
+class EnrichedReference(TypedDict, total=False):
     source: str
     source_url: str
     name: str
@@ -23,12 +23,12 @@ class RenderReference(TypedDict, total=False):
     metadata: dict[str, Any]
 
 
-class VersionedRenderRecord(TypedDict, total=False):
+class VersionedEnrichedRecord(TypedDict, total=False):
     """Fields a sibling-version merge adds to any enriched record."""
 
     versions: list[str]
     version_variants: dict[str, dict[str, Any]]
-    reference_variants: dict[str, RenderReference | None]
+    reference_variants: dict[str, EnrichedReference | None]
 
 
 class NamedId(TypedDict):
@@ -194,8 +194,8 @@ class PokemonEvolutionFields(TypedDict):
     evolution_provenance: dict[str, Any] | None
 
 
-class PokemonRenderRecord(
-    VersionedRenderRecord,
+class PokemonEnrichedRecord(
+    VersionedEnrichedRecord,
     PokemonIdentityFields,
     PokemonSpeciesTraits,
     PokemonMoveCompatibility,
@@ -248,7 +248,7 @@ class MoveEnrichedFields(TypedDict):
     egg_move_pokemon: list[PokemonMemberLink]
 
 
-class MoveRenderRecord(VersionedRenderRecord, MoveFields, MoveEnrichedFields):
+class MoveEnrichedRecord(VersionedEnrichedRecord, MoveFields, MoveEnrichedFields):
     pass
 
 
@@ -262,7 +262,7 @@ class AbilityPokemon(TypedDict):
     is_hidden: bool
 
 
-class AbilityRenderRecord(VersionedRenderRecord):
+class AbilityEnrichedRecord(VersionedEnrichedRecord):
     ability_id: int
     slug: str | None
     name: str
@@ -287,7 +287,7 @@ class ItemEnrichedFields(TypedDict):
     revives_at: list[dict[str, Any]]
 
 
-class ItemRenderRecord(VersionedRenderRecord, ItemEnrichedFields, total=False):
+class ItemEnrichedRecord(VersionedEnrichedRecord, ItemEnrichedFields, total=False):
     """A raw item record plus its reference data and reverse relationships.
 
     Raw mechanic fields vary by engine and are left untyped here.
@@ -311,7 +311,9 @@ class TrainerEnrichedFields(TypedDict):
     ai_battle_items: list[TrainerItem]
 
 
-class TrainerRenderRecord(VersionedRenderRecord, TrainerEnrichedFields, total=False):
+class TrainerEnrichedRecord(
+    VersionedEnrichedRecord, TrainerEnrichedFields, total=False
+):
     """A raw trainer record plus its resolved party, items, and prize money.
 
     Raw storage fields vary by trainer format and are left untyped here.
@@ -379,7 +381,7 @@ class DirectSpecialEncounters(TypedDict):
     fishing_swarm: EncounterPokemon | None
 
 
-class EncounterRenderRecord(VersionedRenderRecord, total=False):
+class EncounterEnrichedRecord(VersionedEnrichedRecord, total=False):
     """One wild-encounter area or conditional encounter source.
 
     Area shapes differ by the dataset's encounter format, and conditional
@@ -420,7 +422,7 @@ class EncounterRenderRecord(VersionedRenderRecord, total=False):
     hidden_items: list[dict[str, Any]]
 
 
-class LocationRenderRecord(VersionedRenderRecord, total=False):
+class LocationEnrichedRecord(VersionedEnrichedRecord, total=False):
     """A normalized location; its shape depends on the location format."""
 
     header_id: Required[int]
@@ -429,7 +431,7 @@ class LocationRenderRecord(VersionedRenderRecord, total=False):
     section_name: str | None
 
 
-class RenderDataset[RecordT: VersionedRenderRecord](TypedDict, total=False):
+class EnrichedDataset[RecordT: VersionedEnrichedRecord](TypedDict, total=False):
     schema_version: Required[int]
     game: Required[str]
     engine: Required[str]
@@ -446,25 +448,25 @@ class RenderDataset[RecordT: VersionedRenderRecord](TypedDict, total=False):
     supplemental_sources: dict[str, dict[str, Any] | None]
 
 
-class PokemonDataset(RenderDataset[PokemonRenderRecord], total=False):
+class PokemonDataset(EnrichedDataset[PokemonEnrichedRecord], total=False):
     public_record_count: Required[int]
     ability_names: list[str]
     ability_descriptions: list[str]
 
 
-class MoveDataset(RenderDataset[MoveRenderRecord], total=False):
+class MoveDataset(EnrichedDataset[MoveEnrichedRecord], total=False):
     public_record_count: Required[int]
 
 
-class AbilityDataset(RenderDataset[AbilityRenderRecord], total=False):
+class AbilityDataset(EnrichedDataset[AbilityEnrichedRecord], total=False):
     assigned_record_count: Required[int]
 
 
-class ItemDataset(RenderDataset[ItemRenderRecord], total=False):
+class ItemDataset(EnrichedDataset[ItemEnrichedRecord], total=False):
     referenced_record_count: Required[int]
 
 
-class TrainerDataset(RenderDataset[TrainerRenderRecord], total=False):
+class TrainerDataset(EnrichedDataset[TrainerEnrichedRecord], total=False):
     party_schema_version: Required[int]
     battle_family_schema_version: Required[int]
     trainer_variant_support: Required[TrainerVariantSupport]
@@ -474,10 +476,10 @@ class TrainerDataset(RenderDataset[TrainerRenderRecord], total=False):
     location_reference_count: Required[int]
 
 
-class EncounterDataset(RenderDataset[EncounterRenderRecord], total=False):
+class EncounterDataset(EnrichedDataset[EncounterEnrichedRecord], total=False):
     encounter_format: Required[EncounterFormat]
     active_record_count: Required[int]
 
 
-class LocationDataset(RenderDataset[LocationRenderRecord], total=False):
+class LocationDataset(EnrichedDataset[LocationEnrichedRecord], total=False):
     location_format: Required[LocationFormat]

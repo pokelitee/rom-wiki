@@ -95,15 +95,29 @@ class ExtractionSourceFilesTests(unittest.TestCase):
             "gen4_platinum", "romwiki.pipeline.extraction.locations.dispatcher"
         )
         self.assertIn("pipeline/extraction/locations/arm9_event_map.py", dppt_files)
+        self.assertIn(
+            "pipeline/extraction/locations/arm9_event_map_source.py", dppt_files
+        )
         self.assertIn("pipeline/extraction/locations/helpers.py", dppt_files)
 
         gen5_files = extraction_source_files(
             "gen5_bw", "romwiki.pipeline.extraction.locations.dispatcher"
         )
-        self.assertIn(
-            "pipeline/extraction/locations/archive_encounter_map.py", gen5_files
-        )
+        for module in (
+            "archive_encounter_map",
+            "archive_encounter_map_source",
+            "archive_location_shops",
+        ):
+            self.assertIn(f"pipeline/extraction/locations/{module}.py", gen5_files)
         self.assertIn("pipeline/extraction/locations/helpers.py", gen5_files)
+
+    def test_includes_split_encounter_format_dependencies(self) -> None:
+        files = extraction_source_files(
+            "gen5_b2w2", "romwiki.pipeline.extraction.encounters.dispatcher"
+        )
+
+        for strategy in ("conditional", "method_table", "seasonal"):
+            self.assertIn(f"pipeline/extraction/encounters/{strategy}.py", files)
 
     def test_includes_split_trainer_strategy_dependencies(self) -> None:
         class_gender = extraction_source_files(

@@ -13,7 +13,7 @@ from romwiki.cli.common import (
 )
 from romwiki.engines.registry import DETACHED_NPC_TRADES, get_engine
 from romwiki.pipeline.extraction.egg_moves import extract_egg_move_dataset
-from romwiki.pipeline.extraction.encounters import extract_encounter_dataset
+from romwiki.pipeline.extraction.encounters.dispatcher import extract_encounter_dataset
 from romwiki.pipeline.extraction.evolutions import extract_evolution_dataset
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.items import extract_item_dataset
