@@ -17,6 +17,12 @@ class PagesHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
 
+class PagesServer(ThreadingHTTPServer):
+    # Pages fetch several data files at once, and parallel browser tests
+    # overflow the default listen backlog of 5 on Windows.
+    request_queue_size = 128
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=4173)
@@ -27,7 +33,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     handler = partial(PagesHandler, directory=str(args.directory))
-    with ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
+    with PagesServer(("127.0.0.1", args.port), handler) as server:
         server.serve_forever()
 
 
