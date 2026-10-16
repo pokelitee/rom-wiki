@@ -19,3 +19,9 @@ export function title(value: string) {
     .replaceAll(/[_-]/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+// Matches the exporter's `_search_text`: locale-independent Unicode default
+// lowercasing, so queries behave the same for every viewer's language.
+export function searchText(value: string) {
+  return value.toLowerCase();
+}

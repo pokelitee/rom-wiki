@@ -1,3 +1,5 @@
+import { searchText } from "../../lib/utils";
+
 export interface SearchEntry {
   label: string;
   path: string;
@@ -9,8 +11,8 @@ export function matchSearch(
   entries: SearchEntry[],
   query: string,
 ): SearchEntry[] {
-  const term = query.trim().toLocaleLowerCase();
+  const term = searchText(query.trim());
   return entries.filter((entry) =>
-    (entry.search ?? entry.label.toLocaleLowerCase()).includes(term),
+    (entry.search ?? searchText(entry.label)).includes(term),
   );
 }

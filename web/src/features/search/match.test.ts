@@ -33,6 +33,16 @@ describe("game search matching", () => {
     ).toEqual(["Data sources"]);
   });
 
+  it("matches non-ASCII text the exporter lowercased", () => {
+    const guide: SearchEntry = {
+      label: "Codes",
+      path: "/platinum/docs/codes",
+      section: "Documentation",
+      search: "straße éclair",
+    };
+    expect(matchSearch([guide], "STRAßE ÉCLAIR")).toEqual([guide]);
+  });
+
   it("returns nothing for an unmatched term", () => {
     expect(matchSearch(entries, "zzz")).toEqual([]);
   });

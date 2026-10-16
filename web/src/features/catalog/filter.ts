@@ -1,4 +1,5 @@
 import type { IndexRecord } from "../../data/types";
+import { searchText } from "../../lib/utils";
 
 export const PAGE_SIZE = 50;
 
@@ -6,7 +7,7 @@ export function filterRecords(
   records: IndexRecord[],
   params: URLSearchParams,
 ): IndexRecord[] {
-  const query = (params.get("q") ?? "").trim().toLocaleLowerCase();
+  const query = searchText((params.get("q") ?? "").trim());
   const filters = [...params.entries()].filter(
     ([key, value]) => value && key.startsWith("f."),
   );

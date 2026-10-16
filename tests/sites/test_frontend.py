@@ -9,6 +9,7 @@ import pytest
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.frontend import (
     DETAIL_CHUNK_SIZE,
+    _search_text,
     export_frontend,
     record_route,
 )
@@ -151,6 +152,14 @@ def test_typed_routes_preserve_conditional_sources() -> None:
             "encounters", {"source_type": "headbutt", "location": {"header_id": 3}}
         )
         == "headbutt-003"
+    )
+
+
+def test_search_text_matches_frontend_lowercasing() -> None:
+    # web/src/lib/utils.test.ts expects the same output from searchText.
+    assert (
+        _search_text("Straße ÉCLAIR İstanbul ΟΔΟΣ ﬁre")
+        == "straße éclair i̇stanbul οδος ﬁre"
     )
 
 
