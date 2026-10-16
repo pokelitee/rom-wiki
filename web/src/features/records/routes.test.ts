@@ -27,6 +27,22 @@ describe("entity routes", () => {
     expect(entityRoute(slug, "evolutions")).toBe("pokemon/overgrow");
   });
 
+  it("routes evolution endpoints, parameters, and revived fossils", () => {
+    const ivysaur = { id: 2, name: "Ivysaur", slug: "ivysaur" };
+    expect(entityRoute(ivysaur, "target")).toBe("pokemon/ivysaur");
+    expect(entityRoute(ivysaur, "source")).toBe("pokemon/ivysaur");
+    expect(entityRoute(ivysaur, "revives_into")).toBe("pokemon/ivysaur");
+    expect(
+      entityRoute({ kind: "item", slug: "moon-stone" }, "parameter_data"),
+    ).toBe("items/moon-stone");
+    expect(
+      entityRoute({ kind: "pokemon", slug: "remoraid" }, "parameter_data"),
+    ).toBe("pokemon/remoraid");
+    expect(
+      entityRoute({ kind: "level", slug: "x" }, "parameter_data"),
+    ).toBeUndefined();
+  });
+
   it("leaves unlinked values without a route", () => {
     expect(entityRoute({ slug: "grass" }, "types")).toBeUndefined();
     expect(entityRoute({ name: "Overgrow" }, "abilities")).toBeUndefined();
