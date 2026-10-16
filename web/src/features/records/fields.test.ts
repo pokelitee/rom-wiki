@@ -15,6 +15,7 @@ describe("record field rules", () => {
       "move_id",
       "flags",
       "table_index",
+      "reward_item_ids",
       "multiplier_provenance",
       "pokemon_slug",
       "internal_name",

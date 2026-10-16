@@ -112,6 +112,46 @@ test("record pages show readable values and keep raw data in the details", async
   await expect(page.locator(".raw-record pre")).toContainText('"gender_ratio"');
 });
 
+test("trainer parties render as cards", async ({ page }) => {
+  await page.goto("./#/platinum/trainers?q=roark");
+  await page.locator(".catalog-table tbody a").first().click();
+  await expect(page.locator(".record-hero h1")).toContainText("Roark");
+  const card = page.locator(".party-card").first();
+  await expect(card).toContainText("Level");
+  await expect(card.locator(".party-moves li").first()).toBeVisible();
+  await expect(page.getByText("Calculated stats")).toHaveCount(0);
+});
+
+test("encounter pages lead with real encounters and hide empty methods", async ({
+  page,
+}) => {
+  await page.goto("./#/platinum/encounters?q=route%20201");
+  await page.locator(".catalog-table tbody a").first().click();
+  await expect(page.locator(".record-hero h1")).toHaveText("Route 201");
+  const headings = await page.locator("main section h2").allTextContents();
+  expect(headings[0] === "Overview" ? headings[1] : headings[0]).toBe(
+    "Walking",
+  );
+  expect(headings).not.toContain("Good rod");
+  await expect(page.locator(".slot-pokemon").first()).toBeVisible();
+});
+
+const comparative = manifest.games.find(
+  (game) => Object.keys(game.comparisons).length,
+);
+
+test("changes summarize each record and filter by status", async ({ page }) => {
+  test.skip(!comparative, "No published game has comparisons");
+  await page.goto(`./#/${comparative!.id}/changes`);
+  await expect(page.locator(".change-summary").first()).not.toBeEmpty();
+  await page.getByLabel("Show").selectOption("changed");
+  await expect(page).toHaveURL(/status=changed/);
+  const badges = await page
+    .locator(".change-record > summary > .badge")
+    .allTextContents();
+  expect(new Set(badges)).toEqual(new Set(["Changed"]));
+});
+
 test("mobile navigation opens, navigates, and closes", async ({
   page,
   isMobile,
