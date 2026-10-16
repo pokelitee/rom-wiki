@@ -3,11 +3,14 @@ import { ArrowDownUp, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useResource } from "../../data/use-resource";
 import type { Game, IndexRecord } from "../../data/types";
 import { ResourceState } from "../../components/resource-state";
+import { TypeBadge } from "../../components/type-badge";
 import { Button } from "../../components/ui/button";
 import { title } from "../../lib/utils";
 import { defaultSort, filterRecords, PAGE_SIZE, pageNumber } from "./filter";
 import type { DataObject, RecordDetail } from "../../data/types";
 import { object } from "../../lib/json";
+
+const TYPE_FIELDS = new Set(["types", "type"]);
 
 export function Catalog({ game, section }: { game: Game; section: string }) {
   const resource = useResource<{ records: IndexRecord[] }>(
@@ -62,7 +65,7 @@ function TypeChart({ game, chunk }: { game: Game; chunk: string }) {
                   <tr key={String(type.name)}>
                     <th scope="row">
                       <Link to={`/${game.id}/types/${type.name}`}>
-                        {title(String(type.name))}
+                        <TypeBadge name={String(type.name)} />
                       </Link>
                     </th>
                     {types.map((defender) => {
@@ -244,18 +247,26 @@ function CatalogTable({
               <tr key={row.id}>
                 <td>
                   <Link to={`/${game.id}/${section}/${row.id}`}>
-                    {row.label}
+                    {section === "types" ? (
+                      <TypeBadge name={row.label} />
+                    ) : (
+                      row.label
+                    )}
                   </Link>
                   <small>{row.id}</small>
                 </td>
                 {columns.map((key) => (
                   <td key={key}>
                     {Array.isArray(row.fields[key])
-                      ? (row.fields[key] as string[]).map((value) => (
-                          <span className={`badge type-${value}`} key={value}>
-                            {title(value)}
-                          </span>
-                        ))
+                      ? (row.fields[key] as string[]).map((value) =>
+                          TYPE_FIELDS.has(key) ? (
+                            <TypeBadge name={value} key={value} />
+                          ) : (
+                            <span className="badge" key={value}>
+                              {title(value)}
+                            </span>
+                          ),
+                        )
                       : (row.fields[key] ?? "—")}
                   </td>
                 ))}
