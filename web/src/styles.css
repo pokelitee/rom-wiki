@@ -2,7 +2,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  font-family: "Inter Variable", Inter, "Segoe UI", system-ui, sans-serif;
   color: #242838;
   background: #f7f8fc;
   font-synthesis: none;
@@ -16,6 +16,34 @@
   --primary-foreground: #fff;
   --ring: #8d7ac5;
   --radius: 0.7rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  /* Type badges tint a single hue per type toward the current surface and
+     text colors, so one set of hues serves both themes. */
+  --type-normal: #a8a77a;
+  --type-fighting: #c22e28;
+  --type-flying: #a98ff3;
+  --type-poison: #a33ea1;
+  --type-ground: #e2bf65;
+  --type-rock: #b6a136;
+  --type-bug: #a6b91a;
+  --type-ghost: #735797;
+  --type-steel: #b7b7ce;
+  --type-fire: #ee8130;
+  --type-water: #6390f0;
+  --type-grass: #7ac74c;
+  --type-electric: #f7d02c;
+  --type-psychic: #f95587;
+  --type-ice: #96d9d6;
+  --type-dragon: #6f35fc;
+  --type-dark: #705746;
+  --effect-strong: #3c9a52;
+  --effect-weak: #c4453b;
+  --effect-none: #6b7280;
   color-scheme: light;
 }
 .dark {
@@ -72,7 +100,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1.6;
 }
 button,
@@ -122,11 +150,11 @@ h1 {
   margin-bottom: 18px;
 }
 h2 {
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   font-weight: 650;
 }
 h3 {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: 650;
 }
 small,
@@ -138,11 +166,11 @@ label {
   flex-direction: column;
   gap: 5px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 th {
   text-align: left;
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
   color: var(--muted-foreground);
   text-transform: uppercase;
@@ -158,11 +186,6 @@ th {
 table {
   width: 100%;
   border-collapse: collapse;
-}
-td small {
-  display: block;
-  font-size: 10px;
-  margin-top: 3px;
 }
 tbody tr:last-child td {
   border-bottom: 0;
@@ -193,7 +216,7 @@ tbody tr:hover {
   gap: 5px;
   color: var(--foreground);
   font-weight: 800;
-  font-size: 19px;
+  font-size: var(--text-lg);
   letter-spacing: -0.6px;
   white-space: nowrap;
 }
@@ -223,7 +246,7 @@ tbody tr:hover {
   border: 0;
   max-width: 370px;
   padding-right: 28px;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .header-actions {
   display: flex;
@@ -234,7 +257,7 @@ tbody tr:hover {
 .source-link {
   display: flex;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
 }
 .app-layout {
@@ -255,7 +278,7 @@ tbody tr:hover {
   padding: 0 12px 24px;
 }
 .sidebar-game strong {
-  font-size: 15px;
+  font-size: var(--text-md);
 }
 .sidebar nav {
   display: flex;
@@ -269,7 +292,7 @@ tbody tr:hover {
   gap: 11px;
   border-radius: 6px;
   padding: 9px 12px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
 }
 .sidebar nav > a:hover,
@@ -280,7 +303,7 @@ tbody tr:hover {
 }
 .nav-label {
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   padding: 18px 12px 5px;
@@ -305,7 +328,7 @@ tbody tr:hover {
 }
 .sidebar-bottom p {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: var(--text-xs);
   padding: 14px 12px;
 }
 .main-content {
@@ -328,7 +351,7 @@ tbody tr:hover {
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 5px 12px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 650;
   letter-spacing: 0.05em;
   color: var(--muted-foreground);
@@ -352,7 +375,7 @@ tbody tr:hover {
 .portal-hero p {
   max-width: 510px;
   color: var(--muted-foreground);
-  font-size: 15px;
+  font-size: var(--text-md);
   line-height: 1.8;
 }
 .hero-meta {
@@ -360,7 +383,7 @@ tbody tr:hover {
   gap: 22px;
   margin-top: 24px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .hero-meta span {
   display: flex;
@@ -375,7 +398,7 @@ tbody tr:hover {
   margin-bottom: 20px;
 }
 .generation-heading span {
-  font-size: 10px;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted-foreground);
@@ -420,13 +443,13 @@ tbody tr:hover {
 }
 .game-card h3 {
   line-height: 1.4;
-  font-size: 16px;
+  font-size: var(--text-md);
   min-height: 45px;
   margin-bottom: 10px;
 }
 .game-card p {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--text-xs);
   min-height: 52px;
 }
 .game-card-meta {
@@ -437,7 +460,7 @@ tbody tr:hover {
   padding-top: 14px;
   margin-top: 20px;
   color: var(--primary);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 .panel {
@@ -446,7 +469,7 @@ tbody tr:hover {
   border-radius: 9px;
 }
 .eyebrow {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -455,7 +478,7 @@ tbody tr:hover {
 }
 .lead {
   color: var(--muted-foreground);
-  font-size: 14px;
+  font-size: var(--text-base);
   max-width: 700px;
   margin-bottom: 30px;
 }
@@ -469,7 +492,7 @@ tbody tr:hover {
   background: var(--muted);
   border-radius: 20px;
   padding: 5px 12px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   white-space: nowrap;
   color: var(--muted-foreground);
 }
@@ -492,7 +515,7 @@ tbody tr:hover {
   background: transparent;
   flex: 1;
   padding: 11px 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--foreground);
 }
 .filters {
@@ -508,7 +531,7 @@ tbody tr:hover {
   max-width: 240px;
 }
 .advanced-filters {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
   margin-top: 14px;
 }
@@ -527,7 +550,7 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
   margin: 17px 0 8px;
 }
@@ -537,7 +560,7 @@ tbody tr:hover {
 }
 .catalog-table {
   min-width: 580px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .catalog-table td:first-child {
   min-width: 165px;
@@ -557,29 +580,63 @@ tbody tr:hover {
   color: var(--muted-foreground);
   padding: 2px 7px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   white-space: nowrap;
   margin: 2px 4px 2px 0;
 }
-.type-grass {
-  background: #e4f3e3;
-  color: #316235;
+.type-badge {
+  --type-color: var(--type-normal);
+  background: color-mix(in srgb, var(--type-color) 22%, var(--card));
+  color: color-mix(in srgb, var(--type-color) 40%, var(--foreground));
+  font-weight: 600;
 }
-.type-fire {
-  background: #fce8df;
-  color: #8e4326;
+.type-badge[data-type="fighting"] {
+  --type-color: var(--type-fighting);
 }
-.type-water {
-  background: #e1edfb;
-  color: #335e9d;
+.type-badge[data-type="flying"] {
+  --type-color: var(--type-flying);
 }
-.type-poison {
-  background: #f2e2f7;
-  color: #7c3e90;
+.type-badge[data-type="poison"] {
+  --type-color: var(--type-poison);
 }
-.type-electric {
-  background: #fff2cb;
-  color: #795d0f;
+.type-badge[data-type="ground"] {
+  --type-color: var(--type-ground);
+}
+.type-badge[data-type="rock"] {
+  --type-color: var(--type-rock);
+}
+.type-badge[data-type="bug"] {
+  --type-color: var(--type-bug);
+}
+.type-badge[data-type="ghost"] {
+  --type-color: var(--type-ghost);
+}
+.type-badge[data-type="steel"] {
+  --type-color: var(--type-steel);
+}
+.type-badge[data-type="fire"] {
+  --type-color: var(--type-fire);
+}
+.type-badge[data-type="water"] {
+  --type-color: var(--type-water);
+}
+.type-badge[data-type="grass"] {
+  --type-color: var(--type-grass);
+}
+.type-badge[data-type="electric"] {
+  --type-color: var(--type-electric);
+}
+.type-badge[data-type="psychic"] {
+  --type-color: var(--type-psychic);
+}
+.type-badge[data-type="ice"] {
+  --type-color: var(--type-ice);
+}
+.type-badge[data-type="dragon"] {
+  --type-color: var(--type-dragon);
+}
+.type-badge[data-type="dark"] {
+  --type-color: var(--type-dark);
 }
 .pagination {
   display: flex;
@@ -587,7 +644,7 @@ tbody tr:hover {
   justify-content: space-between;
   gap: 15px;
   margin: 24px 0;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
 }
 .record-hero {
@@ -610,7 +667,7 @@ tbody tr:hover {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   margin-bottom: 20px;
 }
 .detail-section {
@@ -627,14 +684,14 @@ tbody tr:hover {
   font-weight: 600;
 }
 .detail-table {
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .detail-table td,
 .detail-table th {
   padding: 9px 12px;
 }
 .type-chart {
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .type-chart td,
 .type-chart th {
@@ -643,18 +700,23 @@ tbody tr:hover {
   text-align: center;
 }
 .effectiveness-2,
+.effectiveness-4,
+.effectiveness-1-2,
+.effectiveness-1-4,
+.effectiveness-0 {
+  background: color-mix(in srgb, var(--effect) 18%, var(--card));
+  color: color-mix(in srgb, var(--effect) 55%, var(--foreground));
+}
+.effectiveness-2,
 .effectiveness-4 {
-  background: #e1f1e5;
-  color: #245c34;
+  --effect: var(--effect-strong);
 }
 .effectiveness-1-2,
 .effectiveness-1-4 {
-  background: #f9e8e5;
-  color: #7e3b35;
+  --effect: var(--effect-weak);
 }
 .effectiveness-0 {
-  background: #e5e7ed;
-  color: #414b60;
+  --effect: var(--effect-none);
 }
 .battle-family + .battle-family {
   margin-top: 24px;
@@ -668,11 +730,11 @@ tbody tr:hover {
 }
 .battle-variant span {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .battle-family details {
   margin-top: 14px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .fact-list {
   display: grid;
@@ -690,7 +752,7 @@ tbody tr:hover {
   border-bottom: 0;
 }
 .fact-list dt {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
 }
 .fact-list dd {
@@ -723,7 +785,7 @@ tbody tr:hover {
 }
 .sprite-gallery figcaption {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 .value-list > div {
@@ -754,7 +816,7 @@ tbody tr:hover {
   align-items: center;
   gap: 14px;
   margin: 11px 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .stat-track {
   height: 9px;
@@ -770,7 +832,7 @@ tbody tr:hover {
 .stat-total {
   display: flex;
   gap: 25px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   margin-top: 20px;
 }
 .section-grid {
@@ -787,11 +849,11 @@ tbody tr:hover {
 }
 .section-card strong {
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .section-card span {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: var(--text-xs);
   margin-left: auto;
 }
 .notice {
@@ -805,10 +867,10 @@ tbody tr:hover {
 }
 .notice p {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .notice strong {
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .prose {
   padding: 30px;
@@ -816,7 +878,7 @@ tbody tr:hover {
   overflow-wrap: anywhere;
 }
 .prose h1 {
-  font-size: 1.6rem;
+  font-size: var(--text-xl);
 }
 .prose h2 {
   margin-top: 32px;
@@ -845,7 +907,7 @@ tbody tr:hover {
   border-radius: 6px;
 }
 .prose code {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .prose blockquote {
   border-left: 3px solid var(--primary);
@@ -855,7 +917,7 @@ tbody tr:hover {
 .prose table {
   display: block;
   overflow-x: auto;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .prose img {
   max-width: 100%;
@@ -872,18 +934,18 @@ tbody tr:hover {
   padding: 20px;
 }
 .summary-card strong {
-  font-size: 24px;
+  font-size: var(--text-xl);
 }
 .summary-card span {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .change-record {
   margin-bottom: 10px;
   padding: 18px;
 }
 .change-record > summary {
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .change-record > div {
   margin-top: 16px;
@@ -896,7 +958,7 @@ tbody tr:hover {
   display: block;
   max-width: 230px;
   overflow-wrap: anywhere;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .search-results {
   display: grid;
@@ -935,7 +997,7 @@ footer {
   border-top: 1px solid var(--border);
   margin-top: 60px;
   padding: 24px 0;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted-foreground);
 }
 footer > span {
@@ -982,13 +1044,13 @@ footer > span {
   .game-picker select {
     max-width: 100%;
     width: 100%;
-    font-size: 11px;
+    font-size: var(--text-xs);
   }
   .header-actions {
     gap: 2px;
   }
   .brand {
-    font-size: 16px;
+    font-size: var(--text-md);
   }
   .brand-mark {
     width: 28px;
@@ -1054,7 +1116,7 @@ footer > span {
   .stat-row {
     grid-template-columns: 100px 26px 1fr;
     gap: 8px;
-    font-size: 11px;
+    font-size: var(--text-xs);
   }
   .prose {
     padding: 20px;

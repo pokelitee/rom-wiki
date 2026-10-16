@@ -9,6 +9,7 @@ import type {
 } from "../../data/types";
 import { useResource } from "../../data/use-resource";
 import { ResourceState } from "../../components/resource-state";
+import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
 import { object } from "../../lib/json";
@@ -192,7 +193,7 @@ function RecordPage({
           <p className="eyebrow">
             {title(section)} · {row.id}
           </p>
-          <h1>{row.label}</h1>
+          <h1>{section === "types" ? title(row.label) : row.label}</h1>
           <div className="badge-list">
             {(Array.isArray(record.types)
               ? record.types
@@ -200,9 +201,10 @@ function RecordPage({
                 ? [record.type]
                 : []
             ).map((value, index) => (
-              <span key={index} className={`badge type-${object(value).name}`}>
-                {title(String(object(value).name ?? value))}
-              </span>
+              <TypeBadge
+                key={index}
+                name={String(object(value).name ?? value)}
+              />
             ))}
           </div>
         </div>
