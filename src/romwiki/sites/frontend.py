@@ -274,10 +274,11 @@ def _documentation(
         return _SNIPPET.sub(snippet, text)
 
     documents = []
-    # A folder's index page introduces it, so it leads that folder's guides.
-    paths = sorted(wiki.glob("*.md")) + sorted(
+    # The game's own guides come first, led by their folder's index page;
+    # the wiki's notes about its sources follow them.
+    paths = sorted(
         (wiki / "docs").rglob("*.md"), key=lambda path: (path.stem != "index", path)
-    )
+    ) + sorted(wiki.glob("*.md"))
     for path in paths:
         relative = path.relative_to(wiki).as_posix()
         slug = relative.removesuffix(".md")

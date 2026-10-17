@@ -128,12 +128,12 @@ def test_export_titles_guides_counts_published_records_and_adds_sprites() -> Non
         manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
         game = manifest["games"][0]
         assert [document["label"] for document in game["documents"]] == [
-            "Test game",
             "Index",
             "FAQ",
             "Special events",
+            "Test game",
         ]
-        faq = json.loads((output / game["documents"][2]["path"]).read_text())
+        faq = json.loads((output / game["documents"][1]["path"]).read_text())
         assert faq["markdown"] == "\n## Q\n"
         pokemon = game["sections"]["pokemon"]
         assert pokemon["metadata"]["record_count"] == 3
