@@ -19,6 +19,7 @@ import { countLabel, title } from "../../lib/utils";
 import { defaultSort, filterRecords, PAGE_SIZE, pageNumber } from "./filter";
 import type { DataObject, RecordDetail } from "../../data/types";
 import { object } from "../../lib/json";
+import { recordContext, sharedLabels } from "../records/same-name";
 
 const TYPE_FIELDS = new Set(["types", "type"]);
 
@@ -176,6 +177,7 @@ function CatalogTable({
   const filtered = filterRecords(records, params, defaultSort(section));
   const page = pageNumber(params, filtered.length);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const shared = sharedLabels(records);
   const columns = fields
     .filter(
       (key) =>
@@ -326,6 +328,11 @@ function CatalogTable({
                     )}
                     {row.label}
                   </Link>
+                  {shared.has(row.label) && (
+                    <span className="row-context">
+                      {recordContext(section, row)}
+                    </span>
+                  )}
                 </td>
                 {columns.map((key) => (
                   <td key={key} data-label={title(key)}>

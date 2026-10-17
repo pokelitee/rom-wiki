@@ -17,15 +17,21 @@ export function entityRoute(
     return `locations/header-${String(value.header_id).padStart(3, "0")}`;
   if (typeof value.pokemon_slug === "string")
     return `pokemon/${value.pokemon_slug}`;
+  if (typeof value.item_slug === "string") return `items/${value.item_slug}`;
   if (typeof value.slug !== "string") return undefined;
+  // Species carry their Pokédex number, whatever list holds them, such as a
+  // move's egg-move Pokémon or an item's wild holders.
+  if (typeof value.national_dex_id === "number") return `pokemon/${value.slug}`;
   // An evolution's parameter is an item or a species, and says which.
   if (field === "parameter_data" && value.kind === "item")
     return `items/${value.slug}`;
   if (field === "parameter_data" && value.kind === "pokemon")
     return `pokemon/${value.slug}`;
   if (field.includes("abilit")) return `abilities/${value.slug}`;
-  if (field.includes("move") || field === "replaces")
-    return `moves/${value.slug}`;
+  // "replaces" names the standard move a ROM slot stands in for, which has
+  // no page of its own.
+  if (field === "replaces") return undefined;
+  if (field.includes("move")) return `moves/${value.slug}`;
   if (
     field.includes("item") ||
     field.includes("held") ||
@@ -37,9 +43,37 @@ export function entityRoute(
     field.includes("species") ||
     field.includes("evolution") ||
     field === "base_species" ||
-    // Evolution endpoints and revived fossils are always species.
-    ["source", "target", "revives_into"].includes(field)
+    // Evolution endpoints, revived fossils, and the Poké Radar and radio
+    // encounter lists are always species.
+    [
+      "source",
+      "target",
+      "revives_into",
+      "radar",
+      "hoenn_radio",
+      "sinnoh_radio",
+    ].includes(field)
   )
     return `pokemon/${value.slug}`;
+  return undefined;
+}
+
+// A "<thing>_name" column links when its row also carries that thing's slug
+// or map header, such as a trainer's held_item_name beside held_item_slug.
+export function columnRoute(
+  row: DataObject,
+  column: string,
+): string | undefined {
+  const prefix = column.match(/^(.+)_name$/)?.[1];
+  if (!prefix) return undefined;
+  if (prefix === "location" && typeof row.location_id === "number")
+    return `locations/header-${String(row.location_id).padStart(3, "0")}`;
+  const slug = row[`${prefix}_slug`];
+  if (typeof slug !== "string") return undefined;
+  if (prefix.includes("item")) return `items/${slug}`;
+  if (prefix.includes("pokemon") || prefix.includes("species"))
+    return `pokemon/${slug}`;
+  if (prefix.includes("abilit")) return `abilities/${slug}`;
+  if (prefix.includes("move")) return `moves/${slug}`;
   return undefined;
 }

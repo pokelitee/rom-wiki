@@ -1,7 +1,7 @@
 import { EntityLink } from "../../components/entity-link";
 import type { DataObject } from "../../data/types";
 import { summarizeSlots } from "./encounter";
-import { formatName } from "./fields";
+import { formatName, tableScroll } from "./fields";
 
 export function SlotTable({
   rows,
@@ -14,7 +14,7 @@ export function SlotTable({
   if (!summaries.length) return <span className="muted">No Pokémon</span>;
   const showChance = summaries.some((summary) => summary.chance !== null);
   return (
-    <div className="table-scroll">
+    <div className={tableScroll(summaries.length)}>
       <table className="detail-table">
         <thead>
           <tr>
