@@ -169,32 +169,28 @@ class Gen5MessageTests(unittest.TestCase):
 
         self.assertEqual(result, ("If held, \nit recovers.",))
 
-    def test_drops_the_class_icon_marker(self) -> None:
-        # Real Black/Black 2 trainer-class table fact: several classes
-        # ("Trainer", "Breeder", "Ranger", including BW's rival classes
-        # Cheren/Bianca use "Trainer") are prefixed with the fixed two-word
-        # pair (0x2486, 0x2487) before the plain occupational text -- with no
-        # observed variation in either word across any real occurrence.
+    def test_decodes_the_pkmn_glyph(self) -> None:
+        # Real Black/Black 2 trainer-class table fact: "PKMN Trainer" classes
+        # (including BW's rivals Cheren and Bianca) start with the two-word
+        # ligature (0x2486, 0x2487) followed by " Trainer".
         words = [0x2486, 0x2487] + [ord(c) for c in " Trainer"] + [0xFFFF]
         data = _make_raw_message_archive([words])
 
         result = parse_english_message_archive(data)
 
-        self.assertEqual(result, (" Trainer",))
+        self.assertEqual(result, ("PKMN Trainer",))
 
-    def test_drops_the_class_gender_icon_marker(self) -> None:
-        # Real Black/Black 2/Blaze Black 2 Redux fact: "Clerk" and "Swimmer"
-        # each appear twice in the trainer-class table, once with a trailing
-        # 0x246D and once with 0x246E -- a male/female icon pair, the same
-        # role as the two-word marker above but encoded as a single word.
-        for marker in (0x246D, 0x246E):
+    def test_decodes_gender_signs(self) -> None:
+        # Real Black 2 fact: Nidoran♀ (species 29) ends in 0x246E and
+        # Nidoran♂ (species 32) in 0x246D.
+        for marker, sign in ((0x246E, "♀"), (0x246D, "♂")):
             with self.subTest(marker=marker):
-                words = [ord(c) for c in "Clerk "] + [marker, 0xFFFF]
+                words = [ord(c) for c in "Nidoran"] + [marker, 0xFFFF]
                 data = _make_raw_message_archive([words])
 
                 result = parse_english_message_archive(data)
 
-                self.assertEqual(result, ("Clerk ",))
+                self.assertEqual(result, (f"Nidoran{sign}",))
 
     def test_decodes_compressed_text(self) -> None:
         # 9-bit-packed stream (all 16 bits/word) for "AB": codes 0x41, 0x42,
