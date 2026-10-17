@@ -15,7 +15,23 @@ import { isSlotList } from "./encounter";
 import { SlotTable } from "./slot-table";
 
 const TYPE_FIELDS = new Set(["type", "types", "natural_gift_type"]);
-const NAME_KEYS = ["name", "pokemon_name", "area_name", "destination_name"];
+const NAME_KEYS = [
+  "name",
+  "pokemon_name",
+  "trainer_name",
+  "area_name",
+  "destination_name",
+];
+
+// Relationship rows name places as [map header, name] pairs.
+function isHeaderPair(value: Json): value is [number, string] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "string"
+  );
+}
 
 function visibleKeys(value: DataObject): string[] {
   return Object.keys(value).filter(
@@ -83,7 +99,7 @@ export function Value({
   field?: string;
   depth?: number;
 }) {
-  if (value === null) return <span className="muted">None</span>;
+  if (value === null) return <span className="muted">—</span>;
   if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
   if (typeof value === "number")
     return <span className="numeric">{formatScalar(field, value)}</span>;
@@ -104,7 +120,22 @@ export function Value({
     const entries = value.filter(
       (entry) => !(entry && typeof entry === "object" && isEmpty(entry)),
     );
-    if (!entries.length) return <span className="muted">No entries</span>;
+    if (!entries.length)
+      return <span className="muted">{depth > 0 ? "—" : "No entries"}</span>;
+    if (entries.every(isHeaderPair))
+      return (
+        <span className="badge-list chip-list">
+          {entries.map(([header, name]) => (
+            <EntityLink
+              key={header}
+              game={game}
+              route={`locations/header-${String(header).padStart(3, "0")}`}
+            >
+              {name}
+            </EntityLink>
+          ))}
+        </span>
+      );
     if (entries.every((entry) => typeof entry !== "object"))
       return (
         <span className="badge-list">

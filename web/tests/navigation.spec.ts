@@ -61,8 +61,10 @@ for (const game of manifest.games) {
     page.on("pageerror", (error) => failures.push(error.message));
     for (const section of Object.keys(game.sections)) {
       await page.goto(`./#/${game.id}/${section}`);
-      await expect(page.locator(".catalog-table")).toBeVisible();
-      const first = page.locator(".catalog-table tbody a").first();
+      // Types list as tiles; every other section lists as a table.
+      const list = section === "types" ? ".type-grid" : ".catalog-table";
+      await expect(page.locator(list)).toBeVisible();
+      const first = page.locator(`${list} a`).first();
       if (await first.count()) {
         await first.click();
         await expect(page.locator(".record-hero h1")).toBeVisible();
@@ -86,14 +88,19 @@ for (const game of manifest.games) {
       }
     }
     await page.goto(`./#/${game.id}/docs/data-sources`);
-    await expect(page.locator("article")).toContainText("Data sources");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Data sources" }),
+    ).toBeVisible();
+    await expect(page.locator("article")).not.toBeEmpty();
     await page.goto(`./#/${game.id}/downloads`);
     await expect(
       page.getByRole("heading", { name: "Data downloads" }),
     ).toBeVisible();
     if (Object.keys(game.comparisons).length) {
       await page.goto(`./#/${game.id}/changes`);
-      await expect(page.locator(".summary-grid")).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Show changes" }),
+      ).toBeVisible();
     }
     expect(failures).toEqual([]);
   });

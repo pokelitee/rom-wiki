@@ -39,7 +39,7 @@ export function GameHome({ game }: { game: Game }) {
           </p>
         </div>
       </div>
-      <Document game={game} id="index" />
+      <Document game={game} id="index" titled={false} />
     </>
   );
 }
