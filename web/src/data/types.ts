@@ -32,6 +32,7 @@ export interface Game {
   description: string;
   generation: number;
   theme: string;
+  mascot?: { name: string; sprite: string } | null;
   versions: string[];
   sections: Record<string, Section>;
   comparisons: Record<string, string>;

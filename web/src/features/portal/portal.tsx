@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, BookOpen, ChevronRight, Database } from "lucide-react";
+import { ArrowUpRight, BookOpen, ChevronRight } from "lucide-react";
+import { Logo } from "../../components/logo";
 import type { Game } from "../../data/types";
 
 export function Portal({ games }: { games: Game[] }) {
@@ -22,7 +23,7 @@ export function Portal({ games }: { games: Game[] }) {
         </p>
         <div className="hero-meta">
           <span>
-            <Database size={14} />
+            <Logo size={14} />
             {games.length} game wikis
           </span>
           <span>
@@ -48,7 +49,17 @@ export function Portal({ games }: { games: Game[] }) {
                   to={`/${game.id}`}
                 >
                   <span className="game-card-icon">
-                    <Database size={22} />
+                    {game.mascot ? (
+                      <img
+                        src={game.mascot.sprite}
+                        alt=""
+                        width={64}
+                        height={64}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Logo size={22} />
+                    )}
                   </span>
                   <ArrowUpRight className="card-arrow" size={19} />
                   <h3>{game.name.replace("Pokémon ", "")}</h3>
