@@ -81,6 +81,21 @@ export function isNamedReference(value: Json | undefined): boolean {
   );
 }
 
+// Repeated references, such as a trainer's two Potions, collapse into one
+// entry with a count, in order of first appearance.
+export function countRepeats(
+  entries: Json[],
+): { value: Json; count: number }[] {
+  const counted = new Map<string, { value: Json; count: number }>();
+  for (const entry of entries) {
+    const key = JSON.stringify(entry);
+    const existing = counted.get(key);
+    if (existing) existing.count += 1;
+    else counted.set(key, { value: entry, count: 1 });
+  }
+  return [...counted.values()];
+}
+
 // Primary content first; any field not listed follows in its stored order.
 const SECTION_ORDER: Record<string, string[]> = {
   pokemon: [

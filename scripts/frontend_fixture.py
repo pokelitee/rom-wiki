@@ -113,6 +113,10 @@ def main() -> None:
                     "trainer_id": 1,
                     "class_name": "Leader",
                     "name": "Roark",
+                    "ai_battle_items": [
+                        {"id": 17, "name": "Potion", "slug": "potion"},
+                        {"id": 17, "name": "Potion", "slug": "potion"},
+                    ],
                     "party": [
                         {
                             "level": 12,
