@@ -8,7 +8,7 @@ import { useResource } from "../../data/use-resource";
 import { object } from "../../lib/json";
 import { title } from "../../lib/utils";
 import { evolutionCondition } from "./evolution";
-import { formatName, formatScalar } from "./fields";
+import { formatName, formatScalar, tableScroll } from "./fields";
 
 export interface SectionProps {
   value: Json;
@@ -257,7 +257,7 @@ export function MovesPanel({ value, game }: SectionProps) {
         role="tabpanel"
         id={`panel-${tab.field}`}
         aria-labelledby={`tab-${tab.field}`}
-        className="table-scroll"
+        className={tableScroll((lists[tab.field] as Json[]).length)}
       >
         <table className="detail-table move-table">
           <thead>

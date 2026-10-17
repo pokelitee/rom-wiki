@@ -9,9 +9,11 @@ import pytest
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.frontend import (
     DETAIL_CHUNK_SIZE,
+    _encounter_facets,
     _index_record,
     _index_sprite,
     _search_text,
+    _with_record_slugs,
     export_frontend,
     record_route,
 )
@@ -291,3 +293,44 @@ def test_version_variants_and_supported_empty_sections_are_preserved() -> None:
         chunk = json.loads((output / index["records"][0]["chunk"]).read_text())
         assert chunk["pokemon-1"]["record"] == dataset["records"][0]
         assert section["metadata"]["features"] == ["egg-moves"]
+
+
+def test_item_and_species_references_gain_their_page_slug() -> None:
+    value = {
+        "items": [{"item_id": 17, "name": "Potion"}, {"item_id": 999, "name": "X"}],
+        "item": {"item_id": 17, "slug": "potion", "name": "Potion"},
+        "static_encounters": [{"name": "Raikou", "species_id": 243}],
+        "trades": [{"name": "Route 15", "pokemon": {"id": 373, "name": "Salamence"}}],
+    }
+    assert _with_record_slugs(
+        value, {17: "potion"}, {243: "raikou", 373: "salamence"}
+    ) == {
+        "items": [
+            {"item_id": 17, "name": "Potion", "item_slug": "potion"},
+            {"item_id": 999, "name": "X"},
+        ],
+        "item": {"item_id": 17, "slug": "potion", "name": "Potion"},
+        "static_encounters": [
+            {"name": "Raikou", "species_id": 243, "pokemon_slug": "raikou"}
+        ],
+        "trades": [
+            {
+                "name": "Route 15",
+                "pokemon": {"id": 373, "name": "Salamence", "slug": "salamence"},
+            }
+        ],
+    }
+
+
+def test_encounter_level_ranges_skip_empty_slots() -> None:
+    record = {
+        "walking": {
+            "slots": [
+                {"level": 30, "pokemon": {"name": "Geodude"}},
+                {"level": 0, "pokemon": None},
+            ]
+        },
+        "radar": {"slots": [{"level": 39, "pokemon": {"name": "Machoke"}}]},
+    }
+    facets = _encounter_facets(record)
+    assert (facets["min_level"], facets["max_level"]) == (30, 39)

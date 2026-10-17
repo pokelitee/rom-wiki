@@ -6,6 +6,8 @@ export interface SearchEntry {
   section: string;
   search?: string;
   sprite?: string;
+  // Tells the entry apart from others in its section with the same label.
+  context?: string;
 }
 
 export function matchSearch(

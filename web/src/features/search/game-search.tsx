@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen, ChevronRight, Search } from "lucide-react";
-import type { Game } from "../../data/types";
+import type { Game, IndexRecord } from "../../data/types";
 import { loadData } from "../../data/client";
 import { ResourceState } from "../../components/resource-state";
 import { countLabel, title } from "../../lib/utils";
 import { SectionIcon } from "../../components/section-icon";
 import { matchSearch, type SearchEntry } from "./match";
+import { recordContext, sharedLabels } from "../records/same-name";
 
 export function GameSearch({ game }: { game: Game }) {
   const [params, setParams] = useSearchParams();
@@ -46,15 +47,22 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
       const [indexes, guides] = await Promise.all([
         Promise.all(
           Object.entries(game.sections).map(async ([section, definition]) => {
-            const index = await loadData<{
-              records: { id: string; label: string; sprite?: string }[];
-            }>(definition.index);
-            return index.records.map((record) => ({
-              label: record.label,
-              section,
-              path: `/${game.id}/${section}/${record.id}`,
-              sprite: record.sprite,
-            }));
+            const index = await loadData<{ records: IndexRecord[] }>(
+              definition.index,
+            );
+            const shared = sharedLabels(index.records);
+            return index.records.map((record) => {
+              const context = shared.has(record.label)
+                ? recordContext(section, record)
+                : undefined;
+              return {
+                label: record.label,
+                section,
+                path: `/${game.id}/${section}/${record.id}`,
+                sprite: record.sprite,
+                context,
+              };
+            });
           }),
         ),
         loadData<{ id: string; label: string; search: string }[]>(
@@ -117,7 +125,12 @@ function SearchResults({ game, query }: { game: Game; query: string }) {
                 <SectionIcon section={result.section} size={18} />
               )}
             </span>
-            <span>{result.label}</span>
+            <span className="result-label">
+              {result.label}
+              {result.context && (
+                <span className="result-context">{result.context}</span>
+              )}
+            </span>
             <small className="badge">{title(result.section)}</small>
             <ChevronRight size={15} />
           </Link>

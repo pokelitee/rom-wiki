@@ -38,29 +38,15 @@ _VARIABLE_MARKER = 0xF000
 # rejected.
 _LINE_BREAK = 0xFFFE
 
-# A fixed two-word marker with no varying payload -- confirmed against real
-# Black and Black 2 trainer-class tables (member `trainer_classes_member`):
-# every occurrence is this exact pair, always the first two words of the
-# message, always immediately followed by a plain occupational word
-# ("Trainer", "Breeder", "Ranger") with nothing else distinguishing the
-# entries that carry it from ones that don't. Previously decoded as two
-# literal characters via the generic `chr()` fallback below, producing
-# garbage glyphs (U+2486, U+2487) in front of otherwise-ordinary class names
-# like "Trainer" -- including several real rival classes (BW's Cheren/Bianca,
-# B2W2's PWT roster). Since nothing in this codebase renders in-game icon
-# graphics, and no parameter here has ever been observed to vary, the pair
-# is dropped rather than guessed at.
-_CLASS_ICON_MARKER = (0x2486, 0x2487)
+# The two halves of the "PKMN" ligature glyph, which English Gen V text uses
+# for "PKMN Trainer" classes (BW's Cheren and Bianca, B2W2's PWT roster). The
+# pair always appears together, at the start of a class name.
+_PKMN_GLYPH = (0x2486, 0x2487)
 
-# A single-word marker taking one of exactly two observed values -- confirmed
-# against real Black, Black 2, and Blaze Black 2 Redux trainer-class tables:
-# "Clerk" and "Swimmer" each appear twice, once with each value, and nothing
-# else in this codebase's decoded tables ever uses either value. That paired
-# shape (one class, two otherwise-identical entries differing only in this
-# marker) matches a male/female icon selector, the same role `_CLASS_ICON_MARKER`
-# fills with a fixed pair instead of a choice of one; dropped for the same
-# reason -- nothing here renders in-game icon graphics.
-_CLASS_GENDER_ICON_MARKERS = frozenset({0x246D, 0x246E})
+# Gen V's gender signs, confirmed against a real Black 2 ROM: species 29
+# (Nidoran♀) ends in 0x246E and species 32 (Nidoran♂) in 0x246D, and the
+# trainer-class table tells "Clerk" and "Swimmer" apart with the same pair.
+_GENDER_SIGNS = {0x246D: "♂", 0x246E: "♀"}
 
 
 def parse_english_message_archive(
@@ -146,13 +132,15 @@ def _decode_message(words: list[int], index: int) -> str:
             position += 1
             continue
         if (
-            value == _CLASS_ICON_MARKER[0]
+            value == _PKMN_GLYPH[0]
             and position + 1 < len(code_points)
-            and code_points[position + 1] == _CLASS_ICON_MARKER[1]
+            and code_points[position + 1] == _PKMN_GLYPH[1]
         ):
+            characters.append("PKMN")
             position += 2
             continue
-        if value in _CLASS_GENDER_ICON_MARKERS:
+        if value in _GENDER_SIGNS:
+            characters.append(_GENDER_SIGNS[value])
             position += 1
             continue
         if not 20 < value <= 0xFFF0:

@@ -16,6 +16,9 @@ import { title } from "../../lib/utils";
 import { Value } from "./value";
 import { RecordHero } from "./record-hero";
 import { TypeMatchups } from "./type-sections";
+import { Warps } from "./location-sections";
+import { recordContext } from "./same-name";
+import { EntityLink } from "../../components/entity-link";
 import {
   Evolutions,
   MovesPanel,
@@ -24,6 +27,7 @@ import {
 } from "./pokemon-sections";
 import { Party } from "./trainer-sections";
 import {
+  fieldLabel,
   hasNoEncounters,
   isEmpty,
   isNamedReference,
@@ -108,6 +112,7 @@ const SECTION_RENDERERS: Record<string, ComponentType<SectionProps>> = {
   "pokemon.moves": MovesPanel,
   "trainers.party": Party,
   "types.matchups": TypeMatchups,
+  "locations.warps": Warps,
 };
 
 // Pokémon facts shown in the summary rather than the overview.
@@ -254,7 +259,7 @@ function RecordPage({
             onChange={(value) => update("version", value)}
             options={[
               { value: "", label: "Shared record" },
-              ...versions.map((value) => ({ value, label: title(value) })),
+              ...versions.map((value) => ({ value, label: fieldLabel(value) })),
             ]}
           />
         )}
@@ -332,6 +337,16 @@ function RecordPage({
       {section === "trainers" && (
         <TrainerFamilies game={game} record={record} metadata={metadata} />
       )}
+      <SameNameRecords
+        game={game}
+        section={section}
+        row={row}
+        exclude={
+          section === "trainers"
+            ? familyTrainerIds(metadata, record.trainer_id)
+            : new Set()
+        }
+      />
       {Object.keys(reference).some(
         (key) =>
           ![
@@ -417,6 +432,71 @@ function RawFacts({ values }: { values: DataObject }) {
         );
       })}
     </dl>
+  );
+}
+
+// Every trainer in the battle families that include this trainer; the
+// Battle variants section already links those.
+function familyTrainerIds(metadata: DataObject, trainerId: Json | undefined) {
+  const ids = new Set<string>();
+  const families = Array.isArray(metadata.battle_families)
+    ? metadata.battle_families
+    : [];
+  const collect = (value: Json, into: Set<number>) => {
+    if (Array.isArray(value)) value.forEach((entry) => collect(entry, into));
+    else if (value && typeof value === "object") {
+      if (typeof value.trainer_id === "number") into.add(value.trainer_id);
+      Object.values(value).forEach((entry) => collect(entry, into));
+    }
+  };
+  for (const family of families) {
+    const members = new Set<number>();
+    collect(family, members);
+    if (typeof trainerId === "number" && members.has(trainerId))
+      members.forEach((id) =>
+        ids.add(`trainer-${String(id).padStart(4, "0")}`),
+      );
+  }
+  return ids;
+}
+
+// Other records in this section that share the record's name, each with the
+// detail that tells it apart.
+function SameNameRecords({
+  game,
+  section,
+  row,
+  exclude,
+}: {
+  game: Game;
+  section: string;
+  row: IndexRecord;
+  exclude: Set<string>;
+}) {
+  const index = useResource<{ records: IndexRecord[] }>(
+    game.sections[section].index,
+  );
+  const others = (index.value?.records ?? []).filter(
+    (other) =>
+      other.label === row.label &&
+      other.id !== row.id &&
+      !exclude.has(other.id),
+  );
+  if (!others.length) return null;
+  return (
+    <section className="panel detail-section" id="section-same-name">
+      <h2>Also named {row.label}</h2>
+      <ul className="link-list">
+        {others.map((other) => (
+          <li key={other.id}>
+            <EntityLink game={game.id} route={`${section}/${other.id}`}>
+              {other.label}
+            </EntityLink>
+            <span className="row-context">{recordContext(section, other)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

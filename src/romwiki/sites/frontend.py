@@ -94,13 +94,15 @@ def _encounter_facets(record: dict[str, Any]) -> dict[str, Any]:
                 collect(entry, method)
         elif isinstance(value, dict):
             pokemon = value.get("pokemon")
-            if isinstance(pokemon, dict) and pokemon.get("name"):
-                methods.setdefault(method, []).append(pokemon["name"])
+            name = pokemon.get("name") if isinstance(pokemon, dict) else None
+            occupied = bool(name)
+            if occupied:
+                methods.setdefault(method, []).append(str(name))
             for key, entry in value.items():
-                if key in {"minimum_level", "maximum_level", "level"} and isinstance(
-                    entry, int
-                ):
-                    levels.append(entry)
+                # Empty slots keep a level of 0, which no encounter uses.
+                if key in {"minimum_level", "maximum_level", "level"}:
+                    if occupied and isinstance(entry, int) and entry > 0:
+                        levels.append(entry)
                 elif isinstance(entry, (dict, list)) and key not in {
                     "pokemon",
                     "provenance",
@@ -126,6 +128,42 @@ def _encounter_facets(record: dict[str, Any]) -> dict[str, Any]:
     if levels:
         fields.update(min_level=min(levels), max_level=max(levels))
     return fields
+
+
+def _with_record_slugs(
+    value: Any,
+    item_slugs: Mapping[int, str],
+    species_slugs: Mapping[int, str],
+    key: str = "",
+) -> Any:
+    """Give references that only carry a ROM item or species ID their page slug."""
+    if isinstance(value, list):
+        return [
+            _with_record_slugs(entry, item_slugs, species_slugs, key) for entry in value
+        ]
+    if not isinstance(value, dict):
+        return value
+    result = {
+        field: _with_record_slugs(entry, item_slugs, species_slugs, field)
+        for field, entry in value.items()
+    }
+    if "slug" in value:
+        return result
+    item_id = value.get("item_id")
+    if isinstance(item_id, int) and item_id in item_slugs and "item_slug" not in value:
+        result["item_slug"] = item_slugs[item_id]
+    species_id = value.get("species_id")
+    if (
+        isinstance(species_id, int)
+        and species_id in species_slugs
+        and "pokemon_slug" not in value
+    ):
+        result["pokemon_slug"] = species_slugs[species_id]
+    # A bare {id, name} under a "pokemon" key, such as an in-game trade's.
+    pokemon_id = value.get("id")
+    if key == "pokemon" and isinstance(pokemon_id, int) and pokemon_id in species_slugs:
+        result["slug"] = species_slugs[pokemon_id]
+    return result
 
 
 def _mascot(
@@ -345,6 +383,22 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
             continue
         datasets = _read_datasets(site)
         relationships = _relationships(datasets)
+        # A species ID is its base form's member number; alternate forms
+        # follow the national Pokédex in the personal archive.
+        species_slugs = {
+            record["member"]: record["slug"]
+            for record in datasets.get("pokemon", {}).get("records", [])
+            if record.get("public", True)
+            and record.get("member") == record.get("national_dex_id")
+            and isinstance(record.get("slug"), str)
+        }
+        item_slugs = {
+            record["item_id"]: record["slug"]
+            for record in datasets.get("items", {}).get("records", [])
+            if record.get("public", True)
+            and isinstance(record.get("item_id"), int)
+            and isinstance(record.get("slug"), str)
+        }
         sections: dict[str, Any] = {}
         comparisons: dict[str, str] = {}
         profile_id = site.game.profiles[0] if len(site.game.profiles) == 1 else site.id
@@ -438,12 +492,16 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                         if kind == "encounters"
                         else str(raw_id)
                     )
-                    chunk[route] = {
-                        "record": record,
-                        "relationships": relationships.get(kind, {}).get(
-                            relationship_key, {}
-                        ),
-                    }
+                    chunk[route] = _with_record_slugs(
+                        {
+                            "record": record,
+                            "relationships": relationships.get(kind, {}).get(
+                                relationship_key, {}
+                            ),
+                        },
+                        item_slugs,
+                        species_slugs,
+                    )
                     entry = _index_record(kind, record, route)
                     sprite = _index_sprite(kind, record)
                     if sprite:

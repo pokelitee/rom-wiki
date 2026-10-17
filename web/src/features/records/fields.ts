@@ -12,7 +12,7 @@ export const OPTIONAL_FEATURES: Record<string, string> = {
 // ROM identifiers, storage details, and provenance. Record pages keep these
 // in their collapsed source details instead of the main content.
 const TECHNICAL =
-  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$|^pokemon_form$|^linked$|^party_position$)/;
+  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$|^pokemon_form$|^linked$|^party_position$|^event_index$|^hidden_flag$)/;
 
 export function isTechnical(key: string): boolean {
   return TECHNICAL.test(key);
@@ -79,6 +79,26 @@ export function isNamedReference(value: Json | undefined): boolean {
       (key) => key === "name" || key === "kind" || isTechnical(key),
     )
   );
+}
+
+// Field and version names whose words title-case wrongly, such as games in
+// dual-slot encounter tables or HeartGold's version identifier.
+const FIELD_LABELS: Record<string, string> = {
+  fire_red: "FireRed",
+  leaf_green: "LeafGreen",
+  heart_gold: "HeartGold",
+  soul_silver: "SoulSilver",
+};
+
+export function fieldLabel(key: string): string {
+  return FIELD_LABELS[key.replaceAll("-", "_")] ?? title(key);
+}
+
+const LONG_TABLE_ROWS = 15;
+
+// Tables longer than this scroll inside their card.
+export function tableScroll(rows: number): string {
+  return rows > LONG_TABLE_ROWS ? "table-scroll is-long" : "table-scroll";
 }
 
 // Repeated references, such as a trainer's two Potions, collapse into one

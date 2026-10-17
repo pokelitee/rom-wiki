@@ -1,17 +1,18 @@
 import { EntityLink } from "../../components/entity-link";
 import type { DataObject, Json } from "../../data/types";
 import { TypeBadge } from "../../components/type-badge";
-import { title } from "../../lib/utils";
 import { object } from "../../lib/json";
 import {
   countRepeats,
+  fieldLabel,
+  tableScroll,
   formatName,
   formatScalar,
   isEmpty,
   isNamedReference,
   isTechnical,
 } from "./fields";
-import { entityRoute } from "./routes";
+import { columnRoute, entityRoute } from "./routes";
 import { isSlotList } from "./encounter";
 import { SlotTable } from "./slot-table";
 
@@ -184,8 +185,19 @@ export function Value({
       );
     const rows = entries.map(object);
     if (isSlotList(rows)) return <SlotTable rows={rows} game={game} />;
+    // Trainers read as "Galactic Grunt", class and name together.
+    const trainerRows = rows.every(
+      (row) =>
+        typeof row.trainer_id === "number" &&
+        typeof row.class_name === "string",
+    );
+    const nameOf = (row: DataObject, key: string) =>
+      trainerRows && (key === "name" || key === "trainer_name")
+        ? `${String(row.class_name)} ${String(row[key])}`
+        : formatName(String(row[key]));
     const keys = [...new Set(rows.flatMap(visibleKeys))].filter(
       (key) =>
+        !(trainerRows && key === "class_name") &&
         !rows.every((row) => isEmpty(row[key])) &&
         (NAME_KEYS.includes(key) || !isConstant(rows, key)),
     );
@@ -206,7 +218,7 @@ export function Value({
             const route = NAME_KEYS.includes(keys[0])
               ? entityRoute(row, field)
               : undefined;
-            const label = formatName(String(cell));
+            const label = nameOf(row, keys[0]);
             return route ? (
               <EntityLink key={index} game={game} route={route}>
                 {label}
@@ -221,12 +233,12 @@ export function Value({
       );
     if (keys.length && keys.length <= 9 && depth < 5)
       return (
-        <div className="table-scroll">
+        <div className={tableScroll(rows.length)}>
           <table className="detail-table">
             <thead>
               <tr>
                 {keys.map((key) => (
-                  <th key={key}>{title(key)}</th>
+                  <th key={key}>{fieldLabel(key)}</th>
                 ))}
               </tr>
             </thead>
@@ -236,12 +248,12 @@ export function Value({
                   {keys.map((key) => {
                     const route = NAME_KEYS.includes(key)
                       ? entityRoute(row, field)
-                      : undefined;
+                      : columnRoute(row, key);
                     return (
                       <td key={key}>
                         {route ? (
                           <EntityLink game={game} route={route}>
-                            {formatName(String(row[key]))}
+                            {nameOf(row, key)}
                           </EntityLink>
                         ) : row[key] === undefined ? (
                           "—"
@@ -293,7 +305,8 @@ export function Value({
         </EntityLink>
         {extra.map(([key, item]) => (
           <span className="badge" key={key}>
-            {title(key)}: {formatScalar(key, item as string | number | boolean)}
+            {fieldLabel(key)}:{" "}
+            {formatScalar(key, item as string | number | boolean)}
           </span>
         ))}
       </span>
@@ -305,7 +318,7 @@ export function Value({
     <dl className={grid ? "fact-grid" : "fact-list"}>
       {keys.map((key) => (
         <div key={key}>
-          <dt>{title(key)}</dt>
+          <dt>{fieldLabel(key)}</dt>
           <dd>
             <Value
               value={value[key]}

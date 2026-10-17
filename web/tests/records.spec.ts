@@ -202,3 +202,29 @@ test("mobile navigation opens, navigates, and closes", async ({
     page.getByRole("button", { name: "Open navigation" }),
   ).toHaveAttribute("aria-expanded", "false");
 });
+
+const trainerIndex = platinum.sections.trainers
+  ? await readData<{ records: { id: string; label: string }[] }>(
+      platinum.sections.trainers.index,
+    )
+  : { records: [] };
+const sharedTrainer = trainerIndex.records.find(
+  (record, index, records) =>
+    records.findIndex((other) => other.label === record.label) !== index,
+);
+
+test("records that share a name are told apart and linked", async ({
+  page,
+}) => {
+  test.skip(!sharedTrainer, "No two published trainers share a name");
+  const label = sharedTrainer!.label;
+  await page.goto(`./#/platinum/search?q=${encodeURIComponent(label)}`);
+  const result = page.locator(".search-results a", { hasText: label }).first();
+  await expect(result.locator(".result-context")).toContainText("#");
+  await page.goto(`./#/platinum/trainers/${sharedTrainer!.id}`);
+  const others = page.locator("#section-same-name");
+  await expect(
+    others.getByRole("heading", { name: `Also named ${label}` }),
+  ).toBeVisible();
+  await expect(others.locator("a").first()).toContainText(label);
+});
