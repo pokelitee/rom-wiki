@@ -159,6 +159,37 @@ def test_index_labels_unnamed_areas_and_carries_item_sprites() -> None:
     assert _index_sprite("moves", {"sprite": {"url": "x"}}) is None
 
 
+def test_export_publishes_the_game_mascot_sprite() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        wiki = make_repository(root)
+        descriptor = root / "sites/games/test-game/game.toml"
+        descriptor.write_text(
+            descriptor.read_text(encoding="utf-8").replace(
+                '[appearance]\ntheme="platinum"\n',
+                '[appearance]\ntheme="platinum"\nmascot="pokemon-1"\n',
+            ),
+            encoding="utf-8",
+        )
+        dataset = pokemon_dataset(1)
+        dataset["records"][0]["sprite"] = {"url": "https://example.test/1.png"}
+        write_public_dataset(wiki, "pokemon", dataset)
+        output = root / "export"
+        export_frontend(root, output)
+        game = json.loads((output / "manifest.json").read_text(encoding="utf-8"))[
+            "games"
+        ][0]
+        assert game["mascot"] == {
+            "name": "Pokemon 1",
+            "sprite": "https://example.test/1.png",
+        }
+
+        dataset["records"][0].pop("sprite")
+        write_public_dataset(wiki, "pokemon", dataset)
+        with pytest.raises(SiteError, match="mascot has no published sprite"):
+            export_frontend(root, root / "export-2")
+
+
 def test_export_rejects_corrupt_archives_and_duplicate_routes() -> None:
     with TemporaryDirectory() as directory:
         root = Path(directory)

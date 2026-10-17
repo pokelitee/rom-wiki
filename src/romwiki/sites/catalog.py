@@ -52,6 +52,8 @@ class SiteDefinition:
     description: str
     theme: str
     game: GameMetadata | None = None
+    # Slug of the Pokémon whose sprite represents the game in the library.
+    mascot: str | None = None
 
 
 def site_display_key(site: SiteDefinition) -> tuple[bool, int, int, str]:
@@ -137,6 +139,11 @@ def _load_site(path: Path, root: Path) -> SiteDefinition:
             raise SiteError(f"Invalid theme in {path.relative_to(root)}: {theme}")
         if theme not in SUPPORTED_THEMES:
             raise SiteError(f"Unsupported theme in {path.relative_to(root)}: {theme}")
+        mascot = descriptor["appearance"].get("mascot")
+        if mascot is not None and (
+            not isinstance(mascot, str) or not _SLUG_PATTERN.fullmatch(mascot)
+        ):
+            raise SiteError(f"Invalid mascot in {path.relative_to(root)}: {mascot}")
         return SiteDefinition(
             id=site["id"],
             name=site["name"],
@@ -147,6 +154,7 @@ def _load_site(path: Path, root: Path) -> SiteDefinition:
             config_path=path,
             description=site.get("description", ""),
             theme=theme,
+            mascot=mascot,
             game=(
                 _load_game_metadata(path, root, descriptor["game"])
                 if kind == "game"
