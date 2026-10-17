@@ -1,5 +1,5 @@
 {
-  "archive": "frontend-d21cf5f95f5ccdc6.tar.gz",
+  "archive": "frontend-0124e25bbad6cdba.tar.gz",
   "files": {
     "black-2-white-2/abilities/chunk-0000-b2a551125c616f5f.json": "b2a551125c616f5f2e2fd8a8d43cb1df8280a677205d059751884ca8a1a1cc15",
     "black-2-white-2/abilities/chunk-0001-b338cc5ebb3a3854.json": "b338cc5ebb3a3854d62759ddb6a6a8f89984ca784e34173ad69be45215fd7125",
@@ -240,7 +240,7 @@
     "blaze-black-2-redux-volt-white-2-redux/encounters/chunk-0003-2de76d22a5bb79e5.json": "2de76d22a5bb79e51d8aad59a0ad23032ea4a7909ebd442db9ac508d9b8c36b8",
     "blaze-black-2-redux-volt-white-2-redux/encounters/index-e3cd06c6823d0a01.json": "e3cd06c6823d0a0175677351a9f6848ed75886695f85291222cbf75c80c28dc3",
     "blaze-black-2-redux-volt-white-2-redux/encounters/metadata-5dba52dd736568ce.json": "5dba52dd736568ce512a635aae5ea28cc9e5ee2a206803cfbc9bdde007390bc0",
-    "blaze-black-2-redux-volt-white-2-redux/guide-search-90c6a83ff4efcd0b.json": "90c6a83ff4efcd0b8d6e7629954c46803f6e2815a589aa7db7cdbde6f1a90f20",
+    "blaze-black-2-redux-volt-white-2-redux/guide-search-dbf58f46ec28450f.json": "dbf58f46ec28450fe95fd9aaad5eab89e14fe40cc184ba6dc73c4dad77fdf4f0",
     "blaze-black-2-redux-volt-white-2-redux/items/chunk-0000-9764a402c35e8628.json": "9764a402c35e862870c9199db25f4134505e7645ab23ce0e1e994eab14f3ec51",
     "blaze-black-2-redux-volt-white-2-redux/items/chunk-0001-a1ae257d7b158953.json": "a1ae257d7b1589534fc7b0faaf055f40554f68a464b932f420700f780876ff03",
     "blaze-black-2-redux-volt-white-2-redux/items/chunk-0002-da9d131229bb37d7.json": "da9d131229bb37d7c4146fcbb4820e9b602e050c34bb6d76084aeed20db8d563",
@@ -357,7 +357,7 @@
     "blaze-black-2-volt-white-2/encounters/chunk-0003-32d254d72092e479.json": "32d254d72092e47982be563d92d45177f6056c69023363fb77b87e2dc896f8c0",
     "blaze-black-2-volt-white-2/encounters/index-a596d7573776b54b.json": "a596d7573776b54b173ae05e3c908799098b7512057eac4d3a3ca447350024bc",
     "blaze-black-2-volt-white-2/encounters/metadata-875a8b1b9fa2186f.json": "875a8b1b9fa2186f875aa70bdf57292873842916e659badd7ee2a8a8fcc7b53f",
-    "blaze-black-2-volt-white-2/guide-search-76071c953e15e6a4.json": "76071c953e15e6a464634e67dfbb7fa4b335a057a16cbac622ca9a3c3130df68",
+    "blaze-black-2-volt-white-2/guide-search-9aeabc9099335313.json": "9aeabc909933531306b7d91fd90ec4b17c95c1efec0266c23c939873d3b5a9f5",
     "blaze-black-2-volt-white-2/items/chunk-0000-1cf6205caf30c6a7.json": "1cf6205caf30c6a7db71a82a40292df20fe134500e20b92740ca499c6408c453",
     "blaze-black-2-volt-white-2/items/chunk-0001-c0382c2cc2289da4.json": "c0382c2cc2289da44a2652db5e397ded4e6745fd51a8223f8ba5d505613f92f8",
     "blaze-black-2-volt-white-2/items/chunk-0002-2a9661a0df434d71.json": "2a9661a0df434d719ee488901d0298baebbda4bda4f9bd6ca1e9e0fb2eb496cf",
@@ -473,7 +473,7 @@
     "blaze-black-volt-white/encounters/chunk-0002-f9fa13ac3e004891.json": "f9fa13ac3e004891045c60649b98973b16f2ce476651ce2adb0c20e0abf6473e",
     "blaze-black-volt-white/encounters/index-d03136caedbeb09e.json": "d03136caedbeb09ee157048643c1ad545c102e49ae6da9f69236588eb1e02f0b",
     "blaze-black-volt-white/encounters/metadata-f653e0abc8f8171d.json": "f653e0abc8f8171d72a864f5cf1430ad233c0cad83bab671b0443c9525708fb9",
-    "blaze-black-volt-white/guide-search-6eb316196f907d34.json": "6eb316196f907d34f56b7573d2d5e1870c7484e2a2b6e9a3deeb0cc90c4c2c96",
+    "blaze-black-volt-white/guide-search-011b3b59d34745d7.json": "011b3b59d34745d734d29ff9b830562be191242f425e78ecce68ce2ac8203597",
     "blaze-black-volt-white/items/chunk-0000-817b4f16377becba.json": "817b4f16377becba3373524fd257ebd76484a0a3e68b01cf560e6bf5d0bef919",
     "blaze-black-volt-white/items/chunk-0001-6930f279768fe2cc.json": "6930f279768fe2ccbf2616f97377fc2de4f647b54460355291c66775100c5556",
     "blaze-black-volt-white/items/chunk-0002-6194674eb938baba.json": "6194674eb938babaeb8291e6a67bfec5f490498a750cddbe19dcb26871beebe1",
@@ -642,7 +642,7 @@
     "heart-gold-soul-silver/types/chunk-0000-c1fdc9f2377b812e.json": "c1fdc9f2377b812e95f5ea805f396d385a863eb35719f4145104299bccdd4a82",
     "heart-gold-soul-silver/types/index-ad0e1093e37bd405.json": "ad0e1093e37bd4054a5b0bb630a5d60fad0aac288a995c2b02c1aa29079cdc57",
     "heart-gold-soul-silver/types/metadata-1c20131a2b8ae294.json": "1c20131a2b8ae29466013ba97d3edaf3a0af809d9e018df8147e87254df59d78",
-    "manifest.json": "0cf847b5f50d1db98132afb34df6805ddcf601a57c93c7daeb605a80385d9def",
+    "manifest.json": "8304bc5f89b168dc1710ce5537d35c2999d65dee7cb68d5163e17a91e71629ce",
     "platinum/abilities/chunk-0000-0106b86506c9b7b9.json": "0106b86506c9b7b91f5f431de1f0fbefa53d4a71e618e843dca48e31e9999e03",
     "platinum/abilities/chunk-0001-f497c81f4caacee6.json": "f497c81f4caacee6fd9d0bd07b7bf2bd829cd2e2f3c706054e4b5f8332afa58d",
     "platinum/abilities/chunk-0002-1b3e1062d2f6a696.json": "1b3e1062d2f6a696a9d503ae92624839befb5bc09697a4121c47044f8c5b79a4",
@@ -772,7 +772,7 @@
     "renegade-platinum/encounters/chunk-0002-91fc7dbd27ba87d6.json": "91fc7dbd27ba87d6bde4f08ce9fa68a7b8ea1a277a19d818eb77dcd8a0fabf5b",
     "renegade-platinum/encounters/index-5f2083267e6d02f4.json": "5f2083267e6d02f41e4c7a03e3aa159665d737bd7454bebd5371f2c52cd5820f",
     "renegade-platinum/encounters/metadata-4485f0f045cfa3ac.json": "4485f0f045cfa3aca54b7bdc82bbe3baca266c0cd16fc9b197ee55c656d5cbd5",
-    "renegade-platinum/guide-search-04485393d8593fbb.json": "04485393d8593fbbe6e434f1e4dd5a02f57abb9d20533b4e94d4bca30930802e",
+    "renegade-platinum/guide-search-05e9e30d6e0c717a.json": "05e9e30d6e0c717ae220d51d61e88de138e1d0663f97fab7d781e9e41df3329b",
     "renegade-platinum/items/chunk-0000-f5526f6bf50c022b.json": "f5526f6bf50c022bad2fb794188b9539aaa1b4721d01e448aac08b876077b1b5",
     "renegade-platinum/items/chunk-0001-7066b86ec21932bc.json": "7066b86ec21932bc0349b49b2bbd71799bc1989ae8b2ff2e55eafa871cd54274",
     "renegade-platinum/items/chunk-0002-dd64c209c9c4f931.json": "dd64c209c9c4f931776d2f2910d0838b09c8bc567e6834645d887552e3ee84b5",
@@ -884,7 +884,7 @@
     "sacred-gold-storm-silver/encounters/chunk-0004-83e1e7344d46158b.json": "83e1e7344d46158b65a2747fe2a9c9eef1412a3e08941565ea8fe1938a3ef1fd",
     "sacred-gold-storm-silver/encounters/index-af2c5fb3d815fa43.json": "af2c5fb3d815fa43608ec27e3cf174f9b480993cbe545f3ec68522ff26edb577",
     "sacred-gold-storm-silver/encounters/metadata-e314a66372eca33a.json": "e314a66372eca33a8f22a8895d8ab2368d4712f143ce61eeff738ca3f8e70506",
-    "sacred-gold-storm-silver/guide-search-28b47793e619f410.json": "28b47793e619f410f0df5ab3e15f06ebc92077a405b54e42aa0d1f7e61782e0e",
+    "sacred-gold-storm-silver/guide-search-a08ac4ddcee1cf1d.json": "a08ac4ddcee1cf1dc2ff3e59ce566c5b1158133f1910f62885759fca2fa1e01e",
     "sacred-gold-storm-silver/items/chunk-0000-67cbc83c8567033a.json": "67cbc83c8567033a9433f86ca1c9905181d2cfb1afc51b69b65f62bea840f0c3",
     "sacred-gold-storm-silver/items/chunk-0001-b19f7ed1b06d7663.json": "b19f7ed1b06d76633d4bdb068b0e6388906ad91bc4ee99d9c9f27f9a1a0c2cd4",
     "sacred-gold-storm-silver/items/chunk-0002-6655b41f999dae7b.json": "6655b41f999dae7b457a36a05b738c36f1f4ce55c6e519cc97d353a3a69e05db",
@@ -958,5 +958,5 @@
     "sacred-gold-storm-silver/types/metadata-d2337a717cfedf3e.json": "d2337a717cfedf3eb79271f64ac3788cf8fa61819cedbf184949535e3c0a0fef"
   },
   "schema_version": 1,
-  "sha256": "d21cf5f95f5ccdc6afe656e441d4ae12822452a80eca00331b87b3fb79d53fa5"
+  "sha256": "0124e25bbad6cdba1555ff5596728b46537cb722360b54b9c42de44a5251cb66"
 }
