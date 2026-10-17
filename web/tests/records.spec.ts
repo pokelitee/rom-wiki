@@ -120,6 +120,10 @@ test("trainer parties render as cards", async ({ page }) => {
   await expect(card).toContainText("Level");
   await expect(card.locator(".party-moves tbody tr").first()).toBeVisible();
   await expect(page.getByText("Calculated stats")).toHaveCount(0);
+  // Roark carries two Potions, shown once with a count.
+  const items = page.locator("#section-ai_battle_items");
+  await expect(items.locator(".chip-list > *")).toHaveCount(1);
+  await expect(items).toContainText("Potion×2");
 });
 
 test("encounter pages lead with real encounters and hide empty methods", async ({

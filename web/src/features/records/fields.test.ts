@@ -4,6 +4,7 @@ import {
   formatScalar,
   isEmpty,
   isNamedReference,
+  countRepeats,
   isTechnical,
   orderEntries,
 } from "./fields";
@@ -90,5 +91,14 @@ describe("record field rules", () => {
     expect(formatScalar("name", "Shed Skin")).toBe("Shed Skin");
     expect(formatName("stealth-rock")).toBe("Stealth Rock");
     expect(formatName("Mr. Mime")).toBe("Mr. Mime");
+  });
+
+  it("counts repeated references in order of first appearance", () => {
+    const potion = { id: 17, name: "Potion", slug: "potion" };
+    const antidote = { id: 18, name: "Antidote", slug: "antidote" };
+    expect(countRepeats([potion, antidote, potion])).toEqual([
+      { value: potion, count: 2 },
+      { value: antidote, count: 1 },
+    ]);
   });
 });

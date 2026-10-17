@@ -4,6 +4,7 @@ import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { object } from "../../lib/json";
 import {
+  countRepeats,
   formatName,
   formatScalar,
   isEmpty,
@@ -71,20 +72,27 @@ function NamedReference({
   value,
   game,
   field,
+  count = 1,
 }: {
   value: DataObject;
   game: string;
   field: string;
+  count?: number;
 }) {
   const name = String(value.name);
   if (TYPE_FIELDS.has(field)) return <TypeBadge name={name} />;
   const route = entityRoute(value, field);
+  const quantity = count > 1 && <span className="chip-count">×{count}</span>;
   return route ? (
     <EntityLink game={game} route={route}>
       {formatName(name)}
+      {quantity}
     </EntityLink>
   ) : (
-    <span>{formatScalar(field, name)}</span>
+    <span>
+      {formatScalar(field, name)}
+      {quantity}
+    </span>
   );
 }
 
@@ -154,19 +162,22 @@ export function Value({
       return (
         <span className="badge-list chip-list">
           {(TYPE_FIELDS.has(field)
-            ? entries.filter(
-                (entry, index) =>
-                  entries.findIndex(
-                    (other) => object(other).name === object(entry).name,
-                  ) === index,
-              )
-            : entries
-          ).map((entry, index) => (
+            ? entries
+                .filter(
+                  (entry, index) =>
+                    entries.findIndex(
+                      (other) => object(other).name === object(entry).name,
+                    ) === index,
+                )
+                .map((value) => ({ value, count: 1 }))
+            : countRepeats(entries)
+          ).map(({ value: entry, count }, index) => (
             <NamedReference
               key={index}
               value={entry as DataObject}
               game={game}
               field={field}
+              count={count}
             />
           ))}
         </span>
