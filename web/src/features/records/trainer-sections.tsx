@@ -1,5 +1,7 @@
+import { Link } from "react-router-dom";
 import { EntityLink } from "../../components/entity-link";
-import type { DataObject, Json } from "../../data/types";
+import type { DataObject, IndexRecord, Json } from "../../data/types";
+import { useResource } from "../../data/use-resource";
 import { StatBars } from "../../components/stat-bars";
 import { TypeBadge } from "../../components/type-badge";
 import { object } from "../../lib/json";
@@ -44,7 +46,66 @@ function statSpread(value: Json): string {
         .join(" · ");
 }
 
-function PartyCard({ member, game }: { member: DataObject; game: string }) {
+type MoveFields = Map<string, IndexRecord["fields"]>;
+
+function PartyMoves({
+  moves,
+  game,
+  moveFields,
+}: {
+  moves: DataObject[];
+  game: string;
+  moveFields: MoveFields;
+}) {
+  return (
+    <table className="party-moves">
+      <thead>
+        <tr>
+          <th>Move</th>
+          <th>Type</th>
+          <th>Category</th>
+          <th className="numeric">Power</th>
+        </tr>
+      </thead>
+      <tbody>
+        {moves.map((move, index) => {
+          const type = object(move.type).name;
+          const category = object(move.damage_class).name;
+          const power =
+            typeof move.slug === "string"
+              ? moveFields.get(move.slug)?.power
+              : undefined;
+          return (
+            <tr key={index}>
+              <td>
+                <RecordName value={move} section="moves" game={game} />
+              </td>
+              <td>{typeof type === "string" && <TypeBadge name={type} />}</td>
+              <td className="muted">
+                {typeof category === "string"
+                  ? formatScalar("damage_class", category)
+                  : "—"}
+              </td>
+              <td className="numeric">
+                {typeof power === "number" && power > 0 ? power : "—"}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function PartyCard({
+  member,
+  game,
+  moveFields,
+}: {
+  member: DataObject;
+  game: string;
+  moveFields: MoveFields;
+}) {
   const pokemon = object(member.pokemon);
   const sprite = object(pokemon.sprite).url;
   const stats = object(object(member.calculated_stats).values);
@@ -62,7 +123,13 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
         )}
         <div>
           <h3>
-            <RecordName value={member.pokemon} section="pokemon" game={game} />
+            {typeof pokemon.slug === "string" ? (
+              <Link to={`/${game}/pokemon/${pokemon.slug}`}>
+                {formatName(String(pokemon.name))}
+              </Link>
+            ) : (
+              formatName(String(pokemon.name ?? "Unknown"))
+            )}
           </h3>
           <p className="badge-list">
             <span className="badge">Level {String(member.level)}</span>
@@ -99,22 +166,7 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
         </div>
       </dl>
       {moves.length > 0 && (
-        <ul className="party-moves">
-          {moves.map((move, index) => (
-            <li key={index}>
-              <RecordName value={move} section="moves" game={game} />
-              {typeof object(move.type).name === "string" && (
-                <TypeBadge name={String(object(move.type).name)} />
-              )}
-              <span className="muted">
-                {formatScalar(
-                  "damage_class",
-                  String(object(move.damage_class).name ?? ""),
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <PartyMoves moves={moves} game={game} moveFields={moveFields} />
       )}
       {Object.keys(stats).length > 0 && (
         <StatBars stats={stats} max={Math.max(highest, 1)} />
@@ -138,10 +190,24 @@ function PartyCard({ member, game }: { member: DataObject; game: string }) {
 
 export function Party({ value, game }: SectionProps) {
   const members = Array.isArray(value) ? value.map(object) : [];
+  const movesIndex = useResource<{ records: IndexRecord[] }>(
+    game.sections.moves?.index,
+  );
+  const moveFields: MoveFields = new Map(
+    (movesIndex.value?.records ?? []).map((record) => [
+      record.id,
+      record.fields,
+    ]),
+  );
   return (
     <div className="party-grid">
       {members.map((member, index) => (
-        <PartyCard key={index} member={member} game={game.id} />
+        <PartyCard
+          key={index}
+          member={member}
+          game={game.id}
+          moveFields={moveFields}
+        />
       ))}
     </div>
   );

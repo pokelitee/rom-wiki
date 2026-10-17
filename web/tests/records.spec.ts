@@ -118,7 +118,7 @@ test("trainer parties render as cards", async ({ page }) => {
   await expect(page.locator(".record-hero h1")).toContainText("Roark");
   const card = page.locator(".party-card").first();
   await expect(card).toContainText("Level");
-  await expect(card.locator(".party-moves li").first()).toBeVisible();
+  await expect(card.locator(".party-moves tbody tr").first()).toBeVisible();
   await expect(page.getByText("Calculated stats")).toHaveCount(0);
 });
 
@@ -144,8 +144,10 @@ test("changes summarize each record and filter by status", async ({ page }) => {
   test.skip(!comparative, "No published game has comparisons");
   await page.goto(`./#/${comparative!.id}/changes`);
   await expect(page.locator(".change-summary").first()).not.toBeEmpty();
-  await page.getByLabel("Show").click();
-  await page.getByRole("option", { name: "Changed" }).click();
+  await page
+    .getByRole("group", { name: "Show changes" })
+    .getByRole("button", { name: /^Changed/ })
+    .click();
   await expect(page).toHaveURL(/status=changed/);
   const badges = await page
     .locator(".change-record > summary > .badge")

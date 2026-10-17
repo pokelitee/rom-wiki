@@ -12,12 +12,12 @@ import { useResource } from "../../data/use-resource";
 import { ResourceState } from "../../components/resource-state";
 import { OptionSelect } from "../../components/option-select";
 import { StatBars } from "../../components/stat-bars";
-import { TypeBadge } from "../../components/type-badge";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
+import { RecordHero } from "./record-hero";
+import { TypeMatchups } from "./type-sections";
 import {
   Evolutions,
-  EvYields,
   MovesPanel,
   PokemonSummary,
   type SectionProps,
@@ -105,9 +105,9 @@ function typeNames(record: DataObject): string[] {
 // Sections whose generic rendering would hide what matters about them.
 const SECTION_RENDERERS: Record<string, ComponentType<SectionProps>> = {
   "pokemon.evolutions": Evolutions,
-  "pokemon.ev_yields": EvYields,
   "pokemon.moves": MovesPanel,
   "trainers.party": Party,
+  "types.matchups": TypeMatchups,
 };
 
 // Pokémon facts shown in the summary rather than the overview.
@@ -117,6 +117,7 @@ const POKEMON_SUMMARY_FIELDS = [
   "gender_ratio",
   "catch_rate",
   "growth_rate",
+  "ev_yields",
 ];
 const POKEMON_MOVE_FIELDS = [
   "level_up_moves",
@@ -168,8 +169,6 @@ function RecordPage({
       ? referenceVariants[version]
       : record.reference,
   );
-  const sprite =
-    object(record.sprite).url ?? object(record.reference).sprite_url;
   const features = new Set(
     (game.sections[section].metadata.features ?? []) as string[],
   );
@@ -240,28 +239,13 @@ function RecordPage({
         <ArrowLeft size={14} />
         All {title(section)}
       </Link>
-      <div className="record-hero panel">
-        {typeof sprite === "string" && (
-          <img
-            className="record-sprite"
-            src={sprite}
-            alt=""
-            width={104}
-            height={104}
-          />
-        )}
-        <div>
-          <p className="eyebrow">
-            {title(section)} · {row.id}
-          </p>
-          <h1>{section === "types" ? title(row.label) : row.label}</h1>
-          <div className="badge-list">
-            {typeNames(record).map((name) => (
-              <TypeBadge key={name} name={name} />
-            ))}
-          </div>
-        </div>
-      </div>
+      <RecordHero
+        eyebrow={`${title(section)} · ${row.id}`}
+        label={section === "types" ? title(row.label) : row.label}
+        record={record}
+        reference={reference}
+        types={typeNames(record)}
+      />
       <div className="variant-controls">
         {versions.length > 0 && (
           <OptionSelect
@@ -286,20 +270,6 @@ function RecordPage({
           />
         )}
       </div>
-      {(reference.flavor_text ||
-        reference.short_effect ||
-        reference.effect) && (
-        <div className="reference-prose">
-          <p>{String(reference.flavor_text ?? reference.short_effect ?? "")}</p>
-          {reference.effect && <p>{String(reference.effect)}</p>}
-          <small>
-            {reference.source ? String(reference.source) : ""}
-            {reference.flavor_text_source === "rom"
-              ? " · Description decoded from ROM"
-              : ""}
-          </small>
-        </div>
-      )}
       {outline.length >= 4 && (
         <nav className="record-nav" aria-label="On this page">
           {outline.map(([id, label]) => (
@@ -361,32 +331,6 @@ function RecordPage({
       ))}
       {section === "trainers" && (
         <TrainerFamilies game={game} record={record} metadata={metadata} />
-      )}
-      {record.cry && typeof object(record.cry).url === "string" && (
-        <section className="panel detail-section">
-          <h2>Cry</h2>
-          <audio controls preload="none" src={String(object(record.cry).url)} />
-          <small>{String(object(record.cry).source ?? "")}</small>
-        </section>
-      )}
-      {Array.isArray(record.sprites) && record.sprites.length > 1 && (
-        <section className="panel detail-section">
-          <h2>Sprites</h2>
-          <div className="sprite-gallery">
-            {record.sprites.map((entry, index) => (
-              <figure key={index}>
-                <img
-                  loading="lazy"
-                  width={96}
-                  height={96}
-                  alt={String(object(entry).label ?? "Sprite")}
-                  src={String(object(entry).url)}
-                />
-                <figcaption>{String(object(entry).label ?? "")}</figcaption>
-              </figure>
-            ))}
-          </div>
-        </section>
       )}
       {Object.keys(reference).some(
         (key) =>

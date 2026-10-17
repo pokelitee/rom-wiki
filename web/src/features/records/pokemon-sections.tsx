@@ -23,6 +23,26 @@ function names(value: Json): string[] {
   });
 }
 
+const STAT_LABELS: Record<string, string> = {
+  hp: "HP",
+  attack: "Attack",
+  defense: "Defense",
+  special_attack: "Sp. Atk",
+  special_defense: "Sp. Def",
+  speed: "Speed",
+};
+
+// Only the stats a Pokémon actually yields; most yield one or two.
+function evYield(value: Json | undefined): string {
+  return Object.entries(object(value))
+    .filter(([, amount]) => Number(amount) > 0)
+    .map(
+      ([stat, amount]) =>
+        `+${String(amount)} ${STAT_LABELS[stat] ?? title(stat)}`,
+    )
+    .join(", ");
+}
+
 function numberFact(field: string, value: Json | undefined): string {
   return typeof value === "number" ? formatScalar(field, value) : "";
 }
@@ -51,10 +71,15 @@ export function PokemonSummary({
     ],
     [
       "Egg groups",
-      names(record.egg_groups)
-        .map((name) => formatScalar("egg_group", name))
-        .join(", "),
+      [
+        ...new Set(
+          names(record.egg_groups).map((name) =>
+            formatScalar("egg_group", name),
+          ),
+        ),
+      ].join(", "),
     ],
+    ["EV yield", evYield(record.ev_yields)],
   ];
   return (
     <div className="pokemon-summary">
@@ -113,48 +138,38 @@ export function Evolutions({ value, game }: SectionProps) {
       {evolutions.map((evolution, index) => {
         const target = object(evolution.target);
         return (
-          <li key={index}>
-            <span className="evolution-condition">
-              {evolutionCondition(evolution).map((part, partIndex) =>
-                typeof part === "string" ? (
-                  part
-                ) : part.route ? (
-                  <EntityLink key={partIndex} game={game.id} route={part.route}>
-                    {part.name}
-                  </EntityLink>
-                ) : (
-                  <strong key={partIndex}>{part.name}</strong>
-                ),
+          <li className="evolution-card" key={index}>
+            <ArrowRight size={16} aria-hidden="true" />
+            <div>
+              {typeof target.slug === "string" ? (
+                <EntityLink game={game.id} route={`pokemon/${target.slug}`}>
+                  {formatName(String(target.name))}
+                </EntityLink>
+              ) : (
+                <strong>{String(target.name ?? "Unknown")}</strong>
               )}
-            </span>
-            <ArrowRight size={15} aria-hidden="true" />
-            {typeof target.slug === "string" ? (
-              <EntityLink game={game.id} route={`pokemon/${target.slug}`}>
-                {formatName(String(target.name))}
-              </EntityLink>
-            ) : (
-              <span>{String(target.name ?? "Unknown")}</span>
-            )}
+              <p className="evolution-condition">
+                {evolutionCondition(evolution).map((part, partIndex) =>
+                  typeof part === "string" ? (
+                    part
+                  ) : part.route ? (
+                    <EntityLink
+                      key={partIndex}
+                      game={game.id}
+                      route={part.route}
+                    >
+                      {part.name}
+                    </EntityLink>
+                  ) : (
+                    <strong key={partIndex}>{part.name}</strong>
+                  ),
+                )}
+              </p>
+            </div>
           </li>
         );
       })}
     </ul>
-  );
-}
-
-// Only the stats a Pokémon actually yields; most yield one or two.
-export function EvYields({ value }: SectionProps) {
-  const yields = Object.entries(object(value)).filter(
-    ([, amount]) => Number(amount) > 0,
-  );
-  return (
-    <p className="badge-list">
-      {yields.map(([stat, amount]) => (
-        <span className="badge" key={stat}>
-          {title(stat)} +{String(amount)}
-        </span>
-      ))}
-    </p>
   );
 }
 

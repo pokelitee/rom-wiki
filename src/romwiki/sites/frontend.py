@@ -128,6 +128,20 @@ def _encounter_facets(record: dict[str, Any]) -> dict[str, Any]:
     return fields
 
 
+def _mascot(
+    site: SiteDefinition, datasets: dict[str, dict[str, Any]]
+) -> dict[str, str] | None:
+    """The Pokémon that represents a game in the library, with its sprite."""
+    if site.mascot is None:
+        return None
+    for record in datasets.get("pokemon", {}).get("records", []):
+        if record.get("slug") == site.mascot:
+            sprite = _index_sprite("pokemon", record)
+            if sprite:
+                return {"name": str(record.get("name")), "sprite": sprite}
+    raise SiteError(f"{site.id} mascot has no published sprite: {site.mascot}")
+
+
 def _index_sprite(kind: str, record: Mapping[str, Any]) -> str | None:
     """The small image the app shows beside a Pokémon or item link."""
     if kind == "pokemon":
@@ -260,10 +274,11 @@ def _documentation(
         return _SNIPPET.sub(snippet, text)
 
     documents = []
-    # A folder's index page introduces it, so it leads that folder's guides.
-    paths = sorted(wiki.glob("*.md")) + sorted(
+    # The game's own guides come first, led by their folder's index page;
+    # the wiki's notes about its sources follow them.
+    paths = sorted(
         (wiki / "docs").rglob("*.md"), key=lambda path: (path.stem != "index", path)
-    )
+    ) + sorted(wiki.glob("*.md"))
     for path in paths:
         relative = path.relative_to(wiki).as_posix()
         slug = relative.removesuffix(".md")
@@ -515,6 +530,7 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                 "description": site.description,
                 "generation": site.game.generation,
                 "theme": site.theme,
+                "mascot": _mascot(site, datasets),
                 "versions": list(site.game.versions),
                 "sections": sections,
                 "comparisons": comparisons,

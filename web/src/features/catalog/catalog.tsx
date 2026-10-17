@@ -1,5 +1,14 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowDownUp, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { useResource } from "../../data/use-resource";
 import type { Game, IndexRecord } from "../../data/types";
 import { ResourceState } from "../../components/resource-state";
@@ -21,17 +30,52 @@ export function Catalog({ game, section }: { game: Game; section: string }) {
     <ResourceState error={resource.error} retry={resource.retry}>
       {resource.value && (
         <>
-          <CatalogTable
-            game={game}
-            section={section}
-            records={resource.value.records}
-          />
+          {section === "types" ? (
+            <TypeGrid game={game} records={resource.value.records} />
+          ) : (
+            <CatalogTable
+              game={game}
+              section={section}
+              records={resource.value.records}
+            />
+          )}
           {section === "types" && resource.value.records[0] && (
             <TypeChart game={game} chunk={resource.value.records[0].chunk} />
           )}
         </>
       )}
     </ResourceState>
+  );
+}
+
+const MULTIPLIER_LABELS: Record<string, string> = { "1/2": "½", "1/4": "¼" };
+
+// There are only 18 types, so they read better as tiles than as a table.
+function TypeGrid({ game, records }: { game: Game; records: IndexRecord[] }) {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Game reference</p>
+          <h1>Types</h1>
+        </div>
+        <span className="count">{countLabel(records.length, "type")}</span>
+      </div>
+      <ul className="type-grid">
+        {records.map((row) => (
+          <li key={row.id}>
+            <Link
+              className="type-tile"
+              data-type={row.label.toLowerCase()}
+              to={`/${game.id}/types/${row.id}`}
+            >
+              <TypeBadge name={row.label} />
+              <ChevronRight size={15} aria-hidden="true" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -80,7 +124,7 @@ function TypeChart({ game, chunk }: { game: Game; chunk: string }) {
                           key={String(defender.name)}
                           className={`effectiveness-${multiplier.replace("/", "-")}`}
                         >
-                          {multiplier}×
+                          {MULTIPLIER_LABELS[multiplier] ?? multiplier}×
                         </td>
                       );
                     })}
@@ -121,6 +165,14 @@ function CatalogTable({
   const numeric = fields.filter((key) =>
     records.some((row) => typeof row.fields[key] === "number"),
   );
+  const hasRange = [...params.keys()].some(
+    (key) => key.startsWith("min.") || key.startsWith("max."),
+  );
+  const [showRanges, setShowRanges] = useState(hasRange);
+  const filtering = [...params.keys()].some(
+    (key) => key !== "page" && key !== "sort" && key !== "dir",
+  );
+  const descending = params.get("dir") === "desc";
   const filtered = filterRecords(records, params, defaultSort(section));
   const page = pageNumber(params, filtered.length);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -171,62 +223,79 @@ function CatalogTable({
             );
           })}
         </div>
-        <details className="advanced-filters">
-          <summary>Ranges and sorting</summary>
-          <div className="filters">
+        {numeric.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="more-filters"
+            aria-expanded={showRanges}
+            onClick={() => setShowRanges((value) => !value)}
+          >
+            <SlidersHorizontal size={14} />
+            {showRanges ? "Fewer filters" : "More filters"}
+          </Button>
+        )}
+        {showRanges && (
+          <div className="filters range-filters">
             {numeric.map((key) => (
-              <div className="range-filter" key={key}>
-                <span>{title(key)}</span>
-                <label>
-                  <span className="sr-only">Minimum {title(key)}</span>
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={params.get(`min.${key}`) ?? ""}
-                    onChange={(event) =>
-                      update(`min.${key}`, event.target.value)
-                    }
-                  />
-                </label>
-                <label>
-                  <span className="sr-only">Maximum {title(key)}</span>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={params.get(`max.${key}`) ?? ""}
-                    onChange={(event) =>
-                      update(`max.${key}`, event.target.value)
-                    }
-                  />
-                </label>
-              </div>
+              <fieldset className="range-filter" key={key}>
+                <legend>{title(key)}</legend>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  aria-label={`Minimum ${title(key)}`}
+                  placeholder="Min"
+                  value={params.get(`min.${key}`) ?? ""}
+                  onChange={(event) => update(`min.${key}`, event.target.value)}
+                />
+                <span aria-hidden="true">–</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  aria-label={`Maximum ${title(key)}`}
+                  placeholder="Max"
+                  value={params.get(`max.${key}`) ?? ""}
+                  onChange={(event) => update(`max.${key}`, event.target.value)}
+                />
+              </fieldset>
             ))}
-            <OptionSelect
-              label="Sort by"
-              value={params.get("sort") ?? defaultSort(section)}
-              onChange={(value) => update("sort", value)}
-              options={["name", "id", ...numeric].map((key) => ({
-                value: key,
-                label: title(key),
-              }))}
-            />
-            <Button
-              variant="outline"
-              onClick={() =>
-                update("dir", params.get("dir") === "desc" ? "asc" : "desc")
-              }
-            >
-              <ArrowDownUp size={14} />
-              {params.get("dir") === "desc" ? "Descending" : "Ascending"}
-            </Button>
           </div>
-        </details>
+        )}
       </div>
       <div className="results-line">
         <span>{countLabel(filtered.length, "result")}</span>
-        <Button variant="ghost" size="sm" onClick={() => setParams({})}>
-          Reset filters
-        </Button>
+        <div className="results-actions">
+          {filtering && (
+            <Button variant="ghost" size="sm" onClick={() => setParams({})}>
+              <X size={14} />
+              Reset filters
+            </Button>
+          )}
+          <OptionSelect
+            className="sort-select"
+            label="Sort by"
+            value={params.get("sort") ?? defaultSort(section)}
+            onChange={(value) => update("sort", value)}
+            options={["name", ...numeric].map((key) => ({
+              value: key,
+              label: title(key),
+            }))}
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            className="sort-direction"
+            aria-label={descending ? "Sort ascending" : "Sort descending"}
+            title={descending ? "Descending" : "Ascending"}
+            onClick={() => update("dir", descending ? "asc" : "desc")}
+          >
+            {descending ? (
+              <ArrowDownWideNarrow size={16} />
+            ) : (
+              <ArrowUpNarrowWide size={16} />
+            )}
+          </Button>
+        </div>
       </div>
       <div className="panel table-scroll">
         <table className="catalog-table">
@@ -255,11 +324,7 @@ function CatalogTable({
                         loading="lazy"
                       />
                     )}
-                    {section === "types" ? (
-                      <TypeBadge name={row.label} />
-                    ) : (
-                      row.label
-                    )}
+                    {row.label}
                   </Link>
                 </td>
                 {columns.map((key) => (
@@ -285,27 +350,29 @@ function CatalogTable({
           <p className="empty-state">No records match these filters.</p>
         )}
       </div>
-      <div className="pagination">
-        <Button
-          variant="outline"
-          disabled={page <= 1}
-          onClick={() => update("page", String(page - 1))}
-        >
-          <ChevronLeft size={15} />
-          Previous
-        </Button>
-        <span>
-          Page {page} of {Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))}
-        </span>
-        <Button
-          variant="outline"
-          disabled={page * PAGE_SIZE >= filtered.length}
-          onClick={() => update("page", String(page + 1))}
-        >
-          Next
-          <ChevronRight size={15} />
-        </Button>
-      </div>
+      {filtered.length > PAGE_SIZE && (
+        <div className="pagination">
+          <Button
+            variant="outline"
+            disabled={page <= 1}
+            onClick={() => update("page", String(page - 1))}
+          >
+            <ChevronLeft size={15} />
+            Previous
+          </Button>
+          <span>
+            Page {page} of {Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))}
+          </span>
+          <Button
+            variant="outline"
+            disabled={page * PAGE_SIZE >= filtered.length}
+            onClick={() => update("page", String(page + 1))}
+          >
+            Next
+            <ChevronRight size={15} />
+          </Button>
+        </div>
+      )}
     </>
   );
 }

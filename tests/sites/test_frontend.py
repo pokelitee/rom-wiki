@@ -128,12 +128,12 @@ def test_export_titles_guides_counts_published_records_and_adds_sprites() -> Non
         manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
         game = manifest["games"][0]
         assert [document["label"] for document in game["documents"]] == [
-            "Test game",
             "Index",
             "FAQ",
             "Special events",
+            "Test game",
         ]
-        faq = json.loads((output / game["documents"][2]["path"]).read_text())
+        faq = json.loads((output / game["documents"][1]["path"]).read_text())
         assert faq["markdown"] == "\n## Q\n"
         pokemon = game["sections"]["pokemon"]
         assert pokemon["metadata"]["record_count"] == 3
@@ -157,6 +157,37 @@ def test_index_labels_unnamed_areas_and_carries_item_sprites() -> None:
         == "https://example.test/i.png"
     )
     assert _index_sprite("moves", {"sprite": {"url": "x"}}) is None
+
+
+def test_export_publishes_the_game_mascot_sprite() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        wiki = make_repository(root)
+        descriptor = root / "sites/games/test-game/game.toml"
+        descriptor.write_text(
+            descriptor.read_text(encoding="utf-8").replace(
+                '[appearance]\ntheme="platinum"\n',
+                '[appearance]\ntheme="platinum"\nmascot="pokemon-1"\n',
+            ),
+            encoding="utf-8",
+        )
+        dataset = pokemon_dataset(1)
+        dataset["records"][0]["sprite"] = {"url": "https://example.test/1.png"}
+        write_public_dataset(wiki, "pokemon", dataset)
+        output = root / "export"
+        export_frontend(root, output)
+        game = json.loads((output / "manifest.json").read_text(encoding="utf-8"))[
+            "games"
+        ][0]
+        assert game["mascot"] == {
+            "name": "Pokemon 1",
+            "sprite": "https://example.test/1.png",
+        }
+
+        dataset["records"][0].pop("sprite")
+        write_public_dataset(wiki, "pokemon", dataset)
+        with pytest.raises(SiteError, match="mascot has no published sprite"):
+            export_frontend(root, root / "export-2")
 
 
 def test_export_rejects_corrupt_archives_and_duplicate_routes() -> None:

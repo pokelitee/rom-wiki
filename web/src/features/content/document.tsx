@@ -40,7 +40,21 @@ function Contents({ entries }: { entries: OutlineEntry[] }) {
   );
 }
 
-export function Document({ game, id }: { game: Game; id: string }) {
+// Guides are titled by the page header, so a leading "# Title" in the
+// Markdown would repeat it.
+function withoutTitle(markdown: string): string {
+  return markdown.replace(/^\s*# [^\n]*\n?/, "");
+}
+
+export function Document({
+  game,
+  id,
+  titled = true,
+}: {
+  game: Game;
+  id: string;
+  titled?: boolean;
+}) {
   const entry = game.documents.find((document) => document.id === id);
   const resource = useResource<{ markdown: string }>(entry?.path);
   if (!entry)
@@ -52,6 +66,14 @@ export function Document({ game, id }: { game: Game; id: string }) {
     );
   return (
     <ResourceState error={resource.error} retry={resource.retry}>
+      {resource.value && titled && (
+        <header className="page-heading">
+          <div>
+            <p className="eyebrow">Documentation</p>
+            <h1>{entry.label}</h1>
+          </div>
+        </header>
+      )}
       {resource.value && (
         <div className="guide-layout">
           <article className="prose panel">
@@ -114,7 +136,9 @@ export function Document({ game, id }: { game: Game; id: string }) {
                 },
               }}
             >
-              {resource.value.markdown}
+              {titled
+                ? withoutTitle(resource.value.markdown)
+                : resource.value.markdown}
             </ReactMarkdown>
           </article>
           {outline(resource.value.markdown).length >= 3 && (

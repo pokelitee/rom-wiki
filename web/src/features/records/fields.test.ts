@@ -20,6 +20,8 @@ describe("record field rules", () => {
       "pokemon_slug",
       "internal_name",
       "x",
+      "pokemon_form",
+      "party_position",
     ])
       expect(isTechnical(key)).toBe(true);
     for (const key of ["name", "level", "abilities", "gender_ratio"])

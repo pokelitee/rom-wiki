@@ -17,7 +17,6 @@ import {
   ArrowUpRight,
   BookOpen,
   ChevronRight,
-  Database,
   Download,
   GitCompareArrows,
   Library,
@@ -31,6 +30,7 @@ import type { Game, Manifest } from "./data/types";
 import { loadManifest } from "./data/client";
 import { Button } from "./components/ui/button";
 import { OptionSelect } from "./components/option-select";
+import { Logo } from "./components/logo";
 import { SpriteProvider } from "./components/sprite-provider";
 import { SectionIcon } from "./components/section-icon";
 import { Catalog } from "./features/catalog/catalog";
@@ -137,7 +137,7 @@ function Shell({ manifest }: { manifest: Manifest }) {
         <div className="topbar-inner">
           <Link className="brand" to="/">
             <span className="brand-mark">
-              <Database size={19} />
+              <Logo size={19} />
             </span>
             ROM<span>Wiki</span>
           </Link>
@@ -259,14 +259,16 @@ function Shell({ manifest }: { manifest: Manifest }) {
           </aside>
         )}
         <main id="main-content" tabIndex={-1} className="main-content">
-          <Routes>
-            <Route path="/" element={<Portal games={manifest.games} />} />
-            <Route
-              path="/:gameId/*"
-              element={<GameRoutes games={manifest.games} />}
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="page-body">
+            <Routes>
+              <Route path="/" element={<Portal games={manifest.games} />} />
+              <Route
+                path="/:gameId/*"
+                element={<GameRoutes games={manifest.games} />}
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
           <footer>
             ROM Wiki <span>·</span> An independent, data-driven reference.
             Pokémon belongs to its respective owners.
