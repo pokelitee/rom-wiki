@@ -9,3 +9,5 @@ description = "Data-driven references for Pokémon ROM hacks"
 
 [appearance]
 theme = "portal"
+# Porygon is made of computer data, fitting a wiki decoded from ROMs.
+mascot = "porygon"
