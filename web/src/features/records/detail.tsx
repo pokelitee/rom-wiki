@@ -239,7 +239,7 @@ function RecordPage({
     ),
   ];
   return (
-    <>
+    <div className="record-page">
       <Link className="back-link" to={`/${game.id}/${section}`}>
         <ArrowLeft size={14} />
         All {title(section)}
@@ -405,7 +405,7 @@ function RecordPage({
           Data sources and known limitations
         </Link>
       </details>
-    </>
+    </div>
   );
 }
 
@@ -425,7 +425,7 @@ function RawFacts({ values }: { values: DataObject }) {
               {value !== null && typeof value === "object" ? (
                 <pre>{JSON.stringify(value, null, 2)}</pre>
               ) : (
-                String(value)
+                String(value) || <span className="muted">—</span>
               )}
             </dd>
           </div>

@@ -313,6 +313,7 @@ export function Value({
     );
   }
   const keys = factKeys(value, field !== "");
+  if (!keys.length) return <span className="muted">—</span>;
   const grid = depth === 0 && keys.every((key) => isScalarFact(value[key]));
   return (
     <dl className={grid ? "fact-grid" : "fact-list"}>
