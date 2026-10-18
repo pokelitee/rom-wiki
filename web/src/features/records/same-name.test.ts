@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IndexRecord } from "../../data/types";
-import { recordContext, sharedLabels } from "./same-name";
+import { recordContext, recordNumber, sharedLabels } from "./same-name";
 
 function row(id: string, label: string, fields: IndexRecord["fields"] = {}) {
   return { id, label, chunk: "", fields } as IndexRecord;
@@ -28,6 +28,11 @@ describe("records with the same name", () => {
         }),
       ),
     ).toBe("Lv. 5–7 · Rattata, Starly, Bidoof +1 · #117");
+  });
+
+  it("numbers records by their identifier", () => {
+    expect(recordNumber("area-112")).toBe("#112");
+    expect(recordNumber("map-007")).toBe("#7");
   });
 
   it("leaves out what catalog columns already show", () => {

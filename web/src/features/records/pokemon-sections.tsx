@@ -12,6 +12,7 @@ import { title } from "../../lib/utils";
 import { evolutionCondition } from "./evolution";
 import { fieldLabel, formatName, formatScalar, tableScroll } from "./fields";
 import { compactEncounters, type WildEncounter } from "./wild-encounters";
+import { recordNumber } from "./same-name";
 
 export interface SectionProps {
   value: Json;
@@ -400,6 +401,11 @@ export function WildEncounters({ value, game }: SectionProps) {
       last.push(row);
     else areas.push([row]);
   }
+  const shared = new Set(
+    areas
+      .map((group) => group[0].area)
+      .filter((area, index, all) => all.indexOf(area) !== index),
+  );
   const showWhen = rows.some((row) => row.when.length);
   const showVersions = rows.some((row) => row.versions.length);
   return (
@@ -430,6 +436,11 @@ export function WildEncounters({ value, game }: SectionProps) {
                       </EntityLink>
                     ) : (
                       row.area
+                    )}
+                    {row.route && shared.has(row.area) && (
+                      <span className="row-context">
+                        {recordNumber(row.route)}
+                      </span>
                     )}
                   </th>
                 )}
