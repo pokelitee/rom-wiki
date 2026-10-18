@@ -193,6 +193,30 @@ def test_export_publishes_the_game_mascot_sprite() -> None:
             export_frontend(root, root / "export-2")
 
 
+def test_export_publishes_the_portal_mascot_from_a_game() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        wiki = make_repository(root)
+        portal = root / "sites/portal/site.toml"
+        portal.write_text(
+            portal.read_text(encoding="utf-8").replace(
+                '[appearance]\ntheme="platinum"\n',
+                '[appearance]\ntheme="platinum"\nmascot="pokemon-2"\n',
+            ),
+            encoding="utf-8",
+        )
+        dataset = pokemon_dataset(2)
+        dataset["records"][1]["sprite"] = {"url": "https://example.test/2.png"}
+        write_public_dataset(wiki, "pokemon", dataset)
+        output = root / "export"
+        export_frontend(root, output)
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["mascot"] == {
+            "name": "Pokemon 2",
+            "sprite": "https://example.test/2.png",
+        }
+
+
 def test_export_rejects_corrupt_archives_and_duplicate_routes() -> None:
     with TemporaryDirectory() as directory:
         root = Path(directory)

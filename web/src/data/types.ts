@@ -26,13 +26,18 @@ export interface DownloadEntry {
   record_count: number;
   sha256: string;
 }
+// The Pokémon whose sprite represents a game, or the library as a whole.
+export interface Mascot {
+  name: string;
+  sprite: string;
+}
 export interface Game {
   id: string;
   name: string;
   description: string;
   generation: number;
   theme: string;
-  mascot?: { name: string; sprite: string } | null;
+  mascot?: Mascot | null;
   versions: string[];
   sections: Record<string, Section>;
   comparisons: Record<string, string>;
@@ -42,6 +47,7 @@ export interface Game {
 }
 export interface Manifest {
   schema_version: number;
+  mascot?: Mascot | null;
   games: Game[];
 }
 export interface RecordDetail {

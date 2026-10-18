@@ -167,17 +167,22 @@ def _with_record_slugs(
 
 
 def _mascot(
-    site: SiteDefinition, datasets: dict[str, dict[str, Any]]
+    owner: str, slug: str | None, datasets: list[dict[str, Any]]
 ) -> dict[str, str] | None:
-    """The Pokémon that represents a game in the library, with its sprite."""
-    if site.mascot is None:
+    """The Pokémon that represents a site, with its sprite.
+
+    A game's mascot comes from its own Pokémon; the portal's from the first
+    game that publishes a sprite for it.
+    """
+    if slug is None:
         return None
-    for record in datasets.get("pokemon", {}).get("records", []):
-        if record.get("slug") == site.mascot:
-            sprite = _index_sprite("pokemon", record)
-            if sprite:
-                return {"name": str(record.get("name")), "sprite": sprite}
-    raise SiteError(f"{site.id} mascot has no published sprite: {site.mascot}")
+    for dataset in datasets:
+        for record in dataset.get("records", []):
+            if record.get("slug") == slug:
+                sprite = _index_sprite("pokemon", record)
+                if sprite:
+                    return {"name": str(record.get("name")), "sprite": sprite}
+    raise SiteError(f"{owner} mascot has no published sprite: {slug}")
 
 
 def _index_sprite(kind: str, record: Mapping[str, Any]) -> str | None:
@@ -448,10 +453,12 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
         raise SiteError("Frontend output must not contain the repository")
     catalog = SiteCatalog.load(root)
     games = []
+    pokemon: list[dict[str, Any]] = []
     for site in catalog.published():
         if site.game is None:
             continue
         datasets = _read_datasets(site)
+        pokemon.append(datasets.get("pokemon", {}))
         relationships = _relationships(datasets)
         # A species ID is its base form's member number; alternate forms
         # follow the national Pokédex in the personal archive.
@@ -658,7 +665,7 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                 "description": site.description,
                 "generation": site.game.generation,
                 "theme": site.theme,
-                "mascot": _mascot(site, datasets),
+                "mascot": _mascot(site.id, site.mascot, [datasets.get("pokemon", {})]),
                 "versions": list(site.game.versions),
                 "sections": sections,
                 "comparisons": comparisons,
@@ -670,6 +677,11 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
                 "search_index": search_index,
             }
         )
-    manifest = {"schema_version": FRONTEND_SCHEMA_VERSION, "games": games}
+    portal = next(site for site in catalog.published() if site.kind == "portal")
+    manifest = {
+        "schema_version": FRONTEND_SCHEMA_VERSION,
+        "mascot": _mascot(portal.id, portal.mascot, pokemon),
+        "games": games,
+    }
     write_json_atomic(output / "manifest.json", manifest)
     return len(games)

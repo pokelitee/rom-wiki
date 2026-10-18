@@ -1,6 +1,11 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, BookOpen, ChevronRight } from "lucide-react";
-import { Logo } from "../../components/logo";
+import {
+  ArrowUpRight,
+  BookOpen,
+  ChevronRight,
+  Gamepad2,
+  Library,
+} from "lucide-react";
 import type { Game } from "../../data/types";
 
 export function Portal({ games }: { games: Game[] }) {
@@ -23,7 +28,7 @@ export function Portal({ games }: { games: Game[] }) {
         </p>
         <div className="hero-meta">
           <span>
-            <Logo size={14} />
+            <Library size={14} />
             {games.length} game wikis
           </span>
           <span>
@@ -58,7 +63,7 @@ export function Portal({ games }: { games: Game[] }) {
                         loading="lazy"
                       />
                     ) : (
-                      <Logo size={22} />
+                      <Gamepad2 size={22} />
                     )}
                   </span>
                   <ArrowUpRight className="card-arrow" size={19} />
