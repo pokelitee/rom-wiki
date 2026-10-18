@@ -15,7 +15,7 @@ import { StatBars } from "../../components/stat-bars";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
 import { RecordHero } from "./record-hero";
-import { TypeMatchups } from "./type-sections";
+import { TypeMatchups, TypePokemon } from "./type-sections";
 import { Warps } from "./location-sections";
 import { recordContext } from "./same-name";
 import { EntityLink } from "../../components/entity-link";
@@ -237,9 +237,12 @@ function RecordPage({
     ...[...sections, ...relationships].map(
       ([key]) => [`section-${key}`, title(key)] as [string, string],
     ),
+    ...(section === "types"
+      ? [["section-pokemon", "Pokémon"] as [string, string]]
+      : []),
   ];
   return (
-    <>
+    <div className="record-page">
       <Link className="back-link" to={`/${game.id}/${section}`}>
         <ArrowLeft size={14} />
         All {title(section)}
@@ -334,6 +337,9 @@ function RecordPage({
           <Value value={value} game={game.id} field={key} />
         </section>
       ))}
+      {section === "types" && (
+        <TypePokemon game={game} type={String(record.name)} />
+      )}
       {section === "trainers" && (
         <TrainerFamilies game={game} record={record} metadata={metadata} />
       )}
@@ -405,7 +411,7 @@ function RecordPage({
           Data sources and known limitations
         </Link>
       </details>
-    </>
+    </div>
   );
 }
 
@@ -425,7 +431,7 @@ function RawFacts({ values }: { values: DataObject }) {
               {value !== null && typeof value === "object" ? (
                 <pre>{JSON.stringify(value, null, 2)}</pre>
               ) : (
-                String(value)
+                String(value) || <span className="muted">—</span>
               )}
             </dd>
           </div>

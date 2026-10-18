@@ -178,6 +178,20 @@ function CatalogTable({
   const page = pageNumber(params, filtered.length);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const shared = sharedLabels(records);
+  // A filter needs at least two values to choose between.
+  const choices = categorical
+    .map(
+      (key) =>
+        [
+          key,
+          [
+            ...new Set(
+              records.flatMap((row) => row.fields[key] ?? []).map(String),
+            ),
+          ].sort(),
+        ] as const,
+    )
+    .filter(([, values]) => values.length > 1);
   const columns = fields
     .filter(
       (key) =>
@@ -203,15 +217,9 @@ function CatalogTable({
             onChange={(event) => update("q", event.target.value)}
           />
         </label>
-        <div className="filters">
-          {categorical.map((key) => {
-            const values = [
-              ...new Set(
-                records.flatMap((row) => row.fields[key] ?? []).map(String),
-              ),
-            ].sort();
-            if (values.length < 2) return null;
-            return (
+        {choices.length > 0 && (
+          <div className="filters">
+            {choices.map(([key, values]) => (
               <OptionSelect
                 key={key}
                 label={title(key)}
@@ -222,9 +230,9 @@ function CatalogTable({
                   ...values.map((value) => ({ value, label: title(value) })),
                 ]}
               />
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
         {numeric.length > 0 && (
           <Button
             variant="ghost"
@@ -336,17 +344,22 @@ function CatalogTable({
                 </td>
                 {columns.map((key) => (
                   <td key={key} data-label={title(key)}>
-                    {Array.isArray(row.fields[key])
-                      ? (row.fields[key] as string[]).map((value) =>
-                          TYPE_FIELDS.has(key) ? (
-                            <TypeBadge name={value} key={value} />
-                          ) : (
-                            <span className="badge" key={value}>
-                              {title(value)}
-                            </span>
-                          ),
-                        )
-                      : (row.fields[key] ?? "—")}
+                    {Array.isArray(row.fields[key]) &&
+                    (row.fields[key] as string[]).length ? (
+                      (row.fields[key] as string[]).map((value) =>
+                        TYPE_FIELDS.has(key) ? (
+                          <TypeBadge name={value} key={value} />
+                        ) : (
+                          <span className="badge" key={value}>
+                            {title(value)}
+                          </span>
+                        ),
+                      )
+                    ) : Array.isArray(row.fields[key]) ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      (row.fields[key] ?? "—")
+                    )}
                   </td>
                 ))}
               </tr>

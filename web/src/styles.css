@@ -805,7 +805,6 @@ tbody tr:hover {
   align-items: flex-start;
   gap: 24px;
   padding: 24px;
-  margin-bottom: 22px;
 }
 .sprite-viewer {
   display: grid;
@@ -862,9 +861,6 @@ tbody tr:hover {
 .hero-description small {
   font-size: var(--text-xs);
 }
-.record-hero h1 {
-  margin-bottom: 7px;
-}
 .record-sprite {
   image-rendering: pixelated;
   object-fit: contain;
@@ -877,6 +873,21 @@ tbody tr:hover {
   gap: 7px;
   font-size: var(--text-xs);
   margin-bottom: 20px;
+}
+/* The page spaces its parts with one gap, so a part a record lacks leaves
+   no space behind. */
+.record-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+.record-page
+  > :is(.back-link, .notice, .panel, .record-nav, .variant-controls) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.record-page > .back-link {
+  justify-self: start;
 }
 .detail-section {
   padding: 22px;
@@ -1109,7 +1120,6 @@ tbody tr:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  margin: 20px 0;
 }
 .variant-controls:empty {
   display: none;
@@ -1121,14 +1131,17 @@ tbody tr:hover {
   width: 220px;
 }
 .stat-bars {
+  --stat-columns: 125px 32px 1fr;
+  display: grid;
+  gap: 13px;
   max-width: 620px;
 }
-.stat-row {
+.stat-row,
+.stat-total {
   display: grid;
-  grid-template-columns: 125px 32px 1fr;
+  grid-template-columns: var(--stat-columns);
   align-items: center;
   gap: 14px;
-  margin: 11px 0;
   font-size: var(--text-xs);
 }
 .stat-track {
@@ -1143,10 +1156,8 @@ tbody tr:hover {
   border-radius: 3px;
 }
 .stat-total {
-  display: flex;
-  gap: 25px;
-  font-size: var(--text-xs);
-  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 .evolution-list {
   display: grid;
@@ -1212,14 +1223,9 @@ tbody tr:hover {
   margin: 0 0 4px;
 }
 .party-card .stat-bars {
+  --stat-columns: 110px 48px 1fr;
+  gap: 8px;
   max-width: none;
-}
-.party-card .stat-row {
-  grid-template-columns: 110px 48px 1fr;
-  margin: 6px 0;
-}
-.party-card .stat-total {
-  margin-top: 8px;
 }
 .party-card details {
   font-size: var(--text-xs);
@@ -1265,7 +1271,7 @@ tbody tr:hover {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 .section-card {
   display: flex;
@@ -1289,7 +1295,7 @@ tbody tr:hover {
   border: 1px solid var(--border);
   background: var(--muted);
   border-radius: 8px;
-  margin: 25px 0;
+  margin: 0 0 24px;
 }
 .notice p {
   margin: 4px 0 0;
@@ -1349,6 +1355,15 @@ tbody tr:hover {
 }
 .prose h3 {
   margin-top: 24px;
+}
+.prose :is(h1, h2, h3, h4) {
+  margin-bottom: 10px;
+}
+.prose :is(p, pre, blockquote, table) {
+  margin-bottom: 14px;
+}
+.prose > :last-child {
+  margin-bottom: 0;
 }
 .prose ul,
 .prose ol {
@@ -1720,7 +1735,6 @@ footer > span {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-  margin-bottom: 18px;
 }
 .pokemon-summary > .detail-section {
   margin-bottom: 0;
@@ -1966,10 +1980,12 @@ footer > span {
   .catalog-table td:first-child::before {
     content: none;
   }
-  .stat-row {
-    grid-template-columns: 100px 26px 1fr;
+  .stat-bars {
+    --stat-columns: 100px 26px 1fr;
+  }
+  .stat-row,
+  .stat-total {
     gap: 8px;
-    font-size: var(--text-xs);
   }
   .prose {
     padding: 20px;
