@@ -30,7 +30,7 @@ import type { Game, Manifest } from "./data/types";
 import { loadManifest } from "./data/client";
 import { Button } from "./components/ui/button";
 import { OptionSelect } from "./components/option-select";
-import { Logo } from "./components/logo";
+import { useFavicon, useMascotIcon } from "./components/mascot";
 import { SpriteProvider } from "./components/sprite-provider";
 import { SectionIcon } from "./components/section-icon";
 import { Catalog } from "./features/catalog/catalog";
@@ -116,11 +116,14 @@ function Shell({ manifest }: { manifest: Manifest }) {
       console.warn("Theme preference could not be saved", error);
     }
   }, [dark]);
+  const mascot = game ? game.mascot : manifest.mascot;
+  const icon = useMascotIcon(mascot?.sprite);
   useEffect(() => {
     document.documentElement.dataset.theme = game?.theme ?? "portal";
     document.title = game ? `${game.name} · ROM Wiki` : "ROM Wiki";
     window.scrollTo(0, 0);
   }, [game, location.pathname]);
+  useFavicon(icon, `${game?.theme ?? "portal"}/${dark ? "dark" : "light"}`);
   return (
     <>
       <a
@@ -137,7 +140,7 @@ function Shell({ manifest }: { manifest: Manifest }) {
         <div className="topbar-inner">
           <Link className="brand" to="/">
             <span className="brand-mark">
-              <Logo size={19} />
+              {icon && <img src={icon} alt="" width={24} height={24} />}
             </span>
             ROM<span>Wiki</span>
           </Link>

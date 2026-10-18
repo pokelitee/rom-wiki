@@ -182,6 +182,19 @@ test("a Pokémon's wild encounters merge seasons and versions", async ({
   await expect(page.locator(".record-hero h1")).toHaveText("Route 6");
 });
 
+test("the header and browser tab show the game's mascot", async ({ page }) => {
+  test.skip(!platinum?.mascot, "needs a Platinum mascot");
+  await page.goto("./#/platinum");
+  await expect(page.locator(".brand-mark img")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href,
+      ),
+    )
+    .toMatch(/^data:image\/png/);
+});
+
 test("trainer parties render as cards", async ({ page }) => {
   await page.goto("./#/platinum/trainers?q=roark");
   await page.locator(".catalog-table tbody a").first().click();
