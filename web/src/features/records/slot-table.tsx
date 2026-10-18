@@ -12,15 +12,31 @@ function levels({ minimumLevel, maximumLevel }: SlotSummary): string {
     : `${minimumLevel}–${maximumLevel}`;
 }
 
+interface Columns {
+  showLevel: boolean;
+  showChance: boolean;
+}
+
+// Level and chance columns appear only when some row has a value for them;
+// a swarm's Pokémon, for example, store neither.
+function columns(slots: SlotSummary[]): Columns {
+  return {
+    showLevel: slots.some(
+      (slot) => slot.minimumLevel !== null || slot.maximumLevel !== null,
+    ),
+    showChance: slots.some((slot) => slot.chance !== null),
+  };
+}
+
 function SlotCells({
   slot,
   game,
+  showLevel,
   showChance,
 }: {
   slot: SlotSummary;
   game: string;
-  showChance: boolean;
-}) {
+} & Columns) {
   const { pokemon, chance } = slot;
   const name = formatName(String(pokemon.name));
   return (
@@ -34,7 +50,7 @@ function SlotCells({
           name
         )}
       </td>
-      <td className="numeric">{levels(slot)}</td>
+      {showLevel && <td className="numeric">{levels(slot)}</td>}
       {showChance && (
         <td className="numeric">{chance === null ? "—" : `${chance}%`}</td>
       )}
@@ -42,12 +58,12 @@ function SlotCells({
   );
 }
 
-function SlotHead({ showChance }: { showChance: boolean }) {
+function SlotHead({ showLevel, showChance }: Columns) {
   return (
     <>
       <th>Pokémon</th>
-      <th>Level</th>
-      {showChance && <th>Chance</th>}
+      {showLevel && <th className="numeric">Level</th>}
+      {showChance && <th className="numeric">Chance</th>}
     </>
   );
 }
@@ -61,19 +77,19 @@ export function SlotTable({
 }) {
   const summaries = summarizeSlots(rows);
   if (!summaries.length) return <span className="muted">No Pokémon</span>;
-  const showChance = summaries.some((summary) => summary.chance !== null);
+  const shown = columns(summaries);
   return (
     <div className={tableScroll(summaries.length)}>
       <table className="detail-table slot-table">
         <thead>
           <tr>
-            <SlotHead showChance={showChance} />
+            <SlotHead {...shown} />
           </tr>
         </thead>
         <tbody>
           {summaries.map((slot) => (
             <tr key={String(slot.pokemon.slug ?? slot.pokemon.name)}>
-              <SlotCells slot={slot} game={game} showChance={showChance} />
+              <SlotCells slot={slot} game={game} {...shown} />
             </tr>
           ))}
         </tbody>
@@ -91,9 +107,7 @@ export function GroupedSlotTable({
   groups: SlotGroup[];
   game: string;
 }) {
-  const showChance = groups.some((group) =>
-    group.slots.some((slot) => slot.chance !== null),
-  );
+  const shown = columns(groups.flatMap((group) => group.slots));
   const rows = groups.reduce((total, group) => total + group.slots.length, 0);
   return (
     <div className={tableScroll(rows)}>
@@ -101,7 +115,7 @@ export function GroupedSlotTable({
         <thead>
           <tr>
             <th>When</th>
-            <SlotHead showChance={showChance} />
+            <SlotHead {...shown} />
           </tr>
         </thead>
         {groups.map((group, index) => (
@@ -122,7 +136,7 @@ export function GroupedSlotTable({
                     ))}
                   </th>
                 )}
-                <SlotCells slot={slot} game={game} showChance={showChance} />
+                <SlotCells slot={slot} game={game} {...shown} />
               </tr>
             ))}
           </tbody>

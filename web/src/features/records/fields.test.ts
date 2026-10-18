@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  coversAllVersions,
   formatName,
   formatScalar,
   isEmpty,
   isNamedReference,
+  isScriptCommand,
   countRepeats,
   isTechnical,
   orderEntries,
@@ -100,5 +102,21 @@ describe("record field rules", () => {
       { value: potion, count: 2 },
       { value: antidote, count: 1 },
     ]);
+  });
+
+  it("recognizes records found in every version", () => {
+    expect(
+      coversAllVersions(["black-2", "white-2"], ["black-2", "white-2"]),
+    ).toBe(true);
+    expect(coversAllVersions(["black-2"], ["black-2", "white-2"])).toBe(false);
+    expect(coversAllVersions([], [])).toBe(false);
+  });
+
+  it("recognizes script commands only in acquisition details", () => {
+    expect(isScriptCommand("detail", "PokePartyAddEx")).toBe(true);
+    expect(isScriptCommand("detail", "CallWildBattle")).toBe(true);
+    expect(isScriptCommand("detail", "Helix Fossil")).toBe(false);
+    expect(isScriptCommand("detail", "Trade for Buizel")).toBe(false);
+    expect(isScriptCommand("held_item_name", "BlackGlasses")).toBe(false);
   });
 });

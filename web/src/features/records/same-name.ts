@@ -34,7 +34,8 @@ function list(value: IndexRecord["fields"][string], limit: number): string {
     : entries.join(", ");
 }
 
-function number(id: string): string {
+// "#112" for area-112: the number players can tell same-named records by.
+export function recordNumber(id: string): string {
   return `#${Number(id.replace(/^\D+/, ""))}`;
 }
 
@@ -63,10 +64,14 @@ export function recordContext(
               ),
             ]
         : undefined;
-  if (parts) return [...parts, number(row.id)].filter(Boolean).join(" · ");
+  if (parts)
+    return [...parts, recordNumber(row.id)].filter(Boolean).join(" · ");
   if (section === "locations")
-    return mapContext(fields.section_name, Number(number(row.id).slice(1)));
-  return /^\D+-?\d+$/.test(row.id) ? number(row.id) : row.id;
+    return mapContext(
+      fields.section_name,
+      Number(recordNumber(row.id).slice(1)),
+    );
+  return /^\D+-?\d+$/.test(row.id) ? recordNumber(row.id) : row.id;
 }
 
 // Labels shared by more than one record in a section.

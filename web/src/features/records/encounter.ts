@@ -130,8 +130,27 @@ function hasSlotList(value: Json): boolean {
   );
 }
 
+// A Pokémon named in an encounter table carries its sprite; places and
+// other references in the same records do not.
+function hasPokemon(value: Json): boolean {
+  if (isNamedReference(value) && "sprite" in object(value)) return true;
+  if (Array.isArray(value)) return value.some(hasPokemon);
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    Object.values(value).some(hasPokemon)
+  );
+}
+
 // Slot groups for a value that holds at least one real encounter table, so
-// other lists of Pokémon are not mistaken for encounters.
-export function encounterGroups(value: Json): SlotGroup[] | null {
-  return hasSlotList(value) ? slotGroups(value) : null;
+// other lists of Pokémon are not mistaken for encounters. Inside an
+// encounter section, Pokémon named without slots count too, such as
+// HeartGold's swarm and night fishing Pokémon.
+export function encounterGroups(
+  value: Json,
+  inEncounterSection = false,
+): SlotGroup[] | null {
+  return hasSlotList(value) || (inEncounterSection && hasPokemon(value))
+    ? slotGroups(value)
+    : null;
 }
