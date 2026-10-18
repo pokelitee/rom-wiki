@@ -112,6 +112,42 @@ test("record pages show readable values and keep raw data in the details", async
   await expect(page.locator(".raw-record pre")).toContainText('"gender_ratio"');
 });
 
+test("type pages list their Pokémon", async ({ page }) => {
+  test.skip(!platinum?.sections.types, "needs the Platinum type chart");
+  await page.goto("./#/platinum/types/fire");
+  const pokemon = page.locator("#section-pokemon");
+  await expect(pokemon.getByRole("link", { name: "Charmander" })).toBeVisible();
+  await expect(pokemon.getByRole("link", { name: "Bulbasaur" })).toHaveCount(0);
+  await pokemon.getByRole("link", { name: "Charmander" }).click();
+  await expect(page.locator(".record-hero h1")).toHaveText("Charmander");
+});
+
+test("parts a record lacks leave no extra space", async ({ page }) => {
+  test.skip(!platinum?.sections.trainers, "needs Platinum trainers");
+  // Trainers have no sprite, description, version picker, or reference data.
+  const trainers = await readData<{ records: { id: string }[] }>(
+    platinum.sections.trainers.index,
+  );
+  await page.goto(`./#/platinum/trainers/${trainers.records[0].id}`);
+  await expect(
+    page.locator(".record-page > .detail-section").first(),
+  ).toBeVisible();
+  const gaps = await page.locator(".record-page").evaluate((root) => {
+    const parts = [...root.children].filter(
+      (part) => part.getBoundingClientRect().height > 0,
+    );
+    return parts
+      .slice(1)
+      .map((part, index) =>
+        Math.round(
+          part.getBoundingClientRect().top -
+            parts[index].getBoundingClientRect().bottom,
+        ),
+      );
+  });
+  expect(new Set(gaps).size).toBe(1);
+});
+
 test("trainer parties render as cards", async ({ page }) => {
   await page.goto("./#/platinum/trainers?q=roark");
   await page.locator(".catalog-table tbody a").first().click();

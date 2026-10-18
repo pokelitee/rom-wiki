@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import type {
   DataObject,
+  Game,
   IndexRecord,
   Json,
   RecordDetail,
 } from "../../data/types";
+import { EntityLink } from "../../components/entity-link";
 import { TypeBadge } from "../../components/type-badge";
 import { useResource } from "../../data/use-resource";
 import { object } from "../../lib/json";
@@ -103,5 +105,35 @@ export function TypeMatchups({ value, game, record }: SectionProps) {
         />
       )}
     </div>
+  );
+}
+
+// Every Pokémon with this type in either slot, in Pokédex order, read from
+// the Pokémon index since type records do not list their Pokémon.
+export function TypePokemon({ game, type }: { game: Game; type: string }) {
+  const index = useResource<{ records: IndexRecord[] }>(
+    game.sections.pokemon?.index,
+  );
+  const members = (index.value?.records ?? [])
+    .filter(
+      (row) =>
+        Array.isArray(row.fields.types) && row.fields.types.includes(type),
+    )
+    .sort(
+      (a, b) =>
+        Number(a.fields.national_dex_id) - Number(b.fields.national_dex_id),
+    );
+  if (!members.length) return null;
+  return (
+    <section className="panel detail-section" id="section-pokemon">
+      <h2>Pokémon</h2>
+      <span className="badge-list chip-list">
+        {members.map((row) => (
+          <EntityLink key={row.id} game={game.id} route={`pokemon/${row.id}`}>
+            {row.label}
+          </EntityLink>
+        ))}
+      </span>
+    </section>
   );
 }
