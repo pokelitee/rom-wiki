@@ -11,6 +11,7 @@ import { TypeBadge } from "../../components/type-badge";
 import { useResource } from "../../data/use-resource";
 import { object } from "../../lib/json";
 import type { SectionProps } from "./pokemon-sections";
+import { formatScalar, tableScroll } from "./fields";
 
 const GROUPS: { multiplier: string; label: string }[] = [
   { multiplier: "2", label: "2×" },
@@ -134,6 +135,63 @@ export function TypePokemon({ game, type }: { game: Game; type: string }) {
           </EntityLink>
         ))}
       </span>
+    </section>
+  );
+}
+
+// Every move of this type, read from the moves index like the Pokémon above.
+export function TypeMoves({ game, type }: { game: Game; type: string }) {
+  const index = useResource<{ records: IndexRecord[] }>(
+    game.sections.moves?.index,
+  );
+  const moves = (index.value?.records ?? [])
+    .filter(
+      (row) => Array.isArray(row.fields.type) && row.fields.type.includes(type),
+    )
+    .sort((a, b) => a.label.localeCompare(b.label));
+  if (!moves.length) return null;
+  const stat = (value: Json | undefined) =>
+    typeof value === "number" && value > 0 ? value : "—";
+  return (
+    <section className="panel detail-section" id="section-moves">
+      <h2>Moves</h2>
+      <div className={tableScroll(moves.length)}>
+        <table className="detail-table">
+          <thead>
+            <tr>
+              <th>Move</th>
+              <th>Category</th>
+              <th>Power</th>
+              <th>Accuracy</th>
+              <th>PP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {moves.map((row) => {
+              const category = Array.isArray(row.fields.damage_class)
+                ? row.fields.damage_class[0]
+                : row.fields.damage_class;
+              return (
+                <tr key={row.id}>
+                  <td>
+                    <EntityLink game={game.id} route={`moves/${row.id}`}>
+                      {row.label}
+                    </EntityLink>
+                  </td>
+                  <td>
+                    {typeof category === "string"
+                      ? formatScalar("damage_class", category)
+                      : "—"}
+                  </td>
+                  <td className="numeric">{stat(row.fields.power)}</td>
+                  <td className="numeric">{stat(row.fields.accuracy)}</td>
+                  <td className="numeric">{stat(row.fields.pp)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
