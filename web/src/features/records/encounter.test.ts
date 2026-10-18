@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isSlotList, slotGroups, summarizeSlots } from "./encounter";
+import {
+  encounterGroups,
+  isSlotList,
+  slotGroups,
+  summarizeSlots,
+} from "./encounter";
 
 const starly = { name: "Starly", slug: "starly" };
 const bidoof = { name: "Bidoof", slug: "bidoof" };
@@ -85,5 +90,31 @@ describe("encounter slots", () => {
         slots: [{ chance: 20, level: 2, pokemon: starly }],
       }),
     ).toHaveLength(1);
+  });
+
+  it("treats named Pokémon as encounters only inside encounter sections", () => {
+    const magikarp = { name: "Magikarp", slug: "magikarp", sprite: {} };
+    expect(
+      encounterGroups([{ name: "Lake Verity", header_id: 311 }], true),
+    ).toBeNull();
+    const special = {
+      fishing_swarm: magikarp,
+      land_swarm: null,
+      hoenn_radio: [null, null],
+    };
+    expect(encounterGroups(special)).toBeNull();
+    expect(encounterGroups(special, true)).toEqual([
+      {
+        labels: ["Fishing swarm"],
+        slots: [
+          {
+            pokemon: magikarp,
+            minimumLevel: null,
+            maximumLevel: null,
+            chance: null,
+          },
+        ],
+      },
+    ]);
   });
 });
