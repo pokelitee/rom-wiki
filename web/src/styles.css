@@ -920,18 +920,19 @@ tbody tr:hover {
 /* Tables inside record cards: a light header, compact rows, and edges that
    line up with the card's other content. */
 .detail-table {
+  --cell-x: 12px;
   font-size: var(--text-sm);
 }
 .detail-table th {
   background: transparent;
   border-bottom: 1px solid var(--border);
-  padding: 0 12px 8px;
+  padding: 0 var(--cell-x) 8px;
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
 .detail-table td {
-  padding: 7px 12px;
+  padding: 7px var(--cell-x);
   vertical-align: middle;
 }
 .detail-table :is(td, th):first-child {
@@ -942,6 +943,45 @@ tbody tr:hover {
 }
 .detail-table td .entity-icon {
   margin: -8px 0;
+}
+/* Encounter tables share column widths, so the tables of one area line up
+   from method to method. */
+.slot-table {
+  table-layout: fixed;
+}
+.detail-table td.numeric {
+  white-space: nowrap;
+}
+.slot-table thead th:nth-last-child(-n + 2) {
+  width: 22%;
+}
+.grouped-slot-table thead th:first-child {
+  width: 26%;
+}
+.grouped-slot-table tbody th {
+  padding: 7px var(--cell-x) 7px 0;
+  border-bottom: 0;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+}
+/* Rows after a group's first lose its spanning header cell, but keep their
+   cells in the same columns. */
+.grouped-slot-table tbody tr:not(:first-child) > td:first-child {
+  padding-left: var(--cell-x);
+}
+.grouped-slot-table .group-label {
+  font-weight: 600;
+}
+.grouped-slot-table tbody + tbody > tr:first-child > * {
+  border-top: 1px solid var(--border);
+}
+.encounter-method > p {
+  margin: 0 0 10px;
+  font-size: var(--text-sm);
 }
 /* Long tables scroll inside their card with the header kept in view. */
 .table-scroll.is-long {
@@ -1159,33 +1199,61 @@ tbody tr:hover {
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-.evolution-list {
+.evolution-tree {
+  overflow-x: auto;
+}
+.evolution-branch,
+.evolution-steps > li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.evolution-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.evolution-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+/* Many branches from one stage, like Eevee's, wrap instead of stacking. */
+.evolution-steps.is-many {
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(274px, 1fr));
+}
+.evolution-stage {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 4px;
+  width: 112px;
+  padding: 10px 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--muted);
-}
-.evolution-card > svg {
-  flex: none;
-  color: var(--muted-foreground);
-}
-.evolution-card .entity-link {
+  font-size: var(--text-sm);
   font-weight: 600;
+  text-align: center;
+}
+.evolution-stage img {
+  image-rendering: pixelated;
+}
+.evolution-stage[aria-current="page"] {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  color: var(--foreground);
+}
+.evolution-step {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 4px;
+  width: 150px;
+  color: var(--muted-foreground);
+  text-align: center;
 }
 .evolution-condition {
-  margin: 2px 0 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  line-height: 1.5;
   color: var(--muted-foreground);
 }
 .evolution-condition .entity-link {
@@ -1843,6 +1911,47 @@ footer > span {
   }
 }
 @media (max-width: 760px) {
+  /* Families read top to bottom; each branch is indented under the stage
+     it leaves. */
+  .evolution-branch,
+  .evolution-steps > li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .evolution-steps {
+    width: 100%;
+  }
+  .evolution-steps:has(> li + li) > li {
+    padding-left: 12px;
+    border-left: 2px solid var(--border);
+  }
+  .evolution-step {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    width: auto;
+    text-align: left;
+  }
+  .evolution-step > svg {
+    transform: rotate(90deg);
+  }
+  /* Too narrow for shared column widths; columns fit their content. */
+  .slot-table {
+    table-layout: auto;
+  }
+  .detail-table {
+    --cell-x: 8px;
+  }
+  .evolution-stage {
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    padding: 4px 14px 4px 6px;
+  }
+  .evolution-stage img {
+    width: 40px;
+    height: 40px;
+  }
   .topbar-inner {
     padding: 0 16px;
     gap: 10px;

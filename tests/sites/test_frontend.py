@@ -10,6 +10,7 @@ from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.frontend import (
     DETAIL_CHUNK_SIZE,
     _encounter_facets,
+    _evolution_chains,
     _index_record,
     _index_sprite,
     _search_text,
@@ -334,3 +335,49 @@ def test_encounter_level_ranges_skip_empty_slots() -> None:
     }
     facets = _encounter_facets(record)
     assert (facets["min_level"], facets["max_level"]) == (30, 39)
+
+
+def _species(
+    slug: str, dex: int, *targets: str, member: int | None = None
+) -> dict[str, object]:
+    return {
+        "slug": slug,
+        "name": slug.title(),
+        "national_dex_id": dex,
+        "member": dex if member is None else member,
+        "evolutions": [
+            {"method": {"name": "level"}, "parameter": 7, "target": {"slug": target}}
+            for target in targets
+        ],
+    }
+
+
+def test_evolution_chains_cover_the_whole_branching_family() -> None:
+    chains = _evolution_chains(
+        [
+            _species("wurmple", 265, "silcoon", "cascoon"),
+            _species("silcoon", 266, "beautifly"),
+            _species("beautifly", 267),
+            _species("cascoon", 268, "dustox"),
+            _species("dustox", 269),
+            _species("wormadam", 413),
+            _species("wormadam-sandy", 413, member=496),
+            _species("burmy", 412, "wormadam"),
+            _species("ditto", 132),
+        ]
+    )
+
+    def shape(node: dict[str, object]) -> object:
+        steps = node["evolutions"]
+        assert isinstance(steps, list)
+        return {node["slug"]: [shape(step["target"]) for step in steps]}
+
+    wurmple = {
+        "wurmple": [{"silcoon": [{"beautifly": []}]}, {"cascoon": [{"dustox": []}]}]
+    }
+    assert shape(chains["dustox"]) == wurmple
+    assert chains["wurmple"] == chains["beautifly"]
+    assert chains["wurmple"]["evolutions"][0]["method"] == {"name": "level"}
+    # Alternate forms share their base form's family.
+    assert shape(chains["wormadam-sandy"]) == {"burmy": [{"wormadam": []}]}
+    assert "ditto" not in chains

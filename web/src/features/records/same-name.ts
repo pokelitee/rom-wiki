@@ -38,21 +38,32 @@ function number(id: string): string {
   return `#${Number(id.replace(/^\D+/, ""))}`;
 }
 
-// A short line telling a record apart from others with the same name.
-export function recordContext(section: string, row: IndexRecord): string {
+// A short line telling a record apart from others with the same name,
+// leaving out what the catalog's columns already show.
+export function recordContext(
+  section: string,
+  row: IndexRecord,
+  columns: string[] = [],
+): string {
   const { fields } = row;
-  if (section === "trainers")
-    return [levels(fields), list(fields.pokemon, 3), number(row.id)]
-      .filter(Boolean)
-      .join(" · ");
-  if (section === "encounters")
-    return [
-      levels(fields),
-      list((Array.isArray(fields.methods) ? fields.methods : []).map(title), 3),
-      number(row.id),
-    ]
-      .filter(Boolean)
-      .join(" · ");
+  const range = columns.includes("levels") ? undefined : levels(fields);
+  const parts =
+    section === "trainers"
+      ? [range, list(fields.pokemon, 3)]
+      : section === "encounters"
+        ? columns.includes("methods")
+          ? [range, list(fields.pokemon, 3)]
+          : [
+              range,
+              list(
+                (Array.isArray(fields.methods) ? fields.methods : []).map(
+                  title,
+                ),
+                3,
+              ),
+            ]
+        : undefined;
+  if (parts) return [...parts, number(row.id)].filter(Boolean).join(" · ");
   if (section === "locations")
     return mapContext(fields.section_name, Number(number(row.id).slice(1)));
   return /^\D+-?\d+$/.test(row.id) ? number(row.id) : row.id;

@@ -12,7 +12,7 @@ export const OPTIONAL_FEATURES: Record<string, string> = {
 // ROM identifiers, storage details, and provenance. Record pages keep these
 // in their collapsed source details instead of the main content.
 const TECHNICAL =
-  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$|^pokemon_form$|^linked$|^party_position$|^event_index$|^hidden_flag$)/;
+  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$|^pokemon_form$|^linked$|^party_position$|^event_index$|^hidden_flag$|^format$)/;
 
 export function isTechnical(key: string): boolean {
   return TECHNICAL.test(key);
@@ -88,6 +88,7 @@ const FIELD_LABELS: Record<string, string> = {
   leaf_green: "LeafGreen",
   heart_gold: "HeartGold",
   soul_silver: "SoulSilver",
+  radar: "Poké Radar",
 };
 
 export function fieldLabel(key: string): string {
@@ -207,6 +208,8 @@ export function formatScalar(
   value: string | number | boolean,
 ): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (field === "versions" && typeof value === "string")
+    return fieldLabel(value);
   if (typeof value === "number") {
     if (field === "gender_ratio") return GENDER_RATIOS[value] ?? String(value);
     if (field === "height_dm") return `${value / 10} m`;

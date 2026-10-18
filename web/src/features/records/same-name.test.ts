@@ -30,6 +30,21 @@ describe("records with the same name", () => {
     ).toBe("Lv. 5–7 · Rattata, Starly, Bidoof +1 · #117");
   });
 
+  it("leaves out what catalog columns already show", () => {
+    const marsh = row("area-023", "Great Marsh", {
+      min_level: 3,
+      max_level: 55,
+      methods: ["walking", "surf"],
+      pokemon: ["Bibarel", "Wooper"],
+    });
+    expect(recordContext("encounters", marsh, ["levels", "methods"])).toBe(
+      "Bibarel, Wooper · #23",
+    );
+    expect(recordContext("encounters", marsh)).toBe(
+      "Lv. 3–55 · Walking, Surf · #23",
+    );
+  });
+
   it("names Gen 4 indoor maps by their map code", () => {
     const place = (code: string) =>
       recordContext(

@@ -140,6 +140,12 @@ function TypeChart({ game, chunk }: { game: Game; chunk: string }) {
   );
 }
 
+function levelRange(row: IndexRecord): string {
+  const { min_level: low, max_level: high } = row.fields;
+  if (typeof low !== "number" || typeof high !== "number") return "—";
+  return low === high ? String(low) : `${low}–${high}`;
+}
+
 function CatalogTable({
   game,
   section,
@@ -192,11 +198,17 @@ function CatalogTable({
         ] as const,
     )
     .filter(([, values]) => values.length > 1);
+  // Trainer labels already name the class, and a level range reads as one
+  // column rather than two.
+  const ranged = fields.includes("min_level") && fields.includes("max_level");
   const columns = fields
     .filter(
       (key) =>
-        !["pokemon", "features", "egg_groups", "section_name"].includes(key),
+        !["pokemon", "features", "egg_groups", "section_name"].includes(key) &&
+        !(section === "trainers" && key === "class_name") &&
+        !(ranged && key === "max_level"),
     )
+    .map((key) => (ranged && key === "min_level" ? "levels" : key))
     .slice(0, 5);
   return (
     <>
@@ -338,14 +350,16 @@ function CatalogTable({
                   </Link>
                   {shared.has(row.label) && (
                     <span className="row-context">
-                      {recordContext(section, row)}
+                      {recordContext(section, row, columns)}
                     </span>
                   )}
                 </td>
                 {columns.map((key) => (
                   <td key={key} data-label={title(key)}>
-                    {Array.isArray(row.fields[key]) &&
-                    (row.fields[key] as string[]).length ? (
+                    {key === "levels" ? (
+                      levelRange(row)
+                    ) : Array.isArray(row.fields[key]) &&
+                      (row.fields[key] as string[]).length ? (
                       (row.fields[key] as string[]).map((value) =>
                         TYPE_FIELDS.has(key) ? (
                           <TypeBadge name={value} key={value} />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSlotList, summarizeSlots } from "./encounter";
+import { isSlotList, slotGroups, summarizeSlots } from "./encounter";
 
 const starly = { name: "Starly", slug: "starly" };
 const bidoof = { name: "Bidoof", slug: "bidoof" };
@@ -33,5 +33,57 @@ describe("encounter slots", () => {
     ).toEqual([
       { pokemon: starly, minimumLevel: 20, maximumLevel: 30, chance: 60 },
     ]);
+  });
+
+  it("groups conditional tables and merges conditions with the same Pokémon", () => {
+    const pair = [
+      { chance: 4, level: 4, pokemon: starly },
+      { chance: 4, level: 4, pokemon: bidoof },
+    ];
+    expect(
+      slotGroups({
+        day: [{ chance: 10, level: 3, pokemon: starly }],
+        dual_slot: { emerald: pair, "fire-red": pair, ruby: [] },
+        radar: [starly, starly],
+        unown_forms: [],
+      }),
+    ).toEqual([
+      {
+        labels: ["Day"],
+        slots: [
+          { pokemon: starly, minimumLevel: 3, maximumLevel: 3, chance: 10 },
+        ],
+      },
+      {
+        labels: ["Dual slot", "Emerald, FireRed"],
+        slots: [
+          { pokemon: starly, minimumLevel: 4, maximumLevel: 4, chance: 4 },
+          { pokemon: bidoof, minimumLevel: 4, maximumLevel: 4, chance: 4 },
+        ],
+      },
+      {
+        labels: ["Poké Radar"],
+        slots: [
+          {
+            pokemon: starly,
+            minimumLevel: null,
+            maximumLevel: null,
+            chance: null,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("leaves values that are not encounter tables alone", () => {
+    expect(
+      slotGroups({ note: "Only after the National Dex", day: [] }),
+    ).toBeNull();
+    expect(
+      slotGroups({
+        rate: 30,
+        slots: [{ chance: 20, level: 2, pokemon: starly }],
+      }),
+    ).toHaveLength(1);
   });
 });

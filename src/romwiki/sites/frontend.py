@@ -364,7 +364,77 @@ def _relationships(datasets: dict[str, dict[str, Any]]) -> dict[str, dict[str, A
                     name.removeprefix(kind.removesuffix("s") + "_")
                 ] = [asdict(value) for value in values]
         result[kind] = rows
+    for slug, chain in _evolution_chains(
+        datasets.get("pokemon", {}).get("records", [])
+    ).items():
+        result["pokemon"].setdefault(slug, {})["evolution_chain"] = chain
     return result
+
+
+def _evolution_chains(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Map each Pokémon slug to its whole evolution family as a tree.
+
+    Records list only the evolutions leaving them, so a stage's page cannot
+    otherwise show what it evolved from or where sibling branches lead.
+    Alternate forms share their base form's family.
+    """
+    public = [
+        record
+        for record in records
+        if record.get("public", True) and isinstance(record.get("slug"), str)
+    ]
+    by_slug = {record["slug"]: record for record in public}
+    base_forms = {
+        record["national_dex_id"]: record["slug"]
+        for record in public
+        if record.get("member") == record.get("national_dex_id")
+    }
+
+    def evolutions(record: dict[str, Any]) -> list[tuple[dict[str, Any], str]]:
+        return [
+            (evolution, target)
+            for evolution in record.get("evolutions") or []
+            if isinstance(target := (evolution.get("target") or {}).get("slug"), str)
+            and target in by_slug
+        ]
+
+    parents: dict[str, str] = {}
+    for record in public:
+        for _, target in evolutions(record):
+            parents.setdefault(target, record["slug"])
+
+    def node(slug: str, seen: frozenset[str]) -> dict[str, Any]:
+        record = by_slug[slug]
+        steps = []
+        for evolution, target in evolutions(record):
+            if target not in seen:
+                steps.append(
+                    {
+                        **{
+                            key: evolution.get(key)
+                            for key in ("method", "parameter", "parameter_data")
+                        },
+                        "target": node(target, seen | {target}),
+                    }
+                )
+        return {
+            "name": record.get("name"),
+            "slug": slug,
+            "national_dex_id": record.get("national_dex_id"),
+            "evolutions": steps,
+        }
+
+    chains: dict[str, dict[str, Any]] = {}
+    for record in public:
+        slug: str = base_forms.get(record.get("national_dex_id"), record["slug"])
+        root, seen = slug, {slug}
+        while root in parents and parents[root] not in seen:
+            root = parents[root]
+            seen.add(root)
+        chain = node(root, frozenset({root}))
+        if chain["evolutions"]:
+            chains[record["slug"]] = chain
+    return chains
 
 
 def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) -> int:
