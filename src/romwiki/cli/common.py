@@ -17,6 +17,7 @@ from romwiki.util.logging import timed_operation
 
 LOG = logging.getLogger("romwiki")
 DEFAULT_DATA_ROOT = Path("build/data")
+DEFAULT_POKEDB_ROOT = Path("../pokedb/.output")
 
 type SubParsers = argparse._SubParsersAction[argparse.ArgumentParser]
 
@@ -119,9 +120,25 @@ def resolve_input_rom(args: argparse.Namespace) -> Path:
     return game.rom(base=args.base)
 
 
+def resolve_pokedb_root(configured: Path | None, games_config: Path) -> Path:
+    """Return the directory holding `gen<N>` PokéDB outputs.
+
+    An explicit option wins, then the local registry's `pokedb_root`, then the
+    conventional sibling checkout.
+    """
+    if configured is not None:
+        return configured
+    if games_config.is_file():
+        pokedb_root = LocalGameRegistry.load(games_config).pokedb_root
+        if pokedb_root is not None:
+            return pokedb_root
+    return DEFAULT_POKEDB_ROOT
+
+
 def resolve_pokedb_path(
     configured: Path | None,
     profiles: Sequence[GameProfile],
+    games_config: Path,
 ) -> Path:
     if configured is not None:
         return configured
@@ -136,7 +153,7 @@ def resolve_pokedb_path(
             "Selected profiles use different generations; specify compatible profiles"
         )
     generation = generations.pop()
-    return Path("../pokedb/.output") / f"gen{generation}"
+    return resolve_pokedb_root(None, games_config) / f"gen{generation}"
 
 
 def version_family_inputs(

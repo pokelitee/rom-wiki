@@ -36,6 +36,38 @@ base_rom = "roms/base.nds"
             self.assertEqual(game.rom(), patched.resolve())
             self.assertEqual(game.rom(base=True), base.resolve())
 
+    def test_resolves_pokedb_root_from_config_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "games.toml"
+            config.write_text(
+                """
+pokedb_root = "pokedb"
+[games.test-game]
+patched_rom = "patched.nds"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            registry = LocalGameRegistry.load(config)
+
+            self.assertEqual(registry.pokedb_root, (root / "pokedb").resolve())
+
+    def test_pokedb_root_is_optional_but_must_be_a_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "games.toml"
+            config.write_text(
+                '[games.test-game]\npatched_rom = "patched.nds"\n', encoding="utf-8"
+            )
+            self.assertIsNone(LocalGameRegistry.load(config).pokedb_root)
+
+            config.write_text(
+                'pokedb_root = ""\n[games.test-game]\npatched_rom = "patched.nds"\n',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(LocalConfigError, "Invalid pokedb_root"):
+                LocalGameRegistry.load(config)
+
     def test_does_not_require_base_rom_until_selected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

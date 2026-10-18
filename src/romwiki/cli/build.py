@@ -218,7 +218,9 @@ def _run_family_build(args: argparse.Namespace) -> None:
         for result in current_results.values()
         if result.match is not None
     )
-    pokedb = PokeDBGeneration.load(resolve_pokedb_path(args.pokedb, profiles))
+    pokedb = PokeDBGeneration.load(
+        resolve_pokedb_path(args.pokedb, profiles, args.games_config)
+    )
     workflows = {}
     for version_number, version in enumerate(versions, start=1):
         paths = game_paths[version]
@@ -262,7 +264,7 @@ def create_build_workflow(
     if result.match is None:
         raise LocalConfigError("The ROM did not match a game profile")
     pokedb = PokeDBGeneration.load(
-        resolve_pokedb_path(args.pokedb, (result.match.profile,))
+        resolve_pokedb_path(args.pokedb, (result.match.profile,), args.games_config)
     )
     baseline_path = resolve_build_baseline(args)
     baseline = (

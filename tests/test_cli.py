@@ -14,6 +14,7 @@ from romwiki.cli.common import (
     profile_wiki_root,
     resolve_input_rom,
     resolve_pokedb_path,
+    resolve_pokedb_root,
     site_wiki_root,
     version_family_inputs,
     version_family_uses_baselines,
@@ -255,17 +256,41 @@ class VersionFamilyInputTests(unittest.TestCase):
         repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
         profiles = {profile.id: profile for profile in repository.profiles}
 
+        no_config = Path("missing/games.toml")
         self.assertEqual(
-            resolve_pokedb_path(None, (profiles["platinum-us"],)),
+            resolve_pokedb_path(None, (profiles["platinum-us"],), no_config),
             Path("../pokedb/.output/gen4"),
         )
         self.assertEqual(
             resolve_pokedb_path(
                 None,
                 (profiles["black-us"], profiles["white-us"]),
+                no_config,
             ),
             Path("../pokedb/.output/gen5"),
         )
+
+    def test_local_configuration_selects_the_pokedb_root(self) -> None:
+        repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
+        profile = next(
+            profile for profile in repository.profiles if profile.id == "platinum-us"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "games.toml"
+            config.write_text(
+                'pokedb_root = "pokedb"\n'
+                '[games.platinum-us]\npatched_rom = "platinum.nds"\n',
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                resolve_pokedb_path(None, (profile,), config),
+                (Path(directory) / "pokedb" / "gen4").resolve(),
+            )
+            self.assertEqual(
+                resolve_pokedb_root(Path("custom/pokedb"), config),
+                Path("custom/pokedb"),
+            )
 
     def test_explicit_pokedb_path_overrides_profile_generation(self) -> None:
         repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
@@ -274,7 +299,9 @@ class VersionFamilyInputTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            resolve_pokedb_path(Path("custom/pokedb"), (profile,)),
+            resolve_pokedb_path(
+                Path("custom/pokedb"), (profile,), Path("missing/games.toml")
+            ),
             Path("custom/pokedb"),
         )
 

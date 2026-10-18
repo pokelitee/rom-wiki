@@ -17,6 +17,7 @@ from romwiki.cli.common import (
     SubParsers,
     add_jobs_argument,
     add_site_root_argument,
+    resolve_pokedb_root,
     version_family_inputs,
     version_family_uses_baselines,
 )
@@ -61,8 +62,10 @@ def add_generate_parser(subparsers: SubParsers) -> None:
     generate_parser.add_argument(
         "--pokedb-root",
         type=Path,
-        default=Path("../pokedb/.output"),
-        help="directory containing gen<N> PokéDB outputs",
+        help=(
+            "directory containing gen<N> PokéDB outputs (default: the local "
+            "configuration's pokedb_root, else ../pokedb/.output)"
+        ),
     )
     generate_parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
     generate_parser.add_argument(
@@ -386,6 +389,7 @@ def _generate_site(
 
 
 def _run_regeneration_steps(args: argparse.Namespace) -> None:
+    args.pokedb_root = resolve_pokedb_root(args.pokedb_root, args.games_config)
     catalog = SiteCatalog.load(args.root)
     prepared = _prepare_regeneration_sites(args, catalog)
     _generate_prepared_sites(args, prepared)
