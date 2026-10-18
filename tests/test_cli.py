@@ -25,7 +25,7 @@ from romwiki.cli.regenerate import (
     _generate_site_group_in_worker,
     _PreparedSite,
     _SiteGeneration,
-    run_regeneration,
+    run_generation,
 )
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import GameMetadata, SiteCatalog, SiteDefinition
@@ -585,7 +585,7 @@ patched_rom = "roms/white-us.nds"
                 patch("romwiki.cli.regenerate.write_regeneration_state"),
                 self.assertLogs("romwiki", level="INFO") as logs,
             ):
-                run_regeneration(args)
+                run_generation(args)
 
             self.assertEqual(inspect.call_count, 3)
             self.assertEqual(load_pokedb.call_count, 1)
@@ -628,7 +628,7 @@ patched_rom = "roms/white-us.nds"
             self.assertIn("Generation preflight [2/2]: black-white", messages)
             self.assertIn("Generation [1/2] platinum: checking inputs", messages)
             self.assertIn("Generation [2/2] black-white: checking inputs", messages)
-            self.assertIn("Complete regeneration completed in", messages)
+            self.assertIn("Catalog generation completed in", messages)
 
     def test_sites_sharing_an_extraction_cache_are_generated_together(
         self,

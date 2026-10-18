@@ -1,4 +1,4 @@
-"""`romwiki generate` and `romwiki regenerate`: catalog-driven site workflows."""
+"""`romwiki generate` (alias `regenerate`): catalog-driven site workflows."""
 
 from __future__ import annotations
 
@@ -41,49 +41,10 @@ from romwiki.util.logging import DATE_FORMAT, LOG_FORMAT, timed_operation
 _GENERATION_JOBS_HELP = "parallel site generation workers"
 
 
-def add_regenerate_parser(subparsers: SubParsers) -> None:
-    regenerate_parser = subparsers.add_parser(
-        "regenerate",
-        help="regenerate selected game data",
-    )
-    regenerate_parser.add_argument("site_ids", nargs="*", help="game site identifiers")
-    regenerate_parser.add_argument(
-        "--all",
-        action="store_true",
-        dest="regenerate_all",
-        help="regenerate every published data-driven game",
-    )
-    regenerate_parser.add_argument(
-        "--games-config", type=Path, default=Path(".local/games.toml")
-    )
-    regenerate_parser.add_argument(
-        "--profiles-dir", type=Path, default=Path("profiles")
-    )
-    regenerate_parser.add_argument(
-        "--pokedb-root",
-        type=Path,
-        default=Path("../pokedb/.output"),
-        help="directory containing gen<N> PokéDB outputs",
-    )
-    regenerate_parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
-    regenerate_parser.add_argument(
-        "--refresh",
-        action="store_true",
-        help="replace current-ROM and clean-baseline extraction caches",
-    )
-    regenerate_parser.add_argument(
-        "--clean",
-        action="store_true",
-        help="ignore generation reuse state and rebuild generated content",
-    )
-    add_jobs_argument(regenerate_parser, workers=_GENERATION_JOBS_HELP)
-    add_site_root_argument(regenerate_parser)
-    regenerate_parser.set_defaults(handler=run_regeneration)
-
-
 def add_generate_parser(subparsers: SubParsers) -> None:
     generate_parser = subparsers.add_parser(
         "generate",
+        aliases=["regenerate"],
         help="generate data for catalog game sites",
     )
     generate_parser.add_argument("site_ids", nargs="*", help="game site identifiers")
@@ -117,11 +78,6 @@ def add_generate_parser(subparsers: SubParsers) -> None:
     add_jobs_argument(generate_parser, workers=_GENERATION_JOBS_HELP)
     add_site_root_argument(generate_parser)
     generate_parser.set_defaults(handler=run_generation)
-
-
-def run_regeneration(args: argparse.Namespace) -> None:
-    with timed_operation(LOG, "Complete regeneration"):
-        _run_regeneration_steps(args)
 
 
 def run_generation(args: argparse.Namespace) -> None:

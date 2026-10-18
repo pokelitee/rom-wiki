@@ -42,7 +42,6 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_parser(subparsers)
     build.add_parser(subparsers)
     regenerate.add_generate_parser(subparsers)
-    regenerate.add_regenerate_parser(subparsers)
     baseline.add_parser(subparsers)
     site.add_parser(subparsers)
     return parser
