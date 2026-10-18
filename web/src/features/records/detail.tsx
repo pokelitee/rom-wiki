@@ -15,7 +15,7 @@ import { StatBars } from "../../components/stat-bars";
 import { title } from "../../lib/utils";
 import { Value } from "./value";
 import { RecordHero } from "./record-hero";
-import { TypeMatchups, TypePokemon } from "./type-sections";
+import { TypeMatchups, TypeMoves, TypePokemon } from "./type-sections";
 import { Warps } from "./location-sections";
 import { recordContext } from "./same-name";
 import { EntityLink } from "../../components/entity-link";
@@ -28,6 +28,7 @@ import {
 } from "./pokemon-sections";
 import { Party } from "./trainer-sections";
 import {
+  coversAllVersions,
   fieldLabel,
   hasNoEncounters,
   isEmpty,
@@ -180,7 +181,7 @@ function RecordPage({
     (game.sections[section].metadata.features ?? []) as string[],
   );
   const entries = Object.entries(record).filter(
-    ([key]) =>
+    ([key, value]) =>
       ![
         "name",
         "types",
@@ -190,6 +191,7 @@ function RecordPage({
         "reference_variants",
         "season_variants",
       ].includes(key) &&
+      !(key === "versions" && coversAllVersions(value, game.versions)) &&
       (!OPTIONAL_FEATURES[key] || features.has(OPTIONAL_FEATURES[key])),
   );
   const update = (key: string, value: string) => {
@@ -258,7 +260,10 @@ function RecordPage({
       ([key]) => [`section-${key}`, title(key)] as [string, string],
     ),
     ...(section === "types"
-      ? [["section-pokemon", "Pokémon"] as [string, string]]
+      ? ([
+          ["section-pokemon", "Pokémon"],
+          ["section-moves", "Moves"],
+        ] as [string, string][])
       : []),
   ];
   return (
@@ -342,7 +347,12 @@ function RecordPage({
             {Renderer ? (
               <Renderer value={value} game={game} record={record} />
             ) : (
-              <Value value={value} game={game.id} field={key} />
+              <Value
+                value={value}
+                game={game.id}
+                field={key}
+                encounters={section === "encounters"}
+              />
             )}
           </section>
         );
@@ -365,7 +375,10 @@ function RecordPage({
         );
       })}
       {section === "types" && (
-        <TypePokemon game={game} type={String(record.name)} />
+        <>
+          <TypePokemon game={game} type={String(record.name)} />
+          <TypeMoves game={game} type={String(record.name)} />
+        </>
       )}
       {section === "trainers" && (
         <TrainerFamilies game={game} record={record} metadata={metadata} />
@@ -405,6 +418,9 @@ function RecordPage({
                     "short_effect",
                     "flavor_text",
                     "sprite_url",
+                    // The description's own source line says these.
+                    "flavor_text_source",
+                    "flavor_text_label",
                     // The Pokémon summary already shows these.
                     ...(section === "pokemon"
                       ? ["height_dm", "weight_hg"]

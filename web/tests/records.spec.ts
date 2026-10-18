@@ -195,6 +195,41 @@ test("the header and browser tab show the game's mascot", async ({ page }) => {
     .toMatch(/^data:image\/png/);
 });
 
+test("type pages list their moves", async ({ page }) => {
+  const moves = platinum?.sections.moves
+    ? await readData<{ records: { id: string }[] }>(
+        platinum.sections.moves.index,
+      )
+    : { records: [] };
+  test.skip(
+    !moves.records.some((record) => record.id === "ember") ||
+      !platinum?.sections.types,
+    "needs Platinum's Fire moves",
+  );
+  await page.goto("./#/platinum/types/fire");
+  const section = page.locator("#section-moves");
+  await expect(section.getByRole("link", { name: "Ember" })).toBeVisible();
+  await expect(section.getByRole("link", { name: "Tackle" })).toHaveCount(0);
+});
+
+test("pages leave out facts that say nothing", async ({ page }) => {
+  const hgss = manifest.games.find(
+    (game) => game.id === "heart-gold-soul-silver",
+  );
+  test.skip(!hgss, "needs HeartGold & SoulSilver");
+  await page.goto("./#/heart-gold-soul-silver/encounters/area-000");
+  // Swarm and night fishing Pokémon read as one encounter table.
+  await expect(
+    page.locator("#section-special table").getByText("Fishing swarm"),
+  ).toBeVisible();
+  // Every area is active and in both versions; neither is worth a fact.
+  await expect(page.locator("#section-versions")).toHaveCount(0);
+  await expect(page.locator("#section-overview")).toHaveCount(0);
+  await page.goto("./#/heart-gold-soul-silver/pokemon/pidgey");
+  await expect(page.locator("#section-wild_encounters")).toBeVisible();
+  await expect(page.locator("#section-versions")).toHaveCount(0);
+});
+
 test("trainer parties render as cards", async ({ page }) => {
   await page.goto("./#/platinum/trainers?q=roark");
   await page.locator(".catalog-table tbody a").first().click();

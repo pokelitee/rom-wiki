@@ -10,6 +10,7 @@ import {
   formatScalar,
   isEmpty,
   isNamedReference,
+  isScriptCommand,
   isTechnical,
 } from "./fields";
 import { columnRoute, entityRoute } from "./routes";
@@ -102,11 +103,14 @@ export function Value({
   game,
   field = "",
   depth = 0,
+  encounters = false,
 }: {
   value: Json;
   game: string;
   field?: string;
   depth?: number;
+  // The value is an encounter area's section, where Pokémon are encounters.
+  encounters?: boolean;
 }) {
   if (value === null) return <span className="muted">—</span>;
   if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
@@ -198,7 +202,9 @@ export function Value({
     const keys = [...new Set(rows.flatMap(visibleKeys))].filter(
       (key) =>
         !(trainerRows && key === "class_name") &&
-        !rows.every((row) => isEmpty(row[key])) &&
+        !rows.every(
+          (row) => isEmpty(row[key]) || isScriptCommand(key, row[key]),
+        ) &&
         (NAME_KEYS.includes(key) || !isConstant(rows, key)),
     );
     if (keys.length === 1 && rows.every((row) => isScalarFact(row[keys[0]])))
@@ -259,7 +265,8 @@ export function Value({
                           <EntityLink game={game} route={route}>
                             {nameOf(row, key)}
                           </EntityLink>
-                        ) : row[key] === undefined ? (
+                        ) : row[key] === undefined ||
+                          isScriptCommand(key, row[key]) ? (
                           "—"
                         ) : (
                           <Value
@@ -303,7 +310,7 @@ export function Value({
         </div>
       );
   }
-  const groups = encounterGroups(value);
+  const groups = encounterGroups(value, encounters);
   if (groups?.length) return <GroupedSlotTable groups={groups} game={game} />;
   const route = entityRoute(value, field);
   const name = value.name ?? value.pokemon_name ?? value.area_name;

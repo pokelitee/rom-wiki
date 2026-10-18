@@ -12,7 +12,7 @@ export const OPTIONAL_FEATURES: Record<string, string> = {
 // ROM identifiers, storage details, and provenance. Record pages keep these
 // in their collapsed source details instead of the main content.
 const TECHNICAL =
-  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$|^pokemon_form$|^linked$|^party_position$|^event_index$|^hidden_flag$|^format$)/;
+  /(?:^id$|_id$|_ids$|_flags$|^flags$|_offset$|_provenance$|^provenance$|^unknown_|^data_archive|^trailing_|^sprite|^portrait|^cry$|^public$|^slug$|_slug$|^member$|^flip_sprite$|^source$|^source_fields$|^moves_source$|^table_index$|^battle_type$|^has_custom_moves$|^has_held_items$|^party_count$|internal_name$|^section_name$|^command$|_mask$|^hold_effect_parameter$|^section_name_source$|^bonus_slot_methodology_source$|^encounter_map_index$|^map_index$|^rom_sha256$|^archive$|^trainer_type$|^object_index$|^[xyz]$|^version$|^flavor_text_version$|^pokemon_form$|^linked$|^party_position$|^event_index$|^hidden_flag$|^format$|^active$)/;
 
 export function isTechnical(key: string): boolean {
   return TECHNICAL.test(key);
@@ -228,4 +228,30 @@ export function formatName(value: string): string {
         .map((word) => word[0].toUpperCase() + word.slice(1))
         .join(" ")
     : value;
+}
+
+// A record available in every version of its game; saying so adds nothing.
+export function coversAllVersions(
+  value: Json | undefined,
+  versions: string[],
+): boolean {
+  return (
+    Array.isArray(value) &&
+    versions.length > 0 &&
+    versions.every((version) => value.includes(version))
+  );
+}
+
+// Acquisition details that are script commands, such as PokePartyAddEx,
+// name how the game runs an event rather than anything a player sees. Only
+// the detail field is checked: Gen 4 item names like BlackGlasses look alike.
+export function isScriptCommand(
+  field: string,
+  value: Json | undefined,
+): boolean {
+  return (
+    field === "detail" &&
+    typeof value === "string" &&
+    /^[A-Z][a-z]+(?:[A-Z][a-z]*)+$/.test(value)
+  );
 }
