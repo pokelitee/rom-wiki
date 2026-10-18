@@ -287,7 +287,13 @@ tbody tr:hover {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  color: #fff;
+  /* A pale tile in light mode keeps white sprites, like Kyurem, visible. */
+  background: color-mix(in srgb, var(--primary) 18%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  margin-right: 5px;
+}
+.dark .brand-mark {
+  border-color: transparent;
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--primary) 78%, #fff),
@@ -296,7 +302,6 @@ tbody tr:hover {
   box-shadow:
     0 1px 2px color-mix(in srgb, var(--primary) 35%, transparent),
     inset 0 1px 0 rgb(255 255 255 / 0.18);
-  margin-right: 5px;
 }
 .brand-mark img {
   image-rendering: pixelated;
@@ -955,7 +960,7 @@ tbody tr:hover {
 .detail-table td.numeric {
   white-space: nowrap;
 }
-.slot-table thead th:nth-last-child(-n + 2) {
+.slot-table thead th.numeric {
   width: 22%;
 }
 .grouped-slot-table thead th:first-child {

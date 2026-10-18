@@ -68,7 +68,7 @@ function trim(url: string): Promise<string> {
   return result;
 }
 
-// The mascot sprite cropped to the Pokémon, once it has loaded.
+// The mascot sprite, replaced by its cropped version once that is ready.
 export function useMascotIcon(sprite: string | undefined): string | undefined {
   const [icon, setIcon] = useState<{ sprite: string; url: string }>();
   useEffect(() => {
@@ -81,10 +81,11 @@ export function useMascotIcon(sprite: string | undefined): string | undefined {
       active = false;
     };
   }, [sprite]);
-  return icon && icon.sprite === sprite ? icon.url : undefined;
+  return icon && icon.sprite === sprite ? icon.url : sprite;
 }
 
-// The browser tab shows the mascot on a tile in the page's theme color.
+// The browser tab shows the mascot on the same tile as the header: a pale
+// tint of the theme color in light mode, the full color in dark mode.
 // `theme` names the current theme and color scheme, so the tile is redrawn
 // when either changes; effects declared before this one apply them.
 export function useFavicon(icon: string | undefined, theme: string) {
@@ -92,9 +93,10 @@ export function useFavicon(icon: string | undefined, theme: string) {
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (!icon || !link) return;
     const original = { href: link.href, type: link.type };
-    const color = getComputedStyle(document.documentElement)
-      .getPropertyValue("--primary")
-      .trim();
+    const style = getComputedStyle(document.documentElement);
+    const primary = style.getPropertyValue("--primary").trim();
+    const card = style.getPropertyValue("--card").trim();
+    const dark = document.documentElement.classList.contains("dark");
     const image = new Image();
     image.onload = () => {
       const size = 64;
@@ -102,10 +104,20 @@ export function useFavicon(icon: string | undefined, theme: string) {
       canvas.width = canvas.height = size;
       const context = canvas.getContext("2d");
       if (!context) return;
-      context.fillStyle = color;
-      context.beginPath();
-      context.roundRect(0, 0, size, size, 14);
-      context.fill();
+      const tile = new Path2D();
+      tile.roundRect(1, 1, size - 2, size - 2, 14);
+      context.fillStyle = dark ? primary : card;
+      context.fill(tile);
+      if (!dark) {
+        context.globalAlpha = 0.18;
+        context.fillStyle = primary;
+        context.fill(tile);
+        context.globalAlpha = 0.35;
+        context.strokeStyle = primary;
+        context.lineWidth = 2;
+        context.stroke(tile);
+        context.globalAlpha = 1;
+      }
       context.imageSmoothingEnabled = false;
       context.drawImage(image, 6, 6, size - 12, size - 12);
       try {
