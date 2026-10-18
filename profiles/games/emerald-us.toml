@@ -9,6 +9,9 @@ base_game = "emerald"
 game_codes = ["BPEE"]
 rom_versions = [0]
 
+[reference]
+sprite_version = "emerald"
+
 [type_chart]
 chart = "gen3"
 
