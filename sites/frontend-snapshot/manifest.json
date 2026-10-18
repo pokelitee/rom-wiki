@@ -1,5 +1,5 @@
 {
-  "archive": "frontend-5bc579c2ddca7454.tar.gz",
+  "archive": "frontend-28f44bf85d5a52dc.tar.gz",
   "files": {
     "black-2-white-2/abilities/chunk-0000-8c1564dcfe0cbdf0.json": "8c1564dcfe0cbdf0e00b70e202cc2cfb72a646a936c0744f115a500f68ef32d8",
     "black-2-white-2/abilities/chunk-0001-9064855cffd33393.json": "9064855cffd33393b86216fd25ec20a132e4cea0e1f46c649fb27c0f5fb9c2ca",
@@ -642,7 +642,7 @@
     "heart-gold-soul-silver/types/chunk-0000-c1fdc9f2377b812e.json": "c1fdc9f2377b812e95f5ea805f396d385a863eb35719f4145104299bccdd4a82",
     "heart-gold-soul-silver/types/index-ad0e1093e37bd405.json": "ad0e1093e37bd4054a5b0bb630a5d60fad0aac288a995c2b02c1aa29079cdc57",
     "heart-gold-soul-silver/types/metadata-1c20131a2b8ae294.json": "1c20131a2b8ae29466013ba97d3edaf3a0af809d9e018df8147e87254df59d78",
-    "manifest.json": "30757bd3185e48b2d71e225067f4b6cb6c396c7c7d1687dab3d254a29b5e87d5",
+    "manifest.json": "8af6bd83b5fcd84650ece9e3fdfb703c32dcd6c900334588a79cfb097bcdc90b",
     "platinum/abilities/chunk-0000-0106b86506c9b7b9.json": "0106b86506c9b7b91f5f431de1f0fbefa53d4a71e618e843dca48e31e9999e03",
     "platinum/abilities/chunk-0001-061032bee810a507.json": "061032bee810a5075c3f001e3d36707d05e02315e9cd35e00aa2375f5f9957b1",
     "platinum/abilities/chunk-0002-1b3e1062d2f6a696.json": "1b3e1062d2f6a696a9d503ae92624839befb5bc09697a4121c47044f8c5b79a4",
@@ -958,5 +958,5 @@
     "sacred-gold-storm-silver/types/metadata-d2337a717cfedf3e.json": "d2337a717cfedf3eb79271f64ac3788cf8fa61819cedbf184949535e3c0a0fef"
   },
   "schema_version": 1,
-  "sha256": "5bc579c2ddca7454b84261319a61807dc72c8ae7d16506f657c24a5065f471c0"
+  "sha256": "28f44bf85d5a52dc03c6db5732ea1e506ef1e7b7edcff061631df985cf3fa7c8"
 }
