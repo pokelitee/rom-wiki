@@ -31,10 +31,10 @@ python -m romwiki site restore-web .romwiki/frontend-snapshot
 
 These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. They do not create releases, upload assets, or deploy. Snapshot creation includes only resources referenced by the current manifest, excluding stale files from earlier exports.
 
-The reviewed publication is pinned by `sites/frontend-snapshot/manifest.json`. Its content-addressed archive is an asset of the existing `snapshots` release. For a clean checkout, download the archive named in that manifest, then restore and check it:
+The reviewed publication is pinned by `sites/frontend-snapshot/manifest.json`. Its content-addressed archive is an asset of the existing `snapshots` release. For a clean checkout, download the archive named in that manifest (its `archive` field), then restore and check it:
 
 ```sh
-gh release download snapshots --repo pokelitee/rom-wiki --pattern frontend-d21cf5f95f5ccdc6.tar.gz --dir sites/frontend-snapshot
+gh release download snapshots --repo pokelitee/rom-wiki --pattern <archive> --dir sites/frontend-snapshot
 python -m romwiki site restore-web sites/frontend-snapshot
 python scripts/check_frontend_publication.py
 ```
@@ -51,4 +51,4 @@ The React site is deployed on GitHub Pages. Every CI run builds and verifies a P
 
 The Python page renderers, MkDocs configuration, templates, assets, and serving/audit tooling have been removed. Their implementation remains in Git history at the last main commit before migration, `04b72f24827b557df4f8b4bf61cff8c3146fd824`.
 
-Keep the `snapshots` release and its content-addressed assets while current or historical snapshot manifests reference them. Older assets support restoration from earlier commits; absence from the current manifest does not make an asset disposable. The protected `archive/dev-2026-10-13` tag preserves development history and is separate from publication snapshots.
+Keep the `snapshots` release and the `frontend-*` archives that current or historical frontend manifests reference; they support restoration from earlier commits, and absence from the current manifest does not make one disposable. The retired per-game `generated-wiki` archives were deleted, so commits from before the frontend snapshot can no longer restore their data. The protected `archive/dev-2026-10-13` tag preserves development history and is separate from publication snapshots.
