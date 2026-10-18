@@ -100,7 +100,7 @@ test("record pages show readable values and keep raw data in the details", async
   await expect(page.locator(".record-hero h1")).toHaveText("Bulbasaur");
   await expect(page.getByText("87.5% male")).toBeVisible();
   await expect(page.locator(".stat-row span").first()).toHaveText("HP");
-  await expect(page.locator(".evolution-list li").first()).toContainText(
+  await expect(page.locator(".evolution-step").first()).toContainText(
     "Level 16",
   );
   const headers = await page.locator("main table th").allTextContents();
@@ -146,6 +146,40 @@ test("parts a record lacks leave no extra space", async ({ page }) => {
       );
   });
   expect(new Set(gaps).size).toBe(1);
+});
+
+test("evolution trees show the whole family from any stage", async ({
+  page,
+}) => {
+  const pokemon = platinum?.sections.pokemon
+    ? await readData<{ records: { id: string }[] }>(
+        platinum.sections.pokemon.index,
+      )
+    : { records: [] };
+  test.skip(
+    !pokemon.records.some((record) => record.id === "beautifly"),
+    "needs Platinum's Wurmple family",
+  );
+  await page.goto("./#/platinum/pokemon/beautifly");
+  const tree = page.locator("#section-evolutions .evolution-tree");
+  for (const name of ["Wurmple", "Silcoon", "Beautifly", "Cascoon", "Dustox"])
+    await expect(tree.getByRole("link", { name })).toBeVisible();
+  await expect(tree.locator('[aria-current="page"]')).toHaveText("Beautifly");
+});
+
+test("a Pokémon's wild encounters merge seasons and versions", async ({
+  page,
+}) => {
+  test.skip(
+    !manifest.games.some((game) => game.id === "black-2-white-2"),
+    "needs Black 2 & White 2",
+  );
+  await page.goto("./#/black-2-white-2/pokemon/deerling");
+  const table = page.locator("#section-wild_encounters table");
+  // Four seasons in two versions collapse into one row per encounter.
+  await expect(table.locator("tbody tr")).toHaveCount(4);
+  await table.getByRole("link", { name: "Route 6" }).click();
+  await expect(page.locator(".record-hero h1")).toHaveText("Route 6");
 });
 
 test("trainer parties render as cards", async ({ page }) => {

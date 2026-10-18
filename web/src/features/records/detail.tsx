@@ -23,6 +23,7 @@ import {
   Evolutions,
   MovesPanel,
   PokemonSummary,
+  WildEncounters,
   type SectionProps,
 } from "./pokemon-sections";
 import { Party } from "./trainer-sections";
@@ -113,6 +114,7 @@ const SECTION_RENDERERS: Record<string, ComponentType<SectionProps>> = {
   "trainers.party": Party,
   "types.matchups": TypeMatchups,
   "locations.warps": Warps,
+  "pokemon.wild_encounters": WildEncounters,
 };
 
 // Pokémon facts shown in the summary rather than the overview.
@@ -220,9 +222,27 @@ function RecordPage({
         !hasNoEncounters(value),
     ),
   );
-  const sections = section === "pokemon" ? combineMoves(ordered) : ordered;
+  // A Pokémon's family tree replaces the evolutions leaving it, and also
+  // gives final stages, which evolve into nothing, an evolutions section.
+  const chain = section === "pokemon" && detail.relationships.evolution_chain;
+  const sections =
+    section === "pokemon"
+      ? combineMoves(
+          chain
+            ? orderEntries(section, [
+                ...ordered.filter(([key]) => key !== "evolutions"),
+                ["evolutions", chain],
+              ])
+            : ordered,
+        )
+      : ordered;
   const relationships = Object.entries(detail.relationships).filter(
-    ([, value]) => !isEmpty(value),
+    ([key, value]) =>
+      key !== "evolution_chain" &&
+      // The record's own section already shows these, such as an
+      // encounter area's locations.
+      !sections.some(([name]) => name === key) &&
+      !isEmpty(value),
   );
   const outline: [string, string][] = [
     ...(section === "pokemon"
@@ -327,16 +347,23 @@ function RecordPage({
           </section>
         );
       })}
-      {relationships.map(([key, value]) => (
-        <section
-          className="panel detail-section"
-          key={key}
-          id={`section-${key}`}
-        >
-          <h2>{title(key)}</h2>
-          <Value value={value} game={game.id} field={key} />
-        </section>
-      ))}
+      {relationships.map(([key, value]) => {
+        const Renderer = SECTION_RENDERERS[`${section}.${key}`];
+        return (
+          <section
+            className="panel detail-section"
+            key={key}
+            id={`section-${key}`}
+          >
+            <h2>{title(key)}</h2>
+            {Renderer ? (
+              <Renderer value={value} game={game} record={record} />
+            ) : (
+              <Value value={value} game={game.id} field={key} />
+            )}
+          </section>
+        );
+      })}
       {section === "types" && (
         <TypePokemon game={game} type={String(record.name)} />
       )}

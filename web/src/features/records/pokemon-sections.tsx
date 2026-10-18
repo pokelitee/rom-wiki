@@ -1,14 +1,17 @@
 import { useState, type KeyboardEvent } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { EntityLink } from "../../components/entity-link";
 import { StatBars } from "../../components/stat-bars";
 import { TypeBadge } from "../../components/type-badge";
 import type { DataObject, Game, IndexRecord, Json } from "../../data/types";
 import { useResource } from "../../data/use-resource";
+import { useSprite } from "../../data/sprite-context";
 import { object } from "../../lib/json";
 import { title } from "../../lib/utils";
 import { evolutionCondition } from "./evolution";
-import { formatName, formatScalar, tableScroll } from "./fields";
+import { fieldLabel, formatName, formatScalar, tableScroll } from "./fields";
+import { compactEncounters, type WildEncounter } from "./wild-encounters";
 
 export interface SectionProps {
   value: Json;
@@ -131,45 +134,103 @@ export function PokemonSummary({
   );
 }
 
-export function Evolutions({ value, game }: SectionProps) {
-  const evolutions = Array.isArray(value) ? value.map(object) : [];
+function Condition({
+  evolution,
+  game,
+}: {
+  evolution: DataObject;
+  game: string;
+}) {
   return (
-    <ul className="evolution-list">
-      {evolutions.map((evolution, index) => {
-        const target = object(evolution.target);
-        return (
-          <li className="evolution-card" key={index}>
-            <ArrowRight size={16} aria-hidden="true" />
-            <div>
-              {typeof target.slug === "string" ? (
-                <EntityLink game={game.id} route={`pokemon/${target.slug}`}>
-                  {formatName(String(target.name))}
-                </EntityLink>
-              ) : (
-                <strong>{String(target.name ?? "Unknown")}</strong>
-              )}
-              <p className="evolution-condition">
-                {evolutionCondition(evolution).map((part, partIndex) =>
-                  typeof part === "string" ? (
-                    part
-                  ) : part.route ? (
-                    <EntityLink
-                      key={partIndex}
-                      game={game.id}
-                      route={part.route}
-                    >
-                      {part.name}
-                    </EntityLink>
-                  ) : (
-                    <strong key={partIndex}>{part.name}</strong>
-                  ),
-                )}
-              </p>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <span className="evolution-condition">
+      {evolutionCondition(evolution).map((part, index) =>
+        typeof part === "string" ? (
+          part
+        ) : part.route ? (
+          <EntityLink key={index} game={game} route={part.route}>
+            {part.name}
+          </EntityLink>
+        ) : (
+          <strong key={index}>{part.name}</strong>
+        ),
+      )}
+    </span>
+  );
+}
+
+function Stage({
+  node,
+  game,
+  current,
+}: {
+  node: DataObject;
+  game: string;
+  current: Json | undefined;
+}) {
+  const route = `pokemon/${String(node.slug)}`;
+  const sprite = useSprite(route);
+  const isCurrent = node.national_dex_id === current;
+  // Branches read in Pokédex order, as Eevee's evolutions are usually listed.
+  const steps = (Array.isArray(node.evolutions) ? node.evolutions : [])
+    .map(object)
+    .sort(
+      (a, b) =>
+        Number(object(a.target).national_dex_id) -
+        Number(object(b.target).national_dex_id),
+    );
+  return (
+    <div className="evolution-branch">
+      <Link
+        className="evolution-stage"
+        to={`/${game}/${route}`}
+        aria-current={isCurrent ? "page" : undefined}
+      >
+        {sprite && <img src={sprite} alt="" width={56} height={56} />}
+        <span>{formatName(String(node.name))}</span>
+      </Link>
+      {steps.length > 0 && (
+        <ul
+          className={
+            steps.length > 3 ? "evolution-steps is-many" : "evolution-steps"
+          }
+        >
+          {steps.map((step, index) => (
+            <li key={index}>
+              <div className="evolution-step">
+                <ArrowRight size={16} aria-hidden="true" />
+                <Condition evolution={step} game={game} />
+              </div>
+              <Stage node={object(step.target)} game={game} current={current} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// The whole family, from its first stage through every branch, with this
+// Pokémon marked. Records published without a family tree show only the
+// evolutions leaving this Pokémon.
+export function Evolutions({ value, game, record }: SectionProps) {
+  const root = Array.isArray(value)
+    ? {
+        name: record.name ?? null,
+        slug: record.slug ?? null,
+        national_dex_id: record.national_dex_id ?? null,
+        evolutions: value.map((evolution) => {
+          const target = object(object(evolution).target);
+          return {
+            ...object(evolution),
+            target: { ...target, national_dex_id: null },
+          };
+        }),
+      }
+    : object(value);
+  return (
+    <div className="evolution-tree">
+      <Stage node={root} game={game.id} current={record.national_dex_id} />
+    </div>
   );
 }
 
@@ -316,5 +377,82 @@ export function MovesPanel({ value, game }: SectionProps) {
         </table>
       </div>
     </>
+  );
+}
+
+// Where this Pokémon appears in the wild, one row per distinct encounter,
+// grouped by area.
+export function WildEncounters({ value, game }: SectionProps) {
+  const rows = compactEncounters(
+    (Array.isArray(value) ? value : []).map(object),
+    game.versions,
+  ).sort(
+    (a, b) =>
+      a.area.localeCompare(b.area, undefined, { numeric: true }) ||
+      String(a.route).localeCompare(String(b.route)) ||
+      a.method.localeCompare(b.method) ||
+      (b.chance ?? 0) - (a.chance ?? 0),
+  );
+  const areas: WildEncounter[][] = [];
+  for (const row of rows) {
+    const last = areas.at(-1);
+    if (last && last[0].route === row.route && last[0].area === row.area)
+      last.push(row);
+    else areas.push([row]);
+  }
+  const showWhen = rows.some((row) => row.when.length);
+  const showVersions = rows.some((row) => row.versions.length);
+  return (
+    <div className={tableScroll(rows.length)}>
+      <table className="detail-table grouped-slot-table">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Method</th>
+            <th>Level</th>
+            <th>Chance</th>
+            {showWhen && <th>When</th>}
+            {showVersions && <th>Versions</th>}
+          </tr>
+        </thead>
+        {areas.map((group) => (
+          <tbody key={`${group[0].route}/${group[0].area}`}>
+            {group.map((row, index) => (
+              <tr key={index}>
+                {index === 0 && (
+                  <th scope="rowgroup" rowSpan={group.length}>
+                    {row.route ? (
+                      <EntityLink
+                        game={game.id}
+                        route={`encounters/${row.route}`}
+                      >
+                        {row.area}
+                      </EntityLink>
+                    ) : (
+                      row.area
+                    )}
+                  </th>
+                )}
+                <td>{row.method}</td>
+                <td className="numeric">{row.levels}</td>
+                <td className="numeric">
+                  {row.chance === null ? "—" : `${row.chance}%`}
+                </td>
+                {showWhen && <td>{row.when.join(" · ") || "Always"}</td>}
+                {showVersions && (
+                  <td>
+                    {row.versions.length
+                      ? row.versions.map(fieldLabel).join(", ")
+                      : game.versions.length === 2
+                        ? "Both"
+                        : "All"}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
   );
 }
