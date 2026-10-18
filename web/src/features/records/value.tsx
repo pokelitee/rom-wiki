@@ -13,8 +13,8 @@ import {
   isTechnical,
 } from "./fields";
 import { columnRoute, entityRoute } from "./routes";
-import { isSlotList } from "./encounter";
-import { SlotTable } from "./slot-table";
+import { encounterGroups, isSlotList } from "./encounter";
+import { GroupedSlotTable, SlotTable } from "./slot-table";
 
 const TYPE_FIELDS = new Set(["type", "types", "natural_gift_type"]);
 const NAME_KEYS = [
@@ -218,7 +218,11 @@ export function Value({
             const route = NAME_KEYS.includes(keys[0])
               ? entityRoute(row, field)
               : undefined;
-            const label = nameOf(row, keys[0]);
+            // A lone value other than a name, such as a static
+            // encounter's level, says what it is.
+            const label = NAME_KEYS.includes(keys[0])
+              ? nameOf(row, keys[0])
+              : `${fieldLabel(keys[0])} ${formatScalar(keys[0], cell as string | number | boolean)}`;
             return route ? (
               <EntityLink key={index} game={game} route={route}>
                 {label}
@@ -288,6 +292,19 @@ export function Value({
     return (
       <NamedReference value={value as DataObject} game={game} field={field} />
     );
+  // An encounter method: how often it triggers, then its Pokémon.
+  if (typeof value.rate === "number" && Array.isArray(value.slots)) {
+    const slots = value.slots.filter((slot) => slot !== null).map(object);
+    if (isSlotList(slots))
+      return (
+        <div className="encounter-method">
+          <p className="muted">Encounter rate {value.rate}</p>
+          <SlotTable rows={slots} game={game} />
+        </div>
+      );
+  }
+  const groups = encounterGroups(value);
+  if (groups?.length) return <GroupedSlotTable groups={groups} game={game} />;
   const route = entityRoute(value, field);
   const name = value.name ?? value.pokemon_name ?? value.area_name;
   if (route && name) {
