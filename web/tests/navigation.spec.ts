@@ -139,6 +139,47 @@ test("a failed index request offers a working retry", async ({ page }) => {
   await expect(page.locator(".catalog-table")).toBeVisible();
 });
 
+test("record icons recover from a failed index without a reload", async ({
+  page,
+}) => {
+  const platinum = manifest.games.find((game) => game.id === "platinum");
+  const readIndex = async (section: string) =>
+    platinum?.sections[section]
+      ? (JSON.parse(
+          await readFile(
+            new URL(
+              `../public/data/${platinum.sections[section].index}`,
+              import.meta.url,
+            ),
+            "utf8",
+          ),
+        ) as { records: { id: string; sprite?: string }[] })
+      : { records: [] };
+  const [abilities, pokemon] = await Promise.all([
+    readIndex("abilities"),
+    readIndex("pokemon"),
+  ]);
+  test.skip(
+    !abilities.records.length ||
+      !pokemon.records.some((record) => record.sprite),
+    "needs Platinum abilities and Pokémon sprites",
+  );
+  // Ability pages link Pokémon without loading their index themselves, so
+  // only the icon lookup sees the failures.
+  let failures = 0;
+  await page.route("**/data/platinum/pokemon/index-*.json", async (route) => {
+    if (failures < 2) {
+      failures++;
+      await route.fulfill({ status: 503, body: "Unavailable" });
+    } else await route.continue();
+  });
+  await page.goto(`./#/platinum/abilities/${abilities.records[0].id}`);
+  await expect(
+    page.locator(".detail-section .entity-icon").first(),
+  ).toBeVisible({ timeout: 10_000 });
+  expect(failures).toBe(2);
+});
+
 test("guide anchors keep the route and reference links reach catalogs", async ({
   page,
 }) => {
