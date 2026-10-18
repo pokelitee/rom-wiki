@@ -19,11 +19,14 @@ export function ResourceState({
         </Button>
       </div>
     );
-  if (!children)
-    return (
-      <div role="status" className="loading">
-        <span className="loading-dot" /> Loading game data…
-      </div>
-    );
+  if (!children) return <Loading />;
   return children;
+}
+
+export function Loading() {
+  return (
+    <div role="status" className="loading">
+      <span className="loading-dot" /> Loading game data…
+    </div>
+  );
 }

@@ -125,15 +125,16 @@ test("detail requests stay within the selected game and use chunks", async ({
 });
 
 test("a failed index request offers a working retry", async ({ page }) => {
-  let failed = false;
+  // Every request fails until Retry, since the catalog and the sprite
+  // lookup both ask for this index and either may ask first.
+  let retried = false;
   await page.route("**/data/platinum/pokemon/index-*.json", async (route) => {
-    if (!failed) {
-      failed = true;
-      await route.fulfill({ status: 503, body: "Unavailable" });
-    } else await route.continue();
+    if (retried) await route.continue();
+    else await route.fulfill({ status: 503, body: "Unavailable" });
   });
   await page.goto("./#/platinum/pokemon");
   await expect(page.getByRole("alert")).toContainText("503");
+  retried = true;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page.locator(".catalog-table")).toBeVisible();
 });

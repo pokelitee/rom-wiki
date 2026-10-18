@@ -1,8 +1,5 @@
-import { GameSearch } from "./features/search/game-search";
-import { Downloads } from "./features/content/downloads";
-import { GameHome } from "./features/content/game-home";
 import { Portal } from "./features/portal/portal";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   HashRouter,
   Link,
@@ -33,11 +30,36 @@ import { OptionSelect } from "./components/option-select";
 import { useFavicon, useMascotIcon } from "./components/mascot";
 import { SpriteProvider } from "./components/sprite-provider";
 import { SectionIcon } from "./components/section-icon";
-import { Catalog } from "./features/catalog/catalog";
-import { Detail } from "./features/records/detail";
-import { Document } from "./features/content/document";
-import { Changes } from "./features/content/changes";
 import { title } from "./lib/utils";
+import { Loading } from "./components/resource-state";
+import { LoadBoundary } from "./components/load-boundary";
+
+// A game's pages load on demand, keeping the library's first load small.
+const GameHome = lazy(() =>
+  import("./features/content/game-home").then((m) => ({ default: m.GameHome })),
+);
+const GameSearch = lazy(() =>
+  import("./features/search/game-search").then((m) => ({
+    default: m.GameSearch,
+  })),
+);
+const Downloads = lazy(() =>
+  import("./features/content/downloads").then((m) => ({
+    default: m.Downloads,
+  })),
+);
+const Changes = lazy(() =>
+  import("./features/content/changes").then((m) => ({ default: m.Changes })),
+);
+const Document = lazy(() =>
+  import("./features/content/document").then((m) => ({ default: m.Document })),
+);
+const Catalog = lazy(() =>
+  import("./features/catalog/catalog").then((m) => ({ default: m.Catalog })),
+);
+const Detail = lazy(() =>
+  import("./features/records/detail").then((m) => ({ default: m.Detail })),
+);
 
 export function App() {
   const [manifest, setManifest] = useState<Manifest>();
@@ -288,28 +310,32 @@ function GameRoutes({ games }: { games: Game[] }) {
   if (!game) return <NotFound />;
   return (
     <SpriteProvider game={game}>
-      <Routes>
-        <Route index element={<GameHome game={game} />} />
-        <Route path="search" element={<GameSearch game={game} />} />
-        <Route path="downloads" element={<Downloads game={game} />} />
-        <Route
-          path="changes"
-          element={
-            Object.keys(game.comparisons).length ? (
-              <Changes game={game} />
-            ) : (
-              <NotFound />
-            )
-          }
-        />
-        <Route path="docs/*" element={<DocumentRoute game={game} />} />
-        <Route path=":section" element={<SectionRoute game={game} />} />
-        <Route
-          path=":section/:recordId"
-          element={<SectionRoute game={game} />}
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <LoadBoundary>
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route index element={<GameHome game={game} />} />
+            <Route path="search" element={<GameSearch game={game} />} />
+            <Route path="downloads" element={<Downloads game={game} />} />
+            <Route
+              path="changes"
+              element={
+                Object.keys(game.comparisons).length ? (
+                  <Changes game={game} />
+                ) : (
+                  <NotFound />
+                )
+              }
+            />
+            <Route path="docs/*" element={<DocumentRoute game={game} />} />
+            <Route path=":section" element={<SectionRoute game={game} />} />
+            <Route
+              path=":section/:recordId"
+              element={<SectionRoute game={game} />}
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </LoadBoundary>
     </SpriteProvider>
   );
 }
