@@ -39,11 +39,16 @@ def _print_inspection(result: InspectionResult, *, as_json: bool) -> None:
         return
 
     profile = data["profile"]
-    print(f"Title: {data['header']['title']}")
-    print(f"Game code: {data['header']['game_code']}")
-    print(f"ROM version: {data['header']['rom_version']}")
+    header = data["header"]
+    print(f"Title: {header['title']}")
+    print(f"Game code: {header['game_code']}")
+    # Each platform's header names its revision differently, and only
+    # filesystem-based platforms have files to count.
+    version = header.get("rom_version", header.get("software_version"))
+    print(f"ROM version: {version}")
     print(f"Size: {data['size']} bytes")
-    print(f"Files: {data['header']['filesystem_file_count']}")
+    if "filesystem_file_count" in header:
+        print(f"Files: {header['filesystem_file_count']}")
     print(f"SHA-256: {data['hashes']['sha256']}")
     if profile:
         print(f"Profile: {profile['name']} ({profile['variant']})")

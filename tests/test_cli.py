@@ -31,6 +31,7 @@ from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import GameMetadata, SiteCatalog, SiteDefinition
 from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGamePaths
+from tests.conftest import make_gba_header
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -174,6 +175,21 @@ class MainErrorHandlingTests(unittest.TestCase):
         exit_code = main(["inspect", "--rom", str(rom_path), "--json"])
 
         self.assertEqual(exit_code, 0)
+
+    def test_inspect_prints_text_for_an_unmatched_gba_image(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            rom_path = Path(directory) / "hack.gba"
+            rom_path.write_bytes(
+                make_gba_header(software_version=1).ljust(0x1000, b"\0")
+            )
+            with patch("builtins.print") as printed:
+                exit_code = main(["inspect", "--rom", str(rom_path)])
+
+        lines = [call.args[0] for call in printed.call_args_list]
+        self.assertEqual(exit_code, 0)
+        self.assertIn("ROM version: 1", lines)
+        self.assertIn("Profile: unknown", lines)
+        self.assertFalse(any(line.startswith("Files:") for line in lines))
 
     def test_dppt_location_extraction_uses_integrated_trade_records(self) -> None:
         profile = SimpleNamespace(
