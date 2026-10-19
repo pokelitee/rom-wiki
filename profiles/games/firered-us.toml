@@ -47,6 +47,7 @@ item_count = 375
 
 trainer_offset = 0x23eac8
 trainer_count = 743
+trainer_class_name_offset = 0x23e558
 
 ability_name_offset = 0x24fc40
 ability_name_stride = 13

@@ -269,6 +269,10 @@ COLOR_NAMES = (
 # (FireRed 743, Emerald 855) -- TRAINER_RECORD_COUNT stays leaf-specific.
 TRAINER_RECORD_SIZE = 0x28
 
+# `gTrainerClassNames`: 13-byte names indexed by a trainer's class ID, just
+# before the trainer table on both games. The class count differs per game.
+TRAINER_CLASS_NAME_SIZE = 13
+
 # `sTMHMLearnsets[][2]`: a separate, species-indexed 64-bit bitmask (two
 # u32 halves). Bit N = machine N+1. Verified identical on both games
 # (Bulbasaur/Ivysaur share the same 19-machine mask on both).

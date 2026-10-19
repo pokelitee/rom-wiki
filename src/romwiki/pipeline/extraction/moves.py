@@ -109,7 +109,7 @@ def _extract_move_records_flat(
     ]
 
     name_data = platform.read_bytes(result.image, name_offset, name_stride * name_count)
-    move_names = engine.decode_gen3_text_table(
+    move_names = engine.decode_gen3_name_table(
         name_data, stride=name_stride, count=name_count
     )
     reference_names = {

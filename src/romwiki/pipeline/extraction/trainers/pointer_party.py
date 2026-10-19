@@ -18,7 +18,7 @@ from romwiki.schema.versions import (
     TRAINER_BATTLE_FAMILY_SCHEMA_VERSION,
     TRAINERS_RAW_SCHEMA_VERSION,
 )
-from romwiki.util.errors import ProfileError
+from romwiki.util.errors import InvalidRomError, ProfileError
 
 # Party-flags byte and party-size byte within one trainer header record --
 # needed here (ahead of the engine's own `parse_trainer_record`) to size the
@@ -81,9 +81,12 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     # Only trainers placed as overworld objects whose script starts the
     # battle can be linked; rematches and scripted battles keep no location.
     locations_by_trainer = _extract_gen3_trainer_locations(platform, result, profile)
+    class_names = _trainer_class_names(profile, platform, result, engine)
     records = [
         replace(
-            record, locations=tuple(locations_by_trainer.get(record.trainer_id, ()))
+            record,
+            class_name=_class_name(record, class_names),
+            locations=tuple(locations_by_trainer.get(record.trainer_id, ())),
         ).to_dict()
         for record in parsed_records
     ]
@@ -116,6 +119,30 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     if item_names is not None:
         envelope["item_names"] = item_names
     return envelope
+
+
+def _trainer_class_names(
+    profile: Any, platform: Any, result: InspectionResult, engine: Any
+) -> list[str] | None:
+    """Decode the class-name table, if the profile locates it."""
+    offset = profile.optional_int_parameter("trainer_class_name_offset")
+    if offset is None:
+        return None
+    count = profile.int_parameter("trainer_class_count", engine.TRAINER_CLASS_COUNT)
+    size = engine.TRAINER_CLASS_NAME_SIZE
+    data = platform.read_bytes(result.image, offset, size * count)
+    return list(engine.decode_gen3_name_table(data, stride=size, count=count))
+
+
+def _class_name(record: Any, class_names: list[str] | None) -> str | None:
+    if class_names is None:
+        return None
+    if record.class_id >= len(class_names):
+        raise InvalidRomError(
+            f"Gen III trainer {record.trainer_id} has class {record.class_id}, "
+            f"beyond the {len(class_names)}-entry class-name table"
+        )
+    return class_names[record.class_id]
 
 
 def _extract_gen3_trainer_locations(
@@ -237,6 +264,6 @@ def _item_names(
         return None
     record_size = engine.items.ITEM_RECORD_SIZE
     data = platform.read_bytes(result.image, item_offset, record_size * item_count)
-    return engine.items.decode_gen3_text_table(
+    return engine.items.decode_gen3_name_table(
         data, stride=record_size, count=item_count
     )

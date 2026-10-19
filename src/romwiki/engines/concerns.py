@@ -22,7 +22,7 @@ class PersonalConcern(Protocol):
     PERSONAL_RECORD_COUNT: int
     PERSONAL_RECORD_SIZE: int
     decode_gen3_text: Parser
-    decode_gen3_text_table: Parser
+    decode_gen3_name_table: Parser
     parse_personal_record: Parser
     resolve_gba_pointer: Parser
 
@@ -57,7 +57,7 @@ class LocationConcern(MessageArchiveReader, Protocol):
     TROPHY_GARDEN_HEADER_ID: int
     TROPHY_GARDEN_MEMBER: int
     WARP_DESTINATION_INDEXED: bool
-    decode_gen3_text: Parser
+    decode_gen3_name: Parser
     disassemble_function: Parser
     find_item_archive_members: Parser
     find_script_awarded_items: Parser
@@ -115,7 +115,7 @@ class TrainerConcern(MessageArchiveReader, Protocol):
     TRAINER_OBJECT_SCRIPT_START: int
     TRAINER_RECORD_COUNT: int
     TRAINER_RECORD_SIZE: int
-    decode_gen3_text: Parser
+    decode_gen3_name: Parser
     parse_difficulty_branch_families: Parser
     parse_map_header: Parser
     parse_map_header_script_files: Parser
@@ -155,7 +155,7 @@ class EncounterConcern(MessageArchiveReader, Protocol):
     POKEMON_NAME_COUNT: int
     SAFARI_AREA_NAMES: tuple[str, ...]
     SWARM_RECORD_SIZE: int
-    decode_gen3_text: Parser
+    decode_gen3_name: Parser
     gba_pointer_for_offset: Parser
     hidden_grotto_id_for_dispatch: Parser
     parse_encounter_entry: Parser
@@ -182,7 +182,7 @@ class EvolutionConcern(MessageArchiveReader, Protocol):
     ITEM_RECORD_COUNT: int
     ITEM_RECORD_SIZE: int
     PERSONAL_RECORD_COUNT: int
-    decode_gen3_text_table: Parser
+    decode_gen3_name_table: Parser
     parse_evolution_record: Parser
 
 
@@ -217,7 +217,7 @@ class MachineConcern(Protocol):
 class MoveConcern(Protocol):
     MOVE_RECORD_COUNT: int
     MOVE_RECORD_SIZE: int
-    decode_gen3_text_table: Parser
+    decode_gen3_name_table: Parser
     parse_move_record: Parser
 
 
@@ -234,7 +234,7 @@ class TutorConcern(Protocol):
     TUTOR_LOCATION_NAMES: tuple[str, ...]
     TUTOR_MOVE_COUNT: int
     TUTOR_RECORD_SIZE: int
-    decode_gen3_text: Parser
+    decode_gen3_name: Parser
     parse_english_message_archive: Parser
     parse_map_header: Parser
     parse_personal_record: Parser

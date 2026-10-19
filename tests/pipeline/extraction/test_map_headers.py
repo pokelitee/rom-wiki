@@ -199,7 +199,7 @@ class IterGbaMapHeadersTests(unittest.TestCase):
                 (header.header_id, header.map_group, header.map_num, header.name)
                 for header in headers
             ],
-            [(0, 0, 0, "VIR"), (1, 0, 1, "PALL"), (2, 1, 0, "VIR")],
+            [(0, 0, 0, "Vir"), (1, 0, 1, "Pall"), (2, 1, 0, "Vir")],
         )
         self.assertEqual(headers[1].rom_offset, 0x80 + 28)
 
@@ -214,7 +214,7 @@ class IterGbaMapHeadersTests(unittest.TestCase):
         headers = list(iter_gba_map_headers(frlg, platform, None, profile))
 
         self.assertEqual(
-            [(header.header_id, header.name) for header in headers], [(1, "PALL")]
+            [(header.header_id, header.name) for header in headers], [(1, "Pall")]
         )
 
     def test_rejects_a_map_in_an_unknown_section(self) -> None:

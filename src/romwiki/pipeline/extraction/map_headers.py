@@ -172,7 +172,7 @@ def read_region_names(
     for index in range(count):
         pointer_at = index * entry_size + engine.REGION_NAME_POINTER_OFFSET
         pointer = int.from_bytes(table[pointer_at : pointer_at + 4], "little")
-        names[engine.FIRST_REGION_MAP_SECTION + index] = engine.decode_gen3_text(
+        names[engine.FIRST_REGION_MAP_SECTION + index] = engine.decode_gen3_name(
             platform.read_bytes(
                 image, engine.resolve_gba_pointer(pointer), _REGION_NAME_READ_SIZE
             )

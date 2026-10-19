@@ -3,8 +3,9 @@ from __future__ import annotations
 import unittest
 
 from romwiki.engines.gen3.shared.text import (
+    decode_gen3_name_table,
     decode_gen3_text,
-    decode_gen3_text_table,
+    gen3_display_name,
 )
 
 
@@ -64,15 +65,46 @@ class DecodeGen3TextTests(unittest.TestCase):
                 self.assertEqual(decode_gen3_text(data), expected)
 
 
-class DecodeGen3TextTableTests(unittest.TestCase):
-    def test_decodes_a_fixed_width_table(self) -> None:
+class DecodeGen3NameTableTests(unittest.TestCase):
+    def test_decodes_a_fixed_width_table_as_display_names(self) -> None:
         entry_a = bytes([0xCA, 0xC9, 0xCF, 0xC8, 0xBE, 0xFF, 0x00, 0x00])
         entry_b = bytes([0xCE, 0xBB, 0xBD, 0xC5, 0xC6, 0xBF, 0xFF, 0x00])
         data = entry_a + entry_b
 
-        names = decode_gen3_text_table(data, stride=8, count=2)
+        names = decode_gen3_name_table(data, stride=8, count=2)
 
-        self.assertEqual(names, ["POUND", "TACKLE"])
+        self.assertEqual(names, ["Pound", "Tackle"])
+
+
+class Gen3DisplayNameTests(unittest.TestCase):
+    def test_recases_each_word_of_an_all_caps_name(self) -> None:
+        cases = {
+            "THUNDERPUNCH": "Thunderpunch",
+            "KING'S ROCK": "King's Rock",
+            "MT. MOON": "Mt. Moon",
+            "S.S. TICKET": "S.S. Ticket",
+            "TATE&LIZA": "Tate&Liza",
+            "POKé BALL": "Poké Ball",
+        }
+        for value, expected in cases.items():
+            with self.subTest(value=value):
+                self.assertEqual(gen3_display_name(value), expected)
+
+    def test_keeps_machine_and_stat_acronyms_in_capitals(self) -> None:
+        cases = {
+            "TM01": "TM01",
+            "TM CASE": "TM Case",
+            "HP UP": "HP Up",
+            "PP MAX": "PP Max",
+            "PKMN TRAINER": "PKMN Trainer",
+        }
+        for value, expected in cases.items():
+            with self.subTest(value=value):
+                self.assertEqual(gen3_display_name(value), expected)
+
+    def test_keeps_names_that_already_have_lowercase_letters(self) -> None:
+        self.assertEqual(gen3_display_name("Pokémon Center"), "Pokémon Center")
+        self.assertEqual(gen3_display_name(""), "")
 
 
 if __name__ == "__main__":

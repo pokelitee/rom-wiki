@@ -111,6 +111,9 @@ ITEM_RECORD_COUNT = 375
 # real). Differs per game (Emerald has 854) -- not a shared fact.
 TRAINER_RECORD_COUNT = 743
 
+# Classes 0 ("PKMN TRAINER") through 106 ("PAINTER"); trainers use 0-106.
+TRAINER_CLASS_COUNT = 107
+
 # Generation III has no per-tutor location table -- only individual NPC
 # scripts. Each tutor script's `setvar VAR_0x8005, <index>; call
 # EventScript_ChooseMoveTutorMon` is a unique signature occurring exactly 15
@@ -124,21 +127,21 @@ TRAINER_RECORD_COUNT = 743
 # synthetic `header_id`; the extraction layer resolves the name to the
 # first of that profile's maps with it.
 TUTOR_LOCATIONS = {
-    0: "ROUTE 4",  # Mega Punch
-    1: "SEVEN ISLAND",  # Swords Dance
-    2: "ROUTE 4",  # Mega Kick
-    3: "FOUR ISLAND",  # Body Slam
-    4: "VICTORY ROAD",  # Double-Edge
-    5: "CELADON CITY",  # Counter
-    6: "PEWTER CITY",  # Seismic Toss
-    7: "SAFFRON CITY",  # Mimic
-    8: "CINNABAR ISLAND",  # Metronome
-    9: "CELADON CITY",  # Softboiled
-    10: "VIRIDIAN CITY",  # Dream Eater
-    11: "SILPH CO.",  # Thunder Wave
-    12: "MT. EMBER",  # Explosion
-    13: "ROCK TUNNEL",  # Rock Slide
-    14: "FUCHSIA CITY",  # Substitute
+    0: "Route 4",  # Mega Punch
+    1: "Seven Island",  # Swords Dance
+    2: "Route 4",  # Mega Kick
+    3: "Four Island",  # Body Slam
+    4: "Victory Road",  # Double-Edge
+    5: "Celadon City",  # Counter
+    6: "Pewter City",  # Seismic Toss
+    7: "Saffron City",  # Mimic
+    8: "Cinnabar Island",  # Metronome
+    9: "Celadon City",  # Softboiled
+    10: "Viridian City",  # Dream Eater
+    11: "Silph Co.",  # Thunder Wave
+    12: "Mt. Ember",  # Explosion
+    13: "Rock Tunnel",  # Rock Slide
+    14: "Fuchsia City",  # Substitute
 }
 
 # One entry per map (mapGroup/mapNum, not a species-style index), so no

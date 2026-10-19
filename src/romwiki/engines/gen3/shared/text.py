@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import re
+
+from romwiki.util.text import normalize_display_name
+
 # Generation III's proprietary single-byte character table (the same map
 # used by every Gen III game). Verified against the real FireRed and
 # LeafGreen ROMs: decoding the move-name table at the offsets in
@@ -10,13 +14,17 @@ from __future__ import annotations
 # real region-name table ("MT. MOON", "S.S. ANNE", "SILPH CO.", "CELADON
 # DEPT." all decode correctly with it), the other punctuation against the
 # species-name table ("FARFETCH'D", "HO-OH", "NIDORAN♀") and trainer names
-# ("TATE&LIZA"). Add further entries as they're needed and verified, rather
-# than guessing the full table upfront. The apostrophe decodes to ASCII to
-# match the names the Nintendo DS engines produce.
+# ("TATE&LIZA", "POKéFAN", "PKMN TRAINER", where PK and MN are one glyph
+# each). Add further entries as they're needed and verified, rather than
+# guessing the full table upfront. The apostrophe decodes to ASCII to match
+# the names the Nintendo DS engines produce.
 _TERMINATOR = 0xFF
 _PUNCTUATION = {
     0x00: " ",
+    0x1B: "é",
     0x2D: "&",
+    0x53: "PK",
+    0x54: "MN",
     0xAB: "!",
     0xAC: "?",
     0xAD: ".",
@@ -33,8 +41,35 @@ _LOWER_START = 0xD5
 _LOWER_END = 0xEE
 
 
-def decode_gen3_text_table(data: bytes, *, stride: int, count: int) -> list[str]:
-    """Decode a flat, fixed-width array of `decode_gen3_text`-encoded strings.
+# Words that keep their capitals when a name is recased for display.
+_UPPERCASE_WORD = re.compile(r"(?:TM|HM)\d*|HP|PP|PKMN")
+
+
+def gen3_display_name(value: str) -> str:
+    """Recase a name the ROM stores in capitals ("HP UP" -> "HP Up").
+
+    Generation III stores every name in capitals, and the readable spelling
+    isn't recorded anywhere, so each word is capitalized: a name the games
+    later spelled with an inner capital reads "Thunderpunch". "POKé" counts
+    as capitals, since the games write it that way.
+    """
+    capitals = value.replace("é", "É")
+    if not capitals.isupper():
+        return value
+    recased = normalize_display_name(capitals).split(" ")
+    return " ".join(
+        word if _UPPERCASE_WORD.fullmatch(word) else display
+        for word, display in zip(value.split(" "), recased, strict=True)
+    )
+
+
+def decode_gen3_name(data: bytes) -> str:
+    """Decode a name and recase it for display (see `gen3_display_name`)."""
+    return gen3_display_name(decode_gen3_text(data))
+
+
+def decode_gen3_name_table(data: bytes, *, stride: int, count: int) -> list[str]:
+    """Decode a flat, fixed-width array of names (see `decode_gen3_name`).
 
     `data` is the table's own bytes (already sliced from the ROM at the
     table's start offset, sized `stride * count`). The flat-offset
@@ -45,7 +80,7 @@ def decode_gen3_text_table(data: bytes, *, stride: int, count: int) -> list[str]
     move-name table; see `gen3/frlg/moves.py`).
     """
     return [
-        decode_gen3_text(data[index * stride : (index + 1) * stride])
+        decode_gen3_name(data[index * stride : (index + 1) * stride])
         for index in range(count)
     ]
 

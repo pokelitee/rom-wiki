@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 
 from romwiki.engines.gen3.shared.constants import TRAINER_RECORD_SIZE
-from romwiki.engines.gen3.shared.text import decode_gen3_text
+from romwiki.engines.gen3.shared.text import decode_gen3_name
 from romwiki.schema import (
     AbilitySlotTrainerPokemon,
     BattleModeTrainer,
@@ -65,7 +65,7 @@ def parse_trainer_record(
 
     party_flags = data[0]
     class_id = data[1]
-    name = decode_gen3_text(data[0x04:0x10])
+    name = decode_gen3_name(data[0x04:0x10])
     reward_item_ids = struct.unpack_from("<4H", data, 0x10)
     double_battle = data[0x18] != 0
     ai_flags = struct.unpack_from("<I", data, 0x1C)[0]

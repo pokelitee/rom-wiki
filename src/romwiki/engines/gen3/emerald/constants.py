@@ -30,6 +30,9 @@ ITEM_NAME_COUNT = 377
 # index 854.
 TRAINER_RECORD_COUNT = 855
 
+# Classes 0 ("PKMN TRAINER") through 65; trainers use 0-65.
+TRAINER_CLASS_COUNT = 66
+
 # `gWildMonHeaders`: verified against the real Emerald ROM -- struct shape
 # and slot counts are the shared Gen III fact (`gen3/shared/constants.py`'s
 # `ENCOUNTER_HEADER_SIZE`); this leaf's table offset/count are its own.

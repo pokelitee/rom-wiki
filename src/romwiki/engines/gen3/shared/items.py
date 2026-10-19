@@ -6,7 +6,7 @@ from romwiki.engines.gen3.shared.constants import ITEM_RECORD_SIZE
 from romwiki.schema import Item, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
-from .text import decode_gen3_text
+from .text import decode_gen3_name
 
 # Generation III's item struct (44 bytes, `struct Item` in the public
 # pokefirered/pokeemerald decompilation), verified against the real FireRed
@@ -60,7 +60,7 @@ def item_name(data: bytes) -> str:
     Unlike every NDS engine, Generation III has no separate item-name table
     -- each item's display name is embedded directly in its own record.
     """
-    return decode_gen3_text(data[:_NAME_SIZE])
+    return decode_gen3_name(data[:_NAME_SIZE])
 
 
 def parse_item_record(
