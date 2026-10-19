@@ -714,6 +714,9 @@ def _remove_unreferenced(output: Path) -> None:
 
 def publication_files(root: Path) -> list[Path]:
     """Every file the frontend manifest at `root` references, checked to exist."""
+    # Resolve once the directory exists: on Windows, a path resolved before its
+    # directory was created can keep an 8.3 short name its files won't share.
+    root = root.resolve()
     manifest_path = root / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("schema_version") != FRONTEND_SCHEMA_VERSION:
@@ -725,7 +728,7 @@ def publication_files(root: Path) -> list[Path]:
         if relative in included:
             return included[relative]
         candidate = (root / relative).resolve()
-        if not candidate.is_relative_to(root.resolve()) or not candidate.is_file():
+        if not candidate.is_relative_to(root) or not candidate.is_file():
             raise SiteError(f"Invalid frontend resource: {relative}")
         files.add(candidate)
         included[relative] = candidate
