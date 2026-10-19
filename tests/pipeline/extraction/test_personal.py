@@ -234,11 +234,13 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         self.assertEqual(dataset["records"], [{"species_id": 0}])
 
     def test_reads_one_flat_species_name_per_record(self) -> None:
-        # Two one-byte records at 0x00, species names (stride 2) at 0x10 and
-        # ability names (stride 3) at 0x20.
-        rom = bytearray(0x30)
+        # Two one-byte records at 0x00, species names (stride 2) at 0x10,
+        # ability names (stride 3) at 0x20, and two 4-byte item records at
+        # 0x30, each led by its name.
+        rom = bytearray(0x38)
         rom[0x10:0x14] = b"ABZ\xff"
         rom[0x20:0x26] = b"XY\xffQR\xff"
+        rom[0x30:0x38] = b"M\xff\x00\x00NO\xff\x00"
         profile = _profile(
             platform=_FLAT_PLATFORM_ID,
             layout={},
@@ -249,6 +251,8 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
                 "pokemon_name_stride": 2,
                 "ability_name_offset": 0x20,
                 "ability_name_stride": 3,
+                "item_offset": 0x30,
+                "item_count": 2,
             },
         )
         _register_fake_flat_platform(bytes(rom))
@@ -257,6 +261,7 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
                 parse_personal_record=_parse_record,
                 PERSONAL_RECORD_SIZE=1,
                 ABILITY_NAME_COUNT=2,
+                ITEM_RECORD_SIZE=4,
                 decode_gen3_name_table=_decode_ascii_table,
             )
         )
@@ -266,10 +271,12 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         self.assertEqual(dataset["record_count"], 2)
         self.assertEqual(dataset["pokemon_names"], ["AB", "Z"])
         self.assertEqual(dataset["ability_names"], ["XY", "QR"])
+        self.assertEqual(dataset["item_names"], ["M", "NO"])
         self.assertEqual(
             dataset["name_sources"],
             {
                 "ability_names": {"archive": "offset:0x20", "member": 0},
+                "item_names": {"archive": "offset:0x30", "member": 0},
                 "pokemon_names": {"archive": "offset:0x10", "member": 0},
             },
         )

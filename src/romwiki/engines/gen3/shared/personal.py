@@ -39,19 +39,9 @@ from romwiki.util.errors import InvalidRomError
 # slots (no Dark Grass slot, introduced in Generation V) and two ability
 # slots (no hidden-ability slot, introduced in Generation V).
 #
-# The raw item1/item2 values are read but not yet surfaced through
-# `wild_held_items` (see below): `pipeline/enrichment/references.py`'s
-# `item_reference` resolves a raw item ID straight against PokeDB when no
-# ROM-extracted item name table is available, which assumes the ROM's raw
-# item ID already matches PokeDB/PokeAPI's numbering. That's true for the
-# Nintendo DS engines already onboarded, but hasn't been verified for
-# Generation III's own item ordering (e.g. this table's raw common-item
-# value for Venomoth decodes to 188, while PokeDB's Silver Powder is 199 --
-# they may not be the same numbering at all). Surfacing an unverified
-# mapping as fact would violate this repo's evidence-based norm, so this
-# stays zeroed -- like `machine_ids`/`machine_masks` above -- until the
-# items domain is added with a verified ID mapping (or ROM-extracted item
-# names, which sidestep the mapping question entirely).
+# Item IDs follow Generation III's own numbering, which differs from PokéDB's
+# (Venomoth's common item is 188, Silver Powder), so the extraction layer
+# pairs them with the ROM's own item names.
 
 
 def parse_personal_record(
@@ -92,7 +82,10 @@ def parse_personal_record(
             special_attack=(ev_mask >> 8) & 0b11,
             special_defense=(ev_mask >> 10) & 0b11,
         ),
-        wild_held_items=WildHeldItems(common=0, rare=0),
+        wild_held_items=WildHeldItems(
+            common=struct.unpack_from("<H", data, 0x0C)[0],
+            rare=struct.unpack_from("<H", data, 0x0E)[0],
+        ),
         gender_ratio=data[0x10],
         hatch_cycles=data[0x11],
         base_friendship=data[0x12],

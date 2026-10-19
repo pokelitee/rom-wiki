@@ -18,6 +18,7 @@ FormLabels = Mapping[tuple[int, int], str]
 
 class PersonalConcern(Protocol):
     ABILITY_NAME_COUNT: int
+    ITEM_RECORD_SIZE: int
     MACHINE_LEARNSET_SIZE: int
     PERSONAL_RECORD_COUNT: int
     PERSONAL_RECORD_SIZE: int

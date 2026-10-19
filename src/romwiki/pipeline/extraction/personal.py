@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from romwiki.engines.concerns import PersonalConcern
@@ -153,22 +154,36 @@ def _extract_names_flat(
 ) -> dict[str, Any]:
     # Each table is optional: without its offset, enrichment falls back to
     # PokéDB's names. Species names are one per personal record; a build with
-    # a resized ability table sets ability_name_count.
-    tables = {
-        "ability_names": (
+    # a resized ability table sets ability_name_count. Item names are the
+    # leading name field of each item record, which wild held items need
+    # because the ROM's item numbering differs from PokéDB's.
+    tables: list[tuple[str, str, Callable[[], tuple[int, int]]]] = [
+        (
+            "ability_names",
             "ability_name_offset",
-            "ability_name_stride",
-            profile_count(profile, "ability_name_count", engine.ABILITY_NAME_COUNT),
+            lambda: (
+                profile.int_parameter("ability_name_stride"),
+                profile_count(profile, "ability_name_count", engine.ABILITY_NAME_COUNT),
+            ),
         ),
-        "pokemon_names": ("pokemon_name_offset", "pokemon_name_stride", record_count),
-    }
+        (
+            "pokemon_names",
+            "pokemon_name_offset",
+            lambda: (profile.int_parameter("pokemon_name_stride"), record_count),
+        ),
+        (
+            "item_names",
+            "item_offset",
+            lambda: (engine.ITEM_RECORD_SIZE, profile.int_parameter("item_count")),
+        ),
+    ]
     result_names: dict[str, Any] = {}
     sources: dict[str, Any] = {}
-    for field, (offset_parameter, stride_parameter, count) in tables.items():
+    for field, offset_parameter, shape in tables:
         offset = profile.optional_int_parameter(offset_parameter)
         if offset is None:
             continue
-        stride = profile.int_parameter(stride_parameter)
+        stride, count = shape()
         data = platform.read_bytes(result.image, offset, stride * count)
         result_names[field] = engine.decode_gen3_name_table(
             data, stride=stride, count=count

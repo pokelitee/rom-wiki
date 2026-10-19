@@ -28,10 +28,8 @@ class Gen3PersonalDataTests(unittest.TestCase):
         self.assertEqual(record.base_experience, 64)
         self.assertEqual(record.ev_yields.attack, 2)
         self.assertEqual(record.ev_yields.special_attack, 1)
-        # Raw item1/item2 bytes are read but not yet surfaced (see
-        # personal.py's comment on the unverified Gen III item-ID mapping).
-        self.assertEqual(record.wild_held_items.common, 0)
-        self.assertEqual(record.wild_held_items.rare, 0)
+        self.assertEqual(record.wild_held_items.common, 10)
+        self.assertEqual(record.wild_held_items.rare, 20)
         self.assertIsNone(record.wild_held_items.dark_grass)
         self.assertEqual(record.gender_ratio, 31)
         self.assertEqual(record.hatch_cycles, 20)
