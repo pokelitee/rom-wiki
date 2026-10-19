@@ -229,4 +229,4 @@ romwiki site snapshot-web
 romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
-`export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract. `snapshot-web` packages only referenced resources into a deterministic local archive and checksum manifest. `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. These commands do not publish releases or deploy the site.
+`export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract, deleting files an earlier export left that the new manifest no longer references. `snapshot-web` packages only referenced resources into a deterministic local archive and checksum manifest. `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. These commands do not publish releases or deploy the site.

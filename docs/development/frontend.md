@@ -29,7 +29,7 @@ python -m romwiki site snapshot-web
 python -m romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
-These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. Snapshot creation includes only resources referenced by the current manifest, excluding stale files from earlier exports. `snapshot-web` also pins the new snapshot by writing its manifest to `sites/frontend-snapshot/manifest.json` and publishes its archive to the `snapshots` release (see below); pass `--no-upload` to pin without publishing, or `--no-pin` for a local trial snapshot. Neither command deploys.
+These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. `export-web` deletes files an earlier export left in its output that the new manifest no longer references, and refuses to write into a non-empty directory that holds no earlier export. `snapshot-web` also pins the new snapshot by writing its manifest to `sites/frontend-snapshot/manifest.json` and publishes its archive to the `snapshots` release (see below); pass `--no-upload` to pin without publishing, or `--no-pin` for a local trial snapshot. Neither command deploys.
 
 The reviewed publication is pinned by `sites/frontend-snapshot/manifest.json`. Its content-addressed archive is an asset of the existing `snapshots` release. For a clean checkout, download the archive named in that manifest (its `archive` field), then restore and check it:
 
