@@ -22,7 +22,7 @@ from romwiki.sites.frontend_snapshot import (
     create_frontend_snapshot,
     restore_frontend_snapshot,
 )
-from romwiki.util.errors import SiteError
+from romwiki.util.errors import DataSourceError, SiteError
 
 
 def make_repository(root: Path) -> Path:
@@ -224,6 +224,19 @@ def test_export_rejects_corrupt_archives_and_duplicate_routes() -> None:
         dataset = pokemon_dataset()
         dataset["records"].append(dataset["records"][0])
         write_public_dataset(wiki, "pokemon", dataset)
+        with pytest.raises(DataSourceError, match="failed content checks"):
+            export_frontend(root, root / "output")
+        # Locations have no content checks, so their duplicates reach routing.
+        write_public_dataset(wiki, "pokemon", pokemon_dataset())
+        locations = {
+            "dataset": "locations",
+            "schema_version": 1,
+            "game": "test-game",
+            "record_count": 2,
+            "source": {"source": "synthetic"},
+            "records": [{"header_id": 1, "name": "Route 1"}] * 2,
+        }
+        write_public_dataset(wiki, "locations", locations)
         with pytest.raises(SiteError, match="Duplicate frontend identity"):
             export_frontend(root, root / "output")
         (wiki / "data/pokemon.json.gz").write_bytes(b"invalid")

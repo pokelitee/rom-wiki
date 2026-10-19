@@ -12,6 +12,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.build.checks import check_game_datasets
 from romwiki.pipeline.semantics.encounter_identity import (
     encounter_route_key,
     is_unlinked_encounter_area,
@@ -458,6 +459,7 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
         if site.game is None:
             continue
         datasets = _read_datasets(site)
+        check_game_datasets(site.id, datasets)
         pokemon.append(datasets.get("pokemon", {}))
         relationships = _relationships(datasets)
         # A species ID is its base form's member number; alternate forms
