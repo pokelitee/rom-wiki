@@ -99,14 +99,13 @@ def _extract_move_records_flat(
     record_size = engine.MOVE_RECORD_SIZE
     data = platform.read_bytes(result.image, offset, record_size * count)
     archive_path = f"offset:{offset:#x}"
-    decoded_count = min(count, engine.MOVE_RECORD_COUNT)
     records = [
         engine.parse_move_record(
             data[index * record_size : (index + 1) * record_size],
             move_id=index,
             archive_path=archive_path,
         ).to_dict()
-        for index in range(decoded_count)
+        for index in range(count)
     ]
 
     name_data = platform.read_bytes(result.image, name_offset, name_stride * name_count)

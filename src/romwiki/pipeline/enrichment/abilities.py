@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.references import with_rom_description
 from romwiki.schema.enriched import (
     AbilityDataset,
@@ -27,19 +26,14 @@ def build_ability_dataset(
     engine_id = pokemon_dataset.get("engine")
     if not isinstance(engine_id, str):
         raise DataSourceError("Pokémon dataset must declare its source engine")
-    expected_count = get_engine(engine_id).enrich.ABILITY_NAME_COUNT
     ability_names = pokemon_dataset.get("ability_names")
-    if not isinstance(ability_names, list) or len(ability_names) != expected_count:
-        raise DataSourceError(
-            f"Expected exactly {expected_count} ROM-derived ability names"
-        )
+    if not isinstance(ability_names, list) or not ability_names:
+        raise DataSourceError("Expected ROM-derived ability names")
     descriptions = pokemon_dataset.get("ability_descriptions")
     if descriptions is not None and (
-        not isinstance(descriptions, list) or len(descriptions) != expected_count
+        not isinstance(descriptions, list) or len(descriptions) != len(ability_names)
     ):
-        raise DataSourceError(
-            f"Expected exactly {expected_count} ROM-derived ability descriptions"
-        )
+        raise DataSourceError("Expected one ROM-derived description per ability name")
 
     pokemon_by_ability: dict[int, list[AbilityPokemon]] = {}
     for pokemon in pokemon_dataset.get("records", []):

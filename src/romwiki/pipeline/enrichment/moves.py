@@ -47,21 +47,18 @@ def enrich_move_dataset(
 ) -> MoveDataset:
     engine = get_engine(dataset["engine"]).enrich
     source_records = dataset.get("records")
-    expected_count = engine.MOVE_RECORD_COUNT
-    if not isinstance(source_records, list) or len(source_records) != expected_count:
-        raise DataSourceError(f"Expected exactly {expected_count} move records")
-    rom_move_names = reference_name_table(dataset, "move_names", engine.MOVE_NAME_COUNT)
-    type_names = resolve_type_names(engine, dataset, type_names)
-    move_names = resolve_move_names(engine, dataset, move_names)
-    pokemon_names = resolve_pokemon_names(engine, dataset)
+    if not isinstance(source_records, list) or not source_records:
+        raise DataSourceError("Expected move records")
+    rom_move_names = reference_name_table(dataset, "move_names")
+    type_names = resolve_type_names(dataset, type_names)
+    move_names = resolve_move_names(dataset, move_names)
+    pokemon_names = resolve_pokemon_names(dataset)
     descriptions = dataset.get("move_descriptions")
     if descriptions is not None and (
         not isinstance(descriptions, list)
-        or len(descriptions) != engine.MOVE_NAME_COUNT
+        or (rom_move_names is not None and len(descriptions) != len(rom_move_names))
     ):
-        raise DataSourceError(
-            f"Expected exactly {engine.MOVE_NAME_COUNT} ROM-derived move descriptions"
-        )
+        raise DataSourceError("Expected one ROM-derived description per move name")
 
     machines = validate_machines(engine, machine_dataset, dataset["game"])
     machines_by_move: dict[int, list[dict[str, Any]]] = {}

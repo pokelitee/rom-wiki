@@ -375,18 +375,12 @@ def build_item_dataset(
     engine_name = item_dataset.get("engine")
     engine_tables = get_engine(engine_name).enrich if engine_name else None
     descriptions = item_dataset.get("item_descriptions")
-    if descriptions is not None:
-        expected_description_count = get_engine(
-            item_dataset["engine"]
-        ).enrich.ITEM_NAME_COUNT
-        if (
-            not isinstance(descriptions, list)
-            or len(descriptions) != expected_description_count
-        ):
-            raise DataSourceError(
-                f"Expected exactly {expected_description_count} ROM-derived item "
-                "descriptions"
-            )
+    names = item_dataset.get("item_names")
+    if descriptions is not None and (
+        not isinstance(descriptions, list)
+        or (isinstance(names, list) and len(descriptions) != len(names))
+    ):
+        raise DataSourceError("Expected one ROM-derived description per item name")
     for label, dataset in (
         ("Pokémon", pokemon_dataset),
         ("trainer", trainer_dataset),

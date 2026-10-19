@@ -174,6 +174,19 @@ archive index. The Generation IV adapter locates and validates the complete ARM9
 mapping table, allowing hacks to repurpose unused item IDs without profile-level
 member overrides.
 
+Hacks often add species, moves, or items, so table sizes belong to the build
+being read (`pipeline/extraction/counts.py`). Where the ROM records a table's
+length, extraction reads it: a DS personal archive's species and form records
+are its leading members up to the first one larger than a record. Flat GBA
+tables use the profile's counts (`personal_count`, `move_count`, `item_count`,
+`trainer_count`). Message tables default to the engine's retail size and are
+resized with `pokemon_name_count`, `pokemon_description_count`,
+`move_name_count`, `item_name_count`, `ability_name_count`, or
+`type_name_count`; a table of any other length fails extraction with a message
+naming the parameter to set. No extractor shortens a table to a retail size,
+and enrichment checks that companion datasets (learnsets, evolutions, name and
+description tables) match the extracted records rather than retail counts.
+
 ## 3. Implement or extend the platform and engine
 
 For a new platform, add container and filesystem readers under

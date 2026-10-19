@@ -5,6 +5,7 @@ from typing import Any
 
 from romwiki.engines.concerns import EncounterConcern
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.extraction.counts import profile_count
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.reference_names import extract_reference_names
 from romwiki.pipeline.semantics.encounter_identity import EncounterSourceType
@@ -181,8 +182,12 @@ def _extract_hidden_grottos(
             grotto_id=grotto_id,
             archive_path=archive_path,
             version_group=version_group,
-            species_count=engine.POKEMON_NAME_COUNT,
-            item_count=engine.ITEM_NAME_COUNT,
+            species_count=profile_count(
+                profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+            ),
+            item_count=profile_count(
+                profile, "item_name_count", engine.ITEM_NAME_COUNT
+            ),
             valid_forms=valid_forms,
         )
         header_id = next(iter(owners[grotto_id]))
@@ -330,7 +335,9 @@ def _extract_swarms(
         archive_path=f"overlay{overlay.id}",
         table_offset=table_offset,
         map_header_count=len(headers),
-        species_count=engine.POKEMON_NAME_COUNT,
+        species_count=profile_count(
+            profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+        ),
     )
     return [
         {

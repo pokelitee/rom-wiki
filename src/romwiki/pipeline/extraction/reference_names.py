@@ -5,45 +5,77 @@ from typing import Any
 
 from romwiki.engines.concerns import ReferenceNameConcern
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.extraction.counts import profile_count
 from romwiki.platforms.registry import get_platform
 from romwiki.profiles.models import GameProfile
 from romwiki.util.errors import DataSourceError, ProfileError
 
 _TableCount = Callable[[ReferenceNameConcern], int | None]
 
-# Each table's profile parameter and the engine constant naming its size.
-_NAME_TABLES: dict[str, tuple[str, _TableCount]] = {
-    "type_names": ("type_names_member", lambda engine: engine.TYPE_NAME_COUNT),
+# Each table's member parameter, the parameter a profile sets when its build's
+# table is larger or smaller than retail, and the engine's retail size.
+_NAME_TABLES: dict[str, tuple[str, str, _TableCount]] = {
+    "type_names": (
+        "type_names_member",
+        "type_name_count",
+        lambda engine: engine.TYPE_NAME_COUNT,
+    ),
     "ability_names": (
         "ability_names_member",
+        "ability_name_count",
         lambda engine: engine.ABILITY_NAME_COUNT,
     ),
-    "item_names": ("item_names_member", lambda engine: engine.ITEM_NAME_COUNT),
-    "move_names": ("move_names_member", lambda engine: engine.MOVE_NAME_COUNT),
+    "item_names": (
+        "item_names_member",
+        "item_name_count",
+        lambda engine: engine.ITEM_NAME_COUNT,
+    ),
+    "move_names": (
+        "move_names_member",
+        "move_name_count",
+        lambda engine: engine.MOVE_NAME_COUNT,
+    ),
     "pokemon_names": (
         "pokemon_names_member",
+        "pokemon_name_count",
         lambda engine: engine.POKEMON_NAME_COUNT,
     ),
 }
 
-_DESCRIPTION_TABLES: dict[str, tuple[str, _TableCount]] = {
+_DESCRIPTION_TABLES: dict[str, tuple[str, str, _TableCount]] = {
     "ability_descriptions": (
         "ability_descriptions_member",
+        "ability_name_count",
         lambda engine: engine.ABILITY_NAME_COUNT,
     ),
     "item_descriptions": (
         "item_descriptions_member",
+        "item_name_count",
         lambda engine: engine.ITEM_NAME_COUNT,
     ),
     "move_descriptions": (
         "move_descriptions_member",
+        "move_name_count",
         lambda engine: engine.MOVE_NAME_COUNT,
     ),
     "pokemon_descriptions": (
         "pokemon_descriptions_member",
+        "pokemon_description_count",
         lambda engine: engine.POKEMON_DESCRIPTION_COUNT,
     ),
 }
+
+
+def _table_count(
+    profile: GameProfile,
+    count_parameter: str,
+    count_of: _TableCount,
+    engine: ReferenceNameConcern,
+) -> int:
+    default = count_of(engine)
+    if default is None:
+        return profile.int_parameter(count_parameter)
+    return profile_count(profile, count_parameter, default)
 
 
 def extract_reference_names(
@@ -53,8 +85,12 @@ def extract_reference_names(
 ) -> dict[str, Any]:
     engine = get_engine(profile.engine).reference_names
     configured = {
-        field: (parameter, count_of(engine))
-        for field, (parameter, count_of) in _NAME_TABLES.items()
+        field: (
+            parameter,
+            count_parameter,
+            _table_count(profile, count_parameter, count_of, engine),
+        )
+        for field, (parameter, count_parameter, count_of) in _NAME_TABLES.items()
         if parameter in profile.parameters
     }
     if not configured:
@@ -78,12 +114,14 @@ def extract_reference_names(
         filesystem.read(archive_path), **archive_options
     )
     result: dict[str, Any] = {"name_sources": {}}
-    for field, (parameter, expected_count) in configured.items():
+    for field, (parameter, count_parameter, expected_count) in configured.items():
         member = profile.int_parameter(parameter)
         names = parse_english_message_archive(archive.read(member))
         if len(names) != expected_count or any(not name for name in names):
             raise DataSourceError(
-                f"Expected exactly {expected_count} names in message member {member}"
+                f"Expected exactly {expected_count} names in message member {member} "
+                f"(found {len(names)}); a build with a resized table sets "
+                f"{count_parameter}"
             )
         result[field] = list(names)
         result["name_sources"][field] = {
@@ -102,8 +140,12 @@ def extract_reference_descriptions(
 ) -> dict[str, Any]:
     engine = get_engine(profile.engine).reference_names
     configured = {
-        field: (parameter, count_of(engine))
-        for field, (parameter, count_of) in _DESCRIPTION_TABLES.items()
+        field: (
+            parameter,
+            count_parameter,
+            _table_count(profile, count_parameter, count_of, engine),
+        )
+        for field, (parameter, count_parameter, count_of) in _DESCRIPTION_TABLES.items()
         if parameter in profile.parameters and (fields is None or field in fields)
     }
     if not configured:
@@ -126,13 +168,14 @@ def extract_reference_descriptions(
         filesystem.read(archive_path), **archive_options
     )
     result: dict[str, Any] = {"description_sources": {}}
-    for field, (parameter, expected_count) in configured.items():
+    for field, (parameter, count_parameter, expected_count) in configured.items():
         member = profile.int_parameter(parameter)
         descriptions = engine.parse_english_message_archive(archive.read(member))
         if len(descriptions) != expected_count:
             raise DataSourceError(
                 f"Expected exactly {expected_count} descriptions in message member "
-                f"{member}"
+                f"{member} (found {len(descriptions)}); a build with a resized "
+                f"table sets {count_parameter}"
             )
         result[field] = list(descriptions)
         result["description_sources"][field] = {

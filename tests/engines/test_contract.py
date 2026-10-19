@@ -389,13 +389,26 @@ class EngineContractTests(unittest.TestCase):
         self.assertEqual(enriched["records"][1]["growth_rate"]["name"], "steady")
         self.assertEqual(enriched["records"][1]["egg_groups"][0]["name"], "blob")
 
-    def test_personal_enrichment_rejects_gen4_sized_input_for_other_engines(
+    def test_personal_enrichment_requires_learnsets_for_every_extracted_record(
         self,
     ) -> None:
+        # The record count is whatever extraction read from the ROM, so a hack
+        # may exceed the engine's retail size; companion datasets must match it.
         _register_fake_engine(_fake_engine_tables())
-        records = [_fake_personal_record(member) for member in range(508)]
+        records = [
+            _fake_personal_record(member) for member in range(_FAKE_PERSONAL_COUNT)
+        ]
+        learnsets = {
+            "game": "test",
+            "records": [
+                {"species_id": member, "moves": []}
+                for member in range(_FAKE_PERSONAL_COUNT + 1)
+            ],
+        }
 
-        with self.assertRaisesRegex(DataSourceError, "Expected exactly 4"):
+        with self.assertRaisesRegex(
+            DataSourceError, f"Expected exactly {_FAKE_PERSONAL_COUNT} level-up"
+        ):
             enrich_personal_dataset(
                 {
                     "game": "test",
@@ -404,6 +417,7 @@ class EngineContractTests(unittest.TestCase):
                     "records": records,
                 },
                 _fake_pokedb(),
+                learnset_dataset=learnsets,
             )
 
     def test_move_enrichment_uses_the_engines_shapes(self) -> None:

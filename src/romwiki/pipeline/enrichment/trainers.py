@@ -62,7 +62,6 @@ def enrich_trainer_dataset(
     engine = dataset.get("engine")
     if not isinstance(engine, str):
         raise DataSourceError("Trainer dataset must declare its source engine")
-    engine_tables = get_engine(engine).enrich
     families = dataset.get("battle_families", [])
     support = dataset.get(
         "trainer_variant_support", unresolved_trainer_variant_support()
@@ -74,9 +73,9 @@ def enrich_trainer_dataset(
     )
     pokemon_records = _trainer_pokemon_index(dataset, pokemon_dataset)
     move_records = _trainer_move_index(dataset, move_dataset)
-    move_names = resolve_move_names(engine_tables, dataset, move_names)
-    item_names = resolve_item_names(engine_tables, dataset)
-    pokemon_names = resolve_pokemon_names(engine_tables, dataset)
+    move_names = resolve_move_names(dataset, move_names)
+    item_names = resolve_item_names(dataset)
+    pokemon_names = resolve_pokemon_names(dataset)
     records: list[TrainerEnrichedRecord] = []
     # IDs are consecutive but may start above zero when an archive reserves
     # leading members for a different record shape.

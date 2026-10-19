@@ -517,13 +517,9 @@ def _decode_flat_tutor_compatibility(
     compatibility_data = platform.read_bytes(
         image, compatibility_offset, personal_count * 2
     )
-    # Bounded to the engine's exposed species count, not the table's real
-    # on-ROM size -- the same "populate what's real and currently exposed"
-    # gap `egg_moves.py`'s padding-species filter documents.
-    decoded_species_count = min(personal_count, engine.PERSONAL_RECORD_COUNT)
     return [
         record
-        for species_id in range(decoded_species_count)
+        for species_id in range(personal_count)
         if (
             record := engine.parse_tutor_compatibility(
                 compatibility_data[species_id * 2 : species_id * 2 + 2],

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.extraction.counts import profile_count
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
@@ -47,8 +48,10 @@ def extract_static_encounter_dataset(result: InspectionResult) -> dict[str, Any]
         scripts.read,
         member_count=len(scripts.members),
         archive_path=scripts_path,
-        species_count=engine.POKEMON_NAME_COUNT,
-        item_count=engine.ITEM_NAME_COUNT,
+        species_count=profile_count(
+            profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+        ),
+        item_count=profile_count(profile, "item_name_count", engine.ITEM_NAME_COUNT),
     )
     records = [encounter.to_dict() for encounter in encounters]
     return dataset_envelope(

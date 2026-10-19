@@ -53,12 +53,11 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
         raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
     engine = get_engine(profile.engine).trainers
     record_size = engine.TRAINER_RECORD_SIZE
-    decoded_count = min(count, engine.TRAINER_RECORD_COUNT)
-    header_data = platform.read_bytes(result.image, offset, record_size * decoded_count)
+    header_data = platform.read_bytes(result.image, offset, record_size * count)
     archive_path = f"offset:{offset:#x}"
 
     parsed_records = []
-    for trainer_id in range(decoded_count):
+    for trainer_id in range(count):
         header = header_data[trainer_id * record_size : (trainer_id + 1) * record_size]
         party_flags = header[_PARTY_FLAGS_OFFSET]
         party_size = header[_PARTY_SIZE_OFFSET]
@@ -258,8 +257,7 @@ def _item_names(
     if item_offset is None or item_count is None:
         return None
     record_size = engine.items.ITEM_RECORD_SIZE
-    decoded_count = min(item_count, engine.items.ITEM_RECORD_COUNT)
-    data = platform.read_bytes(result.image, item_offset, record_size * decoded_count)
+    data = platform.read_bytes(result.image, item_offset, record_size * item_count)
     return engine.items.decode_gen3_text_table(
-        data, stride=record_size, count=decoded_count
+        data, stride=record_size, count=item_count
     )

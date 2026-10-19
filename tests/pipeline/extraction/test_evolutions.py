@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from romwiki.engines.registry import (
     EngineAdapter,
@@ -58,7 +58,11 @@ def _register_fake_engine(
 ) -> None:
     fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, SimpleNamespace())
     fields["evolutions"] = evolutions
-    fields["personal"] = SimpleNamespace(PERSONAL_RECORD_COUNT=personal_record_count)
+    # The species count comes from the personal archive, tested on its own.
+    patch(
+        "romwiki.pipeline.extraction.evolutions.personal_archive_count",
+        return_value=personal_record_count,
+    ).start()
     fields["generation"] = None
     fields["dataset_kinds"] = frozenset({"pokemon"})
     fields["required_dataset_kinds"] = frozenset({"pokemon"})
@@ -110,6 +114,7 @@ def _parse_evolution_record(data: bytes, *, species_id: int, archive_path: str):
 
 class ExtractEvolutionDatasetTests(unittest.TestCase):
     def tearDown(self) -> None:
+        patch.stopall()
         unregister_platform(_PLATFORM_ID)
         unregister_engine(_ENGINE_ID)
 
@@ -135,7 +140,7 @@ class ExtractEvolutionDatasetTests(unittest.TestCase):
         ):
             extract_evolution_dataset(_result(profile))
 
-    def test_extracts_records_bounded_to_the_personal_record_count(self) -> None:
+    def test_extracts_records_bounded_to_the_personal_archive_count(self) -> None:
         profile = _profile()
         messages_archive = Mock()
         messages_archive.read.return_value = b"raw"

@@ -5,6 +5,7 @@ from typing import Any
 
 from romwiki.engines.concerns import ItemConcern
 from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
+from romwiki.pipeline.extraction.counts import profile_count
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import read_code_binary
 from romwiki.pipeline.extraction.reference_names import extract_reference_descriptions
@@ -49,11 +50,10 @@ def _extract_item_dataset_flat(
     record_size = engine.ITEM_RECORD_SIZE
     data = platform.read_bytes(result.image, offset, record_size * count)
     archive_path = f"offset:{offset:#x}"
-    decoded_count = min(count, engine.ITEM_RECORD_COUNT)
 
     records = []
     descriptions = []
-    for item_id in range(decoded_count):
+    for item_id in range(count):
         record_bytes = data[item_id * record_size : (item_id + 1) * record_size]
         parsed = engine.parse_item_record(
             record_bytes, item_id=item_id, archive_path=archive_path
@@ -299,7 +299,9 @@ def _extract_fossil_revivals(
             offset=fossil_revival_table_offset,
             count=profile.int_parameter("fossil_revival_count"),
             item_count=item_count,
-            species_count=engine.POKEMON_NAME_COUNT,
+            species_count=profile_count(
+                profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+            ),
         )
         return _revives_into_by_item(fossil_revivals), {
             "source": "arm9",
@@ -326,7 +328,9 @@ def _extract_fossil_revivals(
         scripts_archive.read,
         member_count=len(scripts_archive.members),
         item_count=item_count,
-        species_count=engine.POKEMON_NAME_COUNT,
+        species_count=profile_count(
+            profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+        ),
     )
     return _revives_into_by_item(fossil_revivals), {
         "source": "script",

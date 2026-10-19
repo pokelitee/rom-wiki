@@ -128,9 +128,8 @@ def validate_machines(
     if dataset.get("game") != game:
         raise DataSourceError("Machine dataset must be for the same game")
     records = dataset.get("records")
-    expected_count = engine.MACHINE_COUNT
-    if not isinstance(records, list) or len(records) != expected_count:
-        raise DataSourceError(f"Expected exactly {expected_count} machine records")
+    if not isinstance(records, list) or not records:
+        raise DataSourceError("Expected machine records")
     result = {}
     for expected_id, record in enumerate(records, start=1):
         if record.get("machine_id") != expected_id:

@@ -69,6 +69,32 @@ class ReferenceNameTests(unittest.TestCase):
         ):
             extract_reference_names(profile, Mock(), archive)
 
+    def test_names_the_parameter_that_resizes_a_table(self) -> None:
+        profile = _profile()
+        profile.parameters.clear()
+        profile.parameters["move_names_member"] = 647
+        move_names = tuple(f"Move {index}" for index in range(470))
+
+        with (
+            patch(
+                "romwiki.engines.gen4.platinum.parse_english_message_archive",
+                return_value=move_names,
+            ),
+            self.assertRaisesRegex(
+                DataSourceError, r"\(found 470\); .* sets move_name_count"
+            ),
+        ):
+            extract_reference_names(profile, Mock(), Mock())
+
+        profile.parameters["move_name_count"] = 470
+        with patch(
+            "romwiki.engines.gen4.platinum.parse_english_message_archive",
+            return_value=move_names,
+        ):
+            result = extract_reference_names(profile, Mock(), Mock())
+
+        self.assertEqual(result["move_names"], list(move_names))
+
     def test_allows_an_explicitly_truncated_message_archive(self) -> None:
         profile = _profile()
         profile.parameters.clear()

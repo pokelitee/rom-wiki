@@ -112,6 +112,18 @@ class EngineProfileContract:
 # Optional so that a build no variant contract was verified against still
 # publishes its trainers, without battle families.
 _TRAINER_VARIANT_PARAMETERS = frozenset({"trainer_variant_contract"})
+# Sizes of message tables a hack may resize; each defaults to the engine's
+# retail size (see `pipeline/extraction/counts.py`).
+_TABLE_COUNT_PARAMETERS = frozenset(
+    {
+        "ability_name_count",
+        "item_name_count",
+        "move_name_count",
+        "pokemon_description_count",
+        "pokemon_name_count",
+        "type_name_count",
+    }
+)
 
 GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
     # Generation III (Game Boy Advance) has no filesystem/archive concept --
@@ -240,7 +252,7 @@ GEN5_BW_PROFILE_CONTRACT = EngineProfileContract(
         "starter_species_offset",
         "starter_species_overlay_id",
     },
-    optional_parameters=_TRAINER_VARIANT_PARAMETERS,
+    optional_parameters=_TRAINER_VARIANT_PARAMETERS | _TABLE_COUNT_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -271,7 +283,8 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
             "repair_invalid_secondary_egg_group",
         }
     )
-    | _TRAINER_VARIANT_PARAMETERS,
+    | _TRAINER_VARIANT_PARAMETERS
+    | _TABLE_COUNT_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -355,7 +368,7 @@ GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
             "type_names_member",
         }
     ),
-    optional_parameters=_TRAINER_VARIANT_PARAMETERS,
+    optional_parameters=_TRAINER_VARIANT_PARAMETERS | _TABLE_COUNT_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -420,6 +433,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "trainer_archives_allow_truncated",
         }
     )
-    | _TRAINER_VARIANT_PARAMETERS,
+    | _TRAINER_VARIANT_PARAMETERS
+    | _TABLE_COUNT_PARAMETERS,
     reject_unknown=True,
 )

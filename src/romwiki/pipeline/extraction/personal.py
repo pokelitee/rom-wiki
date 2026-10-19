@@ -4,6 +4,7 @@ from typing import Any
 
 from romwiki.engines.concerns import PersonalConcern
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.extraction.counts import leading_record_count, profile_count
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.reference_names import (
     extract_reference_descriptions,
@@ -71,11 +72,9 @@ def _extract_personal_records_archive(
         filesystem,
         fields={"ability_descriptions", "pokemon_descriptions"},
     )
-    # Bounded to the engine's declared record count rather than every archive
-    # member: some engines' personal archives carry trailing members that
-    # aren't personal records at all (e.g. Gen V's `a/0/1/6` has a non-record
-    # table appended after the last species/forme entry).
-    members = archive.members[: engine.PERSONAL_RECORD_COUNT]
+    members = archive.members[
+        : leading_record_count(archive, engine.PERSONAL_RECORD_SIZE)
+    ]
     parser_options = {}
     if profile.parameters.get("repair_invalid_secondary_egg_group", False):
         parser_options["repair_invalid_secondary_egg_group"] = True
@@ -109,10 +108,6 @@ def _extract_personal_records_flat(
     record_size = engine.PERSONAL_RECORD_SIZE
     data = platform.read_bytes(result.image, offset, record_size * count)
     archive_path = f"offset:{offset:#x}"
-    # `personal_count` in the profile is the table's real on-ROM size (used
-    # to size the read); decoding is bounded to the engine's declared record
-    # count, same reasoning as the archive path above.
-    decoded_count = min(count, engine.PERSONAL_RECORD_COUNT)
 
     # Optional: a species-indexed TM/HM compatibility bitmap, separate from
     # the personal struct itself (unlike Generation IV/V, which embed it
@@ -133,7 +128,7 @@ def _extract_personal_records_flat(
                     index * learnset_size : (index + 1) * learnset_size
                 ]
             }
-            for index in range(decoded_count)
+            for index in range(count)
         }
 
     records = [
@@ -143,7 +138,7 @@ def _extract_personal_records_flat(
             archive_path=archive_path,
             **tmhm_learnset_kwargs.get(index, {}),
         ).to_dict()
-        for index in range(decoded_count)
+        for index in range(count)
     ]
     reference_names = _extract_ability_names_flat(profile, platform, engine, result)
     return records, {"offset": offset}, reference_names
@@ -183,7 +178,7 @@ def _extract_ability_descriptions_flat(
     description_offset = profile.optional_int_parameter("ability_description_offset")
     if description_offset is None:
         return {}
-    count = engine.ABILITY_NAME_COUNT
+    count = profile_count(profile, "ability_name_count", engine.ABILITY_NAME_COUNT)
     pointer_data = platform.read_bytes(result.image, description_offset, count * 4)
     descriptions = []
     for index in range(count):

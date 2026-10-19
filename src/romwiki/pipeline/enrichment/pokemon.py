@@ -72,11 +72,10 @@ def enrich_personal_dataset(
 ) -> PokemonDataset:
     engine = get_engine(dataset["engine"]).enrich
     source_records = dataset.get("records")
-    expected_count = engine.PERSONAL_RECORD_COUNT
-    if not isinstance(source_records, list) or len(source_records) != expected_count:
-        raise DataSourceError(f"Expected exactly {expected_count} personal records")
-    type_names = resolve_type_names(engine, dataset, type_names)
-    move_names = resolve_move_names(engine, dataset, move_names)
+    if not isinstance(source_records, list) or not source_records:
+        raise DataSourceError("Expected personal records")
+    type_names = resolve_type_names(dataset, type_names)
+    move_names = resolve_move_names(dataset, move_names)
     # A move whose exact ROM-decoded name diverges stylistically from
     # PokeDB's canonical one (e.g. "SOLARBEAM" vs "Solar Beam") gets its own
     # `moves` page under the ROM-derived slug (see `moves.py`'s own
@@ -87,25 +86,21 @@ def enrich_personal_dataset(
     # `page_slugs`-override pattern `evolution_item_slugs` already uses for
     # items.
     move_page_slugs = (
-        resolve_move_names(engine, move_dataset, None)
-        if move_dataset is not None
-        else {}
+        resolve_move_names(move_dataset, None) if move_dataset is not None else {}
     )
-    ability_names = resolve_ability_names(engine, dataset)
-    item_names = resolve_item_names(engine, dataset)
-    pokemon_names = resolve_pokemon_names(engine, dataset)
+    ability_names = resolve_ability_names(dataset)
+    item_names = resolve_item_names(dataset)
+    pokemon_names = resolve_pokemon_names(dataset)
     pokemon_descriptions = dataset.get("pokemon_descriptions")
-    expected_description_count = engine.POKEMON_DESCRIPTION_COUNT
-    if pokemon_descriptions is not None and (
-        not isinstance(pokemon_descriptions, list)
-        or len(pokemon_descriptions) != expected_description_count
-    ):
-        raise DataSourceError(
-            f"Expected exactly {expected_description_count} ROM-derived Pokémon descriptions"
-        )
+    if pokemon_descriptions is not None and not isinstance(pokemon_descriptions, list):
+        raise DataSourceError("ROM-derived Pokémon descriptions must be a list")
 
-    learnsets = _validate_learnsets(engine, learnset_dataset, dataset["game"])
-    evolutions = _validate_evolutions(engine, evolution_dataset, dataset["game"])
+    learnsets = _validate_learnsets(
+        learnset_dataset, dataset["game"], len(source_records)
+    )
+    evolutions = _validate_evolutions(
+        evolution_dataset, dataset["game"], len(source_records)
+    )
     evolution_item_names = _validate_evolution_item_names(evolution_dataset)
     evolution_item_slugs = _validate_evolution_item_slugs(
         item_dataset, dataset["game"], pokedb
@@ -553,9 +548,8 @@ def _evolution_fields(
 
 
 def _validate_learnsets(
-    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
+    dataset: dict[str, Any] | None, game: str, expected_count: int
 ) -> list[dict[str, Any] | None]:
-    expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
         return [None] * expected_count
     if dataset.get("game") != game:
@@ -572,9 +566,8 @@ def _validate_learnsets(
 
 
 def _validate_evolutions(
-    engine: EnrichmentTables, dataset: dict[str, Any] | None, game: str
+    dataset: dict[str, Any] | None, game: str, expected_count: int
 ) -> list[dict[str, Any] | None]:
-    expected_count = engine.PERSONAL_RECORD_COUNT
     if dataset is None:
         return [None] * expected_count
     if dataset.get("game") != game:
