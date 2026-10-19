@@ -1,0 +1,20 @@
+[site]
+id = "firered-omega"
+name = "Pokémon FireRed Omega"
+kind = "game"
+slug = "firered-omega"
+published = false
+order = 45
+description = "A data-driven reference for Pokémon FireRed Omega"
+
+[game]
+profile = "firered-omega"
+generation = 3
+base_game = "firered-leafgreen"
+platform = "game-boy-advance"
+platform_name = "Game Boy Advance"
+creator = "Drayano"
+
+[appearance]
+theme = "firered-leafgreen"
+mascot = "venusaur"
