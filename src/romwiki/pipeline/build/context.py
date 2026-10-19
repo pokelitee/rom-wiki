@@ -101,7 +101,10 @@ class GameBuildContext:
     # datasets) gets a Pokémon section without that detail instead of a hard
     # failure.
     def learnsets_raw(self) -> dict[str, Any] | None:
-        if "learnsets" not in self.profile.layout:
+        if (
+            "learnsets" not in self.profile.layout
+            and "learnset_offset" not in self.profile.parameters
+        ):
             return None
         return self._raw("pokemon/learnsets", extract_learnset_dataset)
 

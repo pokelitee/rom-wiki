@@ -20,6 +20,7 @@ personal_offset = 0x254784
 personal_count = 412
 pokemon_name_offset = 0x245ee0
 pokemon_name_stride = 11
+learnset_offset = 0x25d7b4
 
 evolution_offset = 0x259754
 

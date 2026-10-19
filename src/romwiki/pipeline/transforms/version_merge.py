@@ -14,7 +14,7 @@ from romwiki.util.errors import DataSourceError
 # These dataset renderers present complete same-key variants. Other dataset
 # kinds may still contain version-exclusive records, but a same-key difference
 # must not silently fall back to the first version's value.
-VERSION_VARIANT_DATASETS = frozenset({"items", "trades", "wild_encounters"})
+VERSION_VARIANT_DATASETS = frozenset({"items", "pokemon", "trades", "wild_encounters"})
 
 
 def merge_version_family_datasets(

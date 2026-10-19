@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
-from ._shared import _record_versions
+from ._shared import _record_variants, _record_versions
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,47 +35,57 @@ def _move_learners(
     for pokemon in pokemon_records:
         if not pokemon.get("public", True) or not isinstance(pokemon.get("slug"), str):
             continue
-        versions = _record_versions(pokemon)
         slug = pokemon["slug"]
-        pokemon_id = pokemon.get("member", slug)
-        pokemon_name = str(pokemon.get("name", slug))
-        pokemon_form = pokemon.get("form")
-        for entry in pokemon.get("level_up_moves", []):
-            move = entry.get("move")
-            if not isinstance(move, dict) or not isinstance(move.get("id"), int):
-                continue
-            level_up[move["id"]].append(
-                MoveLearnerReference(
+        learner = {
+            "pokemon_id": pokemon.get("member", slug),
+            "pokemon_name": str(pokemon.get("name", slug)),
+            "pokemon_slug": slug,
+            "pokemon_form": pokemon.get("form"),
+        }
+        # A sibling version may teach a different set (FireRed and LeafGreen
+        # each give Deoxys its own learnset); a move learned the same way in
+        # several versions is one reference listing all of them.
+        learned: dict[MoveLearnerReference, set[str]] = {}
+        for versions, variant in _record_variants(pokemon):
+            for entry in variant.get("level_up_moves", []):
+                move = entry.get("move")
+                if not isinstance(move, dict) or not isinstance(move.get("id"), int):
+                    continue
+                reference = MoveLearnerReference(
                     move_id=move["id"],
-                    pokemon_id=pokemon_id,
-                    pokemon_name=pokemon_name,
-                    pokemon_slug=slug,
-                    pokemon_form=pokemon_form,
+                    **learner,
                     method="level-up",
                     level=entry.get("level"),
                     machine_id=None,
                     machine_name=None,
                     machine_kind=None,
-                    versions=versions,
+                    versions=(),
                 )
-            )
-        for machine in pokemon.get("machines", []):
-            move = machine.get("move")
-            if not isinstance(move, dict) or not isinstance(move.get("id"), int):
-                continue
-            machines[move["id"]].append(
-                MoveLearnerReference(
+                learned.setdefault(reference, set()).update(versions)
+            for machine in variant.get("machines", []):
+                move = machine.get("move")
+                if not isinstance(move, dict) or not isinstance(move.get("id"), int):
+                    continue
+                reference = MoveLearnerReference(
                     move_id=move["id"],
-                    pokemon_id=pokemon_id,
-                    pokemon_name=pokemon_name,
-                    pokemon_slug=slug,
-                    pokemon_form=pokemon_form,
+                    **learner,
                     method="machine",
                     level=None,
                     machine_id=machine.get("id"),
                     machine_name=machine.get("name"),
                     machine_kind=machine.get("kind"),
-                    versions=versions,
+                    versions=(),
+                )
+                learned.setdefault(reference, set()).update(versions)
+        order = _record_versions(pokemon)
+        for reference, learned_in in learned.items():
+            target = level_up if reference.method == "level-up" else machines
+            target[reference.move_id].append(
+                replace(
+                    reference,
+                    versions=tuple(
+                        version for version in order if version in learned_in
+                    ),
                 )
             )
     return level_up, machines

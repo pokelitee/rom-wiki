@@ -38,6 +38,40 @@ class VersionMergeTests(unittest.TestCase):
         self.assertEqual(records[643]["versions"], ["white"])
         self.assertNotIn("version_variants", records[1])
 
+    def test_keeps_every_versions_learnset_for_a_differing_pokemon(self) -> None:
+        firered = _dataset(
+            "pokemon",
+            "firered-us",
+            [
+                _pokemon(
+                    410, "Deoxys", level_up_moves=[{"level": 15, "move": {"id": 1}}]
+                )
+            ],
+        )
+        leafgreen = _dataset(
+            "pokemon",
+            "leafgreen-us",
+            [
+                _pokemon(
+                    410, "Deoxys", level_up_moves=[{"level": 15, "move": {"id": 2}}]
+                )
+            ],
+        )
+
+        merged = merge_version_family_datasets(
+            {"firered": firered, "leafgreen": leafgreen}
+        )
+        record = merged["records"][0]
+
+        self.assertEqual(record["versions"], ["firered", "leafgreen"])
+        self.assertEqual(
+            {
+                version: variant["level_up_moves"][0]["move"]["id"]
+                for version, variant in record["version_variants"].items()
+            },
+            {"firered": 1, "leafgreen": 2},
+        )
+
     def test_rejects_differing_records_without_variant_renderer(self) -> None:
         black = _dataset("moves", "black-us", [_move(1, 40)])
         white = _dataset("moves", "white-us", [_move(1, 41)])
