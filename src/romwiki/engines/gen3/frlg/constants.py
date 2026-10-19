@@ -181,3 +181,7 @@ TRADE_INFO_SPECIAL = 252
 # Trainer IDs per rematch-table row, and the mechanic that offers rematches.
 REMATCH_TRAINERS_PER_ENTRY = 6
 REMATCH_LABEL = "Vs. Seeker"
+
+# `struct PokedexEntry`: 36 bytes (FireRed/LeafGreen also keep an unused second description pointer); the description pointer
+# sits at 0x10.
+POKEDEX_ENTRY_SIZE = 0x24

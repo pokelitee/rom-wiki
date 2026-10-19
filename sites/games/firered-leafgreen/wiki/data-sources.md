@@ -27,7 +27,8 @@ Location pages also show the map's warps (1294) and connections (116), 339
 item balls and hidden items, 60 items handed over by scripts, 13 static
 encounters, 7 gift Pokémon and Eggs, 23 marts, and 9 in-game trades.
 
-PokéDB supplies reference identity, sprites, and Pokédex text. The ROMs remain
+Pokédex entries and move, item, and ability descriptions come from the ROM's
+own text. FireRed and LeafGreen each keep their own Pokédex text. PokéDB supplies reference identity and sprites. The ROMs remain
 authoritative for mechanics, relationships, and version differences, and the
 wiki always distinguishes ROM-derived facts from reference content.
 

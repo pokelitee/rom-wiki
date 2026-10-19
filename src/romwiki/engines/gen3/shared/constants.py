@@ -401,3 +401,7 @@ NATURE_NAMES = (
     "Careful",
     "Quirky",
 )
+
+# `gPokedexEntries` covers National Dex 0 (unknown) through 386.
+POKEDEX_ENTRY_COUNT = 387
+POKEDEX_DESCRIPTION_POINTER = 0x10

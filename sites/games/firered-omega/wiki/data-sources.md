@@ -23,7 +23,8 @@ item balls and hidden items, 61 items handed over by scripts, 27 static
 encounters, 19 gift Pokémon and Eggs, 23 marts, and 9 in-game trades. One
 object's script points at unused bytes and is skipped.
 
-PokéDB supplies reference identity, sprites, and Pokédex text. The ROM remains
+Pokédex entries and move, item, and ability descriptions come from the ROM's
+own text. PokéDB supplies reference identity and sprites. The ROM remains
 authoritative for mechanics, and the wiki always distinguishes ROM-derived
 facts from reference content.
 

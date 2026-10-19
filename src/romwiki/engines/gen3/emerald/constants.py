@@ -114,3 +114,7 @@ TRADE_INFO_SPECIAL = 255
 # Trainer IDs per rematch-table row, and the mechanic that offers rematches.
 REMATCH_TRAINERS_PER_ENTRY = 5
 REMATCH_LABEL = "Match Call"
+
+# `struct PokedexEntry`: 32 bytes; the description pointer
+# sits at 0x10.
+POKEDEX_ENTRY_SIZE = 0x20

@@ -301,6 +301,45 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         self.assertNotIn("pokemon_names", dataset)
         self.assertNotIn("name_sources", dataset)
 
+    def test_reads_one_pokedex_description_per_national_dex_number(self) -> None:
+        # Two 8-byte Pokédex entries at 0x10 whose description pointers (at
+        # +4) lead to "?" and "SEED" text.
+        rom = bytearray(0x40)
+        rom[0x30:0x32] = b"?\xff"
+        rom[0x34:0x39] = b"SEED\xff"
+        rom[0x14:0x18] = (0x08000030).to_bytes(4, "little")
+        rom[0x1C:0x20] = (0x08000034).to_bytes(4, "little")
+        profile = _profile(
+            platform=_FLAT_PLATFORM_ID,
+            layout={},
+            parameters={
+                "personal_offset": 0,
+                "personal_count": 1,
+                "pokedex_entry_offset": 0x10,
+            },
+        )
+        _register_fake_flat_platform(bytes(rom))
+        _register_fake_engine(
+            SimpleNamespace(
+                parse_personal_record=_parse_record,
+                PERSONAL_RECORD_SIZE=1,
+                ABILITY_NAME_COUNT=2,
+                POKEDEX_ENTRY_SIZE=8,
+                POKEDEX_ENTRY_COUNT=2,
+                POKEDEX_DESCRIPTION_POINTER=4,
+                resolve_gba_pointer=lambda pointer: pointer - 0x08000000,
+                decode_gen3_text=lambda data: data.split(b"\xff")[0].decode(),
+            )
+        )
+
+        dataset = extract_personal_dataset(_result(profile))
+
+        self.assertEqual(dataset["pokemon_descriptions"], ["?", "SEED"])
+        self.assertEqual(
+            dataset["description_sources"]["pokemon_descriptions"],
+            {"archive": "offset:0x10", "member": 0},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,7 +22,8 @@ Location pages also show the map's warps (1277) and connections (148), 273
 item balls and hidden items, 163 items handed over by scripts, 20 static
 encounters, 8 gift Pokémon and Eggs, 27 marts, and 4 in-game trades.
 
-PokéDB supplies reference identity, sprites, and Pokédex text. The ROM remains
+Pokédex entries and move, item, and ability descriptions come from the ROM's
+own text. PokéDB supplies reference identity and sprites. The ROM remains
 authoritative for mechanics and relationships, and the wiki always
 distinguishes ROM-derived facts from reference content.
 

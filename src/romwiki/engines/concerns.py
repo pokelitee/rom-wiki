@@ -22,8 +22,11 @@ class PersonalConcern(Protocol):
     MACHINE_LEARNSET_SIZE: int
     PERSONAL_RECORD_COUNT: int
     PERSONAL_RECORD_SIZE: int
-    decode_gen3_text: Parser
+    POKEDEX_DESCRIPTION_POINTER: int
+    POKEDEX_ENTRY_COUNT: int
+    POKEDEX_ENTRY_SIZE: int
     decode_gen3_name_table: Parser
+    decode_gen3_text: Parser
     parse_personal_record: Parser
     resolve_gba_pointer: Parser
 

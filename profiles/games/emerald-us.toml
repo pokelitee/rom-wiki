@@ -73,6 +73,9 @@ trainer_money_offset = 0x31aeb8
 # `gMoveDescriptionPointers`: one pointer per move from move 1.
 move_description_offset = 0x61c524
 
+# `gPokedexEntries`: one entry per National Dex number from 0.
+pokedex_entry_offset = 0x56b5b0
+
 # The rematch table: 16-byte rows of trainer IDs.
 rematch_table_offset = 0x5500a4
 rematch_table_count = 78

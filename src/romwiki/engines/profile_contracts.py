@@ -163,6 +163,7 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
             "egg_move_table_size",
             "ability_description_offset",
             "move_description_offset",
+            "pokedex_entry_offset",
             "tutor_move_offset",
             "tutor_compatibility_offset",
         }
@@ -197,6 +198,7 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "ability_name_count",
             "ability_description_offset",
             "move_description_offset",
+            "pokedex_entry_offset",
             "move_offset",
             "move_count",
             "move_name_offset",
