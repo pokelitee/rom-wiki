@@ -328,8 +328,7 @@ The ROM's own Pokédex and move/ability/item description text banks aren't
 extracted yet: this needs dedicated offset research of its own, so PokéDB's
 effect description and flavor-text quote are shown instead, version-matched
 to the profile's base game, while every structured mechanical field remains
-ROM-derived and authoritative. This is the same gap Generation V's own
-description text has, for the same reason.
+ROM-derived and authoritative.
 
 Which honey-tree slathering yields, which four trees are a save file's
 guaranteed Rare trees on a given file, and which Great Marsh/Trophy Garden

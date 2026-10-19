@@ -441,11 +441,6 @@ so order values may repeat across generations.
 The descriptor's generation must match the generation declared by its registered
 engine adapter.
 
-Documentation-only sites may set `data_driven = false` in `[game]` and omit
-`profile`/`profiles`. They remain first-class catalog entries but skip generation
-and generated-data snapshot validation. Add real profiles and remove the flag when
-ROM extraction support is ready.
-
 ### Sibling game versions (e.g. Black/White)
 
 Two or more releases of the same game (same engine, data confirmed identical
@@ -470,15 +465,16 @@ does not infer user-facing version identity from profile IDs.
 
 The `romwiki build family --games black-us white-us --versions black white
 --site-id black-white` command accepts two or more local game registrations
-and merges each section with
-`pipeline.version_merge.merge_version_family_datasets`. Every record is tagged
+and merges each section with `merge_version_family_datasets`
+(`pipeline/transforms/version_merge.py`). Every record is tagged
 with the `versions` it appears in -- `["black", "white"]` for shared content
 or a single entry for an exclusive -- before the merged dataset is written for
 that one site. A record whose `versions` list has exactly one entry is exclusive
 to that version; shared records list every version. Do not use
 this pattern for a ROM hack and its base game (e.g. Renegade Platinum vs.
 Platinum) -- those are deliberately different games and keep their existing
-separate-sites-plus-comparison-diff treatment (`pipeline.comparisons`).
+separate-sites-plus-comparison-diff treatment
+(`pipeline/transforms/comparisons.py`).
 
 When sibling profiles are themselves a hack family, define `base_rom` for every
 local game registration. The same command then compares each hack
@@ -492,8 +488,9 @@ existing site.
 Same-key records whose current values differ retain all complete records under
 `version_variants`. Only dataset kinds registered as variant-capable may contain
 them; merging fails rather than silently publishing the first value for any
-other kind. Generation V encounters and items are the current examples, for
-version-specific encounter tables and NPC trade references.
+other kind. Current examples are Generation V encounters and items
+(version-specific encounter tables and NPC trade references) and FireRed/
+LeafGreen Pokémon (Deoxys's learnset differs between the versions).
 
 ## 7. Validate before publication
 
