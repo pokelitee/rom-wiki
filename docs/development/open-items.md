@@ -168,128 +168,20 @@ unanchored byte scans cannot improve confidence.
 
 ## 2. Not currently recoverable as structured ROM facts
 
-- **HGSS static encounters (`WildBattle`) — resolved.** A ground-truth field-script
-  opcode table (`gen4/hgss/script_opcode_table.py`, sourced from
-  pret/pokeheartgold's real decompilation, cross-checked against every opcode
-  this codebase had already independently verified, including a direct
-  real-ROM byte comparison) replaced the abandoned 90.8%-accurate inferred
-  walker. Literal `WildBattle` sites, validated by a real follow-on
-  `CheckBattleWon` (directly, or after `ClearFlag`), are now decoded and
-  published per map header (`gen4/hgss/scripts.py`'s
-  `parse_static_encounter_commands`, wired into
-  `pipeline/extraction/locations/arm9_encounter_map.py`). Verified end to end
-  against real HeartGold/SoulSilver and Sacred Gold/Storm Silver ROMs: every
-  hit is a known, named legendary or gift encounter at its correct real map
-  location (Mewtwo/Cerulean Cave, the three legendary birds, Suicune, both
-  Snorlax roadblocks, both Sudowoodo blocks, the Lake of Rage red Gyarados,
-  the three self-destructing Team Rocket Electrode, the Kyogre/Groudon/
-  Rayquaza trio for HGSS; plus Sacred Gold/Storm Silver's own documented
-  legendary/gift additions -- Regigigas, Celebi, Mew, Jirachi, Arceus,
-  roaming Latios/Latias, and route-guardian Pokémon).
-- **HGSS gifts and eggs (`GiveMon`/`GiveEgg`/`GiveTogepiEgg`) — resolved.**
-  The missing acceptance signal was reachability, not a `CheckBattleWon`-style
-  follow-on: `gen4/hgss/gifts.py` now walks every real function offset with
-  the control-flow-aware disassembler (`disassemble_function`, HGSS's own
-  opcode table) instead of a raw byte scan, then applies the existing
-  species/level bounds check only to instructions actually reached from real
-  code. Verified directly against all four real gen4_hgss ROMs (HeartGold,
-  SoulSilver, Sacred Gold, Storm Silver): an unfiltered reachable-instruction
-  scan alone still surfaces `GiveMon` sites whose species operand is a script
-  variable (>= 0x8000, e.g. weekly event prizes), which the bounds check
-  correctly rejects; every hit that passes both checks is real and
-  independently recognizable (HeartGold/SoulSilver's known Tyrogue/Dratini/
-  Dialga-Palkia-Giratina/Eevee/Tentacool gifts, plus Sacred Gold/Storm
-  Silver's own hack-added roster). `GiveEgg` sites are additionally
-  corroborated by a `BufferSpeciesName` call immediately preceding each one,
-  buffering the identical species into the on-screen message -- the same
-  validating role `CheckBattleWon` plays for `WildBattle`. `GiveTogepiEgg`
-  carries no species operand at all; its species identity rests on the
-  opcode's own pret/pokeheartgold-derived name (the same trust already
-  extended to every other opcode in this table), resolved dynamically against
-  the current profile's own decoded Pokémon name table rather than a
-  hardcoded ID, and omitted if that table has no exact "TOGEPI" entry. All
-  three are now published as `LocationPokemonGift` records (`kind: "pokemon"`
-  or `"egg"`) from `pipeline/extraction/locations/arm9_encounter_map.py`.
-  Common-script-routed gifts and other variable-produced operands remain
-  unresolved -- this closes the literal-operand and zero-operand cases only.
-- **HGSS specialty-shop placement (map attachment) — resolved for dispatch,
-  still open for inventory content.** The field-script decoder
-  (`gen4/hgss/script_opcode_table.py`) found `MartBuy`/`SpecialMartBuy`/
-  `DecorationMart`/`SealMart` as real, named, correctly-widthed opcodes
-  (0x113-0x116). Scanning for them (`gen4/hgss/marts.py`'s
-  `parse_mart_dispatch_commands`) found 65 real dispatch sites, every one
-  cross-referencing to a real, correctly-named map header (Goldenrod City,
-  Celadon City's four separate department-store-floor scripts, Pokéathlon
-  Dome, Olivine City, Route 32/40, Pokémon League, Battle Frontier). This
-  location fact is now published as `LocationMartReference` (kind, raw
-  inventory selector, map header) on encounter-map locations.
-  What remains genuinely unresolved: the inventory *content* those dispatch
-  commands reference. DPPT's two structures for this (an ARM9 pointer table
-  of `0xFFFF`-terminated item lists for specialty/decoration/seal marts, and
-  a single badge-tiered `(item_id, tier)` list terminated by `(0, 0)` for
-  common marts) were searched for exhaustively and mechanically across
-  HGSS's entire ARM9 binary and all 129 ARM9 overlays -- zero candidate
-  matches of either structure at any length. This is a real negative
-  result, not an incomplete search: HGSS encodes mart inventory content
-  differently from DPPT (or somewhere this search didn't cover), and no
-  further guessing was attempted, consistent with this project's
-  decode-don't-guess bar. Do not map inventories from shop or location
-  names.
-
-  This dispatch-command gap is distinct from `gen4/hgss/marts.py`'s separate,
-  already-published `parse_shop_catalog` (27 standalone, unlocated specialty
-  shops with real decoded item lists, gated by `shop_catalog_locator`) — the
-  two mechanisms are not currently linked to each other, so a shop catalog
-  entry cannot yet be attributed to a specific dispatch command's map header.
-  `parse_shop_catalog`'s own shop-name/main-game labels were independently
-  re-verified while investigating this item: they trace to
-  Ajarmar/universal-pokemon-randomizer-zx's HGSS-specific `hgssShopNames`
-  (`Gen4Constants.java`, distinct from that file's separate Platinum array),
-  and every published (non-skipped) entry checks out against real HGSS
-  geography and story-gating — see `gen4/hgss/marts.py`'s own comment for the
-  full verification. This was a documentation gap, not a data error; the
-  code and site docs now cite the source.
-
-- **BW roaming Tornadus and Thundurus (species identity) — resolved.** The
-  published community offset (`GetRoamerFlagOffsetStartOffset=0x95C4`,
-  overlay 10) pointed into code, not data, so it was correctly rejected as a
-  guess. What that code actually does was decoded by hand instead: a small
-  routine at overlay 10 file offset `0x95C4` (verified byte-identical between
-  Black (US) and White (US)) takes a species ID in `r0` and returns which
-  roamer it is:
-
-  ```text
-  +0x00  LDR  r1, [PC, #0x14]   ; r1 = literal pool word at +0x18 = 0x281
-  +0x02  CMP  r0, r1
-  +0x04  BEQ  +0x10             ; -> MOV r0, #1 ("Tornadus") ; BX LR
-  +0x06  ADD  r1, r1, #1        ; r1 = 0x282 (Tornadus id + 1)
-  +0x08  CMP  r0, r1
-  +0x0A  BNE  +0x0C             ; -> MOV r0, #2 (default) ; BX LR
-  +0x0C  MOV  r0, #0            ; ("Thundurus") ; BX LR
-  +0x18  .word 0x00000281       ; literal pool: 641 (Tornadus's real
-                                   National Dex number)
-  ```
-
-  This exactly matches the (independently written) code comment in
-  Ajarmar/universal-pokemon-randomizer-zx's
-  `Gen5RomHandler.applyBlackWhiteRoamerPatch` describing the routine's real
-  behavior ("returns 0 for Thundurus, 1 for Tornadus, and 2 for any other
-  species... computing Thundurus's ID as TornadusID + 1") — confirming both
-  the derivation above and that the tool's own patch never needed to guess
-  either ID; it only needed to short-circuit the "any other species" branch.
-  Tornadus = species 641 (a literal pool constant), Thundurus = species 642
-  (computed as Tornadus + 1 by the routine itself) — both correct, real
-  National Dex numbers, cross-checked against real-world knowledge, not read
-  from the tool's output.
-
-  What remains open is not the species identity but *where this belongs in
-  the schema*: Gen5's roaming mechanic has no location-tied activation script
-  the way DPPT's `roaming_activations` does (that field is populated from a
-  specific NPC/trigger script owning a map header; this routine is a generic
-  species-identity helper with no map-header ownership to attach to).
-  Publishing this fact needs a deliberate schema decision (e.g. a
-  location-less "roaming species" fact rather than a per-map record), not
-  more binary parsing.
+- **HGSS specialty-shop inventory content.** Shop dispatch is decoded: 65
+  `MartBuy`/`SpecialMartBuy`/`DecorationMart`/`SealMart` sites are published as
+  `LocationMartReference` records on their map headers. The inventories those
+  commands reference are not. DPPT's two inventory structures (an ARM9 pointer
+  table of `0xFFFF`-terminated item lists, and a badge-tiered `(item_id, tier)`
+  list) were searched for across HGSS's ARM9 binary and all 129 overlays with
+  zero matches, so HGSS encodes them differently. The separately published
+  `parse_shop_catalog` shops (27 unlocated specialty shops) are not yet linked
+  to dispatch sites. Do not map inventories from shop or location names.
+- **BW roaming Tornadus and Thundurus.** Their species identity is decoded from
+  the routine at overlay 10 offset `0x95C4` (Tornadus is the literal 641,
+  Thundurus is computed as 642). Generation V roaming has no location-owned
+  activation script, so publishing it needs a schema decision (for example a
+  location-less roaming-species fact), not more binary parsing.
 - **Generation V location section labels** — decoded map headers provide a
   broad display name and stable header identity, but no floor/room label. Warps
   already carry `destination_section_name` when an explicit profile mapping is
@@ -316,15 +208,29 @@ unanchored byte scans cannot improve confidence.
   currently exist, or a different verification strategy entirely -- not more
   binary parsing, and not a data-entry pass against the current mechanism.
 
-## 3. Release validation
+## 3. Generation III
+
+- **Rival name.** Trainer records store the ROM's default rival name ("Terry"
+  on FireRed/LeafGreen); the player-chosen name lives in save data.
+- **Battle Point costs.** Emerald's 20 Battle Frontier tutors are published
+  without their BP costs.
+- **Compound names.** All-caps ROM names are recased per word, so names that
+  later games write with an inner capital read as one word ("Thunderpunch").
+- **Emerald systems.** Battle Frontier facilities, contests, and Berry
+  mechanics are not decoded.
+- **Unused trainer slots** are published as stored, by decision: about 100
+  FireRed/LeafGreen slots share one placeholder party, as do about 175 on
+  Platinum. Nothing is hidden by inference.
+
+## 4. Release validation
 
 Routine development uses the Python suite and focused data generation. Before preparing a complete React publication:
 
-1. Regenerate all nine published game datasets and their comparisons without reuse when inputs changed.
+1. Regenerate every published game's datasets and comparisons without reuse when inputs changed.
 2. Export the frontend with `romwiki site export-web` and build the production application.
 3. Run browser checks across every published game, section, guide, and download. Verify typed encounter routes, seasons, trainer families, sibling versions, and exact comparisons.
 4. Check desktop/mobile layouts, keyboard navigation, light/dark themes, failed requests, direct hash links, and a plain static host under `/rom-wiki/`.
-5. Prepare a deterministic frontend snapshot, then verify restoration and every checksum in a clean directory.
-6. Publish the snapshot with `snapshot-web` and commit its manifest through a PR. Merging to `main` deploys the site automatically.
+5. Publish the snapshot with `romwiki site snapshot-web`, then verify restoration and every checksum in a clean directory.
+6. Commit the pinned manifest through a PR. Merging to `main` deploys the site automatically.
 
-The nine published wikis are Platinum, Renegade Platinum, HeartGold/SoulSilver, Sacred Gold/Storm Silver, Black/White, Blaze Black/Volt White, Black 2/White 2, Blaze Black 2/Volt White 2, and Blaze Black 2 Redux/Volt White 2 Redux.
+`romwiki site list --published` lists the published wikis.

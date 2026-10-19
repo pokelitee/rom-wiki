@@ -27,7 +27,8 @@ Individual records and files are not logged. `--verbose` adds diagnostic detail;
 messages consistently use `started`, `completed in`, and `failed after` wording.
 
 Commands exit with status `0` on success and `1` when a ROM Wiki error, such as a
-missing ROM, an unmatched profile, or a stale snapshot, stops the command. Status
+missing ROM, an unmatched profile, or data that fails the content checks, stops
+the command. Status
 `2` is reserved for usage errors reported by argument parsing, such as an unknown
 option.
 
@@ -103,8 +104,9 @@ Every kind accepts `--output` to replace its default file.
 
 ## Build
 
-Build commands load the generation-appropriate PokéDB directory automatically.
-Use `--pokedb` to override it.
+Build commands load the generation-appropriate PokéDB output from `pokedb_root`
+(see [Operations](operations.md#pokédb-reference-data)). Use `--pokedb` to override
+it with a full path; `generate` takes `--pokedb-root` instead.
 
 ### One game
 
@@ -229,4 +231,4 @@ romwiki site snapshot-web
 romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
-`export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract, deleting files an earlier export left that the new manifest no longer references. `snapshot-web` packages only referenced resources into a deterministic local archive and checksum manifest. `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. These commands do not publish releases or deploy the site.
+`export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract, deleting files an earlier export left that the new manifest no longer references. `snapshot-web` packages only referenced resources into a deterministic archive, pins its checksum manifest in `sites/frontend-snapshot/manifest.json`, and publishes the archive to the `snapshots` release (see the [frontend guide](development/frontend.md#complete-frontend-snapshots)). `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. None of these commands deploys the site.

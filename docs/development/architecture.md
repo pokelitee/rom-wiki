@@ -174,7 +174,7 @@ documentation.
 
 When an engine stores a semantic value indirectly, its engine package also owns
 the translator for that encoding. For example,
-`engines/gen4/platinum/trainer_party.py` translates Gen IV trainer-party records into
+`engines/gen4/shared/trainer_party.py` translates Gen IV trainer-party records into
 the shared party contract. `pipeline/enrichment/trainer_party.py` dispatches by the explicit
 `engine` field on the raw dataset; it must not accumulate generation-specific
 branches itself.
@@ -223,8 +223,7 @@ families may merge only datasets with identical feature contracts; a mismatch fa
 at the pipeline boundary instead of producing an internally inconsistent site.
 
 Schema versions for independently emitted contracts are declared centrally in
-`schema/versions.py`. Raw and enriched forms have separate constants even when
-both are currently version 1. Raw-cache validation selects the expected version
+`schema/versions.py`. Raw and enriched forms have separate constants. Raw-cache validation selects the expected version
 by cache key, while extraction-source changes conservatively invalidate the
 profile's raw-cache context. Independently evolving nested contracts, such as
 trainer parties, keep their own schema version alongside the containing dataset's
@@ -334,7 +333,8 @@ presentation. Its focused `RelationshipIndex` covers Pokémon encounters,
 acquisition sources and trainer appearances; move learners; and
 location-to-encounter variants. It preserves stable IDs, forms, versions,
 deterministic ordering, and deduplication so consumers do not rescan unrelated
-datasets to recreate joins. Data generation does not currently invoke it.
+datasets to recreate joins. `site export-web` builds it for the frontend; data
+generation does not.
 
 The relationship index is deliberately a presentation artifact, not a normalized
 download. Its source facts and forward relationships already exist in the public
@@ -404,22 +404,22 @@ versions, record counts, compressed sizes, and SHA-256 checksums. Comparisons st
 under `build/data/` and are exported separately under `wiki/data/comparisons/`; they are not entries in the normalized-download manifest. React consumes compact indexes and detail chunks derived from these data contracts. Snapshot creation and restoration validate the manifest
 and every archive.
 
-The former page renderer remains in Git history at `04b72f2`. React presentation lives in `web/`; see [Frontend](frontend.md).
+React presentation lives in `web/`; see [Frontend](frontend.md).
 
 ### Cache invalidation
 
 Each cache layer is keyed by the inputs that can change its output:
 
-| Input | Raw extraction cache | Regeneration skip | Snapshot staleness |
-| --- | --- | --- | --- |
-| ROM SHA-256 | yes | yes | via data |
-| Resolved profile values | yes | yes | yes |
-| Extractor import closure and engine adapter descriptor | yes, per dataset | yes | yes |
-| Any other `src/romwiki/**/*.py` | no | yes | yes, except snapshot-only modules |
-| Raw schema version and `CACHE_REVISION` | yes | yes | yes |
-| PokéDB JSON | no | yes | recorded as provenance only |
-| `game.toml` | no | yes | yes |
-| Generated data files | no | yes | yes |
+| Input | Raw extraction cache | Regeneration skip |
+| --- | --- | --- |
+| ROM SHA-256 | yes | yes |
+| Resolved profile values | yes | yes |
+| Extractor import closure and engine adapter descriptor | yes, per dataset | yes |
+| Any other `src/romwiki/**/*.py` | no | yes |
+| Raw schema version and `CACHE_REVISION` | yes | yes |
+| PokéDB JSON | no | yes |
+| `game.toml` | no | yes |
+| Generated data files | no | yes |
 
 Raw extraction caches live under `build/data/`; the others live under
 `.romwiki/`. The regeneration fingerprint reuses file digests recorded in
@@ -490,20 +490,10 @@ Data-driven sites may publish a truthful partial vertical slice. The site always
 publishes Pokémon and type-chart downloads; its remaining generated sections must
 exactly match the datasets enabled by the engine and profile contracts.
 
-But a pipeline
-module that has only ever run against one engine can still carry that engine's
-unstated assumptions, invisible until a second real engine exercises the same
-code path. Implementing `gen5_bw` (alongside `gen4_platinum`) found two:
-`pipeline/extraction/locations/dispatcher.py` unconditionally required several
-Platinum-only Sinnoh
-mechanics (honey trees, Trophy Garden, Great Marsh, decorations, seals, Battle
-Frontier), and `pipeline/build/context.py` eagerly required several ancillary
-Pokémon-enrichment datasets (learnsets, evolutions, machines, tutors, egg
-moves, pickup) that don't exist for an engine's first vertical slice. Both were
-small, targeted fixes — gate the feature on whether the profile actually
-configures it, mirroring `pipeline/extraction/reference_names.py`
-— not a redesign. Treat this as expected, cheap-to-fix generalization work when
-adding a second engine, not evidence the registry boundary is wrong.
+A pipeline module that has only ever run against one engine can still carry
+that engine's unstated assumptions; [Adding a game](adding-a-game.md) describes
+the small, targeted fixes this has needed. They are expected generalization
+work, not evidence the registry boundary is wrong.
 
 `tests/engines/test_contract.py` is the regression guard for this boundary: it
 registers a throwaway fake engine at test time and asserts that enrichment
@@ -538,8 +528,8 @@ support followed the "small, targeted fixes" pattern rather than a redesign:
 extractors whose storage differs declare a flat-offset format (for example the
 `flat-offset-table` egg-move format and `locations/gba_map_groups.py`),
 and the shared NDS/archive paths stay unchanged. The `gen3_frlg` and
-`gen3_emerald` engines publish a truthful partial slice; their sites are
-configured but not yet published. A further platform (GB/GBC, 3DS) should add
+`gen3_emerald` engines emit the same public sections as the DS engines, and
+both Generation III sites are published. A further platform (GB/GBC, 3DS) should add
 profile-identification, parser, and normalized-output fixtures following
 [Adding a game](adding-a-game.md) and choose its read primitive from its real
 format.
@@ -556,15 +546,15 @@ Generated data remains ignored as individual files, but restoring the site must
 be reproducible without distributing ROM inputs. `romwiki site snapshot-web`
 packs every resource referenced by the exported frontend manifest into one
 deterministic archive, pinned with per-resource checksums by
-`sites/frontend-snapshot/manifest.json`. `restore-web` verifies the archive and
-every resource before writing.
+`sites/frontend-snapshot/manifest.json`, and publishes the archive to the
+`snapshots` release. `restore-web` verifies the archive and every resource
+before writing.
 
 `romwiki generate` is the catalog-driven owner of complete local regeneration.
 It preflights all selected ROM registrations and generation-specific PokéDB
 outputs before writing, then dispatches single-profile and version-family sites
-through their existing build workflows. Snapshot creation is an optional final
-step restricted to complete `--all` runs. This orchestration layer does not
-reimplement extraction, merging, or snapshot behavior.
+through their existing build workflows. This orchestration layer does not
+reimplement extraction or merging.
 
 Sites are generated in a process pool bounded by `--jobs`. Each site writes only
 its own data, wiki, and state directories, but clean-ROM baseline caches can be
