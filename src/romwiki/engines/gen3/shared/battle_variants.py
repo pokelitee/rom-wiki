@@ -7,6 +7,11 @@ keeps the previous party) and Emerald's Match Call `gRematchTable` (five
 trainer IDs per row). A row whose slots all name the base trainer has no
 distinct rematch party and is skipped.
 
+Starter families come from the rival's scripts: each compares the
+starter variable with every value and branches to one party's battle (see
+`script_facts.find_starter_branches`). Each value is named for the species
+it stands for, read from the ROM's starter scripts or table.
+
 A profile names the contract its tables were verified under; it is never
 inherited, so a hack is unresolved until it is verified on its own.
 """
@@ -56,13 +61,16 @@ def resolve_trainer_variants(
             f"Profile {profile_id!r} must select a verified Gen III trainer "
             "variant contract"
         )
-    rows = (selector_data or {}).get("rematch_rows", ())
-    label = (selector_data or {}).get("rematch_label", "Rematch")
+    selectors = selector_data or {}
+    rows = selectors.get("rematch_rows", ())
+    label = selectors.get("rematch_label", "Rematch")
+    starter_families = _starter_families(profile_id, records, selectors)
     return {
         "trainer_variant_support": {
             "starter_choice": {
-                "status": "unresolved",
-                "note": "Rival parties selected by the starter aren't decoded yet.",
+                "status": "verified",
+                "note": "Every starter comparison in the map scripts was followed "
+                "to the battle its branch starts.",
             },
             "difficulty_mode": {"status": "unsupported"},
             "rematch_stage": {
@@ -73,8 +81,74 @@ def resolve_trainer_variants(
             "sibling_version": {"status": "unsupported"},
             "season": {"status": "unsupported"},
         },
-        "battle_families": _rematch_families(profile_id, records, rows, label),
+        "battle_families": [
+            *starter_families,
+            *(
+                {**family, "order": len(starter_families) + family["order"]}
+                for family in _rematch_families(profile_id, records, rows, label)
+            ),
+        ],
     }
+
+
+def _starter_families(
+    profile_id: str,
+    records: Sequence[Mapping[str, Any]],
+    selectors: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    by_id = {record["trainer_id"]: record for record in records if record.get("party")}
+    species = selectors.get("starter_species", {})
+    names = selectors.get("species_names", ())
+    families: list[dict[str, Any]] = []
+    seen: set[tuple[tuple[int, int], ...]] = set()
+    for map_name, branch in selectors.get("starter_branches", ()):
+        choices = tuple(sorted(set(branch)))
+        trainer_ids = [trainer_id for _, trainer_id in choices]
+        if (
+            choices in seen
+            or len(set(trainer_ids)) != len(trainer_ids)
+            or len(choices) < 2
+            or not all(
+                trainer_id in by_id and value in species
+                for value, trainer_id in choices
+            )
+        ):
+            continue
+        seen.add(choices)
+        families.append(
+            {
+                "id": f"starter-{trainer_ids[0]:04d}",
+                "label": f"{map_name} rival battle",
+                "order": len(families),
+                "provenance": {
+                    "source": "ROM event-script starter branch",
+                    "reference": f"{profile_id}:starter-branch[{trainer_ids[0]}]",
+                    "verification": (
+                        "Each comparison against the starter variable was followed to "
+                        "the literal battle command its branch starts."
+                    ),
+                },
+                "variants": [
+                    {
+                        "trainer_id": trainer_id,
+                        "order": order,
+                        "conditions": [
+                            {
+                                "kind": "starter-choice",
+                                "value": _slug(names[species[value]]),
+                                "label": f"Player chose {names[species[value]]}",
+                            }
+                        ],
+                    }
+                    for order, (value, trainer_id) in enumerate(choices)
+                ],
+            }
+        )
+    return families
+
+
+def _slug(name: str) -> str:
+    return "-".join(name.lower().replace("é", "e").split())
 
 
 def _rematch_families(

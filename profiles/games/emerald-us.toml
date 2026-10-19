@@ -83,6 +83,9 @@ pickup_common_items_offset = 0x31c440
 pickup_rare_items_offset = 0x31c464
 pickup_common_rate_offset = 0x31c47a
 
+# `sStarterMon`: Treecko, Torchic, and Mudkip, indexed by VAR_STARTER_MON.
+starter_species_offset = 0x5b1df8
+
 # The rematch table: 16-byte rows of trainer IDs.
 rematch_table_offset = 0x5500a4
 rematch_table_count = 78

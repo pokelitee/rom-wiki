@@ -61,8 +61,10 @@ value range rather than located by name.
   in-game trades. Only literal commands count; a value held in a script
   variable, such as a starter, is left out.
 - **Rematches:** the Vs. Seeker table (221 rows of a first battle and up to
-  five story tiers) groups 85 trainers' rematch parties. Rival parties chosen
-  by the starter aren't grouped yet.
+  five story tiers) groups 85 trainers' rematch parties.
+- **Rival battles:** each starter comparison in the rival's scripts was
+  followed to the party it selects, grouping the rival's nine battles by the
+  player's starter.
 - **Pickup:** the ROM's 16-entry Pickup table gives each item's chance; the
   ability triggers on 10% of battles.
 - **Prize money:** each trainer class's money value comes from the ROM's

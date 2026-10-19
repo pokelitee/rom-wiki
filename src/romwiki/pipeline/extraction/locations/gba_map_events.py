@@ -125,6 +125,27 @@ def map_object_scripts(
     return scripts
 
 
+def map_scripts(
+    engine: Any, read: Callable[[int, int], bytes], header: GbaMapHeader
+) -> dict[int, ScriptInstruction]:
+    """Every instruction reachable from a map's objects, signs, triggers, and
+    map scripts.
+    """
+    scripts: dict[int, ScriptInstruction] = {}
+    events = _events(engine, read, header)
+    if events is not None:
+        scripts.update(map_object_scripts(engine, read, [header]))
+        for raw in _array(
+            engine, read, events.bgs_pointer, events.bg_count, engine.BG_EVENT_SIZE
+        ):
+            event = engine.parse_bg_event(raw)
+            if event.kind in engine.BG_EVENT_SCRIPT_KINDS and event.value:
+                scripts.update(_disassemble(engine, read, event.value))
+        _coord_events(engine, read, events, scripts)
+    _map_scripts(engine, read, header, scripts)
+    return scripts
+
+
 def _pointer(header: GbaMapHeader, offset: int) -> int:
     return int(struct.unpack_from("<I", header.data, offset)[0])
 

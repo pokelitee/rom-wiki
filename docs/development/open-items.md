@@ -210,8 +210,6 @@ unanchored byte scans cannot improve confidence.
 
 ## 3. Generation III
 
-- **Starter-selected rival parties.** The rival's three parties per battle
-  aren't grouped into battle families yet; rematch families are.
 - **Rival name.** Trainer records store the ROM's default rival name ("Terry"
   on FireRed/LeafGreen); the player-chosen name lives in save data.
 - **Compound names.** All-caps ROM names are recased per word, so names that
