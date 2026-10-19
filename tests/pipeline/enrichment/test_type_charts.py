@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from fractions import Fraction
+from typing import Any
 from unittest.mock import patch
 
 from romwiki.pipeline.enrichment.type_charts import (
@@ -8,12 +10,29 @@ from romwiki.pipeline.enrichment.type_charts import (
     RegisteredTypeChart,
     TypeChartFamily,
     build_type_dataset,
-    defensive_effectiveness,
     validate_type_chart,
 )
 from romwiki.profiles.models import GameProfile, KnownHash, TypeChartConfig
 from romwiki.schema.versions import TYPE_CHART_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, ProfileError
+
+
+def defensive_effectiveness(
+    dataset: dict[str, Any], defending_types: tuple[str, ...]
+) -> dict[str, list[str]]:
+    """Group attacking types by their combined multiplier against a defender."""
+    matrix = {
+        (record["name"], matchup["defending_type"]): Fraction(matchup["multiplier"])
+        for record in dataset["records"]
+        for matchup in record["matchups"]
+    }
+    grouped: dict[str, list[str]] = {}
+    for record in dataset["records"]:
+        multiplier = Fraction(1)
+        for defending in defending_types:
+            multiplier *= matrix[record["name"], defending]
+        grouped.setdefault(str(multiplier), []).append(record["name"])
+    return grouped
 
 
 class TypeChartTests(unittest.TestCase):

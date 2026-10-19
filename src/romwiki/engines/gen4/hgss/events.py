@@ -49,7 +49,6 @@ from romwiki.util.errors import InvalidRomError
 # Forest, Ruins of Alph, Route 27, Route 42).
 ITEM_BALL_TABLE_SCRIPT_MEMBER = 141
 _ITEM_WORK_VARIABLE = 32776
-_QUANTITY_WORK_VARIABLE = 32777
 
 
 def parse_item_ball_table(data: bytes) -> tuple[int | None, ...]:

@@ -33,7 +33,6 @@ _GENERATED_SECTION_SET = frozenset(DEFAULT_GENERATED_SECTIONS)
 class GameMetadata:
     profiles: tuple[str, ...]
     versions: tuple[str, ...]
-    data_driven: bool
     generation: int
     base_game: str
     platform: str
@@ -176,18 +175,13 @@ def _load_game_metadata(
         generation = game["generation"]
         if not isinstance(generation, int) or generation < 1:
             raise SiteError(f"Invalid game generation in {path.relative_to(root)}")
-        data_driven = game.get("data_driven", True)
-        if not isinstance(data_driven, bool):
-            raise SiteError(f"Invalid data_driven flag in {path.relative_to(root)}")
         raw_profiles = game.get("profile", game.get("profiles", ()))
         profiles = (
             (raw_profiles,) if isinstance(raw_profiles, str) else tuple(raw_profiles)
         )
         raw_versions = game.get("versions", ())
         versions = tuple(raw_versions) if isinstance(raw_versions, list) else ()
-        if (data_driven and not profiles) or not all(
-            isinstance(value, str) for value in profiles
-        ):
+        if not profiles or not all(isinstance(value, str) for value in profiles):
             raise SiteError(f"Invalid profile(s) in {path.relative_to(root)}")
         if len(profiles) > 1 and (
             len(versions) != len(profiles)
@@ -239,15 +233,14 @@ def _load_game_metadata(
         ):
             raise SiteError(f"Invalid generated_sections in {path.relative_to(root)}")
         for required in ("pokemon", "types"):
-            if data_driven and required not in generated_sections:
+            if required not in generated_sections:
                 raise SiteError(
-                    f"Data-driven game in {path.relative_to(root)} must require "
+                    f"Game in {path.relative_to(root)} must require "
                     f"generated section {required!r}"
                 )
         return GameMetadata(
             profiles=profiles,
             versions=versions,
-            data_driven=data_driven,
             generation=generation,
             base_game=slug_fields["base_game"],
             platform=slug_fields["platform"],
@@ -289,7 +282,7 @@ def _validate_profile_references(
         return
     profiles = {profile.id: profile for profile in repository.profiles}
     for site in sites:
-        if site.game is None or not site.game.data_driven:
+        if site.game is None:
             continue
         missing = [
             profile_id

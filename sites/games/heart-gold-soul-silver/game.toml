@@ -10,7 +10,6 @@ description = "An exact, data-driven reference for Pokémon HeartGold and SoulSi
 [game]
 profiles = ["heartgold-us", "soulsilver-us"]
 versions = ["heart-gold", "soul-silver"]
-generated_sections = ["pokemon", "abilities", "moves", "items", "encounters", "trainers", "locations", "types"]
 generation = 4
 base_game = "heart-gold-soul-silver"
 platform = "nintendo-ds"

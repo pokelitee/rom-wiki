@@ -107,13 +107,3 @@ def disassemble_script(
         ).items()
     }
     return tuple(sorted(instructions.values(), key=lambda value: value.offset))
-
-
-def find_calls(data: bytes, start: int, opcode: int) -> tuple[Gen5Instruction, ...]:
-    """Find every statically-reachable call to a specific opcode."""
-    instructions = disassemble_function(data, start)
-    return tuple(
-        instruction
-        for instruction in sorted(instructions.values(), key=lambda i: i.offset)
-        if instruction.opcode == opcode
-    )

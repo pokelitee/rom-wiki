@@ -36,10 +36,9 @@ from romwiki.engines.gen4.shared.script_table import parse_script_function_offse
 # additionally surface their own hack-added roster (e.g. Manaphy/Phione-range
 # species IDs 489/490, consistent with those hacks' documented Sinnoh-era
 # additions).
-GIVE_POKEMON_COMMAND = 0x0089
-
-# `GiveEgg(species, var)` -- verified reachable-and-bounded hits are identical
-# across HeartGold and SoulSilver (script member 860, a shared common
+#
+# `GiveEgg(species, var)` (opcode 0x008A) -- verified reachable-and-bounded
+# hits are identical across HeartGold and SoulSilver (script member 860, a shared common
 # script): three literal egg choices, species 179/194/218 (Mareep/Wooper/
 # Slugma), each one immediately preceded in the disassembly by a
 # `BufferSpeciesName(1, species, 0, 0)` call buffering that exact same
@@ -48,10 +47,9 @@ GIVE_POKEMON_COMMAND = 0x0089
 # Silver reuse the same three IDs plus their own hack-added egg choices
 # (species 447/489/490), all equally validated by reachability, bounds, and
 # the same preceding `BufferSpeciesName` pattern.
-GIVE_EGG_COMMAND = 0x008A
-
-# `GiveTogepiEgg` takes no operands at all -- species identity is fixed by
-# the routine itself, not by any per-call operand, so there is no literal
+#
+# `GiveTogepiEgg` (opcode 0x0308) takes no operands at all -- species
+# identity is fixed by the routine itself, not by any per-call operand, so there is no literal
 # value to bounds-check the way `GiveMon`/`GiveEgg` allow. The opcode's own
 # name comes from the same pret/pokeheartgold-derived table already trusted
 # for every other opcode in this codebase (including `GiveMon`/`GiveEgg`
@@ -62,7 +60,6 @@ GIVE_EGG_COMMAND = 0x008A
 # one real site in HeartGold/SoulSilver (script member 858, guarded by a
 # `GetPartyCount`/`CompareVarToValue(_, 6)` party-space check), two in Sacred
 # Gold/Storm Silver.
-GIVE_TOGEPI_EGG_COMMAND = 0x0308
 
 
 @dataclass(frozen=True, slots=True)

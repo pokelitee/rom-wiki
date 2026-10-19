@@ -38,13 +38,7 @@ def run_list(args: argparse.Namespace) -> None:
     if args.json:
         print(
             json.dumps(
-                [
-                    {
-                        "id": site.id,
-                        "data_driven": bool(site.game and site.game.data_driven),
-                    }
-                    for site in sites
-                ],
+                [{"id": site.id, "kind": site.kind} for site in sites],
                 separators=(",", ":"),
             )
         )

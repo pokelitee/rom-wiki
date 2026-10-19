@@ -17,7 +17,6 @@ from romwiki.util.byte_search import find_unique_pattern
 # words at a literal byte offset in the (BLZ-compressed) `ShopItemOvlNumber`
 # overlay. See sites/games/black-white/wiki/data-sources.md for the source
 # and verification.
-SHOP_ITEM_WORD_SIZE = 2
 SHOP_CATALOG_LOCATOR = "00A00F0000000000260A010000000000"
 SHOP_RELATIVE_OFFSETS = (
     0x0,

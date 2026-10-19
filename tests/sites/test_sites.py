@@ -14,7 +14,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class SiteCatalogTests(unittest.TestCase):
-    def test_data_driven_site_can_declare_a_truthful_vertical_slice(self) -> None:
+    def test_game_site_can_declare_a_truthful_vertical_slice(self) -> None:
         metadata = _load_game_metadata(
             Path("sites/games/future/game.toml"),
             Path("."),
@@ -33,7 +33,6 @@ class SiteCatalogTests(unittest.TestCase):
             },
         )
 
-        self.assertTrue(metadata.data_driven)
         self.assertEqual(
             metadata.generated_sections,
             ("pokemon", "abilities", "types"),
@@ -93,7 +92,6 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertTrue(hgss.published)
         self.assertIsNotNone(hgss.game)
         assert hgss.game is not None
-        self.assertTrue(hgss.game.data_driven)
         self.assertEqual(hgss.game.profiles, ("heartgold-us", "soulsilver-us"))
         self.assertEqual(
             hgss.game.generated_sections,
@@ -112,7 +110,6 @@ class SiteCatalogTests(unittest.TestCase):
         self.assertTrue(sacred_gold_storm_silver.published)
         self.assertIsNotNone(sacred_gold_storm_silver.game)
         assert sacred_gold_storm_silver.game is not None
-        self.assertTrue(sacred_gold_storm_silver.game.data_driven)
         self.assertEqual(
             sacred_gold_storm_silver.game.profiles,
             ("sacred-gold", "storm-silver"),
@@ -128,7 +125,6 @@ class SiteCatalogTests(unittest.TestCase):
 
         self.assertIsNotNone(site.game)
         assert site.game is not None
-        self.assertTrue(site.game.data_driven)
         self.assertEqual(
             site.game.profiles,
             ("blaze-black-2", "volt-white-2"),
@@ -137,7 +133,6 @@ class SiteCatalogTests(unittest.TestCase):
         redux = catalog.get("blaze-black-2-redux-volt-white-2-redux")
         self.assertIsNotNone(redux.game)
         assert redux.game is not None
-        self.assertTrue(redux.game.data_driven)
         self.assertEqual(
             redux.game.profiles,
             ("blaze-black-2-redux", "volt-white-2-redux"),
