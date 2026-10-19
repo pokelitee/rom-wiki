@@ -296,21 +296,22 @@ Trainer variants require a named engine/profile evidence contract. Decode starte
 difficulty, rematch, story, sibling-version, and season selection in the owning leaf,
 declare each mechanic verified, partial, unsupported, or unresolved, and reference
 exact trainer IDs with rule provenance. Never construct a family from names,
-adjacent IDs, levels, party size, species similarity, or locations. Hacks must
-select an explicit compatible or overridden contract after ROM and creator-source
-verification; inheriting a retail profile alone is not evidence of script behavior.
+adjacent IDs, levels, party size, species similarity, or locations.
 
-Concretely, this is one of the few places a hack profile for an *already supported*
-engine still needs a source-code touch, not just profile data: each trainer-enabled
-engine leaf keeps its own `_CONTRACTS` allowlist (e.g.
-`engines/gen4/platinum/battle_variants.py`, `engines/gen5/b2w2/battle_variants.py`) of
-every `trainer_variant_contract` string that engine's own decoders have been
-verified against. A profile's `trainer_variant_contract` parameter must name a
-value already present in its engine's set, or `resolve_trainer_variants` raises
-`ProfileError` — by design, not a bug to work around. Verify the new hack's field
-scripts against the owning leaf's decoded selectors (starter branches, rematch
-tables, and so on) the same way an existing hack was verified, then add its own new
-contract string to that engine's `_CONTRACTS` set as part of onboarding the profile.
+A profile's `trainer_variant_contract` parameter names the verification its trainer
+selectors passed. It is never inherited: a profile that extends another must
+declare its own, because a parent's verification is not evidence of the child's
+script behavior. Without one, the profile still builds and publishes its trainers,
+but every variant mechanic is unresolved and no battle families are published.
+A new hack can therefore be onboarded with only a profile.
+
+To publish its families, verify the hack's field scripts against the owning leaf's
+decoded selectors (starter branches, rematch tables, and so on) the same way an
+existing hack was verified, then add a new contract string to that leaf's
+`_CONTRACTS` set (e.g. `engines/gen4/platinum/battle_variants.py`,
+`engines/gen5/b2w2/battle_variants.py`) and select it in the profile. A contract
+string the leaf does not list raises `ProfileError`, so a misspelling cannot
+silently turn families off.
 
 If party pages expose calculated stats, implement the generation's formula in its
 engine adapter and emit normalized `calculated_stats`; do not calculate them in a

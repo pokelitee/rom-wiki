@@ -594,6 +594,69 @@ variant = "child"
             with self.assertRaisesRegex(ProfileError, "explicitly declare"):
                 ProfileRepository.load(root)
 
+    def test_inherited_profile_declares_its_own_trainer_variant_contract(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "base.toml").write_text(
+                """
+[profile]
+id = "base"
+name = "Base"
+platform = "nintendo-ds"
+engine = "gen4_platinum"
+base_game = "platinum"
+[header]
+game_codes = ["CPUE"]
+rom_versions = [0]
+[type_chart]
+chart = "gen4"
+[parameters]
+trainer_variant_contract = "platinum-retail-v1"
+[[hashes]]
+algorithm = "sha256"
+value = "base"
+variant = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+            for profile_id, parameters in (
+                ("unverified", ""),
+                (
+                    "verified",
+                    '[parameters]\ntrainer_variant_contract = "verified-v1"\n',
+                ),
+            ):
+                (root / f"{profile_id}.toml").write_text(
+                    f"""
+[profile]
+id = "{profile_id}"
+name = "Child"
+extends = "base"
+[type_chart]
+chart = "gen4"
+{parameters}[[hashes]]
+algorithm = "sha256"
+value = "{profile_id}"
+variant = "{profile_id}"
+""".strip(),
+                    encoding="utf-8",
+                )
+
+            profiles = {
+                profile.id: profile for profile in ProfileRepository.load(root).profiles
+            }
+
+        self.assertEqual(
+            profiles["base"].parameters["trainer_variant_contract"],
+            "platinum-retail-v1",
+        )
+        self.assertNotIn("trainer_variant_contract", profiles["unverified"].parameters)
+        self.assertEqual(
+            profiles["verified"].parameters["trainer_variant_contract"], "verified-v1"
+        )
+
     def test_inherited_profile_requires_its_own_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

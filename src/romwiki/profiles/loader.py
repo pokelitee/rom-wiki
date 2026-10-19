@@ -84,6 +84,11 @@ class ProfileRepository:
                     parent,
                     data,
                 )
+                # A variant contract records that this exact build's trainer
+                # selectors were verified, which a parent's verification does
+                # not show; without its own, a profile publishes no families.
+                if "trainer_variant_contract" not in data.get("parameters", {}):
+                    merged.get("parameters", {}).pop("trainer_variant_contract", None)
             merged["profile"].pop("extends", None)
             resolved[profile_id] = merged
             return merged

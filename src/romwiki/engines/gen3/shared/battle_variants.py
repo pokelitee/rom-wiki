@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from romwiki.schema.trainers import unresolved_trainer_variant_support
+from romwiki.schema.trainers import unverified_trainer_variants
 
 
 def resolve_trainer_variants(
@@ -25,7 +25,4 @@ def resolve_trainer_variants(
     *,
     selector_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
-        "trainer_variant_support": unresolved_trainer_variant_support(),
-        "battle_families": [],
-    }
+    return unverified_trainer_variants()
