@@ -314,9 +314,14 @@ def test_frontend_snapshot_round_trip_and_corruption_rejection() -> None:
         assert not (root / "invalid").exists()
 
 
-def test_snapshot_command_pins_the_manifest_unless_asked_not_to(
+def test_snapshot_command_pins_and_publishes_unless_asked_not_to(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    published: list[Path] = []
+    monkeypatch.setattr(
+        "romwiki.cli.frontend.publish_snapshot",
+        lambda archive: published.append(archive) or [],
+    )
     root = tmp_path
     wiki = make_repository(root)
     write_public_dataset(wiki, "pokemon", pokemon_dataset())
@@ -329,12 +334,17 @@ def test_snapshot_command_pins_the_manifest_unless_asked_not_to(
 
     assert main([*command, "--output", str(snapshot), "--no-pin"]) == 0
     assert not (root / "sites/frontend-snapshot/manifest.json").exists()
+    assert published == []
 
     pin = root / "pinned.json"
-    assert main([*command, "--output", str(snapshot), "--pin", str(pin)]) == 0
+    pinned = [*command, "--output", str(snapshot), "--pin", str(pin)]
+    assert main([*pinned, "--no-upload"]) == 0
+    assert published == []
+    assert main(pinned) == 0
     assert pin.read_bytes() == (snapshot / "manifest.json").read_bytes()
     archive = json.loads(pin.read_text(encoding="utf-8"))["archive"]
     assert (snapshot / archive).is_file()
+    assert published == [snapshot / archive]
 
 
 def test_version_variants_and_supported_empty_sections_are_preserved() -> None:

@@ -172,13 +172,13 @@ The React site is live on GitHub Pages. Every PR and main-branch CI run restores
 
 CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot.
 
-Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged locally with `romwiki site snapshot-web`, which also writes `sites/frontend-snapshot/manifest.json` to pin the archive and every resource checksum. The reviewed archive is uploaded under its unique content-addressed name to the existing `snapshots` release, using the command `snapshot-web` logs. No new release or archive tag is needed. See the [frontend guide](development/frontend.md) for restoration from a clean checkout.
+Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged with `romwiki site snapshot-web`, which writes `sites/frontend-snapshot/manifest.json` to pin the archive and every resource checksum, uploads the archive to the existing `snapshots` release under its content-addressed name, and deletes superseded archives other than the one `main` pins. No new release or archive tag is needed. See the [frontend guide](development/frontend.md) for restoration from a clean checkout.
 
 For review, download the `github-pages` artifact from a successful CI run and extract its `artifact.tar` into a temporary directory. Serve it below `/rom-wiki/` using `python scripts/serve_frontend.py --directory PATH_TO_EXTRACTED_ARTIFACT`, then open `http://127.0.0.1:4173/rom-wiki/`.
 
 A push to `main` deploys automatically: once the `CI gate` passes, CI's `Deploy Pages` job publishes the artifact that run already built and tested to the `github-pages` environment. That environment accepts deployments only from `main`. Superseded PR runs are cancelled, but `main` runs always finish, and deployments are serialized, so a newer merge never interrupts one in progress. If a deployment fails or Pages needs republishing, run the `Deploy Pages` workflow manually from `main`; it repeats the checks and publication build before deploying.
 
-For rollback, revert the frontend source and/or snapshot manifest through a PR; merging the revert redeploys the previous site. The pre-migration MkDocs implementation is preserved at `04b72f2`; restoring that stack requires a separate change, not merely a React snapshot rollback.
+Superseded snapshot archives are deleted, so data cannot be rolled back by reverting the manifest; to restore earlier data, regenerate it and publish a new snapshot. Frontend source changes can still be reverted through a PR. The pre-migration MkDocs implementation is preserved at `04b72f2`; restoring that stack requires a separate change, not merely a React snapshot rollback.
 
 ## Troubleshooting and recovery
 
@@ -187,6 +187,6 @@ For rollback, revert the frontend source and/or snapshot manifest through a PR; 
 - **Missing PokéDB generation:** generate the required generation, then point `pokedb_root` in `.local/games.toml` at its output root or pass the CLI's `--pokedb` / `--pokedb-root` options. Consult the CLI reference for command-specific inputs.
 - **Unexpected cached output:** use the focused workflow first. `--refresh` replaces extraction caches; `--clean` regenerates sites whose inputs are unchanged. These flags address different layers.
 - **Missing generated data in a clean checkout:** restore the publication snapshot. Do not substitute incomplete local outputs for a reviewed snapshot.
-- **Snapshot asset is not published:** the manifest references an archive that was never uploaded. Upload it from the checkout that created it under its content-addressed name. A checksum mismatch means the downloaded asset is not the archive the manifest describes; never replace release assets to fix it.
+- **Snapshot asset is not published:** the manifest references an archive that was never uploaded or has since been superseded. Rerun `romwiki site snapshot-web` from a checkout with the matching exported data. A checksum mismatch means the downloaded asset is not the archive the manifest describes; publish a new snapshot rather than replacing the asset.
 
-To restore a previous snapshot, revert the relevant source and manifest changes through a PR. Do not force-push source history or rewrite archive tags. Build caches can be discarded and regenerated; local user-supplied inputs cannot be recreated from the repository.
+Do not force-push source history or rewrite archive tags. Build caches can be discarded and regenerated; local user-supplied inputs cannot be recreated from the repository.
