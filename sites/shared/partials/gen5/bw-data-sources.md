@@ -535,7 +535,7 @@ ever hit this in one *unused* map-name table entry, not a real page name).
 
 ## Known coverage limitations
 
-- **Black/White roaming Pokémon:** Thundurus and Tornadus's species identity is
+- **Black/White roaming Pokémon:** Tornadus and Thundurus's species identity is
   now decoded (species 641 and 642 respectively, hand-derived from the real
   ARM Thumb code at overlay 10 rather than trusted from a community tool's
   published offset — see `gen5/bw/__init__.py`'s module comment), but not yet

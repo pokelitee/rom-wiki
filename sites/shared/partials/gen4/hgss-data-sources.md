@@ -208,8 +208,8 @@ obtainable rather than guessed at.
 Battle-triggered static encounters (`WildBattle`) are decoded and published as
 each map header's `static_encounters`, using a ground-truth field-script
 opcode table (`gen4/hgss/script_opcode_table.py`, sourced from
-pret/pokeheartgold's real decompilation, not an inferred walker) rather than
-the previous unpublished 90.8%-accurate heuristic. A literal `WildBattle`
+pret/pokeheartgold's real decompilation, not an inferred walker). A literal
+`WildBattle`
 site is accepted only when its species/level operands are in range and its
 result is validated by a real follow-on command (`CheckBattleWon`, directly
 or after a `ClearFlag`) -- see `gen4/hgss/scripts.py`'s module comment for
@@ -218,11 +218,13 @@ site's real-world identity (every HeartGold/SoulSilver hit is a known,
 named legendary or gift encounter; Sacred Gold/Storm Silver's additional
 hits match that hack's own documented legendary/gift additions).
 
-Direct-to-party gifts (`GiveMon`, `GiveEgg`, and specialized paths such as
-`GiveTogepiEgg`) remain unavailable -- these use a different, non-battle
-mechanism (no `CheckBattleWon`-style result to validate against) and are not
-yet resolved. Common-script-routed gifts and eggs, and variable-backed
-operands, also remain unresolved.
+Direct-to-party gifts (`GiveMon`, `GiveEgg`, and `GiveTogepiEgg`) are
+published as each map header's `pokemon_gifts`. Only call sites reachable from
+real script code are accepted, then species and level operands must be in range;
+each `GiveEgg` is also preceded by a `BufferSpeciesName` naming the same
+species. `GiveTogepiEgg` has no species operand, so its species is resolved from
+the ROM's own Pokémon name table. Common-script-routed gifts and eggs, and
+variable-backed operands, remain unresolved.
 
 ## Text and names
 
