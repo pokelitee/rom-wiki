@@ -4,7 +4,7 @@ that resolves in-game location names (encounters, trainers, locations, tutors).
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -93,53 +93,93 @@ def resolve_map_headers(
 
 
 @dataclass(frozen=True, slots=True)
-class SegmentMapHeader:
-    """One full map header from a Generation III `map_header_segments` run."""
+class GbaMapHeader:
+    """One Generation III `MapHeader`, reached through `gMapGroups`."""
 
     header_id: int
+    map_group: int
+    map_num: int
     rom_offset: int
     data: bytes
     name: str
 
 
-def read_region_names(
-    engine: Any, platform: Any, image: Any, *, offset: int, count: int
-) -> list[str]:
-    # `decode_gen3_text_sequence` scans for terminators starting at `offset`
-    # within the given buffer, so the region-name table is read as one
-    # oversized chunk (worst case, every entry uses its full padding budget)
-    # rather than needing an exact byte length up front.
-    data = platform.read_bytes(image, offset, count * 32)
-    return engine.decode_gen3_text_sequence(data, offset=0, count=count)
+def iter_gba_map_headers(
+    engine: Any, platform: Any, image: Any, profile: Any
+) -> Iterator[GbaMapHeader]:
+    """Yield every named map in `gMapGroups`, in (group, number) order.
 
-
-def iter_segment_map_headers(
-    engine: Any,
-    platform: Any,
-    image: Any,
-    segments: Iterable[Iterable[int]],
-    region_names: Sequence[str],
-) -> Iterator[SegmentMapHeader]:
-    """Yield each header of the profile's verified `map_header_segments` runs.
-
-    Runs are concatenated in profile order, so `header_id` is the sequential
-    synthetic ID the `locations` domain assigns to the same header.
+    `header_id` numbers all maps in that order; it is the synthetic ID the
+    `locations` domain and every location backfill share. Maps in a section
+    whose name is empty are skipped: Emerald's dynamic section (the S.S.
+    Tidal's cabins, for example) shows wherever the player came from, so
+    the ROM gives those maps no name of their own.
     """
+    gmapgroups_offset = profile.int_parameter("gmapgroups_offset")
+    group_count = profile.int_parameter(
+        "map_group_count", engine.GMAPGROUPS_GROUP_COUNT
+    )
+    group_pointers = engine.parse_gmapgroups_pointers(
+        platform.read_bytes(image, gmapgroups_offset, group_count * 4),
+        group_count=group_count,
+    )
+    gmapgroups_address = engine.gba_pointer_for_offset(gmapgroups_offset)
+    subtable_data = platform.read_bytes(
+        image,
+        engine.resolve_gba_pointer(group_pointers[0]),
+        gmapgroups_address - group_pointers[0],
+    )
+    addresses = engine.parse_map_group_index(
+        group_pointers, subtable_data, gmapgroups_address=gmapgroups_address
+    )
+    region_names = read_region_names(engine, platform, image, profile)
     header_size = engine.MAP_HEADER_SIZE
-    header_id = 0
-    for segment_offset, segment_count in segments:
-        segment_data = platform.read_bytes(
-            image, segment_offset, header_size * segment_count
+    for header_id, ((group, num), address) in enumerate(sorted(addresses.items())):
+        offset = engine.resolve_gba_pointer(address)
+        data = platform.read_bytes(image, offset, header_size)
+        _music, _layout_id, section = engine.parse_map_header(data, header_id=header_id)
+        if section not in region_names:
+            raise InvalidRomError(
+                f"Gen III map {group}.{num} has unknown region map section {section}"
+            )
+        if not region_names[section]:
+            continue
+        yield GbaMapHeader(
+            header_id=header_id,
+            map_group=group,
+            map_num=num,
+            rom_offset=offset,
+            data=data,
+            name=region_names[section],
         )
-        for slot in range(segment_count):
-            data = segment_data[slot * header_size : (slot + 1) * header_size]
-            _music, _layout_id, region_id = engine.parse_map_header(
-                data, header_id=header_id
+
+
+def read_region_names(
+    engine: Any, platform: Any, image: Any, profile: Any
+) -> dict[int, str]:
+    """Map each region map section to its Town Map name.
+
+    The profile's table holds one name pointer per section, starting at the
+    engine's first section: FireRed/LeafGreen's `sMapNames` covers only
+    Kanto's sections, while Emerald's `gRegionMapEntries` covers every one.
+    Several sections may share one name string.
+    """
+    offset = profile.int_parameter("region_name_offset")
+    count = profile.int_parameter("region_name_count")
+    entry_size = engine.REGION_NAME_ENTRY_SIZE
+    table = platform.read_bytes(image, offset, count * entry_size)
+    names = {}
+    for index in range(count):
+        pointer_at = index * entry_size + engine.REGION_NAME_POINTER_OFFSET
+        pointer = int.from_bytes(table[pointer_at : pointer_at + 4], "little")
+        names[engine.FIRST_REGION_MAP_SECTION + index] = engine.decode_gen3_text(
+            platform.read_bytes(
+                image, engine.resolve_gba_pointer(pointer), _REGION_NAME_READ_SIZE
             )
-            yield SegmentMapHeader(
-                header_id=header_id,
-                rom_offset=segment_offset + slot * header_size,
-                data=data,
-                name=region_names[region_id],
-            )
-            header_id += 1
+        )
+    return names
+
+
+# Bytes read per region name; the longest retail name is 16 characters, and
+# decoding stops at the terminator.
+_REGION_NAME_READ_SIZE = 32

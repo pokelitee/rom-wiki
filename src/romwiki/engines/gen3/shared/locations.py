@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from collections.abc import Mapping, Sequence
 
 from romwiki.schema import EncounterMapLocation, RecordProvenance
 from romwiki.util.errors import InvalidRomError
@@ -10,17 +11,12 @@ from .constants import MAP_HEADER_SIZE
 # `struct MapHeader` (28 bytes), verified against both FireRed/LeafGreen and
 # Emerald: four leading pointers (mapLayout/events/mapScripts/connections,
 # not decoded here), music/mapLayoutId (u16 each), regionMapSectionId (u8,
-# index into a per-game region-name table), cave/weather/mapType/flag bytes
-# (not decoded). Generation III's map headers aren't one flat table --
-# `gMapGroups[group]` points to that group's own contiguous array of
-# `MapHeader` structs; each leaf's `map_header_segments` profile parameter
-# lists every verified `(offset, count)` run (see each leaf's own module/
-# constants comments for the real-ROM cross-checks that found them).
-#
-# The region-name table itself is a *separate*, variable-length, back-to-
-# back 0xFF-terminated string table (`text.decode_gen3_text_sequence`, not
-# the fixed-stride table every other name table uses) -- its entry count
-# differs per game and stays leaf-specific.
+# the map's Town Map section), cave/weather/mapType/flag bytes (not
+# decoded). Map headers aren't one flat table: `gMapGroups[group][num]`
+# points to each map's header, so every map is reached through it (see
+# `pipeline/extraction/map_headers.py`'s `iter_gba_map_headers`). Each
+# section's name comes from a separate per-game pointer table; see each
+# leaf's `REGION_NAME_*` constants.
 
 
 def parse_map_header(data: bytes, *, header_id: int) -> tuple[int, int, int]:
@@ -41,15 +37,15 @@ def parse_map_header(data: bytes, *, header_id: int) -> tuple[int, int, int]:
 
 def parse_map_header_table(
     header_data: bytes,
-    region_names: list[str],
+    region_names: Mapping[int, str],
     *,
-    count: int,
+    header_ids: Sequence[int],
     archive_path: str,
 ) -> tuple[EncounterMapLocation, ...]:
-    """Decode `count` concatenated 28-byte `MapHeader` records (already
-    read and concatenated across every verified segment by the extraction
-    layer, in segment order) into one `EncounterMapLocation` per header, a
-    synthetic sequential `header_id` (0..count-1) identifying each.
+    """Decode concatenated 28-byte `MapHeader` records into one
+    `EncounterMapLocation` each, identified by the matching synthetic
+    `header_ids` entry (see `iter_gba_map_headers`). `region_names` maps
+    each region map section to its name.
 
     This slice decodes names only -- `matrix_id` has no real ROM-derived
     value yet (Generation III's outdoor-connection grid isn't decoded this
@@ -57,18 +53,17 @@ def parse_map_header_table(
     `connections`, `items`, `trainers`, and every other optional field stay
     at their schema defaults.
     """
-    if len(header_data) != count * MAP_HEADER_SIZE:
+    expected_size = len(header_ids) * MAP_HEADER_SIZE
+    if len(header_data) != expected_size:
         raise InvalidRomError(
             f"Gen III map header table has size {len(header_data)}, "
-            f"expected {count * MAP_HEADER_SIZE}"
+            f"expected {expected_size}"
         )
     records = []
-    for header_id in range(count):
-        raw = header_data[
-            header_id * MAP_HEADER_SIZE : (header_id + 1) * MAP_HEADER_SIZE
-        ]
+    for index, header_id in enumerate(header_ids):
+        raw = header_data[index * MAP_HEADER_SIZE : (index + 1) * MAP_HEADER_SIZE]
         _music, _map_layout_id, region_id = parse_map_header(raw, header_id=header_id)
-        if region_id >= len(region_names):
+        if region_id not in region_names:
             raise InvalidRomError(
                 f"Gen III map header {header_id} references unknown region {region_id}"
             )
@@ -115,8 +110,9 @@ def parse_map_group_index(
     `gmapgroups_address` -- every group's own pointer array is packed
     contiguously, in ascending group-index order, across exactly this span
     (verified against real ROM data: consecutive group-pointer differences,
-    divided by 4, give each group's real map count, cross-checked against
-    every already-known Sevii Islands header's address).
+    divided by 4, give each group's real map count, and every resulting
+    map's region section resolves to a Town Map name on FireRed, LeafGreen,
+    and Emerald).
     """
     bounds = (*group_pointers, gmapgroups_address)
     base = group_pointers[0]

@@ -536,7 +536,7 @@ Game Boy Advance is the second real platform. `PlatformAdapter`
 (`archive_cls`, `filesystem_from_image`) or flat reads (`read_bytes`). GBA
 support followed the "small, targeted fixes" pattern rather than a redesign:
 extractors whose storage differs declare a flat-offset format (for example the
-`flat-offset-table` egg-move format and `locations/flat_header_segments.py`),
+`flat-offset-table` egg-move format and `locations/gba_map_groups.py`),
 and the shared NDS/archive paths stay unchanged. The `gen3_frlg` and
 `gen3_emerald` engines publish a truthful partial slice; their sites are
 configured but not yet published. A further platform (GB/GBC, 3DS) should add

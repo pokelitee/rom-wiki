@@ -42,8 +42,7 @@ ability_description_offset = 0x24fae4
 
 encounter_offset = 0x3c9af4
 
-map_header_segments = [[0x3505f8, 12], [0x35080c, 8], [0x350d30, 104]]
-region_name_offset = 0x3eeb38
+region_name_offset = 0x3f1ae8
 
 gmapgroups_offset = 0x352688
 

@@ -36,7 +36,9 @@ class LocationConcern(MessageArchiveReader, Protocol):
     DYNAMIC_WARP_HEADER_ID: int
     DYNAMIC_WARP_ID: int
     ENCOUNTER_MEMBER_NONE: int
+    FIRST_REGION_MAP_SECTION: int
     GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID: int
+    GMAPGROUPS_GROUP_COUNT: int
     GREAT_MARSH_HEADER_IDS: tuple[int, ...]
     GREAT_MARSH_POST_NATIONAL_DEX_MEMBER: int
     GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER: int
@@ -48,12 +50,14 @@ class LocationConcern(MessageArchiveReader, Protocol):
     MAP_HEADER_SIZE: int
     MATRIX_VOID_HEADER_IDS: frozenset[int]
     NPC_TRADE_TEXT_MEMBER_BY_ID: Mapping[int, int]
+    REGION_NAME_ENTRY_SIZE: int
+    REGION_NAME_POINTER_OFFSET: int
     ROAMING_SLOT_COUNT: int
     ROAMING_SLOT_SPECIES_IDS: tuple[int, ...]
     TROPHY_GARDEN_HEADER_ID: int
     TROPHY_GARDEN_MEMBER: int
     WARP_DESTINATION_INDEXED: bool
-    decode_gen3_text_sequence: Parser
+    decode_gen3_text: Parser
     disassemble_function: Parser
     find_item_archive_members: Parser
     find_script_awarded_items: Parser
@@ -68,7 +72,9 @@ class LocationConcern(MessageArchiveReader, Protocol):
     parse_hidden_item_table: Parser
     parse_item_ball_table: Parser
     parse_item_price: Parser
+    parse_gmapgroups_pointers: Parser
     parse_map_events: Parser
+    parse_map_group_index: Parser
     parse_map_header_script_files: Parser
     parse_map_header_table: Parser
     parse_map_headers: Parser
@@ -109,7 +115,7 @@ class TrainerConcern(MessageArchiveReader, Protocol):
     TRAINER_OBJECT_SCRIPT_START: int
     TRAINER_RECORD_COUNT: int
     TRAINER_RECORD_SIZE: int
-    decode_gen3_text_sequence: Parser
+    decode_gen3_text: Parser
     parse_difficulty_branch_families: Parser
     parse_map_header: Parser
     parse_map_header_script_files: Parser
@@ -149,7 +155,7 @@ class EncounterConcern(MessageArchiveReader, Protocol):
     POKEMON_NAME_COUNT: int
     SAFARI_AREA_NAMES: tuple[str, ...]
     SWARM_RECORD_SIZE: int
-    decode_gen3_text_sequence: Parser
+    decode_gen3_text: Parser
     gba_pointer_for_offset: Parser
     hidden_grotto_id_for_dispatch: Parser
     parse_encounter_entry: Parser
@@ -228,7 +234,7 @@ class TutorConcern(Protocol):
     TUTOR_LOCATION_NAMES: tuple[str, ...]
     TUTOR_MOVE_COUNT: int
     TUTOR_RECORD_SIZE: int
-    decode_gen3_text_sequence: Parser
+    decode_gen3_text: Parser
     parse_english_message_archive: Parser
     parse_map_header: Parser
     parse_personal_record: Parser

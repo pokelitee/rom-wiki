@@ -31,7 +31,7 @@ _SECTION_LAYOUT_REQUIREMENTS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("map_matrices",),
         ("map_headers",),
         ("map_names",),
-        ("map_header_segments",),
+        ("gmapgroups_offset",),
     ),
 }
 

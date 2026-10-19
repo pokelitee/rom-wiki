@@ -4,7 +4,6 @@ import unittest
 
 from romwiki.engines.gen3.shared.text import (
     decode_gen3_text,
-    decode_gen3_text_sequence,
     decode_gen3_text_table,
 )
 
@@ -74,26 +73,6 @@ class DecodeGen3TextTableTests(unittest.TestCase):
         names = decode_gen3_text_table(data, stride=8, count=2)
 
         self.assertEqual(names, ["POUND", "TACKLE"])
-
-
-class DecodeGen3TextSequenceTests(unittest.TestCase):
-    def test_decodes_back_to_back_variable_length_strings(self) -> None:
-        entry_a = bytes([0xCA, 0xC9, 0xCF, 0xC8, 0xBE, 0xFF])
-        entry_b = bytes([0xCE, 0xBB, 0xBD, 0xC5, 0xC6, 0xBF, 0xFF])
-        data = entry_a + entry_b
-
-        names = decode_gen3_text_sequence(data, offset=0, count=2)
-
-        self.assertEqual(names, ["POUND", "TACKLE"])
-
-    def test_starts_decoding_at_the_given_offset(self) -> None:
-        entry_a = bytes([0xCA, 0xC9, 0xCF, 0xC8, 0xBE, 0xFF])
-        entry_b = bytes([0xCE, 0xBB, 0xBD, 0xC5, 0xC6, 0xBF, 0xFF])
-        data = entry_a + entry_b
-
-        names = decode_gen3_text_sequence(data, offset=len(entry_a), count=1)
-
-        self.assertEqual(names, ["TACKLE"])
 
 
 if __name__ == "__main__":

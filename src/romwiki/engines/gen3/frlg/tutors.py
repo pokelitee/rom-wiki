@@ -8,8 +8,8 @@ from romwiki.util.errors import InvalidRomError
 
 from .constants import MAX_MOVE_ID, TUTOR_LOCATIONS, TUTOR_MOVE_COUNT
 
-# Renumbers the 4 tutors in TUTOR_LOCATIONS (see constants.py) to
-# sequential 1-based tutor IDs, the shape `validate_tutors` expects.
+# Renumbers the tutors in TUTOR_LOCATIONS (see constants.py) to sequential
+# 1-based tutor IDs, the shape `validate_tutors` expects.
 TUTOR_ID_BY_TABLE_INDEX = {
     table_index: rank + 1 for rank, table_index in enumerate(sorted(TUTOR_LOCATIONS))
 }
@@ -53,7 +53,7 @@ def parse_tutor_compatibility(
     data: bytes, *, species_id: int, table_index: int
 ) -> TutorCompatibility | None:
     """Decode one species' 2-byte `sTutorLearnsets` bitmask, keeping only
-    the 4 exposed tutors. Returns `None` if none apply.
+    the tutors in `TUTOR_LOCATIONS`. Returns `None` if none apply.
     """
     if len(data) != 2:
         raise InvalidRomError(

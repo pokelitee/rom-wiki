@@ -56,14 +56,11 @@ ability_description_offset = 0x24fb08
 encounter_offset = 0x3c9cb8
 encounter_count = 132
 
-# Sevii Islands/postgame only -- see engines/gen3/shared/locations.py's
-# module comment for the Kanto scope decision.
-map_header_segments = [[0x350618, 12], [0x35082c, 8], [0x350d50, 104]]
-region_name_offset = 0x3eecfc
+# `sMapNames`, one name pointer per Kanto/Sevii region map section, and
+# `gMapGroups` -- see engines/gen3/frlg/constants.py's REGION_NAME_* and
+# GMAPGROUPS_GROUP_COUNT comments.
+region_name_offset = 0x3f1cac
 region_name_count = 109
-
-# `gMapGroups`'s own base address, distinct from map_header_segments above
-# -- see engines/gen3/frlg/constants.py's GMAPGROUPS_GROUP_COUNT comment.
 gmapgroups_offset = 0x3526a8
 
 [[hashes]]

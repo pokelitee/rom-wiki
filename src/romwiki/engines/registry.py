@@ -56,7 +56,7 @@ LocationExtractionFormat = Literal[
     "arm9-event-map",
     "arm9-encounter-map",
     "archive-encounter-map",
-    "flat-header-segments",
+    "gba-map-groups",
 ]
 PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode", "pointer-party"]
@@ -216,7 +216,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         formats=EngineFormats(
             encounters="method-table",
             locations="encounter-map",
-            location_extraction="flat-header-segments",
+            location_extraction="gba-map-groups",
             pickup="none",
             trainers="pointer-party",
             tutors="flat-offset-table",
@@ -251,7 +251,7 @@ _ENGINES: dict[str, EngineAdapter] = {
         formats=EngineFormats(
             encounters="method-table",
             locations="encounter-map",
-            location_extraction="flat-header-segments",
+            location_extraction="gba-map-groups",
             pickup="none",
             trainers="pointer-party",
             tutors="none",
@@ -409,7 +409,7 @@ _LOCATION_EXTRACTION_SHAPES = {
     "arm9-event-map": "event-map",
     "arm9-encounter-map": "encounter-map",
     "archive-encounter-map": "encounter-map",
-    "flat-header-segments": "encounter-map",
+    "gba-map-groups": "encounter-map",
 }
 _STARTER_SELECTION_MEMBERS = (
     "parse_starter_branch_families",
@@ -486,6 +486,16 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
             "NPC_TRADE_TEXT_MEMBER_BY_ID",
             "WARP_DESTINATION_INDEXED",
             "is_visible_item_candidate",
+        )
+    },
+    ("location_extraction", "gba-map-groups"): {
+        "locations": (
+            "FIRST_REGION_MAP_SECTION",
+            "GMAPGROUPS_GROUP_COUNT",
+            "REGION_NAME_ENTRY_SIZE",
+            "REGION_NAME_POINTER_OFFSET",
+            "parse_gmapgroups_pointers",
+            "parse_map_group_index",
         )
     },
     ("pickup", "split-table"): {"pickup": ("parse_pickup_tables",)},

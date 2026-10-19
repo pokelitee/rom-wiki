@@ -42,46 +42,43 @@ class ParseMapHeaderTests(unittest.TestCase):
 
 
 class ParseMapHeaderTableTests(unittest.TestCase):
-    def test_decodes_records_with_resolved_region_names(self) -> None:
-        region_names = ["PALLET TOWN"] * 88 + ["ONE ISLAND"] + ["?"] * 20
-        header_data = _header(region_map_section_id=88) + _header(
+    def test_decodes_records_with_section_names(self) -> None:
+        region_names = {88: "PALLET TOWN", 89: "VIRIDIAN CITY"}
+        header_data = _header(region_map_section_id=89) + _header(
             region_map_section_id=88
         )
 
         records = parse_map_header_table(
             header_data,
             region_names,
-            count=2,
-            archive_path="0x350618",
+            header_ids=[0, 2],
+            archive_path="gMapGroups:0x3526a8",
         )
 
         self.assertEqual(len(records), 2)
         self.assertIsInstance(records[0], EncounterMapLocation)
         self.assertEqual(records[0].header_id, 0)
-        self.assertEqual(records[0].name, "ONE ISLAND")
+        self.assertEqual(records[0].name, "VIRIDIAN CITY")
+        self.assertEqual(records[1].name, "PALLET TOWN")
         self.assertEqual(records[0].matrix_id, 0)
         self.assertEqual(records[0].encounter_map_index, None)
-        self.assertEqual(records[1].header_id, 1)
-        self.assertEqual(records[0].provenance.archive, "0x350618")
+        self.assertEqual(records[1].header_id, 2)
+        self.assertEqual(records[0].provenance.archive, "gMapGroups:0x3526a8")
         self.assertEqual(records[0].provenance.member, 0)
-        self.assertEqual(records[1].provenance.member, 1)
+        self.assertEqual(records[1].provenance.member, 2)
 
     def test_rejects_wrong_header_data_size(self) -> None:
         with self.assertRaises(InvalidRomError):
             parse_map_header_table(
-                b"\x00" * 10, ["x"] * 109, count=2, archive_path="0x0"
+                b"\x00" * 10, {88: "PALLET TOWN"}, header_ids=[0, 1], archive_path="0x0"
             )
 
-    def test_rejects_wrong_region_name_count(self) -> None:
-        with self.assertRaises(InvalidRomError):
-            parse_map_header_table(_header(), ["x"] * 5, count=1, archive_path="0x0")
-
-    def test_rejects_region_id_out_of_range(self) -> None:
-        header_data = _header(region_map_section_id=109)
+    def test_rejects_a_section_without_a_name(self) -> None:
+        header_data = _header(region_map_section_id=87)
 
         with self.assertRaises(InvalidRomError):
             parse_map_header_table(
-                header_data, ["x"] * 109, count=1, archive_path="0x0"
+                header_data, {88: "PALLET TOWN"}, header_ids=[0], archive_path="0x0"
             )
 
 
