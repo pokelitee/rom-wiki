@@ -18,6 +18,8 @@ SUPPORTED_THEMES = frozenset(
     {
         "black-2-white-2",
         "black-white",
+        "emerald",
+        "firered-leafgreen",
         "heart-gold-soul-silver",
         "platinum",
         "portal",

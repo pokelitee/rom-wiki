@@ -89,6 +89,14 @@
   --primary: #1d7388;
   --ring: #3198b0;
 }
+[data-theme="firered-leafgreen"] {
+  --primary: #b03a2e;
+  --ring: #d0634f;
+}
+[data-theme="emerald"] {
+  --primary: #217a4a;
+  --ring: #3c9e68;
+}
 .dark [data-theme="platinum"],
 .dark[data-theme="platinum"] {
   --primary: #b0a0ea;
@@ -104,6 +112,14 @@
 .dark [data-theme="black-2-white-2"],
 .dark[data-theme="black-2-white-2"] {
   --primary: #6fc5dc;
+}
+.dark [data-theme="firered-leafgreen"],
+.dark[data-theme="firered-leafgreen"] {
+  --primary: #f0907e;
+}
+.dark [data-theme="emerald"],
+.dark[data-theme="emerald"] {
+  --primary: #7fd4a2;
 }
 @theme inline {
   --color-background: var(--background);
