@@ -118,3 +118,10 @@ REMATCH_LABEL = "Match Call"
 # `struct PokedexEntry`: 32 bytes; the description pointer
 # sits at 0x10.
 POKEDEX_ENTRY_SIZE = 0x20
+
+# The Battle Frontier tutors' two 10-move menus (`frontier_tutor_move_offset`)
+# and the variable each tutor sets to its menu before showing it
+# (`VAR_TEMP_FRONTIER_TUTOR_ID`, pret's `VAR_TEMP_E`).
+FRONTIER_TUTOR_MENU_COUNT = 2
+FRONTIER_TUTOR_MENU_SIZE = 10
+FRONTIER_TUTOR_SELECTOR_VAR = 0x400E

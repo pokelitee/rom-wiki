@@ -36,6 +36,9 @@ SET_OR_COPY_VAR = 0x1A
 SET_VAR = 0x16
 SPECIAL = 0x25
 SPECIAL_VAR = 0x26
+COPY_VAR = 0x19
+COMPARE_VAR_TO_VALUE = 0x21
+GOTO_IF = 0x06
 ADD_ITEM = 0x44
 CALL_STD = 0x09
 STD_OBTAIN_ITEM = 0
@@ -48,6 +51,13 @@ _ITEM_VAR = 0x8000
 _QUANTITY_VAR = 0x8001
 _EVENT_MON_VARS = (0x8004, 0x8005, 0x8006)
 _TRADE_VAR = 0x8008
+# `switch` copies its value into `VAR_0x8000`; a menu's choice is `VAR_RESULT`.
+_SWITCH_VAR = 0x8000
+_RESULT_VAR = 0x800D
+_COST_VAR = 0x8008
+_EQUAL = 1
+# How far a menu's selector can sit before its `switch`.
+_MENU_SEARCH_LIMIT = 32
 _FIRST_VAR_ID = 0x4000
 _MAX_LEVEL = 100
 # Generous bound on a mart's product list.
@@ -235,3 +245,46 @@ def find_trades(
         and instruction.params[0] == _TRADE_VAR
         and instruction.params[1] < trade_count
     )
+
+
+def find_menu_costs(
+    instructions: Mapping[int, ScriptInstruction], *, selector_var: int
+) -> dict[tuple[int, int], int]:
+    """`(menu, choice) -> cost` for Emerald's Battle Frontier tutors.
+
+    Each tutor sets `selector_var` to its menu (0 or 1), shows the menu, and
+    `switch`es on the choice: each `case` compares `VAR_0x8000` with the
+    choice and jumps to a block that sets `VAR_0x8008` to the cost in
+    Battle Points (pret's `BattleFrontier_Lounge7` scripts).
+    """
+    costs: dict[tuple[int, int], int] = {}
+    for address in sorted(instructions):
+        selector = instructions[address]
+        if selector.opcode != SET_VAR or selector.params[0] != selector_var:
+            continue
+        cursor = instructions.get(selector.next_offset)
+        for _ in range(_MENU_SEARCH_LIMIT):
+            if cursor is None or (
+                cursor.opcode == COPY_VAR
+                and cursor.params == (_SWITCH_VAR, _RESULT_VAR)
+            ):
+                break
+            cursor = instructions.get(cursor.next_offset)
+        case = instructions.get(cursor.next_offset) if cursor else None
+        while (
+            case is not None
+            and case.opcode == COMPARE_VAR_TO_VALUE
+            and case.params[0] == _SWITCH_VAR
+        ):
+            jump = instructions.get(case.next_offset)
+            if jump is None or jump.opcode != GOTO_IF or jump.params[0] != _EQUAL:
+                break
+            target = instructions.get(jump.params[1])
+            if (
+                target is not None
+                and target.opcode == SET_VAR
+                and target.params[0] == _COST_VAR
+            ):
+                costs[(selector.params[1], case.params[1])] = target.params[1]
+            case = instructions.get(jump.next_offset)
+    return costs

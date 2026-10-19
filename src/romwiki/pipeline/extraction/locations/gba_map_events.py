@@ -98,6 +98,33 @@ def extract_gba_map_facts(
     return facts, undecoded
 
 
+def map_object_scripts(
+    engine: Any,
+    read: Callable[[int, int], bytes],
+    headers: Sequence[GbaMapHeader],
+) -> dict[int, ScriptInstruction]:
+    """Every instruction reachable from any map's object scripts."""
+    scripts: dict[int, ScriptInstruction] = {}
+    for header in headers:
+        events = _events(engine, read, header)
+        if events is None:
+            continue
+        objects = _array(
+            engine,
+            read,
+            events.objects_pointer,
+            events.object_count,
+            engine.OBJECT_EVENT_TEMPLATE_SIZE,
+        )
+        for index, raw in enumerate(objects):
+            _, kind, *_rest, script = engine.parse_object_event_template(
+                raw, header_id=header.header_id, index=index
+            )
+            if kind == 0 and script:
+                scripts.update(_disassemble(engine, read, script))
+    return scripts
+
+
 def _pointer(header: GbaMapHeader, offset: int) -> int:
     return int(struct.unpack_from("<I", header.data, offset)[0])
 

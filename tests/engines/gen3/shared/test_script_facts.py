@@ -7,6 +7,7 @@ from romwiki.engines.gen3.shared.script_facts import (
     find_given_items,
     find_item_ball,
     find_marts,
+    find_menu_costs,
     find_pokemon,
     find_trades,
 )
@@ -114,3 +115,27 @@ def test_trades_need_the_trade_info_special() -> None:
         for trade_id, _ in find_trades(script, trade_count=4, trade_info_special=255)
     ] == [2]
     assert find_trades(script, trade_count=4, trade_info_special=252) == ()
+
+
+def test_menu_costs_follow_each_case_to_its_cost() -> None:
+    menu = _script(
+        (0x16, "setvar", (0x400E, 1), 5),
+        (0x25, "special", (474,), 3),
+        (0x19, "copyvar", (0x8000, 0x800D), 5),
+        (0x21, "compare", (0x8000, 0), 5),
+        (0x06, "goto_if", (1, _GBA + 0x100), 6),
+        (0x21, "compare", (0x8000, 1), 5),
+        (0x06, "goto_if", (1, _GBA + 0x110), 6),
+    )
+    menu.update(
+        {
+            _GBA + 0x100: ScriptInstruction(
+                _GBA + 0x100, 0x16, "setvar", (0x8008, 16), _GBA + 0x105
+            ),
+            _GBA + 0x110: ScriptInstruction(
+                _GBA + 0x110, 0x16, "setvar", (0x8008, 48), _GBA + 0x115
+            ),
+        }
+    )
+
+    assert find_menu_costs(menu, selector_var=0x400E) == {(1, 0): 16, (1, 1): 48}

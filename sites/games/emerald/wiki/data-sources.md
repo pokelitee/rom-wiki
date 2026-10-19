@@ -61,11 +61,12 @@ value range rather than located by name.
   level of its last Pokémon x that value, doubled for a double battle.
 - **Move tutors:** the tutor move table and 4-byte per-species compatibility
   masks cover 30 tutors. Ten are field NPCs; the other 20 are Battle Frontier
-  tutors reached through script specials 474 and 475. Battle Point costs are
-  not decoded.
+  tutors reached through script specials 474 and 475. Each Frontier tutor's
+  Battle Point cost comes from the script that handles its menu choice.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Poké
-  Ball"); move, item, and ability descriptions come from the ROM's own text. Names that later games write with
-  an inner capital read as one word, e.g. "Thunderpunch".
+  Ball"); move, item, and ability descriptions come from the ROM's own text.
+  Names that later games write with an inner capital read as one word, e.g.
+  "Thunderpunch".
 
 Battle Frontier facilities, contests, and Berry mechanics are not covered.
 Trainers are published exactly as the ROM stores them, including unused

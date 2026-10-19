@@ -53,6 +53,8 @@ egg_move_table_size = 2278
 
 tutor_move_offset = 0x61500c
 tutor_compatibility_offset = 0x615048
+# The Battle Frontier tutors' two 10-move menus.
+frontier_tutor_move_offset = 0x5b31f8
 
 # `gWildMonHeaders` -- see `engines/gen3/emerald/constants.py`'s
 # `ENCOUNTER_HEADER_COUNT` comment for the real-ROM cross-checks.

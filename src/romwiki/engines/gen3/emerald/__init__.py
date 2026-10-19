@@ -119,6 +119,7 @@ from romwiki.engines.gen3.shared.script_facts import (
     find_given_items,
     find_item_ball,
     find_marts,
+    find_menu_costs,
     find_pokemon,
     find_trades,
 )
@@ -145,6 +146,9 @@ from .constants import (
     ENCOUNTER_HEADER_COUNT,
     EVENT_MON_SPECIAL,
     FIRST_REGION_MAP_SECTION,
+    FRONTIER_TUTOR_MENU_COUNT,
+    FRONTIER_TUTOR_MENU_SIZE,
+    FRONTIER_TUTOR_SELECTOR_VAR,
     GMAPGROUPS_GROUP_COUNT,
     ITEM_NAME_COUNT,
     ITEM_RECORD_COUNT,
@@ -311,4 +315,8 @@ __all__ = [
     "POKEDEX_DESCRIPTION_POINTER",
     "POKEDEX_ENTRY_COUNT",
     "POKEDEX_ENTRY_SIZE",
+    "FRONTIER_TUTOR_MENU_COUNT",
+    "FRONTIER_TUTOR_MENU_SIZE",
+    "FRONTIER_TUTOR_SELECTOR_VAR",
+    "find_menu_costs",
 ]
