@@ -283,6 +283,10 @@ _LABELS = {
 }
 
 _DISPLAY_KEYS = {"name", "slug", "label", "internal_name", "class_name"}
+# Where a script command sits in the ROM is provenance, not a game fact: a
+# hack that inserts bytes, or a sibling version laid out differently
+# (LeafGreen's scripts sit 36 bytes before FireRed's), moves every command.
+_LOCATOR_KEYS = {"command_offset", "script_file_id"}
 _IDENTITY_KEYS = {
     "id",
     "member",
@@ -521,7 +525,7 @@ def normalize_comparison_value(
     return {
         key: normalize_comparison_value(item)
         for key, item in value.items()
-        if not (has_identity and key in _DISPLAY_KEYS)
+        if key not in _LOCATOR_KEYS and not (has_identity and key in _DISPLAY_KEYS)
     }
 
 
