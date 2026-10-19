@@ -47,6 +47,27 @@ region_name_offset = 0x3f1ae8
 
 gmapgroups_offset = 0x352688
 
+# `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
+trainer_money_offset = 0x24f1fc
+
+# `gMoveDescriptionPointers`: one pointer per move from move 1.
+move_description_offset = 0x487fc4
+
+# `gPokedexEntries`: one entry per National Dex number from 0.
+pokedex_entry_offset = 0x44e270
+
+# `sPickupItems`: 16 (item, cumulative threshold) entries.
+pickup_items_offset = 0x250824
+
+# The rematch table: 16-byte rows of trainer IDs.
+rematch_table_offset = 0x452bac
+rematch_table_count = 221
+trainer_variant_contract = "frlg-retail-v1"
+
+# `sIngameTrades`: 9 in-game trades, 60 bytes each.
+trade_table_offset = 0x26cf6c
+trade_count = 9
+
 [[hashes]]
 algorithm = "sha256"
 value = "78d310d557ceebc593bd393acc52d1b19a8f023fec40bc200e6063880d8531fc"

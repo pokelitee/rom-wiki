@@ -23,15 +23,38 @@ _PUNCTUATION = {
     0x00: " ",
     0x1B: "é",
     0x2D: "&",
+    0x2E: "+",
     0x53: "PK",
     0x54: "MN",
+    # "POKéBLOCK" is one five-glyph word (pret's charmap `POKEBLOCK`), as in
+    # Emerald's "POKéBLOCK CASE".
+    0x55: "POKéBLOCK",
+    0x56: "",
+    0x57: "",
+    0x58: "",
+    0x59: "",
+    0x5B: "%",
+    0x5C: "(",
+    0x5D: ")",
     0xAB: "!",
     0xAC: "?",
     0xAD: ".",
     0xAE: "-",
+    0xAF: "·",
+    0xB0: "…",
+    0xB1: "“",
+    0xB2: "”",
+    0xB3: "‘",
     0xB4: "'",
     0xB5: "♂",
     0xB6: "♀",
+    0xB7: "¥",
+    0xB8: ",",
+    0xB9: "×",
+    0xBA: "/",
+    0xF0: ":",
+    # A line break within a description.
+    0xFE: "\n",
 }
 _DIGIT_START = 0xA1
 _DIGIT_END = 0xAA

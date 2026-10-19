@@ -101,3 +101,27 @@ GMAPGROUPS_GROUP_COUNT = 34
 REGION_NAME_ENTRY_SIZE = 8
 REGION_NAME_POINTER_OFFSET = 4
 FIRST_REGION_MAP_SECTION = 0
+
+# `gSpecials` index of `CreateEnemyEventMon`, which `seteventmon` calls to
+# set up an event legendary's battle. Every Emerald call site is preceded by
+# `setvar` of the species, level, and item.
+EVENT_MON_SPECIAL = 482
+
+# `gSpecials` index of `GetInGameTradeSpeciesInfo`, which a trader's script
+# calls after setting `VAR_0x8008` to the trade's index.
+TRADE_INFO_SPECIAL = 255
+
+# Trainer IDs per rematch-table row, and the mechanic that offers rematches.
+REMATCH_TRAINERS_PER_ENTRY = 5
+REMATCH_LABEL = "Match Call"
+
+# `struct PokedexEntry`: 32 bytes; the description pointer
+# sits at 0x10.
+POKEDEX_ENTRY_SIZE = 0x20
+
+# The Battle Frontier tutors' two 10-move menus (`frontier_tutor_move_offset`)
+# and the variable each tutor sets to its menu before showing it
+# (`VAR_TEMP_FRONTIER_TUTOR_ID`, pret's `VAR_TEMP_E`).
+FRONTIER_TUTOR_MENU_COUNT = 2
+FRONTIER_TUTOR_MENU_SIZE = 10
+FRONTIER_TUTOR_SELECTOR_VAR = 0x400E

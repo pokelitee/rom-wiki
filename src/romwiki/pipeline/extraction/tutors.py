@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import struct
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from romwiki.engines.concerns import TutorConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.pipeline.extraction.locations.gba_map_events import map_object_scripts
 from romwiki.pipeline.extraction.map_headers import (
     iter_gba_map_headers,
     parse_map_header_table,
@@ -450,6 +453,7 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
     compatibility = _decode_flat_tutor_compatibility(
         engine, platform, result.image, compatibility_offset, personal_count
     )
+    costs = _battle_point_costs(engine, platform, result, profile)
 
     envelope = dataset_envelope(
         schema_version=TUTORS_RAW_SCHEMA_VERSION,
@@ -461,7 +465,7 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
             "move_offset": move_offset,
             "compatibility_offset": compatibility_offset,
         },
-        records=[{**tutor.to_dict(), "kind": "shard"} for tutor in tutors],
+        records=[_flat_tutor_record(tutor, costs) for tutor in tutors],
     )
     envelope["compatibility_record_count"] = len(compatibility)
     envelope["special_record_count"] = 0
@@ -471,6 +475,49 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
     envelope["special_records"] = []
     envelope["special_compatibility"] = []
     return envelope
+
+
+def _flat_tutor_record(tutor: Any, costs: Mapping[int, int]) -> dict[str, Any]:
+    record = tutor.to_dict()
+    cost = costs.get(record["move_id"])
+    if cost is None:
+        return {**record, "kind": "shard"}
+    record.pop("shard_costs")
+    return {**record, "battle_point_cost": cost, "kind": "battle-points"}
+
+
+def _battle_point_costs(
+    engine: Any, platform: Any, result: InspectionResult, profile: Any
+) -> dict[int, int]:
+    """`move -> Battle Point cost` for Emerald's Battle Frontier tutors, from
+    their two menus and the costs their scripts set for each choice.
+    """
+    offset = profile.optional_int_parameter("frontier_tutor_move_offset")
+    if offset is None:
+        return {}
+    rom = platform.read_bytes(result.image, 0, result.image.size)
+
+    def read(start: int, size: int) -> bytes:
+        if start < 0 or start + size > len(rom):
+            raise InvalidRomError(
+                f"Read of {size} byte(s) at {start:#x} is past the ROM"
+            )
+        return bytes(rom[start : start + size])
+
+    size = engine.FRONTIER_TUTOR_MENU_SIZE
+    menus = struct.unpack_from(
+        f"<{engine.FRONTIER_TUTOR_MENU_COUNT * size}H", rom, offset
+    )
+    headers = list(iter_gba_map_headers(engine, platform, result.image, profile))
+    choices = engine.find_menu_costs(
+        map_object_scripts(engine, read, headers),
+        selector_var=engine.FRONTIER_TUTOR_SELECTOR_VAR,
+    )
+    return {
+        menus[menu * size + choice]: cost
+        for (menu, choice), cost in choices.items()
+        if menu < engine.FRONTIER_TUTOR_MENU_COUNT and choice < size
+    }
 
 
 def _resolve_tutor_location_ids(

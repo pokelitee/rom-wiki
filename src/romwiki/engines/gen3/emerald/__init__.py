@@ -1,5 +1,9 @@
 import romwiki.engines.gen3.shared.overworld as overworld
-from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen3.shared.battle_variants import (
+    REMATCH_ENTRY_SIZE,
+    parse_rematch_table,
+    resolve_trainer_variants,
+)
 from romwiki.engines.gen3.shared.constants import (
     ABILITY_REFERENCE_IDS,
     ALLOW_DUPLICATE_EGG_MOVES,
@@ -36,10 +40,13 @@ from romwiki.engines.gen3.shared.constants import (
     MOVE_NAME_COUNT,
     MOVE_RECORD_COUNT,
     MOVE_RECORD_SIZE,
+    NATURE_NAMES,
     PERSONAL_FORM_MEMBERS,
     PERSONAL_INTERNAL_MEMBERS,
     PERSONAL_RECORD_COUNT,
     PERSONAL_RECORD_SIZE,
+    POKEDEX_DESCRIPTION_POINTER,
+    POKEDEX_ENTRY_COUNT,
     TM_COUNT,
     TRAINER_CLASS_NAME_SIZE,
     TRAINER_RECORD_SIZE,
@@ -76,45 +83,99 @@ from romwiki.engines.gen3.shared.machines import (
     parse_machine_move_table,
     parse_tmhm_learnset,
 )
+from romwiki.engines.gen3.shared.map_events import (
+    BG_EVENT_HIDDEN_ITEM,
+    BG_EVENT_SCRIPT_KINDS,
+    BG_EVENT_SIZE,
+    COORD_EVENT_SIZE,
+    DYNAMIC_MAP,
+    GBA_MAP_EVENTS_SIZE,
+    MAP_CONNECTION_SIZE,
+    MAP_CONNECTIONS_SIZE,
+    WARP_EVENT_SIZE,
+    parse_bg_event,
+    parse_coord_event_script,
+    parse_gba_map_events,
+    parse_map_connection,
+    parse_map_connections,
+    parse_warp_event,
+)
+from romwiki.engines.gen3.shared.map_events import (
+    decode_split_hidden_item as decode_hidden_item,
+)
 from romwiki.engines.gen3.shared.moves import parse_move_record
 from romwiki.engines.gen3.shared.overworld import (
+    OBJECT_EVENT_TEMPLATE_SIZE,
     decode_trainerbattle_id,
     parse_map_events,
     parse_object_event_template,
 )
 from romwiki.engines.gen3.shared.personal import parse_personal_record
+from romwiki.engines.gen3.shared.pickup import (
+    PICKUP_CHANCE_ENTRY_SIZE,
+    PICKUP_CHANCE_ITEM_COUNT,
+    PICKUP_COMMON_ITEM_COUNT,
+    PICKUP_COMMON_RATE_COUNT,
+    PICKUP_RARE_ITEM_COUNT,
+    parse_pickup_chance_table,
+    parse_split_pickup_tables,
+)
 from romwiki.engines.gen3.shared.pointers import (
     gba_pointer_for_offset,
     resolve_gba_pointer,
 )
+from romwiki.engines.gen3.shared.script_facts import (
+    find_given_items,
+    find_item_ball,
+    find_marts,
+    find_menu_costs,
+    find_pokemon,
+    find_trades,
+)
+from romwiki.engines.gen3.shared.scripts import disassemble_script
 from romwiki.engines.gen3.shared.text import (
     decode_gen3_name,
     decode_gen3_name_table,
     decode_gen3_text,
 )
+from romwiki.engines.gen3.shared.trades import INGAME_TRADE_SIZE, parse_ingame_trade
 from romwiki.engines.gen3.shared.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
-from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
+from romwiki.engines.gen3.shared.trainers import (
+    TRAINER_MONEY_ENTRY_SIZE,
+    parse_trainer_money_table,
+    parse_trainer_record,
+    party_record_size,
+)
 
 from .constants import (
     ABILITY_NAME_COUNT,
     ENCOUNTER_HEADER_COUNT,
+    EVENT_MON_SPECIAL,
     FIRST_REGION_MAP_SECTION,
+    FRONTIER_TUTOR_MENU_COUNT,
+    FRONTIER_TUTOR_MENU_SIZE,
+    FRONTIER_TUTOR_SELECTOR_VAR,
     GMAPGROUPS_GROUP_COUNT,
     ITEM_NAME_COUNT,
     ITEM_RECORD_COUNT,
+    POKEDEX_ENTRY_SIZE,
     POKEMON_DESCRIPTION_COUNT,
     POKEMON_NAME_COUNT,
     REGION_NAME_ENTRY_SIZE,
     REGION_NAME_POINTER_OFFSET,
+    REMATCH_LABEL,
+    REMATCH_TRAINERS_PER_ENTRY,
+    TRADE_INFO_SPECIAL,
     TRAINER_CLASS_COUNT,
     TRAINER_RECORD_COUNT,
     TUTOR_COMPATIBILITY_SIZE,
     TUTOR_LOCATIONS,
     TUTOR_MOVE_COUNT,
 )
+from .script_commands import SCRIPT_COMMANDS, SCRIPT_WARP_COMMANDS
 from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 
 # `pipeline/enrichment/pokemon.py` reads these off the flat engine namespace
@@ -224,4 +285,54 @@ __all__ = [
     "party_record_size",
     "resolve_gba_pointer",
     "resolve_trainer_variants",
+    "EVENT_MON_SPECIAL",
+    "OBJECT_EVENT_TEMPLATE_SIZE",
+    "SCRIPT_COMMANDS",
+    "SCRIPT_WARP_COMMANDS",
+    "decode_hidden_item",
+    "disassemble_script",
+    "find_given_items",
+    "find_item_ball",
+    "find_marts",
+    "find_pokemon",
+    "BG_EVENT_HIDDEN_ITEM",
+    "BG_EVENT_SCRIPT_KINDS",
+    "BG_EVENT_SIZE",
+    "COORD_EVENT_SIZE",
+    "DYNAMIC_MAP",
+    "GBA_MAP_EVENTS_SIZE",
+    "MAP_CONNECTION_SIZE",
+    "MAP_CONNECTIONS_SIZE",
+    "WARP_EVENT_SIZE",
+    "parse_bg_event",
+    "parse_coord_event_script",
+    "parse_gba_map_events",
+    "parse_map_connection",
+    "parse_map_connections",
+    "parse_warp_event",
+    "INGAME_TRADE_SIZE",
+    "NATURE_NAMES",
+    "TRADE_INFO_SPECIAL",
+    "find_trades",
+    "parse_ingame_trade",
+    "TRAINER_MONEY_ENTRY_SIZE",
+    "parse_trainer_money_table",
+    "REMATCH_ENTRY_SIZE",
+    "REMATCH_LABEL",
+    "REMATCH_TRAINERS_PER_ENTRY",
+    "parse_rematch_table",
+    "POKEDEX_DESCRIPTION_POINTER",
+    "POKEDEX_ENTRY_COUNT",
+    "POKEDEX_ENTRY_SIZE",
+    "FRONTIER_TUTOR_MENU_COUNT",
+    "FRONTIER_TUTOR_MENU_SIZE",
+    "FRONTIER_TUTOR_SELECTOR_VAR",
+    "find_menu_costs",
+    "PICKUP_CHANCE_ENTRY_SIZE",
+    "PICKUP_CHANCE_ITEM_COUNT",
+    "PICKUP_COMMON_ITEM_COUNT",
+    "PICKUP_COMMON_RATE_COUNT",
+    "PICKUP_RARE_ITEM_COUNT",
+    "parse_pickup_chance_table",
+    "parse_split_pickup_tables",
 ]

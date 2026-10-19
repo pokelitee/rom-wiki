@@ -23,7 +23,12 @@ compatibility, all 15 move tutors, and wild held items. The ROMs' 25 "?"
 placeholder species records remain in the normalized datasets for auditing
 but do not receive public pages.
 
-PokéDB supplies reference identity, sprites, and Pokédex text. The ROMs remain
+Location pages also show the map's warps (1294) and connections (116), 339
+item balls and hidden items, 60 items handed over by scripts, 13 static
+encounters, 7 gift Pokémon and Eggs, 23 marts, and 9 in-game trades.
+
+Pokédex entries and move, item, and ability descriptions come from the ROM's
+own text. FireRed and LeafGreen each keep their own Pokédex text. PokéDB supplies reference identity and sprites. The ROMs remain
 authoritative for mechanics, relationships, and version differences, and the
 wiki always distinguishes ROM-derived facts from reference content.
 
@@ -47,11 +52,28 @@ value range rather than located by name.
 - **Locations:** every map is read through the ROM's map-group table, and
   names come from the map-section name table, whose first entry is map
   section 88.
+- **Map events and scripts:** each map's warps, connections, objects, signs,
+  and triggers are read from its event tables. Its scripts are disassembled
+  with the command layouts from the pret decompilations, following every
+  jump and call. Location pages list item balls (`finditem`), hidden items,
+  items handed over (`giveitem`/`additem`), static encounters
+  (`setwildbattle` and event legendaries), gift Pokémon and Eggs, marts, and
+  in-game trades. Only literal commands count; a value held in a script
+  variable, such as a starter, is left out.
+- **Rematches:** the Vs. Seeker table (221 rows of a first battle and up to
+  five story tiers) groups 85 trainers' rematch parties. Rival parties chosen
+  by the starter aren't grouped yet.
+- **Pickup:** the ROM's 16-entry Pickup table gives each item's chance; the
+  ability triggers on 10% of battles.
+- **Prize money:** each trainer class's money value comes from the ROM's
+  money table (unlisted classes use its default). A trainer pays 4 x the
+  level of its last Pokémon x that value, doubled for a double battle.
 - **Move tutors:** the tutor move table and 2-byte per-species compatibility
   masks cover 15 tutors, each located from the script that teaches its move.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Mt.
-  Moon"); descriptions keep their ROM text. Names that later games write with
-  an inner capital read as one word, e.g. "Thunderpunch".
+  Moon"); move, item, and ability descriptions come from the ROM's own text.
+  Names that later games write with an inner capital read as one word, e.g.
+  "Thunderpunch".
 
 Trainers are published exactly as the ROMs store them. About 100 unused
 trainer slots share one placeholder party (a level-5 Ekans) and have no name,

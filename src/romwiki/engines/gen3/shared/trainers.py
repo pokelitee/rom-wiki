@@ -143,3 +143,32 @@ def parse_trainer_record(
             source="rom", archive=archive_path, member=trainer_id
         ),
     )
+
+
+# `gTrainerMoneyTable`: 4-byte entries -- trainer class (u8), money value
+# (u8), two bytes of padding -- ending at class 0xFF, whose value applies
+# to every class not listed. pret's `GetTrainerMoneyToGive` pays
+# 4 x the last Pokémon's level x that value, doubled for a double battle.
+# Located in each ROM by pret's table: FireRed lists 104 classes and
+# Emerald 55, both with a default of 5.
+TRAINER_MONEY_ENTRY_SIZE = 4
+_MONEY_TABLE_END = 0xFF
+_MAX_MONEY_ENTRIES = 256
+
+
+def parse_trainer_money_table(
+    data: bytes,
+) -> tuple[dict[int, tuple[int, int]], tuple[int, int]]:
+    """Decode `gTrainerMoneyTable` into `{class: (value, entry index)}` and
+    the default `(value, entry index)` from its terminator. `data` may run
+    past the table's end.
+    """
+    values: dict[int, tuple[int, int]] = {}
+    for index in range(min(len(data) // TRAINER_MONEY_ENTRY_SIZE, _MAX_MONEY_ENTRIES)):
+        start = index * TRAINER_MONEY_ENTRY_SIZE
+        class_id, value = data[start], data[start + 1]
+        if class_id == _MONEY_TABLE_END:
+            return values, (value, index)
+        # The game stops at a class's first entry.
+        values.setdefault(class_id, (value, index))
+    raise InvalidRomError("Gen III trainer money table has no terminator")

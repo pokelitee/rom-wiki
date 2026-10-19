@@ -22,8 +22,11 @@ class PersonalConcern(Protocol):
     MACHINE_LEARNSET_SIZE: int
     PERSONAL_RECORD_COUNT: int
     PERSONAL_RECORD_SIZE: int
-    decode_gen3_text: Parser
+    POKEDEX_DESCRIPTION_POINTER: int
+    POKEDEX_ENTRY_COUNT: int
+    POKEDEX_ENTRY_SIZE: int
     decode_gen3_name_table: Parser
+    decode_gen3_text: Parser
     parse_personal_record: Parser
     resolve_gba_pointer: Parser
 
@@ -34,11 +37,18 @@ class MessageArchiveReader(Protocol):
 
 class LocationConcern(MessageArchiveReader, Protocol):
     ARCHIVE_MEMBER_NONE: int
+    BG_EVENT_HIDDEN_ITEM: int
+    BG_EVENT_SCRIPT_KINDS: frozenset[int]
+    BG_EVENT_SIZE: int
+    COORD_EVENT_SIZE: int
+    DYNAMIC_MAP: tuple[int, int]
     DYNAMIC_WARP_HEADER_ID: int
     DYNAMIC_WARP_ID: int
     ENCOUNTER_MEMBER_NONE: int
+    EVENT_MON_SPECIAL: int
     FIRST_REGION_MAP_SECTION: int
     GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID: int
+    GBA_MAP_EVENTS_SIZE: int
     GMAPGROUPS_GROUP_COUNT: int
     GREAT_MARSH_HEADER_IDS: tuple[int, ...]
     GREAT_MARSH_POST_NATIONAL_DEX_MEMBER: int
@@ -47,44 +57,68 @@ class LocationConcern(MessageArchiveReader, Protocol):
     HONEY_TREE_HEADER_IDS: tuple[int, ...]
     HONEY_TREE_RARE_MEMBER: int
     HONEY_TREE_UNCOMMON_MEMBER: int
+    INGAME_TRADE_SIZE: int
     ITEM_BALL_TABLE_SCRIPT_MEMBER: int
+    MAP_CONNECTIONS_SIZE: int
+    MAP_CONNECTION_SIZE: int
     MAP_HEADER_SIZE: int
     MATRIX_VOID_HEADER_IDS: frozenset[int]
+    NATURE_NAMES: tuple[str, ...]
     NPC_TRADE_TEXT_MEMBER_BY_ID: Mapping[int, int]
+    OBJECT_EVENT_TEMPLATE_SIZE: int
     REGION_NAME_ENTRY_SIZE: int
     REGION_NAME_POINTER_OFFSET: int
     ROAMING_SLOT_COUNT: int
     ROAMING_SLOT_SPECIES_IDS: tuple[int, ...]
+    SCRIPT_COMMANDS: Mapping[int, tuple[str, tuple[int, ...]]]
+    SCRIPT_WARP_COMMANDS: frozenset[int]
+    TRADE_INFO_SPECIAL: int
     TROPHY_GARDEN_HEADER_ID: int
     TROPHY_GARDEN_MEMBER: int
     WARP_DESTINATION_INDEXED: bool
+    WARP_EVENT_SIZE: int
     decode_gen3_name: Parser
+    decode_gen3_name_table: Parser
+    decode_hidden_item: Parser
     disassemble_function: Parser
+    disassemble_script: Parser
+    find_given_items: Parser
     find_item_archive_members: Parser
+    find_item_ball: Parser
+    find_marts: Parser
+    find_pokemon: Parser
     find_script_awarded_items: Parser
+    find_trades: Parser
     is_hidden_item_candidate: Parser
     is_visible_item_candidate: Parser
+    parse_bg_event: Parser
     parse_common_mart_inventory: Parser
+    parse_coord_event_script: Parser
     parse_decoration_price_table: Parser
     parse_egg_gift_commands: Parser
     parse_frontier_price_table: Parser
     parse_function_offsets: Parser
     parse_game_corner_prizes: Parser
+    parse_gba_map_events: Parser
+    parse_gmapgroups_pointers: Parser
     parse_hidden_item_table: Parser
+    parse_ingame_trade: Parser
     parse_item_ball_table: Parser
     parse_item_price: Parser
-    parse_gmapgroups_pointers: Parser
+    parse_map_connection: Parser
+    parse_map_connections: Parser
     parse_map_events: Parser
     parse_map_group_index: Parser
     parse_map_header_script_files: Parser
     parse_map_header_table: Parser
-    parse_map_headers: Parser
     parse_map_header_text_files: Parser
+    parse_map_headers: Parser
     parse_map_matrix: Parser
     parse_mart_commands: Parser
     parse_mart_dispatch_commands: Parser
     parse_npc_trade_commands: Parser
     parse_npc_trade_record: Parser
+    parse_object_event_template: Parser
     parse_overworld_furniture: Parser
     parse_overworld_npcs: Parser
     parse_pokemon_gift_commands: Parser
@@ -94,7 +128,9 @@ class LocationConcern(MessageArchiveReader, Protocol):
     parse_species_list: Parser
     parse_static_encounter_commands: Parser
     parse_togepi_egg_gift_commands: Parser
+    parse_warp_event: Parser
     resolve_common_script_member: Parser
+    resolve_gba_pointer: Parser
     resolve_hidden_item_id: Parser
     resolve_location_special_vendors: Parser
     resolve_visible_item_id: Parser
@@ -108,9 +144,13 @@ class TrainerConcern(MessageArchiveReader, Protocol):
     CHECK_WON_BATTLE: int
     FIRST_TRAINER_ID: int
     MAP_HEADER_SIZE: int
+    REMATCH_ENTRY_SIZE: int
+    REMATCH_LABEL: str
     REMATCH_RECORD_SIZE: int
+    REMATCH_TRAINERS_PER_ENTRY: int
     STARTER_SPECIES_ENTRY_SIZE: int
     START_TRAINER_BATTLE: int
+    TRAINER_MONEY_ENTRY_SIZE: int
     TRAINER_OBJECT_ID_OFFSET: int
     TRAINER_OBJECT_SCRIPT_END: int
     TRAINER_OBJECT_SCRIPT_START: int
@@ -132,6 +172,7 @@ class TrainerConcern(MessageArchiveReader, Protocol):
     parse_trainer_battle_commands: Parser
     parse_trainer_class_genders: Parser
     parse_trainer_class_prize_multipliers: Parser
+    parse_trainer_money_table: Parser
     parse_trainer_record: Parser
     party_record_size: Parser
     resolve_common_script_trainer_id: Parser
@@ -219,7 +260,9 @@ class MoveConcern(Protocol):
     MOVE_RECORD_COUNT: int
     MOVE_RECORD_SIZE: int
     decode_gen3_name_table: Parser
+    decode_gen3_text: Parser
     parse_move_record: Parser
+    resolve_gba_pointer: Parser
 
 
 class TutorConcern(Protocol):
@@ -344,6 +387,9 @@ class StaticEncounterConcern(Protocol):
 
 
 class PickupConcern(MessageArchiveReader, Protocol):
+    ITEM_RECORD_SIZE: int
+    PICKUP_CHANCE_ENTRY_SIZE: int
+    PICKUP_CHANCE_ITEM_COUNT: int
     PICKUP_COMMON_ITEM_COUNT: int
     PICKUP_COMMON_RATE_COUNT: int
     PICKUP_COMMON_TABLE_LOCATOR: str
@@ -354,7 +400,10 @@ class PickupConcern(MessageArchiveReader, Protocol):
     PICKUP_RARE_TABLE_LOCATOR: str
     PICKUP_SLOT_CHANCES: tuple[int, ...]
     PICKUP_TABLE_LOCATOR: str
+    decode_gen3_name_table: Parser
+    parse_pickup_chance_table: Parser
     parse_pickup_item_table: Parser
     parse_pickup_table: Parser
     parse_pickup_tables: Parser
+    parse_split_pickup_tables: Parser
     pickup_level_range_item_ids: Parser

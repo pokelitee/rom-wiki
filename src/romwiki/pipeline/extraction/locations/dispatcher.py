@@ -54,7 +54,9 @@ def extract_location_dataset(
             trade_dataset,
         )
     if extraction_format == "gba-map-groups":
-        return extract_gba_map_groups_location_dataset(result)
+        return extract_gba_map_groups_location_dataset(
+            result, trainer_dataset=trainer_dataset, item_dataset=item_dataset
+        )
     raise DataSourceError(
         f"Unsupported location extraction format: {extraction_format!r}"
     )

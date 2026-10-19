@@ -229,6 +229,9 @@ variable-backed operands, remain unresolved.
 ## Text and names
 
 Names and descriptions are decoded from each ROM's message archive at `a/0/2/7`.
+Move, ability, and item descriptions are members 749, 722, and 221. Both
+versions carry both Pokédex texts; HeartGold reads member 803 and SoulSilver
+member 804, which match each version's published Pokédex.
 The relevant member tables are validated against the engine's record counts before
 use. PokéDB supplies canonical links, descriptive metadata, and optional media
 fallbacks; it does not replace ROM-derived mechanics or provide the clean

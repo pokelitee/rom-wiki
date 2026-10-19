@@ -89,6 +89,10 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "move_names_member": 750,
                 "item_names_member": 222,
                 "pokemon_names_member": 237,
+                "pokemon_descriptions_member": 803,
+                "ability_descriptions_member": 722,
+                "move_descriptions_member": 749,
+                "item_descriptions_member": 221,
                 "location_names_member": 279,
                 "map_header_offset": 0xF6BE0,
                 "map_header_count": 540,
@@ -122,6 +126,7 @@ class ProfileRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(soulsilver.game_codes, ("IPGE",))
         self.assertEqual(soulsilver.base_game, "soulsilver")
+        self.assertEqual(soulsilver.parameters["pokemon_descriptions_member"], 804)
         self.assertEqual(sacred_gold.hashes[0].variant, "complete-v1.05")
         self.assertEqual(storm_silver.hashes[0].variant, "complete-v1.05")
         self.assertEqual(sacred_gold.layout, heartgold.layout)

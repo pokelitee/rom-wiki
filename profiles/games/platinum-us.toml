@@ -39,6 +39,12 @@ map_header_count = 593
 location_names_member = 433
 item_names_member = 392
 pokemon_names_member = 412
+# Description banks. The Pokédex bank is the one matching PokéDB's Platinum
+# text (other banks hold another version's).
+pokemon_descriptions_member = 706
+ability_descriptions_member = 612
+move_descriptions_member = 646
+item_descriptions_member = 391
 type_names_member = 624
 ability_names_member = 610
 move_names_member = 647

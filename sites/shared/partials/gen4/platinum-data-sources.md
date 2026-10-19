@@ -322,13 +322,11 @@ names, and NPC-trade nickname/OT-name text each have their own dedicated
 member in the same archive. PokéDB supplies stable page slugs and links
 without overriding any of these ROM-decoded names.
 
-## Not yet available
+Pokédex entries and move, ability, and item descriptions also come from the
+archive: members 706, 646, 612, and 391. The archive holds Diamond and Pearl's
+Pokédex text too (member 700); 706 is the bank that matches Platinum's.
 
-The ROM's own Pokédex and move/ability/item description text banks aren't
-extracted yet: this needs dedicated offset research of its own, so PokéDB's
-effect description and flavor-text quote are shown instead, version-matched
-to the profile's base game, while every structured mechanical field remains
-ROM-derived and authoritative.
+## Not yet available
 
 Which honey-tree slathering yields, which four trees are a save file's
 guaranteed Rare trees on a given file, and which Great Marsh/Trophy Garden

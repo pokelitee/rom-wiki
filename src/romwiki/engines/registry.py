@@ -58,7 +58,14 @@ LocationExtractionFormat = Literal[
     "archive-encounter-map",
     "gba-map-groups",
 ]
-PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
+PickupFormat = Literal[
+    "none",
+    "locator-tables",
+    "split-table",
+    "sliding-table",
+    "flat-split-table",
+    "chance-table",
+]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode", "pointer-party"]
 TutorFormat = Literal[
     "none", "overlay-table", "overlay-archive", "personal-archive", "flat-offset-table"
@@ -214,7 +221,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             encounters="method-table",
             locations="encounter-map",
             location_extraction="gba-map-groups",
-            pickup="none",
+            pickup="chance-table",
             trainers="pointer-party",
             tutors="flat-offset-table",
             fossils="none",
@@ -247,7 +254,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             encounters="method-table",
             locations="encounter-map",
             location_extraction="gba-map-groups",
-            pickup="none",
+            pickup="flat-split-table",
             trainers="pointer-party",
             tutors="flat-offset-table",
             fossils="none",
@@ -491,10 +498,58 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
             "REGION_NAME_POINTER_OFFSET",
             "parse_gmapgroups_pointers",
             "parse_map_group_index",
+            "BG_EVENT_HIDDEN_ITEM",
+            "BG_EVENT_SCRIPT_KINDS",
+            "BG_EVENT_SIZE",
+            "COORD_EVENT_SIZE",
+            "DYNAMIC_MAP",
+            "EVENT_MON_SPECIAL",
+            "GBA_MAP_EVENTS_SIZE",
+            "INGAME_TRADE_SIZE",
+            "NATURE_NAMES",
+            "MAP_CONNECTIONS_SIZE",
+            "MAP_CONNECTION_SIZE",
+            "OBJECT_EVENT_TEMPLATE_SIZE",
+            "SCRIPT_COMMANDS",
+            "SCRIPT_WARP_COMMANDS",
+            "TRADE_INFO_SPECIAL",
+            "WARP_EVENT_SIZE",
+            "decode_gen3_name_table",
+            "decode_hidden_item",
+            "disassemble_script",
+            "find_given_items",
+            "find_item_ball",
+            "find_marts",
+            "find_pokemon",
+            "find_trades",
+            "parse_bg_event",
+            "parse_coord_event_script",
+            "parse_gba_map_events",
+            "parse_ingame_trade",
+            "parse_map_connection",
+            "parse_map_connections",
+            "parse_warp_event",
+            "parse_object_event_template",
+            "resolve_gba_pointer",
         )
     },
     ("pickup", "split-table"): {"pickup": ("parse_pickup_tables",)},
     ("pickup", "sliding-table"): {"pickup": ("parse_pickup_table",)},
+    ("pickup", "flat-split-table"): {
+        "pickup": (
+            "PICKUP_COMMON_ITEM_COUNT",
+            "PICKUP_COMMON_RATE_COUNT",
+            "PICKUP_RARE_ITEM_COUNT",
+            "parse_split_pickup_tables",
+        )
+    },
+    ("pickup", "chance-table"): {
+        "pickup": (
+            "PICKUP_CHANCE_ENTRY_SIZE",
+            "PICKUP_CHANCE_ITEM_COUNT",
+            "parse_pickup_chance_table",
+        )
+    },
     ("trainers", "class-gender"): {
         "trainers": (
             "parse_trainer_record",
@@ -511,7 +566,16 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
         )
     },
     ("trainers", "pointer-party"): {
-        "trainers": ("parse_trainer_record", "resolve_trainer_variants")
+        "trainers": (
+            "REMATCH_ENTRY_SIZE",
+            "REMATCH_LABEL",
+            "REMATCH_TRAINERS_PER_ENTRY",
+            "TRAINER_MONEY_ENTRY_SIZE",
+            "parse_rematch_table",
+            "parse_trainer_money_table",
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+        )
     },
     ("tutors", "overlay-table"): {"tutors": ("parse_tutor_move_table",)},
     ("tutors", "personal-archive"): {"tutors": ("parse_tutor_move_table",)},

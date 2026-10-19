@@ -70,7 +70,7 @@ def build_ability_dataset(
     # also has no Honey Gather / Honey Tree equivalent to attach.
     is_sliding_pickup = pickup_dataset is not None and "level_ranges" in pickup_dataset
     pickup_tables = (
-        pickup_dataset["tables"]
+        pickup_dataset.get("tables")
         if pickup_dataset is not None and not is_sliding_pickup
         else None
     )
@@ -85,6 +85,13 @@ def build_ability_dataset(
         pickup = None
         if is_sliding_pickup and pickup_dataset is not None and slug == "pickup":
             pickup = {"level_ranges": pickup_dataset["level_ranges"]}
+        elif (
+            pickup_dataset is not None
+            and "items" in pickup_dataset
+            and slug == "pickup"
+        ):
+            # FireRed/LeafGreen: one list of items with their chances.
+            pickup = {"items": pickup_dataset["items"]}
         elif pickup_tables is not None and slug == "pickup":
             pickup = {
                 "common_items": pickup_tables["common_items"],

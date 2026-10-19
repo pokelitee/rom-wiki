@@ -82,12 +82,21 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     # battle can be linked; rematches and scripted battles keep no location.
     locations_by_trainer = _extract_gen3_trainer_locations(platform, result, profile)
     class_names = _trainer_class_names(profile, platform, result, engine)
+    money = _trainer_money(profile, platform, result, engine)
     records = [
-        replace(
-            record,
-            class_name=_class_name(record, class_names),
-            locations=tuple(locations_by_trainer.get(record.trainer_id, ())),
-        ).to_dict()
+        {
+            **replace(
+                record,
+                class_name=_class_name(record, class_names),
+                locations=tuple(locations_by_trainer.get(record.trainer_id, ())),
+                victory_money_multiplier=money(record.class_id)[0] if money else None,
+            ).to_dict(),
+            **(
+                {"victory_money_multiplier_provenance": money(record.class_id)[1]}
+                if money
+                else {}
+            ),
+        }
         for record in parsed_records
     ]
 
@@ -96,7 +105,7 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
         profile.id,
         profile.parameters,
         records,
-        None,
+        _rematch_selectors(profile, platform, result, engine),
     )
     envelope = dataset_envelope(
         schema_version=TRAINERS_RAW_SCHEMA_VERSION,
@@ -119,6 +128,50 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     if item_names is not None:
         envelope["item_names"] = item_names
     return envelope
+
+
+def _rematch_selectors(
+    profile: Any, platform: Any, result: InspectionResult, engine: Any
+) -> dict[str, Any] | None:
+    if "rematch_table_offset" not in profile.parameters:
+        return None
+    count = profile.int_parameter("rematch_table_count")
+    rows = engine.parse_rematch_table(
+        platform.read_bytes(
+            result.image,
+            profile.int_parameter("rematch_table_offset"),
+            count * engine.REMATCH_ENTRY_SIZE,
+        ),
+        count=count,
+        trainers_per_entry=engine.REMATCH_TRAINERS_PER_ENTRY,
+    )
+    return {"rematch_rows": rows, "rematch_label": engine.REMATCH_LABEL}
+
+
+def _trainer_money(
+    profile: Any, platform: Any, result: InspectionResult, engine: Any
+) -> Any:
+    """Return `class -> (money value, provenance)` from the profile's
+    `gTrainerMoneyTable`, or `None` when the profile doesn't locate it.
+    """
+    if "trainer_money_offset" not in profile.parameters:
+        return None
+    offset = profile.int_parameter("trainer_money_offset")
+    size = engine.TRAINER_MONEY_ENTRY_SIZE
+    available = result.image.size - offset
+    values, default = engine.parse_trainer_money_table(
+        platform.read_bytes(result.image, offset, min(available, 256 * size))
+    )
+
+    def lookup(class_id: int) -> tuple[int, dict[str, Any]]:
+        value, index = values.get(class_id, default)
+        return value, {
+            "source": "rom",
+            "offset": offset + index * size,
+            "class_id": class_id,
+        }
+
+    return lookup
 
 
 def _trainer_class_names(

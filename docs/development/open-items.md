@@ -210,10 +210,10 @@ unanchored byte scans cannot improve confidence.
 
 ## 3. Generation III
 
+- **Starter-selected rival parties.** The rival's three parties per battle
+  aren't grouped into battle families yet; rematch families are.
 - **Rival name.** Trainer records store the ROM's default rival name ("Terry"
   on FireRed/LeafGreen); the player-chosen name lives in save data.
-- **Battle Point costs.** Emerald's 20 Battle Frontier tutors are published
-  without their BP costs.
 - **Compound names.** All-caps ROM names are recased per word, so names that
   later games write with an inner capital read as one word ("Thunderpunch").
 - **Emerald systems.** Battle Frontier facilities, contests, and Berry

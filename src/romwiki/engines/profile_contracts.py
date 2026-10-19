@@ -162,11 +162,29 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
             "egg_move_offset",
             "egg_move_table_size",
             "ability_description_offset",
+            "move_description_offset",
+            "pokedex_entry_offset",
             "tutor_move_offset",
             "tutor_compatibility_offset",
         }
     ),
-    optional_parameters=frozenset({"map_group_count", "trainer_class_count"}),
+    optional_parameters=frozenset(
+        {
+            "frontier_tutor_move_offset",
+            "pickup_common_items_offset",
+            "pickup_common_rate_offset",
+            "pickup_items_offset",
+            "pickup_rare_items_offset",
+            "map_group_count",
+            "rematch_table_count",
+            "rematch_table_offset",
+            "trade_count",
+            "trade_table_offset",
+            "trainer_class_count",
+            "trainer_money_offset",
+            "trainer_variant_contract",
+        }
+    ),
     reject_unknown=True,
 )
 
@@ -184,6 +202,8 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "ability_name_stride",
             "ability_name_count",
             "ability_description_offset",
+            "move_description_offset",
+            "pokedex_entry_offset",
             "move_offset",
             "move_count",
             "move_name_offset",
@@ -210,7 +230,23 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "gmapgroups_offset",
         }
     ),
-    optional_parameters=frozenset({"map_group_count", "trainer_class_count"}),
+    optional_parameters=frozenset(
+        {
+            "frontier_tutor_move_offset",
+            "pickup_common_items_offset",
+            "pickup_common_rate_offset",
+            "pickup_items_offset",
+            "pickup_rare_items_offset",
+            "map_group_count",
+            "rematch_table_count",
+            "rematch_table_offset",
+            "trade_count",
+            "trade_table_offset",
+            "trainer_class_count",
+            "trainer_money_offset",
+            "trainer_variant_contract",
+        }
+    ),
     reject_unknown=True,
 )
 
@@ -299,6 +335,16 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
     reject_unknown=True,
 )
 
+# Message banks holding ROM description text, optional for Generation IV.
+_DESCRIPTION_PARAMETERS = frozenset(
+    {
+        "ability_descriptions_member",
+        "item_descriptions_member",
+        "move_descriptions_member",
+        "pokemon_descriptions_member",
+    }
+)
+
 GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
     required_layout=frozenset(
         {
@@ -379,7 +425,9 @@ GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
             "type_names_member",
         }
     ),
-    optional_parameters=_TRAINER_VARIANT_PARAMETERS | _TABLE_COUNT_PARAMETERS,
+    optional_parameters=_TRAINER_VARIANT_PARAMETERS
+    | _TABLE_COUNT_PARAMETERS
+    | _DESCRIPTION_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -445,6 +493,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
         }
     )
     | _TRAINER_VARIANT_PARAMETERS
-    | _TABLE_COUNT_PARAMETERS,
+    | _TABLE_COUNT_PARAMETERS
+    | _DESCRIPTION_PARAMETERS,
     reject_unknown=True,
 )

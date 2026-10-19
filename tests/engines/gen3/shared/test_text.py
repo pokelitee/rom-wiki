@@ -64,6 +64,18 @@ class DecodeGen3TextTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertEqual(decode_gen3_text(data), expected)
 
+    def test_decodes_description_punctuation_and_line_breaks(self) -> None:
+        # "A, B:\n(C)/D" with comma, colon, line break, brackets, and slash.
+        data = bytes(
+            [0xBB, 0xB8, 0x00, 0xBC, 0xF0, 0xFE, 0x5C, 0xBD, 0x5D, 0xBA, 0xBE, 0xFF]
+        )
+        self.assertEqual(decode_gen3_text(data), "A, B:\n(C)/D")
+
+    def test_decodes_the_five_glyph_pokeblock_word(self) -> None:
+        # Emerald's "POKéBLOCK CASE".
+        data = bytes([0x55, 0x56, 0x57, 0x58, 0x59, 0x00, 0xBD, 0xBB, 0xCD, 0xBF])
+        self.assertEqual(gen3_display_name(decode_gen3_text(data)), "Pokéblock Case")
+
 
 class DecodeGen3NameTableTests(unittest.TestCase):
     def test_decodes_a_fixed_width_table_as_display_names(self) -> None:

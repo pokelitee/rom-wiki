@@ -140,7 +140,16 @@ class GameBuildContext:
         return self._raw("tutors/raw", extract_tutor_dataset)
 
     def pickup_raw(self) -> dict[str, Any] | None:
-        if "pickup_overlay_id" not in self.profile.parameters:
+        # DS profiles locate Pickup through an overlay, Generation III ones
+        # through flat offsets.
+        if not any(
+            parameter in self.profile.parameters
+            for parameter in (
+                "pickup_overlay_id",
+                "pickup_common_items_offset",
+                "pickup_items_offset",
+            )
+        ):
             return None
         return self._raw("pickup/raw", extract_pickup_dataset)
 

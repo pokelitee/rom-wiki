@@ -37,6 +37,12 @@ def extract_personal_dataset(result: InspectionResult) -> dict[str, Any]:
         reference_descriptions = _extract_ability_descriptions_flat(
             profile, platform, engine, result
         )
+        pokedex = _extract_pokedex_descriptions_flat(profile, platform, engine, result)
+        if pokedex:
+            reference_descriptions["pokemon_descriptions"] = pokedex["descriptions"]
+            reference_descriptions.setdefault("description_sources", {})[
+                "pokemon_descriptions"
+            ] = pokedex["source"]
     else:
         raise ProfileError(
             f"Platform {profile.platform!r} supports neither archive nor flat reads"
@@ -192,6 +198,41 @@ def _extract_names_flat(
     if sources:
         result_names["name_sources"] = sources
     return result_names
+
+
+def _extract_pokedex_descriptions_flat(
+    profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
+) -> dict[str, Any]:
+    # `gPokedexEntries` has one entry per National Dex number from 0, each
+    # with a description pointer. Optional: without `pokedex_entry_offset`,
+    # PokéDB's Pokédex text is used.
+    offset = profile.optional_int_parameter("pokedex_entry_offset")
+    if offset is None:
+        return {}
+    size, count = engine.POKEDEX_ENTRY_SIZE, engine.POKEDEX_ENTRY_COUNT
+    entries = platform.read_bytes(result.image, offset, size * count)
+    descriptions = []
+    for index in range(count):
+        pointer = int.from_bytes(
+            entries[
+                index * size + engine.POKEDEX_DESCRIPTION_POINTER : index * size
+                + engine.POKEDEX_DESCRIPTION_POINTER
+                + 4
+            ],
+            "little",
+        )
+        # A generous read; decoding stops at the 0xFF terminator.
+        descriptions.append(
+            engine.decode_gen3_text(
+                platform.read_bytes(
+                    result.image, engine.resolve_gba_pointer(pointer), 512
+                )
+            )
+        )
+    return {
+        "descriptions": descriptions,
+        "source": {"archive": f"offset:{offset:#x}", "member": 0},
+    }
 
 
 def _extract_ability_descriptions_flat(

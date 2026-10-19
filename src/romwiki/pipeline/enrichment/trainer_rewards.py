@@ -27,8 +27,12 @@ def calculate_base_prize_money(
         return None
 
     base_factor = 4
+    # Gen IV and Gen III pay double for a double battle.
     battle_format_multiplier = (
-        2 if trainer_format == "class-gender" and trainer.get("double_battle") else 1
+        2
+        if trainer_format in ("class-gender", "pointer-party")
+        and trainer.get("double_battle")
+        else 1
     )
     multiplier_provenance = trainer.get("victory_money_multiplier_provenance")
     if multiplier_provenance is None and trainer_format == "battle-mode":

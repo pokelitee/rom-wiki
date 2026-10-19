@@ -53,6 +53,8 @@ egg_move_table_size = 2278
 
 tutor_move_offset = 0x61500c
 tutor_compatibility_offset = 0x615048
+# The Battle Frontier tutors' two 10-move menus.
+frontier_tutor_move_offset = 0x5b31f8
 
 # `gWildMonHeaders` -- see `engines/gen3/emerald/constants.py`'s
 # `ENCOUNTER_HEADER_COUNT` comment for the real-ROM cross-checks.
@@ -66,6 +68,29 @@ encounter_count = 124
 region_name_offset = 0x5a147c
 region_name_count = 213
 gmapgroups_offset = 0x486578
+
+# `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
+trainer_money_offset = 0x31aeb8
+
+# `gMoveDescriptionPointers`: one pointer per move from move 1.
+move_description_offset = 0x61c524
+
+# `gPokedexEntries`: one entry per National Dex number from 0.
+pokedex_entry_offset = 0x56b5b0
+
+# Pickup's 18 common items, 11 rare items, and nine rate thresholds.
+pickup_common_items_offset = 0x31c440
+pickup_rare_items_offset = 0x31c464
+pickup_common_rate_offset = 0x31c47a
+
+# The rematch table: 16-byte rows of trainer IDs.
+rematch_table_offset = 0x5500a4
+rematch_table_count = 78
+trainer_variant_contract = "emerald-retail-v1"
+
+# `sIngameTrades`: 4 in-game trades, 60 bytes each.
+trade_table_offset = 0x338ed0
+trade_count = 4
 
 [[hashes]]
 algorithm = "sha256"
