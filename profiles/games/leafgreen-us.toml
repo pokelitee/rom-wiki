@@ -47,6 +47,10 @@ region_name_offset = 0x3f1ae8
 
 gmapgroups_offset = 0x352688
 
+# `sIngameTrades`: 9 in-game trades, 60 bytes each.
+trade_table_offset = 0x26cf6c
+trade_count = 9
+
 [[hashes]]
 algorithm = "sha256"
 value = "78d310d557ceebc593bd393acc52d1b19a8f023fec40bc200e6063880d8531fc"

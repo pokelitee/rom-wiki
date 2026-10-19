@@ -18,6 +18,11 @@ dataset is compared with the exact USA retail Pokémon FireRed ROM (header code
 The patched ROM produces 386 public Pokémon, 76 abilities, 354 playable moves,
 374 items, 143 wild-encounter areas, 743 trainers, and 439 map locations,
 including the hack's new areas such as Yggdrasill Forest and the Sanctuaries.
+Location pages also show the map's warps (1339) and connections (116), 353
+item balls and hidden items, 61 items handed over by scripts, 27 static
+encounters, 19 gift Pokémon and Eggs, 23 marts, and 9 in-game trades. One
+object's script points at unused bytes and is skipped.
+
 PokéDB supplies reference identity, sprites, and Pokédex text. The ROM remains
 authoritative for mechanics, and the wiki always distinguishes ROM-derived
 facts from reference content.
@@ -34,6 +39,9 @@ except two, which every code reference in the hack now points to:
 The hack leaves the original groups' map lists in place, so the ROM stores
 no per-group map count. A group ends at the next group's list or at its first
 entry that doesn't point to a map header.
+
+Map events and scripts are decoded as for retail FireRed; see its data
+sources page.
 
 Trainers are published exactly as the ROM stores them, including unused
 slots, and the rival keeps the ROM's default name.

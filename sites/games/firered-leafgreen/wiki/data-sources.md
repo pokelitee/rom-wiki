@@ -23,6 +23,10 @@ compatibility, all 15 move tutors, and wild held items. The ROMs' 25 "?"
 placeholder species records remain in the normalized datasets for auditing
 but do not receive public pages.
 
+Location pages also show the map's warps (1294) and connections (116), 339
+item balls and hidden items, 60 items handed over by scripts, 13 static
+encounters, 7 gift Pokémon and Eggs, 23 marts, and 9 in-game trades.
+
 PokéDB supplies reference identity, sprites, and Pokédex text. The ROMs remain
 authoritative for mechanics, relationships, and version differences, and the
 wiki always distinguishes ROM-derived facts from reference content.
@@ -47,6 +51,14 @@ value range rather than located by name.
 - **Locations:** every map is read through the ROM's map-group table, and
   names come from the map-section name table, whose first entry is map
   section 88.
+- **Map events and scripts:** each map's warps, connections, objects, signs,
+  and triggers are read from its event tables. Its scripts are disassembled
+  with the command layouts from the pret decompilations, following every
+  jump and call. Location pages list item balls (`finditem`), hidden items,
+  items handed over (`giveitem`/`additem`), static encounters
+  (`setwildbattle` and event legendaries), gift Pokémon and Eggs, marts, and
+  in-game trades. Only literal commands count; a value held in a script
+  variable, such as a starter, is left out.
 - **Move tutors:** the tutor move table and 2-byte per-species compatibility
   masks cover 15 tutors, each located from the script that teaches its move.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Mt.

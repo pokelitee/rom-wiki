@@ -18,6 +18,10 @@ all 30 move tutors, and wild held items. The ROM's 25 "?" placeholder species
 records remain in the normalized datasets for auditing but do not receive
 public pages.
 
+Location pages also show the map's warps (1277) and connections (148), 273
+item balls and hidden items, 163 items handed over by scripts, 20 static
+encounters, 8 gift Pokémon and Eggs, 27 marts, and 4 in-game trades.
+
 PokéDB supplies reference identity, sprites, and Pokédex text. The ROM remains
 authoritative for mechanics and relationships, and the wiki always
 distinguishes ROM-derived facts from reference content.
@@ -40,6 +44,14 @@ value range rather than located by name.
 - **Locations:** every map is read through the ROM's map-group table, and
   names come from the region-map section table. Maps in the dynamic section
   (used by the S.S. Tidal) have no name and are skipped.
+- **Map events and scripts:** each map's warps, connections, objects, signs,
+  and triggers are read from its event tables. Its scripts are disassembled
+  with the command layouts from the pret decompilations, following every
+  jump and call. Location pages list item balls (`finditem`), hidden items,
+  items handed over (`giveitem`/`additem`), static encounters
+  (`setwildbattle` and event legendaries), gift Pokémon and Eggs, marts, and
+  in-game trades. Only literal commands count; a value held in a script
+  variable, such as a starter, is left out.
 - **Move tutors:** the tutor move table and 4-byte per-species compatibility
   masks cover 30 tutors. Ten are field NPCs; the other 20 are Battle Frontier
   tutors reached through script specials 474 and 475. Battle Point costs are
