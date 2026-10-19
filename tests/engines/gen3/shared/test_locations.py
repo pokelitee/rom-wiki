@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 import unittest
+from collections.abc import Callable
 
 from romwiki.engines.gen3.shared.locations import (
     parse_gmapgroups_pointers,
@@ -96,28 +97,76 @@ class ParseGmapgroupsPointersTests(unittest.TestCase):
             parse_gmapgroups_pointers(b"\x00" * 10, group_count=_GROUP_COUNT)
 
 
+_GBA = 0x08000000
+
+
+def _map_rom(*arrays: tuple[int, tuple[int, ...]]) -> bytearray:
+    """A ROM with three map headers at 0x100, 0x120, and 0x140 sharing one
+    1x1 layout at 0x200, plus each `(offset, entries)` pointer array.
+    """
+    rom = bytearray(0x400)
+    struct.pack_into("<2i4I", rom, 0x200, 1, 1, *(_GBA + 0x200,) * 4)
+    for header in (0x100, 0x120, 0x140):
+        struct.pack_into("<I", rom, header, _GBA + 0x200)
+    for offset, entries in arrays:
+        struct.pack_into(f"<{len(entries)}I", rom, offset, *entries)
+    return rom
+
+
+def _reader(rom: bytes) -> Callable[[int, int], bytes]:
+    def read(offset: int, size: int) -> bytes:
+        if offset + size > len(rom):
+            raise InvalidRomError("out of range")
+        return bytes(rom[offset : offset + size])
+
+    return read
+
+
 class ParseMapGroupIndexTests(unittest.TestCase):
-    def test_resolves_group_num_to_header_address_using_boundaries(self) -> None:
-        # Two groups: group 0 has 2 maps, group 1 has 1 map. Sub-table data
-        # (the raw pointer bytes spanning group_pointers[0] to
-        # gmapgroups_address) holds 3 header-address pointers back to back.
-        group_pointers = (0x08350000, 0x08350008)
-        gmapgroups_address = 0x0835000C
-        subtable_data = struct.pack("<3I", 0x08360000, 0x08360020, 0x08360040)
+    def test_bounds_contiguous_groups_by_the_next_array(self) -> None:
+        # Retail layout: group 0 has 2 maps and group 1 has 1, packed back
+        # to back and ending at gMapGroups (0x30C).
+        rom = _map_rom((0x300, (_GBA + 0x100, _GBA + 0x120, _GBA + 0x140)))
 
         index = parse_map_group_index(
-            group_pointers, subtable_data, gmapgroups_address=gmapgroups_address
+            (_GBA + 0x300, _GBA + 0x308),
+            _reader(rom),
+            gmapgroups_address=_GBA + 0x30C,
         )
 
-        self.assertEqual(index[(0, 0)], 0x08360000)
-        self.assertEqual(index[(0, 1)], 0x08360020)
-        self.assertEqual(index[(1, 0)], 0x08360040)
+        self.assertEqual(
+            index,
+            {(0, 0): _GBA + 0x100, (0, 1): _GBA + 0x120, (1, 0): _GBA + 0x140},
+        )
 
-    def test_rejects_a_misaligned_group_boundary(self) -> None:
-        group_pointers = (0x08350000, 0x08350003)
-        with self.assertRaises(InvalidRomError):
+    def test_ends_a_group_at_its_first_entry_that_is_not_a_map_header(
+        self,
+    ) -> None:
+        # A hack moved gMapGroups to 0x380 and added group 1 at 0x3A0, so
+        # group 0 runs into the old table (pointers to arrays, not headers)
+        # and nothing bounds group 1.
+        rom = _map_rom(
+            (0x300, (_GBA + 0x100, _GBA + 0x300)),
+            (0x3A0, (_GBA + 0x120, _GBA + 0x140, 0)),
+        )
+
+        index = parse_map_group_index(
+            (_GBA + 0x300, _GBA + 0x3A0),
+            _reader(rom),
+            gmapgroups_address=_GBA + 0x380,
+        )
+
+        self.assertEqual(
+            index,
+            {(0, 0): _GBA + 0x100, (1, 0): _GBA + 0x120, (1, 1): _GBA + 0x140},
+        )
+
+    def test_rejects_a_group_without_map_headers(self) -> None:
+        rom = _map_rom((0x300, (0,)))
+
+        with self.assertRaisesRegex(InvalidRomError, "group 0 has no map headers"):
             parse_map_group_index(
-                group_pointers, b"\x00" * 8, gmapgroups_address=0x08350008
+                (_GBA + 0x300,), _reader(rom), gmapgroups_address=_GBA + 0x304
             )
 
 

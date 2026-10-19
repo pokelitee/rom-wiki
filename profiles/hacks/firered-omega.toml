@@ -1,0 +1,20 @@
+[profile]
+id = "firered-omega"
+name = "Pokémon FireRed Omega"
+extends = "firered-us"
+
+[type_chart]
+chart = "gen3"
+
+# Omega keeps retail FireRed's tables in place except the two below, which
+# every code reference now points to.
+[parameters]
+encounter_offset = 0x72ce50
+encounter_count = 143
+gmapgroups_offset = 0x71be34
+map_group_count = 44
+
+[[hashes]]
+algorithm = "sha256"
+value = "a1939737dad5b41eb4f61d2c7e5844c765b66ea8f6c3ef52b66eedc5420e4471"
+variant = "drayano"

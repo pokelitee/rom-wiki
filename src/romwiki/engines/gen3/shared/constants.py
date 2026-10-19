@@ -326,6 +326,15 @@ EVOLUTION_PARAMETER_KINDS = {
 # disassembly, exists at a unique location in both ROMs).
 MAP_HEADER_SIZE = 28
 
+# The leading 24 bytes of `struct MapLayout` -- width and height (s32 each),
+# then border, map, primary-tileset, and secondary-tileset pointers -- shared
+# by both games. They're read only to tell a real map header from other data.
+MAP_LAYOUT_PREFIX_SIZE = 24
+# Generous sanity bound for a layout's width and height.
+MAX_MAP_DIMENSION = 0x400
+# Map numbers are a u8.
+MAX_MAPS_PER_GROUP = 256
+
 # `WildPokemonHeader`, 20 bytes -- one entry per map (mapGroup/mapNum, not a
 # species-style index), so no dummy record. Verified identical struct shape
 # on both games (FireRed's table decodes real Kanto data; Emerald's table,

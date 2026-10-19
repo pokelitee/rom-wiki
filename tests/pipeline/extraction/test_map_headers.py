@@ -155,13 +155,17 @@ def _gba_map_rom() -> tuple[bytes, GameProfile]:
     """A ROM with two map groups (two maps, then one) and two Kanto names.
 
     Layout: names at 0x00, `sMapNames` at 0x40, three map headers at 0x80,
-    each group's header-pointer array at 0x100, and `gMapGroups` at 0x10C.
+    each group's header-pointer array at 0x100, `gMapGroups` at 0x10C, and
+    the map layout every header shares at 0x180.
     """
     rom = bytearray(0x200)
     rom[0x00:0x05] = bytes([0xCA, 0xBB, 0xC6, 0xC6, 0xFF])  # PALL
     rom[0x10:0x14] = bytes([0xD0, 0xC3, 0xCC, 0xFF])  # VIR
     struct.pack_into("<2I", rom, 0x40, _GBA + 0x00, _GBA + 0x10)
+    # One 1x1 map layout at 0x180 that every header points to.
+    struct.pack_into("<2i4I", rom, 0x180, 1, 1, *(_GBA + 0x180,) * 4)
     for index, section in enumerate((89, 88, 89)):
+        struct.pack_into("<I", rom, 0x80 + 28 * index, _GBA + 0x180)
         rom[0x80 + 28 * index + 0x14] = section
     struct.pack_into("<3I", rom, 0x100, _GBA + 0x80, _GBA + 0x80 + 28, _GBA + 0x80 + 56)
     struct.pack_into("<2I", rom, 0x10C, _GBA + 0x100, _GBA + 0x108)

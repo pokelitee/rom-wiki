@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import struct
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 from romwiki.schema import EncounterMapLocation, RecordProvenance
 from romwiki.util.errors import InvalidRomError
 
-from .constants import MAP_HEADER_SIZE
+from .constants import (
+    MAP_HEADER_SIZE,
+    MAP_LAYOUT_PREFIX_SIZE,
+    MAX_MAP_DIMENSION,
+    MAX_MAPS_PER_GROUP,
+)
+from .pointers import resolve_gba_pointer
 
 # `struct MapHeader` (28 bytes), verified against both FireRed/LeafGreen and
 # Emerald: four leading pointers (mapLayout/events/mapScripts/connections,
@@ -97,35 +103,55 @@ def parse_gmapgroups_pointers(data: bytes, *, group_count: int) -> tuple[int, ..
 
 def parse_map_group_index(
     group_pointers: tuple[int, ...],
-    subtable_data: bytes,
+    read: Callable[[int, int], bytes],
     *,
     gmapgroups_address: int,
 ) -> dict[tuple[int, int], int]:
     """Decode `gMapGroups`' second indirection level into a mapping from
-    `(map_group, map_num)` to the ROM address of that map's `MapHeader`
-    struct.
+    `(map_group, map_num)` to the ROM address of that map's `MapHeader`.
 
-    `subtable_data` must be the raw bytes spanning from `group_pointers[0]`
-    (the lowest address, verified ascending for both games) to
-    `gmapgroups_address` -- every group's own pointer array is packed
-    contiguously, in ascending group-index order, across exactly this span
-    (verified against real ROM data: consecutive group-pointer differences,
-    divided by 4, give each group's real map count, and every resulting
-    map's region section resolves to a Town Map name on FireRed, LeafGreen,
-    and Emerald).
+    `read(offset, size)` returns ROM bytes. The ROM stores no per-group map
+    count. Retail games pack every group's pointer array contiguously in
+    group order, ending at `gMapGroups`, so the next array (or `gMapGroups`)
+    bounds each group; this gives FireRed/LeafGreen's 425 and Emerald's 518
+    maps. Hacks can move `gMapGroups` and add groups elsewhere (FireRed
+    Omega appends a 44th), which leaves no array above the last ones, so a
+    group also ends at its first entry that doesn't point to a map header.
     """
-    bounds = (*group_pointers, gmapgroups_address)
-    base = group_pointers[0]
+    bounds = sorted({*group_pointers, gmapgroups_address})
     index: dict[tuple[int, int], int] = {}
-    for group in range(len(group_pointers)):
-        start, end = bounds[group], bounds[group + 1]
-        if end < start or (end - start) % 4:
-            raise InvalidRomError(
-                f"Gen III map group {group} has an invalid boundary "
-                f"(0x{start:x}-0x{end:x})"
-            )
-        for slot in range((end - start) // 4):
-            offset = (start - base) + slot * 4
-            (pointer,) = struct.unpack_from("<I", subtable_data, offset)
-            index[(group, slot)] = pointer
+    for group, start in enumerate(group_pointers):
+        end = next((bound for bound in bounds if bound > start), None)
+        slots = MAX_MAPS_PER_GROUP if end is None else (end - start) // 4
+        for num in range(min(slots, MAX_MAPS_PER_GROUP)):
+            entry = read(resolve_gba_pointer(start) + num * 4, 4)
+            (address,) = struct.unpack("<I", entry)
+            if not _is_map_header(address, read):
+                break
+            index[(group, num)] = address
+        if (group, 0) not in index:
+            raise InvalidRomError(f"Gen III map group {group} has no map headers")
     return index
+
+
+def _is_map_header(address: int, read: Callable[[int, int], bytes]) -> bool:
+    try:
+        header = read(resolve_gba_pointer(address), MAP_HEADER_SIZE)
+        (layout_address,) = struct.unpack_from("<I", header, 0)
+        layout = read(resolve_gba_pointer(layout_address), MAP_LAYOUT_PREFIX_SIZE)
+    except InvalidRomError:
+        return False
+    width, height, *pointers = struct.unpack("<2i4I", layout)
+    return (
+        0 < width <= MAX_MAP_DIMENSION
+        and 0 < height <= MAX_MAP_DIMENSION
+        and all(_is_rom_pointer(pointer) for pointer in pointers)
+    )
+
+
+def _is_rom_pointer(value: int) -> bool:
+    try:
+        resolve_gba_pointer(value)
+    except InvalidRomError:
+        return False
+    return True

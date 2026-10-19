@@ -154,6 +154,7 @@ class MainErrorHandlingTests(unittest.TestCase):
             [
                 "portal",
                 "firered-leafgreen",
+                "firered-omega",
                 "emerald",
                 "platinum",
                 "renegade-platinum",

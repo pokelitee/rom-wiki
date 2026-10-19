@@ -123,14 +123,10 @@ def iter_gba_map_headers(
         platform.read_bytes(image, gmapgroups_offset, group_count * 4),
         group_count=group_count,
     )
-    gmapgroups_address = engine.gba_pointer_for_offset(gmapgroups_offset)
-    subtable_data = platform.read_bytes(
-        image,
-        engine.resolve_gba_pointer(group_pointers[0]),
-        gmapgroups_address - group_pointers[0],
-    )
     addresses = engine.parse_map_group_index(
-        group_pointers, subtable_data, gmapgroups_address=gmapgroups_address
+        group_pointers,
+        lambda offset, size: platform.read_bytes(image, offset, size),
+        gmapgroups_address=engine.gba_pointer_for_offset(gmapgroups_offset),
     )
     region_names = read_region_names(engine, platform, image, profile)
     header_size = engine.MAP_HEADER_SIZE
