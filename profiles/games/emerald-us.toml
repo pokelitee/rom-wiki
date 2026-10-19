@@ -39,6 +39,7 @@ item_count = 377
 
 trainer_offset = 0x310030
 trainer_count = 855
+trainer_class_name_offset = 0x30fcd4
 
 evolution_offset = 0x32531c
 

@@ -36,6 +36,7 @@ move_name_offset = 0x247070
 item_offset = 0x3dae64
 
 trainer_offset = 0x23eaa4
+trainer_class_name_offset = 0x23e534
 
 ability_name_offset = 0x24fc1c
 ability_description_offset = 0x24fae4

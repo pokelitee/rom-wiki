@@ -170,7 +170,7 @@ def _extract_names_flat(
             continue
         stride = profile.int_parameter(stride_parameter)
         data = platform.read_bytes(result.image, offset, stride * count)
-        result_names[field] = engine.decode_gen3_text_table(
+        result_names[field] = engine.decode_gen3_name_table(
             data, stride=stride, count=count
         )
         sources[field] = {"archive": f"offset:{offset:#x}", "member": 0}

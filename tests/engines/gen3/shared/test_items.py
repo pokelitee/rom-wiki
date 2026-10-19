@@ -35,7 +35,7 @@ class Gen3ItemDataTests(unittest.TestCase):
         name = item_name(data)
         record = parse_item_record(data, item_id=1, archive_path="offset:0x0")
 
-        self.assertEqual(name, "MASTER BALL")
+        self.assertEqual(name, "Master Ball")
         self.assertEqual(record.item_id, 1)
         self.assertEqual(record.price, 0)
         self.assertEqual(record.hold_effect_id, 0)

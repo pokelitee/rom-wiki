@@ -257,7 +257,7 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
                 parse_personal_record=_parse_record,
                 PERSONAL_RECORD_SIZE=1,
                 ABILITY_NAME_COUNT=2,
-                decode_gen3_text_table=_decode_ascii_table,
+                decode_gen3_name_table=_decode_ascii_table,
             )
         )
 

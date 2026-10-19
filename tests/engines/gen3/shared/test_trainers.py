@@ -52,7 +52,7 @@ class Gen3TrainerDataTests(unittest.TestCase):
         )
 
         self.assertEqual(record.trainer_id, 414)
-        self.assertEqual(record.name, "BROCK")
+        self.assertEqual(record.name, "Brock")
         self.assertEqual(record.class_id, 0x54)
         self.assertFalse(record.double_battle)
         self.assertEqual(record.battle_mode, 0)

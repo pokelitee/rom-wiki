@@ -16,6 +16,7 @@ from romwiki.engines.gen3.shared.constants import (
     ENCOUNTER_WATER_SLOT_CHANCES,
     ENCOUNTER_WATER_SLOT_COUNT,
     LAST_SPECIES_ID,
+    TRAINER_CLASS_NAME_SIZE,
     TRANSFORMATION_MEMBERS,
 )
 from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
@@ -59,8 +60,9 @@ from romwiki.engines.gen3.shared.pointers import (
     resolve_gba_pointer,
 )
 from romwiki.engines.gen3.shared.text import (
+    decode_gen3_name,
+    decode_gen3_name_table,
     decode_gen3_text,
-    decode_gen3_text_table,
 )
 from romwiki.engines.gen3.shared.trainer_party import (
     derive_trainer_party_attributes,
@@ -104,6 +106,7 @@ from .constants import (
     REGION_NAME_ENTRY_SIZE,
     REGION_NAME_POINTER_OFFSET,
     TM_COUNT,
+    TRAINER_CLASS_COUNT,
     TRAINER_RECORD_COUNT,
     TRAINER_RECORD_SIZE,
     TUTOR_LOCATIONS,
@@ -121,6 +124,8 @@ FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 BASE_SPECIES_COUNT = LAST_SPECIES_ID
 
 __all__ = [
+    "TRAINER_CLASS_COUNT",
+    "TRAINER_CLASS_NAME_SIZE",
     "FIRST_REGION_MAP_SECTION",
     "REGION_NAME_ENTRY_SIZE",
     "REGION_NAME_POINTER_OFFSET",
@@ -182,8 +187,9 @@ __all__ = [
     "TUTOR_MOVE_COUNT",
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
+    "decode_gen3_name",
+    "decode_gen3_name_table",
     "decode_gen3_text",
-    "decode_gen3_text_table",
     "decode_trainerbattle_id",
     "derive_trainer_party_attributes",
     "gba_pointer_for_offset",

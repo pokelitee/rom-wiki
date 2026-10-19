@@ -110,7 +110,7 @@ def _extract_evolution_dataset_flat(
     item_data = platform.read_bytes(
         result.image, item_offset, item_record_size * item_count
     )
-    item_names = engine.decode_gen3_text_table(
+    item_names = engine.decode_gen3_name_table(
         item_data, stride=item_record_size, count=item_count
     )
 
