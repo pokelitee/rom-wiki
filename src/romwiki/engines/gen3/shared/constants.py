@@ -372,3 +372,32 @@ TRANSFORMATION_MEMBERS: dict[int, dict[str, str]] = {}
 ENCOUNTER_FORM_SLUGS: dict[tuple[int, int], str] = {}
 ENCOUNTER_COSMETIC_FORM_LABELS: dict[tuple[int, int], str] = {}
 ALLOW_DUPLICATE_EGG_MOVES = False
+
+# A Pokémon's nature is its personality value modulo 25, in this order.
+NATURE_NAMES = (
+    "Hardy",
+    "Lonely",
+    "Brave",
+    "Adamant",
+    "Naughty",
+    "Bold",
+    "Docile",
+    "Relaxed",
+    "Impish",
+    "Lax",
+    "Timid",
+    "Hasty",
+    "Serious",
+    "Jolly",
+    "Naive",
+    "Modest",
+    "Mild",
+    "Quiet",
+    "Bashful",
+    "Rash",
+    "Calm",
+    "Gentle",
+    "Sassy",
+    "Careful",
+    "Quirky",
+)

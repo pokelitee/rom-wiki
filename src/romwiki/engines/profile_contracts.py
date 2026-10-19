@@ -166,7 +166,9 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
             "tutor_compatibility_offset",
         }
     ),
-    optional_parameters=frozenset({"map_group_count", "trainer_class_count"}),
+    optional_parameters=frozenset(
+        {"map_group_count", "trade_count", "trade_table_offset", "trainer_class_count"}
+    ),
     reject_unknown=True,
 )
 
@@ -210,7 +212,9 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "gmapgroups_offset",
         }
     ),
-    optional_parameters=frozenset({"map_group_count", "trainer_class_count"}),
+    optional_parameters=frozenset(
+        {"map_group_count", "trade_count", "trade_table_offset", "trainer_class_count"}
+    ),
     reject_unknown=True,
 )
 

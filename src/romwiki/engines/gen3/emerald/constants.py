@@ -101,3 +101,12 @@ GMAPGROUPS_GROUP_COUNT = 34
 REGION_NAME_ENTRY_SIZE = 8
 REGION_NAME_POINTER_OFFSET = 4
 FIRST_REGION_MAP_SECTION = 0
+
+# `gSpecials` index of `CreateEnemyEventMon`, which `seteventmon` calls to
+# set up an event legendary's battle. Every Emerald call site is preceded by
+# `setvar` of the species, level, and item.
+EVENT_MON_SPECIAL = 482
+
+# `gSpecials` index of `GetInGameTradeSpeciesInfo`, which a trader's script
+# calls after setting `VAR_0x8008` to the trade's index.
+TRADE_INFO_SPECIAL = 255
