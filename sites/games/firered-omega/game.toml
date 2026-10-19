@@ -3,7 +3,7 @@ id = "firered-omega"
 name = "Pokémon FireRed Omega"
 kind = "game"
 slug = "firered-omega"
-published = false
+published = true
 order = 45
 description = "A data-driven reference for Pokémon FireRed Omega"
 
@@ -17,4 +17,4 @@ creator = "Drayano"
 
 [appearance]
 theme = "firered-leafgreen"
-mascot = "venusaur"
+mascot = "charizard"

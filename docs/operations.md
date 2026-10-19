@@ -137,6 +137,7 @@ Use the current [PokéDB data contract](https://github.com/pokelitee/pokedb/blob
 | Site | Publication model |
 | --- | --- |
 | Pokémon FireRed & LeafGreen | Data-driven Generation III sibling-version family |
+| Pokémon FireRed Omega | Data-driven comparison against FireRed |
 | Pokémon Emerald | Data-driven Generation III retail reference |
 | Pokémon Platinum | Data-driven Generation IV baseline |
 | Pokémon Renegade Platinum | Data-driven comparison against Platinum |
