@@ -93,19 +93,15 @@ from romwiki.engines.gen3.shared.constants import (
     TYPE_NAMES as TYPE_NAMES,
 )
 
-# Zero rather than a guessed count for domains not yet implemented; real
-# once the corresponding table lands (moves/items/abilities are; pokemon
-# name/description tables aren't yet).
+# `gSpeciesNames`: one 11-byte name per personal record. Pokédex entries
+# come from PokéDB rather than the ROM, so there is no description table.
 ITEM_NAME_COUNT = 375
-POKEMON_NAME_COUNT = 0
+POKEMON_NAME_COUNT = 412
 POKEMON_DESCRIPTION_COUNT = 0
 
-# Real table runs to index 77 ("AIR LOCK"), but index 76 ("CACOPHONY") has
-# no PokeDB counterpart -- a one-entry numbering divergence. No decoded
-# species (1-386) references ability 76 or 77, so bounding at 76 loses
-# nothing currently exposed; revisit once species 387-411 are exposed
-# (species 406 references Air Lock).
-ABILITY_NAME_COUNT = 76
+# `gAbilityNames` runs through index 77 ("AIR LOCK"); see
+# `ABILITY_REFERENCE_IDS` for how it maps onto PokéDB's numbering.
+ABILITY_NAME_COUNT = 78
 
 # FireRed/LeafGreen's real item count (Sapphire, item 374, is last real).
 # Differs per game (Emerald has 376) -- not a shared fact.

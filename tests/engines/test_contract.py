@@ -72,6 +72,7 @@ def _fake_engine_tables(**overrides: object) -> types.SimpleNamespace:
         "UNOWN_FORM_NAMES": ("Q", "R"),
         "UNOWN_FORM_TABLES": ((0,), (1,)),
         "INTERNAL_TO_NATIONAL_DEX": {},
+        "ABILITY_REFERENCE_IDS": {},
         "TRANSFORMATION_MEMBERS": {},
         "POKEMON_DESCRIPTION_COUNT": None,
         "ALLOW_DUPLICATE_EGG_MOVES": False,
@@ -554,6 +555,27 @@ class EngineContractTests(unittest.TestCase):
 
         self.assertEqual(dataset["record_count"], 2)
         self.assertEqual(dataset["records"][0]["name"], "Sturdy Shell")
+
+    def test_ability_dataset_maps_rom_ability_ids_onto_pokedb(self) -> None:
+        _register_fake_engine(
+            _fake_engine_tables(ABILITY_REFERENCE_IDS={1: None, 2: 1})
+        )
+        dataset = build_ability_dataset(
+            {
+                "game": "test",
+                "engine": _FAKE_ENGINE_ID,
+                "dataset": "pokemon",
+                "source": {"archive": "fake.bin"},
+                "ability_names": ["-", "Unused", "Sturdy Shell"],
+                "records": [],
+            },
+            _fake_pokedb(),
+        )
+
+        self.assertEqual(
+            [(record["ability_id"], record["slug"]) for record in dataset["records"]],
+            [(2, "sturdy-shell")],
+        )
 
     def test_encounter_enrichment_uses_the_registered_engines_slot_chances(
         self,

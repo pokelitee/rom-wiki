@@ -7,6 +7,7 @@ from typing import Any, cast
 from romwiki.engines.concerns import EnrichmentTables
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.enrichment.common import (
+    ability_reference_id,
     named_id,
     national_dex_id_for_member,
     pokemon_display_name,
@@ -434,7 +435,7 @@ def _species_traits(
             if is_internal
             else [
                 {
-                    **_ability_id(value, lookups.pokedb, lookups.ability_names),
+                    **_ability_id(value, lookups),
                     "is_hidden": index == 2,
                 }
                 for index, value in enumerate(source["ability_ids"])
@@ -842,16 +843,16 @@ def _enrich_egg_moves(
     return moves
 
 
-def _ability_id(
-    ability_id: int,
-    pokedb: PokeDBGeneration,
-    ability_names: list[str] | None,
-) -> EntityLink:
+def _ability_id(ability_id: int, lookups: _RecordLookups) -> EntityLink:
     if ability_id == 0:
         return {"id": 0, "slug": None, "name": None}
-    slug = pokedb.ability_name(ability_id)
+    reference_id = ability_reference_id(lookups.engine, ability_id)
+    if reference_id is None:
+        raise DataSourceError(f"Ability ID {ability_id} has no PokéDB entry")
+    slug = lookups.pokedb.ability_name(reference_id)
     if slug is None:
         raise DataSourceError(f"Unknown ability ID: {ability_id}")
+    ability_names = lookups.ability_names
     if ability_names is not None:
         if ability_id >= len(ability_names):
             raise DataSourceError(f"Unknown ability ID: {ability_id}")

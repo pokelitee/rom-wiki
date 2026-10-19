@@ -260,6 +260,7 @@ class ReferenceNameConcern(MessageArchiveReader, Protocol):
 
 class EnrichmentTables(Protocol):
     ABILITY_NAME_COUNT: int
+    ABILITY_REFERENCE_IDS: Mapping[int, int | None]
     ALLOW_DUPLICATE_EGG_MOVES: bool
     BASE_SPECIES_COUNT: int
     COLOR_NAMES: tuple[str, ...]

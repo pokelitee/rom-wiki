@@ -23,6 +23,7 @@ from romwiki.schema.versions import POKEMON_PERSONAL_RAW_SCHEMA_VERSION
 from romwiki.util.errors import ProfileError
 
 _PLATFORM_ID = "fake-personal-platform"
+_FLAT_PLATFORM_ID = "fake-flat-personal-platform"
 _ENGINE_ID = "fake_personal_engine"
 
 
@@ -54,6 +55,25 @@ def _register_fake_platform(archive: _FakeArchive) -> None:
             archive_cls=archive_cls,
         ),
     )
+
+
+def _register_fake_flat_platform(rom: bytes) -> None:
+    register_platform(
+        _FLAT_PLATFORM_ID,
+        PlatformAdapter(
+            inspect=lambda path: None,
+            filesystem_from_image=lambda image: None,
+            matches_header=lambda image, codes, versions: True,
+            read_bytes=lambda image, offset, size: rom[offset : offset + size],
+        ),
+    )
+
+
+def _decode_ascii_table(data: bytes, *, stride: int, count: int) -> list[str]:
+    return [
+        data[index * stride : (index + 1) * stride].split(b"\xff")[0].decode()
+        for index in range(count)
+    ]
 
 
 def _register_fake_engine(personal: SimpleNamespace) -> None:
@@ -111,6 +131,7 @@ def _parse_record(data: bytes, *, species_id: int, archive_path: str, **kwargs: 
 class ExtractPersonalDatasetTests(unittest.TestCase):
     def tearDown(self) -> None:
         unregister_platform(_PLATFORM_ID)
+        unregister_platform(_FLAT_PLATFORM_ID)
         unregister_engine(_ENGINE_ID)
 
     def test_raises_without_a_matched_profile(self) -> None:
@@ -211,6 +232,67 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
             dataset = extract_personal_dataset(_result(profile))
 
         self.assertEqual(dataset["records"], [{"species_id": 0}])
+
+    def test_reads_one_flat_species_name_per_record(self) -> None:
+        # Two one-byte records at 0x00, species names (stride 2) at 0x10 and
+        # ability names (stride 3) at 0x20.
+        rom = bytearray(0x30)
+        rom[0x10:0x14] = b"ABZ\xff"
+        rom[0x20:0x26] = b"XY\xffQR\xff"
+        profile = _profile(
+            platform=_FLAT_PLATFORM_ID,
+            layout={},
+            parameters={
+                "personal_offset": 0x00,
+                "personal_count": 2,
+                "pokemon_name_offset": 0x10,
+                "pokemon_name_stride": 2,
+                "ability_name_offset": 0x20,
+                "ability_name_stride": 3,
+            },
+        )
+        _register_fake_flat_platform(bytes(rom))
+        _register_fake_engine(
+            SimpleNamespace(
+                parse_personal_record=_parse_record,
+                PERSONAL_RECORD_SIZE=1,
+                ABILITY_NAME_COUNT=2,
+                decode_gen3_text_table=_decode_ascii_table,
+            )
+        )
+
+        dataset = extract_personal_dataset(_result(profile))
+
+        self.assertEqual(dataset["record_count"], 2)
+        self.assertEqual(dataset["pokemon_names"], ["AB", "Z"])
+        self.assertEqual(dataset["ability_names"], ["XY", "QR"])
+        self.assertEqual(
+            dataset["name_sources"],
+            {
+                "ability_names": {"archive": "offset:0x20", "member": 0},
+                "pokemon_names": {"archive": "offset:0x10", "member": 0},
+            },
+        )
+
+    def test_flat_profiles_without_name_offsets_get_no_names(self) -> None:
+        profile = _profile(
+            platform=_FLAT_PLATFORM_ID,
+            layout={},
+            parameters={"personal_offset": 0, "personal_count": 1},
+        )
+        _register_fake_flat_platform(bytes(4))
+        _register_fake_engine(
+            SimpleNamespace(
+                parse_personal_record=_parse_record,
+                PERSONAL_RECORD_SIZE=1,
+                ABILITY_NAME_COUNT=2,
+            )
+        )
+
+        dataset = extract_personal_dataset(_result(profile))
+
+        self.assertNotIn("pokemon_names", dataset)
+        self.assertNotIn("name_sources", dataset)
 
 
 if __name__ == "__main__":

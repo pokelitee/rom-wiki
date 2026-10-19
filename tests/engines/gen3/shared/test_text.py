@@ -53,6 +53,17 @@ class DecodeGen3TextTests(unittest.TestCase):
         data = bytes([0xC7, 0xCE, 0xAD, 0x00, 0xC7, 0xC9, 0xC9, 0xC8, 0xFF])
         self.assertEqual(decode_gen3_text(data), "MT. MOON")
 
+    def test_decodes_species_name_punctuation(self) -> None:
+        cases = {
+            bytes([0xC0, 0xBB, 0xCC, 0xB4, 0xBE, 0xFF]): "FAR'D",
+            bytes([0xC2, 0xC9, 0xAE, 0xC9, 0xC2, 0xFF]): "HO-OH",
+            bytes([0xC8, 0xC3, 0xBE, 0xC9, 0xB6, 0xB5, 0xFF]): "NIDO\u2640\u2642",
+            bytes([0xAB, 0xAC, 0xFF]): "!?",
+        }
+        for data, expected in cases.items():
+            with self.subTest(expected=expected):
+                self.assertEqual(decode_gen3_text(data), expected)
+
 
 class DecodeGen3TextTableTests(unittest.TestCase):
     def test_decodes_a_fixed_width_table(self) -> None:
