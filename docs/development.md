@@ -23,7 +23,15 @@ npm --prefix web test
 npm --prefix web run build
 ```
 
-CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
+CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images.
+
+With local ROMs registered and `pokedb_root` set in `.local/games.toml`, also build every registered profile from its real ROM. This takes several minutes, so it only runs when enabled:
+
+```sh
+ROMWIKI_ROM_TESTS=1 python -m pytest tests/pipeline/build/test_engine_capability_contract.py
+```
+
+It requires every published game's data to pass the content checks in `pipeline/build/checks.py`. Generation and `site export-web` apply the same checks and refuse to write or publish data that fails them. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
 
 The installed CLI is distributed as a Python package; profiles, site configuration, authored content, and snapshots belong to the repository checkout. Wiki generation must run with those repository resources available. A wheel alone is not a bundled copy of the published wiki corpus.
 
