@@ -51,6 +51,9 @@ tm_count = 50
 egg_move_offset = 0x32add8
 egg_move_table_size = 2278
 
+tutor_move_offset = 0x61500c
+tutor_compatibility_offset = 0x615048
+
 # `gWildMonHeaders` -- see `engines/gen3/emerald/constants.py`'s
 # `ENCOUNTER_HEADER_COUNT` comment for the real-ROM cross-checks.
 encounter_offset = 0x552d48

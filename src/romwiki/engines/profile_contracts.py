@@ -201,6 +201,8 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "tm_count",
             "egg_move_offset",
             "egg_move_table_size",
+            "tutor_move_offset",
+            "tutor_compatibility_offset",
             "encounter_offset",
             "encounter_count",
             "region_name_offset",

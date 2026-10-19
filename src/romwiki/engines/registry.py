@@ -254,7 +254,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             location_extraction="gba-map-groups",
             pickup="none",
             trainers="pointer-party",
-            tutors="none",
+            tutors="flat-offset-table",
             fossils="none",
             static_encounters="none",
             egg_moves="flat-offset-table",
@@ -520,7 +520,13 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
     },
     ("tutors", "overlay-table"): {"tutors": ("parse_tutor_move_table",)},
     ("tutors", "personal-archive"): {"tutors": ("parse_tutor_move_table",)},
-    ("tutors", "flat-offset-table"): {"tutors": ("parse_tutor_move_table",)},
+    ("tutors", "flat-offset-table"): {
+        "tutors": (
+            "TUTOR_COMPATIBILITY_SIZE",
+            "parse_tutor_compatibility",
+            "parse_tutor_move_table",
+        )
+    },
     ("fossils", "script-pattern"): {"items": ("find_fossil_revival_script",)},
     ("static_encounters", "script-commands"): {
         "static_encounters": ("discover_static_encounters",)

@@ -495,15 +495,16 @@ def _decode_flat_tutor_compatibility(
     compatibility_offset: int,
     personal_count: int,
 ) -> list[Any]:
+    size = engine.TUTOR_COMPATIBILITY_SIZE
     compatibility_data = platform.read_bytes(
-        image, compatibility_offset, personal_count * 2
+        image, compatibility_offset, personal_count * size
     )
     return [
         record
         for species_id in range(personal_count)
         if (
             record := engine.parse_tutor_compatibility(
-                compatibility_data[species_id * 2 : species_id * 2 + 2],
+                compatibility_data[species_id * size : (species_id + 1) * size],
                 species_id=species_id,
                 table_index=species_id,
             )

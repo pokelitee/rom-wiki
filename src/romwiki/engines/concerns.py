@@ -230,6 +230,7 @@ class TutorConcern(Protocol):
     PERSONAL_RECORD_COUNT: int
     TUTOR_COMPATIBILITY_OFFSET: int
     TUTOR_COMPATIBILITY_RECORD_SIZE: int
+    TUTOR_COMPATIBILITY_SIZE: int
     TUTOR_COUNT: int
     TUTOR_LOCATIONS: Mapping[int, str]
     TUTOR_LOCATION_NAMES: tuple[str, ...]
