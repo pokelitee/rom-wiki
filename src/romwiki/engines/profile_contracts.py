@@ -109,6 +109,10 @@ class EngineProfileContract:
             )
 
 
+# Optional so that a build no variant contract was verified against still
+# publishes its trainers, without battle families.
+_TRAINER_VARIANT_PARAMETERS = frozenset({"trainer_variant_contract"})
+
 GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
     # Generation III (Game Boy Advance) has no filesystem/archive concept --
     # data is addressed by fixed ROM offsets under `[parameters]`, not
@@ -224,7 +228,6 @@ _GEN5_PARAMETERS = frozenset(
         "pokemon_descriptions_member",
         "trainer_classes_member",
         "trainer_names_member",
-        "trainer_variant_contract",
     }
 )
 
@@ -237,6 +240,7 @@ GEN5_BW_PROFILE_CONTRACT = EngineProfileContract(
         "starter_species_offset",
         "starter_species_overlay_id",
     },
+    optional_parameters=_TRAINER_VARIANT_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -266,7 +270,8 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
             "pickup_table_locator",
             "repair_invalid_secondary_egg_group",
         }
-    ),
+    )
+    | _TRAINER_VARIANT_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -343,7 +348,6 @@ GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
             "trainer_rematch_count",
             "trainer_rematch_offset",
             "trainer_rematch_overlay_id",
-            "trainer_variant_contract",
             "tutor_compatibility_offset",
             "tutor_count",
             "tutor_move_offset",
@@ -351,6 +355,7 @@ GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
             "type_names_member",
         }
     ),
+    optional_parameters=_TRAINER_VARIANT_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -396,7 +401,6 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "trainer_class_gender_offset",
             "trainer_classes_member",
             "trainer_names_member",
-            "trainer_variant_contract",
             "tutor_move_offset",
             "tutor_overlay_id",
         }
@@ -415,6 +419,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "scripts_allow_trailing_data",
             "trainer_archives_allow_truncated",
         }
-    ),
+    )
+    | _TRAINER_VARIANT_PARAMETERS,
     reject_unknown=True,
 )

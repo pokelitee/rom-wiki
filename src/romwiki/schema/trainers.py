@@ -91,7 +91,7 @@ _SUPPORT_STATUSES = {"verified", "partial", "unsupported", "unresolved"}
 
 
 def unresolved_trainer_variant_support() -> TrainerVariantSupport:
-    """Conservative fallback for synthetic/legacy inputs without capabilities."""
+    """Conservative fallback for inputs whose variant mechanics are unverified."""
     return {
         "starter_choice": {"status": "unresolved"},
         "difficulty_mode": {"status": "unresolved"},
@@ -99,6 +99,19 @@ def unresolved_trainer_variant_support() -> TrainerVariantSupport:
         "story_stage": {"status": "unresolved"},
         "sibling_version": {"status": "unresolved"},
         "season": {"status": "unresolved"},
+    }
+
+
+def unverified_trainer_variants() -> dict[str, Any]:
+    """Trainer variants for a build no variant contract has been verified against.
+
+    Every mechanic is unresolved and no battle families are published, so a
+    new hack's trainers can be built from its profile alone without applying
+    selectors that were only verified against other builds.
+    """
+    return {
+        "trainer_variant_support": unresolved_trainer_variant_support(),
+        "battle_families": [],
     }
 
 

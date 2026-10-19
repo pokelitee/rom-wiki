@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
+from romwiki.schema.trainers import unverified_trainer_variants
 from romwiki.util.errors import ProfileError
 
 _CONTRACTS = {"bw-retail-v1", "blaze-black-volt-white-v3.1"}
@@ -134,6 +135,8 @@ def resolve_trainer_variants(
     selector_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract = parameters.get("trainer_variant_contract")
+    if contract is None:
+        return unverified_trainer_variants()
     if contract not in _CONTRACTS:
         raise ProfileError(
             f"Profile {profile_id!r} must select a verified BW trainer variant contract"

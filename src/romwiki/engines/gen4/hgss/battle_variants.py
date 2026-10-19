@@ -9,6 +9,7 @@ from romwiki.engines.gen4.shared.battle_variant_support import (
 from romwiki.engines.gen4.shared.battle_variant_support import (
     species_name as _species_name,
 )
+from romwiki.schema.trainers import unverified_trainer_variants
 from romwiki.util.errors import ProfileError
 
 _CONTRACTS = {
@@ -110,6 +111,8 @@ def resolve_trainer_variants(
     selector_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract = parameters.get("trainer_variant_contract")
+    if contract is None:
+        return unverified_trainer_variants()
     if contract not in _CONTRACTS:
         raise ProfileError(
             f"Profile {profile_id!r} must select a verified HGSS trainer variant contract"
