@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 
 from romwiki.cli.common import LOG, SubParsers, add_site_root_argument
@@ -32,6 +33,19 @@ def add_parser(subparsers: SubParsers) -> None:
     snapshot.add_argument(
         "--output", type=Path, default=Path(".romwiki/frontend-snapshot")
     )
+    snapshot.add_argument(
+        "--pin",
+        type=Path,
+        default=Path("sites/frontend-snapshot/manifest.json"),
+        help="committed manifest to pin the new snapshot in",
+    )
+    snapshot.add_argument(
+        "--no-pin",
+        dest="pin",
+        action="store_const",
+        const=None,
+        help="prepare a trial snapshot without pinning it",
+    )
     snapshot.set_defaults(handler=run_snapshot)
     restore = subparsers.add_parser(
         "restore-web", help="restore a checksum-pinned frontend snapshot"
@@ -49,6 +63,15 @@ def run_export(args: argparse.Namespace) -> None:
 def run_snapshot(args: argparse.Namespace) -> None:
     path = create_frontend_snapshot(args.source, args.output)
     LOG.info("Prepared frontend snapshot: %s", path)
+    if args.pin is None:
+        return
+    shutil.copyfile(path.parent / "manifest.json", args.pin)
+    LOG.info("Pinned the snapshot in %s", args.pin)
+    # Uploading publishes a release asset, so it stays a separate, explicit step.
+    LOG.info(
+        "Upload it before committing the manifest: gh release upload snapshots %s",
+        path.as_posix(),
+    )
 
 
 def run_restore(args: argparse.Namespace) -> None:

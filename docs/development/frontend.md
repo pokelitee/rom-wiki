@@ -29,7 +29,7 @@ python -m romwiki site snapshot-web
 python -m romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
-These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. They do not create releases, upload assets, or deploy. Snapshot creation includes only resources referenced by the current manifest, excluding stale files from earlier exports.
+These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. Snapshot creation includes only resources referenced by the current manifest, excluding stale files from earlier exports. `snapshot-web` also pins the new snapshot by writing its manifest to `sites/frontend-snapshot/manifest.json`; pass `--no-pin` for a trial snapshot. Neither command uploads assets or deploys.
 
 The reviewed publication is pinned by `sites/frontend-snapshot/manifest.json`. Its content-addressed archive is an asset of the existing `snapshots` release. For a clean checkout, download the archive named in that manifest (its `archive` field), then restore and check it:
 
@@ -41,7 +41,16 @@ python scripts/check_frontend_publication.py
 
 The restore verifies the archive and every resource checksum. The coverage check requires all published games, configured sections, reference guides, detail records, and applicable comparisons. CI runs this path and browser tests against the complete dataset in addition to the synthetic tests.
 
-To update publication data, generate and review a new snapshot, upload its uniquely named archive to the existing release without replacing assets, and update the committed manifest through a PR. Keep older archives for historical restoration.
+To update publication data after generating and reviewing it:
+
+```sh
+python -m romwiki site export-web --data-root build/data
+python -m romwiki site snapshot-web
+gh release upload snapshots .romwiki/frontend-snapshot/<archive>
+python scripts/check_frontend_publication.py
+```
+
+`snapshot-web` logs the exact upload command for its uniquely named archive. Upload it to the existing release without replacing assets, then commit the pinned manifest through a PR. Keep older archives for historical restoration.
 
 ### Deployment
 
