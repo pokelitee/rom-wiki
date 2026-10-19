@@ -321,12 +321,6 @@ EVOLUTION_PARAMETER_KINDS = {
     15: "beauty",
 }
 
-# `sTutorMoves[15]`: the base field-tutor move list, verified identical
-# (same 15 moves, same order) on both FireRed and Emerald. Emerald layers
-# additional Battle Frontier tutors on top of this base set -- a separate,
-# leaf-specific extension, not part of this shared fact.
-TUTOR_MOVE_COUNT = 15
-
 # `struct MapHeader`, 28 bytes -- verified identical on both games (the
 # same `gMapGroups[group][num]` accessor idiom, located via ROM
 # disassembly, exists at a unique location in both ROMs).

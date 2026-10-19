@@ -45,8 +45,10 @@ class Gen3EmeraldAdapterTests(unittest.TestCase):
             self.engine.trainers.parse_trainer_record, frlg.parse_trainer_record
         )
 
-    def test_declares_no_tutor_or_pickup_data(self) -> None:
-        self.assertEqual(self.engine.formats.tutors, "none")
+    def test_declares_flat_tutors_but_no_pickup_data(self) -> None:
+        self.assertEqual(self.engine.formats.tutors, "flat-offset-table")
+        self.assertEqual(self.engine.tutors.TUTOR_MOVE_COUNT, 30)
+        self.assertEqual(len(self.engine.tutors.TUTOR_LOCATIONS), 30)
         self.assertEqual(self.engine.formats.pickup, "none")
         self.assertEqual(self.engine.formats.static_encounters, "none")
 
@@ -77,6 +79,24 @@ class Gen3EmeraldAdapterTests(unittest.TestCase):
                 _party_member(level=5, species=261),
                 trainer_id=1,
                 archive_path="offset:0x310030",
+            )
+
+
+class Gen3EmeraldTutorTests(unittest.TestCase):
+    def test_reads_four_byte_masks_covering_all_thirty_tutors(self) -> None:
+        bits = (1 << 0) | (1 << 15) | (1 << 29)
+
+        record = emerald.parse_tutor_compatibility(
+            struct.pack("<I", bits), species_id=1, table_index=0
+        )
+
+        assert record is not None
+        self.assertEqual(record.tutor_ids, (1, 16, 30))
+
+    def test_rejects_a_two_byte_mask(self) -> None:
+        with self.assertRaises(InvalidRomError):
+            emerald.parse_tutor_compatibility(
+                struct.pack("<H", 1), species_id=1, table_index=0
             )
 
 

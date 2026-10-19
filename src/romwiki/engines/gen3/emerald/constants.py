@@ -33,6 +33,50 @@ TRAINER_RECORD_COUNT = 855
 # Classes 0 ("PKMN TRAINER") through 65; trainers use 0-65.
 TRAINER_CLASS_COUNT = 66
 
+# `gTutorMoves`: FireRed/LeafGreen's 15 tutor moves followed by 15 more, each
+# with a bit in a species' 4-byte `sTutorLearnsets` mask.
+TUTOR_MOVE_COUNT = 30
+TUTOR_COMPATIBILITY_SIZE = 4
+
+# Ten tutors are field NPCs whose scripts reach the tutor routine the way
+# FireRed/LeafGreen's do (see `gen3/frlg/constants.py`'s `TUTOR_LOCATIONS`):
+# each script starts 54 bytes before its `setvar VAR_0x8005, <index>`. The
+# other twenty are the Battle Frontier's: their moves are exactly the two
+# 10-move lists read by specials 474 and 475, which only a Battle Frontier
+# NPC's script calls.
+TUTOR_LOCATIONS = {
+    0: "Battle Frontier",  # Mega Punch
+    1: "Battle Frontier",  # Swords Dance
+    2: "Battle Frontier",  # Mega Kick
+    3: "Battle Frontier",  # Body Slam
+    4: "Sootopolis City",  # Double-Edge
+    5: "Battle Frontier",  # Counter
+    6: "Battle Frontier",  # Seismic Toss
+    7: "Lavaridge Town",  # Mimic
+    8: "Fallarbor Town",  # Metronome
+    9: "Battle Frontier",  # Softboiled
+    10: "Battle Frontier",  # Dream Eater
+    11: "Battle Frontier",  # Thunder Wave
+    12: "Pacifidlog Town",  # Explosion
+    13: "Battle Frontier",  # Rock Slide
+    14: "Lilycove City",  # Substitute
+    15: "Mossdeep City",  # DynamicPunch
+    16: "Mauville City",  # Rollout
+    17: "Battle Frontier",  # Psych Up
+    18: "Battle Frontier",  # Snore
+    19: "Battle Frontier",  # Icy Wind
+    20: "Battle Frontier",  # Endure
+    21: "Battle Frontier",  # Mud-Slap
+    22: "Battle Frontier",  # Ice Punch
+    23: "Slateport City",  # Swagger
+    24: "Fortree City",  # Sleep Talk
+    25: "Battle Frontier",  # Swift
+    26: "Battle Frontier",  # Defense Curl
+    27: "Battle Frontier",  # ThunderPunch
+    28: "Battle Frontier",  # Fire Punch
+    29: "Verdanturf Town",  # Fury Cutter
+}
+
 # `gWildMonHeaders`: verified against the real Emerald ROM -- struct shape
 # and slot counts are the shared Gen III fact (`gen3/shared/constants.py`'s
 # `ENCOUNTER_HEADER_SIZE`); this leaf's table offset/count are its own.

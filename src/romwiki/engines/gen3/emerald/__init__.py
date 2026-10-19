@@ -111,7 +111,11 @@ from .constants import (
     REGION_NAME_POINTER_OFFSET,
     TRAINER_CLASS_COUNT,
     TRAINER_RECORD_COUNT,
+    TUTOR_COMPATIBILITY_SIZE,
+    TUTOR_LOCATIONS,
+    TUTOR_MOVE_COUNT,
 )
+from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 
 # `pipeline/enrichment/pokemon.py` reads these off the flat engine namespace
 # without the `PERSONAL_` prefix, matching `engines/gen3/frlg/__init__.py`'s
@@ -121,6 +125,11 @@ FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 BASE_SPECIES_COUNT = LAST_SPECIES_ID
 
 __all__ = [
+    "TUTOR_COMPATIBILITY_SIZE",
+    "TUTOR_LOCATIONS",
+    "TUTOR_MOVE_COUNT",
+    "parse_tutor_compatibility",
+    "parse_tutor_move_table",
     "TRAINER_CLASS_COUNT",
     "TRAINER_CLASS_NAME_SIZE",
     "FIRST_REGION_MAP_SECTION",

@@ -84,9 +84,6 @@ from romwiki.engines.gen3.shared.constants import (
     TRAINER_RECORD_SIZE as TRAINER_RECORD_SIZE,
 )
 from romwiki.engines.gen3.shared.constants import (
-    TUTOR_MOVE_COUNT as TUTOR_MOVE_COUNT,
-)
-from romwiki.engines.gen3.shared.constants import (
     TYPE_NAME_COUNT as TYPE_NAME_COUNT,
 )
 from romwiki.engines.gen3.shared.constants import (
@@ -113,6 +110,11 @@ TRAINER_RECORD_COUNT = 743
 
 # Classes 0 ("PKMN TRAINER") through 106 ("PAINTER"); trainers use 0-106.
 TRAINER_CLASS_COUNT = 107
+
+# `gTutorMoves`: 15 tutor moves, each with a bit in a species' 2-byte
+# `sTutorLearnsets` mask.
+TUTOR_MOVE_COUNT = 15
+TUTOR_COMPATIBILITY_SIZE = 2
 
 # Generation III has no per-tutor location table -- only individual NPC
 # scripts. Each tutor script's `setvar VAR_0x8005, <index>; call
