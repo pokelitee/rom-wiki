@@ -153,6 +153,8 @@ class MainErrorHandlingTests(unittest.TestCase):
             [site["id"] for site in sites],
             [
                 "portal",
+                "firered-leafgreen",
+                "emerald",
                 "platinum",
                 "renegade-platinum",
                 "heart-gold-soul-silver",

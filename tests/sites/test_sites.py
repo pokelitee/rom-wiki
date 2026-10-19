@@ -72,6 +72,8 @@ class SiteCatalogTests(unittest.TestCase):
             catalog.get("black-2-white-2").theme,
             "black-2-white-2",
         )
+        self.assertEqual(catalog.get("firered-leafgreen").theme, "firered-leafgreen")
+        self.assertEqual(catalog.get("emerald").theme, "emerald")
         game = renegade_platinum.game
         self.assertIsNotNone(game)
         assert game is not None
