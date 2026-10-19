@@ -3,7 +3,7 @@ id = "firered-leafgreen"
 name = "Pokémon FireRed & LeafGreen"
 kind = "game"
 slug = "firered-leafgreen"
-published = false
+published = true
 order = 40
 description = "A data-driven reference for Pokémon FireRed and LeafGreen (USA)"
 
@@ -15,23 +15,7 @@ base_game = "firered-leafgreen"
 platform = "game-boy-advance"
 platform_name = "Game Boy Advance"
 creator = "Game Freak"
-# gen3_frlg is a vertical slice: Pokémon, moves, items, trainers, abilities,
-# encounters, and locations are implemented so far (see engines/registry.py's
-# GEN3_FRLG_ENGINE entry). Restricted to what the profiles actually support
-# -- "types" is an always-available, non-dataset-kind section, required for
-# every data-driven site.
-generated_sections = [
-    "pokemon",
-    "moves",
-    "items",
-    "trainers",
-    "abilities",
-    "encounters",
-    "locations",
-    "types",
-]
 
 [appearance]
-# Placeholder: reusing the neutral "platinum" theme (already shared by two
-# unrelated sites) until FireRed/LeafGreen gets its own designed palette.
-theme = "platinum"
+theme = "firered-leafgreen"
+mascot = "charizard"

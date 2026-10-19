@@ -10,14 +10,49 @@
 ## Publication model
 
 FireRed and LeafGreen are published as one paired retail reference. Both
-ROMs are parsed independently and merged by stable record identity.
+ROMs are parsed independently and merged by stable record identity; shared
+records appear once and version-specific records state which game provides
+them.
 
 ## Coverage and provenance
 
-This site derives Pokémon base data, moves, items, trainers, abilities, wild
-encounters, locations, and the type chart directly from the ROMs. Location
-coverage is a bounded first slice: the 124 Sevii Islands/postgame map
-headers verified against real ROM data, not Kanto's main-region map
-headers, which have not yet been located. PokéDB supplies reference
-identity, sprites, and Pokédex text; the wiki always distinguishes
-ROM-derived facts from reference content.
+The paired ROMs produce 386 public Pokémon, 76 abilities, 354 playable moves,
+374 items, 132 wild-encounter areas, 743 trainers, and 425 map locations.
+Pokémon pages include level-up learnsets, egg moves, evolutions, TM/HM
+compatibility, all 15 move tutors, and wild held items. The ROMs' 25 "?"
+placeholder species records remain in the normalized datasets for auditing
+but do not receive public pages.
+
+PokéDB supplies reference identity, sprites, and Pokédex text. The ROMs remain
+authoritative for mechanics, relationships, and version differences, and the
+wiki always distinguishes ROM-derived facts from reference content.
+
+## Engine notes
+
+FireRed and LeafGreen use the `gen3_frlg` leaf adapter, which shares its
+Generation III record formats with Emerald. GBA ROMs have no file system, so
+every table is read at a profile-declared offset and validated by size and
+value range rather than located by name.
+
+- **Species identity:** the personal table holds 412 records. Internal species
+  IDs follow the ROM's own internal-to-National-Dex table, and names come from
+  the ROM's species-name table. Records 252–276 are unused "?" placeholders
+  with identical stats and no abilities.
+- **Abilities:** ability 76 (Cacophony) is unused, so the ROM's ability IDs
+  from 77 onward are shifted down by one to match the reference numbering.
+- **Learnsets:** level-up moves come from a pointer table of per-species lists
+  of packed `level << 9 | move` entries terminated by `0xFFFF`. Deoxys has a
+  different learnset in each version, and Dugtrio's level-1 moves are stored
+  in a different order; both are kept as version variants.
+- **Locations:** every map is read through the ROM's map-group table, and
+  names come from the map-section name table, whose first entry is map
+  section 88.
+- **Move tutors:** the tutor move table and 2-byte per-species compatibility
+  masks cover 15 tutors, each located from the script that teaches its move.
+- **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Mt.
+  Moon"); descriptions keep their ROM text. Names that later games write with
+  an inner capital read as one word, e.g. "Thunderpunch".
+
+Trainers are published exactly as the ROMs store them. About 100 unused
+trainer slots share one placeholder party (a level-5 Ekans) and have no name,
+and the rival keeps the ROM's default name.

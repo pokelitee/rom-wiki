@@ -140,6 +140,8 @@ Use the current [PokéDB data contract](https://github.com/pokelitee/pokedb/blob
 
 | Site | Publication model |
 | --- | --- |
+| Pokémon FireRed & LeafGreen | Data-driven Generation III sibling-version family |
+| Pokémon Emerald | Data-driven Generation III retail reference |
 | Pokémon Platinum | Data-driven Generation IV baseline |
 | Pokémon Renegade Platinum | Data-driven comparison against Platinum |
 | Pokémon HeartGold & SoulSilver | Data-driven sibling-version family |
@@ -155,7 +157,9 @@ learnsets, evolutions, machines, encounters, trainers, locations, shops, gifts,
 trades, static encounters, and other engine-specific mechanics where exact
 extraction is supported. The HGSS engine covers Pokémon, abilities, moves,
 items, encounters, trainers, and map-header locations, with explicitly recorded
-gaps for trainer payouts and map associations. Each site's data-sources page
+gaps for trainer payouts and map associations. The Generation III engines
+cover Pokémon, abilities, moves, items, learnsets, machines, move tutors,
+encounters, trainers, and locations. Each site's data-sources page
 records its exact input versions, provenance, and known limitations.
 
 “Data-driven” means a site is generated from normalized ROM datasets; it does
