@@ -31,6 +31,7 @@ from romwiki.engines.common.script_control_flow import ScriptInstruction
 from romwiki.util.errors import InvalidRomError
 
 from .pointers import resolve_gba_pointer
+from .scripts import TRAINER_BATTLE
 
 SET_OR_COPY_VAR = 0x1A
 SET_VAR = 0x16
@@ -39,6 +40,9 @@ SPECIAL_VAR = 0x26
 COPY_VAR = 0x19
 COMPARE_VAR_TO_VALUE = 0x21
 GOTO_IF = 0x06
+CALL_IF = 0x07
+GOTO = 0x05
+CALL = 0x04
 ADD_ITEM = 0x44
 CALL_STD = 0x09
 STD_OBTAIN_ITEM = 0
@@ -58,6 +62,10 @@ _COST_VAR = 0x8008
 _EQUAL = 1
 # How far a menu's selector can sit before its `switch`.
 _MENU_SEARCH_LIMIT = 32
+# How far a branch target can sit before its battle, and how deep to follow
+# calls and jumps to reach it.
+_BATTLE_SEARCH_LIMIT = 60
+_BATTLE_SEARCH_DEPTH = 3
 _FIRST_VAR_ID = 0x4000
 _MAX_LEVEL = 100
 # Generous bound on a mart's product list.
@@ -288,3 +296,106 @@ def find_menu_costs(
                 costs[(selector.params[1], case.params[1])] = target.params[1]
             case = instructions.get(jump.next_offset)
     return costs
+
+
+def find_starter_branches(
+    instructions: Mapping[int, ScriptInstruction], *, starter_var: int
+) -> tuple[tuple[tuple[int, int], ...], ...]:
+    """Each starter-dependent battle as `((starter value, trainer), ...)`.
+
+    A rival's script compares `starter_var` with each value and jumps or
+    calls to a block that starts that party's `trainerbattle`. FireRed/
+    LeafGreen compare the variable directly (`call_if_eq`); Emerald
+    `switch`es on it, copying it into `VAR_0x8000` first. Each run of
+    consecutive comparisons is one battle.
+    """
+    previous = {
+        instruction.next_offset: instruction for instruction in instructions.values()
+    }
+    branches = []
+    consumed: set[int] = set()
+    for address in sorted(instructions):
+        compare = instructions[address]
+        if address in consumed or compare.opcode != COMPARE_VAR_TO_VALUE:
+            continue
+        variable = compare.params[0]
+        before = previous.get(address)
+        if not (
+            variable == starter_var
+            or (
+                variable == _SWITCH_VAR
+                and before is not None
+                and before.opcode == COPY_VAR
+                and before.params == (_SWITCH_VAR, starter_var)
+            )
+        ):
+            continue
+        choices = []
+        cursor: ScriptInstruction | None = compare
+        while (
+            cursor is not None
+            and cursor.opcode == COMPARE_VAR_TO_VALUE
+            and cursor.params[0] == variable
+        ):
+            consumed.add(cursor.offset)
+            branch = instructions.get(cursor.next_offset)
+            if branch is None or branch.opcode not in (GOTO_IF, CALL_IF):
+                break
+            if branch.params[0] == _EQUAL:
+                trainer = _first_battle(instructions, branch.params[1], 0)
+                if trainer is not None:
+                    choices.append((cursor.params[1], trainer))
+            cursor = instructions.get(branch.next_offset)
+        if choices:
+            branches.append(tuple(choices))
+    return tuple(branches)
+
+
+def find_starter_species(
+    instructions: Mapping[int, ScriptInstruction], *, starter_var: int
+) -> dict[int, int]:
+    """`starter value -> species` from FireRed/LeafGreen's starter scripts.
+
+    The confirming script copies the chosen ball's number into
+    `starter_var` and gives the species held in another variable; each
+    ball's script sets the number and then the species.
+    """
+    numbers = {
+        instruction.params[1]
+        for instruction in instructions.values()
+        if instruction.opcode == COPY_VAR and instruction.params[0] == starter_var
+    }
+    species_vars = {
+        instruction.params[0]
+        for instruction in instructions.values()
+        if instruction.opcode == GIVE_MON and instruction.params[0] >= _FIRST_VAR_ID
+    }
+    species: dict[int, int] = {}
+    for instruction in instructions.values():
+        if instruction.opcode != SET_VAR or instruction.params[0] not in numbers:
+            continue
+        following = instructions.get(instruction.next_offset)
+        if (
+            following is not None
+            and following.opcode == SET_VAR
+            and following.params[0] in species_vars
+        ):
+            species[instruction.params[1]] = following.params[1]
+    return species
+
+
+def _first_battle(
+    instructions: Mapping[int, ScriptInstruction], address: int, depth: int
+) -> int | None:
+    for _ in range(_BATTLE_SEARCH_LIMIT):
+        instruction = instructions.get(address)
+        if instruction is None:
+            return None
+        if instruction.opcode == TRAINER_BATTLE:
+            return int(instruction.params[1])
+        if instruction.opcode in (CALL, GOTO) and depth < _BATTLE_SEARCH_DEPTH:
+            found = _first_battle(instructions, instruction.params[0], depth + 1)
+            if found is not None or instruction.opcode == GOTO:
+                return found
+        address = instruction.next_offset
+    return None

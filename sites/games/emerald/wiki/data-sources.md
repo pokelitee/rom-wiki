@@ -55,7 +55,9 @@ value range rather than located by name.
   variable, such as a starter, is left out.
 - **Rematches:** the Match Call rematch table (78 rows of a first battle and
   four rematches) groups 73 trainers' rematch parties, Gym Leaders included.
-  Rival parties chosen by the starter aren't grouped yet.
+- **Rival battles:** each starter comparison in the rival's scripts was
+  followed to the party it selects, grouping May's and Brendan's five battles
+  each by the player's starter.
 - **Pickup:** 18 common items, 11 rare items, and nine rate thresholds that
   slide with the Pokémon's level, as in Generation IV.
 - **Prize money:** each trainer class's money value comes from the ROM's

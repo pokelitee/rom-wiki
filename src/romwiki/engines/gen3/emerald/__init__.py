@@ -130,6 +130,8 @@ from romwiki.engines.gen3.shared.script_facts import (
     find_marts,
     find_menu_costs,
     find_pokemon,
+    find_starter_branches,
+    find_starter_species,
     find_trades,
 )
 from romwiki.engines.gen3.shared.scripts import disassemble_script
@@ -168,6 +170,7 @@ from .constants import (
     REGION_NAME_POINTER_OFFSET,
     REMATCH_LABEL,
     REMATCH_TRAINERS_PER_ENTRY,
+    STARTER_VAR,
     TRADE_INFO_SPECIAL,
     TRAINER_CLASS_COUNT,
     TRAINER_RECORD_COUNT,
@@ -335,4 +338,7 @@ __all__ = [
     "PICKUP_RARE_ITEM_COUNT",
     "parse_pickup_chance_table",
     "parse_split_pickup_tables",
+    "STARTER_VAR",
+    "find_starter_branches",
+    "find_starter_species",
 ]

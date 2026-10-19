@@ -75,3 +75,36 @@ def test_parses_rows_padded_to_sixteen_bytes() -> None:
     rows = parse_rematch_table(data, count=2, trainers_per_entry=5)
 
     assert rows == ((37, 40, 41, 42, 43), (37, 40, 41, 42, 43))
+
+
+def test_starter_branches_become_one_family_per_battle() -> None:
+    records = [_trainer(trainer_id) for trainer_id in (426, 427, 428)]
+    branch = ((0, 428), (1, 427), (2, 426))
+    selectors = {
+        "starter_branches": [("Pallet Town", branch), ("Pallet Town", branch)],
+        "starter_species": {0: 1, 1: 7, 2: 4},
+        "species_names": [
+            "?",
+            "Bulbasaur",
+            "?",
+            "?",
+            "Charmander",
+            "?",
+            "?",
+            "Squirtle",
+        ],
+    }
+
+    result = resolve_trainer_variants(
+        "firered-us", _CONTRACT, records, selector_data=selectors
+    )
+
+    (family,) = result["battle_families"]
+    assert family["label"] == "Pallet Town rival battle"
+    assert [
+        (variant["trainer_id"], variant["conditions"][0]["value"])
+        for variant in family["variants"]
+    ] == [(428, "bulbasaur"), (427, "squirtle"), (426, "charmander")]
+    validate_trainer_battle_families(
+        result["battle_families"], result["trainer_variant_support"], [426, 427, 428]
+    )

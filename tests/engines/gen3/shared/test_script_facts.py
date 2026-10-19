@@ -9,6 +9,8 @@ from romwiki.engines.gen3.shared.script_facts import (
     find_marts,
     find_menu_costs,
     find_pokemon,
+    find_starter_branches,
+    find_starter_species,
     find_trades,
 )
 
@@ -139,3 +141,53 @@ def test_menu_costs_follow_each_case_to_its_cost() -> None:
     )
 
     assert find_menu_costs(menu, selector_var=0x400E) == {(1, 0): 16, (1, 1): 48}
+
+
+def _battle_at(address: int, trainer: int) -> dict[int, ScriptInstruction]:
+    return {
+        address: ScriptInstruction(
+            address, 0x5C, "trainerbattle", (3, trainer, 0, 0), address + 10
+        )
+    }
+
+
+def test_starter_branches_follow_direct_comparisons() -> None:
+    # FireRed/LeafGreen: `call_if_eq VAR_STARTER_MON, n, <battle>`.
+    script = _script(
+        (0x21, "compare", (0x4031, 0), 5),
+        (0x07, "call_if", (1, _GBA + 0x100), 6),
+        (0x21, "compare", (0x4031, 1), 5),
+        (0x07, "call_if", (1, _GBA + 0x200), 6),
+    )
+    script.update(_battle_at(_GBA + 0x100, 428))
+    script.update(_battle_at(_GBA + 0x200, 427))
+
+    assert find_starter_branches(script, starter_var=0x4031) == (((0, 428), (1, 427)),)
+
+
+def test_starter_branches_follow_a_switch_on_the_starter() -> None:
+    # Emerald: `switch VAR_STARTER_MON` copies it into VAR_0x8000 first; a
+    # switch on another variable is ignored.
+    script = _script(
+        (0x19, "copyvar", (0x8000, 0x4023), 5),
+        (0x21, "compare", (0x8000, 2), 5),
+        (0x06, "goto_if", (1, _GBA + 0x100), 6),
+        (0x19, "copyvar", (0x8000, 0x800D), 5),
+        (0x21, "compare", (0x8000, 0), 5),
+        (0x06, "goto_if", (1, _GBA + 0x200), 6),
+    )
+    script.update(_battle_at(_GBA + 0x100, 593))
+    script.update(_battle_at(_GBA + 0x200, 533))
+
+    assert find_starter_branches(script, starter_var=0x4023) == (((2, 593),),)
+
+
+def test_starter_species_come_from_each_balls_script() -> None:
+    script = _script(
+        (0x16, "setvar", (0x4001, 2), 5),
+        (0x16, "setvar", (0x4002, 4), 5),
+        (0x79, "givemon", (0x4002, 5, 0, 0, 0, 0), 15),
+        (0x19, "copyvar", (0x4031, 0x4001), 5),
+    )
+
+    assert find_starter_species(script, starter_var=0x4031) == {2: 4}

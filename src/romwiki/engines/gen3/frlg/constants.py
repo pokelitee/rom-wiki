@@ -185,3 +185,6 @@ REMATCH_LABEL = "Vs. Seeker"
 # `struct PokedexEntry`: 36 bytes (FireRed/LeafGreen also keep an unused second description pointer); the description pointer
 # sits at 0x10.
 POKEDEX_ENTRY_SIZE = 0x24
+
+# `VAR_STARTER_MON`, the chosen starter's index (pret `include/constants/vars.h`).
+STARTER_VAR = 0x4031

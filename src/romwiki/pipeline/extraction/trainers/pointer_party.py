@@ -10,6 +10,7 @@ from romwiki.engines.trainer_variants import (
     resolve_trainer_variants,
 )
 from romwiki.pipeline.extraction.identify import InspectionResult
+from romwiki.pipeline.extraction.locations.gba_map_events import map_scripts
 from romwiki.pipeline.extraction.map_headers import iter_gba_map_headers
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
@@ -105,7 +106,7 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
         profile.id,
         profile.parameters,
         records,
-        _rematch_selectors(profile, platform, result, engine),
+        _variant_selectors(profile, platform, result, engine),
     )
     envelope = dataset_envelope(
         schema_version=TRAINERS_RAW_SCHEMA_VERSION,
@@ -130,11 +131,71 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     return envelope
 
 
-def _rematch_selectors(
+def _variant_selectors(
     profile: Any, platform: Any, result: InspectionResult, engine: Any
 ) -> dict[str, Any] | None:
-    if "rematch_table_offset" not in profile.parameters:
+    """Rematch and starter selectors, read only under a verified contract."""
+    if "trainer_variant_contract" not in profile.parameters:
         return None
+    return {
+        **_rematch_selectors(profile, platform, result, engine),
+        **_starter_selectors(profile, platform, result, engine),
+    }
+
+
+def _starter_selectors(
+    profile: Any, platform: Any, result: InspectionResult, engine: Any
+) -> dict[str, Any]:
+    rom = platform.read_bytes(result.image, 0, result.image.size)
+
+    def read(start: int, size: int) -> bytes:
+        if start < 0 or start + size > len(rom):
+            raise InvalidRomError(
+                f"Read of {size} byte(s) at {start:#x} is past the ROM"
+            )
+        return bytes(rom[start : start + size])
+
+    branches: list[tuple[str, Any]] = []
+    scripts: dict[int, Any] = {}
+    for header in iter_gba_map_headers(engine, platform, result.image, profile):
+        instructions = map_scripts(engine, read, header)
+        scripts.update(instructions)
+        branches.extend(
+            (header.name, branch)
+            for branch in engine.find_starter_branches(
+                instructions, starter_var=engine.STARTER_VAR
+            )
+        )
+    if "starter_species_offset" in profile.parameters:
+        # Emerald picks its starter in code, from a three-species table.
+        species = dict(
+            enumerate(
+                struct.unpack_from(
+                    "<3H", rom, profile.int_parameter("starter_species_offset")
+                )
+            )
+        )
+    else:
+        species = engine.find_starter_species(scripts, starter_var=engine.STARTER_VAR)
+    stride = profile.int_parameter("pokemon_name_stride")
+    count = profile.int_parameter("personal_count")
+    names = engine.decode_gen3_name_table(
+        read(profile.int_parameter("pokemon_name_offset"), stride * count),
+        stride=stride,
+        count=count,
+    )
+    return {
+        "starter_branches": branches,
+        "starter_species": species,
+        "species_names": names,
+    }
+
+
+def _rematch_selectors(
+    profile: Any, platform: Any, result: InspectionResult, engine: Any
+) -> dict[str, Any]:
+    if "rematch_table_offset" not in profile.parameters:
+        return {}
     count = profile.int_parameter("rematch_table_count")
     rows = engine.parse_rematch_table(
         platform.read_bytes(
