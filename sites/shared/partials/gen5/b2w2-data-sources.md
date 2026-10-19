@@ -224,16 +224,15 @@ missing, only its duplicate placements at the other routes are unlisted.
 
 Display names come from the ROM's message archive at `a/0/0/2`: Pokémon,
 abilities, moves, items, trainers, trainer classes, locations, and NPC-trade
-names each use the profile's verified member index. PokéDB contributes stable
-slugs, links, descriptions, and available sprites without replacing decoded
-ROM names or mechanics.
+names each use the profile's verified member index, as do the Pokédex and the
+ability, move, and item descriptions (members 442, 375, 402, and 63). PokéDB
+contributes stable slugs, links, structured effect text, and available sprites
+without replacing decoded ROM text or mechanics.
 
 ## Known coverage limitations
 
-The ROM's Pokédex and move, ability, and item description banks are not yet
-decoded, so those prose fields use version-matched PokéDB reference text while
-structured mechanics remain ROM-derived. Outcomes controlled by save data or
-runtime randomness are not presented as fixed ROM facts.
+Outcomes controlled by save data or runtime randomness are not presented as
+fixed ROM facts.
 
 Hidden Grottos and daily swarms remain separate normalized sources from ordinary
 seasonal area tables even though their tables are presented on their verified
