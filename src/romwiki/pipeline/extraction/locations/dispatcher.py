@@ -13,8 +13,8 @@ from romwiki.pipeline.extraction.locations.arm9_encounter_map import (
 from romwiki.pipeline.extraction.locations.arm9_event_map import (
     extract_arm9_event_map_location_dataset,
 )
-from romwiki.pipeline.extraction.locations.flat_header_segments import (
-    extract_flat_header_segments_location_dataset,
+from romwiki.pipeline.extraction.locations.gba_map_groups import (
+    extract_gba_map_groups_location_dataset,
 )
 from romwiki.util.errors import DataSourceError, ProfileError
 
@@ -53,8 +53,8 @@ def extract_location_dataset(
             mart_dataset,
             trade_dataset,
         )
-    if extraction_format == "flat-header-segments":
-        return extract_flat_header_segments_location_dataset(result)
+    if extraction_format == "gba-map-groups":
+        return extract_gba_map_groups_location_dataset(result)
     raise DataSourceError(
         f"Unsupported location extraction format: {extraction_format!r}"
     )

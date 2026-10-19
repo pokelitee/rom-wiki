@@ -19,18 +19,20 @@ def _move_table() -> bytes:
     return struct.pack("<15H", *ids)
 
 
-_LOCATION_IDS = {0: 15, 2: 15, 5: 30, 14: 7}
+# Each table index mapped to a distinct synthetic header ID.
+_LOCATION_IDS = {table_index: 100 + table_index for table_index in range(15)}
 
 
 class ParseTutorMoveTableTests(unittest.TestCase):
-    def test_decodes_only_the_four_located_tutors(self) -> None:
+    def test_decodes_every_located_tutor_in_table_order(self) -> None:
         records = parse_tutor_move_table(_move_table(), location_ids=_LOCATION_IDS)
 
-        self.assertEqual(len(records), 4)
+        self.assertEqual(len(records), 15)
         self.assertEqual(
-            [(r.tutor_id, r.move_id, r.location_id) for r in records],
-            [(1, 5, 15), (2, 25, 15), (3, 68, 30), (4, 164, 7)],
+            [(r.tutor_id, r.move_id, r.location_id) for r in records[:3]],
+            [(1, 5, 100), (2, 14, 101), (3, 25, 102)],
         )
+        self.assertEqual((records[-1].tutor_id, records[-1].move_id), (15, 164))
         self.assertEqual(records[0].shard_costs.red, 0)
         self.assertEqual(records[0].table_index, 0)
 
@@ -40,10 +42,9 @@ class ParseTutorMoveTableTests(unittest.TestCase):
 
 
 class ParseTutorCompatibilityTests(unittest.TestCase):
-    def test_keeps_only_the_four_exposed_tutor_bits(self) -> None:
+    def test_numbers_each_compatible_tutor_from_its_table_index(self) -> None:
         # Real Bulbasaur mask: Swords Dance/Body Slam/Double-Edge/Mimic/
-        # Substitute -- only Substitute (table index 14) is one of the 4
-        # exposed tutors.
+        # Substitute.
         bits = (1 << 1) | (1 << 3) | (1 << 4) | (1 << 7) | (1 << 14)
         data = struct.pack("<H", bits)
 
@@ -51,11 +52,10 @@ class ParseTutorCompatibilityTests(unittest.TestCase):
 
         assert record is not None
         self.assertEqual(record.personal_member, 1)
-        self.assertEqual(record.tutor_ids, (4,))
+        self.assertEqual(record.tutor_ids, (2, 4, 5, 8, 15))
 
-    def test_returns_none_when_no_exposed_tutor_matches(self) -> None:
-        bits = 1 << 1  # Swords Dance only, not one of the 4 exposed tutors
-        data = struct.pack("<H", bits)
+    def test_returns_none_without_a_compatible_tutor(self) -> None:
+        data = struct.pack("<H", 0)
 
         self.assertIsNone(parse_tutor_compatibility(data, species_id=1, table_index=0))
 

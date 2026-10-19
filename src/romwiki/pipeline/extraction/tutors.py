@@ -7,10 +7,9 @@ from romwiki.engines.concerns import TutorConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
-    iter_segment_map_headers,
+    iter_gba_map_headers,
     parse_map_header_table,
     read_code_binary,
-    read_region_names,
 )
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
@@ -417,30 +416,21 @@ def _special_tutor_eligibility_value(
 
 def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
     # Generation III's move tutors are individual overworld NPC scripts,
-    # not a location-annotated data table -- only the 4 tutors with a
-    # real, ROM-verified NPC location are exposed at all (see
-    # `engines/gen3/frlg/constants.py`'s `TUTOR_LOCATIONS` comment).
-    # `location_names` reuses the same Sevii Islands/postgame
-    # `map_header_segments` decode `locations.py`'s own extraction and
-    # `encounters.py`/`trainers/pointer_party.py`'s location backfills
-    # already do. `TUTOR_LOCATIONS` names a target *region*, not a
-    # `header_id` -- resolved against this specific ROM's own decoded
-    # `location_names` below, since `header_id` numbering isn't guaranteed
-    # stable across profiles (see that constant's comment).
+    # not a location-annotated data table (see `engines/gen3/frlg/
+    # constants.py`'s `TUTOR_LOCATIONS` comment). `location_names` lists
+    # every map, read through `gMapGroups` like the `locations` domain and
+    # the other location backfills. `TUTOR_LOCATIONS` names a target
+    # *region*, not a `header_id`, resolved against this ROM's own maps.
     assert result.match is not None
     profile = result.match.profile
     try:
         move_offset = profile.parameters["tutor_move_offset"]
         compatibility_offset = profile.parameters["tutor_compatibility_offset"]
         personal_count = profile.parameters["personal_count"]
-        segments = profile.parameters["map_header_segments"]
-        region_name_offset = profile.parameters["region_name_offset"]
-        region_name_count = profile.parameters["region_name_count"]
     except KeyError as error:
         raise ProfileError(
             f"Profile {profile.id} does not define tutor_move_offset/"
-            "tutor_compatibility_offset/map_header_segments/region_name_offset/"
-            "region_name_count"
+            "tutor_compatibility_offset/personal_count"
         ) from error
 
     platform = get_platform(profile.platform)
@@ -448,18 +438,9 @@ def _extract_flat_offset_tutors(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
     engine = get_engine(profile.engine).tutors
 
-    region_names = read_region_names(
-        engine,
-        platform,
-        result.image,
-        offset=region_name_offset,
-        count=region_name_count,
-    )
     location_names = [
         header.name
-        for header in iter_segment_map_headers(
-            engine, platform, result.image, segments, region_names
-        )
+        for header in iter_gba_map_headers(engine, platform, result.image, profile)
     ]
     location_ids = _resolve_tutor_location_ids(engine, location_names)
     move_data = platform.read_bytes(

@@ -6,16 +6,17 @@ from __future__ import annotations
 # `constants.py` against these ranges reproduces every checked move name
 # (Pound, Karate Chop, Scratch, Horn Drill, Tackle, Body Slam, Growl,
 # Substitute, Struggle, Sketch, Psycho Boost) and the item table's "MASTER
-# BALL"/"ULTRA BALL" entries exactly. `_PERIOD` was verified against the
+# BALL"/"ULTRA BALL" entries exactly. The period was verified against the
 # real region-name table ("MT. MOON", "S.S. ANNE", "SILPH CO.", "CELADON
-# DEPT." all decode correctly with it). The other punctuation was verified
-# against the species-name table ("FARFETCH'D", "HO-OH", "NIDORAN♀"); add
-# further entries as they're needed and verified, rather than guessing the
-# full table upfront. The apostrophe decodes to ASCII to match the names
-# the Nintendo DS engines produce.
+# DEPT." all decode correctly with it), the other punctuation against the
+# species-name table ("FARFETCH'D", "HO-OH", "NIDORAN♀") and trainer names
+# ("TATE&LIZA"). Add further entries as they're needed and verified, rather
+# than guessing the full table upfront. The apostrophe decodes to ASCII to
+# match the names the Nintendo DS engines produce.
 _TERMINATOR = 0xFF
 _PUNCTUATION = {
     0x00: " ",
+    0x2D: "&",
     0xAB: "!",
     0xAC: "?",
     0xAD: ".",
@@ -47,26 +48,6 @@ def decode_gen3_text_table(data: bytes, *, stride: int, count: int) -> list[str]
         decode_gen3_text(data[index * stride : (index + 1) * stride])
         for index in range(count)
     ]
-
-
-def decode_gen3_text_sequence(data: bytes, *, offset: int, count: int) -> list[str]:
-    """Decode `count` variable-length, back-to-back, 0xFF-terminated
-    `decode_gen3_text`-encoded strings starting at `offset` within `data`.
-
-    Unlike `decode_gen3_text_table`'s fixed-width entries, this table has no
-    padding between entries -- each string is only as long as its own text
-    plus one terminator byte, so entries must be found by scanning for the
-    next terminator rather than by a fixed stride. Verified against the
-    real FireRed/LeafGreen and Emerald region-name (Town Map section)
-    tables -- see `gen3/shared/locations.py`'s module comment.
-    """
-    values = []
-    position = offset
-    for _ in range(count):
-        terminator = data.index(_TERMINATOR, position)
-        values.append(decode_gen3_text(data[position:terminator]))
-        position = terminator + 1
-    return values
 
 
 def decode_gen3_text(data: bytes) -> str:

@@ -10,10 +10,7 @@ from romwiki.engines.trainer_variants import (
     resolve_trainer_variants,
 )
 from romwiki.pipeline.extraction.identify import InspectionResult
-from romwiki.pipeline.extraction.map_headers import (
-    iter_segment_map_headers,
-    read_region_names,
-)
+from romwiki.pipeline.extraction.map_headers import iter_gba_map_headers
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.trainers import TrainerLocation
@@ -81,10 +78,8 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
         )
         parsed_records.append(record)
 
-    # Only trainers placed as overworld objects on the already-verified
-    # Sevii Islands/postgame `map_header_segments` span can be linked --
-    # Kanto's own trainers have no corresponding location record yet (same
-    # documented gap as `locations.py`/`encounters.py`'s backfill).
+    # Only trainers placed as overworld objects whose script starts the
+    # battle can be linked; rematches and scripted battles keep no location.
     locations_by_trainer = _extract_gen3_trainer_locations(platform, result, profile)
     records = [
         replace(
@@ -133,34 +128,16 @@ def _extract_gen3_trainer_locations(
     `engines/gen3/shared/overworld.py`'s module comment for how this was
     verified against real ROM data).
 
-    Independently re-decodes `map_header_segments`/`region_name_offset`/
-    `region_name_count` the same way `locations.py`'s own extraction and
-    `encounters.py`'s `_extract_gen3_encounter_locations` do, rather than
-    depending on either domain's own extraction output. Optional: a profile
-    without a `locations` domain yet (e.g. a fresh Generation III leaf that
-    hasn't verified its own map-header data) simply gets every trainer's
-    `locations` left at its schema default (`()`), matching the "no
-    location system decoded yet" deferral every other Gen III engine
-    already documents.
+    Reads every map through `gMapGroups`, like the `locations` domain,
+    rather than depending on its output. Optional: a profile without
+    `gmapgroups_offset` leaves every trainer's `locations` empty.
     """
     engine = get_engine(profile.engine).trainers
-    segments = profile.parameters.get("map_header_segments")
-    region_name_offset = profile.optional_int_parameter("region_name_offset")
-    region_name_count = profile.optional_int_parameter("region_name_count")
-    if segments is None or region_name_offset is None or region_name_count is None:
+    if "gmapgroups_offset" not in profile.parameters:
         return {}
 
-    region_names = read_region_names(
-        engine,
-        platform,
-        result.image,
-        offset=region_name_offset,
-        count=region_name_count,
-    )
     locations: dict[int, list[TrainerLocation]] = {}
-    for header in iter_segment_map_headers(
-        engine, platform, result.image, segments, region_names
-    ):
+    for header in iter_gba_map_headers(engine, platform, result.image, profile):
         events_pointer = struct.unpack_from("<I", header.data, 0x04)[0]
         if events_pointer != 0:
             _link_gen3_trainer_objects(
@@ -204,7 +181,9 @@ def _link_gen3_trainer_objects(
         local_id, kind, x, y, elevation, trainer_type, script_pointer = (
             engine.parse_object_event_template(raw, header_id=header_id, index=index)
         )
-        if kind != 0 or trainer_type == 0 or script_pointer == 0:
+        # Objects that never walk up to the player, such as Emerald's Gym
+        # Leaders, have trainer type 0 but still start a `trainerbattle`.
+        if kind != 0 or script_pointer == 0:
             continue
         script_offset = engine.resolve_gba_pointer(script_pointer)
         script_data = platform.read_bytes(result.image, script_offset, 4)

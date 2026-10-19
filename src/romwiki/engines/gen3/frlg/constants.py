@@ -112,28 +112,33 @@ ITEM_RECORD_COUNT = 375
 TRAINER_RECORD_COUNT = 743
 
 # Generation III has no per-tutor location table -- only individual NPC
-# scripts. Verified via ROM disassembly (each tutor script's `setvar
-# VAR_0x8005, <index>; call EventScript_ChooseMoveTutorMon` is a unique
-# signature occurring exactly 15 times in the ROM); cross-referencing those
-# 15 script addresses against every overworld object on the already-decoded
-# Sevii Islands/postgame segments found exactly 4 real matches (identical
-# on both games). The other 11 tutors are in Kanto, which this engine has
-# no map-header data for (see `locations.py`) -- excluded rather than
-# guessed.
+# scripts. Each tutor script's `setvar VAR_0x8005, <index>; call
+# EventScript_ChooseMoveTutorMon` is a unique signature occurring exactly 15
+# times in the ROM. Matching those scripts against every map's overworld
+# objects placed all 15 on both games: nine NPCs' scripts start 54 bytes
+# before the signature, five start with a `goto` into it, and Mimic's
+# Saffron City NPC reaches it from a longer script that checks for a Poké
+# Doll first.
 #
-# Maps each `sTutorMoves` index to its Town Map region name -- not a
-# `header_id`. `header_id` is a synthetic number the extraction layer
-# assigns from `map_header_segments`' list order, so it isn't guaranteed
-# stable across profiles (FireRed and LeafGreen only agree because both
-# happen to list their 3 segments in the same order). Region name is a
-# real ROM-native fact (`regionMapSectionId` on the `MapHeader` struct
-# itself), so the extraction layer resolves it to that profile's own
-# `header_id` at read time instead of trusting a baked-in number.
+# Maps each `sTutorMoves` index to its Town Map region name rather than a
+# synthetic `header_id`; the extraction layer resolves the name to the
+# first of that profile's maps with it.
 TUTOR_LOCATIONS = {
-    0: "SCUFIB CHAMBER",  # Mega Punch
-    2: "SCUFIB CHAMBER",  # Mega Kick
-    5: "ROCKET WAREHOUSE",  # Counter
-    14: "ALTERING CAVE",  # Substitute
+    0: "ROUTE 4",  # Mega Punch
+    1: "SEVEN ISLAND",  # Swords Dance
+    2: "ROUTE 4",  # Mega Kick
+    3: "FOUR ISLAND",  # Body Slam
+    4: "VICTORY ROAD",  # Double-Edge
+    5: "CELADON CITY",  # Counter
+    6: "PEWTER CITY",  # Seismic Toss
+    7: "SAFFRON CITY",  # Mimic
+    8: "CINNABAR ISLAND",  # Metronome
+    9: "CELADON CITY",  # Softboiled
+    10: "VIRIDIAN CITY",  # Dream Eater
+    11: "SILPH CO.",  # Thunder Wave
+    12: "MT. EMBER",  # Explosion
+    13: "ROCK TUNNEL",  # Rock Slide
+    14: "FUCHSIA CITY",  # Substitute
 }
 
 # One entry per map (mapGroup/mapNum, not a species-style index), so no
@@ -143,12 +148,18 @@ TUTOR_LOCATIONS = {
 # 124).
 ENCOUNTER_HEADER_COUNT = 132
 
-# `gMapGroups`'s own base: an array of pointers, one per map group, each to
-# that group's own array of pointers-to-`MapHeader`. Located via ROM
-# disassembly (the `gMapGroups[group][num]` accessor's literal pool value
-# at file offset 0x05524C). Exactly 43 groups on both FireRed and
-# LeafGreen (Emerald's own count differs -- 34 -- so this stays leaf-
-# specific). Used only to backfill wild-encounter `locations` within the
-# already-decoded Sevii Islands/postgame span -- Kanto maps aren't covered
-# (see `locations.py`).
+# `gMapGroups`: an array of pointers, one per map group, each to that
+# group's own array of pointers-to-`MapHeader`. Located via ROM disassembly
+# (the `gMapGroups[group][num]` accessor's literal pool value at file
+# offset 0x05524C). Exactly 43 groups (425 maps) on both FireRed and
+# LeafGreen; a hack that adds groups sets `map_group_count`.
 GMAPGROUPS_GROUP_COUNT = 43
+
+# `sMapNames`: one name pointer per Kanto/Sevii region map section. FireRed/
+# LeafGreen's sections start at 88 (`KANTO_MAPSEC_START`), after the Hoenn
+# sections they share numbering with, so section 88 (Pallet Town) is entry
+# 0. Verified against the maps' own sections: group 3's map 0 is section 88
+# and map 19 (Route 1) is section 101.
+REGION_NAME_ENTRY_SIZE = 4
+REGION_NAME_POINTER_OFFSET = 0
+FIRST_REGION_MAP_SECTION = 88

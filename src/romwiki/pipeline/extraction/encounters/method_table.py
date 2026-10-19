@@ -6,15 +6,12 @@ from typing import Any
 from romwiki.engines.concerns import EncounterConcern
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult
-from romwiki.pipeline.extraction.map_headers import (
-    iter_segment_map_headers,
-    read_region_names,
-)
+from romwiki.pipeline.extraction.map_headers import iter_gba_map_headers
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
 from romwiki.schema.encounters import EncounterLocation, EncounterMethod
 from romwiki.schema.versions import ENCOUNTERS_RAW_SCHEMA_VERSION
-from romwiki.util.errors import ProfileError
+from romwiki.util.errors import InvalidRomError, ProfileError
 
 
 def extract_method_table_encounter_dataset(result: InspectionResult) -> dict[str, Any]:
@@ -80,10 +77,6 @@ def extract_method_table_encounter_dataset(result: InspectionResult) -> dict[str
         )
         parsed_records.append(record)
 
-    # Only maps within the already-verified Sevii Islands/postgame
-    # `map_header_segments` span can be linked -- Kanto's own maps have no
-    # corresponding location record yet (see `locations.py`'s module
-    # comment), so those records keep `locations=()`.
     locations_by_map_index = _extract_gen3_encounter_locations(
         platform, result, profile, engine, parsed_records
     )
@@ -113,83 +106,31 @@ def _extract_gen3_encounter_locations(
     parsed_records: list[Any],
 ) -> dict[int, tuple[EncounterLocation, ...]]:
     """Link each Generation III wild-encounter map (`map_group`/`map_num`,
-    see `parse_header`) to the location record it corresponds to, when that
-    map falls within the already-verified `map_header_segments` span.
+    see `parse_header`) to the location record for that map.
 
-    Independently re-decodes both `map_header_segments` (the same way
-    `flat_header_segments.py` does for the `locations` domain) and
-    `gMapGroups` (the two-level pointer structure those segments are
-    actually reached through in-game, see `constants.py`'s
-    `GMAPGROUPS_GROUP_COUNT` comment) rather than depending on the
-    `locations` domain's own extraction output -- the same "each domain
-    independently re-decodes the shared table" pattern already used by the
-    NDS engines' `battle_mode.py`/`encounters.py` location backfills.
-
-    Optional: a profile whose engine doesn't implement the `locations`
-    domain yet (e.g. Emerald) simply gets every record's `locations=()`,
-    the same "optional enrichment input" precedent as
-    `_extract_seasonal_wild_map_names` above.
+    Optional: a profile without `gmapgroups_offset` keeps every record's
+    `locations=()`.
     """
-    location_params = (
-        "map_header_segments",
-        "region_name_offset",
-        "region_name_count",
-        "gmapgroups_offset",
-    )
-    if not all(name in profile.parameters for name in location_params):
+    if "gmapgroups_offset" not in profile.parameters:
         return {}
-    segments = profile.parameters["map_header_segments"]
-    region_name_offset = profile.int_parameter("region_name_offset")
-    region_name_count = profile.int_parameter("region_name_count")
-    gmapgroups_offset = profile.int_parameter("gmapgroups_offset")
-
-    region_names = read_region_names(
-        engine,
-        platform,
-        result.image,
-        offset=region_name_offset,
-        count=region_name_count,
-    )
-    header_by_address = {
-        engine.gba_pointer_for_offset(header.rom_offset): (
-            header.header_id,
-            header.name,
-        )
-        for header in iter_segment_map_headers(
-            engine, platform, result.image, segments, region_names
-        )
+    headers = {
+        (header.map_group, header.map_num): header
+        for header in iter_gba_map_headers(engine, platform, result.image, profile)
     }
-
-    group_pointer_data = platform.read_bytes(
-        result.image, gmapgroups_offset, engine.GMAPGROUPS_GROUP_COUNT * 4
-    )
-    group_pointers = engine.parse_gmapgroups_pointers(
-        group_pointer_data, group_count=engine.GMAPGROUPS_GROUP_COUNT
-    )
-    gmapgroups_address = engine.gba_pointer_for_offset(gmapgroups_offset)
-    subtable_start = engine.resolve_gba_pointer(group_pointers[0])
-    subtable_data = platform.read_bytes(
-        result.image, subtable_start, gmapgroups_address - group_pointers[0]
-    )
-    group_num_to_address = engine.parse_map_group_index(
-        group_pointers, subtable_data, gmapgroups_address=gmapgroups_address
-    )
-
     locations: dict[int, tuple[EncounterLocation, ...]] = {}
     for record in parsed_records:
-        address = group_num_to_address.get((record.map_group, record.map_num))
-        if address is None:
-            continue
-        header = header_by_address.get(address)
+        header = headers.get((record.map_group, record.map_num))
         if header is None:
-            continue
-        header_id, name = header
+            raise InvalidRomError(
+                f"Gen III wild encounter map {record.map_group}.{record.map_num} "
+                "is not a named map in gMapGroups"
+            )
         locations[record.area_id] = (
             EncounterLocation(
-                header_id=header_id,
+                header_id=header.header_id,
                 internal_name="",
                 location_name_id=0,
-                name=name,
+                name=header.name,
             ),
         )
     return locations

@@ -88,7 +88,6 @@ from romwiki.engines.gen3.shared.pointers import (
 )
 from romwiki.engines.gen3.shared.text import (
     decode_gen3_text,
-    decode_gen3_text_sequence,
     decode_gen3_text_table,
 )
 from romwiki.engines.gen3.shared.trainer_party import (
@@ -100,10 +99,14 @@ from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_rec
 from .constants import (
     ABILITY_NAME_COUNT,
     ENCOUNTER_HEADER_COUNT,
+    FIRST_REGION_MAP_SECTION,
+    GMAPGROUPS_GROUP_COUNT,
     ITEM_NAME_COUNT,
     ITEM_RECORD_COUNT,
     POKEMON_DESCRIPTION_COUNT,
     POKEMON_NAME_COUNT,
+    REGION_NAME_ENTRY_SIZE,
+    REGION_NAME_POINTER_OFFSET,
     TRAINER_RECORD_COUNT,
 )
 
@@ -115,6 +118,10 @@ FORM_MEMBERS = PERSONAL_FORM_MEMBERS
 BASE_SPECIES_COUNT = LAST_SPECIES_ID
 
 __all__ = [
+    "FIRST_REGION_MAP_SECTION",
+    "GMAPGROUPS_GROUP_COUNT",
+    "REGION_NAME_ENTRY_SIZE",
+    "REGION_NAME_POINTER_OFFSET",
     "ABILITY_REFERENCE_IDS",
     "ALLOW_DUPLICATE_EGG_MOVES",
     "ENCOUNTER_COSMETIC_FORM_LABELS",
@@ -171,7 +178,6 @@ __all__ = [
     "TYPE_NAME_COUNT",
     "TYPE_NAMES",
     "decode_gen3_text",
-    "decode_gen3_text_sequence",
     "decode_gen3_text_table",
     "decode_trainerbattle_id",
     "derive_trainer_party_attributes",

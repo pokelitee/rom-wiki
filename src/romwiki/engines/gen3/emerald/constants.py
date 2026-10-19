@@ -41,9 +41,16 @@ TRAINER_RECORD_COUNT = 855
 # LeafGreen. Real count differs from FireRed/LeafGreen's 132.
 ENCOUNTER_HEADER_COUNT = 124
 
-# Region-name (Town Map section) table and `map_header_segments`: real
-# ROM offsets, not per-game-count facts, so they live in the profile TOML
-# (`profiles/games/emerald-us.toml`) rather than here -- see that file's
-# comments for the real-ROM cross-checks (region names, decoded map
-# groups) that verified them, mirroring FireRed/LeafGreen's own TOML-level
-# documentation for the same parameters.
+# `gMapGroups`: 34 groups (518 maps), found as the pointer table whose
+# entries point at each group's map-header pointer array; every map's
+# region section resolves to a Town Map name (Route 101, Petalburg Woods,
+# Battle Frontier, ...). A hack that adds groups sets `map_group_count`.
+GMAPGROUPS_GROUP_COUNT = 34
+
+# `gRegionMapEntries`: one 8-byte entry per region map section, starting at
+# section 0, with the section's name pointer at +4 (`struct RegionMapLocation`).
+# Several sections share one string (each "UNDERWATER" section points at the
+# same name), so the names can't be read back-to-back.
+REGION_NAME_ENTRY_SIZE = 8
+REGION_NAME_POINTER_OFFSET = 4
+FIRST_REGION_MAP_SECTION = 0
