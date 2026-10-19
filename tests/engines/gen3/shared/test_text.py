@@ -64,6 +64,11 @@ class DecodeGen3TextTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertEqual(decode_gen3_text(data), expected)
 
+    def test_decodes_the_five_glyph_pokeblock_word(self) -> None:
+        # Emerald's "POKéBLOCK CASE".
+        data = bytes([0x55, 0x56, 0x57, 0x58, 0x59, 0x00, 0xBD, 0xBB, 0xCD, 0xBF])
+        self.assertEqual(gen3_display_name(decode_gen3_text(data)), "Pokéblock Case")
+
 
 class DecodeGen3NameTableTests(unittest.TestCase):
     def test_decodes_a_fixed_width_table_as_display_names(self) -> None:

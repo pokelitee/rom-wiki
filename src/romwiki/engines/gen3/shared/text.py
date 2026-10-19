@@ -25,6 +25,13 @@ _PUNCTUATION = {
     0x2D: "&",
     0x53: "PK",
     0x54: "MN",
+    # "POKéBLOCK" is one five-glyph word (pret's charmap `POKEBLOCK`), as in
+    # Emerald's "POKéBLOCK CASE".
+    0x55: "POKéBLOCK",
+    0x56: "",
+    0x57: "",
+    0x58: "",
+    0x59: "",
     0xAB: "!",
     0xAC: "?",
     0xAD: ".",
