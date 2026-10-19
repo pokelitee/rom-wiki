@@ -431,6 +431,7 @@ _DATASET_REQUIRED_MEMBERS: dict[str, dict[str, tuple[str, ...]]] = {
             "PERSONAL_RECORD_SIZE",
         ),
         "enrich": (
+            "ABILITY_REFERENCE_IDS",
             "ALLOW_DUPLICATE_EGG_MOVES",
             "INTERNAL_TO_NATIONAL_DEX",
             "POKEMON_DESCRIPTION_COUNT",

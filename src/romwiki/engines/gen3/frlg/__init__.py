@@ -1,6 +1,7 @@
 import romwiki.engines.gen3.shared.overworld as overworld
 from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
 from romwiki.engines.gen3.shared.constants import (
+    ABILITY_REFERENCE_IDS,
     ALLOW_DUPLICATE_EGG_MOVES,
     ENCOUNTER_COSMETIC_FORM_LABELS,
     ENCOUNTER_FISHING_SLOT_CHANCES,
@@ -14,6 +15,7 @@ from romwiki.engines.gen3.shared.constants import (
     ENCOUNTER_ROCK_SMASH_SLOT_COUNT,
     ENCOUNTER_WATER_SLOT_CHANCES,
     ENCOUNTER_WATER_SLOT_COUNT,
+    LAST_SPECIES_ID,
     TRANSFORMATION_MEMBERS,
 )
 from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
@@ -109,16 +111,10 @@ from .tutors import parse_tutor_compatibility, parse_tutor_move_table
 # own INTERNAL_MEMBERS/FORM_MEMBERS aliasing convention.
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
-# `pipeline/enrichment/common.py`'s `validate_egg_moves` reads this bound
-# off the flat engine namespace too (matching Gen IV/V's own
-# `BASE_SPECIES_COUNT` alias). Some raw ROM tables this bounds (e.g. egg
-# moves) legitimately reference species up to 386 even though the
-# `pokemon` domain only exposes public records through member 385 (see
-# `PERSONAL_RECORD_COUNT`'s own comment) -- `personal_member_reference`
-# handles that specific gap itself rather than this bound doing so.
-BASE_SPECIES_COUNT = PERSONAL_RECORD_COUNT
+BASE_SPECIES_COUNT = LAST_SPECIES_ID
 
 __all__ = [
+    "ABILITY_REFERENCE_IDS",
     "ALLOW_DUPLICATE_EGG_MOVES",
     "ENCOUNTER_COSMETIC_FORM_LABELS",
     "ENCOUNTER_FORM_SLUGS",

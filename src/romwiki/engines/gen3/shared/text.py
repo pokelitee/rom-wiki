@@ -8,12 +8,22 @@ from __future__ import annotations
 # Substitute, Struggle, Sketch, Psycho Boost) and the item table's "MASTER
 # BALL"/"ULTRA BALL" entries exactly. `_PERIOD` was verified against the
 # real region-name table ("MT. MOON", "S.S. ANNE", "SILPH CO.", "CELADON
-# DEPT." all decode correctly with it). Punctuation beyond space/digits/
-# period is not yet included -- add entries here as they're needed and
-# verified, rather than guessing the full table upfront.
+# DEPT." all decode correctly with it). The other punctuation was verified
+# against the species-name table ("FARFETCH'D", "HO-OH", "NIDORAN♀"); add
+# further entries as they're needed and verified, rather than guessing the
+# full table upfront. The apostrophe decodes to ASCII to match the names
+# the Nintendo DS engines produce.
 _TERMINATOR = 0xFF
-_SPACE = 0x00
-_PERIOD = 0xAD
+_PUNCTUATION = {
+    0x00: " ",
+    0xAB: "!",
+    0xAC: "?",
+    0xAD: ".",
+    0xAE: "-",
+    0xB4: "'",
+    0xB5: "♂",
+    0xB6: "♀",
+}
 _DIGIT_START = 0xA1
 _DIGIT_END = 0xAA
 _UPPER_START = 0xBB
@@ -64,10 +74,8 @@ def decode_gen3_text(data: bytes) -> str:
     for byte in data:
         if byte == _TERMINATOR:
             break
-        if byte == _SPACE:
-            characters.append(" ")
-        elif byte == _PERIOD:
-            characters.append(".")
+        if byte in _PUNCTUATION:
+            characters.append(_PUNCTUATION[byte])
         elif _DIGIT_START <= byte <= _DIGIT_END:
             characters.append(chr(ord("0") + byte - _DIGIT_START))
         elif _UPPER_START <= byte <= _UPPER_END:

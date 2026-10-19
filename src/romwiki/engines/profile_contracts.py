@@ -133,6 +133,8 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
         {
             "personal_offset",
             "personal_count",
+            "pokemon_name_offset",
+            "pokemon_name_stride",
             "move_offset",
             "move_count",
             "move_name_offset",
@@ -173,6 +175,8 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
         {
             "personal_offset",
             "personal_count",
+            "pokemon_name_offset",
+            "pokemon_name_stride",
             "ability_name_offset",
             "ability_name_stride",
             "ability_name_count",

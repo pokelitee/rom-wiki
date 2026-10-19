@@ -38,6 +38,14 @@ def national_dex_id_for_member(engine: EnrichmentTables | None, member: int) -> 
     return engine.INTERNAL_TO_NATIONAL_DEX.get(member, member)
 
 
+def ability_reference_id(engine: EnrichmentTables, ability_id: int) -> int | None:
+    """Translate a ROM ability ID into PokéDB's numbering.
+
+    Returns None for an ability PokéDB has no entry for.
+    """
+    return engine.ABILITY_REFERENCE_IDS.get(ability_id, ability_id)
+
+
 def pokemon_display_name(
     species_id: int, slug: str, pokemon_names: list[str] | None
 ) -> str:

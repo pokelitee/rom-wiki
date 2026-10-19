@@ -9,44 +9,19 @@ from __future__ import annotations
 # `gBaseStats`, 28 bytes, no inline TM/HM bitmap (see `machines.py`).
 PERSONAL_RECORD_SIZE = 28
 
-# Real table is 412 entries (dummy + species 1-411, all real, distinct
-# Pokemon -- see INTERNAL_TO_NATIONAL_DEX below) on both FireRed and
-# Emerald. Bounded to 386 for now: species 387-411 decode to real personal
-# data (verified: internal index 410 decodes to Deoxys's exact real stats,
-# 50/150/50/150/150/50), but exposing them needs Unown-letter-form
-# deduplication this pass doesn't implement (several of 387-411 map to the
-# same National Dex entry, #201 Unown, the same way FORM_MEMBERS already
-# handles other forms) -- not yet a guessed real fact, just an unimplemented
-# widening.
-PERSONAL_RECORD_COUNT = 386
+# `gBaseStats` holds a dummy record plus internal species 1-411. 252-276 are
+# unused placeholders between Celebi and Treecko (see
+# `PERSONAL_INTERNAL_MEMBERS`); every other index is a real Pokémon.
+PERSONAL_RECORD_COUNT = 412
+LAST_SPECIES_ID = 411
 
-# `sSpeciesToNationalPokedexNum[]` (public pokeemerald/pokefirered
-# decompilation `src/pokemon.c`): Generation III's internal `SPECIES_*`
-# ordering only matches National Dex order through species 251 (Kanto +
-# Johto) -- Hoenn-native species (277 onward) are stored in in-game
-# "regional dex discovery order," a completely different sequence, with
-# this table converting internal ID -> real National Dex ID for display.
-# Verified directly against real ROM data (not just the public source):
-# internal index 281 decodes to Combusken's exact real stats (60/85/60/85/
-# 60/55) on both the FireRed and Emerald ROMs, while National Dex #281 is
-# Kirlia -- confirming the two numbering schemes genuinely diverge before
-# the 387-411 range too. Identity entries (internal == national, true for
-# every Kanto/Johto species) are omitted; look up with
-# `.get(internal_id, internal_id)`.
-#
-# Internal indices 252-276 (Unown's 25 alternate letter forms, B-Z) are
-# deliberately excluded, not identity-mapped: `sSpeciesToNationalPokedexNum`
-# itself never assigns them a value in the public source (their would-be
-# entries reference `NATIONAL_DEX_OLD_UNOWN_*`, a legacy placeholder block
-# the real National Dex enum doesn't include -- confirmed by cross-checking
-# `include/constants/pokedex.h`, where `NATIONAL_DEX_COUNT` stops at Deoxys,
-# 386, before that block even starts). Unown's real National Dex identity
-# is #201 for every letter; resolving these 25 internal indices needs
-# `FORM_MEMBERS`-style handling (matching how every other engine's
-# alternate forms already work), not a simple id translation -- not yet
-# implemented, so `.get(internal_id, internal_id)`'s fallback leaves them
-# silently wrong for now rather than crashing, the same class of gap as
-# `PERSONAL_RECORD_COUNT` not yet exposing species 387-411.
+# `sSpeciesToNationalPokedexNum[]` (pokeemerald/pokefirered `src/pokemon.c`):
+# internal species numbering matches the National Dex only through Celebi
+# (251). Hoenn species (277-411) are stored in Hoenn Dex order, so this
+# converts them; e.g. internal 281 is Combusken while National Dex #281 is
+# Kirlia. Verified entry-for-entry against the ROM's own table on FireRed
+# (0x251FEE) and Emerald (0x31DC82). Identity entries are omitted; look up
+# with `.get(internal_id, internal_id)`.
 INTERNAL_TO_NATIONAL_DEX: dict[int, int] = {
     277: 252,
     278: 253,
@@ -184,6 +159,11 @@ INTERNAL_TO_NATIONAL_DEX: dict[int, int] = {
     411: 358,
 }
 
+# `gAbilityNames` matches PokéDB's numbering through Shell Armor (75). Index
+# 76 is Cacophony, which no Pokémon has and PokéDB omits, and Air Lock
+# follows at 77, which PokéDB numbers 76. Verified on FireRed and Emerald.
+ABILITY_REFERENCE_IDS: dict[int, int | None] = {76: None, 77: 76}
+
 TYPE_NAME_COUNT = 18
 TYPE_NAMES = (
     "normal",
@@ -258,10 +238,17 @@ ITEM_POCKET_NAMES = (
     "berries",
 )
 
-# Species 387-411 are real Pokemon (see INTERNAL_TO_NATIONAL_DEX above),
-# not padding -- simply not yet exposed (PERSONAL_RECORD_COUNT is bounded
-# to 386). Index 0 is the only genuinely non-species record.
-PERSONAL_INTERNAL_MEMBERS: dict[int, str] = {0: "none"}
+# Index 0 and the 25 placeholder species 252-276 (`SPECIES_OLD_UNOWN_B`-`_Z`
+# in the decompilations). The ROM names each "?" and gives it the same
+# dummy stats (50/150/50/150/150/50, no abilities); they are never
+# obtainable, and the Dex table maps them past National Dex #386.
+PERSONAL_INTERNAL_MEMBERS: dict[int, str] = {
+    0: "none",
+    **{
+        252 + offset: f"old-unown-{letter}"
+        for offset, letter in enumerate("bcdefghijklmnopqrstuvwxyz")
+    },
+}
 PERSONAL_FORM_MEMBERS: dict[int, str] = {}
 
 COLOR_NAMES = (
@@ -296,9 +283,8 @@ TM_COUNT = 50
 FIRST_MACHINE_ITEM_ID = 289
 
 # `gEvolutionTable[species][5]`: 8-byte slots (method u16, param u16,
-# targetSpecies u16, 2 bytes padding). Index 0 is an all-zero dummy;
-# bounded to the same 386 species PERSONAL_RECORD_COUNT exposes. Verified
-# identical struct shape on both games.
+# targetSpecies u16, 2 bytes padding), one per personal record. Index 0 is
+# an all-zero dummy. Verified identical struct shape on both games.
 EVOLUTION_SLOT_SIZE = 8
 EVOLUTION_SLOT_COUNT = 5
 EVOLUTION_RECORD_SIZE = EVOLUTION_SLOT_SIZE * EVOLUTION_SLOT_COUNT
