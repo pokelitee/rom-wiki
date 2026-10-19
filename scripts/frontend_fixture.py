@@ -99,14 +99,25 @@ def main() -> None:
                         "slug": "ivysaur",
                         "name": "Ivysaur",
                         "public": True,
+                        "base_stats": {
+                            "hp": 60,
+                            "attack": 62,
+                            "defense": 63,
+                            "special_attack": 80,
+                            "special_defense": 80,
+                            "speed": 60,
+                        },
                         "types": [{"id": 12, "name": "grass"}],
                     },
                 ],
             },
         )
         for kind, record in (
-            ("abilities", {"id": 65, "slug": "overgrow", "name": "Overgrow"}),
-            ("moves", {"id": 33, "slug": "tackle", "name": "Tackle", "power": 35}),
+            ("abilities", {"ability_id": 65, "slug": "overgrow", "name": "Overgrow"}),
+            (
+                "moves",
+                {"move_id": 33, "slug": "tackle", "name": "Tackle", "power": 35},
+            ),
             (
                 "trainers",
                 {
