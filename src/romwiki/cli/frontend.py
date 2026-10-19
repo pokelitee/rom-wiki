@@ -12,6 +12,7 @@ from romwiki.sites.frontend_snapshot import (
     create_frontend_snapshot,
     restore_frontend_snapshot,
 )
+from romwiki.sites.snapshot_release import publish_snapshot
 
 
 def add_parser(subparsers: SubParsers) -> None:
@@ -27,7 +28,8 @@ def add_parser(subparsers: SubParsers) -> None:
     )
     parser.set_defaults(handler=run_export)
     snapshot = subparsers.add_parser(
-        "snapshot-web", help="prepare a complete ROM-free frontend snapshot locally"
+        "snapshot-web",
+        help="package, pin and upload a complete ROM-free frontend snapshot",
     )
     snapshot.add_argument("--source", type=Path, default=Path("web/public/data"))
     snapshot.add_argument(
@@ -44,7 +46,13 @@ def add_parser(subparsers: SubParsers) -> None:
         dest="pin",
         action="store_const",
         const=None,
-        help="prepare a trial snapshot without pinning it",
+        help="prepare a trial snapshot without pinning or uploading it",
+    )
+    snapshot.add_argument(
+        "--no-upload",
+        dest="upload",
+        action="store_false",
+        help="pin the snapshot without uploading it to the snapshots release",
     )
     snapshot.set_defaults(handler=run_snapshot)
     restore = subparsers.add_parser(
@@ -67,11 +75,12 @@ def run_snapshot(args: argparse.Namespace) -> None:
         return
     shutil.copyfile(path.parent / "manifest.json", args.pin)
     LOG.info("Pinned the snapshot in %s", args.pin)
-    # Uploading publishes a release asset, so it stays a separate, explicit step.
-    LOG.info(
-        "Upload it before committing the manifest: gh release upload snapshots %s",
-        path.as_posix(),
-    )
+    if not args.upload:
+        return
+    removed = publish_snapshot(path)
+    LOG.info("Published %s to the snapshots release", path.name)
+    if removed:
+        LOG.info("Deleted superseded snapshots: %s", ", ".join(removed))
 
 
 def run_restore(args: argparse.Namespace) -> None:
