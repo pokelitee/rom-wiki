@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
+from romwiki.cli import main
 from romwiki.sites.data_exports import write_public_dataset
 from romwiki.sites.frontend import (
     DETAIL_CHUNK_SIZE,
@@ -311,6 +312,29 @@ def test_frontend_snapshot_round_trip_and_corruption_rejection() -> None:
         with pytest.raises(SiteError, match="checksum mismatch"):
             restore_frontend_snapshot(snapshot, root / "invalid")
         assert not (root / "invalid").exists()
+
+
+def test_snapshot_command_pins_the_manifest_unless_asked_not_to(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path
+    wiki = make_repository(root)
+    write_public_dataset(wiki, "pokemon", pokemon_dataset())
+    source, snapshot = root / "export", root / "snapshot"
+    export_frontend(root, source)
+    command = ["site", "snapshot-web", "--source", str(source)]
+    # The default pin is relative to the working directory.
+    monkeypatch.chdir(root)
+    (root / "sites/frontend-snapshot").mkdir()
+
+    assert main([*command, "--output", str(snapshot), "--no-pin"]) == 0
+    assert not (root / "sites/frontend-snapshot/manifest.json").exists()
+
+    pin = root / "pinned.json"
+    assert main([*command, "--output", str(snapshot), "--pin", str(pin)]) == 0
+    assert pin.read_bytes() == (snapshot / "manifest.json").read_bytes()
+    archive = json.loads(pin.read_text(encoding="utf-8"))["archive"]
+    assert (snapshot / archive).is_file()
 
 
 def test_version_variants_and_supported_empty_sections_are_preserved() -> None:

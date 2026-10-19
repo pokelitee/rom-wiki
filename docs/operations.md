@@ -168,7 +168,7 @@ The React site is live on GitHub Pages. Every PR and main-branch CI run restores
 
 CI retains the Python matrix and stable `CI gate`, and adds frontend lint, typing, unit tests, build, and synthetic browser regression tests. Current-site CI uses the complete React snapshot.
 
-Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged locally with `romwiki site snapshot-web`. The reviewed archive is uploaded under its unique content-addressed name to the existing `snapshots` release; `sites/frontend-snapshot/manifest.json` pins the archive and every resource checksum. No new release or archive tag is needed. See the [frontend guide](development/frontend.md) for restoration from a clean checkout.
+Complete React publication data is prepared with `romwiki site export-web --data-root build/data`, then packaged locally with `romwiki site snapshot-web`, which also writes `sites/frontend-snapshot/manifest.json` to pin the archive and every resource checksum. The reviewed archive is uploaded under its unique content-addressed name to the existing `snapshots` release, using the command `snapshot-web` logs. No new release or archive tag is needed. See the [frontend guide](development/frontend.md) for restoration from a clean checkout.
 
 For review, download the `github-pages` artifact from a successful CI run and extract its `artifact.tar` into a temporary directory. Serve it below `/rom-wiki/` using `python scripts/serve_frontend.py --directory PATH_TO_EXTRACTED_ARTIFACT`, then open `http://127.0.0.1:4173/rom-wiki/`.
 
