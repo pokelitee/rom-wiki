@@ -14,6 +14,7 @@ from romwiki.cli.common import (
     profile_wiki_root,
     resolve_input_rom,
     resolve_pokedb_path,
+    resolve_pokedb_root,
     site_wiki_root,
     version_family_inputs,
     version_family_uses_baselines,
@@ -25,12 +26,13 @@ from romwiki.cli.regenerate import (
     _generate_site_group_in_worker,
     _PreparedSite,
     _SiteGeneration,
-    run_regeneration,
+    run_generation,
 )
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.sites import GameMetadata, SiteCatalog, SiteDefinition
 from romwiki.util.errors import LocalConfigError, SiteError
 from romwiki.util.local_config import LocalGamePaths
+from tests.conftest import make_gba_header
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -175,6 +177,21 @@ class MainErrorHandlingTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
 
+    def test_inspect_prints_text_for_an_unmatched_gba_image(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            rom_path = Path(directory) / "hack.gba"
+            rom_path.write_bytes(
+                make_gba_header(software_version=1).ljust(0x1000, b"\0")
+            )
+            with patch("builtins.print") as printed:
+                exit_code = main(["inspect", "--rom", str(rom_path)])
+
+        lines = [call.args[0] for call in printed.call_args_list]
+        self.assertEqual(exit_code, 0)
+        self.assertIn("ROM version: 1", lines)
+        self.assertIn("Profile: unknown", lines)
+        self.assertFalse(any(line.startswith("Files:") for line in lines))
+
     def test_dppt_location_extraction_uses_integrated_trade_records(self) -> None:
         profile = SimpleNamespace(
             id="platinum-us",
@@ -239,17 +256,41 @@ class VersionFamilyInputTests(unittest.TestCase):
         repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
         profiles = {profile.id: profile for profile in repository.profiles}
 
+        no_config = Path("missing/games.toml")
         self.assertEqual(
-            resolve_pokedb_path(None, (profiles["platinum-us"],)),
+            resolve_pokedb_path(None, (profiles["platinum-us"],), no_config),
             Path("../pokedb/.output/gen4"),
         )
         self.assertEqual(
             resolve_pokedb_path(
                 None,
                 (profiles["black-us"], profiles["white-us"]),
+                no_config,
             ),
             Path("../pokedb/.output/gen5"),
         )
+
+    def test_local_configuration_selects_the_pokedb_root(self) -> None:
+        repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
+        profile = next(
+            profile for profile in repository.profiles if profile.id == "platinum-us"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "games.toml"
+            config.write_text(
+                'pokedb_root = "pokedb"\n'
+                '[games.platinum-us]\npatched_rom = "platinum.nds"\n',
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                resolve_pokedb_path(None, (profile,), config),
+                (Path(directory) / "pokedb" / "gen4").resolve(),
+            )
+            self.assertEqual(
+                resolve_pokedb_root(Path("custom/pokedb"), config),
+                Path("custom/pokedb"),
+            )
 
     def test_explicit_pokedb_path_overrides_profile_generation(self) -> None:
         repository = ProfileRepository.load(REPOSITORY_ROOT / "profiles")
@@ -258,7 +299,9 @@ class VersionFamilyInputTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            resolve_pokedb_path(Path("custom/pokedb"), (profile,)),
+            resolve_pokedb_path(
+                Path("custom/pokedb"), (profile,), Path("missing/games.toml")
+            ),
             Path("custom/pokedb"),
         )
 
@@ -569,7 +612,7 @@ patched_rom = "roms/white-us.nds"
                 patch("romwiki.cli.regenerate.write_regeneration_state"),
                 self.assertLogs("romwiki", level="INFO") as logs,
             ):
-                run_regeneration(args)
+                run_generation(args)
 
             self.assertEqual(inspect.call_count, 3)
             self.assertEqual(load_pokedb.call_count, 1)
@@ -612,7 +655,7 @@ patched_rom = "roms/white-us.nds"
             self.assertIn("Generation preflight [2/2]: black-white", messages)
             self.assertIn("Generation [1/2] platinum: checking inputs", messages)
             self.assertIn("Generation [2/2] black-white: checking inputs", messages)
-            self.assertIn("Complete regeneration completed in", messages)
+            self.assertIn("Catalog generation completed in", messages)
 
     def test_sites_sharing_an_extraction_cache_are_generated_together(
         self,

@@ -18,7 +18,7 @@ npm --prefix web run dev
 
 Open `http://127.0.0.1:5173/rom-wiki/`. Export requires complete locally generated datasets and comparison outputs. Alternatively, download and restore the pinned complete frontend snapshot using the [frontend guide](docs/development/frontend.md).
 
-Extraction uses the ignored `.local/games.toml` registry. See [Operations](docs/operations.md) for local inputs and generation. ROM inputs are never needed to restore a complete frontend snapshot or to run synthetic tests.
+Extraction uses the ignored `.local/games.toml` registry. Generating game data also needs local [PokéDB](https://github.com/pokelitee/pokedb) outputs for reference names and sprites; set `pokedb_root` in that registry to their location. See [Operations](docs/operations.md) for local inputs and generation. ROM inputs are never needed to restore a complete frontend snapshot or to run synthetic tests.
 
 ## Architecture
 

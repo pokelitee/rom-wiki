@@ -6,7 +6,7 @@ ROM Wiki exposes six top-level command groups:
 inspect     identify one ROM and optionally write an input manifest
 extract     write one normalized single-ROM audit dataset
 build       extract, enrich, compare, and export game data
-regenerate  regenerate sites from the site catalog
+generate    generate site data from the site catalog (alias: regenerate)
 baseline    manage clean-ROM extraction caches
 site        list sites and snapshot, restore, or publish generated data
 ```
@@ -17,7 +17,7 @@ Use `romwiki <command> --help` and nested help such as
 Global `--verbose` and `--quiet` options must precede the command:
 
 ```console
-romwiki --verbose regenerate --all
+romwiki --verbose generate --all
 ```
 
 Default informational logs report command lifecycles and bounded progress for
@@ -190,27 +190,15 @@ other workers; the command reports the first failure once every site has settled
 Each worker loads only the PokéDB generations its sites need, so peak memory grows
 with the worker count.
 
-## Regenerate
-
-`regenerate` is the complete catalog-driven workflow:
-
-```console
-romwiki regenerate platinum renegade-platinum
-romwiki regenerate --all
-romwiki regenerate --all --refresh
-```
+`regenerate` is an alias of `generate`; both run the same workflow.
 
 It validates every selected site, local ROM registration, profile match, and
-PokéDB generation, then dispatches single-profile and version-family data builds
-in parallel as described for `generate`.
-
-Normal runs reuse validated caches and skip sites whose generation inputs and
-generated files are unchanged. `--clean` bypasses that reuse; `--refresh`
-separately replaces current and baseline extraction caches.
+PokéDB generation before writing, and skips sites whose generation inputs and
+generated files are unchanged.
 
 Use a site ID without `--all` while developing a new game or generation. This
 extracts and writes only that selection, reuses valid per-dataset caches, and
-leaves unrelated games untouched. Reserve `regenerate --all` for final integrated
+leaves unrelated games untouched. Reserve `generate --all` for final integrated
 validation before preparing a frontend snapshot.
 
 ## Baseline caches

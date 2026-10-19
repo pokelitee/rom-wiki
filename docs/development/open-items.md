@@ -324,7 +324,7 @@ Routine development uses the Python suite and focused data generation. Before pr
 2. Export the frontend with `romwiki site export-web` and build the production application.
 3. Run browser checks across every published game, section, guide, and download. Verify typed encounter routes, seasons, trainer families, sibling versions, and exact comparisons.
 4. Check desktop/mobile layouts, keyboard navigation, light/dark themes, failed requests, direct hash links, and a plain static host under `/rom-wiki/`.
-5. Prepare deterministic data and frontend snapshots, then verify restoration and every checksum in a clean directory.
-6. Publish release assets and enable cutover only after separate authorization. The deployment workflow remains frozen until then.
+5. Prepare a deterministic frontend snapshot, then verify restoration and every checksum in a clean directory.
+6. Upload the snapshot archive and commit its manifest through a PR. Merging to `main` deploys the site automatically.
 
 The nine published wikis are Platinum, Renegade Platinum, HeartGold/SoulSilver, Sacred Gold/Storm Silver, Black/White, Blaze Black/Volt White, Black 2/White 2, Blaze Black 2/Volt White 2, and Blaze Black 2 Redux/Volt White 2 Redux.

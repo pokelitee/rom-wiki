@@ -1,5 +1,9 @@
 version = 1
 
+# Directory holding PokéDB's gen<N> outputs, relative to this file. Without it,
+# commands look for ../pokedb/.output beside the repository.
+# pokedb_root = "pokedb"
+
 [games.platinum-us]
 patched_rom = "roms/Pokemon - Platinum Version (USA).nds"
 
@@ -56,3 +60,12 @@ base_rom = "roms/Pokemon - Black Version 2 (USA, Europe) (NDSi Enhanced).nds"
 [games.volt-white-2-redux]
 patched_rom = "roms/Pokemon Volt White 2 Redux Complete.nds"
 base_rom = "roms/Pokemon - White Version 2 (USA, Europe) (NDSi Enhanced).nds"
+
+[games.firered-us]
+patched_rom = "roms/Pokemon - FireRed Version (USA).gba"
+
+[games.leafgreen-us]
+patched_rom = "roms/Pokemon - LeafGreen Version (USA).gba"
+
+[games.emerald-us]
+patched_rom = "roms/Pokemon - Emerald Version (USA, Europe).gba"

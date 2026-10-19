@@ -22,7 +22,9 @@ base_rom = "roms/Pokemon - Platinum Version (USA).nds"
 ```
 
 Committed profiles identify and decode supported ROM revisions; the local
-registry only supplies machine-specific paths.
+registry only supplies machine-specific paths. It may also set `pokedb_root`, the
+directory holding PokéDB's `gen<N>` outputs (see [PokéDB reference
+data](#pokédb-reference-data)).
 
 ## Generation workflows
 
@@ -46,14 +48,15 @@ comparisons, and publishes deterministic compressed data downloads under the
 configured site's `wiki/data/`. The owning site is resolved from the profile, so
 profile and site IDs do not need to be identical.
 
-Regenerate selected sites, or every published site:
+Generate selected sites, or every published site, from the site catalog without
+repeating their profiles and version labels (`regenerate` is an alias):
 
 ```console
-romwiki regenerate platinum renegade-platinum
-romwiki regenerate --all
+romwiki generate platinum renegade-platinum
+romwiki generate --all
 ```
 
-`regenerate` preflights every required ROM and PokéDB generation before writing,
+`generate` preflights every required ROM and PokéDB generation before writing,
 then generates the selected sites. Add `--refresh` to replace current and
 baseline extraction caches. After reviewing a complete generation, update the
 frontend snapshot (see [Publication snapshots](#publication-snapshots)).
@@ -68,7 +71,7 @@ automatically. Use `--clean` to regenerate unchanged sites, and combine
 Global diagnostic options precede the command:
 
 ```console
-romwiki --verbose regenerate --all
+romwiki --verbose generate --all
 ```
 
 ## Focused development
@@ -86,14 +89,6 @@ Build a sibling-version family into one configured site:
 
 ```console
 romwiki build family --games black-us white-us --versions black white --site-id black-white
-```
-
-For normal catalog-driven work, generate one or every configured game site without
-manually repeating its profiles and version labels:
-
-```console
-romwiki generate renegade-platinum
-romwiki generate --all
 ```
 
 Manage baseline caches explicitly when needed:
@@ -122,9 +117,9 @@ sections, guides, downloads, and comparisons, so a clean checkout can restore th
 site without ROMs or PokéDB. See the [frontend guide](development/frontend.md)
 for restoring and updating it.
 
-Earlier per-site data archives (`sites/generated-wiki/`) are retired. Their
-release assets stay on the `snapshots` release; restore them with the tooling
-and manifests from an earlier commit in Git history.
+Earlier per-site data archives (`sites/generated-wiki/`) are retired, and their
+release assets were deleted from the `snapshots` release, so commits that pinned
+them can no longer restore their data.
 
 ## PokéDB reference data
 
@@ -133,9 +128,10 @@ PokéDB is a local external reference dataset for canonical names, links,
 descriptive text, and optional media URLs. Exact mechanics and comparisons remain
 ROM-derived.
 
-Build commands derive `../pokedb/.output/gen<N>` from the matched engine by
-default. Use `--pokedb` or `--pokedb-root` to select another local output.
-
+Commands pick the `gen<N>` output matching the ROM's engine from the PokéDB
+root. The root is `--pokedb-root` (or a full `--pokedb` path) when given, else
+`pokedb_root` in `.local/games.toml`, else `../pokedb/.output` beside the
+repository.
 
 Use the current [PokéDB data contract](https://github.com/pokelitee/pokedb/blob/main/docs/data-contract.md) when updating this integration. PokéDB supplies reference names and descriptive data; it must not replace exact ROM mechanics. Record the inputs and limitations in each site's data-sources page.
 
@@ -184,7 +180,7 @@ For rollback, revert the frontend source and/or snapshot manifest through a PR; 
 
 - **`romwiki` is not found:** activate the virtual environment used during installation, or invoke `python -m romwiki` with that environment's Python.
 - **Missing or unmatched ROM:** check the ignored local registry, relative paths, and the exact profile revision. Registration supplies a path; it does not prove that the image matches the profile. Never commit an image to resolve CI failures.
-- **Missing PokéDB generation:** generate the required generation in the sibling checkout or select another output using the CLI's `--pokedb` / `--pokedb-root` options. Consult the CLI reference for command-specific inputs.
+- **Missing PokéDB generation:** generate the required generation, then point `pokedb_root` in `.local/games.toml` at its output root or pass the CLI's `--pokedb` / `--pokedb-root` options. Consult the CLI reference for command-specific inputs.
 - **Unexpected cached output:** use the focused workflow first. `--refresh` replaces extraction caches; `--clean` regenerates sites whose inputs are unchanged. These flags address different layers.
 - **Missing generated data in a clean checkout:** restore the publication snapshot. Do not substitute incomplete local outputs for a reviewed snapshot.
 - **Snapshot asset is not published:** the manifest references an archive that was never uploaded. Upload it from the checkout that created it under its content-addressed name. A checksum mismatch means the downloaded asset is not the archive the manifest describes; never replace release assets to fix it.

@@ -451,7 +451,7 @@ profiles = ["black-us", "white-us"]
 versions = ["black", "white"]
 ```
 
-The catalog-driven `romwiki regenerate` command uses these labels directly; it
+The catalog-driven `romwiki generate` command uses these labels directly; it
 does not infer user-facing version identity from profile IDs.
 
 The `romwiki build family --games black-us white-us --versions black white
@@ -501,13 +501,13 @@ version-specific encounter tables and NPC trade references.
 - After validating the complete generated output, prepare a frontend snapshot
   with `romwiki site export-web` and `romwiki site snapshot-web`, then test
   `romwiki site restore-web` from a clean checkout.
-- Run `romwiki regenerate --all` to verify the descriptor-driven complete workflow.
-- During development, run `romwiki regenerate <site-id>`; unrelated games are
+- Run `romwiki generate --all` to verify the descriptor-driven complete workflow.
+- During development, run `romwiki generate <site-id>`; unrelated games are
   not extracted. Reserve `--all` for integrated validation.
 - Run `romwiki build game --game <id>` twice and confirm the second run reuses both
   current and baseline extraction caches. Change one extractor and confirm only
   its dependent raw datasets rebuild.
-- Before a major release, run `romwiki regenerate --all --clean --refresh`.
+- Before a major release, run `romwiki generate --all --clean --refresh`.
   Routine complete runs reuse verified per-site state.
 - Confirm no ROM, patch, key, save, or copyrighted extracted asset is tracked.
 

@@ -551,7 +551,7 @@ deterministic archive, pinned with per-resource checksums by
 `sites/frontend-snapshot/manifest.json`. `restore-web` verifies the archive and
 every resource before writing.
 
-`romwiki regenerate` is the catalog-driven owner of complete local regeneration.
+`romwiki generate` is the catalog-driven owner of complete local regeneration.
 It preflights all selected ROM registrations and generation-specific PokéDB
 outputs before writing, then dispatches single-profile and version-family sites
 through their existing build workflows. Snapshot creation is an optional final

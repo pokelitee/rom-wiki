@@ -67,7 +67,7 @@ def _build(args: argparse.Namespace) -> None:
     if result.match is None:
         raise LocalConfigError("The configured base ROM did not match a game profile")
     pokedb = PokeDBGeneration.load(
-        resolve_pokedb_path(args.pokedb, (result.match.profile,))
+        resolve_pokedb_path(args.pokedb, (result.match.profile,), args.games_config)
     )
     cache_root = args.data_root / "baselines" / result.match.profile.id
     context = GameBuildContext(

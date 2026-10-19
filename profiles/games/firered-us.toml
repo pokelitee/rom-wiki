@@ -9,6 +9,9 @@ base_game = "firered"
 game_codes = ["BPRE"]
 rom_versions = [0]
 
+[reference]
+sprite_version = "firered-leafgreen"
+
 [type_chart]
 chart = "gen3"
 

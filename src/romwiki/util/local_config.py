@@ -28,8 +28,11 @@ class LocalGamePaths:
 
 
 class LocalGameRegistry:
-    def __init__(self, games: dict[str, LocalGamePaths]) -> None:
+    def __init__(
+        self, games: dict[str, LocalGamePaths], *, pokedb_root: Path | None = None
+    ) -> None:
         self.games = dict(games)
+        self.pokedb_root = pokedb_root
 
     @classmethod
     def load(cls, path: Path) -> LocalGameRegistry:
@@ -60,7 +63,17 @@ class LocalGameRegistry:
             game_id: _load_game_paths(game_id, value, resolved.parent, resolved)
             for game_id, value in raw_games.items()
         }
-        return cls(games)
+        raw_pokedb_root = data.get("pokedb_root")
+        if raw_pokedb_root is not None and (
+            not isinstance(raw_pokedb_root, str) or not raw_pokedb_root.strip()
+        ):
+            raise LocalConfigError(f"Invalid pokedb_root in {resolved}")
+        pokedb_root = (
+            None
+            if raw_pokedb_root is None
+            else _resolve_relative(raw_pokedb_root, resolved.parent)
+        )
+        return cls(games, pokedb_root=pokedb_root)
 
     def get(self, game_id: str) -> LocalGamePaths:
         try:
@@ -104,5 +117,9 @@ def _resolve_path(
         return None
     if not isinstance(value, str) or not value.strip():
         raise LocalConfigError(f"Game {game_id} must define a non-empty {field}")
+    return _resolve_relative(value, root)
+
+
+def _resolve_relative(value: str, root: Path) -> Path:
     path = Path(value)
     return (path if path.is_absolute() else root / path).resolve()
