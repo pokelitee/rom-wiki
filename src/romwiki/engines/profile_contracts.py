@@ -325,6 +325,16 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
     reject_unknown=True,
 )
 
+# Message banks holding ROM description text, optional for Generation IV.
+_DESCRIPTION_PARAMETERS = frozenset(
+    {
+        "ability_descriptions_member",
+        "item_descriptions_member",
+        "move_descriptions_member",
+        "pokemon_descriptions_member",
+    }
+)
+
 GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
     required_layout=frozenset(
         {
@@ -405,7 +415,9 @@ GEN4_PLATINUM_PROFILE_CONTRACT = EngineProfileContract(
             "type_names_member",
         }
     ),
-    optional_parameters=_TRAINER_VARIANT_PARAMETERS | _TABLE_COUNT_PARAMETERS,
+    optional_parameters=_TRAINER_VARIANT_PARAMETERS
+    | _TABLE_COUNT_PARAMETERS
+    | _DESCRIPTION_PARAMETERS,
     reject_unknown=True,
 )
 
@@ -471,6 +483,7 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
         }
     )
     | _TRAINER_VARIANT_PARAMETERS
-    | _TABLE_COUNT_PARAMETERS,
+    | _TABLE_COUNT_PARAMETERS
+    | _DESCRIPTION_PARAMETERS,
     reject_unknown=True,
 )

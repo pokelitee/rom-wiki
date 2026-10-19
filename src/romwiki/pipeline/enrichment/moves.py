@@ -117,7 +117,11 @@ def enrich_move_dataset(
                     if public
                     else None
                 ),
-                descriptions[expected_id] if descriptions is not None else None,
+                (
+                    descriptions[expected_id]
+                    if public and descriptions is not None
+                    else None
+                ),
             ),
             "public": public,
             "damage_class": named_id(
