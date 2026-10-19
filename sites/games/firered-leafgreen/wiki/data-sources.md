@@ -59,6 +59,9 @@ value range rather than located by name.
   (`setwildbattle` and event legendaries), gift Pokémon and Eggs, marts, and
   in-game trades. Only literal commands count; a value held in a script
   variable, such as a starter, is left out.
+- **Prize money:** each trainer class's money value comes from the ROM's
+  money table (unlisted classes use its default). A trainer pays 4 x the
+  level of its last Pokémon x that value, doubled for a double battle.
 - **Move tutors:** the tutor move table and 2-byte per-species compatibility
   masks cover 15 tutors, each located from the script that teaches its move.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Mt.

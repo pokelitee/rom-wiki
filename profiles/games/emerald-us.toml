@@ -67,6 +67,9 @@ region_name_offset = 0x5a147c
 region_name_count = 213
 gmapgroups_offset = 0x486578
 
+# `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
+trainer_money_offset = 0x31aeb8
+
 # `sIngameTrades`: 4 in-game trades, 60 bytes each.
 trade_table_offset = 0x338ed0
 trade_count = 4

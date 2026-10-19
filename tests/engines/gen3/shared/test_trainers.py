@@ -3,7 +3,11 @@ from __future__ import annotations
 import struct
 import unittest
 
-from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
+from romwiki.engines.gen3.shared.trainers import (
+    parse_trainer_money_table,
+    parse_trainer_record,
+    party_record_size,
+)
 from romwiki.util.errors import InvalidRomError
 
 
@@ -134,6 +138,23 @@ class PartyRecordSizeTests(unittest.TestCase):
 
     def test_custom_moves_adds_eight_bytes(self) -> None:
         self.assertEqual(party_record_size(has_custom_moves=True), 16)
+
+
+class ParseTrainerMoneyTableTests(unittest.TestCase):
+    def test_reads_classes_until_the_terminator_and_its_default(self) -> None:
+        data = bytes(
+            [0x54, 25, 0, 0, 0x51, 4, 0, 0, 0x54, 9, 0, 0, 0xFF, 5, 0, 0, 1, 2]
+        )
+
+        values, default = parse_trainer_money_table(data)
+
+        # The game stops at a class's first entry.
+        self.assertEqual(values, {0x54: (25, 0), 0x51: (4, 1)})
+        self.assertEqual(default, (5, 3))
+
+    def test_rejects_a_table_without_a_terminator(self) -> None:
+        with self.assertRaises(InvalidRomError):
+            parse_trainer_money_table(bytes([1, 2, 0, 0]))
 
 
 if __name__ == "__main__":

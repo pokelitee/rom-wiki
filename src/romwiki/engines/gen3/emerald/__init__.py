@@ -127,7 +127,12 @@ from romwiki.engines.gen3.shared.trainer_party import (
     derive_trainer_party_attributes,
     normalize_trainer_party_member,
 )
-from romwiki.engines.gen3.shared.trainers import parse_trainer_record, party_record_size
+from romwiki.engines.gen3.shared.trainers import (
+    TRAINER_MONEY_ENTRY_SIZE,
+    parse_trainer_money_table,
+    parse_trainer_record,
+    party_record_size,
+)
 
 from .constants import (
     ABILITY_NAME_COUNT,
@@ -288,4 +293,6 @@ __all__ = [
     "TRADE_INFO_SPECIAL",
     "find_trades",
     "parse_ingame_trade",
+    "TRAINER_MONEY_ENTRY_SIZE",
+    "parse_trainer_money_table",
 ]

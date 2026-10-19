@@ -544,7 +544,12 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
         )
     },
     ("trainers", "pointer-party"): {
-        "trainers": ("parse_trainer_record", "resolve_trainer_variants")
+        "trainers": (
+            "TRAINER_MONEY_ENTRY_SIZE",
+            "parse_trainer_money_table",
+            "parse_trainer_record",
+            "resolve_trainer_variants",
+        )
     },
     ("tutors", "overlay-table"): {"tutors": ("parse_tutor_move_table",)},
     ("tutors", "personal-archive"): {"tutors": ("parse_tutor_move_table",)},

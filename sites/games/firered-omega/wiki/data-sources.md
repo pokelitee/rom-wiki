@@ -40,8 +40,9 @@ The hack leaves the original groups' map lists in place, so the ROM stores
 no per-group map count. A group ends at the next group's list or at its first
 entry that doesn't point to a map header.
 
-Map events and scripts are decoded as for retail FireRed; see its data
-sources page.
+Map events, scripts, and prize money are decoded as for retail FireRed; see
+its data sources page. Omega edits the money values, including the default
+for unlisted classes (30 instead of 5).
 
 Trainers are published exactly as the ROM stores them, including unused
 slots, and the rival keeps the ROM's default name.

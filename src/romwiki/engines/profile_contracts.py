@@ -167,7 +167,13 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
         }
     ),
     optional_parameters=frozenset(
-        {"map_group_count", "trade_count", "trade_table_offset", "trainer_class_count"}
+        {
+            "map_group_count",
+            "trade_count",
+            "trade_table_offset",
+            "trainer_class_count",
+            "trainer_money_offset",
+        }
     ),
     reject_unknown=True,
 )
@@ -213,7 +219,13 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
         }
     ),
     optional_parameters=frozenset(
-        {"map_group_count", "trade_count", "trade_table_offset", "trainer_class_count"}
+        {
+            "map_group_count",
+            "trade_count",
+            "trade_table_offset",
+            "trainer_class_count",
+            "trainer_money_offset",
+        }
     ),
     reject_unknown=True,
 )

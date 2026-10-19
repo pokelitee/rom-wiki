@@ -85,6 +85,20 @@ class TrainerRewardTests(unittest.TestCase):
             },
         )
 
+    def test_applies_gen3_double_battle_multiplier(self) -> None:
+        payout = calculate_base_prize_money(
+            {
+                "victory_money_multiplier": 25,
+                "party": [{"level": 14}],
+                "double_battle": True,
+            },
+            engine="gen3_frlg",
+        )
+        assert payout is not None
+        self.assertEqual(
+            (payout["amount"], payout["battle_format_multiplier"]), (2800, 2)
+        )
+
     def test_unknown_engine_is_an_error_rather_than_a_missing_payout(self) -> None:
         with self.assertRaises(DataSourceError):
             calculate_base_prize_money(

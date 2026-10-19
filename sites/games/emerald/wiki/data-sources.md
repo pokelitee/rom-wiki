@@ -52,6 +52,9 @@ value range rather than located by name.
   (`setwildbattle` and event legendaries), gift Pokémon and Eggs, marts, and
   in-game trades. Only literal commands count; a value held in a script
   variable, such as a starter, is left out.
+- **Prize money:** each trainer class's money value comes from the ROM's
+  money table (unlisted classes use its default). A trainer pays 4 x the
+  level of its last Pokémon x that value, doubled for a double battle.
 - **Move tutors:** the tutor move table and 4-byte per-species compatibility
   masks cover 30 tutors. Ten are field NPCs; the other 20 are Battle Frontier
   tutors reached through script specials 474 and 475. Battle Point costs are
