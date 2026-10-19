@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from romwiki.engines.registry import get_engine
+from romwiki.pipeline.extraction.counts import personal_archive_count
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.platforms.registry import get_platform
 from romwiki.schema.datasets import dataset_envelope
@@ -26,8 +27,7 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
         raise ProfileError(
             f"Platform {profile.platform!r} does not support archive-based extraction"
         )
-    adapter = get_engine(profile.engine)
-    engine = adapter.learnsets
+    engine = get_engine(profile.engine).learnsets
     filesystem = platform.filesystem_from_image(result.image)
     archive = platform.archive_cls.from_bytes(
         filesystem.read(archive_path),
@@ -45,7 +45,9 @@ def extract_learnset_dataset(result: InspectionResult) -> dict[str, Any]:
             species_id=member.index,
             archive_path=archive_path,
         ).to_dict()
-        for member in archive.members[: adapter.personal.PERSONAL_RECORD_COUNT]
+        for member in archive.members[
+            : personal_archive_count(profile, platform, filesystem)
+        ]
     ]
     return dataset_envelope(
         schema_version=POKEMON_LEARNSETS_RAW_SCHEMA_VERSION,

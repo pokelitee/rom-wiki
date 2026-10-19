@@ -17,7 +17,10 @@ chart = "gen3"
 
 [parameters]
 personal_offset = 0x3203cc
-personal_count = 412
+# The table holds 412 records. Records 387-411 are not decoded yet: like
+# Unown's letter forms (252-276), they need National Dex and form handling
+# that Generation III does not implement yet.
+personal_count = 386
 
 ability_name_offset = 0x31b6db
 ability_name_stride = 13

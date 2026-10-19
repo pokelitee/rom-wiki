@@ -27,12 +27,18 @@ _ENGINE_ID = "fake_personal_engine"
 
 
 class _FakeArchive:
-    def __init__(self, member_count: int) -> None:
+    """Members are one-byte records, followed by `trailing` larger members."""
+
+    def __init__(self, member_count: int, *, trailing: int = 0) -> None:
         self.members = tuple(
-            NarcMember(index=index, start=0, end=0) for index in range(member_count)
+            NarcMember(index=index, start=0, end=0)
+            for index in range(member_count + trailing)
         )
+        self._record_count = member_count
 
     def read(self, index: int) -> bytes:
+        if index >= self._record_count:
+            return bytes(16)
         return bytes([index])
 
 
@@ -117,21 +123,17 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         profile = _profile(layout={})
         _register_fake_platform(_FakeArchive(1))
         _register_fake_engine(
-            SimpleNamespace(
-                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1
-            )
+            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_SIZE=1)
         )
 
         with self.assertRaisesRegex(ProfileError, "does not define a personal archive"):
             extract_personal_dataset(_result(profile))
 
-    def test_extracts_records_bounded_to_the_engine_record_count(self) -> None:
+    def test_extracts_every_record_before_a_trailing_non_record_member(self) -> None:
         profile = _profile()
-        _register_fake_platform(_FakeArchive(5))
+        _register_fake_platform(_FakeArchive(3, trailing=1))
         _register_fake_engine(
-            SimpleNamespace(
-                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=3
-            )
+            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_SIZE=1)
         )
 
         with (
@@ -169,9 +171,7 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         )
         _register_fake_platform(_FakeArchive(1))
         _register_fake_engine(
-            SimpleNamespace(
-                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1
-            )
+            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_SIZE=1)
         )
 
         with (
@@ -195,9 +195,7 @@ class ExtractPersonalDatasetTests(unittest.TestCase):
         profile = _profile()
         _register_fake_platform(_FakeArchive(1))
         _register_fake_engine(
-            SimpleNamespace(
-                parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=1
-            )
+            SimpleNamespace(parse_personal_record=_parse_record, PERSONAL_RECORD_SIZE=1)
         )
 
         with (

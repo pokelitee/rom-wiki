@@ -425,7 +425,11 @@ _EVENT_MAP_ITEM_MEMBERS = (
 # Members each supported dataset reads, keyed by concern.
 _DATASET_REQUIRED_MEMBERS: dict[str, dict[str, tuple[str, ...]]] = {
     "pokemon": {
-        "personal": ("parse_personal_record", "PERSONAL_RECORD_COUNT"),
+        "personal": (
+            "parse_personal_record",
+            "PERSONAL_RECORD_COUNT",
+            "PERSONAL_RECORD_SIZE",
+        ),
         "enrich": (
             "ALLOW_DUPLICATE_EGG_MOVES",
             "INTERNAL_TO_NATIONAL_DEX",

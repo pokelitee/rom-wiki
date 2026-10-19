@@ -113,7 +113,7 @@ class PlatformContractTests(unittest.TestCase):
             _FAKE_PLATFORM_ID, _fake_platform({"personal.bin": bytes([7, 9, 11])})
         )
         tables = types.SimpleNamespace(
-            parse_personal_record=_parse_record, PERSONAL_RECORD_COUNT=3
+            parse_personal_record=_parse_record, PERSONAL_RECORD_SIZE=1
         )
         engine_fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)
         engine_fields["generation"] = None

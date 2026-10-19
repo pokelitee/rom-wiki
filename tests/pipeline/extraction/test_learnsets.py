@@ -5,7 +5,6 @@ from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import romwiki.engines.gen4.platinum as gen4_platinum
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.learnsets import extract_learnset_dataset
 from romwiki.profiles.models import GameProfile, HashMatch, KnownHash
@@ -51,6 +50,10 @@ class LearnsetDatasetTests(unittest.TestCase):
             patch(
                 "romwiki.pipeline.extraction.learnsets.get_platform",
                 return_value=platform,
+            ),
+            patch(
+                "romwiki.pipeline.extraction.learnsets.personal_archive_count",
+                return_value=2,
             ),
             patch(
                 "romwiki.engines.gen4.platinum.parse_level_up_learnset",
@@ -107,9 +110,15 @@ class LearnsetDatasetTests(unittest.TestCase):
             archive_cls=archive_cls,
         )
 
-        with patch(
-            "romwiki.pipeline.extraction.learnsets.get_platform",
-            return_value=platform,
+        with (
+            patch(
+                "romwiki.pipeline.extraction.learnsets.get_platform",
+                return_value=platform,
+            ),
+            patch(
+                "romwiki.pipeline.extraction.learnsets.personal_archive_count",
+                return_value=0,
+            ),
         ):
             extract_learnset_dataset(result)
 
@@ -120,7 +129,7 @@ class LearnsetDatasetTests(unittest.TestCase):
             allow_trailing_data=True,
         )
 
-    def test_limits_records_to_the_engines_personal_record_count(self) -> None:
+    def test_limits_records_to_the_personal_archive_count(self) -> None:
         profile = _profile()
         result = _result(profile)
 
@@ -142,10 +151,6 @@ class LearnsetDatasetTests(unittest.TestCase):
 
         record_0 = Mock(to_dict=Mock(return_value={"species_id": 0}))
         record_1 = Mock(to_dict=Mock(return_value={"species_id": 1}))
-        fake_adapter = SimpleNamespace(
-            personal=SimpleNamespace(PERSONAL_RECORD_COUNT=2),
-            learnsets=gen4_platinum,
-        )
 
         with (
             patch(
@@ -153,9 +158,9 @@ class LearnsetDatasetTests(unittest.TestCase):
                 return_value=platform,
             ),
             patch(
-                "romwiki.pipeline.extraction.learnsets.get_engine",
-                return_value=fake_adapter,
-            ),
+                "romwiki.pipeline.extraction.learnsets.personal_archive_count",
+                return_value=2,
+            ) as personal_count,
             patch(
                 "romwiki.engines.gen4.platinum.parse_level_up_learnset",
                 side_effect=[record_0, record_1],
@@ -163,6 +168,7 @@ class LearnsetDatasetTests(unittest.TestCase):
         ):
             dataset = extract_learnset_dataset(result)
 
+        personal_count.assert_called_once_with(profile, platform, filesystem)
         self.assertEqual(parse_learnset.call_count, 2)
         self.assertEqual(dataset["record_count"], 2)
         self.assertEqual(dataset["records"], [{"species_id": 0}, {"species_id": 1}])

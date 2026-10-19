@@ -39,8 +39,8 @@ def enrich_encounter_dataset(
         raise DataSourceError("Encounter dataset records must be a list")
     adapter = get_engine(dataset["engine"])
     engine = adapter.enrich
-    pokemon_names = resolve_pokemon_names(engine, dataset)
-    item_names = resolve_item_names(engine, dataset)
+    pokemon_names = resolve_pokemon_names(dataset)
+    item_names = resolve_item_names(dataset)
     if adapter.formats.encounters == "seasonal":
         enrich_area = enrich_seasonal_encounter_area
     elif adapter.formats.encounters == "method-table":

@@ -17,7 +17,10 @@ chart = "gen3"
 # from firered-us. See that profile and engines/gen3/frlg/constants.py for
 # what's verified.
 personal_offset = 0x254760
-personal_count = 412
+# The table holds 412 records. Records 387-411 are not decoded yet: like
+# Unown's letter forms (252-276), they need National Dex and form handling
+# that Generation III does not implement yet.
+personal_count = 386
 
 evolution_offset = 0x259734
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from romwiki.engines.concerns import EncounterConcern
 from romwiki.engines.registry import COMPRESSED_CODE_BINARY, get_engine
+from romwiki.pipeline.extraction.counts import profile_count
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.map_headers import (
     read_code_binary,
@@ -142,7 +143,9 @@ def _extract_headbutt_encounters(
             archive.read(member.index),
             header_id=member.index,
             archive_path=archive_path,
-            species_count=engine.POKEMON_NAME_COUNT,
+            species_count=profile_count(
+                profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+            ),
         )
         if encounter is None:
             continue
@@ -190,7 +193,9 @@ def _extract_safari_encounters(
                     archive.read(member.index),
                     safari_area_id=member.index,
                     archive_path=archive_path,
-                    species_count=engine.POKEMON_NAME_COUNT,
+                    species_count=profile_count(
+                        profile, "pokemon_name_count", engine.POKEMON_NAME_COUNT
+                    ),
                 )
             ),
         }
