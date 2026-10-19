@@ -29,7 +29,7 @@ python -m romwiki site snapshot-web
 python -m romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
-These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. Snapshot creation includes only resources referenced by the current manifest, excluding stale files from earlier exports. `snapshot-web` also pins the new snapshot by writing its manifest to `sites/frontend-snapshot/manifest.json`; pass `--no-pin` for a trial snapshot. Neither command uploads assets or deploys.
+These commands prepare and restore a complete local, checksum-pinned publication, including comparisons. Snapshot creation includes only resources referenced by the current manifest, excluding stale files from earlier exports. `snapshot-web` also pins the new snapshot by writing its manifest to `sites/frontend-snapshot/manifest.json` and publishes its archive to the `snapshots` release (see below); pass `--no-upload` to pin without publishing, or `--no-pin` for a local trial snapshot. Neither command deploys.
 
 The reviewed publication is pinned by `sites/frontend-snapshot/manifest.json`. Its content-addressed archive is an asset of the existing `snapshots` release. For a clean checkout, download the archive named in that manifest (its `archive` field), then restore and check it:
 
@@ -46,11 +46,10 @@ To update publication data after generating and reviewing it:
 ```sh
 python -m romwiki site export-web --data-root build/data
 python -m romwiki site snapshot-web
-gh release upload snapshots .romwiki/frontend-snapshot/<archive>
 python scripts/check_frontend_publication.py
 ```
 
-`snapshot-web` logs the exact upload command for its uniquely named archive. Upload it to the existing release without replacing assets, then commit the pinned manifest through a PR. Keep older archives for historical restoration.
+Then commit the pinned manifest through a PR. `snapshot-web` needs an authenticated GitHub CLI (`gh`). It uploads the archive under its content-addressed name, so an asset is never overwritten in place, and deletes every other `frontend-*` archive except the one `main` currently pins, which `main`'s CI and redeploys still need until the new manifest merges. The release therefore holds at most two archives. Older commits cannot restore their data; this project does not roll back by snapshot.
 
 ### Deployment
 
@@ -60,4 +59,4 @@ The React site is deployed on GitHub Pages. Every CI run builds and verifies a P
 
 The Python page renderers, MkDocs configuration, templates, assets, and serving/audit tooling have been removed. Their implementation remains in Git history at the last main commit before migration, `04b72f24827b557df4f8b4bf61cff8c3146fd824`.
 
-Keep the `snapshots` release and the `frontend-*` archives that current or historical frontend manifests reference; they support restoration from earlier commits, and absence from the current manifest does not make one disposable. The retired per-game `generated-wiki` archives were deleted, so commits from before the frontend snapshot can no longer restore their data. The protected `archive/dev-2026-10-13` tag preserves development history and is separate from publication snapshots.
+Only the current snapshot archives are kept (see [Complete frontend snapshots](#complete-frontend-snapshots)). The protected `archive/dev-2026-10-13` tag preserves development history and is separate from publication snapshots.
