@@ -88,6 +88,42 @@ class LearnsetDatasetTests(unittest.TestCase):
             {"rom_sha256": "deadbeef", "archive": "learnsets.narc"},
         )
 
+    def test_follows_one_flat_pointer_per_personal_record(self) -> None:
+        # A pointer table at 0x00 for two records, each pointing at its own
+        # learnset bytes.
+        rom = bytearray(0x40)
+        rom[0x00:0x08] = (0x08000010).to_bytes(4, "little") + (0x08000020).to_bytes(
+            4, "little"
+        )
+        rom[0x10:0x14] = b"\x21\x02\xff\xff"
+        rom[0x20:0x22] = b"\xff\xff"
+        profile = replace(
+            _profile(),
+            platform="game-boy-advance",
+            engine="gen3_frlg",
+            layout={},
+            parameters={"learnset_offset": 0x00, "personal_count": 2},
+        )
+        platform = SimpleNamespace(
+            archive_cls=None,
+            read_bytes=lambda image, offset, size: bytes(
+                rom[offset : offset + size].ljust(size, b"\x00")
+            ),
+        )
+
+        with patch(
+            "romwiki.pipeline.extraction.learnsets.get_platform",
+            return_value=platform,
+        ):
+            dataset = extract_learnset_dataset(_result(profile))
+
+        self.assertEqual(dataset["record_count"], 2)
+        self.assertEqual(
+            [record["moves"] for record in dataset["records"]],
+            [({"level": 1, "move_id": 33},), ()],
+        )
+        self.assertEqual(dataset["source"], {"rom_sha256": "deadbeef", "offset": 0x00})
+
     def test_forwards_truncation_parameters_to_the_archive_reader(self) -> None:
         profile = replace(
             _profile(),

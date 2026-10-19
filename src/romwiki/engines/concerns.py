@@ -246,7 +246,10 @@ class EggMoveConcern(Protocol):
 
 
 class LearnsetConcern(Protocol):
+    LEARNSET_POINTER_SIZE: int
+    LEARNSET_READ_SIZE: int
     parse_level_up_learnset: Parser
+    resolve_gba_pointer: Parser
 
 
 class ReferenceNameConcern(MessageArchiveReader, Protocol):

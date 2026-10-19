@@ -31,6 +31,11 @@ from romwiki.engines.gen3.shared.items import (
     item_name,
     parse_item_record,
 )
+from romwiki.engines.gen3.shared.learnsets import (
+    LEARNSET_POINTER_SIZE,
+    LEARNSET_READ_SIZE,
+    parse_level_up_learnset,
+)
 from romwiki.engines.gen3.shared.locations import (
     parse_gmapgroups_pointers,
     parse_map_group_index,
@@ -146,6 +151,8 @@ __all__ = [
     "GROWTH_RATE_NAMES",
     "INTERNAL_MEMBERS",
     "INTERNAL_TO_NATIONAL_DEX",
+    "LEARNSET_POINTER_SIZE",
+    "LEARNSET_READ_SIZE",
     "ITEM_NAME_COUNT",
     "ITEM_POCKET_NAMES",
     "ITEM_RECORD_COUNT",
@@ -187,6 +194,7 @@ __all__ = [
     "parse_gmapgroups_pointers",
     "parse_header",
     "parse_item_record",
+    "parse_level_up_learnset",
     "parse_machine_move_table",
     "parse_map_events",
     "parse_map_group_index",

@@ -18,6 +18,7 @@ chart = "gen3"
 # what's verified.
 personal_offset = 0x254760
 pokemon_name_offset = 0x245ebc
+learnset_offset = 0x25d794
 
 evolution_offset = 0x259734
 

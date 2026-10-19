@@ -49,6 +49,33 @@ class RelationshipIndexTests(unittest.TestCase):
             (5, 7, 30),
         )
 
+    def test_tags_level_up_learners_with_the_versions_that_teach_the_move(
+        self,
+    ) -> None:
+        def learnset(*move_ids: int) -> list[dict]:
+            return [{"level": 1, "move": {"id": move_id}} for move_id in move_ids]
+
+        deoxys = _pokemon(410, "deoxys", versions=["firered", "leafgreen"])
+        deoxys["version_variants"] = {
+            "firered": {**deoxys, "level_up_moves": learnset(43, 269)},
+            "leafgreen": {**deoxys, "level_up_moves": learnset(43, 282)},
+        }
+        deoxys["level_up_moves"] = learnset(43, 269)
+
+        index = build_relationship_index(_datasets(pokemon=[deoxys]))
+
+        self.assertEqual(
+            {
+                move_id: [learner.versions for learner in learners]
+                for move_id, learners in index.move_level_up_learners.items()
+            },
+            {
+                43: [("firered", "leafgreen")],
+                269: [("firered",)],
+                282: [("leafgreen",)],
+            },
+        )
+
     def test_builds_gen4_wild_trainer_acquisition_and_learner_references(
         self,
     ) -> None:
