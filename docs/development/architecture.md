@@ -90,6 +90,14 @@ comparisons, and public downloads. Written sections follow the profile's enabled
 sections, so a partial vertical slice publishes only what it supports. The CLI
 only resolves inputs and output paths before handing a workflow to this service.
 
+Before anything is written, `pipeline/build/checks.py` checks the content of a
+game's datasets: unique species identities and slugs, a gap-free National Dex
+range, base stats within the stored range, level-up moves wherever learnsets
+were extracted, unique record IDs, and references that resolve within the game.
+Envelope validation only proves data is well formed; these checks catch
+decoding mistakes that still produce well-formed records. A failure stops the
+build, and `site export-web` repeats the checks before publication.
+
 Comparisons operate on stable normalized keys: Pokémon personal member, numeric
 ability/move/item/trainer IDs, encounter area ID, and location header ID. They
 classify records as unchanged, changed, added, or removed and retain exact field

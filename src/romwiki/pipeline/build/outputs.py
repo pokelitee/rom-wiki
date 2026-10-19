@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.build.checks import check_game_datasets
 from romwiki.pipeline.build.sections import (
     dataset_enabled,
     describe_section_mismatch,
@@ -179,6 +180,7 @@ def _write_game(
     data_root: Path,
     wiki_root: Path,
 ) -> None:
+    check_game_datasets(game, datasets)
     prune_public_datasets(wiki_root, {*datasets, "types"}, game)
     for path in (wiki_root / "data/comparisons").glob("*.json"):
         if path.stem not in comparisons:
@@ -220,10 +222,13 @@ def write_section_build(
         for kind in SECTION_BUILD_KINDS[section]
         if kind != "abilities" or dataset_enabled(profile, "abilities")
     )
+    builds = {kind: workflow.build(kind) for kind in kinds}
+    check_game_datasets(
+        profile.id, {kind: build.current for kind, build in builds.items()}
+    )
     if section == "pokemon":
         write_type_section(build_type_dataset(profile), data_root, wiki_root)
-    for index, kind in enumerate(kinds):
-        build = workflow.build(kind)
+    for index, (kind, build) in enumerate(builds.items()):
         write_section(
             kind,
             build.current,
