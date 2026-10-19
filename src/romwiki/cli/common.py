@@ -193,9 +193,7 @@ def profile_wiki_root(profile_id: str, *, root: Path = Path(".")) -> Path:
     matches = [
         site
         for site in catalog.sites
-        if site.game is not None
-        and site.game.data_driven
-        and profile_id in site.game.profiles
+        if site.game is not None and profile_id in site.game.profiles
     ]
     if len(matches) > 1:
         site_ids = ", ".join(site.id for site in matches)

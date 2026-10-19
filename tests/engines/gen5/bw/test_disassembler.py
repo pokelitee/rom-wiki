@@ -5,7 +5,6 @@ import unittest
 
 from romwiki.engines.gen5.shared.script_disassembler import (
     disassemble_function,
-    find_calls,
     parse_function_offsets,
 )
 from romwiki.engines.gen5.shared.vendors import parse_shop_dispatch
@@ -118,7 +117,11 @@ class Gen5DisassemblerTests(unittest.TestCase):
         battle = _call_trainer_battle(13, 0, 0)
         data = jump + dead_bytes + battle
 
-        calls = find_calls(data, 0, 0x85)
+        calls = [
+            instruction
+            for instruction in disassemble_function(data, 0).values()
+            if instruction.opcode == 0x85
+        ]
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0].params, (13, 0, 0))

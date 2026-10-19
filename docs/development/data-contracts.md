@@ -31,7 +31,7 @@ required presence. Do not invalidate unrelated datasets.
 
 Local orchestration and publication-tooling formats keep their own version
 constants beside their owning module instead of `schema/versions.py` — for
-example `sites/snapshot.py`'s `DIRECTORY_SNAPSHOT_SCHEMA_VERSION`,
+example `sites/frontend_snapshot.py`'s `FRONTEND_SNAPSHOT_SCHEMA_VERSION`,
 `sites/data_exports.py`'s
 `PUBLIC_DATA_MANIFEST_SCHEMA_VERSION`, and
 `pipeline/build/regeneration.py`'s `REGENERATION_STATE_SCHEMA_VERSION`. These
@@ -41,16 +41,9 @@ schemas above. A version constant for an actual dataset field, shape, or
 required presence belongs in `schema/versions.py` regardless of which module
 emits it.
 
-Enriched encounter schema 7 added `encounter_format` and renamed the marker on
-the `special` object of areas whose walking slots vary by time of day:
-`"format": "hgss"` became `"format": "direct-species"`, describing its shape
-(special-condition species named directly rather than as walking-slot
-replacements) instead of the engine family that introduced it. Consumers of
-schema 6 archives that matched the old value should match the new one; the
-object's other fields are unchanged. Published locations
-previously used the raw locations schema version (15); they now have their own
-enriched version, starting at 16 when `location_format` was added, so the
-published number keeps increasing.
+Areas whose walking slots vary by time of day mark their `special` object with
+`"format": "direct-species"`: special-condition species are named directly
+rather than as walking-slot replacements.
 
 Sibling-version merging requires the same dataset kind, schema version, feature
 contract, and semantic format on every side. Differing current records are retained only for
@@ -60,9 +53,10 @@ dataset kinds registered as supporting version variants.
 
 The data exporter serializes canonical compact UTF-8 JSON and writes deterministic
 gzip archives. `data/manifest.json` lists every archive with its schema version,
-record count, compressed byte size, and SHA-256 checksum. Snapshot validation
-decompresses and parses each archive and verifies its checksum, so publication
-cannot silently ship missing or corrupt data.
+record count, compressed byte size, and SHA-256 checksum. `site export-web`
+verifies every archive against that manifest before publishing, and snapshot
+restoration verifies each checksum again, so publication cannot silently ship
+missing or corrupt data.
 
 The archives never contain ROM or patch bytes. External reference fields remain
 labeled as PokéDB-derived. When a profile declares a decoded ROM description

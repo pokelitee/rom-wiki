@@ -206,12 +206,9 @@ def single_namespace_adapter(
 
 _ENGINES: dict[str, EngineAdapter] = {
     GEN3_FRLG_ENGINE: single_namespace_adapter(
-        # Vertical slice: Pokémon personal data, moves, items, trainers,
-        # abilities, encounters, and locations are implemented so far.
-        # Unimplemented concerns are never accessed because
-        # `dataset_kinds`/`formats` below declare nothing that would require
-        # them (enforced by `_validate_engine_adapter`). Widen this entry's
-        # formats as extraction work adds more Generation III domains.
+        # Concerns Generation III lacks (pickup, fossils, static encounters)
+        # are never accessed because `formats` declares them "none"
+        # (enforced by `_validate_engine_adapter`).
         gen3_frlg,
         formats=EngineFormats(
             encounters="method-table",
@@ -244,9 +241,7 @@ _ENGINES: dict[str, EngineAdapter] = {
     GEN3_EMERALD_ENGINE: single_namespace_adapter(
         # The `gen3_emerald` namespace re-exports FireRed/LeafGreen-proven-identical
         # parsers from `gen3/shared/` (see that package's module comments
-        # for the real-ROM cross-checks proving each shared fact). Widen
-        # dataset_kinds as more Generation III domains are verified against
-        # this ROM.
+        # for the real-ROM cross-checks proving each shared fact).
         gen3_emerald,
         formats=EngineFormats(
             encounters="method-table",

@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from fractions import Fraction
 from types import MappingProxyType
 from typing import Any
 
@@ -11,14 +10,7 @@ from romwiki.profiles.models import GameProfile
 from romwiki.schema.versions import TYPE_CHART_SCHEMA_VERSION
 from romwiki.util.errors import DataSourceError, ProfileError
 
-_MULTIPLIERS = {
-    "0": Fraction(0),
-    "1/4": Fraction(1, 4),
-    "1/2": Fraction(1, 2),
-    "1": Fraction(1),
-    "2": Fraction(2),
-    "4": Fraction(4),
-}
+_MULTIPLIERS = frozenset({"0", "1/4", "1/2", "1", "2", "4"})
 _TYPE_NAMES = (
     "normal",
     "fighting",
@@ -232,35 +224,3 @@ def validate_type_chart(chart: RegisteredTypeChart) -> None:
         raise DataSourceError(f"Type chart has {detail} matchup entries")
     if any(multiplier not in _MULTIPLIERS for multiplier in chart.matrix.values()):
         raise DataSourceError("Type chart has an invalid multiplier")
-
-
-def defensive_effectiveness(
-    dataset: dict[str, Any],
-    defending_types: tuple[str, ...],
-) -> dict[str, tuple[str, ...]]:
-    matrix = {
-        (record["name"], matchup["defending_type"]): matchup["multiplier"]
-        for record in dataset["records"]
-        for matchup in record["matchups"]
-    }
-    attacking_types = tuple(record["name"] for record in dataset["records"])
-    unknown = set(defending_types) - set(attacking_types)
-    if unknown:
-        raise DataSourceError(
-            f"Unknown defending type(s): {', '.join(sorted(unknown))}"
-        )
-    grouped: dict[str, list[str]] = {}
-    for attacking in attacking_types:
-        multiplier = Fraction(1)
-        for defending in defending_types:
-            multiplier *= _MULTIPLIERS[matrix[attacking, defending]]
-        label = _fraction_label(multiplier)
-        grouped.setdefault(label, []).append(attacking)
-    return {label: tuple(names) for label, names in grouped.items()}
-
-
-def _fraction_label(value: Fraction) -> str:
-    for label, multiplier in _MULTIPLIERS.items():
-        if value == multiplier:
-            return label
-    raise DataSourceError(f"Unsupported combined type multiplier: {value}")

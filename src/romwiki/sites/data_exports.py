@@ -7,7 +7,6 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from romwiki.schema.versions import COMPARISON_SCHEMA_VERSION
 from romwiki.util.errors import SiteError
 from romwiki.util.json_io import write_bytes_atomic, write_json_atomic
 
@@ -70,27 +69,6 @@ def write_public_comparison(
         path.unlink(missing_ok=True)
     else:
         write_json_atomic(path, comparison)
-
-
-def validate_public_comparisons(wiki_root: Path) -> tuple[Path, ...]:
-    root = wiki_root / PUBLIC_DATA_DIRECTORY
-    manifest = json.loads((root / PUBLIC_DATA_MANIFEST).read_text(encoding="utf-8"))
-    files = tuple(sorted((root / "comparisons").glob("*.json")))
-    for path in files:
-        try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise SiteError(f"Invalid comparison resource: {path}") from error
-        expected_kind = "wild_encounters" if path.stem == "encounters" else path.stem
-        if (
-            not isinstance(value, dict)
-            or value.get("schema_version") != COMPARISON_SCHEMA_VERSION
-            or value.get("game") != manifest["game"]
-            or value.get("kind") != expected_kind
-            or not isinstance(value.get("records"), list)
-        ):
-            raise SiteError(f"Invalid comparison resource: {path}")
-    return files
 
 
 def _gzip_json(value: dict[str, Any]) -> bytes:

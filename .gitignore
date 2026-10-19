@@ -16,22 +16,8 @@ web/test-results/
 
 /build/
 /dist/
-/site/
-sites/**/build/
-sites/**/site/
 .romwiki/
 .local/
-
-# Old generated record pages remain ignored in existing local checkouts.
-sites/games/*/wiki/pokemon/
-sites/games/*/wiki/encounters/
-sites/games/*/wiki/trainers/
-sites/games/*/wiki/locations/
-sites/games/*/wiki/moves/
-sites/games/*/wiki/abilities/
-sites/games/*/wiki/items/
-sites/games/*/wiki/changes/
-sites/games/*/wiki/types/
 
 # Normalized public datasets and comparison sidecars are generated locally.
 sites/games/*/wiki/data/

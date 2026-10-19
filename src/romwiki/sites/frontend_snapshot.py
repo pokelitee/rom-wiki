@@ -9,52 +9,16 @@ import json
 import tarfile
 from pathlib import Path, PurePosixPath
 
-from romwiki.sites.frontend import FRONTEND_SCHEMA_VERSION
+from romwiki.sites.frontend import publication_files
 from romwiki.util.errors import SiteError
 from romwiki.util.json_io import write_json_atomic
 
 FRONTEND_SNAPSHOT_SCHEMA_VERSION = 1
 
 
-def _publication_files(root: Path) -> list[Path]:
-    manifest_path = root / "manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("schema_version") != FRONTEND_SCHEMA_VERSION:
-        raise SiteError("Unsupported frontend publication schema")
-    files = {manifest_path}
-    included: dict[str, Path] = {}
-
-    def include(relative: str) -> Path:
-        if relative in included:
-            return included[relative]
-        candidate = (root / relative).resolve()
-        if not candidate.is_relative_to(root.resolve()) or not candidate.is_file():
-            raise SiteError(f"Invalid frontend resource: {relative}")
-        files.add(candidate)
-        included[relative] = candidate
-        return candidate
-
-    for game in manifest["games"]:
-        for section in game["sections"].values():
-            include(section["metadata_path"])
-            index = json.loads(include(section["index"]).read_text(encoding="utf-8"))
-            for row in index["records"]:
-                include(row["chunk"])
-        for comparison in game["comparisons"].values():
-            include(comparison)
-        for document in game["documents"]:
-            include(document["path"])
-        include(game["search_index"])
-        for download in game["downloads"]:
-            path = include(f"{game['id']}/downloads/{download['path']}")
-            if hashlib.sha256(path.read_bytes()).hexdigest() != download["sha256"]:
-                raise SiteError(f"Frontend download checksum mismatch: {path}")
-    return sorted(files, key=lambda path: path.relative_to(root).as_posix())
-
-
 def create_frontend_snapshot(source: Path, destination: Path) -> Path:
     source = source.resolve()
-    files = _publication_files(source)
+    files = publication_files(source)
     destination.mkdir(parents=True, exist_ok=True)
     temporary = destination / "frontend.tar.gz"
     checksums = {
@@ -136,5 +100,5 @@ def restore_frontend_snapshot(snapshot: Path, output: Path) -> int:
             target = output / member.name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(stream.read())
-    _publication_files(output)
+    publication_files(output)
     return len(members)

@@ -386,18 +386,6 @@ def comparison_by_key(
     return {record["key"]: record for record in dataset.get("records", [])}
 
 
-def records_by_key(
-    dataset: dict[str, Any], key_name: str
-) -> dict[int | str, dict[str, Any]]:
-    records = dataset.get("records")
-    if not isinstance(records, list):
-        raise DataSourceError("Comparison dataset records must be a list")
-    result = {record[key_name]: record for record in records}
-    if len(result) != len(records):
-        raise DataSourceError(f"Comparison keys must be unique: {key_name}")
-    return result
-
-
 def record_identity(kind: str, record: dict[str, Any]) -> int | str:
     if (
         kind == "wild_encounters"

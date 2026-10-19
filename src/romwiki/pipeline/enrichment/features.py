@@ -8,7 +8,6 @@ from romwiki.profiles.models import GameProfile
 
 EGG_MOVES = "egg-moves"
 MOVE_TUTORS = "move-tutors"
-CONTESTS = "contests"
 
 
 def effective_features(profile: GameProfile) -> tuple[str, ...]:

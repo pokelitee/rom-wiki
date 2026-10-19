@@ -8,8 +8,6 @@ from typing import Any
 from romwiki.schema.trainers import NormalizedTrainerPokemon
 from romwiki.util.errors import DataSourceError
 
-_STATS = ("hp", "attack", "defense", "special_attack", "special_defense", "speed")
-
 
 def normalize_trainer_party_member(
     member: Mapping[str, Any], has_custom_moves: bool

@@ -11,7 +11,6 @@ from unittest.mock import patch
 
 from romwiki.sites.data_exports import (
     prune_public_datasets,
-    validate_public_comparisons,
     validate_public_data,
     write_public_comparison,
     write_public_dataset,
@@ -38,7 +37,7 @@ class PublicDataExportTests(unittest.TestCase):
             write_public_dataset(root, "moves", dataset)
             write_public_comparison(root, "moves", comparison)
             write_public_dataset(root, "moves", dataset)
-            self.assertEqual(len(validate_public_comparisons(root)), 1)
+            self.assertTrue((root / "data/comparisons/moves.json").is_file())
             self.assertEqual(len(validate_public_data(root)), 1)
             manifest = json.loads(
                 (root / "data/manifest.json").read_text(encoding="utf-8")
@@ -47,33 +46,7 @@ class PublicDataExportTests(unittest.TestCase):
                 [entry["path"] for entry in manifest["files"]], ["moves.json.gz"]
             )
             write_public_comparison(root, "moves", None)
-            self.assertEqual(validate_public_comparisons(root), ())
-
-    def test_comparison_validation_rejects_another_game(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            write_public_dataset(
-                root,
-                "moves",
-                {
-                    "schema_version": 1,
-                    "game": "test-game",
-                    "dataset": "moves",
-                    "records": [],
-                },
-            )
-            write_public_comparison(
-                root,
-                "moves",
-                {
-                    "schema_version": 1,
-                    "game": "another-game",
-                    "kind": "moves",
-                    "records": [],
-                },
-            )
-            with self.assertRaisesRegex(SiteError, "Invalid comparison resource"):
-                validate_public_comparisons(root)
+            self.assertFalse((root / "data/comparisons/moves.json").exists())
 
     def test_writes_deterministic_dataset_and_manifest(self) -> None:
         dataset = {

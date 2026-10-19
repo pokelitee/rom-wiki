@@ -123,15 +123,11 @@ def _prepare_regeneration_sites(
         all_published=args.regenerate_all,
     )
     data_sites = tuple(
-        site
-        for site in selected
-        if site.kind == "game" and site.game is not None and site.game.data_driven
+        site for site in selected if site.kind == "game" and site.game is not None
     )
     unsupported = [site.id for site in selected if site not in data_sites]
     if unsupported and not args.regenerate_all:
-        raise SiteError(
-            "Generation requires data-driven game sites: " + ", ".join(unsupported)
-        )
+        raise SiteError("Generation requires game sites: " + ", ".join(unsupported))
     registry = LocalGameRegistry.load(args.games_config) if data_sites else None
     profiles = regeneration_profiles(catalog, args.profiles_dir) if data_sites else None
     inspections: dict[Path, InspectionResult] = {}

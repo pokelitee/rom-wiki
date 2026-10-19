@@ -117,10 +117,6 @@ sections, guides, downloads, and comparisons, so a clean checkout can restore th
 site without ROMs or PokéDB. See the [frontend guide](development/frontend.md)
 for restoring and updating it.
 
-Earlier per-site data archives (`sites/generated-wiki/`) are retired, and their
-release assets were deleted from the `snapshots` release, so commits that pinned
-them can no longer restore their data.
-
 ## PokéDB reference data
 
 
@@ -178,7 +174,7 @@ For review, download the `github-pages` artifact from a successful CI run and ex
 
 A push to `main` deploys automatically: once the `CI gate` passes, CI's `Deploy Pages` job publishes the artifact that run already built and tested to the `github-pages` environment. That environment accepts deployments only from `main`. Superseded PR runs are cancelled, but `main` runs always finish, and deployments are serialized, so a newer merge never interrupts one in progress. If a deployment fails or Pages needs republishing, run the `Deploy Pages` workflow manually from `main`; it repeats the checks and publication build before deploying.
 
-Superseded snapshot archives are deleted, so data cannot be rolled back by reverting the manifest; to restore earlier data, regenerate it and publish a new snapshot. Frontend source changes can still be reverted through a PR. The pre-migration MkDocs implementation is preserved at `04b72f2`; restoring that stack requires a separate change, not merely a React snapshot rollback.
+Superseded snapshot archives are deleted, so data cannot be rolled back by reverting the manifest; to restore earlier data, regenerate it and publish a new snapshot. Frontend source changes can still be reverted through a PR.
 
 ## Troubleshooting and recovery
 

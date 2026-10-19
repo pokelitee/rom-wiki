@@ -10,7 +10,6 @@ description = "An exact, data-driven reference for Pokémon Sacred Gold and Stor
 [game]
 profiles = ["sacred-gold", "storm-silver"]
 versions = ["sacred-gold", "storm-silver"]
-generated_sections = ["pokemon", "abilities", "moves", "items", "encounters", "trainers", "locations", "types"]
 generation = 4
 base_game = "heart-gold-soul-silver"
 platform = "nintendo-ds"

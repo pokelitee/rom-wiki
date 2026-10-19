@@ -17,6 +17,7 @@ from romwiki.sites.frontend import (
     _search_text,
     _with_record_slugs,
     export_frontend,
+    publication_files,
     record_route,
 )
 from romwiki.sites.frontend_snapshot import (
@@ -108,6 +109,39 @@ def test_export_is_deterministic_chunked_and_rom_free() -> None:
         )
         assert "Supported mechanics." in doc["markdown"]
         assert not list(output.rglob("*.html"))
+
+
+def test_export_removes_resources_an_earlier_export_left_behind() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        wiki = make_repository(root)
+        write_public_dataset(wiki, "pokemon", pokemon_dataset(2))
+        output = root / "export"
+        export_frontend(root, output)
+        write_public_dataset(wiki, "pokemon", pokemon_dataset(3))
+        stale = output / "retired-game" / "pokemon" / "chunk-0000-old.json"
+        stale.parent.mkdir(parents=True)
+        stale.write_text("{}", encoding="utf-8")
+        export_frontend(root, output)
+
+        current = {path.resolve() for path in publication_files(output)}
+        written = {path.resolve() for path in output.rglob("*") if path.is_file()}
+        assert written == current
+        assert not (output / "retired-game").exists()
+
+
+def test_export_refuses_a_directory_it_did_not_write() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        wiki = make_repository(root)
+        write_public_dataset(wiki, "pokemon", pokemon_dataset())
+        output = root / "unrelated"
+        output.mkdir()
+        (output / "notes.txt").write_text("keep me", encoding="utf-8")
+
+        with pytest.raises(SiteError, match="not an earlier export"):
+            export_frontend(root, output)
+        assert (output / "notes.txt").read_text(encoding="utf-8") == "keep me"
 
 
 def test_export_titles_guides_counts_published_records_and_adds_sprites() -> None:

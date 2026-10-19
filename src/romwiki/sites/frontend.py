@@ -450,8 +450,7 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
     inputs are supplied by local builds or restored data snapshots, never HTML.
     """
     root, output = root.resolve(), output.resolve()
-    if output == root or root.is_relative_to(output):
-        raise SiteError("Frontend output must not contain the repository")
+    _check_output(root, output)
     catalog = SiteCatalog.load(root)
     games = []
     pokemon: list[dict[str, Any]] = []
@@ -686,4 +685,68 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
         "games": games,
     }
     write_json_atomic(output / "manifest.json", manifest)
+    _remove_unreferenced(output)
     return len(games)
+
+
+def _check_output(root: Path, output: Path) -> None:
+    if output == root or root.is_relative_to(output):
+        raise SiteError("Frontend output must not contain the repository")
+    # Files the new manifest doesn't reference are deleted afterwards, so only
+    # write into an empty directory or an earlier export.
+    if (
+        output.is_dir()
+        and any(output.iterdir())
+        and not (output / "manifest.json").is_file()
+    ):
+        raise SiteError(f"Frontend output is not an earlier export: {output}")
+
+
+def _remove_unreferenced(output: Path) -> None:
+    """Delete resources earlier exports wrote that this manifest dropped."""
+    referenced = {path.resolve() for path in publication_files(output)}
+    for path in sorted(output.rglob("*"), reverse=True):
+        if path.is_file() and path.resolve() not in referenced:
+            path.unlink()
+        elif path.is_dir() and not any(path.iterdir()):
+            path.rmdir()
+
+
+def publication_files(root: Path) -> list[Path]:
+    """Every file the frontend manifest at `root` references, checked to exist."""
+    # Resolve once the directory exists: on Windows, a path resolved before its
+    # directory was created can keep an 8.3 short name its files won't share.
+    root = root.resolve()
+    manifest_path = root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != FRONTEND_SCHEMA_VERSION:
+        raise SiteError("Unsupported frontend publication schema")
+    files = {manifest_path}
+    included: dict[str, Path] = {}
+
+    def include(relative: str) -> Path:
+        if relative in included:
+            return included[relative]
+        candidate = (root / relative).resolve()
+        if not candidate.is_relative_to(root) or not candidate.is_file():
+            raise SiteError(f"Invalid frontend resource: {relative}")
+        files.add(candidate)
+        included[relative] = candidate
+        return candidate
+
+    for game in manifest["games"]:
+        for section in game["sections"].values():
+            include(section["metadata_path"])
+            index = json.loads(include(section["index"]).read_text(encoding="utf-8"))
+            for row in index["records"]:
+                include(row["chunk"])
+        for comparison in game["comparisons"].values():
+            include(comparison)
+        for document in game["documents"]:
+            include(document["path"])
+        include(game["search_index"])
+        for download in game["downloads"]:
+            path = include(f"{game['id']}/downloads/{download['path']}")
+            if hashlib.sha256(path.read_bytes()).hexdigest() != download["sha256"]:
+                raise SiteError(f"Frontend download checksum mismatch: {path}")
+    return sorted(files, key=lambda path: path.relative_to(root).as_posix())

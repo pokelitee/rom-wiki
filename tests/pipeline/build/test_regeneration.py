@@ -191,9 +191,7 @@ def _site(site_root: Path) -> SiteDefinition:
         site_root / "game.toml",
         "",
         "platinum",
-        GameMetadata(
-            ("game",), (), True, 4, "base", "nds", "NDS", "Test", ("pokemon",)
-        ),
+        GameMetadata(("game",), (), 4, "base", "nds", "NDS", "Test", ("pokemon",)),
     )
 
 

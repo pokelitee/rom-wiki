@@ -166,9 +166,8 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "blaze-black-2-redux-volt-white-2-redux",
             ],
         )
-        self.assertFalse(sites[0]["data_driven"])
-        self.assertTrue(sites[1]["data_driven"])
-        self.assertTrue(sites[4]["data_driven"])
+        self.assertEqual(sites[0]["kind"], "portal")
+        self.assertEqual({site["kind"] for site in sites[1:]}, {"game"})
 
     def test_inspect_prints_json_for_a_matched_profile(self) -> None:
         rom_path = Path(".local/roms/Pokemon - Renegade Platinum.nds")
@@ -788,7 +787,6 @@ def _game(
     return GameMetadata(
         profiles=profiles,
         versions=versions,
-        data_driven=True,
         generation=generation,
         base_game="test",
         platform="nintendo-ds",
