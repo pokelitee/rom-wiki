@@ -171,6 +171,10 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
     optional_parameters=frozenset(
         {
             "frontier_tutor_move_offset",
+            "pickup_common_items_offset",
+            "pickup_common_rate_offset",
+            "pickup_items_offset",
+            "pickup_rare_items_offset",
             "map_group_count",
             "rematch_table_count",
             "rematch_table_offset",
@@ -229,6 +233,10 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
     optional_parameters=frozenset(
         {
             "frontier_tutor_move_offset",
+            "pickup_common_items_offset",
+            "pickup_common_rate_offset",
+            "pickup_items_offset",
+            "pickup_rare_items_offset",
             "map_group_count",
             "rematch_table_count",
             "rematch_table_offset",

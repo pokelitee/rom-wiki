@@ -78,6 +78,11 @@ move_description_offset = 0x61c524
 # `gPokedexEntries`: one entry per National Dex number from 0.
 pokedex_entry_offset = 0x56b5b0
 
+# Pickup's 18 common items, 11 rare items, and nine rate thresholds.
+pickup_common_items_offset = 0x31c440
+pickup_rare_items_offset = 0x31c464
+pickup_common_rate_offset = 0x31c47a
+
 # The rematch table: 16-byte rows of trainer IDs.
 rematch_table_offset = 0x5500a4
 rematch_table_count = 78

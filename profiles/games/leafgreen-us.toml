@@ -56,6 +56,9 @@ move_description_offset = 0x487fc4
 # `gPokedexEntries`: one entry per National Dex number from 0.
 pokedex_entry_offset = 0x44e270
 
+# `sPickupItems`: 16 (item, cumulative threshold) entries.
+pickup_items_offset = 0x250824
+
 # The rematch table: 16-byte rows of trainer IDs.
 rematch_table_offset = 0x452bac
 rematch_table_count = 221

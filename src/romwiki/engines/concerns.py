@@ -387,6 +387,9 @@ class StaticEncounterConcern(Protocol):
 
 
 class PickupConcern(MessageArchiveReader, Protocol):
+    ITEM_RECORD_SIZE: int
+    PICKUP_CHANCE_ENTRY_SIZE: int
+    PICKUP_CHANCE_ITEM_COUNT: int
     PICKUP_COMMON_ITEM_COUNT: int
     PICKUP_COMMON_RATE_COUNT: int
     PICKUP_COMMON_TABLE_LOCATOR: str
@@ -397,7 +400,10 @@ class PickupConcern(MessageArchiveReader, Protocol):
     PICKUP_RARE_TABLE_LOCATOR: str
     PICKUP_SLOT_CHANCES: tuple[int, ...]
     PICKUP_TABLE_LOCATOR: str
+    decode_gen3_name_table: Parser
+    parse_pickup_chance_table: Parser
     parse_pickup_item_table: Parser
     parse_pickup_table: Parser
     parse_pickup_tables: Parser
+    parse_split_pickup_tables: Parser
     pickup_level_range_item_ids: Parser

@@ -45,11 +45,11 @@ class Gen3EmeraldAdapterTests(unittest.TestCase):
             self.engine.trainers.parse_trainer_record, frlg.parse_trainer_record
         )
 
-    def test_declares_flat_tutors_but_no_pickup_data(self) -> None:
+    def test_declares_flat_tutors_and_split_pickup_tables(self) -> None:
         self.assertEqual(self.engine.formats.tutors, "flat-offset-table")
         self.assertEqual(self.engine.tutors.TUTOR_MOVE_COUNT, 30)
         self.assertEqual(len(self.engine.tutors.TUTOR_LOCATIONS), 30)
-        self.assertEqual(self.engine.formats.pickup, "none")
+        self.assertEqual(self.engine.formats.pickup, "flat-split-table")
         self.assertEqual(self.engine.formats.static_encounters, "none")
 
     def test_decodes_a_trainer_through_the_adapter(self) -> None:

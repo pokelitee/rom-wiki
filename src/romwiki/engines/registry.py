@@ -58,7 +58,14 @@ LocationExtractionFormat = Literal[
     "archive-encounter-map",
     "gba-map-groups",
 ]
-PickupFormat = Literal["none", "locator-tables", "split-table", "sliding-table"]
+PickupFormat = Literal[
+    "none",
+    "locator-tables",
+    "split-table",
+    "sliding-table",
+    "flat-split-table",
+    "chance-table",
+]
 TrainerFormat = Literal["unsupported", "class-gender", "battle-mode", "pointer-party"]
 TutorFormat = Literal[
     "none", "overlay-table", "overlay-archive", "personal-archive", "flat-offset-table"
@@ -214,7 +221,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             encounters="method-table",
             locations="encounter-map",
             location_extraction="gba-map-groups",
-            pickup="none",
+            pickup="chance-table",
             trainers="pointer-party",
             tutors="flat-offset-table",
             fossils="none",
@@ -247,7 +254,7 @@ _ENGINES: dict[str, EngineAdapter] = {
             encounters="method-table",
             locations="encounter-map",
             location_extraction="gba-map-groups",
-            pickup="none",
+            pickup="flat-split-table",
             trainers="pointer-party",
             tutors="flat-offset-table",
             fossils="none",
@@ -528,6 +535,21 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
     },
     ("pickup", "split-table"): {"pickup": ("parse_pickup_tables",)},
     ("pickup", "sliding-table"): {"pickup": ("parse_pickup_table",)},
+    ("pickup", "flat-split-table"): {
+        "pickup": (
+            "PICKUP_COMMON_ITEM_COUNT",
+            "PICKUP_COMMON_RATE_COUNT",
+            "PICKUP_RARE_ITEM_COUNT",
+            "parse_split_pickup_tables",
+        )
+    },
+    ("pickup", "chance-table"): {
+        "pickup": (
+            "PICKUP_CHANCE_ENTRY_SIZE",
+            "PICKUP_CHANCE_ITEM_COUNT",
+            "parse_pickup_chance_table",
+        )
+    },
     ("trainers", "class-gender"): {
         "trainers": (
             "parse_trainer_record",

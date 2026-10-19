@@ -56,6 +56,8 @@ value range rather than located by name.
 - **Rematches:** the Match Call rematch table (78 rows of a first battle and
   four rematches) groups 73 trainers' rematch parties, Gym Leaders included.
   Rival parties chosen by the starter aren't grouped yet.
+- **Pickup:** 18 common items, 11 rare items, and nine rate thresholds that
+  slide with the Pokémon's level, as in Generation IV.
 - **Prize money:** each trainer class's money value comes from the ROM's
   money table (unlisted classes use its default). A trainer pays 4 x the
   level of its last Pokémon x that value, doubled for a double battle.

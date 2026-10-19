@@ -83,6 +83,15 @@ from romwiki.engines.gen3.shared.overworld import (
     parse_object_event_template,
 )
 from romwiki.engines.gen3.shared.personal import parse_personal_record
+from romwiki.engines.gen3.shared.pickup import (
+    PICKUP_CHANCE_ENTRY_SIZE,
+    PICKUP_CHANCE_ITEM_COUNT,
+    PICKUP_COMMON_ITEM_COUNT,
+    PICKUP_COMMON_RATE_COUNT,
+    PICKUP_RARE_ITEM_COUNT,
+    parse_pickup_chance_table,
+    parse_split_pickup_tables,
+)
 from romwiki.engines.gen3.shared.pointers import (
     gba_pointer_for_offset,
     resolve_gba_pointer,
@@ -311,4 +320,11 @@ __all__ = [
     "POKEDEX_DESCRIPTION_POINTER",
     "POKEDEX_ENTRY_COUNT",
     "POKEDEX_ENTRY_SIZE",
+    "PICKUP_CHANCE_ENTRY_SIZE",
+    "PICKUP_CHANCE_ITEM_COUNT",
+    "PICKUP_COMMON_ITEM_COUNT",
+    "PICKUP_COMMON_RATE_COUNT",
+    "PICKUP_RARE_ITEM_COUNT",
+    "parse_pickup_chance_table",
+    "parse_split_pickup_tables",
 ]

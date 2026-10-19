@@ -21,6 +21,10 @@ def extract_pickup_dataset(result: InspectionResult) -> dict[str, Any]:
         return _extract_sliding_table(result)
     if pickup_format == "split-table":
         return _extract_split_table(result)
+    if pickup_format == "flat-split-table":
+        return _extract_flat_split_table(result)
+    if pickup_format == "chance-table":
+        return _extract_chance_table(result)
     raise DataSourceError(
         f"Engine {profile.engine!r} does not provide pickup extraction"
     )
@@ -101,6 +105,97 @@ def _extract_split_table(result: InspectionResult) -> dict[str, Any]:
             "honey_gather_rate": tables.honey_gather_rate,
         },
     }
+
+
+def _flat_reader(platform: Any) -> Any:
+    if platform.read_bytes is None:
+        raise ProfileError("Generation III Pickup needs a platform with flat reads")
+    return platform.read_bytes
+
+
+def _flat_item_names(
+    profile: Any, platform: Any, result: InspectionResult
+) -> list[str]:
+    # A Generation III item record starts with the item's name.
+    engine = get_engine(profile.engine).pickup
+    size, count = engine.ITEM_RECORD_SIZE, profile.int_parameter("item_count")
+    data = _flat_reader(platform)(
+        result.image, profile.int_parameter("item_offset"), size * count
+    )
+    return list(engine.decode_gen3_name_table(data, stride=size, count=count))
+
+
+def _flat_envelope(
+    profile: Any, result: InspectionResult, **fields: Any
+) -> dict[str, Any]:
+    return {
+        "schema_version": PICKUP_RAW_SCHEMA_VERSION,
+        "game": profile.id,
+        "engine": profile.engine,
+        "dataset": "pickup",
+        "record_count": 1,
+        "source": {"rom_sha256": result.image.hashes.sha256},
+        **fields,
+    }
+
+
+def _extract_flat_split_table(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).pickup
+    item_names = _flat_item_names(profile, platform, result)
+
+    def read(parameter: str, size: int) -> bytes:
+        return bytes(
+            _flat_reader(platform)(result.image, profile.int_parameter(parameter), size)
+        )
+
+    tables = engine.parse_split_pickup_tables(
+        read("pickup_common_items_offset", engine.PICKUP_COMMON_ITEM_COUNT * 2),
+        read("pickup_rare_items_offset", engine.PICKUP_RARE_ITEM_COUNT * 2),
+        read("pickup_common_rate_offset", engine.PICKUP_COMMON_RATE_COUNT),
+        item_count=len(item_names),
+    )
+    return _flat_envelope(
+        profile,
+        result,
+        tables={
+            "common_items": [
+                {"item_id": item_id, "name": item_names[item_id]}
+                for item_id in tables.common_item_ids
+            ],
+            "rare_items": [
+                {"item_id": item_id, "name": item_names[item_id]}
+                for item_id in tables.rare_item_ids
+            ],
+            "common_rate": tables.common_rate,
+            "honey_gather_rate": tables.honey_gather_rate,
+        },
+    )
+
+
+def _extract_chance_table(result: InspectionResult) -> dict[str, Any]:
+    assert result.match is not None
+    profile = result.match.profile
+    platform = get_platform(profile.platform)
+    engine = get_engine(profile.engine).pickup
+    item_names = _flat_item_names(profile, platform, result)
+    data = _flat_reader(platform)(
+        result.image,
+        profile.int_parameter("pickup_items_offset"),
+        engine.PICKUP_CHANCE_ITEM_COUNT * engine.PICKUP_CHANCE_ENTRY_SIZE,
+    )
+    return _flat_envelope(
+        profile,
+        result,
+        items=[
+            {"item_id": item_id, "name": item_names[item_id], "chance_percent": percent}
+            for item_id, percent in engine.parse_pickup_chance_table(
+                data, item_count=len(item_names)
+            )
+        ],
+    )
 
 
 def _extract_locator_tables(result: InspectionResult) -> dict[str, Any]:
