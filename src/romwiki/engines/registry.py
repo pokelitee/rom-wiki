@@ -545,7 +545,11 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
     },
     ("trainers", "pointer-party"): {
         "trainers": (
+            "REMATCH_ENTRY_SIZE",
+            "REMATCH_LABEL",
+            "REMATCH_TRAINERS_PER_ENTRY",
             "TRAINER_MONEY_ENTRY_SIZE",
+            "parse_rematch_table",
             "parse_trainer_money_table",
             "parse_trainer_record",
             "resolve_trainer_variants",

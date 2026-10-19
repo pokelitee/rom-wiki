@@ -50,6 +50,11 @@ gmapgroups_offset = 0x352688
 # `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
 trainer_money_offset = 0x24f1fc
 
+# The rematch table: 16-byte rows of trainer IDs.
+rematch_table_offset = 0x452bac
+rematch_table_count = 221
+trainer_variant_contract = "frlg-retail-v1"
+
 # `sIngameTrades`: 9 in-game trades, 60 bytes each.
 trade_table_offset = 0x26cf6c
 trade_count = 9

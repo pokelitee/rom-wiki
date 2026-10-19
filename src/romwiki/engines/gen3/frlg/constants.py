@@ -177,3 +177,7 @@ EVENT_MON_SPECIAL = 443
 # `gSpecials` index of `GetInGameTradeSpeciesInfo`, which a trader's script
 # calls after setting `VAR_0x8008` to the trade's index.
 TRADE_INFO_SPECIAL = 252
+
+# Trainer IDs per rematch-table row, and the mechanic that offers rematches.
+REMATCH_TRAINERS_PER_ENTRY = 6
+REMATCH_LABEL = "Vs. Seeker"

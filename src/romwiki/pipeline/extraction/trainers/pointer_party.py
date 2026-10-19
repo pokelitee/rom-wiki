@@ -105,7 +105,7 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
         profile.id,
         profile.parameters,
         records,
-        None,
+        _rematch_selectors(profile, platform, result, engine),
     )
     envelope = dataset_envelope(
         schema_version=TRAINERS_RAW_SCHEMA_VERSION,
@@ -128,6 +128,24 @@ def extract_pointer_party_trainer_dataset(result: InspectionResult) -> dict[str,
     if item_names is not None:
         envelope["item_names"] = item_names
     return envelope
+
+
+def _rematch_selectors(
+    profile: Any, platform: Any, result: InspectionResult, engine: Any
+) -> dict[str, Any] | None:
+    if "rematch_table_offset" not in profile.parameters:
+        return None
+    count = profile.int_parameter("rematch_table_count")
+    rows = engine.parse_rematch_table(
+        platform.read_bytes(
+            result.image,
+            profile.int_parameter("rematch_table_offset"),
+            count * engine.REMATCH_ENTRY_SIZE,
+        ),
+        count=count,
+        trainers_per_entry=engine.REMATCH_TRAINERS_PER_ENTRY,
+    )
+    return {"rematch_rows": rows, "rematch_label": engine.REMATCH_LABEL}
 
 
 def _trainer_money(

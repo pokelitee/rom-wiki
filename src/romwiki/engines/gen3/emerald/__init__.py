@@ -1,5 +1,9 @@
 import romwiki.engines.gen3.shared.overworld as overworld
-from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
+from romwiki.engines.gen3.shared.battle_variants import (
+    REMATCH_ENTRY_SIZE,
+    parse_rematch_table,
+    resolve_trainer_variants,
+)
 from romwiki.engines.gen3.shared.constants import (
     ABILITY_REFERENCE_IDS,
     ALLOW_DUPLICATE_EGG_MOVES,
@@ -146,6 +150,8 @@ from .constants import (
     POKEMON_NAME_COUNT,
     REGION_NAME_ENTRY_SIZE,
     REGION_NAME_POINTER_OFFSET,
+    REMATCH_LABEL,
+    REMATCH_TRAINERS_PER_ENTRY,
     TRADE_INFO_SPECIAL,
     TRAINER_CLASS_COUNT,
     TRAINER_RECORD_COUNT,
@@ -295,4 +301,8 @@ __all__ = [
     "parse_ingame_trade",
     "TRAINER_MONEY_ENTRY_SIZE",
     "parse_trainer_money_table",
+    "REMATCH_ENTRY_SIZE",
+    "REMATCH_LABEL",
+    "REMATCH_TRAINERS_PER_ENTRY",
+    "parse_rematch_table",
 ]

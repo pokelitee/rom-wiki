@@ -141,9 +141,13 @@ class TrainerConcern(MessageArchiveReader, Protocol):
     CHECK_WON_BATTLE: int
     FIRST_TRAINER_ID: int
     MAP_HEADER_SIZE: int
+    REMATCH_ENTRY_SIZE: int
+    REMATCH_LABEL: str
     REMATCH_RECORD_SIZE: int
+    REMATCH_TRAINERS_PER_ENTRY: int
     STARTER_SPECIES_ENTRY_SIZE: int
     START_TRAINER_BATTLE: int
+    TRAINER_MONEY_ENTRY_SIZE: int
     TRAINER_OBJECT_ID_OFFSET: int
     TRAINER_OBJECT_SCRIPT_END: int
     TRAINER_OBJECT_SCRIPT_START: int
@@ -165,6 +169,7 @@ class TrainerConcern(MessageArchiveReader, Protocol):
     parse_trainer_battle_commands: Parser
     parse_trainer_class_genders: Parser
     parse_trainer_class_prize_multipliers: Parser
+    parse_trainer_money_table: Parser
     parse_trainer_record: Parser
     party_record_size: Parser
     resolve_common_script_trainer_id: Parser

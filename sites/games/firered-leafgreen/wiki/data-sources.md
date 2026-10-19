@@ -59,6 +59,9 @@ value range rather than located by name.
   (`setwildbattle` and event legendaries), gift Pokémon and Eggs, marts, and
   in-game trades. Only literal commands count; a value held in a script
   variable, such as a starter, is left out.
+- **Rematches:** the Vs. Seeker table (221 rows of a first battle and up to
+  five story tiers) groups 85 trainers' rematch parties. Rival parties chosen
+  by the starter aren't grouped yet.
 - **Prize money:** each trainer class's money value comes from the ROM's
   money table (unlisted classes use its default). A trainer pays 4 x the
   level of its last Pokémon x that value, doubled for a double battle.

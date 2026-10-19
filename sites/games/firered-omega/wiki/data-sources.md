@@ -43,6 +43,7 @@ entry that doesn't point to a map header.
 Map events, scripts, and prize money are decoded as for retail FireRed; see
 its data sources page. Omega edits the money values, including the default
 for unlisted classes (30 instead of 5).
+Rematch groups aren't published until Omega's own rematch table is verified.
 
 Trainers are published exactly as the ROM stores them, including unused
 slots, and the rival keeps the ROM's default name.
