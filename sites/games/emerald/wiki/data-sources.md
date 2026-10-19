@@ -63,7 +63,7 @@ value range rather than located by name.
   tutors reached through script specials 474 and 475. Battle Point costs are
   not decoded.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Poké
-  Ball"); descriptions keep their ROM text. Names that later games write with
+  Ball"); move, item, and ability descriptions come from the ROM's own text. Names that later games write with
   an inner capital read as one word, e.g. "Thunderpunch".
 
 Battle Frontier facilities, contests, and Berry mechanics are not covered.

@@ -30,7 +30,9 @@ def extract_move_dataset(result: InspectionResult) -> dict[str, Any]:
         records, source, reference_names = _extract_move_records_flat(
             profile, platform, engine, result
         )
-        reference_descriptions = {}
+        reference_descriptions = _extract_move_descriptions_flat(
+            profile, platform, engine, result
+        )
     else:
         raise ProfileError(
             f"Platform {profile.platform!r} supports neither archive nor flat reads"
@@ -119,3 +121,33 @@ def _extract_move_records_flat(
         },
     }
     return records, {"offset": offset}, reference_names
+
+
+def _extract_move_descriptions_flat(
+    profile: Any, platform: Any, engine: MoveConcern, result: InspectionResult
+) -> dict[str, Any]:
+    # `gMoveDescriptionPointers` has one pointer per move from move 1, so
+    # move 0 (none) gets an empty description. Optional: without
+    # `move_description_offset`, PokéDB's text is used.
+    offset = profile.optional_int_parameter("move_description_offset")
+    if offset is None:
+        return {}
+    count = profile.int_parameter("move_name_count") - 1
+    pointers = platform.read_bytes(result.image, offset, count * 4)
+    descriptions = [""]
+    for index in range(count):
+        pointer = int.from_bytes(pointers[index * 4 : index * 4 + 4], "little")
+        # A generous read; decoding stops at the 0xFF terminator.
+        descriptions.append(
+            engine.decode_gen3_text(
+                platform.read_bytes(
+                    result.image, engine.resolve_gba_pointer(pointer), 256
+                )
+            )
+        )
+    return {
+        "move_descriptions": descriptions,
+        "description_sources": {
+            "move_descriptions": {"archive": f"offset:{offset:#x}", "member": 0}
+        },
+    }

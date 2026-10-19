@@ -68,7 +68,7 @@ value range rather than located by name.
 - **Move tutors:** the tutor move table and 2-byte per-species compatibility
   masks cover 15 tutors, each located from the script that teaches its move.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Mt.
-  Moon"); descriptions keep their ROM text. Names that later games write with
+  Moon"); move, item, and ability descriptions come from the ROM's own text. Names that later games write with
   an inner capital read as one word, e.g. "Thunderpunch".
 
 Trainers are published exactly as the ROMs store them. About 100 unused

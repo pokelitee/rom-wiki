@@ -257,7 +257,9 @@ class MoveConcern(Protocol):
     MOVE_RECORD_COUNT: int
     MOVE_RECORD_SIZE: int
     decode_gen3_name_table: Parser
+    decode_gen3_text: Parser
     parse_move_record: Parser
+    resolve_gba_pointer: Parser
 
 
 class TutorConcern(Protocol):

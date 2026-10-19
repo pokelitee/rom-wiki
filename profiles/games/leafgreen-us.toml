@@ -50,6 +50,9 @@ gmapgroups_offset = 0x352688
 # `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
 trainer_money_offset = 0x24f1fc
 
+# `gMoveDescriptionPointers`: one pointer per move from move 1.
+move_description_offset = 0x487fc4
+
 # The rematch table: 16-byte rows of trainer IDs.
 rematch_table_offset = 0x452bac
 rematch_table_count = 221
