@@ -140,41 +140,50 @@ def _extract_personal_records_flat(
         ).to_dict()
         for index in range(count)
     ]
-    reference_names = _extract_ability_names_flat(profile, platform, engine, result)
+    reference_names = _extract_names_flat(profile, platform, engine, result, count)
     return records, {"offset": offset}, reference_names
 
 
-def _extract_ability_names_flat(
-    profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
+def _extract_names_flat(
+    profile: Any,
+    platform: Any,
+    engine: PersonalConcern,
+    result: InspectionResult,
+    record_count: int,
 ) -> dict[str, Any]:
-    # Optional: an engine that hasn't wired up the "abilities" domain yet
-    # (or a profile that doesn't declare these parameters) simply gets no
-    # ability_names key, matching `resolve_ability_names`'s None-tolerant
-    # fallback -- mirrors `moves.py`'s flat move-name decode, but this one
-    # is optional rather than required since abilities is itself optional.
-    name_offset = profile.optional_int_parameter("ability_name_offset")
-    name_stride = profile.optional_int_parameter("ability_name_stride")
-    name_count = profile.optional_int_parameter("ability_name_count")
-    if name_offset is None or name_stride is None or name_count is None:
-        return {}
-    name_data = platform.read_bytes(result.image, name_offset, name_stride * name_count)
-    ability_names = engine.decode_gen3_text_table(
-        name_data, stride=name_stride, count=name_count
-    )
-    return {
-        "ability_names": ability_names,
-        "name_sources": {
-            "ability_names": {"archive": f"offset:{name_offset:#x}", "member": 0}
-        },
+    # Each table is optional: without its offset, enrichment falls back to
+    # PokéDB's names. Species names are one per personal record; a build with
+    # a resized ability table sets ability_name_count.
+    tables = {
+        "ability_names": (
+            "ability_name_offset",
+            "ability_name_stride",
+            profile_count(profile, "ability_name_count", engine.ABILITY_NAME_COUNT),
+        ),
+        "pokemon_names": ("pokemon_name_offset", "pokemon_name_stride", record_count),
     }
+    result_names: dict[str, Any] = {}
+    sources: dict[str, Any] = {}
+    for field, (offset_parameter, stride_parameter, count) in tables.items():
+        offset = profile.optional_int_parameter(offset_parameter)
+        if offset is None:
+            continue
+        stride = profile.int_parameter(stride_parameter)
+        data = platform.read_bytes(result.image, offset, stride * count)
+        result_names[field] = engine.decode_gen3_text_table(
+            data, stride=stride, count=count
+        )
+        sources[field] = {"archive": f"offset:{offset:#x}", "member": 0}
+    if sources:
+        result_names["name_sources"] = sources
+    return result_names
 
 
 def _extract_ability_descriptions_flat(
     profile: Any, platform: Any, engine: PersonalConcern, result: InspectionResult
 ) -> dict[str, Any]:
-    # Optional, same reasoning as `_extract_ability_names_flat` above: a
-    # profile that doesn't declare `ability_description_offset` simply
-    # skips ability descriptions rather than failing.
+    # Optional, like the name tables: a profile without
+    # `ability_description_offset` skips ability descriptions.
     description_offset = profile.optional_int_parameter("ability_description_offset")
     if description_offset is None:
         return {}

@@ -1,6 +1,7 @@
 import romwiki.engines.gen3.shared.overworld as overworld
 from romwiki.engines.gen3.shared.battle_variants import resolve_trainer_variants
 from romwiki.engines.gen3.shared.constants import (
+    ABILITY_REFERENCE_IDS,
     ALLOW_DUPLICATE_EGG_MOVES,
     COLOR_NAMES,
     DAMAGE_CLASS_NAMES,
@@ -27,6 +28,7 @@ from romwiki.engines.gen3.shared.constants import (
     INTERNAL_TO_NATIONAL_DEX,
     ITEM_POCKET_NAMES,
     ITEM_RECORD_SIZE,
+    LAST_SPECIES_ID,
     MACHINE_COUNT,
     MACHINE_LEARNSET_SIZE,
     MAP_HEADER_SIZE,
@@ -105,12 +107,10 @@ from .constants import (
 # own INTERNAL_MEMBERS/FORM_MEMBERS aliasing convention.
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS
-# See `gen3/frlg/__init__.py`'s own comment: some raw ROM tables this
-# bounds legitimately reference species beyond what the `pokemon` domain
-# currently exposes as public records.
-BASE_SPECIES_COUNT = PERSONAL_RECORD_COUNT
+BASE_SPECIES_COUNT = LAST_SPECIES_ID
 
 __all__ = [
+    "ABILITY_REFERENCE_IDS",
     "ALLOW_DUPLICATE_EGG_MOVES",
     "ENCOUNTER_COSMETIC_FORM_LABELS",
     "ENCOUNTER_FORM_SLUGS",

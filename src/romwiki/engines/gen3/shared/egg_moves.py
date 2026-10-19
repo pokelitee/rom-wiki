@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from romwiki.engines.gen3.shared.constants import MAX_MOVE_ID, PERSONAL_RECORD_COUNT
+from romwiki.engines.gen3.shared.constants import LAST_SPECIES_ID, MAX_MOVE_ID
 from romwiki.schema import OverlayEggMoveSet
 from romwiki.util.errors import InvalidRomError
 
@@ -10,14 +10,8 @@ from romwiki.util.errors import InvalidRomError
 # species' block starts with a marker `species_id + 20000`, followed by
 # move IDs, until the next marker or the `0xFFFF` terminator. Same scheme
 # as Generation IV (`gen4/egg_moves.py`, which this mirrors).
-#
-# Markers span the real on-ROM species range (1-411, all real Pokemon --
-# see `constants.py`'s `INTERNAL_TO_NATIONAL_DEX`), not just the exposed
-# 1-386. Records beyond PERSONAL_RECORD_COUNT are decoded (so parsing
-# doesn't fail) but dropped before returning.
 EGG_MOVE_TABLE_TERMINATOR = 0xFFFF
 EGG_MOVE_SPECIES_MARKER_BASE = 20000
-_MAX_ON_ROM_SPECIES_ID = 411
 
 
 def parse_egg_move_table(
@@ -38,12 +32,12 @@ def parse_egg_move_table(
             if species_id is None:
                 raise InvalidRomError("Gen III egg move table is empty")
             _append_entry(entries, species_id, move_ids, marker_offset)
-            return _filter_and_renumber(entries)
+            return _egg_move_sets(entries)
 
         if (
             EGG_MOVE_SPECIES_MARKER_BASE
             < value
-            <= (EGG_MOVE_SPECIES_MARKER_BASE + _MAX_ON_ROM_SPECIES_ID)
+            <= (EGG_MOVE_SPECIES_MARKER_BASE + LAST_SPECIES_ID)
         ):
             next_species_id = value - EGG_MOVE_SPECIES_MARKER_BASE
             if species_id is not None:
@@ -79,7 +73,7 @@ def _append_entry(
     entries.append((species_id, tuple(move_ids), table_offset))
 
 
-def _filter_and_renumber(
+def _egg_move_sets(
     entries: list[tuple[int, tuple[int, ...], int]],
 ) -> tuple[OverlayEggMoveSet, ...]:
     return tuple(
@@ -89,7 +83,5 @@ def _filter_and_renumber(
             table_index=table_index,
             overlay_offset=table_offset,
         )
-        for table_index, (species_id, move_ids, table_offset) in enumerate(
-            entry for entry in entries if entry[0] <= PERSONAL_RECORD_COUNT
-        )
+        for table_index, (species_id, move_ids, table_offset) in enumerate(entries)
     )

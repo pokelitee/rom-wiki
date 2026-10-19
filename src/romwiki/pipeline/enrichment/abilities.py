@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from romwiki.engines.registry import get_engine
+from romwiki.pipeline.enrichment.common import ability_reference_id
 from romwiki.pipeline.enrichment.references import with_rom_description
 from romwiki.schema.enriched import (
     AbilityDataset,
@@ -26,6 +28,7 @@ def build_ability_dataset(
     engine_id = pokemon_dataset.get("engine")
     if not isinstance(engine_id, str):
         raise DataSourceError("Pokémon dataset must declare its source engine")
+    engine = get_engine(engine_id).enrich
     ability_names = pokemon_dataset.get("ability_names")
     if not isinstance(ability_names, list) or not ability_names:
         raise DataSourceError("Expected ROM-derived ability names")
@@ -73,7 +76,12 @@ def build_ability_dataset(
     )
     records: list[AbilityEnrichedRecord] = []
     for ability_id in range(1, len(ability_names)):
-        slug = pokedb.ability_name(ability_id)
+        reference_id = ability_reference_id(engine, ability_id)
+        if reference_id is None:
+            # Pokémon enrichment already rejects a Pokémon with this ability,
+            # so it is unused and has no page.
+            continue
+        slug = pokedb.ability_name(reference_id)
         pickup = None
         if is_sliding_pickup and pickup_dataset is not None and slug == "pickup":
             pickup = {"level_ranges": pickup_dataset["level_ranges"]}
@@ -91,7 +99,7 @@ def build_ability_dataset(
                 "slug": slug,
                 "name": ability_names[ability_id],
                 "reference": with_rom_description(
-                    pokedb.ability_reference(ability_id, reference_version),
+                    pokedb.ability_reference(reference_id, reference_version),
                     descriptions[ability_id] if descriptions is not None else None,
                 ),
                 "pokemon": pokemon_by_ability.get(ability_id, []),

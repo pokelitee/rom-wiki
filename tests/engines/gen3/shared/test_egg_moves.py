@@ -22,20 +22,13 @@ class ParseEggMoveTableTests(unittest.TestCase):
         self.assertEqual(records[0].table_index, 0)
         self.assertEqual(records[1].table_index, 1)
 
-    def test_drops_and_renumbers_padding_species_beyond_the_exposed_bound(
-        self,
-    ) -> None:
-        # Species markers up to 411 are real on-ROM data (see the module
-        # comment), but only species 1-386 are currently exposed elsewhere
-        # in this engine -- a species-387 entry must not break decoding, but
-        # also must not appear in the returned records.
-        data = struct.pack("<7H", 20001, 113, 20004, 246, 20387, 187, 0xFFFF)
+    def test_keeps_species_through_the_last_internal_species(self) -> None:
+        data = struct.pack("<7H", 20001, 113, 20387, 187, 20411, 50, 0xFFFF)
 
         records = parse_egg_move_table(data)
 
-        self.assertEqual([record.species_id for record in records], [1, 4])
-        self.assertEqual(records[0].table_index, 0)
-        self.assertEqual(records[1].table_index, 1)
+        self.assertEqual([record.species_id for record in records], [1, 387, 411])
+        self.assertEqual([record.table_index for record in records], [0, 1, 2])
 
     def test_rejects_invalid_or_unterminated_tables(self) -> None:
         with self.assertRaises(InvalidRomError):

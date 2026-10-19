@@ -5,16 +5,16 @@ from __future__ import annotations
 # a real per-game record count (differs from FireRed/LeafGreen's own
 # counts) or a domain not yet implemented for this leaf.
 
-# Zero rather than a guessed count for domains not yet implemented on this
-# leaf.
-POKEMON_NAME_COUNT = 0
+# `gSpeciesNames`: one 11-byte name per personal record, as on FireRed/
+# LeafGreen. Pokédex entries come from PokéDB rather than the ROM.
+POKEMON_NAME_COUNT = 412
 POKEMON_DESCRIPTION_COUNT = 0
 
 # `sAbilityNames`/`sAbilityDescriptionPointers`: verified against the real
 # Emerald ROM -- identical 78-entry table to FireRed/LeafGreen's (index 0
-# placeholder, index 1 "STENCH" ... index 77 "AIR LOCK", index 76
-# "CACOPHONY"), same real/PokeDB numbering divergence at Cacophony.
-ABILITY_NAME_COUNT = 76
+# placeholder, index 1 "STENCH" ... index 76 "CACOPHONY", index 77 "AIR
+# LOCK"); see `ABILITY_REFERENCE_IDS` for the PokéDB numbering.
+ABILITY_NAME_COUNT = 78
 
 # Index 0 is an all-"?" placeholder. Real item count differs from FireRed/
 # LeafGreen's (374) -- Emerald's own item list runs through index 376

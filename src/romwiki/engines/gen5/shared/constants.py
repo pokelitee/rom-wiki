@@ -180,5 +180,7 @@ EVOLUTION_PARAMETER_KINDS = {
     22: "pokemon",
 }
 
-# Generation V personal archives are indexed by National Dex ID.
+# Generation V personal archives are indexed by National Dex ID, and ability
+# IDs match PokéDB's.
 INTERNAL_TO_NATIONAL_DEX: dict[int, int] = {}
+ABILITY_REFERENCE_IDS: dict[int, int | None] = {}
