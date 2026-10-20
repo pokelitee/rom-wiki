@@ -1,5 +1,5 @@
 import { Portal } from "./features/portal/portal";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   HashRouter,
   Link,
@@ -21,6 +21,7 @@ import {
   Moon,
   Search,
   Sun,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import type { Game, Manifest } from "./data/types";
@@ -60,6 +61,11 @@ const Catalog = lazy(() =>
 const Detail = lazy(() =>
   import("./features/records/detail").then((m) => ({ default: m.Detail })),
 );
+const MakeWiki = lazy(() =>
+  import("./features/generate/make-wiki").then((m) => ({
+    default: m.MakeWiki,
+  })),
+);
 
 export function App() {
   const [manifest, setManifest] = useState<Manifest>();
@@ -84,10 +90,14 @@ export function App() {
       active = false;
     };
   }, [attempt]);
+  // Rereads the library after a wiki is generated, imported, or deleted.
+  const reload = useCallback(async () => {
+    setManifest(await loadManifest());
+  }, []);
   return (
     <HashRouter>
       {manifest ? (
-        <Shell manifest={manifest} />
+        <Shell manifest={manifest} onLibraryChange={reload} />
       ) : (
         <main className="startup">
           <h1>ROM Wiki</h1>
@@ -112,7 +122,13 @@ export function App() {
   );
 }
 
-function Shell({ manifest }: { manifest: Manifest }) {
+function Shell({
+  manifest,
+  onLibraryChange,
+}: {
+  manifest: Manifest;
+  onLibraryChange: () => Promise<void>;
+}) {
   const location = useLocation();
   const navigate = useNavigate();
   const game = manifest.games.find(
@@ -180,7 +196,9 @@ function Shell({ manifest }: { manifest: Manifest }) {
               { value: "", label: "Game library" },
               ...manifest.games.map((entry) => ({
                 value: entry.id,
-                group: `Generation ${entry.generation}`,
+                group: entry.local
+                  ? "Your wikis"
+                  : `Generation ${entry.generation}`,
                 label: (
                   <span className="game-option">
                     <span className="theme-dot" data-theme={entry.theme} />
@@ -286,7 +304,23 @@ function Shell({ manifest }: { manifest: Manifest }) {
         <main id="main-content" tabIndex={-1} className="main-content">
           <div className="page-body">
             <Routes>
-              <Route path="/" element={<Portal games={manifest.games} />} />
+              <Route
+                path="/"
+                element={
+                  <Portal
+                    games={manifest.games}
+                    onLibraryChange={onLibraryChange}
+                  />
+                }
+              />
+              <Route
+                path="/make"
+                element={
+                  <Suspense fallback={<Loading />}>
+                    <MakeWiki onLibraryChange={onLibraryChange} />
+                  </Suspense>
+                }
+              />
               <Route
                 path="/:gameId/*"
                 element={<GameRoutes games={manifest.games} />}
@@ -310,6 +344,7 @@ function GameRoutes({ games }: { games: Game[] }) {
   if (!game) return <NotFound />;
   return (
     <SpriteProvider game={game}>
+      {game.local && <LocalBanner game={game} />}
       <LoadBoundary>
         <Suspense fallback={<Loading />}>
           <Routes>
@@ -353,6 +388,31 @@ function SectionRoute({ game }: { game: Game }) {
 function DocumentRoute({ game }: { game: Game }) {
   const params = useParams();
   return <Document game={game} id={params["*"] ?? "index"} />;
+}
+
+function LocalBanner({ game }: { game: Game }) {
+  const local = game.local;
+  if (!local) return null;
+  return (
+    <div className="notice">
+      {local.verified ? <Library size={20} /> : <TriangleAlert size={20} />}
+      <div>
+        <strong>Made in this browser from your ROM</strong>
+        {!local.verified && (
+          <p>
+            This ROM isn't one this site knows, so it was read as the game its
+            header names. Check the data before relying on it.
+          </p>
+        )}
+        {local.outdated && (
+          <p>
+            The generator has changed since this wiki was made.{" "}
+            <Link to="/make">Generate it again</Link> for the latest data.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function NotFound() {

@@ -1,6 +1,8 @@
 import { Download } from "lucide-react";
-import type { Game } from "../../data/types";
+import type { DownloadEntry, Game } from "../../data/types";
 import { dataUrl } from "../../data/client";
+import { readWikiFile } from "../../generate/store";
+import { saveBlob } from "../../lib/download";
 import { countLabel, title } from "../../lib/utils";
 import { Button } from "../../components/ui/button";
 import { CopyButton } from "../../components/copy-button";
@@ -52,15 +54,39 @@ export function Downloads({ game }: { game: Game }) {
                 label={`Copy the ${title(entry.kind)} SHA-256 checksum`}
               />
             </div>
-            <Button asChild variant="outline">
-              <a href={dataUrl(`${game.id}/downloads/${entry.path}`)} download>
-                <Download size={15} aria-hidden="true" />
-                Download
-              </a>
-            </Button>
+            <DownloadButton game={game} entry={entry} />
           </article>
         ))}
       </div>
     </>
+  );
+}
+
+function DownloadButton({ game, entry }: { game: Game; entry: DownloadEntry }) {
+  const path = `${game.id}/downloads/${entry.path}`;
+  // A wiki made in this browser has no URL to link to; its files are read
+  // from storage and saved directly.
+  if (game.local)
+    return (
+      <Button
+        variant="outline"
+        onClick={async () =>
+          saveBlob(
+            new Blob([(await readWikiFile(path)) as BlobPart]),
+            entry.path,
+          )
+        }
+      >
+        <Download size={15} aria-hidden="true" />
+        Download
+      </Button>
+    );
+  return (
+    <Button asChild variant="outline">
+      <a href={dataUrl(path)} download>
+        <Download size={15} aria-hidden="true" />
+        Download
+      </a>
+    </Button>
   );
 }

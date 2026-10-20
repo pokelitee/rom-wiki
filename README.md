@@ -4,6 +4,8 @@ ROM Wiki extracts structured Pokémon data from locally supplied ROM images and 
 
 Browse the React reference site at [pokelitee.github.io/rom-wiki](https://pokelitee.github.io/rom-wiki/). Every verified merge to `main` deploys automatically through GitHub Pages.
 
+Its **Make a wiki** page builds a wiki from your own copy of a supported Generation III–V game or ROM hack, entirely in your browser: the ROM is never uploaded, and the wiki is saved in that browser, where you can export it to a file and import it elsewhere.
+
 ## Development
 
 Use Python 3.12+ and Node 22.12+. Activate a Python virtual environment, then run:
