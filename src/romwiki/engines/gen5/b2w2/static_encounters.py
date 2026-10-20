@@ -148,7 +148,7 @@ def _static_fact(
         species_id = instruction.params[1]
         level = instruction.params[3]
         is_egg = False
-    elif instruction.name == "PokePartyAddN":
+    elif instruction.name == "PokePartyAddNPoke":
         _destination, species_id, level, *_attributes = instruction.params
         is_egg = False
     elif instruction.name == "PokePartyAddEgg":
@@ -216,10 +216,10 @@ def _fossil_mappings(
             index : index + 5
         ]
         if not (
-            push_item_var.name == "StackPush"
+            push_item_var.name == "VMStackPush"
             and push_item_var.params == (_FOSSIL_ITEM_VARIABLE,)
-            and push_item.name == "StackPushConst"
-            and compare.name == "StackCmp"
+            and push_item.name == "VMStackPushConst"
+            and compare.name == "VMStackCmp"
             and compare.params == (1,)
             and jump.name == "VMJumpIf"
             and set_species.name == "WorkSetConst"
