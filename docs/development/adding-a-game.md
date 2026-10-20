@@ -90,6 +90,27 @@ Profiles may override an engine default only when a verified ROM variant actuall
 changes it. Keep exact paths, table offsets, message members, and script anchors in
 the profile because those identify where that build stores its data.
 
+Where pret publishes symbols for a retail build, name tables by symbol instead of
+writing their offsets. Set `symbols = "<table>"` in `[profile]`, then use
+`<name>_symbol` for a table and `<name>_special` for a `gSpecials` handler:
+
+```toml
+[profile]
+symbols = "firered-us"
+
+[parameters]
+trainer_symbol = "gTrainers"
+event_mon_special = "CreateEnemyEventMon"
+```
+
+The loader resolves these against `profiles/symbols/<table>.toml` into the usual
+`trainer_offset` and `event_mon_special` integers, so engines and extractors read
+them as before. A profile that extends another inherits its symbol names and
+resolves them against its own table, and an explicit `<name>_offset` wins over an
+inherited symbol, which is how a hack that moved a table overrides it. The symbol
+tables are generated (see [Generated files from pret](../development.md#generated-files-from-pret));
+adding a symbol name to a profile means rerunning `scripts/pret/symbols.py`.
+
 When PokéDB contains generation-specific sprites, set the optional reference key:
 
 ```toml

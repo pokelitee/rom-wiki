@@ -44,10 +44,13 @@ generator and review the diff; `--check` fails when a generated file is stale.
 
 ```sh
 python scripts/pret/gen3_script_commands.py --check
+python scripts/pret/symbols.py --check
 ```
 
 - `gen3_script_commands.py` writes the Gen III event-script command tables
   (`engines/gen3/shared/script_command_table.py`).
+- `symbols.py` writes `profiles/symbols/<table>.toml`: the offset and size of each
+  pret symbol a profile names, and the `gSpecials` index of each named special.
 
 ## Architecture and reference guides
 

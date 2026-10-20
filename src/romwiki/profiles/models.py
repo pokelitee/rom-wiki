@@ -49,6 +49,8 @@ class GameProfile:
     )
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, Any] = field(default_factory=dict)
+    # `<name>_offset` parameter -> the pret symbol it was resolved from.
+    symbols: Mapping[str, str] = field(default_factory=dict)
 
     def int_parameter(self, name: str, default: int | None = None) -> int:
         """Return an integer parameter, or `default` when the profile omits it.

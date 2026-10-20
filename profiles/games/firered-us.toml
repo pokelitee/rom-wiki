@@ -1,5 +1,6 @@
 [profile]
 id = "firered-us"
+symbols = "firered-us"
 name = "Pokémon FireRed (USA)"
 platform = "game-boy-advance"
 engine = "gen3_frlg"
@@ -16,74 +17,78 @@ sprite_version = "firered-leafgreen"
 chart = "gen3"
 
 [parameters]
-personal_offset = 0x254784
+personal_symbol = "gSpeciesInfo"
 personal_count = 412
-pokemon_name_offset = 0x245ee0
+pokemon_name_symbol = "gSpeciesNames"
 pokemon_name_stride = 11
-learnset_offset = 0x25d7b4
+learnset_symbol = "gLevelUpLearnsets"
 
-evolution_offset = 0x259754
+evolution_symbol = "gEvolutionTable"
 
-tmhm_learnset_offset = 0x252bc8
-machine_move_offset = 0x45a5a4
+tmhm_learnset_symbol = "sTMHMLearnsets"
+machine_move_symbol = "sTMHMMoves"
 machine_count = 58
 tm_count = 50
 
-egg_move_offset = 0x25ef0c
+egg_move_symbol = "gEggMoves"
 egg_move_table_size = 2278
 
-tutor_move_offset = 0x459b60
-tutor_compatibility_offset = 0x459b7e
+tutor_move_symbol = "sTutorMoves"
+tutor_compatibility_symbol = "sTutorLearnsets"
 
-move_offset = 0x250c04
+move_symbol = "gBattleMoves"
 move_count = 355
 
-move_name_offset = 0x247094
+move_name_symbol = "gMoveNames"
 move_name_stride = 13
 move_name_count = 355
 
-item_offset = 0x3db028
+item_symbol = "gItems"
 item_count = 375
 
-trainer_offset = 0x23eac8
+trainer_symbol = "gTrainers"
 trainer_count = 743
-trainer_class_name_offset = 0x23e558
+trainer_class_name_symbol = "gTrainerClassNames"
 
-ability_name_offset = 0x24fc40
+ability_name_symbol = "gAbilityNames"
 ability_name_stride = 13
 ability_name_count = 78
-ability_description_offset = 0x24fb08
+ability_description_symbol = "gAbilityDescriptionPointers"
 
-encounter_offset = 0x3c9cb8
+encounter_symbol = "gWildMonHeaders"
 encounter_count = 132
 
 # `sMapNames`, one name pointer per Kanto/Sevii region map section, and
 # `gMapGroups` -- see engines/gen3/frlg/constants.py's REGION_NAME_* and
 # GMAPGROUPS_GROUP_COUNT comments.
-region_name_offset = 0x3f1cac
+region_name_symbol = "sMapNames"
 region_name_count = 109
-gmapgroups_offset = 0x3526a8
+gmapgroups_symbol = "gMapGroups"
 
 # `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
-trainer_money_offset = 0x24f220
+trainer_money_symbol = "gTrainerMoneyTable"
 
 # `gMoveDescriptionPointers`: one pointer per move from move 1.
-move_description_offset = 0x4886e8
+move_description_symbol = "gMoveDescriptionPointers"
 
 # `gPokedexEntries`: one entry per National Dex number from 0.
-pokedex_entry_offset = 0x44e850
+pokedex_entry_symbol = "gPokedexEntries"
 
 # `sPickupItems`: 16 (item, cumulative threshold) entries.
-pickup_items_offset = 0x250848
+pickup_items_symbol = "sPickupItems"
 
 # The rematch table: 16-byte rows of trainer IDs.
-rematch_table_offset = 0x45318c
+rematch_table_symbol = "sRematches"
 rematch_table_count = 221
 trainer_variant_contract = "frlg-retail-v1"
 
 # `sIngameTrades`: 9 in-game trades, 60 bytes each.
-trade_table_offset = 0x26cf8c
+trade_table_symbol = "sInGameTrades"
 trade_count = 9
+
+# `gSpecials` handlers named by event scripts.
+event_mon_special = "CreateEnemyEventMon"
+trade_info_special = "GetInGameTradeSpeciesInfo"
 
 [[hashes]]
 algorithm = "sha256"

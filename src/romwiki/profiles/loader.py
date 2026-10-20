@@ -16,6 +16,9 @@ from romwiki.profiles.models import (
 from romwiki.util.errors import ProfileError
 
 _SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+_SYMBOLS_DIRECTORY = "symbols"
+_SYMBOL_SUFFIX = "_symbol"
+_SPECIAL_SUFFIX = "_special"
 
 
 class ProfileRepository:
@@ -26,7 +29,13 @@ class ProfileRepository:
     def load(cls, directory: Path) -> ProfileRepository:
         if not directory.is_dir():
             raise ProfileError(f"Profile directory does not exist: {directory}")
-        paths = sorted(directory.rglob("*.toml"))
+        # `symbols/` holds the generated pret symbol subsets profiles resolve
+        # against, not profiles.
+        paths = sorted(
+            path
+            for path in directory.rglob("*.toml")
+            if _SYMBOLS_DIRECTORY not in path.relative_to(directory).parts[:-1]
+        )
         if not paths:
             raise ProfileError(f"No TOML profiles found in: {directory}")
 
@@ -93,8 +102,11 @@ class ProfileRepository:
             resolved[profile_id] = merged
             return merged
 
+        symbol_tables: dict[str, dict[str, Any]] = {}
         profiles = tuple(
-            _build_profile(path, resolve(profile_id))
+            _build_profile(
+                path, _resolve_symbols(resolve(profile_id), directory, symbol_tables)
+            )
             for profile_id, (path, _) in profiles_by_id.items()
         )
         return cls(profiles)
@@ -112,6 +124,59 @@ class ProfileRepository:
         if len(matches) > 1:
             raise ProfileError("ROM image matches more than one profile")
         return matches[0] if matches else None
+
+
+def _resolve_symbols(
+    data: dict[str, Any],
+    directory: Path,
+    tables: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Turn `<name>_symbol` parameters into `<name>_offset` and `<name>_special`
+    handler names into `gSpecials` indices, from the profile's symbol table.
+
+    An explicit `<name>_offset` wins over an inherited symbol, which is how a
+    hack overrides a table it moved.
+    """
+    parameters = dict(data.get("parameters", {}))
+    symbol_keys = [key for key in parameters if key.endswith(_SYMBOL_SUFFIX)]
+    special_keys = [
+        key
+        for key, value in parameters.items()
+        if key.endswith(_SPECIAL_SUFFIX) and isinstance(value, str)
+    ]
+    if not symbol_keys and not special_keys:
+        return data
+    table_name = data["profile"].get("symbols")
+    if not isinstance(table_name, str):
+        raise ProfileError(
+            f"Profile {data['profile'].get('id')} names symbols without a symbol table"
+        )
+    if table_name not in tables:
+        tables[table_name] = _read_profile_data(
+            directory / _SYMBOLS_DIRECTORY / f"{table_name}.toml"
+        )
+    table = tables[table_name]
+    sources: dict[str, str] = {}
+    for key in symbol_keys:
+        symbol = parameters.pop(key)
+        offset_key = key.removesuffix(_SYMBOL_SUFFIX) + "_offset"
+        if offset_key in parameters:
+            continue
+        try:
+            parameters[offset_key] = table["symbols"][symbol]["offset"]
+        except KeyError as error:
+            raise ProfileError(
+                f"Symbol table {table_name} has no symbol {symbol!r}"
+            ) from error
+        sources[offset_key] = symbol
+    for key in special_keys:
+        try:
+            parameters[key] = table["specials"][parameters[key]]
+        except KeyError as error:
+            raise ProfileError(
+                f"Symbol table {table_name} has no special {parameters[key]!r}"
+            ) from error
+    return {**data, "parameters": parameters, "symbol_sources": sources}
 
 
 def _read_profile_data(path: Path) -> dict[str, Any]:
@@ -191,6 +256,7 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
             location_sections=location_sections,
             layout=dict(data.get("layout", {})),
             parameters=dict(data.get("parameters", {})),
+            symbols=dict(data.get("symbol_sources", {})),
         )
     except (KeyError, TypeError) as error:
         raise ProfileError(f"Invalid profile {path}: {error}") from error

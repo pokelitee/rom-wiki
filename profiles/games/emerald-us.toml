@@ -1,5 +1,6 @@
 [profile]
 id = "emerald-us"
+symbols = "emerald-us"
 name = "Pokémon Emerald (USA, Europe)"
 platform = "game-boy-advance"
 engine = "gen3_emerald"
@@ -16,84 +17,88 @@ sprite_version = "emerald"
 chart = "gen3"
 
 [parameters]
-personal_offset = 0x3203cc
+personal_symbol = "gSpeciesInfo"
 personal_count = 412
-pokemon_name_offset = 0x3185c8
+pokemon_name_symbol = "gSpeciesNames"
 pokemon_name_stride = 11
-learnset_offset = 0x32937c
+learnset_symbol = "gLevelUpLearnsets"
 
-ability_name_offset = 0x31b6db
+ability_name_symbol = "gAbilityNames"
 ability_name_stride = 13
 ability_name_count = 78
-ability_description_offset = 0x31bad4
+ability_description_symbol = "gAbilityDescriptionPointers"
 
-move_offset = 0x31c898
+move_symbol = "gBattleMoves"
 move_count = 355
 
-move_name_offset = 0x31977c
+move_name_symbol = "gMoveNames"
 move_name_stride = 13
 move_name_count = 355
 
-item_offset = 0x5839a0
+item_symbol = "gItems"
 item_count = 377
 
-trainer_offset = 0x310030
+trainer_symbol = "gTrainers"
 trainer_count = 855
-trainer_class_name_offset = 0x30fcd4
+trainer_class_name_symbol = "gTrainerClassNames"
 
-evolution_offset = 0x32531c
+evolution_symbol = "gEvolutionTable"
 
-tmhm_learnset_offset = 0x31e898
-machine_move_offset = 0x615b94
+tmhm_learnset_symbol = "gTMHMLearnsets"
+machine_move_symbol = "sTMHMMoves"
 machine_count = 58
 tm_count = 50
 
-egg_move_offset = 0x32add8
+egg_move_symbol = "gEggMoves"
 egg_move_table_size = 2278
 
-tutor_move_offset = 0x61500c
-tutor_compatibility_offset = 0x615048
+tutor_move_symbol = "gTutorMoves"
+tutor_compatibility_symbol = "sTutorLearnsets"
 # The Battle Frontier tutors' two 10-move menus.
-frontier_tutor_move_offset = 0x5b31f8
+frontier_tutor_move_symbol = "sBattleFrontier_TutorMoves1"
 
 # `gWildMonHeaders` -- see `engines/gen3/emerald/constants.py`'s
 # `ENCOUNTER_HEADER_COUNT` comment for the real-ROM cross-checks.
-encounter_offset = 0x552d48
+encounter_symbol = "gWildMonHeaders"
 encounter_count = 124
 
 # `gRegionMapEntries`, one entry per region map section (0 = "LITTLEROOT
 # TOWN" ... 212 = "TRAINER HILL"), and `gMapGroups` -- see
 # engines/gen3/emerald/constants.py's REGION_NAME_* and
 # GMAPGROUPS_GROUP_COUNT comments.
-region_name_offset = 0x5a147c
+region_name_symbol = "gRegionMapEntries"
 region_name_count = 213
-gmapgroups_offset = 0x486578
+gmapgroups_symbol = "gMapGroups"
 
 # `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
-trainer_money_offset = 0x31aeb8
+trainer_money_symbol = "gTrainerMoneyTable"
 
 # `gMoveDescriptionPointers`: one pointer per move from move 1.
-move_description_offset = 0x61c524
+move_description_symbol = "gMoveDescriptionPointers"
 
 # `gPokedexEntries`: one entry per National Dex number from 0.
-pokedex_entry_offset = 0x56b5b0
+pokedex_entry_symbol = "gPokedexEntries"
 
 # Pickup's 18 common items, 11 rare items, and nine rate thresholds.
-pickup_common_items_offset = 0x31c440
-pickup_rare_items_offset = 0x31c464
-pickup_common_rate_offset = 0x31c47a
+pickup_common_items_symbol = "sPickupItems"
+pickup_rare_items_symbol = "sRarePickupItems"
+pickup_common_rate_symbol = "sPickupProbabilities"
 
 # `sStarterMon`: Treecko, Torchic, and Mudkip, indexed by VAR_STARTER_MON.
-starter_species_offset = 0x5b1df8
+starter_species_symbol = "sStarterMon"
 
 # The rematch table: 16-byte rows of trainer IDs.
-rematch_table_offset = 0x5500a4
+rematch_table_symbol = "gRematchTable"
 rematch_table_count = 78
 trainer_variant_contract = "emerald-retail-v1"
 
 # `sIngameTrades`: 4 in-game trades, 60 bytes each.
-trade_table_offset = 0x338ed0
+trade_table_symbol = "sIngameTrades"
 trade_count = 4
+
+# `gSpecials` handlers named by event scripts.
+event_mon_special = "CreateEnemyEventMon"
+trade_info_special = "GetInGameTradeSpeciesInfo"
 
 [[hashes]]
 algorithm = "sha256"

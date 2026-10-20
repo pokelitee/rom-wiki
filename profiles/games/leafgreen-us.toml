@@ -1,5 +1,6 @@
 [profile]
 id = "leafgreen-us"
+symbols = "leafgreen-us"
 name = "Pokémon LeafGreen (USA)"
 extends = "firered-us"
 base_game = "leafgreen"
@@ -12,61 +13,11 @@ rom_versions = [0]
 chart = "gen3"
 
 [parameters]
-# LeafGreen's tables sit at different offsets than FireRed's throughout;
-# unset counts/strides are identical between the two games and inherited
-# from firered-us. See that profile and engines/gen3/frlg/constants.py for
-# what's verified.
-personal_offset = 0x254760
-pokemon_name_offset = 0x245ebc
-learnset_offset = 0x25d794
-
-evolution_offset = 0x259734
-
-tmhm_learnset_offset = 0x252ba4
-machine_move_offset = 0x459fc4
-
-egg_move_offset = 0x25eeec
-
-tutor_move_offset = 0x459580
-tutor_compatibility_offset = 0x45959e
-
-move_offset = 0x250be0
-move_name_offset = 0x247070
-
-item_offset = 0x3dae64
-
-trainer_offset = 0x23eaa4
-trainer_class_name_offset = 0x23e534
-
-ability_name_offset = 0x24fc1c
-ability_description_offset = 0x24fae4
-
-encounter_offset = 0x3c9af4
-
-region_name_offset = 0x3f1ae8
-
-gmapgroups_offset = 0x352688
-
-# `gTrainerMoneyTable`: 4-byte (class, money value, padding) entries.
-trainer_money_offset = 0x24f1fc
-
-# `gMoveDescriptionPointers`: one pointer per move from move 1.
-move_description_offset = 0x487fc4
-
-# `gPokedexEntries`: one entry per National Dex number from 0.
-pokedex_entry_offset = 0x44e270
-
-# `sPickupItems`: 16 (item, cumulative threshold) entries.
-pickup_items_offset = 0x250824
-
-# The rematch table: 16-byte rows of trainer IDs.
-rematch_table_offset = 0x452bac
-rematch_table_count = 221
+# Every table is named by the same pret symbol as FireRed's and resolved
+# against LeafGreen's own symbols (`profiles/symbols/leafgreen-us.toml`);
+# counts and strides are inherited from firered-us. A variant contract is
+# never inherited, so LeafGreen declares its own.
 trainer_variant_contract = "frlg-retail-v1"
-
-# `sIngameTrades`: 9 in-game trades, 60 bytes each.
-trade_table_offset = 0x26cf6c
-trade_count = 9
 
 [[hashes]]
 algorithm = "sha256"

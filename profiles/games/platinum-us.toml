@@ -1,5 +1,6 @@
 [profile]
 id = "platinum-us"
+symbols = "platinum-us"
 name = "Pokémon Platinum (USA)"
 platform = "nintendo-ds"
 engine = "gen4_platinum"
@@ -34,7 +35,7 @@ bonus_encounters = "arc/encdata_ex.narc"
 berry_data = "itemtool/itemdata/nuts_data.narc"
 
 [parameters]
-map_header_offset = 0xE601C
+map_header_symbol = "sMapHeaders"
 map_header_count = 593
 location_names_member = 433
 item_names_member = 392
@@ -54,44 +55,50 @@ decoration_name_count = 139
 seal_names_member = 12
 trainer_names_member = 618
 trainer_classes_member = 619
-trainer_class_gender_offset = 0xF0714
+trainer_class_gender_symbol = "sTrainerClassGender"
 trainer_class_prize_overlay_id = 16
-trainer_class_prize_offset = 0x359E0
+trainer_class_prize_symbol = "sTrainerClassPrizeMul"
 starter_species_overlay_id = 78
+# pret leaves the starter list unnamed.
 starter_species_offset = 0x1BC0
 starter_species_count = 3
 trainer_rematch_overlay_id = 5
-trainer_rematch_offset = 0x280C8
+trainer_rematch_symbol = "gVsSeekerRematchData"
 trainer_rematch_count = 240
 trainer_variant_contract = "platinum-retail-v1"
+# An absolute ROM offset: `sTMHMMoves` plus ARM9's ROM position, 0x4000.
 machine_move_offset = 0xF4BFC
 egg_move_overlay_id = 5
-egg_move_offset = 0x29222
+egg_move_symbol = "sEggMoves"
 tutor_overlay_id = 5
-tutor_move_offset = 0x2FF64
+tutor_move_symbol = "sTeachableMoves"
 tutor_count = 38
-tutor_compatibility_offset = 0x3012C
-common_mart_inventory_offset = 0xEBAFC
+tutor_compatibility_symbol = "sSpeciesLearnsetsByTutor"
+common_mart_inventory_symbol = "PokeMartCommonItems"
+# pret names each of these mart pointers as its own symbol, so the table has
+# no single name.
 specialty_mart_pointer_table_offset = 0x100AF0
 specialty_mart_inventory_count = 20
 decoration_mart_inventory_start = 2
 decoration_mart_inventory_count = 2
+# The price field inside `sGoodData`, not the table's start.
 decoration_price_table_offset = 0xEC5A8
 seal_mart_inventory_start = 4
 seal_mart_inventory_count = 7
+# The price field inside `sealTypeValues`, not the table's start.
 seal_price_table_offset = 0xF64D6
 frontier_mart_inventory_count = 2
 frontier_price_overlay_id = 7
-frontier_price_table_offset = 0x5A98
+frontier_price_table_symbol = "itemToBpPrice"
 frontier_price_record_count = 41
-game_corner_prize_table_offset = 0xEC018
+game_corner_prize_table_symbol = "sGameCornerPrizeData"
 game_corner_prize_count = 19
 pickup_overlay_id = 16
-pickup_common_items_offset = 0x3352C
-pickup_rare_items_offset = 0x33450
-pickup_common_rate_offset = 0x33968
-pickup_honey_gather_rate_offset = 0x33974
-fossil_revival_table_offset = 0xEBFFC
+pickup_common_items_symbol = "sCommonPickupItems"
+pickup_rare_items_symbol = "sRarePickupItems"
+pickup_common_rate_symbol = "sCommonPickupRate"
+pickup_honey_gather_rate_symbol = "sHoneyGatherRate"
+fossil_revival_table_symbol = "sFossilItemToSpeciesMapping"
 fossil_revival_count = 7
 first_berry_item_id = 149
 
