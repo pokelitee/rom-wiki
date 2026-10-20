@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from romwiki.pipeline.extraction.table_locations import locate_tables
 from romwiki.platforms.registry import RomImage, registered_platforms
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.profiles.models import HashMatch
@@ -25,6 +26,7 @@ class InspectionResult:
                 "base_game": self.match.profile.base_game,
                 "variant": self.match.known_hash.variant,
                 "matched_by": self.match.known_hash.algorithm,
+                "table_locations": dict(self.match.profile.table_locations),
             }
             if self.match
             else None
@@ -41,6 +43,8 @@ def inspect_rom(
     image, image_platform = _inspect_image(rom_path)
     repository = profiles or ProfileRepository.load(profiles_dir)
     match = repository.identify(image, platform=image_platform)
+    if match is not None:
+        match = locate_tables(match, image)
     return InspectionResult(image=image, match=match)
 
 

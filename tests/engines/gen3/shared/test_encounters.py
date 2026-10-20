@@ -4,6 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen3.shared.encounters import (
+    count_encounter_headers,
     parse_encounter_record,
     parse_header,
     parse_method_info,
@@ -140,6 +141,23 @@ class ParseEncounterRecordTests(unittest.TestCase):
                 map_index=0,
                 archive_path="offset:0x0",
             )
+
+
+class CountEncounterHeadersTests(unittest.TestCase):
+    def test_counts_headers_before_the_terminator(self) -> None:
+        data = bytearray(20 * 4)
+        data[20 * 3] = 0xFF
+        data[20 * 3 + 1] = 0xFF
+
+        count = count_encounter_headers(
+            lambda offset, size: bytes(data[offset : offset + size]), 0
+        )
+
+        self.assertEqual(count, 3)
+
+    def test_rejects_a_table_without_a_terminator(self) -> None:
+        with self.assertRaises(InvalidRomError):
+            count_encounter_headers(lambda offset, size: bytes(size), 0)
 
 
 if __name__ == "__main__":

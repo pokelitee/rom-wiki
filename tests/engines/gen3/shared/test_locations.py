@@ -5,6 +5,7 @@ import unittest
 from collections.abc import Callable
 
 from romwiki.engines.gen3.shared.locations import (
+    count_map_groups,
     parse_gmapgroups_pointers,
     parse_map_group_index,
     parse_map_header,
@@ -168,6 +169,19 @@ class ParseMapGroupIndexTests(unittest.TestCase):
             parse_map_group_index(
                 (_GBA + 0x300,), _reader(rom), gmapgroups_address=_GBA + 0x304
             )
+
+
+class CountMapGroupsTests(unittest.TestCase):
+    def test_counts_the_leading_rom_pointers(self) -> None:
+        data = struct.pack("<4I", 0x08350000, 0x08350010, 0x08350020, 2)
+
+        count = count_map_groups(lambda offset, size: data[offset : offset + size], 0)
+
+        self.assertEqual(count, 3)
+
+    def test_rejects_a_table_without_groups(self) -> None:
+        with self.assertRaises(InvalidRomError):
+            count_map_groups(lambda offset, size: bytes(size), 0)
 
 
 if __name__ == "__main__":

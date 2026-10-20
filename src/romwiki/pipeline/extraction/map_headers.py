@@ -116,9 +116,12 @@ def iter_gba_map_headers(
     the ROM gives those maps no name of their own.
     """
     gmapgroups_offset = profile.int_parameter("gmapgroups_offset")
-    group_count = profile.int_parameter(
-        "map_group_count", engine.GMAPGROUPS_GROUP_COUNT
-    )
+    group_count = profile.optional_int_parameter("map_group_count")
+    if group_count is None:
+        group_count = engine.count_map_groups(
+            lambda offset, size: platform.read_bytes(image, offset, size),
+            gmapgroups_offset,
+        )
     group_pointers = engine.parse_gmapgroups_pointers(
         platform.read_bytes(image, gmapgroups_offset, group_count * 4),
         group_count=group_count,

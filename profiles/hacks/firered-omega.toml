@@ -6,13 +6,9 @@ extends = "firered-us"
 [type_chart]
 chart = "gen3"
 
-# Omega keeps retail FireRed's tables in place except the two below, which
-# every code reference now points to.
-[parameters]
-encounter_offset = 0x72ce50
-encounter_count = 143
-gmapgroups_offset = 0x71be34
-map_group_count = 44
+# Omega moved its wild encounter table and `gMapGroups` (adding a 44th group).
+# Both are found through retail FireRed's code pointers, which Omega repointed,
+# and their counts from where the tables end, so the profile sets no offsets.
 
 [[hashes]]
 algorithm = "sha256"

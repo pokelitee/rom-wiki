@@ -48,7 +48,6 @@ class LocationConcern(MessageArchiveReader, Protocol):
     FIRST_REGION_MAP_SECTION: int
     GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID: int
     GBA_MAP_EVENTS_SIZE: int
-    GMAPGROUPS_GROUP_COUNT: int
     GREAT_MARSH_HEADER_IDS: tuple[int, ...]
     GREAT_MARSH_POST_NATIONAL_DEX_MEMBER: int
     GREAT_MARSH_PRE_NATIONAL_DEX_MEMBER: int
@@ -75,6 +74,7 @@ class LocationConcern(MessageArchiveReader, Protocol):
     TROPHY_GARDEN_MEMBER: int
     WARP_DESTINATION_INDEXED: bool
     WARP_EVENT_SIZE: int
+    count_map_groups: Parser
     decode_gen3_name: Parser
     decode_gen3_name_table: Parser
     decode_hidden_item: Parser
@@ -189,12 +189,13 @@ class EncounterConcern(MessageArchiveReader, Protocol):
     ENCOUNTER_METHOD_NAMES: tuple[str, ...]
     ENCOUNTER_ROCK_SMASH_SLOT_COUNT: int
     ENCOUNTER_WATER_SLOT_COUNT: int
-    GMAPGROUPS_GROUP_COUNT: int
     ITEM_NAME_COUNT: int
     MAP_HEADER_SIZE: int
     POKEMON_NAME_COUNT: int
     SAFARI_AREA_NAMES: tuple[str, ...]
     SWARM_RECORD_SIZE: int
+    count_encounter_headers: Parser
+    count_map_groups: Parser
     decode_gen3_name: Parser
     gba_pointer_for_offset: Parser
     hidden_grotto_id_for_dispatch: Parser

@@ -153,12 +153,6 @@ TUTOR_LOCATIONS = {
 # 124).
 ENCOUNTER_HEADER_COUNT = 132
 
-# `gMapGroups`: an array of pointers, one per map group, each to that
-# group's own array of pointers-to-`MapHeader`. Located via ROM disassembly
-# (the `gMapGroups[group][num]` accessor's literal pool value at file
-# offset 0x05524C). Exactly 43 groups (425 maps) on both FireRed and
-# LeafGreen; a hack that adds groups sets `map_group_count`.
-GMAPGROUPS_GROUP_COUNT = 43
 
 # `sMapNames`: one name pointer per Kanto/Sevii region map section. FireRed/
 # LeafGreen's sections start at 88 (`KANTO_MAPSEC_START`), after the Hoenn

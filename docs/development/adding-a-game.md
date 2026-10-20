@@ -107,7 +107,17 @@ The loader resolves these against `profiles/symbols/<table>.toml` into the usual
 `trainer_offset` and `event_mon_special` integers, so engines and extractors read
 them as before. A profile that extends another inherits its symbol names and
 resolves them against its own table, and an explicit `<name>_offset` wins over an
-inherited symbol, which is how a hack that moved a table overrides it. The symbol
+inherited symbol.
+
+For Generation III, the symbol tables also record every place in the retail ROM
+that points to each table. When a ROM is matched, the build reads those places in
+it: if they all agree on another address, the hack moved the table and that
+address is used; if they disagree, the retail address stands, marked unconfirmed.
+`romwiki inspect --json` reports how each table was found under
+`profile.table_locations`. Encounter and map-group counts come from where those
+tables end, so a Gen III hack that repointed its moved tables, like FireRed Omega,
+needs no offsets or counts in its profile. Set an explicit offset only for a table
+the hack moved without repointing every reference. The symbol
 tables are generated (see [Generated files from pret](../development.md#generated-files-from-pret));
 adding a symbol name to a profile means rerunning `scripts/pret/symbols.py`.
 

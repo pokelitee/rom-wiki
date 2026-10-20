@@ -28,6 +28,7 @@ from romwiki.engines.gen3.shared.constants import (
 )
 from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
 from romwiki.engines.gen3.shared.encounters import (
+    count_encounter_headers,
     parse_encounter_record,
     parse_header,
     parse_method_info,
@@ -45,6 +46,7 @@ from romwiki.engines.gen3.shared.learnsets import (
     parse_level_up_learnset,
 )
 from romwiki.engines.gen3.shared.locations import (
+    count_map_groups,
     parse_gmapgroups_pointers,
     parse_map_group_index,
     parse_map_header,
@@ -136,7 +138,6 @@ from .constants import (
     EVOLUTION_SLOT_SIZE,
     FIRST_MACHINE_ITEM_ID,
     FIRST_REGION_MAP_SECTION,
-    GMAPGROUPS_GROUP_COUNT,
     GROWTH_RATE_NAMES,
     INTERNAL_TO_NATIONAL_DEX,
     ITEM_NAME_COUNT,
@@ -216,7 +217,6 @@ __all__ = [
     "EVOLUTION_SLOT_SIZE",
     "FIRST_MACHINE_ITEM_ID",
     "FORM_MEMBERS",
-    "GMAPGROUPS_GROUP_COUNT",
     "GROWTH_RATE_NAMES",
     "INTERNAL_MEMBERS",
     "INTERNAL_TO_NATIONAL_DEX",
@@ -261,6 +261,8 @@ __all__ = [
     "parse_egg_move_table",
     "parse_encounter_record",
     "parse_evolution_record",
+    "count_encounter_headers",
+    "count_map_groups",
     "parse_gmapgroups_pointers",
     "parse_header",
     "parse_item_record",

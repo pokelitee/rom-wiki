@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from collections.abc import Callable
 
 from romwiki.schema import (
     EncounterMethod,
@@ -10,7 +11,15 @@ from romwiki.schema import (
 )
 from romwiki.util.errors import InvalidRomError
 
-from .constants import ENCOUNTER_HEADER_SIZE, ENCOUNTER_METHOD_NAMES
+from .constants import (
+    ENCOUNTER_HEADER_SIZE,
+    ENCOUNTER_METHOD_NAMES,
+    MAX_MAP_GROUPS,
+    MAX_MAPS_PER_GROUP,
+)
+
+# `MAP_GROUP(MAP_UNDEFINED)`, the map group of the header that ends the table.
+_END_MAP_GROUP = 0xFF
 
 # Generation III's wild-encounter tables (`gWildMonHeaders` in the public
 # pokefirered/pokeemerald decompilations), verified against the real
@@ -74,6 +83,19 @@ def parse_header(data: bytes, *, map_index: int) -> tuple[int, int, dict[str, in
         for name, offset in _HEADER_METHOD_POINTER_OFFSETS.items()
     }
     return map_group, map_num, pointers
+
+
+def count_encounter_headers(read: Callable[[int, int], bytes], offset: int) -> int:
+    """Count the `WildPokemonHeader`s in the table at `offset`.
+
+    The ROM stores no count: the table ends at the first header whose map
+    group is 0xFF, and a hack that adds maps extends it up to the same
+    terminator. `read(offset, size)` returns ROM bytes.
+    """
+    for index in range(MAX_MAP_GROUPS * MAX_MAPS_PER_GROUP):
+        if read(offset + index * ENCOUNTER_HEADER_SIZE, 1)[0] == _END_MAP_GROUP:
+            return index
+    raise InvalidRomError("Gen III encounter table has no terminating header")
 
 
 def parse_method_info(data: bytes, *, map_index: int, name: str) -> tuple[int, int]:

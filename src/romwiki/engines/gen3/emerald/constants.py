@@ -88,11 +88,6 @@ TUTOR_LOCATIONS = {
 # LeafGreen. Real count differs from FireRed/LeafGreen's 132.
 ENCOUNTER_HEADER_COUNT = 124
 
-# `gMapGroups`: 34 groups (518 maps), found as the pointer table whose
-# entries point at each group's map-header pointer array; every map's
-# region section resolves to a Town Map name (Route 101, Petalburg Woods,
-# Battle Frontier, ...). A hack that adds groups sets `map_group_count`.
-GMAPGROUPS_GROUP_COUNT = 34
 
 # `gRegionMapEntries`: one 8-byte entry per region map section, starting at
 # section 0, with the section's name pointer at +4 (`struct RegionMapLocation`).

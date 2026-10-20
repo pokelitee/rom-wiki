@@ -35,7 +35,7 @@ TRAINER_BATTLE = 0x5C
 # its own): a warp loads another map, so scripts often omit the `end` after
 # one and the following bytes are data (an Emerald script ends `warp`,
 # `waitstate`, then movement data).
-_TERMINATORS = frozenset({0x02, 0x03, 0x08, 0x0C, 0x0D, 0x24, 0x5E, 0x5F})
+TERMINATORS = frozenset({0x02, 0x03, 0x08, 0x0C, 0x0D, 0x24, 0x5E, 0x5F})
 COMMON_WARP_COMMANDS = frozenset({0x39, 0x3A, 0x3B, 0x3C, 0x3D})
 
 # `trainerbattle type, trainer, local_id` is followed by a battle-type-
@@ -77,7 +77,7 @@ def disassemble_script(
                 worklist.append(params[1])
             elif opcode == TRAINER_BATTLE and params[0] in _TRAINER_BATTLE_SCRIPT_TYPES:
                 worklist.append(params[-1])
-            if opcode == GOTO or opcode in _TERMINATORS or opcode in warps:
+            if opcode == GOTO or opcode in TERMINATORS or opcode in warps:
                 break
             address = instruction.next_offset
     return instructions

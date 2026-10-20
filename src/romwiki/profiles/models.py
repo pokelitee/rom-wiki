@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any
 
 from romwiki.platforms.registry import RomImage, get_platform
@@ -20,6 +21,32 @@ class TypeChartConfig:
     chart: str
     additional_types: tuple[str, ...] = ()
     overrides: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class TableSymbol:
+    """The pret symbol a table offset was resolved from.
+
+    `address` is the retail build's runtime address of the table and
+    `pointers` the offsets in the retail ROM that hold it; both are empty
+    where the symbol table records no pointer sites.
+    """
+
+    name: str
+    address: int | None = None
+    pointers: tuple[int, ...] = ()
+
+
+class TableLocation(StrEnum):
+    """How a symbol-named table was found in a specific ROM image."""
+
+    # Every retail pointer site holds the symbol's own address.
+    SYMBOL = "symbol"
+    # Every site agrees on another address: the table was moved.
+    POINTER = "pointer"
+    # The sites disagree or hold no address in the image, so the retail
+    # symbol offset is used unconfirmed.
+    SYMBOL_UNCONFIRMED = "symbol-unconfirmed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,7 +77,10 @@ class GameProfile:
     layout: Mapping[str, str] = field(default_factory=dict)
     parameters: Mapping[str, Any] = field(default_factory=dict)
     # `<name>_offset` parameter -> the pret symbol it was resolved from.
-    symbols: Mapping[str, str] = field(default_factory=dict)
+    symbols: Mapping[str, TableSymbol] = field(default_factory=dict)
+    # `<name>_offset` parameter -> how it was located in the matched image;
+    # empty until `locate_tables` runs.
+    table_locations: Mapping[str, TableLocation] = field(default_factory=dict)
 
     def int_parameter(self, name: str, default: int | None = None) -> int:
         """Return an integer parameter, or `default` when the profile omits it.
