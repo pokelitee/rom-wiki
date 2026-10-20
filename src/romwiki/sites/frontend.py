@@ -6,9 +6,8 @@ import gzip
 import hashlib
 import json
 import re
-import shutil
-from collections.abc import Mapping
-from dataclasses import asdict
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +24,8 @@ from romwiki.util.errors import SiteError
 from romwiki.util.json_io import write_json_atomic
 
 FRONTEND_SCHEMA_VERSION = 1
+# Stores one published file: `(path relative to the bundle, bytes)`.
+PutFile = Callable[[str, bytes], None]
 DETAIL_CHUNK_SIZE = 50
 _SNIPPET = re.compile(r'^--8<--\s+"([^"]+)"\s*$', re.MULTILINE)
 _FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
@@ -273,7 +274,49 @@ def _index_record(kind: str, record: dict[str, Any], route: str) -> dict[str, An
     }
 
 
-def _write_resource(output: Path, prefix: str, value: Any) -> str:
+@dataclass(frozen=True, slots=True)
+class FrontendDocument:
+    slug: str
+    label: str
+    markdown: str
+
+
+@dataclass(frozen=True, slots=True)
+class FrontendGame:
+    """Everything the app needs to publish one game, independent of where the
+    data came from: a repository build or a ROM processed in memory.
+    """
+
+    id: str
+    name: str
+    description: str
+    generation: int
+    theme: str
+    mascot: str | None
+    versions: tuple[str, ...]
+    datasets: Mapping[str, dict[str, Any]]
+    # Comparison with the base game by section; a game that is not its own
+    # base game must have one for every section but `types`.
+    comparisons: Mapping[str, dict[str, Any]]
+    requires_comparisons: bool
+    # The bulk-download manifest's `files` entries and each file's bytes.
+    download_entries: Sequence[dict[str, Any]]
+    download_files: Mapping[str, bytes]
+    documents: Sequence[FrontendDocument] = field(default=())
+
+
+def directory_files(output: Path) -> PutFile:
+    """A `PutFile` that writes below `output`."""
+
+    def put(relative: str, payload: bytes) -> None:
+        path = output / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+
+    return put
+
+
+def _write_resource(put: PutFile, prefix: str, value: Any) -> str:
     payload = (
         json.dumps(
             value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -282,9 +325,7 @@ def _write_resource(output: Path, prefix: str, value: Any) -> str:
     )
     digest = hashlib.sha256(payload).hexdigest()[:16]
     relative = f"{prefix}-{digest}.json"
-    path = output / relative
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(payload)
+    put(relative, payload)
     return relative
 
 
@@ -300,9 +341,7 @@ def _read_datasets(site: SiteDefinition) -> dict[str, dict[str, Any]]:
     }
 
 
-def _documentation(
-    root: Path, site: SiteDefinition, output: Path
-) -> list[dict[str, str]]:
+def _read_documents(root: Path, site: SiteDefinition) -> list[FrontendDocument]:
     wiki = site.config_path.parent / "wiki"
     partials = (root / "sites/shared/partials").resolve()
 
@@ -331,10 +370,7 @@ def _documentation(
         if frontmatter:
             text = text[frontmatter.end() :]
         label = _document_label(path, frontmatter[1] if frontmatter else "", text)
-        resource = _write_resource(output, f"{site.id}/docs/{slug}", {"markdown": text})
-        documents.append(
-            {"id": slug, "label": label, "path": resource, "search": _search_text(text)}
-        )
+        documents.append(FrontendDocument(slug=slug, label=label, markdown=text))
     return documents
 
 
@@ -452,232 +488,15 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
     root, output = root.resolve(), output.resolve()
     _check_output(root, output)
     catalog = SiteCatalog.load(root)
+    put = directory_files(output)
     games = []
     pokemon: list[dict[str, Any]] = []
     for site in catalog.published():
         if site.game is None:
             continue
-        datasets = _read_datasets(site)
-        check_game_datasets(site.id, datasets)
-        pokemon.append(datasets.get("pokemon", {}))
-        relationships = _relationships(datasets)
-        # A species ID is its base form's member number; alternate forms
-        # follow the national Pokédex in the personal archive.
-        species_slugs = {
-            record["member"]: record["slug"]
-            for record in datasets.get("pokemon", {}).get("records", [])
-            if record.get("public", True)
-            and record.get("member") == record.get("national_dex_id")
-            and isinstance(record.get("slug"), str)
-        }
-        item_slugs = {
-            record["item_id"]: record["slug"]
-            for record in datasets.get("items", {}).get("records", [])
-            if record.get("public", True)
-            and isinstance(record.get("item_id"), int)
-            and isinstance(record.get("slug"), str)
-        }
-        sections: dict[str, Any] = {}
-        comparisons: dict[str, str] = {}
-        profile_id = site.game.profiles[0] if len(site.game.profiles) == 1 else site.id
-        comparison_dir = site.config_path.parent / "wiki/data/comparisons"
-        if data_root is not None:
-            comparison_dir = data_root / profile_id / "comparisons"
-        needs_comparison = site.id != site.game.base_game
-        for kind, dataset in sorted(datasets.items()):
-            comparison = None
-            comparison_path = comparison_dir / f"{kind}.json"
-            if comparison_path.is_file():
-                comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
-                if comparison.get("game") != dataset.get("game"):
-                    raise SiteError(
-                        f"Comparison belongs to a different game: {comparison_path}"
-                    )
-                routes = {
-                    str(record_identity(str(dataset["dataset"]), record)): record_route(
-                        kind, record
-                    )
-                    for record in dataset["records"]
-                    if record.get("public", True)
-                }
-                comparison = {
-                    **comparison,
-                    "records": [
-                        {**row, "route": routes.get(str(row["key"]))}
-                        for row in comparison["records"]
-                    ],
-                }
-                comparisons[kind] = _write_resource(
-                    output, f"{site.id}/changes/{kind}", comparison
-                )
-            elif needs_comparison and kind != "types":
-                raise SiteError(
-                    f"Missing {site.id} {kind} comparison: {comparison_path}; regenerate or restore a complete data snapshot"
-                )
-            statuses = {
-                str(row["key"]): row["status"]
-                for row in (comparison or {}).get("records", [])
-            }
-            records = [
-                record
-                for record in dataset["records"]
-                if record.get("public", True)
-                and not (
-                    kind == "encounters"
-                    and is_unlinked_encounter_area(
-                        record, dataset.get("encounter_format")
-                    )
-                )
-            ]
-            if kind == "encounters" and dataset.get("encounter_format") == "seasonal":
-                seasonal: dict[str, dict[str, Any]] = {}
-                for record in records:
-                    key = record_route(kind, record)
-                    if record.get("season"):
-                        group = seasonal.setdefault(
-                            key,
-                            {
-                                "name": record["name"],
-                                "area_id": record["area_id"],
-                                "map_index": record["map_index"],
-                                "season_variants": {},
-                            },
-                        )
-                        group["season_variants"][record["season"]] = record
-                    else:
-                        seasonal[key] = record
-                records = list(seasonal.values())
-            indexed: list[dict[str, Any]] = []
-            seen = set()
-            for start in range(0, len(records), DETAIL_CHUNK_SIZE):
-                chunk = {}
-                entries = []
-                for record in records[start : start + DETAIL_CHUNK_SIZE]:
-                    route = record_route(kind, record)
-                    if route in seen:
-                        raise SiteError(
-                            f"Duplicate frontend identity: {site.id}/{kind}/{route}"
-                        )
-                    seen.add(route)
-                    raw_id = record.get(
-                        _IDENTITY_FIELDS.get(kind, "header_id"),
-                        record.get("area_id", record.get("map_index")),
-                    )
-                    relationship_key = (
-                        record.get("slug")
-                        if kind == "pokemon"
-                        else str(encounter_route_key(record))
-                        if kind == "encounters"
-                        else str(raw_id)
-                    )
-                    chunk[route] = _with_record_slugs(
-                        {
-                            "record": record,
-                            "relationships": relationships.get(kind, {}).get(
-                                relationship_key, {}
-                            ),
-                        },
-                        item_slugs,
-                        species_slugs,
-                    )
-                    entry = _index_record(kind, record, route)
-                    sprite = _index_sprite(kind, record)
-                    if sprite:
-                        entry["sprite"] = sprite
-                    related = relationships.get(kind, {}).get(relationship_key, {})
-                    if kind == "pokemon":
-                        entry["fields"]["availability_methods"] = sorted(
-                            {
-                                str(item.get("method", ""))
-                                for domain in ("wild_encounters", "acquisition")
-                                for item in related.get(domain, [])
-                                if item.get("method")
-                            }
-                        )
-                    if kind == "moves":
-                        entry["fields"]["access_methods"] = [
-                            label
-                            for key, label in (
-                                ("level_up_learners", "level-up"),
-                                ("machine_learners", "machine"),
-                            )
-                            if related.get(key)
-                        ] + [
-                            key
-                            for key in ("tutors", "egg_move_pokemon")
-                            if record.get(key)
-                        ]
-                    if comparison is not None:
-                        status_key = (
-                            str(encounter_route_key(record))
-                            if kind == "encounters" and record.get("source_type")
-                            else str(raw_id)
-                        )
-                        entry["fields"]["change_status"] = [
-                            statuses.get(status_key, "unchanged")
-                        ]
-                    entries.append(entry)
-                resource = _write_resource(
-                    output,
-                    f"{site.id}/{kind}/chunk-{start // DETAIL_CHUNK_SIZE:04}",
-                    chunk,
-                )
-                indexed.extend({**entry, "chunk": resource} for entry in entries)
-            metadata = {
-                key: value for key, value in dataset.items() if key != "records"
-            }
-            sections[kind] = {
-                "index": _write_resource(
-                    output, f"{site.id}/{kind}/index", {"records": indexed}
-                ),
-                "metadata": {
-                    key: value
-                    for key, value in metadata.items()
-                    if key
-                    in {
-                        "record_count",
-                        "features",
-                        "schema_version",
-                        "encounter_format",
-                        "location_format",
-                    }
-                }
-                # record_count counts every normalized record, including
-                # placeholders the index omits; visitors see the index.
-                | {"published_count": len(indexed)},
-                "metadata_path": _write_resource(
-                    output, f"{site.id}/{kind}/metadata", metadata
-                ),
-            }
-        download_root = output / site.id / "downloads"
-        download_root.mkdir(parents=True, exist_ok=True)
-        source_data = site.config_path.parent / "wiki/data"
-        downloads = json.loads(
-            (source_data / "manifest.json").read_text(encoding="utf-8")
-        )
-        for entry in downloads["files"]:
-            shutil.copyfile(source_data / entry["path"], download_root / entry["path"])
-        documents = _documentation(root, site, output)
-        search_index = _write_resource(output, f"{site.id}/guide-search", documents)
-        games.append(
-            {
-                "id": site.id,
-                "name": site.name,
-                "description": site.description,
-                "generation": site.game.generation,
-                "theme": site.theme,
-                "mascot": _mascot(site.id, site.mascot, [datasets.get("pokemon", {})]),
-                "versions": list(site.game.versions),
-                "sections": sections,
-                "comparisons": comparisons,
-                "downloads": downloads["files"],
-                "documents": [
-                    {key: value for key, value in document.items() if key != "search"}
-                    for document in documents
-                ],
-                "search_index": search_index,
-            }
-        )
+        game = _site_game(root, site, data_root)
+        pokemon.append(game.datasets.get("pokemon", {}))
+        games.append(render_game(game, put))
     portal = next(site for site in catalog.published() if site.kind == "portal")
     manifest = {
         "schema_version": FRONTEND_SCHEMA_VERSION,
@@ -687,6 +506,258 @@ def export_frontend(root: Path, output: Path, *, data_root: Path | None = None) 
     write_json_atomic(output / "manifest.json", manifest)
     _remove_unreferenced(output)
     return len(games)
+
+
+def _site_game(
+    root: Path, site: SiteDefinition, data_root: Path | None
+) -> FrontendGame:
+    """A published site's game, read from its generated data in the checkout."""
+    assert site.game is not None
+    datasets = _read_datasets(site)
+    profile_id = site.game.profiles[0] if len(site.game.profiles) == 1 else site.id
+    comparison_dir = site.config_path.parent / "wiki/data/comparisons"
+    if data_root is not None:
+        comparison_dir = data_root / profile_id / "comparisons"
+    comparisons = {
+        kind: json.loads(path.read_text(encoding="utf-8"))
+        for kind in datasets
+        if (path := comparison_dir / f"{kind}.json").is_file()
+    }
+    source_data = site.config_path.parent / "wiki/data"
+    downloads = json.loads((source_data / "manifest.json").read_text(encoding="utf-8"))
+    return FrontendGame(
+        id=site.id,
+        name=site.name,
+        description=site.description,
+        generation=site.game.generation,
+        theme=site.theme,
+        mascot=site.mascot,
+        versions=tuple(site.game.versions),
+        datasets=datasets,
+        comparisons=comparisons,
+        requires_comparisons=site.id != site.game.base_game,
+        download_entries=downloads["files"],
+        download_files={
+            entry["path"]: (source_data / entry["path"]).read_bytes()
+            for entry in downloads["files"]
+        },
+        documents=_read_documents(root, site),
+    )
+
+
+def render_game(game: FrontendGame, put: PutFile) -> dict[str, Any]:
+    """Write one game's resources through `put` and return its manifest entry."""
+    datasets = game.datasets
+    check_game_datasets(game.id, datasets)
+    relationships = _relationships(dict(datasets))
+    # A species ID is its base form's member number; alternate forms
+    # follow the national Pokédex in the personal archive.
+    species_slugs = {
+        record["member"]: record["slug"]
+        for record in datasets.get("pokemon", {}).get("records", [])
+        if record.get("public", True)
+        and record.get("member") == record.get("national_dex_id")
+        and isinstance(record.get("slug"), str)
+    }
+    item_slugs = {
+        record["item_id"]: record["slug"]
+        for record in datasets.get("items", {}).get("records", [])
+        if record.get("public", True)
+        and isinstance(record.get("item_id"), int)
+        and isinstance(record.get("slug"), str)
+    }
+    sections: dict[str, Any] = {}
+    comparisons: dict[str, str] = {}
+    for kind, dataset in sorted(datasets.items()):
+        comparison = game.comparisons.get(kind)
+        if comparison is not None:
+            if comparison.get("game") != dataset.get("game"):
+                raise SiteError(
+                    f"{game.id} {kind} comparison belongs to a different game"
+                )
+            routes = {
+                str(record_identity(str(dataset["dataset"]), record)): record_route(
+                    kind, record
+                )
+                for record in dataset["records"]
+                if record.get("public", True)
+            }
+            comparison = {
+                **comparison,
+                "records": [
+                    {**row, "route": routes.get(str(row["key"]))}
+                    for row in comparison["records"]
+                ],
+            }
+            comparisons[kind] = _write_resource(
+                put, f"{game.id}/changes/{kind}", comparison
+            )
+        elif game.requires_comparisons and kind != "types":
+            raise SiteError(
+                f"Missing {game.id} {kind} comparison; regenerate or restore a complete data snapshot"
+            )
+        statuses = {
+            str(row["key"]): row["status"]
+            for row in (comparison or {}).get("records", [])
+        }
+        records = [
+            record
+            for record in dataset["records"]
+            if record.get("public", True)
+            and not (
+                kind == "encounters"
+                and is_unlinked_encounter_area(record, dataset.get("encounter_format"))
+            )
+        ]
+        if kind == "encounters" and dataset.get("encounter_format") == "seasonal":
+            seasonal: dict[str, dict[str, Any]] = {}
+            for record in records:
+                key = record_route(kind, record)
+                if record.get("season"):
+                    group = seasonal.setdefault(
+                        key,
+                        {
+                            "name": record["name"],
+                            "area_id": record["area_id"],
+                            "map_index": record["map_index"],
+                            "season_variants": {},
+                        },
+                    )
+                    group["season_variants"][record["season"]] = record
+                else:
+                    seasonal[key] = record
+            records = list(seasonal.values())
+        indexed: list[dict[str, Any]] = []
+        seen = set()
+        for start in range(0, len(records), DETAIL_CHUNK_SIZE):
+            chunk = {}
+            entries = []
+            for record in records[start : start + DETAIL_CHUNK_SIZE]:
+                route = record_route(kind, record)
+                if route in seen:
+                    raise SiteError(
+                        f"Duplicate frontend identity: {game.id}/{kind}/{route}"
+                    )
+                seen.add(route)
+                raw_id = record.get(
+                    _IDENTITY_FIELDS.get(kind, "header_id"),
+                    record.get("area_id", record.get("map_index")),
+                )
+                relationship_key = (
+                    record.get("slug")
+                    if kind == "pokemon"
+                    else str(encounter_route_key(record))
+                    if kind == "encounters"
+                    else str(raw_id)
+                )
+                chunk[route] = _with_record_slugs(
+                    {
+                        "record": record,
+                        "relationships": relationships.get(kind, {}).get(
+                            relationship_key, {}
+                        ),
+                    },
+                    item_slugs,
+                    species_slugs,
+                )
+                entry = _index_record(kind, record, route)
+                sprite = _index_sprite(kind, record)
+                if sprite:
+                    entry["sprite"] = sprite
+                related = relationships.get(kind, {}).get(relationship_key, {})
+                if kind == "pokemon":
+                    entry["fields"]["availability_methods"] = sorted(
+                        {
+                            str(item.get("method", ""))
+                            for domain in ("wild_encounters", "acquisition")
+                            for item in related.get(domain, [])
+                            if item.get("method")
+                        }
+                    )
+                if kind == "moves":
+                    entry["fields"]["access_methods"] = [
+                        label
+                        for key, label in (
+                            ("level_up_learners", "level-up"),
+                            ("machine_learners", "machine"),
+                        )
+                        if related.get(key)
+                    ] + [
+                        key for key in ("tutors", "egg_move_pokemon") if record.get(key)
+                    ]
+                if comparison is not None:
+                    status_key = (
+                        str(encounter_route_key(record))
+                        if kind == "encounters" and record.get("source_type")
+                        else str(raw_id)
+                    )
+                    entry["fields"]["change_status"] = [
+                        statuses.get(status_key, "unchanged")
+                    ]
+                entries.append(entry)
+            resource = _write_resource(
+                put,
+                f"{game.id}/{kind}/chunk-{start // DETAIL_CHUNK_SIZE:04}",
+                chunk,
+            )
+            indexed.extend({**entry, "chunk": resource} for entry in entries)
+        metadata = {key: value for key, value in dataset.items() if key != "records"}
+        sections[kind] = {
+            "index": _write_resource(
+                put, f"{game.id}/{kind}/index", {"records": indexed}
+            ),
+            "metadata": {
+                key: value
+                for key, value in metadata.items()
+                if key
+                in {
+                    "record_count",
+                    "features",
+                    "schema_version",
+                    "encounter_format",
+                    "location_format",
+                }
+            }
+            # record_count counts every normalized record, including
+            # placeholders the index omits; visitors see the index.
+            | {"published_count": len(indexed)},
+            "metadata_path": _write_resource(
+                put, f"{game.id}/{kind}/metadata", metadata
+            ),
+        }
+    for entry in game.download_entries:
+        put(f"{game.id}/downloads/{entry['path']}", game.download_files[entry["path"]])
+    documents = [
+        {
+            "id": document.slug,
+            "label": document.label,
+            "path": _write_resource(
+                put,
+                f"{game.id}/docs/{document.slug}",
+                {"markdown": document.markdown},
+            ),
+            "search": _search_text(document.markdown),
+        }
+        for document in game.documents
+    ]
+    search_index = _write_resource(put, f"{game.id}/guide-search", documents)
+    return {
+        "id": game.id,
+        "name": game.name,
+        "description": game.description,
+        "generation": game.generation,
+        "theme": game.theme,
+        "mascot": _mascot(game.id, game.mascot, [datasets.get("pokemon", {})]),
+        "versions": list(game.versions),
+        "sections": sections,
+        "comparisons": comparisons,
+        "downloads": list(game.download_entries),
+        "documents": [
+            {key: value for key, value in document.items() if key != "search"}
+            for document in documents
+        ],
+        "search_index": search_index,
+    }
 
 
 def _check_output(root: Path, output: Path) -> None:
