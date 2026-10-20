@@ -49,6 +49,10 @@ python scripts/pret/symbols.py --check
 
 - `gen3_script_commands.py` writes the Gen III event-script command tables
   (`engines/gen3/shared/script_command_table.py`).
+- `scripts/gen3_compound_names.py` (not pret-based; it reads PokéDB through
+  `.local/games.toml`) writes the casing of run-together Generation III names
+  (`engines/gen3/shared/compound_names.py`) from PokéDB's move, ability, and item
+  slugs, and also takes `--check`.
 - `symbols.py` writes `profiles/symbols/<table>.toml`: the offset and size of each
   pret symbol a profile names, and the `gSpecials` index of each named special.
   For Generation III it also records each table's pointer sites, found by
