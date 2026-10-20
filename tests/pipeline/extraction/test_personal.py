@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 from romwiki.engines.registry import (
@@ -77,7 +78,9 @@ def _decode_ascii_table(data: bytes, *, stride: int, count: int) -> list[str]:
 
 
 def _register_fake_engine(personal: SimpleNamespace) -> None:
-    fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, SimpleNamespace())
+    fields: dict[str, Any] = dict.fromkeys(
+        EngineAdapter.__dataclass_fields__, SimpleNamespace()
+    )
     fields["personal"] = personal
     fields["generation"] = None
     fields["dataset_kinds"] = frozenset({"pokemon"})
@@ -99,7 +102,7 @@ def _register_fake_engine(personal: SimpleNamespace) -> None:
 
 
 def _profile(**overrides: object) -> GameProfile:
-    defaults = {
+    defaults: dict[str, Any] = {
         "id": "test-personal",
         "name": "Test Personal",
         "platform": _PLATFORM_ID,

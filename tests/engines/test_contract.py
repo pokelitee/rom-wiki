@@ -262,7 +262,7 @@ class EngineContractTests(unittest.TestCase):
             *registry._CAPABILITY_MEMBERS.values(),
         )
         protocols = {
-            field.name: field.type
+            field.name: str(field.type)
             for field in fields(EngineAdapter)
             if field.name in registry._CONCERN_FIELDS
         }

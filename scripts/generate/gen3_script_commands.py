@@ -97,7 +97,7 @@ def _operand_widths(project: str) -> dict[int, set[tuple[int, ...]]]:
 
 def _table(project: str) -> dict[int, tuple[str, tuple[int, ...]]]:
     widths = _operand_widths(project)
-    table = {}
+    table: dict[int, tuple[str, tuple[int, ...]]] = {}
     for opcode, handler in sorted(_handlers(project).items()):
         if opcode == TRAINER_BATTLE:
             table[opcode] = (handler, (1, 2, 2))

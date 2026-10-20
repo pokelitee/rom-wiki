@@ -15,9 +15,9 @@ from romwiki.util.errors import DataSourceError
 
 class ReferenceNameTests(unittest.TestCase):
     def test_extracts_configured_description_table_with_provenance(self) -> None:
-        profile = replace(_profile(), engine="gen5_bw")
-        profile.parameters.clear()
-        profile.parameters["item_descriptions_member"] = 53
+        profile = replace(
+            _profile(), engine="gen5_bw", parameters={"item_descriptions_member": 53}
+        )
         archive = Mock()
         descriptions = tuple(f"Description {index}" for index in range(627))
 
@@ -70,9 +70,7 @@ class ReferenceNameTests(unittest.TestCase):
             extract_reference_names(profile, Mock(), archive)
 
     def test_names_the_parameter_that_resizes_a_table(self) -> None:
-        profile = _profile()
-        profile.parameters.clear()
-        profile.parameters["move_names_member"] = 647
+        profile = replace(_profile(), parameters={"move_names_member": 647})
         move_names = tuple(f"Move {index}" for index in range(470))
 
         with (
@@ -86,7 +84,9 @@ class ReferenceNameTests(unittest.TestCase):
         ):
             extract_reference_names(profile, Mock(), Mock())
 
-        profile.parameters["move_name_count"] = 470
+        profile = replace(
+            profile, parameters={**profile.parameters, "move_name_count": 470}
+        )
         with patch(
             "romwiki.engines.gen4.platinum.parse_english_message_archive",
             return_value=move_names,
@@ -96,10 +96,9 @@ class ReferenceNameTests(unittest.TestCase):
         self.assertEqual(result["move_names"], list(move_names))
 
     def test_allows_an_explicitly_truncated_message_archive(self) -> None:
-        profile = _profile()
-        profile.parameters.clear()
-        profile.parameters.update(
-            {"ability_names_member": 610, "messages_allow_truncated": True}
+        profile = replace(
+            _profile(),
+            parameters={"ability_names_member": 610, "messages_allow_truncated": True},
         )
         filesystem = Mock()
         filesystem.read.return_value = b"archive"

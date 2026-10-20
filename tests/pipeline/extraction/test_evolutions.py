@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 from romwiki.engines.registry import (
@@ -56,7 +57,9 @@ def _register_fake_platform(
 def _register_fake_engine(
     evolutions: SimpleNamespace, personal_record_count: int
 ) -> None:
-    fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, SimpleNamespace())
+    fields: dict[str, Any] = dict.fromkeys(
+        EngineAdapter.__dataclass_fields__, SimpleNamespace()
+    )
     fields["evolutions"] = evolutions
     # The species count comes from the personal archive, tested on its own.
     patch(
@@ -83,7 +86,7 @@ def _register_fake_engine(
 
 
 def _profile(**overrides: object) -> GameProfile:
-    defaults = {
+    defaults: dict[str, Any] = {
         "id": "test-evolutions",
         "name": "Test Evolutions",
         "platform": _PLATFORM_ID,

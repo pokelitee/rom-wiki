@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.sources import PokeDBGeneration
@@ -23,7 +24,7 @@ FORM_SPECIES = {
 
 class PersonalEnrichmentTests(unittest.TestCase):
     def test_maps_public_species_forms_and_internal_records(self) -> None:
-        defaults = {
+        defaults: dict[int, dict[str, Any]] = {
             pokemon_id: {
                 "id": pokemon_id,
                 "name": f"pokemon-{pokemon_id}",
@@ -111,7 +112,7 @@ class PersonalEnrichmentTests(unittest.TestCase):
     def test_resolves_gen5_alternate_formes_and_battle_only_transformations(
         self,
     ) -> None:
-        defaults = {
+        defaults: dict[int, dict[str, Any]] = {
             pokemon_id: {
                 "id": pokemon_id,
                 "name": f"pokemon-{pokemon_id}",
