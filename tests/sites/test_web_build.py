@@ -9,12 +9,12 @@ from pathlib import Path
 
 from romwiki.sites.catalog import SiteCatalog
 from romwiki.sites.frontend import export_frontend
+from romwiki.sites.web_build import build_wiki
 from romwiki.sources import PokeDBGeneration
 from romwiki.util.errors import LocalConfigError
 from romwiki.util.local_config import LocalGameRegistry
-from romwiki.web_build import build_wiki
 
-_ROOT = Path(__file__).resolve().parents[3]
+_ROOT = Path(__file__).resolve().parents[2]
 _GAMES_CONFIG = _ROOT / ".local/games.toml"
 _DATA_ROOT = _ROOT / "build/data"
 _ENABLE = "ROMWIKI_ROM_TESTS"

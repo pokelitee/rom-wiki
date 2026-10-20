@@ -11,6 +11,7 @@ import types
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 from romwiki.engines.registry import (
     EngineAdapter,
@@ -115,7 +116,9 @@ class PlatformContractTests(unittest.TestCase):
         tables = types.SimpleNamespace(
             parse_personal_record=_parse_record, PERSONAL_RECORD_SIZE=1
         )
-        engine_fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, tables)
+        engine_fields: dict[str, Any] = dict.fromkeys(
+            EngineAdapter.__dataclass_fields__, tables
+        )
         engine_fields["generation"] = None
         engine_fields["dataset_kinds"] = frozenset({"pokemon"})
         engine_fields["required_dataset_kinds"] = frozenset({"pokemon"})

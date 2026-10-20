@@ -496,6 +496,8 @@ GEN4_HGSS_PROFILE_CONTRACT = EngineProfileContract(
             "scripts_allow_incorrect_data_block_size",
             "scripts_allow_trailing_data",
             "trainer_archives_allow_truncated",
+            "trainer_class_prize_offset",
+            "trainer_class_prize_overlay_id",
         }
     )
     | _TRAINER_VARIANT_PARAMETERS

@@ -53,7 +53,7 @@ class _ClassGenderLayout:
 class _ClassPrizeTable:
     overlay_id: int | None
     offset: int | None
-    multipliers: Any
+    prizes: Any
 
 
 @dataclass(frozen=True)
@@ -219,7 +219,9 @@ def _decode_class_gender_trainers(
                 name=names[member.index],
                 class_names=classes,
                 class_genders=class_genders,
-                class_prize_multipliers=prize_table.multipliers,
+                class_prize_multipliers=(
+                    prize_table.prizes.multipliers if prize_table.prizes else None
+                ),
                 trainer_archive=layout.trainer_path,
                 party_archive=layout.party_path,
             )
@@ -257,20 +259,20 @@ def _read_class_prize_table(
 ) -> _ClassPrizeTable:
     overlay_id = profile.optional_int_parameter("trainer_class_prize_overlay_id")
     offset = profile.optional_int_parameter("trainer_class_prize_offset")
-    multipliers = None
+    prizes = None
     if overlay_id is not None and offset is not None:
-        if platform.read_overlay is None:
+        # HeartGold/SoulSilver compress the battle overlay; Platinum's is raw,
+        # which the decompressing reader also returns as stored.
+        read = platform.read_overlay_decompressed or platform.read_overlay
+        if read is None:
             raise ProfileError(
                 f"Platform {profile.platform!r} does not support overlays"
             )
-        _, prize_overlay = platform.read_overlay(result.image, overlay_id)
-        multipliers = engine.parse_trainer_class_prize_multipliers(
-            prize_overlay[offset : offset + class_count],
-            count=class_count,
+        _, prize_overlay = read(result.image, overlay_id)
+        prizes = engine.parse_trainer_class_prize_multipliers(
+            prize_overlay[offset:], count=class_count
         )
-    return _ClassPrizeTable(
-        overlay_id=overlay_id, offset=offset, multipliers=multipliers
-    )
+    return _ClassPrizeTable(overlay_id=overlay_id, offset=offset, prizes=prizes)
 
 
 def _link_class_gender_record(
@@ -292,11 +294,12 @@ def _link_class_gender_record(
                 "victory_money_multiplier_provenance": {
                     "source": "rom",
                     "overlay_id": prize_table.overlay_id,
-                    "offset": prize_table.offset + record.class_id,
+                    "offset": prize_table.offset
+                    + prize_table.prizes.offsets[record.class_id],
                     "class_id": record.class_id,
                 }
             }
-            if prize_table.offset is not None
+            if prize_table.offset is not None and prize_table.prizes is not None
             else {}
         ),
     }
@@ -384,9 +387,9 @@ def _class_gender_source(
             {
                 "overlay_id": prize_table.overlay_id,
                 "offset": prize_table.offset,
-                "count": len(prize_table.multipliers),
+                "count": len(prize_table.prizes.multipliers),
             }
-            if prize_table.multipliers is not None
+            if prize_table.prizes is not None
             else None
         ),
     }

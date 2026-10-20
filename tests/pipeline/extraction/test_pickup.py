@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 from romwiki.engines.registry import (
@@ -48,7 +49,9 @@ def _register_fake_platform(
 def _register_fake_engine(
     *, pickup: SimpleNamespace, items: SimpleNamespace | None = None, pickup_format: str
 ) -> None:
-    fields = dict.fromkeys(EngineAdapter.__dataclass_fields__, SimpleNamespace())
+    fields: dict[str, Any] = dict.fromkeys(
+        EngineAdapter.__dataclass_fields__, SimpleNamespace()
+    )
     fields["pickup"] = pickup
     if items is not None:
         fields["items"] = items
@@ -72,7 +75,7 @@ def _register_fake_engine(
 
 
 def _profile(**overrides: object) -> GameProfile:
-    defaults = {
+    defaults: dict[str, Any] = {
         "id": "test-pickup",
         "name": "Test Pickup",
         "platform": _PLATFORM_ID,

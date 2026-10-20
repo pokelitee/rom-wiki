@@ -76,7 +76,7 @@ export function Portal({
         <section className="generation-section" key={generation}>
           <div className="generation-heading">
             <h2>Generation {generation}</h2>
-            <span>Nintendo DS</span>
+            <span>{generation === 3 ? "Game Boy Advance" : "Nintendo DS"}</span>
           </div>
           <div className="game-grid">
             {published

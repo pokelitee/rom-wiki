@@ -13,7 +13,8 @@ python -m pip install -r requirements/dev.txt
 python -m pip install --no-deps --no-build-isolation -e .
 python -m ruff format --check .
 python -m ruff check .
-python -m mypy src/romwiki
+python -m mypy src/romwiki tests
+python -m mypy scripts
 python -m pytest -q
 python scripts/check_package.py
 npm --prefix web ci
@@ -23,37 +24,46 @@ npm --prefix web test
 npm --prefix web run build
 ```
 
-CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images.
+CI runs these checks on Ubuntu and Windows with Python 3.12 and 3.13. Tests use synthetic inputs and fixtures rather than requiring local ROM images. Tests are type-checked against the real types they import, with the relaxations `pyproject.toml` explains for helpers and test doubles; scripts are checked on their own because they are standalone modules.
 
 With local ROMs registered and `pokedb_root` set in `.local/games.toml`, also build every registered profile from its real ROM. This takes several minutes, so it only runs when enabled:
 
 ```sh
-ROMWIKI_ROM_TESTS=1 python -m pytest tests/pipeline/build/test_engine_capability_contract.py tests/pipeline/build/test_rom_evidence.py tests/pipeline/build/test_web_build.py
+ROMWIKI_ROM_TESTS=1 python -m pytest tests/pipeline/build/test_engine_capability_contract.py tests/pipeline/build/test_rom_evidence.py tests/sites/test_web_build.py
 ```
 
-The capability test requires every published game's data to pass the content checks in `pipeline/build/checks.py`. The evidence test keeps the facts profiles rely on checked against each ROM: Gen III tables sit where their code points, every reachable Gen III script decodes, the script specials find every trade and event Pokémon, and each Gen IV Pokédex bank matches its own version's text. The web build test checks that `romwiki.web_build.build_wiki`, which builds one game's frontend bundle from a ROM in memory for the browser generator, publishes exactly what `site export-web` does for every single-ROM site, and that a ROM no profile knows builds as its retail game, marked unverified. It compares against the checkout's generated data, so regenerate first after a pipeline change. Generation and `site export-web` apply the same checks and refuse to write or publish data that fails them. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
+The capability test requires every published game's data to pass the content checks in `pipeline/build/checks.py`. The evidence test keeps the facts profiles rely on checked against each ROM: Gen III tables sit where their code points, every reachable Gen III script decodes, the script specials find every trade and event Pokémon, and each Gen IV Pokédex bank matches its own version's text. The web build test checks that `romwiki.sites.web_build.build_wiki`, which builds one game's frontend bundle from a ROM in memory for the browser generator, publishes exactly what `site export-web` does for every single-ROM site, and that a ROM no profile knows builds as its retail game, marked unverified. It compares against the checkout's generated data, so regenerate first after a pipeline change. Generation and `site export-web` apply the same checks and refuse to write or publish data that fails them. The package smoke check builds a source distribution and wheel, installs the wheel in an isolated environment, and checks the CLI outside the checkout.
 
 The installed CLI is distributed as a Python package; profiles, site configuration, authored content, and snapshots belong to the repository checkout. Wiki generation must run with those repository resources available. A wheel alone is not a bundled copy of the published wiki corpus.
 
-## Generated files from pret
+## Generated files
 
-Some engine data is generated from the pret decompilations rather than written by
-hand. `scripts/pret/sources.toml` pins the pret commit each generator reads, and
-downloads are cached under `.romwiki/pret-cache/`. After changing a pin, rerun the
-generator and review the diff; `--check` fails when a generated file is stale.
+Some committed files are generated rather than written by hand, by the scripts in
+`scripts/generate/`. Each writes its output, or with `--check` fails if the
+committed file is stale. Rerun one after changing its inputs and review the diff.
+None runs in CI, because each needs inputs CI doesn't have:
 
 ```sh
-python scripts/pret/gen3_script_commands.py --check
-python scripts/pret/symbols.py --check
+python scripts/generate/gen3_script_commands.py --check   # pret sources
+python scripts/generate/profile_symbols.py --check        # pret symbols + retail ROMs
+python scripts/generate/gen3_compound_names.py --check    # PokéDB
 ```
 
 - `gen3_script_commands.py` writes the Gen III event-script command tables
-  (`engines/gen3/shared/script_command_table.py`).
-- `symbols.py` writes `profiles/symbols/<table>.toml`: the offset and size of each
-  pret symbol a profile names, and the `gSpecials` index of each named special.
-  For Generation III it also records each table's pointer sites, found by
-  scanning the retail ROMs configured in `.local/games.toml`, so running it (or
-  its `--check`) needs those ROMs.
+  (`engines/gen3/shared/script_command_table.py`) from pret's macro and command
+  table sources.
+- `profile_symbols.py` writes `profiles/symbols/<table>.toml`: the offset and size
+  of each pret symbol a profile names, and the `gSpecials` index of each named
+  special. For Generation III it also records each table's pointer sites, found
+  by scanning the retail ROMs configured in `.local/games.toml`.
+- `gen3_compound_names.py` writes the casing of run-together Generation III names
+  (`engines/gen3/shared/compound_names.py`) from PokéDB's Generation III move,
+  ability, and item slugs, found through `pokedb_root` in `.local/games.toml`.
+
+`scripts/generate/pret_sources.toml` pins the pret commit each pret-based
+generator reads; downloads are cached under `.romwiki/pret-cache/`, so only the
+first run after a pin change needs network access. Generated files name their
+generator and source commit in their header.
 
 ## Architecture and reference guides
 
@@ -63,7 +73,7 @@ Platform readers open containers, engines decode records, and pipelines normaliz
 - [Adding a game](development/adding-a-game.md): profiles, engines, tests, and publication checklist.
 - [Data contracts](development/data-contracts.md): normalized and published JSON guarantees.
 - [Frontend](development/frontend.md): React architecture, local preview, snapshots, and browser checks.
-- [Open items](development/open-items.md): unresolved selector research and known limitations.
+- [Open items](development/open-items.md): what the wikis do not cover yet, grouped by what blocks it.
 - [CLI reference](cli-reference.md): commands and arguments.
 - [Operations](operations.md): local inputs, generation, snapshots, publishing, and recovery.
 

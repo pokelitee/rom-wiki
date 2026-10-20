@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from collections.abc import Mapping
 from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -205,7 +206,9 @@ _REMATCH_PARAMETERS = {
 
 
 def _profile(
-    *, layout: dict[str, str] | None = None, parameters: dict[str, object] | None = None
+    *,
+    layout: dict[str, str] | None = None,
+    parameters: Mapping[str, object] | None = None,
 ) -> GameProfile:
     base = GameProfile(
         id="test",

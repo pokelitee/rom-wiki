@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from romwiki.schema.trainers import (
     unresolved_trainer_variant_support,
@@ -9,7 +10,7 @@ from romwiki.schema.trainers import (
 from romwiki.util.errors import DataSourceError
 
 
-def _family() -> dict[str, object]:
+def _family() -> dict[str, Any]:
     return {
         "id": "rival-opening",
         "label": "Opening rival battle",

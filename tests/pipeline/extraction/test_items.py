@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from dataclasses import asdict, replace
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 from romwiki.engines.gen4.platinum import Gen4BerryData, Gen4FossilRevival
@@ -51,7 +52,7 @@ def _fake_platform(
 
 
 def _profile(**overrides: object) -> GameProfile:
-    fields = {
+    fields: dict[str, Any] = {
         "id": "test",
         "name": "Test",
         "platform": "nintendo-ds",
@@ -74,11 +75,11 @@ def _profile(**overrides: object) -> GameProfile:
         },
     }
     fields.update(overrides)
-    return GameProfile(**fields)  # type: ignore[arg-type]
+    return GameProfile(**fields)
 
 
 def _item(item_id: int, data_member: int, **overrides: object) -> Item:
-    fields = {
+    fields: dict[str, Any] = {
         "item_id": item_id,
         "data_archive_member": data_member,
         "price": 100,
@@ -102,7 +103,7 @@ def _item(item_id: int, data_member: int, **overrides: object) -> Item:
         ),
     }
     fields.update(overrides)
-    return Item(**fields)  # type: ignore[arg-type]
+    return Item(**fields)
 
 
 class ItemExtractionTests(unittest.TestCase):
@@ -236,9 +237,15 @@ class ItemExtractionTests(unittest.TestCase):
         profile = _profile(
             layout={"item_data": "items.narc", "messages": "messages.narc"}
         )
-        profile = replace(profile, parameters={**profile.parameters})
-        del profile.parameters["type_names_member"]  # type: ignore[attr-defined]
-        del profile.parameters["fossil_revival_table_offset"]  # type: ignore[attr-defined]
+        removed = {"type_names_member", "fossil_revival_table_offset"}
+        profile = replace(
+            profile,
+            parameters={
+                key: value
+                for key, value in profile.parameters.items()
+                if key not in removed
+            },
+        )
 
         filesystem_data = {
             "items.narc": b"ITEMSBLOB",
@@ -344,7 +351,7 @@ class ItemExtractionTests(unittest.TestCase):
         ]
         for started in self._patches:
             started.start()
-        self.addCleanup(lambda: [started.stop() for started in self._patches])
+            self.addCleanup(started.stop)
         return result
 
     def test_extracts_archive_index_items_with_script_pattern_fossils(self) -> None:

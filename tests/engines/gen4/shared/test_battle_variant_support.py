@@ -41,7 +41,7 @@ class ResolvedBattleLocationTests(unittest.TestCase):
         self.assertIsNone(resolved_battle_location(records_by_id, (1, 2)))
 
     def test_returns_none_when_a_record_has_no_location(self) -> None:
-        records_by_id = {1: {"locations": []}}
+        records_by_id: dict[int, dict[str, list[str]]] = {1: {"locations": []}}
 
         self.assertIsNone(resolved_battle_location(records_by_id, (1,)))
 

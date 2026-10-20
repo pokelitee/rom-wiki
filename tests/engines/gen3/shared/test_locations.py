@@ -114,7 +114,7 @@ def _map_rom(*arrays: tuple[int, tuple[int, ...]]) -> bytearray:
     return rom
 
 
-def _reader(rom: bytes) -> Callable[[int, int], bytes]:
+def _reader(rom: bytes | bytearray) -> Callable[[int, int], bytes]:
     def read(offset: int, size: int) -> bytes:
         if offset + size > len(rom):
             raise InvalidRomError("out of range")

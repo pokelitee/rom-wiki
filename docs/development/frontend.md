@@ -55,7 +55,7 @@ Then commit the pinned manifest through a PR. `snapshot-web` needs an authentica
 
 The **Make a wiki** page (`#/make`, `web/src/features/generate/`) builds a wiki from the reader's ROM without uploading it:
 
-- `web/src/generate/worker.ts` runs in a module worker. It loads Pyodide (pinned in the worker) from jsDelivr, installs the `generator/` bundle below after checking each file's SHA-256, mounts the ROM read-only with Emscripten's WORKERFS so a DS image is never copied into memory, and calls `romwiki.web_build.build_wiki(..., id_prefix="local-")`. Python log messages stream to the page as progress, and the runtime stays loaded for further builds while the page is open.
+- `web/src/generate/worker.ts` runs in a module worker. It loads Pyodide (pinned in the worker) from jsDelivr, installs the `generator/` bundle below after checking each file's SHA-256, mounts the ROM read-only with Emscripten's WORKERFS so a DS image is never copied into memory, and calls `romwiki.sites.web_build.build_wiki(..., id_prefix="local-")`. Python log messages stream to the page as progress, and the runtime stays loaded for further builds while the page is open.
 - A generated wiki's game ID is `local-` plus the first 12 hex digits of the ROM's SHA-256, so every resource path begins with an ID no published game uses. `web/src/data/client.ts` reads any path under a local ID from IndexedDB (`web/src/generate/store.ts`) instead of the network, so every page renders local wikis unchanged; `loadManifest` adds them to the library, marked unverified when no profile knew the ROM and outdated when a different generator wheel built them.
 - Wikis export to and import from one gzipped JSON file (`web/src/generate/bundle.ts`), which is rejected unless its ID is a local ID and every file lies under it.
 
@@ -63,7 +63,7 @@ Browser tests import an export built from the published Platinum wiki (`web/test
 
 ### Browser generator runtime
 
-The Pages build also serves what the in-browser generator downloads, under `generator/`: the `romwiki` wheel, a zip of the profiles, site descriptors, and guides that `romwiki.web_build.build_wiki` reads, and one PokéDB pack per generation, all listed with checksums in `generator/manifest.json`. CI builds the wheel and the resources zip from the checkout. PokéDB is not in the repository, so its packs are published like the frontend snapshot: one `pokedb-*.tar` archive in the `snapshots` release, pinned by `sites/generator-runtime/manifest.json`.
+The Pages build also serves what the in-browser generator downloads, under `generator/`: the `romwiki` wheel, a zip of the profiles, site descriptors, and guides that `romwiki.sites.web_build.build_wiki` reads, and one PokéDB pack per generation, all listed with checksums in `generator/manifest.json`. CI builds the wheel and the resources zip from the checkout. PokéDB is not in the repository, so its packs are published like the frontend snapshot: one `pokedb-*.tar` archive in the `snapshots` release, pinned by `sites/generator-runtime/manifest.json`.
 
 After PokéDB changes, repack and pin it:
 

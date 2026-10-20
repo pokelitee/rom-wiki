@@ -69,8 +69,9 @@ value range rather than located by name.
   Battle Point cost comes from the script that handles its menu choice.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Poké
   Ball"); move, item, and ability descriptions come from the ROM's own text.
-  Names that later games write with an inner capital read as one word, e.g.
-  "Thunderpunch".
+  Names that run several words together take their inner capitals from
+  PokéDB's word boundaries ("ThunderPunch", "BlackGlasses"); a few it has no
+  boundary for keep one capital ("Smokescreen").
 
 Battle Frontier facilities, contests, and Berry mechanics are not covered.
 Trainers are published exactly as the ROM stores them, including unused

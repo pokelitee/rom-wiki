@@ -7,16 +7,21 @@ import json
 
 from romwiki.cli.common import SubParsers, add_site_root_argument
 from romwiki.cli.frontend import add_parser as add_frontend_parser
+from romwiki.cli.generator import add_parser as add_generator_parser
 from romwiki.sites import SiteCatalog
 
 
 def add_parser(subparsers: SubParsers) -> None:
     site_parser = subparsers.add_parser(
         "site",
-        help="list sites and export, snapshot, or restore the frontend publication",
+        help=(
+            "list sites, manage the frontend publication, and prepare the "
+            "browser generator"
+        ),
     )
     site_subparsers = site_parser.add_subparsers(dest="site_command", required=True)
     add_frontend_parser(site_subparsers)
+    add_generator_parser(site_subparsers)
     list_parser = site_subparsers.add_parser("list", help="list configured sites")
     list_parser.add_argument(
         "--json",

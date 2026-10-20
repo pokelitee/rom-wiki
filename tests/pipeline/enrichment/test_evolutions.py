@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.sources import PokeDBGeneration
@@ -87,7 +88,7 @@ class EvolutionEnrichmentTests(unittest.TestCase):
 
 
 def _reference_pokedb() -> PokeDBGeneration:
-    defaults = {
+    defaults: dict[int, dict[str, Any]] = {
         pokemon_id: {
             "id": pokemon_id,
             "name": f"pokemon-{pokemon_id}",
