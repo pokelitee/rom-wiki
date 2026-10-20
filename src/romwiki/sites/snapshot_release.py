@@ -1,54 +1,82 @@
-"""Publish frontend snapshot archives to the repository's `snapshots` release."""
+"""Publish pinned archives to the repository's `snapshots` release."""
 
 from __future__ import annotations
 
 import json
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from romwiki.util.errors import SiteError
 
 RELEASE_TAG = "snapshots"
-ARCHIVE_PREFIX = "frontend-"
-ARCHIVE_SUFFIX = ".tar.gz"
-PINNED_MANIFEST = "sites/frontend-snapshot/manifest.json"
 
 
-def publish_snapshot(archive: Path) -> list[str]:
-    """Upload `archive` and delete every other snapshot archive except the one
-    `main` still pins, which its CI and deploys need until the new pin merges.
+@dataclass(frozen=True, slots=True)
+class ReleaseArchive:
+    """One kind of archive in the release and the manifest that pins it."""
+
+    prefix: str
+    suffix: str
+    pinned_manifest: str
+
+
+FRONTEND_SNAPSHOT = ReleaseArchive(
+    prefix="frontend-",
+    suffix=".tar.gz",
+    pinned_manifest="sites/frontend-snapshot/manifest.json",
+)
+POKEDB_PACKS = ReleaseArchive(
+    prefix="pokedb-",
+    suffix=".tar",
+    pinned_manifest="sites/generator-runtime/manifest.json",
+)
+
+
+def publish_snapshot(
+    archive: Path, kind: ReleaseArchive = FRONTEND_SNAPSHOT
+) -> list[str]:
+    """Upload `archive` and delete every other archive of its kind except the
+    one `main` still pins, which its CI and deploys need until the new pin
+    merges.
 
     Returns the names of the deleted archives.
     """
-    keep = {archive.name, _main_archive()}
-    if archive.name not in _release_archives():
+    keep = {archive.name, _main_archive(kind)}
+    if archive.name not in _release_archives(kind):
         _gh("release", "upload", RELEASE_TAG, str(archive))
-    stale = sorted(_release_archives() - keep)
+    stale = sorted(_release_archives(kind) - keep)
     for name in stale:
         _gh("release", "delete-asset", RELEASE_TAG, name, "--yes")
     return stale
 
 
-def _main_archive() -> str:
-    manifest = json.loads(
-        _gh(
-            "api",
-            "-H",
-            "Accept: application/vnd.github.raw",
-            f"repos/{{owner}}/{{repo}}/contents/{PINNED_MANIFEST}?ref=main",
+def _main_archive(kind: ReleaseArchive) -> str:
+    try:
+        manifest = json.loads(
+            _gh(
+                "api",
+                "-H",
+                "Accept: application/vnd.github.raw",
+                f"repos/{{owner}}/{{repo}}/contents/{kind.pinned_manifest}?ref=main",
+            )
         )
-    )
+    except SiteError as error:
+        # The first archive of a new kind has no pin on `main` yet.
+        if "HTTP 404" in str(error):
+            return ""
+        raise
     return str(manifest["archive"])
 
 
-def _release_archives() -> set[str]:
+def _release_archives(kind: ReleaseArchive) -> set[str]:
     names = _gh(
         "release", "view", RELEASE_TAG, "--json", "assets", "--jq", ".assets[].name"
     )
     return {
         name
         for name in names.split()
-        if name.startswith(ARCHIVE_PREFIX) and name.endswith(ARCHIVE_SUFFIX)
+        if name.startswith(kind.prefix) and name.endswith(kind.suffix)
     }
 
 

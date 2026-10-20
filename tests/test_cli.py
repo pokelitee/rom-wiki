@@ -104,6 +104,9 @@ class MainErrorHandlingTests(unittest.TestCase):
                 "export-web",
                 "snapshot-web",
                 "restore-web",
+                "pack-pokedb",
+                "restore-pokedb",
+                "bundle-generator",
             },
         )
 

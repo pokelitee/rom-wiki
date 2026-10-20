@@ -232,3 +232,11 @@ romwiki site restore-web .romwiki/frontend-snapshot
 ```
 
 `export-web` requires all comparative games to have complete comparison inputs and writes the React publication contract, deleting files an earlier export left that the new manifest no longer references. `snapshot-web` packages only referenced resources into a deterministic archive, pins its checksum manifest in `sites/frontend-snapshot/manifest.json`, and publishes the archive to the `snapshots` release (see the [frontend guide](development/frontend.md#complete-frontend-snapshots)). `restore-web` accepts that manifest directory and verifies the archive and resources before restoration. None of these commands deploys the site.
+
+```sh
+romwiki site pack-pokedb
+romwiki site restore-pokedb sites/generator-runtime --output .romwiki/pokedb-packs
+romwiki site bundle-generator --wheel .romwiki/wheel/rom_wiki-0.1.0-py3-none-any.whl --packs .romwiki/pokedb-packs
+```
+
+`pack-pokedb` packs every `gen<N>` PokéDB directory into one deterministic archive, pins it in `sites/generator-runtime/manifest.json`, and publishes it to the `snapshots` release (`--no-upload` pins without publishing). `restore-pokedb` verifies the pinned archive and writes its packs. `bundle-generator` lays out the browser generator's downloads (wheel, repository resources, PokéDB packs, and a checksummed manifest) in `web/public/generator` by default. See the [frontend guide](development/frontend.md#browser-generator-runtime).

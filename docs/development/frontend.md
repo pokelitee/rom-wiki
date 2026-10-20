@@ -51,6 +51,24 @@ python scripts/check_frontend_publication.py
 
 Then commit the pinned manifest through a PR. `snapshot-web` needs an authenticated GitHub CLI (`gh`). It uploads the archive under its content-addressed name, so an asset is never overwritten in place, and deletes every other `frontend-*` archive except the one `main` currently pins, which `main`'s CI and redeploys still need until the new manifest merges. The release therefore holds at most two archives. Older commits cannot restore their data; this project does not roll back by snapshot.
 
+### Browser generator runtime
+
+The Pages build also serves what the in-browser generator downloads, under `generator/`: the `romwiki` wheel, a zip of the profiles, site descriptors, and guides that `romwiki.web_build.build_wiki` reads, and one PokéDB pack per generation, all listed with checksums in `generator/manifest.json`. CI builds the wheel and the resources zip from the checkout. PokéDB is not in the repository, so its packs are published like the frontend snapshot: one `pokedb-*.tar` archive in the `snapshots` release, pinned by `sites/generator-runtime/manifest.json`.
+
+After PokéDB changes, repack and pin it:
+
+```sh
+python -m romwiki site pack-pokedb
+```
+
+Then commit the pinned manifest through a PR. A pack drops the Pokémon fields the pipeline doesn't read (`moves` and `unverified_historical_fields`), which keeps each generation under half a megabyte compressed; the same PokéDB always gives the same archive. To lay out the bundle locally:
+
+```sh
+python -m pip wheel . --no-deps --wheel-dir .romwiki/wheel
+python -m romwiki site restore-pokedb sites/generator-runtime --output .romwiki/pokedb-packs
+python -m romwiki site bundle-generator --wheel .romwiki/wheel/*.whl --packs .romwiki/pokedb-packs
+```
+
 ### Deployment
 
 The React site is deployed on GitHub Pages. Every CI run builds and verifies a Pages artifact. On a push to `main`, CI deploys that same artifact once the `CI gate` passes, so a merged PR goes live without a separate step. PR runs never deploy. See [Operations](../operations.md#ci-and-github-pages) for manual redeploys and rollback.

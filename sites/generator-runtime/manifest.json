@@ -1,0 +1,10 @@
+{
+  "archive": "pokedb-90613ed5ecce22a8.tar",
+  "files": {
+    "gen3.json.gz": "bf1acfa2ff0fc5155faf430d372bef68ad75e728dafe72bd81efc75c5b0e4d95",
+    "gen4.json.gz": "c18953e3212808ca40732c4ada474dc6b17c3fee0e8190ea9f06cb534413f904",
+    "gen5.json.gz": "40aa10e9649a8bc7147d40bd3fdf373a603f562485427cf5f33a12111e13a79a"
+  },
+  "schema_version": 1,
+  "sha256": "90613ed5ecce22a877a72f1731a14fd71c261862a4b8cd914dd25e4773407e4a"
+}

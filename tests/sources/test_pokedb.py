@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import gzip
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from romwiki.sources import PokeDBGeneration
+from romwiki.sources.pokedb import pack_pokedb
 from romwiki.util.errors import DataSourceError
 
 
@@ -488,3 +490,41 @@ class PokeDBLookupMissTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PokeDBPackTests(unittest.TestCase):
+    def _pack(self) -> bytes:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_minimal_pokedb(root)
+            _write_json(
+                root / "pokemon" / "default" / "1.json",
+                {
+                    "id": 1,
+                    "name": "bulbasaur",
+                    "species": "bulbasaur",
+                    "genus": "Seed Pokémon",
+                    "moves": {"tackle": []},
+                    "unverified_historical_fields": ["moves"],
+                },
+            )
+            return pack_pokedb(root)
+
+    def test_a_pack_loads_like_its_directory_without_unread_fields(self) -> None:
+        pokedb = PokeDBGeneration.load_pack(self._pack())
+
+        bulbasaur = pokedb.pokemon_for_id(1)
+        self.assertEqual(bulbasaur["genus"], "Seed Pokémon")
+        self.assertNotIn("moves", bulbasaur)
+        self.assertNotIn("unverified_historical_fields", bulbasaur)
+        self.assertEqual(pokedb.pokemon_for_name("venusaur-mega")["id"], 10091)
+        self.assertEqual(pokedb.move_name(1), "pound")
+
+    def test_packing_is_deterministic(self) -> None:
+        self.assertEqual(self._pack(), self._pack())
+
+    def test_rejects_data_that_is_not_a_pack(self) -> None:
+        with self.assertRaisesRegex(DataSourceError, "Invalid PokéDB pack"):
+            PokeDBGeneration.load_pack(b"not a pack")
+        with self.assertRaisesRegex(DataSourceError, "Unsupported PokéDB pack"):
+            PokeDBGeneration.load_pack(gzip.compress(b'{"schema_version": 99}'))
