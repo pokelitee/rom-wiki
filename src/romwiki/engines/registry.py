@@ -452,7 +452,9 @@ _DATASET_REQUIRED_MEMBERS: dict[str, dict[str, tuple[str, ...]]] = {
 _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
     ("encounters", "conditional"): {"encounters": ("parse_encounter_record",)},
     ("encounters", "seasonal"): {"encounters": ("parse_encounter_entry",)},
-    ("encounters", "method-table"): {"encounters": ("parse_encounter_record",)},
+    ("encounters", "method-table"): {
+        "encounters": ("count_encounter_headers", "parse_encounter_record")
+    },
     ("locations", "event-map"): {"locations": ("parse_map_headers",)},
     ("locations", "encounter-map"): {"locations": ("parse_map_header_table",)},
     ("location_extraction", "arm9-event-map"): {
@@ -493,9 +495,9 @@ _FORMAT_REQUIRED_MEMBERS: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {
     ("location_extraction", "gba-map-groups"): {
         "locations": (
             "FIRST_REGION_MAP_SECTION",
-            "GMAPGROUPS_GROUP_COUNT",
             "REGION_NAME_ENTRY_SIZE",
             "REGION_NAME_POINTER_OFFSET",
+            "count_map_groups",
             "parse_gmapgroups_pointers",
             "parse_map_group_index",
             "BG_EVENT_HIDDEN_ITEM",

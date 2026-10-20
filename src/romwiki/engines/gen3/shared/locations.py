@@ -10,9 +10,10 @@ from .constants import (
     MAP_HEADER_SIZE,
     MAP_LAYOUT_PREFIX_SIZE,
     MAX_MAP_DIMENSION,
+    MAX_MAP_GROUPS,
     MAX_MAPS_PER_GROUP,
 )
-from .pointers import resolve_gba_pointer
+from .pointers import is_gba_pointer, resolve_gba_pointer
 
 # `struct MapHeader` (28 bytes), verified against both FireRed/LeafGreen and
 # Emerald: four leading pointers (mapLayout/events/mapScripts/connections,
@@ -87,11 +88,27 @@ def parse_map_header_table(
     return tuple(records)
 
 
+def count_map_groups(read: Callable[[int, int], bytes], offset: int) -> int:
+    """Count the entries of the `gMapGroups` table at `offset`.
+
+    The ROM stores no group count. Every entry is a ROM pointer and the word
+    after the table is not (retail FireRed/LeafGreen and Emerald follow it
+    with a small integer, FireRed Omega with filler), so the table ends at
+    the first word that isn't one. `read(offset, size)` returns ROM bytes.
+    """
+    for index in range(MAX_MAP_GROUPS + 1):
+        (word,) = struct.unpack("<I", read(offset + index * 4, 4))
+        if not is_gba_pointer(word):
+            if index == 0:
+                raise InvalidRomError("Gen III gMapGroups table has no groups")
+            return index
+    raise InvalidRomError(f"Gen III gMapGroups table exceeds {MAX_MAP_GROUPS} groups")
+
+
 def parse_gmapgroups_pointers(data: bytes, *, group_count: int) -> tuple[int, ...]:
     """Decode `gMapGroups` itself: `group_count` consecutive GBA pointers,
     each the ROM address of that group's own array of pointers-to-
-    `MapHeader` (see each leaf's own `GMAPGROUPS_GROUP_COUNT` comment for
-    how this was verified).
+    `MapHeader`.
     """
     expected_size = group_count * 4
     if len(data) != expected_size:

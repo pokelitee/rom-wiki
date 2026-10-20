@@ -51,6 +51,9 @@ python scripts/pret/symbols.py --check
   (`engines/gen3/shared/script_command_table.py`).
 - `symbols.py` writes `profiles/symbols/<table>.toml`: the offset and size of each
   pret symbol a profile names, and the `gSpecials` index of each named special.
+  For Generation III it also records each table's pointer sites, found by
+  scanning the retail ROMs configured in `.local/games.toml`, so running it (or
+  its `--check`) needs those ROMs.
 
 ## Architecture and reference guides
 

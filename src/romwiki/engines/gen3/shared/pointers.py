@@ -22,6 +22,11 @@ def resolve_gba_pointer(value: int) -> int:
     return value - _ROM_BASE
 
 
+def is_gba_pointer(value: int) -> bool:
+    """Whether `value` is an address in the GBA cartridge ROM space."""
+    return _ROM_BASE <= value < _ROM_END
+
+
 def gba_pointer_for_offset(offset: int) -> int:
     """Convert a file offset to the raw GBA ROM address (0x08000000-based)
     that would point to it -- the inverse of `resolve_gba_pointer`, needed

@@ -332,7 +332,8 @@ MAP_HEADER_SIZE = 28
 MAP_LAYOUT_PREFIX_SIZE = 24
 # Generous sanity bound for a layout's width and height.
 MAX_MAP_DIMENSION = 0x400
-# Map numbers are a u8.
+# Map groups and map numbers are each a u8.
+MAX_MAP_GROUPS = 256
 MAX_MAPS_PER_GROUP = 256
 
 # `WildPokemonHeader`, 20 bytes -- one entry per map (mapGroup/mapNum, not a

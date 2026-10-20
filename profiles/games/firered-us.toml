@@ -56,7 +56,6 @@ ability_name_count = 78
 ability_description_symbol = "gAbilityDescriptionPointers"
 
 encounter_symbol = "gWildMonHeaders"
-encounter_count = 132
 
 # `sMapNames`, one name pointer per Kanto/Sevii region map section, and
 # `gMapGroups` -- see engines/gen3/frlg/constants.py's REGION_NAME_* and

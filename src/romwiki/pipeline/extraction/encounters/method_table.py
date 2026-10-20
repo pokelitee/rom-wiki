@@ -24,20 +24,17 @@ def extract_method_table_encounter_dataset(result: InspectionResult) -> dict[str
     # paths above.
     assert result.match is not None
     profile = result.match.profile
-    try:
-        offset = profile.parameters["encounter_offset"]
-        count = profile.parameters["encounter_count"]
-    except KeyError as error:
-        raise ProfileError(
-            f"Profile {profile.id} does not define encounter_offset/encounter_count"
-        ) from error
-    if not isinstance(offset, int) or not isinstance(count, int):
-        raise ProfileError(f"Profile {profile.id} has an invalid encounter parameter")
-
+    offset = profile.int_parameter("encounter_offset")
     platform = get_platform(profile.platform)
     if platform.read_bytes is None:
         raise ProfileError(f"Platform {profile.platform!r} does not support flat reads")
+    read_bytes = platform.read_bytes
     engine = get_engine(profile.engine).encounters
+    count = profile.optional_int_parameter("encounter_count")
+    if count is None:
+        count = engine.count_encounter_headers(
+            lambda at, size: read_bytes(result.image, at, size), offset
+        )
     header_size = engine.ENCOUNTER_HEADER_SIZE
     header_data = platform.read_bytes(result.image, offset, header_size * count)
     archive_path = f"offset:{offset:#x}"

@@ -571,7 +571,7 @@ variant = "child"
         self.assertEqual(base.int_parameter("table_offset"), 0x100)
         self.assertEqual(base.int_parameter("handler_special"), 7)
         self.assertNotIn("table_symbol", base.parameters)
-        self.assertEqual(base.symbols["table_offset"], "gTable")
+        self.assertEqual(base.symbols["table_offset"].name, "gTable")
         # An inherited symbol resolves against the child's own table, and an
         # explicit offset wins over it.
         self.assertEqual(child.int_parameter("table_offset"), 0x200)

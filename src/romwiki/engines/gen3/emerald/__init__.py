@@ -56,6 +56,7 @@ from romwiki.engines.gen3.shared.constants import (
 )
 from romwiki.engines.gen3.shared.egg_moves import parse_egg_move_table
 from romwiki.engines.gen3.shared.encounters import (
+    count_encounter_headers,
     parse_encounter_record,
     parse_header,
     parse_method_info,
@@ -73,6 +74,7 @@ from romwiki.engines.gen3.shared.learnsets import (
     parse_level_up_learnset,
 )
 from romwiki.engines.gen3.shared.locations import (
+    count_map_groups,
     parse_gmapgroups_pointers,
     parse_map_group_index,
     parse_map_header,
@@ -159,7 +161,6 @@ from .constants import (
     FRONTIER_TUTOR_MENU_COUNT,
     FRONTIER_TUTOR_MENU_SIZE,
     FRONTIER_TUTOR_SELECTOR_VAR,
-    GMAPGROUPS_GROUP_COUNT,
     ITEM_NAME_COUNT,
     ITEM_RECORD_COUNT,
     POKEDEX_ENTRY_SIZE,
@@ -195,7 +196,6 @@ __all__ = [
     "TRAINER_CLASS_COUNT",
     "TRAINER_CLASS_NAME_SIZE",
     "FIRST_REGION_MAP_SECTION",
-    "GMAPGROUPS_GROUP_COUNT",
     "REGION_NAME_ENTRY_SIZE",
     "REGION_NAME_POINTER_OFFSET",
     "ABILITY_REFERENCE_IDS",
@@ -267,6 +267,8 @@ __all__ = [
     "parse_egg_move_table",
     "parse_encounter_record",
     "parse_evolution_record",
+    "count_encounter_headers",
+    "count_map_groups",
     "parse_gmapgroups_pointers",
     "parse_header",
     "parse_item_record",

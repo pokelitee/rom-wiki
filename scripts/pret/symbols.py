@@ -6,9 +6,16 @@ size, plus the `gSpecials` index of each special the profiles name
 (`<parameter>_special = "<handler>"`). Only what profiles use is kept, so the
 files stay small and readable.
 
-GBA offsets are from the start of the ROM. Platinum's come from its linker map
-and are relative to ARM9 or, with `overlay`, to that overlay's load address,
-matching how DS profiles already locate tables. Run from the repository root:
+GBA offsets are from the start of the ROM. Each GBA symbol also records its
+`address` and the `pointers` to it: every 4-byte-aligned offset in the retail
+ROM that holds that address, mostly code literal pools. A hack that moves a
+table repoints those words, so reading them in the hack finds the table.
+Finding them needs the retail ROMs, located through `.local/games.toml` and
+checked against their profile hashes.
+
+Platinum's offsets come from its linker map and are relative to ARM9 or, with
+`overlay`, to that overlay's load address, matching how DS profiles already
+locate tables. Run from the repository root:
 
     python scripts/pret/symbols.py [--check]
 """
@@ -16,14 +23,18 @@ matching how DS profiles already locate tables. Run from the repository root:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
+import struct
 import sys
 import tomllib
+from typing import Any
 
 from sources import ROOT, pinned, read
 
 PROFILES = ROOT / "profiles"
 OUTPUT = PROFILES / "symbols"
+GAMES_CONFIG = ROOT / ".local" / "games.toml"
 GBA_ROM_BASE = 0x08000000
 ARM9_LOAD_ADDRESS = 0x02000000
 # Symbol table -> (pret project, symbol file on its symbols branch).
@@ -36,15 +47,21 @@ TABLES = {
 _SPECIALS_PATH = "data/specials.inc"
 
 
-def _profile_references() -> dict[str, tuple[set[str], set[str]]]:
-    """`table -> (symbols, specials)` named by the profiles that use it,
-    including names a profile inherits through `extends`.
-    """
+def _profiles() -> dict[str, dict[str, Any]]:
     profiles = {}
     for path in sorted(PROFILES.rglob("*.toml")):
         if OUTPUT not in path.parents:
             data = tomllib.loads(path.read_text(encoding="utf-8"))
             profiles[data["profile"]["id"]] = data
+    return profiles
+
+
+def _profile_references(
+    profiles: dict[str, dict[str, Any]],
+) -> dict[str, tuple[set[str], set[str]]]:
+    """`table -> (symbols, specials)` named by the profiles that use it,
+    including names a profile inherits through `extends`.
+    """
 
     def lineage(profile_id: str) -> list[dict]:
         chain = []
@@ -143,28 +160,77 @@ def _special_indices(project: str) -> dict[str, int]:
     return indices
 
 
+def _retail_rom(table: str, profile: dict[str, Any]) -> tuple[bytes, str]:
+    """The retail ROM for `table` and its SHA-256, checked against the profile."""
+    try:
+        games = tomllib.loads(GAMES_CONFIG.read_text(encoding="utf-8"))["games"]
+        data = (GAMES_CONFIG.parent / games[table]["patched_rom"]).read_bytes()
+    except (OSError, KeyError) as error:
+        raise SystemExit(
+            f"{table}: pointer sites need its retail ROM in {GAMES_CONFIG} ({error!r})"
+        ) from error
+    digest = hashlib.sha256(data).hexdigest()
+    known = {
+        entry["value"] for entry in profile["hashes"] if entry["algorithm"] == "sha256"
+    }
+    if digest not in known:
+        raise SystemExit(f"{table}: the configured ROM is not the retail build")
+    return data, digest
+
+
+def _pointer_sites(rom: bytes, addresses: set[int]) -> dict[int, list[int]]:
+    """Every 4-byte-aligned offset in `rom` holding one of `addresses`."""
+    sites: dict[int, list[int]] = {address: [] for address in addresses}
+    aligned = rom[: len(rom) // 4 * 4]
+    for index, (word,) in enumerate(struct.iter_unpack("<I", aligned)):
+        if word in sites:
+            sites[word].append(index * 4)
+    return sites
+
+
+def _hex_list(values: list[int]) -> list[str]:
+    if not values:
+        return ["pointers = []"]
+    rows = [values[start : start + 6] for start in range(0, len(values), 6)]
+    return [
+        "pointers = [",
+        *("    " + " ".join(f"0x{value:x}," for value in row) for row in rows),
+        "]",
+    ]
+
+
 def generate() -> dict[str, str]:
     outputs = {}
-    for table, (symbols, specials) in sorted(_profile_references().items()):
+    profiles = _profiles()
+    for table, (symbols, specials) in sorted(_profile_references(profiles).items()):
         project, filename = TABLES[table]
         known = _symbols(project, filename)
+        missing = sorted(symbols - known.keys())
+        if missing:
+            raise SystemExit(f"{table}: unknown symbols {missing}")
         special_indices = _special_indices(project) if specials else {}
         repository, commit = pinned(project, "symbols")
         sources = f"{repository}@{commit[:12]} ({filename})"
         if specials:
             sources += f" and @{pinned(project)[1][:12]} ({_SPECIALS_PATH})"
-        lines = [
-            f"# Generated by scripts/pret/symbols.py from {sources}.",
-            "# Do not edit.",
-            "",
-        ]
+        lines = [f"# Generated by scripts/pret/symbols.py from {sources}."]
+        sites: dict[int, list[int]] = {}
+        if filename.endswith(".sym"):
+            rom, digest = _retail_rom(table, profiles[table])
+            sites = _pointer_sites(
+                rom, {known[name][0] + GBA_ROM_BASE for name in symbols}
+            )
+            lines.append(f"# Pointer sites from the retail ROM with SHA-256 {digest}.")
+        lines += ["# Do not edit.", ""]
         for name in sorted(symbols):
-            if name not in known:
-                raise SystemExit(f"{table}: unknown symbol {name!r}")
             offset, size, overlay = known[name]
             lines += [f"[symbols.{name}]", f"offset = 0x{offset:x}", f"size = {size}"]
             if overlay is not None:
                 lines.append(f"overlay = {overlay}")
+            if sites:
+                address = offset + GBA_ROM_BASE
+                lines.append(f"address = 0x{address:x}")
+                lines += _hex_list(sites[address])
             lines.append("")
         if specials:
             lines.append("[specials]")

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from romwiki.engines.gen3.shared.battle_variants import REMATCH_ENTRY_SIZE
 from romwiki.engines.gen3.shared.constants import (
-    ENCOUNTER_HEADER_SIZE,
     ITEM_RECORD_SIZE,
     MOVE_RECORD_SIZE,
     PERSONAL_RECORD_SIZE,
@@ -30,7 +29,6 @@ _COUNTS = {
     "trainer_count": ("trainer_offset", TRAINER_RECORD_SIZE, 0),
     "move_name_count": ("move_name_offset", _NAME_SIZE["move_name"], 0),
     "ability_name_count": ("ability_name_offset", _NAME_SIZE["ability_name"], 0),
-    "encounter_count": ("encounter_offset", ENCOUNTER_HEADER_SIZE, 1),
     "rematch_table_count": ("rematch_table_offset", REMATCH_ENTRY_SIZE, 0),
     "trade_count": ("trade_table_offset", INGAME_TRADE_SIZE, 0),
     "machine_count": ("machine_move_offset", 2, 0),
@@ -83,7 +81,7 @@ class RetailSymbolTest(unittest.TestCase):
         profile, table = self.profiles[profile_id], self._symbols(profile_id)
         for count, (offset, entry_size, terminators) in counts.items():
             with self.subTest(profile=profile_id, count=count):
-                size = table[profile.symbols[offset]]["size"]
+                size = table[profile.symbols[offset].name]["size"]
                 self.assertEqual(
                     profile.int_parameter(count), size // entry_size - terminators
                 )
@@ -108,7 +106,7 @@ class RetailSymbolTest(unittest.TestCase):
             with self.subTest(offset=offset):
                 overlay = _PLATINUM_OVERLAYS.get(offset)
                 self.assertEqual(
-                    table[symbol].get("overlay"),
+                    table[symbol.name].get("overlay"),
                     None if overlay is None else profile.int_parameter(overlay),
                 )
 

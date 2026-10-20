@@ -11,6 +11,7 @@ from romwiki.profiles.models import (
     HashMatch,
     KnownHash,
     LocationSectionConfig,
+    TableSymbol,
     TypeChartConfig,
 )
 from romwiki.util.errors import ProfileError
@@ -156,19 +157,24 @@ def _resolve_symbols(
             directory / _SYMBOLS_DIRECTORY / f"{table_name}.toml"
         )
     table = tables[table_name]
-    sources: dict[str, str] = {}
+    sources: dict[str, TableSymbol] = {}
     for key in symbol_keys:
         symbol = parameters.pop(key)
         offset_key = key.removesuffix(_SYMBOL_SUFFIX) + "_offset"
         if offset_key in parameters:
             continue
         try:
-            parameters[offset_key] = table["symbols"][symbol]["offset"]
+            entry = table["symbols"][symbol]
+            parameters[offset_key] = entry["offset"]
         except KeyError as error:
             raise ProfileError(
                 f"Symbol table {table_name} has no symbol {symbol!r}"
             ) from error
-        sources[offset_key] = symbol
+        sources[offset_key] = TableSymbol(
+            name=symbol,
+            address=entry.get("address"),
+            pointers=tuple(entry.get("pointers", ())),
+        )
     for key in special_keys:
         try:
             parameters[key] = table["specials"][parameters[key]]
