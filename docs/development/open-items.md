@@ -157,28 +157,15 @@ the native code that picks the version's roamer.
 
 ## 2. Blocked on our tooling
 
-- **B2W2 story dispatch** — verified contract families are published, but the
-  complete script selector that would replace the contract lists is not
-  decoded. The three known rival-battle script sites (Aspertia member 854,
-  Floccesy Ranch member 890, Castelia Sewers member 990) were re-located and
-  confirmed byte-real in Black 2 (US). BW's generic starter-branch VM idiom
-  (`STACK_PUSH, STACK_PUSH_CONST, STACK_CMP(equal), VM_JUMP_IF,
-  CallTrainerBattle`) was ported against these same B2W2 sites — despite the
-  two engines sharing identical low VM opcode numbers, it finds zero
-  matches, even at sites already known to be starter-gated. Disassembling
-  member 854 with this codebase's own function-table-driven control-flow
-  walker found why: its 33-entry function table's reachable control-flow
-  graphs never include offset 2986, where the trainer-battle call physically
-  sits — the nearest preceding function legitimately ends at `VMHalt`
-  (offset 2840) well before it. Guessing alternate disassembly entry points
-  between 2842 and 2986 produced only garbage (bytecode isn't
-  self-synchronizing), so that avenue was abandoned rather than pursued
-  further. Conclusion: the blocker is disassembler reachability, not
-  selector logic — B2W2 script files apparently reference secondary entry
-  points outside the primary function table, which is a gap in
-  `parse_function_offsets`/the disassembler itself, not just this feature.
-  The currently-published, hand-verified `_RIVAL_GROUPS` list remains
-  accurate and untouched.
+- **B2W2 plugin script commands** — commands from `0x3E8` up belong to
+  per-overlay plugins, and the same number means different things in
+  different plugins. The generated command table keeps only the three whose
+  width every plugin agrees on, so a script walk ends at any other plugin
+  command. In Black 2 about 120 walks end this way. Lifting this needs each
+  script tied to the plugin its map loads.
+- **N's Castle version dispatch** — the Zekrom/Reshiram and seasonal N battles
+  are still related from a verified contract list rather than decoded from
+  their script selector.
 
 ## 3. Not yet decoded
 

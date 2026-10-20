@@ -143,11 +143,23 @@ records now resolve to the same city as each other in all eight cases, which
 corroborates the difficulty dispatch pairs from a second, independent direction. Post-battle healing and
 victory-item behavior remain exact header facts.
 
-Starter-dependent Hugh battles are represented as three exact party tabs.
-Retail and both supported hack families were ROM-checked independently; the Tepig
-branch is retained even when its first record has an unrelated static trainer
-name. Early, middle, late, and rematch triplets all reference their exact stored
-parties rather than a synthesized rival record.
+Starter-dependent battles are decoded from each profile's own scripts, the
+same way as Black and White's: every branch on the starter variable is followed
+to the exact trainer record it selects, and the starter table at overlay 316
+names each index's species. B2W2 also selects tag-battle partners this way
+(`CallTrainerMultiBattle`), so those are decoded by their partner record. Each
+battle is labelled with the map its records resolve to, and with the trainer
+class (and name) when it isn't a rival battle, such as Floccesy Town's School
+Kids. Black 2 yields twelve such battles; Redux adds a thirteenth in Chargestone
+Cave. The Tepig branch is retained even when its first record keeps an
+unrelated static trainer name.
+
+The sequel's script commands come from the
+[pokebw2](https://github.com/fuddlesworth/pokebw2) decompilation, which rebuilds
+both retail ROMs byte for byte, rather than from Black and White's table. The
+sequel changed many command widths and added commands, and decoding it with
+Black and White's table ended script walks early, hiding battles, trades, and
+static encounters behind the first misread command.
 
 B2W2's Easy/Normal/Challenge selector is separate from the party member's
 `iv_strength` byte. Runtime level adjustment applies to trainer battles generally;

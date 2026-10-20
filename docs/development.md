@@ -47,6 +47,7 @@ None runs in CI, because each needs inputs CI doesn't have:
 python scripts/generate/gen3_script_commands.py --check   # pret sources
 python scripts/generate/profile_symbols.py --check        # pret symbols + retail ROMs
 python scripts/generate/gen3_compound_names.py --check    # PokéDB
+python scripts/generate/gen5_b2w2_script_commands.py --check  # pokebw2 sources
 ```
 
 - `gen3_script_commands.py` writes the Gen III event-script command tables
@@ -59,10 +60,16 @@ python scripts/generate/gen3_compound_names.py --check    # PokéDB
 - `gen3_compound_names.py` writes the casing of run-together Generation III names
   (`engines/gen3/shared/compound_names.py`) from PokéDB's Generation III move,
   ability, and item slugs, found through `pokedb_root` in `.local/games.toml`.
+- `gen5_b2w2_script_commands.py` writes the Black 2/White 2 field-script command
+  table (`engines/gen5/b2w2/script_command_table.py`) from the
+  [pokebw2](https://github.com/fuddlesworth/pokebw2) decompilation's command
+  macros. Plugin commands (`0x3E8` and up) are kept only where every plugin
+  gives the number the same operand widths.
 
-`scripts/generate/pret_sources.toml` pins the pret commit each pret-based
-generator reads; downloads are cached under `.romwiki/pret-cache/`, so only the
-first run after a pin change needs network access. Generated files name their
+`scripts/generate/decomp_sources.toml` pins the decompilation commit each
+generator reads (pret's repositories and pokebw2); downloads are cached under
+`.romwiki/pret-cache/`, so only the first run after a pin change needs network
+access. Generated files name their
 generator and source commit in their header.
 
 ## Architecture and reference guides

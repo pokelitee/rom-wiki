@@ -334,6 +334,9 @@ GEN5_B2W2_PROFILE_CONTRACT = EngineProfileContract(
             "overworld_objects_unused",
             "pickup_table_locator",
             "repair_invalid_secondary_egg_group",
+            "starter_species_count",
+            "starter_species_offset",
+            "starter_species_overlay_id",
         }
     )
     | _TRAINER_VARIANT_PARAMETERS

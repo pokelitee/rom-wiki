@@ -56,7 +56,6 @@ from romwiki.engines.gen5.shared.pickup import (
 from romwiki.engines.gen5.shared.script_items import find_script_awarded_items
 from romwiki.engines.gen5.shared.starter_branches import (
     STARTER_SPECIES_ENTRY_SIZE,
-    parse_starter_branch_families,
     parse_starter_species,
 )
 from romwiki.engines.gen5.shared.trades import parse_npc_trade_record
@@ -108,6 +107,7 @@ from .marts import (
     resolve_special_vendor,
 )
 from .personal import parse_personal_record
+from .starter_branches import parse_starter_branch_families
 from .static_encounters import discover_static_encounters, find_fossil_revival_script
 from .swarms import SWARM_RECORD_SIZE, SwarmEncounter, parse_swarm_table
 from .trainer_party import (

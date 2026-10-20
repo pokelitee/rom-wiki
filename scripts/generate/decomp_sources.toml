@@ -1,5 +1,6 @@
-# The pret decompilation commits that generated files and symbol subsets are
-# built from. Update a commit deliberately, then rerun the generators and
+# The decompilation commits that generated files and symbol subsets are built
+# from: pret's, and fuddlesworth/pokebw2 for Black 2/White 2 (both rebuild their
+# ROMs byte for byte). Update a commit deliberately, then rerun the generators and
 # review the diff.
 
 [pokeemerald]
@@ -15,3 +16,7 @@ symbols = "3b401eaf14f193946899eb7c056d5ac02a470126"  # symbols branch
 [pokeplatinum]
 repository = "pret/pokeplatinum"
 symbols = "96159401413e732086848dfbf7c58c6d1e10f9ad"  # xmap branch
+
+[pokebw2]
+repository = "fuddlesworth/pokebw2"
+source = "a23cb32d124892130241c5eb11d365891d9125d5"  # main

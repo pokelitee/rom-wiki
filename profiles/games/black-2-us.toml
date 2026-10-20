@@ -46,6 +46,12 @@ item_descriptions_member = 63
 trainer_names_member = 382
 trainer_classes_member = 383
 trainer_variant_contract = "b2w2-retail-v1"
+# The starter species in selection order; the starter-choice script stores the
+# chosen index, which the rival-battle scripts branch on. Identical in White 2
+# and the supported hacks.
+starter_species_overlay_id = 316
+starter_species_offset = 0x2C14
+starter_species_count = 3
 item_balls_script_member = 1240
 hidden_items_script_member = 1241
 map_names_member = 109

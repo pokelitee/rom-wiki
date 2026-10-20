@@ -30,7 +30,7 @@ import tomllib
 from typing import Any
 
 from common import GAMES_CONFIG, ROOT, check_or_write, local_config, local_path
-from pret_sources import pinned, read
+from decomp_sources import pinned, read
 
 PROFILES = ROOT / "profiles"
 OUTPUT = PROFILES / "symbols"

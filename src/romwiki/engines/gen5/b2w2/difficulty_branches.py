@@ -9,9 +9,9 @@ from .opcode_table import GAME_GET_DIFFICULTY
 _DIFFICULTY_SELECTOR_PREFIX = struct.pack("<H", GAME_GET_DIFFICULTY)
 _SELECTOR_NAMES = (
     "GameGetDifficulty",
-    "StackPush",
-    "StackPushConst",
-    "StackCmp",
+    "VMStackPush",
+    "VMStackPushConst",
+    "VMStackCmp",
     "VMJumpIf",
 )
 _TRAINER_BATTLE_COMMANDS = {"CallTrainerBattle", "CallTrainerMultiBattle"}
