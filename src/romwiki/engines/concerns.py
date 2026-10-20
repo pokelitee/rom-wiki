@@ -45,7 +45,6 @@ class LocationConcern(MessageArchiveReader, Protocol):
     DYNAMIC_WARP_HEADER_ID: int
     DYNAMIC_WARP_ID: int
     ENCOUNTER_MEMBER_NONE: int
-    EVENT_MON_SPECIAL: int
     FIRST_REGION_MAP_SECTION: int
     GAME_CORNER_PRIZE_EXCHANGE_HEADER_ID: int
     GBA_MAP_EVENTS_SIZE: int
@@ -72,7 +71,6 @@ class LocationConcern(MessageArchiveReader, Protocol):
     ROAMING_SLOT_SPECIES_IDS: tuple[int, ...]
     SCRIPT_COMMANDS: Mapping[int, tuple[str, tuple[int, ...]]]
     SCRIPT_WARP_COMMANDS: frozenset[int]
-    TRADE_INFO_SPECIAL: int
     TROPHY_GARDEN_HEADER_ID: int
     TROPHY_GARDEN_MEMBER: int
     WARP_DESTINATION_INDEXED: bool

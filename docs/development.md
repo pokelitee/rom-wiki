@@ -35,6 +35,23 @@ It requires every published game's data to pass the content checks in `pipeline/
 
 The installed CLI is distributed as a Python package; profiles, site configuration, authored content, and snapshots belong to the repository checkout. Wiki generation must run with those repository resources available. A wheel alone is not a bundled copy of the published wiki corpus.
 
+## Generated files from pret
+
+Some engine data is generated from the pret decompilations rather than written by
+hand. `scripts/pret/sources.toml` pins the pret commit each generator reads, and
+downloads are cached under `.romwiki/pret-cache/`. After changing a pin, rerun the
+generator and review the diff; `--check` fails when a generated file is stale.
+
+```sh
+python scripts/pret/gen3_script_commands.py --check
+python scripts/pret/symbols.py --check
+```
+
+- `gen3_script_commands.py` writes the Gen III event-script command tables
+  (`engines/gen3/shared/script_command_table.py`).
+- `symbols.py` writes `profiles/symbols/<table>.toml`: the offset and size of each
+  pret symbol a profile names, and the `gSpecials` index of each named special.
+
 ## Architecture and reference guides
 
 Platform readers open containers, engines decode records, and pipelines normalize, enrich, compare, and publish data. Keep ROM offsets and engine encodings out of published data consumers.

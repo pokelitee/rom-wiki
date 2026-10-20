@@ -64,6 +64,9 @@ class GbaMapNames:
     item_prices: Mapping[int, int]
     # The ROM's `sIngameTrades`, or empty when the profile doesn't locate it.
     trades: Sequence[Any] = ()
+    # `gSpecials` indices the profile names, or None to skip what they find.
+    event_mon_special: int | None = None
+    trade_info_special: int | None = None
 
 
 def extract_gba_map_facts(
@@ -394,7 +397,7 @@ def _script_facts(
     for pokemon in engine.find_pokemon(
         scripts,
         species_count=len(names.species),
-        event_mon_special=engine.EVENT_MON_SPECIAL,
+        event_mon_special=names.event_mon_special,
     ):
         name = names.species[pokemon.species_id]
         offset = engine.resolve_gba_pointer(pokemon.offset)
@@ -447,11 +450,16 @@ def _script_facts(
                 inventory_source="script",
             )
         )
-    for trade_id, offset in engine.find_trades(
-        scripts,
-        trade_count=len(names.trades),
-        trade_info_special=engine.TRADE_INFO_SPECIAL,
-    ):
+    trades = (
+        engine.find_trades(
+            scripts,
+            trade_count=len(names.trades),
+            trade_info_special=names.trade_info_special,
+        )
+        if names.trade_info_special is not None
+        else ()
+    )
+    for trade_id, offset in trades:
         result.npc_trades.append(
             _npc_trade(engine, names, trade_id, engine.resolve_gba_pointer(offset))
         )

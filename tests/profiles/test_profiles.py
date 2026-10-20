@@ -505,6 +505,112 @@ variant = "child"
         self.assertEqual(child.parameters["member"], 2)
         self.assertEqual([value.value for value in child.hashes], ["child"])
 
+    def test_resolves_symbols_and_specials_from_the_symbol_table(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "symbols").mkdir()
+            for table, offset, special in (("base", 0x100, 7), ("child", 0x200, 9)):
+                (root / "symbols" / f"{table}.toml").write_text(
+                    f"""
+[symbols.gTable]
+offset = {offset:#x}
+size = 40
+[symbols.gOther]
+offset = 0x300
+size = 4
+[specials]
+SomeHandler = {special}
+""".strip(),
+                    encoding="utf-8",
+                )
+            (root / "base.toml").write_text(
+                """
+[profile]
+id = "base"
+symbols = "base"
+name = "Base"
+platform = "gba"
+engine = "gen3_frlg"
+base_game = "firered"
+[header]
+game_codes = ["BPRE"]
+rom_versions = [0]
+[parameters]
+table_symbol = "gTable"
+other_symbol = "gOther"
+handler_special = "SomeHandler"
+[[hashes]]
+algorithm = "sha256"
+value = "base"
+variant = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "child.toml").write_text(
+                """
+[profile]
+id = "child"
+symbols = "child"
+name = "Child"
+extends = "base"
+[parameters]
+other_offset = 0x400
+[[hashes]]
+algorithm = "sha256"
+value = "child"
+variant = "child"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            profiles = {
+                profile.id: profile for profile in ProfileRepository.load(root).profiles
+            }
+
+        base, child = profiles["base"], profiles["child"]
+        self.assertEqual(base.int_parameter("table_offset"), 0x100)
+        self.assertEqual(base.int_parameter("handler_special"), 7)
+        self.assertNotIn("table_symbol", base.parameters)
+        self.assertEqual(base.symbols["table_offset"], "gTable")
+        # An inherited symbol resolves against the child's own table, and an
+        # explicit offset wins over it.
+        self.assertEqual(child.int_parameter("table_offset"), 0x200)
+        self.assertEqual(child.int_parameter("handler_special"), 9)
+        self.assertEqual(child.int_parameter("other_offset"), 0x400)
+        self.assertNotIn("other_offset", child.symbols)
+
+    def test_rejects_an_unknown_symbol(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "symbols").mkdir()
+            (root / "symbols" / "base.toml").write_text(
+                "[symbols.gTable]\noffset = 0x100\nsize = 40\n", encoding="utf-8"
+            )
+            (root / "base.toml").write_text(
+                """
+[profile]
+id = "base"
+symbols = "base"
+name = "Base"
+platform = "gba"
+engine = "gen3_frlg"
+base_game = "firered"
+[header]
+game_codes = ["BPRE"]
+rom_versions = [0]
+[parameters]
+table_symbol = "gMissing"
+[[hashes]]
+algorithm = "sha256"
+value = "base"
+variant = "base"
+""".strip(),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProfileError, "gMissing"):
+                ProfileRepository.load(root)
+
     def test_rejects_unknown_profile_parent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "child.toml"

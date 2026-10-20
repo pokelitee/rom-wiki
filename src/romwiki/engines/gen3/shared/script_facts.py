@@ -125,12 +125,16 @@ def find_pokemon(
     instructions: Mapping[int, ScriptInstruction],
     *,
     species_count: int,
-    event_mon_special: int,
+    event_mon_special: int | None,
 ) -> tuple[ScriptPokemon, ...]:
     """Every literal `setwildbattle`, `seteventmon`, `givemon`, and
     `giveegg`.
     """
-    found = list(_event_mons(instructions, species_count, event_mon_special))
+    found = (
+        list(_event_mons(instructions, species_count, event_mon_special))
+        if event_mon_special is not None
+        else []
+    )
     for address in sorted(instructions):
         instruction = instructions[address]
         opcode, params = instruction.opcode, instruction.params

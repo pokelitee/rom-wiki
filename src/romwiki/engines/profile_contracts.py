@@ -170,6 +170,7 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
     ),
     optional_parameters=frozenset(
         {
+            "event_mon_special",
             "frontier_tutor_move_offset",
             "pickup_common_items_offset",
             "pickup_common_rate_offset",
@@ -180,6 +181,7 @@ GEN3_FRLG_PROFILE_CONTRACT = EngineProfileContract(
             "rematch_table_offset",
             "starter_species_offset",
             "trade_count",
+            "trade_info_special",
             "trade_table_offset",
             "trainer_class_count",
             "trainer_money_offset",
@@ -233,6 +235,7 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
     ),
     optional_parameters=frozenset(
         {
+            "event_mon_special",
             "frontier_tutor_move_offset",
             "pickup_common_items_offset",
             "pickup_common_rate_offset",
@@ -243,6 +246,7 @@ GEN3_EMERALD_PROFILE_CONTRACT = EngineProfileContract(
             "rematch_table_offset",
             "starter_species_offset",
             "trade_count",
+            "trade_info_special",
             "trade_table_offset",
             "trainer_class_count",
             "trainer_money_offset",

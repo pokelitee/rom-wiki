@@ -128,4 +128,6 @@ def _names(
         items={item["item_id"]: item["name"] for item in items},
         item_prices={item["item_id"]: item["price"] for item in items},
         trades=trades,
+        event_mon_special=profile.optional_int_parameter("event_mon_special"),
+        trade_info_special=profile.optional_int_parameter("trade_info_special"),
     )
