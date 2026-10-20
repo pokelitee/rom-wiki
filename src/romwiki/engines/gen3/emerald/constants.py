@@ -78,7 +78,6 @@ TUTOR_LOCATIONS = {
 }
 
 
-
 # `gRegionMapEntries`: one 8-byte entry per region map section, starting at
 # section 0, with the section's name pointer at +4 (`struct RegionMapLocation`).
 # Several sections share one string (each "UNDERWATER" section points at the

@@ -147,7 +147,6 @@ TUTOR_LOCATIONS = {
 }
 
 
-
 # `sMapNames`: one name pointer per Kanto/Sevii region map section. FireRed/
 # LeafGreen's sections start at 88 (`KANTO_MAPSEC_START`), after the Hoenn
 # sections they share numbering with, so section 88 (Pallet Town) is entry

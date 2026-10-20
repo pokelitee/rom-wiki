@@ -101,6 +101,8 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "trainer_names_member": 729,
                 "trainer_classes_member": 730,
                 "trainer_class_gender_offset": 0xFFB90,
+                "trainer_class_prize_overlay_id": 12,
+                "trainer_class_prize_offset": 0x34C04,
                 "starter_species_overlay_id": 61,
                 "starter_species_offset": 0x1A98,
                 "starter_species_count": 3,
