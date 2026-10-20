@@ -29,8 +29,7 @@ def write_public_dataset(
     the dataset itself, so it doesn't belong in the data downloads.
     """
     data_root = wiki_root / PUBLIC_DATA_DIRECTORY
-    relative_path = f"{kind}.json.gz"
-    compressed = _gzip_json(dataset)
+    relative_path, compressed, entry = public_dataset_file(kind, dataset)
     write_bytes_atomic(data_root / relative_path, compressed)
     comparisons_dir = data_root / "comparisons"
     if comparisons_dir.is_dir():
@@ -41,7 +40,20 @@ def write_public_dataset(
     _write_manifest(
         data_root,
         str(dataset["game"]),
-        {relative_path: _manifest_entry(relative_path, dataset, compressed)},
+        {relative_path: entry},
+    )
+
+
+def public_dataset_file(
+    kind: str, dataset: dict[str, Any]
+) -> tuple[str, bytes, dict[str, Any]]:
+    """A dataset's bulk download: its path, compressed bytes, and manifest entry."""
+    relative_path = f"{kind}.json.gz"
+    compressed = _gzip_json(dataset)
+    return (
+        relative_path,
+        compressed,
+        _manifest_entry(relative_path, dataset, compressed),
     )
 
 

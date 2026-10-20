@@ -341,7 +341,7 @@ def _read_datasets(site: SiteDefinition) -> dict[str, dict[str, Any]]:
     }
 
 
-def _read_documents(root: Path, site: SiteDefinition) -> list[FrontendDocument]:
+def read_site_documents(root: Path, site: SiteDefinition) -> list[FrontendDocument]:
     wiki = site.config_path.parent / "wiki"
     partials = (root / "sites/shared/partials").resolve()
 
@@ -541,7 +541,7 @@ def _site_game(
             entry["path"]: (source_data / entry["path"]).read_bytes()
             for entry in downloads["files"]
         },
-        documents=_read_documents(root, site),
+        documents=read_site_documents(root, site),
     )
 
 

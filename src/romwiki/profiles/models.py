@@ -67,6 +67,8 @@ class GameProfile:
     game_codes: tuple[str, ...]
     rom_versions: tuple[int, ...]
     hashes: tuple[KnownHash, ...]
+    # The profile this one extends, or None for a retail game.
+    parent: str | None = None
     sprite_version: str | None = None
     type_names: Mapping[int, str] = field(default_factory=dict)
     move_names: Mapping[int, str] = field(default_factory=dict)
@@ -121,4 +123,10 @@ class GameProfile:
 @dataclass(frozen=True, slots=True)
 class HashMatch:
     profile: GameProfile
-    known_hash: KnownHash
+    # None when the image matched its profile by header only: an unknown
+    # build whose data is read as the retail game's, unverified.
+    known_hash: KnownHash | None
+
+    @property
+    def verified(self) -> bool:
+        return self.known_hash is not None

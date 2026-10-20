@@ -24,8 +24,15 @@ class InspectionResult:
                 "name": self.match.profile.name,
                 "engine": self.match.profile.engine,
                 "base_game": self.match.profile.base_game,
-                "variant": self.match.known_hash.variant,
-                "matched_by": self.match.known_hash.algorithm,
+                "variant": (
+                    self.match.known_hash.variant if self.match.known_hash else None
+                ),
+                "matched_by": (
+                    self.match.known_hash.algorithm
+                    if self.match.known_hash
+                    else "header"
+                ),
+                "verified": self.match.verified,
                 "table_locations": dict(self.match.profile.table_locations),
             }
             if self.match
@@ -39,10 +46,16 @@ def inspect_rom(
     profiles_dir: Path,
     *,
     profiles: ProfileRepository | None = None,
+    allow_unverified: bool = False,
 ) -> InspectionResult:
+    """Identify `rom_path`, by exact hash or, with `allow_unverified`, by its
+    header as the retail game an unknown build was made from.
+    """
     image, image_platform = _inspect_image(rom_path)
     repository = profiles or ProfileRepository.load(profiles_dir)
     match = repository.identify(image, platform=image_platform)
+    if match is None and allow_unverified:
+        match = repository.identify_by_header(image, platform=image_platform)
     if match is not None:
         match = locate_tables(match, image)
     return InspectionResult(image=image, match=match)
