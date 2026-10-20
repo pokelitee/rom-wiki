@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import struct
-import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,11 +45,10 @@ class LocateTablesTests(unittest.TestCase):
         rom = bytearray(0x200)
         for site, word in words.items():
             struct.pack_into("<I", rom, site, word)
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "test.gba"
-            path.write_bytes(rom)
-            image: Any = SimpleNamespace(path=path, size=len(rom))
-            return locate_tables(match, image).profile
+        image: Any = SimpleNamespace(
+            path=Path("test.gba"), size=len(rom), data=bytes(rom)
+        )
+        return locate_tables(match, image).profile
 
     def test_confirms_a_table_every_site_still_points_to(self) -> None:
         profile = self._locate(dict.fromkeys(_SITES, _GBA + _TABLE), _match())
