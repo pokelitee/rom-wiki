@@ -21,7 +21,7 @@ import json
 import re
 
 from common import ROOT, check_or_write
-from pret_sources import pinned, read
+from decomp_sources import pinned, read
 
 OUTPUT = ROOT / "src/romwiki/engines/gen3/shared/script_command_table.py"
 SHARED_LAST_OPCODE = 0xC6
