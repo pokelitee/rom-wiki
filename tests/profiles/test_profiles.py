@@ -499,6 +499,8 @@ variant = "child"
             }
 
         child = profiles["child"]
+        self.assertEqual(child.parent, "base")
+        self.assertIsNone(profiles["base"].parent)
         self.assertEqual(child.platform, "nintendo-ds")
         self.assertEqual(child.layout["personal"], "base/personal")
         self.assertEqual(child.layout["messages"], "child/messages")

@@ -33,7 +33,7 @@ class GameBuildWorkflow:
         pokedb: PokeDBGeneration,
         *,
         baseline: InspectionResult | None = None,
-        baseline_cache_root: Path = Path("build/data/baselines"),
+        baseline_cache_root: Path | None = Path("build/data/baselines"),
         refresh_baseline: bool = False,
         current_cache_root: Path | None = None,
         refresh_current: bool = False,
@@ -53,7 +53,11 @@ class GameBuildWorkflow:
         if baseline is not None:
             if baseline.match is None:
                 raise ProfileError("A matched baseline profile is required")
-            cache = baseline_cache_root / baseline.match.profile.id
+            cache = (
+                baseline_cache_root / baseline.match.profile.id
+                if baseline_cache_root is not None
+                else None
+            )
             self.baseline = GameBuildContext(
                 baseline,
                 pokedb,

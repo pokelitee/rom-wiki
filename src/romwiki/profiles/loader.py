@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import re
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from romwiki.platforms.registry import RomImage
+from romwiki.platforms.registry import RomImage, get_platform
 from romwiki.profiles.models import (
     GameProfile,
     HashMatch,
@@ -100,6 +101,7 @@ class ProfileRepository:
                 if "trainer_variant_contract" not in data.get("parameters", {}):
                     merged.get("parameters", {}).pop("trainer_variant_contract", None)
             merged["profile"].pop("extends", None)
+            merged["profile"]["parent"] = parent_id
             resolved[profile_id] = merged
             return merged
 
@@ -125,6 +127,35 @@ class ProfileRepository:
         if len(matches) > 1:
             raise ProfileError("ROM image matches more than one profile")
         return matches[0] if matches else None
+
+    def identify_by_header(
+        self, image: RomImage, *, platform: str | None = None
+    ) -> HashMatch | None:
+        """Match a build no profile knows by its header alone.
+
+        Only retail profiles, which extend no other, are candidates: an unknown
+        hack is read as the game it was built from. The match is unverified,
+        so its profile carries no trainer variant contract.
+        """
+        candidates = [
+            profile
+            for profile in self.profiles
+            if profile.parent is None
+            and (platform is None or profile.platform == platform)
+            and get_platform(profile.platform).matches_header(
+                image, profile.game_codes, profile.rom_versions
+            )
+        ]
+        if len(candidates) > 1:
+            raise ProfileError("ROM header matches more than one retail profile")
+        if not candidates:
+            return None
+        profile = candidates[0]
+        parameters = dict(profile.parameters)
+        parameters.pop("trainer_variant_contract", None)
+        return HashMatch(
+            profile=replace(profile, parameters=parameters), known_hash=None
+        )
 
 
 def _resolve_symbols(
@@ -248,6 +279,7 @@ def _build_profile(path: Path, data: dict[str, Any]) -> GameProfile:
                 )
         return GameProfile(
             id=profile_data["id"],
+            parent=profile_data.get("parent"),
             name=profile_data["name"],
             platform=profile_data["platform"],
             engine=profile_data["engine"],

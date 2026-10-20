@@ -51,9 +51,17 @@ def _fake_inspect(rom_path: Path) -> _FakeImage:
     return _FakeImage(hashes=_FakeHashes(sha256=digest))
 
 
-def _profile(digest: str, *, profile_id: str = "test-game") -> GameProfile:
+def _profile(
+    digest: str,
+    *,
+    profile_id: str = "test-game",
+    parent: str | None = None,
+    parameters: dict[str, Any] | None = None,
+) -> GameProfile:
     return GameProfile(
         id=profile_id,
+        parent=parent,
+        parameters=parameters or {},
         name="Test Game",
         platform=_PLATFORM_ID,
         engine="gen4_platinum",
@@ -106,6 +114,37 @@ class InspectRomTests(unittest.TestCase):
 
         self.assertIsNone(result.match)
         self.assertIsNotNone(result.image)
+
+    def test_reads_an_unknown_build_as_its_retail_game_when_allowed(self) -> None:
+        rom_path = self._write_rom("hack.rom", _MAGIC + b"" * 32)
+        retail = _profile(
+            "0" * 64, parameters={"trainer_variant_contract": "test-retail-v1"}
+        )
+        hack = _profile("1" * 64, profile_id="known-hack", parent="test-game")
+        repository = ProfileRepository((retail, hack))
+
+        strict = inspect_rom(rom_path, Path("unused"), profiles=repository)
+        result = inspect_rom(
+            rom_path, Path("unused"), profiles=repository, allow_unverified=True
+        )
+
+        self.assertIsNone(strict.match)
+        assert result.match is not None
+        self.assertEqual(result.match.profile.id, "test-game")
+        self.assertFalse(result.match.verified)
+        self.assertNotIn("trainer_variant_contract", result.match.profile.parameters)
+        self.assertEqual(result.to_dict()["profile"]["matched_by"], "header")
+
+    def test_rejects_a_header_that_matches_several_retail_games(self) -> None:
+        rom_path = self._write_rom("hack.rom", _MAGIC + b"" * 32)
+        repository = ProfileRepository(
+            (_profile("0" * 64), _profile("1" * 64, profile_id="other-game"))
+        )
+
+        with self.assertRaisesRegex(ProfileError, "more than one retail profile"):
+            inspect_rom(
+                rom_path, Path("unused"), profiles=repository, allow_unverified=True
+            )
 
     def test_raises_when_no_platform_accepts_the_image(self) -> None:
         rom_path = self._write_rom("bad.rom", b"NOTFAKE")
