@@ -1,0 +1,17 @@
+# The pret decompilation commits that generated files and symbol subsets are
+# built from. Update a commit deliberately, then rerun the generators and
+# review the diff.
+
+[pokeemerald]
+repository = "pret/pokeemerald"
+source = "731ad5bfd6e6f265508d0efcca0ba42f9dcf5881"  # master
+symbols = "dba968c67d85caf9595abe12a51ff739d4dc5937"  # symbols branch
+
+[pokefirered]
+repository = "pret/pokefirered"
+source = "037335f4c725d7c9aecdac87066f2002b4bd7e14"  # master
+symbols = "3b401eaf14f193946899eb7c056d5ac02a470126"  # symbols branch
+
+[pokeplatinum]
+repository = "pret/pokeplatinum"
+symbols = "96159401413e732086848dfbf7c58c6d1e10f9ad"  # xmap branch
