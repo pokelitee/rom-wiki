@@ -31,6 +31,16 @@ export interface Mascot {
   name: string;
   sprite: string;
 }
+// Present on a wiki generated in this browser.
+export interface LocalGameInfo {
+  // False when no profile knew the ROM and it was read as the retail game
+  // its header names.
+  verified: boolean;
+  profile: string;
+  createdAt: string;
+  // Built by an earlier generator than the site serves now.
+  outdated: boolean;
+}
 export interface Game {
   id: string;
   name: string;
@@ -44,6 +54,7 @@ export interface Game {
   downloads: DownloadEntry[];
   documents: DocumentEntry[];
   search_index: string;
+  local?: LocalGameInfo;
 }
 export interface Manifest {
   schema_version: number;

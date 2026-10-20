@@ -40,6 +40,7 @@ def build_wiki(
     root: Path,
     pokedb: PokeDBLoader,
     base_rom: Path | None = None,
+    id_prefix: str | None = None,
 ) -> dict[str, bytes]:
     """Return a frontend bundle (`path -> bytes`) for the game in `rom`.
 
@@ -47,6 +48,10 @@ def build_wiki(
     `pokedb(generation)` loads PokéDB for a generation. A ROM no profile
     knows is read as the retail game its header names and marked
     unverified. With `base_rom`, every section is compared with it.
+
+    The game is published under its site's or profile's ID, or with
+    `id_prefix` under that prefix and the start of the ROM's SHA-256, which
+    keeps a locally generated wiki apart from the published one.
     """
     profiles = ProfileRepository.load(root / "profiles")
     current = inspect_rom(
@@ -60,6 +65,8 @@ def build_wiki(
         if baseline.match is None:
             raise ProfileError(f"{base_rom.name} is not a known base game")
     profile = current.match.profile
+    rom_sha256 = current.image.hashes.to_dict()["sha256"]
+    game_id = f"{id_prefix}{rom_sha256[:12]}" if id_prefix is not None else None
     generation = get_engine(profile.engine).generation
     if generation is None:
         raise ProfileError(f"Engine {profile.engine!r} has no PokéDB generation")
@@ -81,7 +88,7 @@ def build_wiki(
     if reuse_site:
         assert site is not None and site.game is not None
         game = FrontendGame(
-            id=site.id,
+            id=game_id or site.id,
             name=site.name,
             description=site.description,
             generation=site.game.generation,
@@ -97,7 +104,7 @@ def build_wiki(
         )
     else:
         game = FrontendGame(
-            id=profile.id,
+            id=game_id or profile.id,
             name=profile.name,
             description=f"Generated from your copy of {profile.name}.",
             generation=generation,
@@ -121,7 +128,7 @@ def build_wiki(
         "local": {
             "profile": profile.id,
             "verified": current.match.verified,
-            "rom_sha256": current.image.hashes.to_dict().get("sha256"),
+            "rom_sha256": rom_sha256,
             "generator_version": __version__,
         },
     }

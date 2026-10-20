@@ -484,10 +484,76 @@ tbody tr:hover {
   color: var(--muted-foreground);
   font-size: var(--text-xs);
 }
-.hero-meta span {
+.hero-meta span,
+.hero-meta a {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+.hero-meta a {
+  color: var(--primary);
+  font-weight: 600;
+}
+.local-game {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.local-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.local-actions [role="alert"] {
+  flex-basis: 100%;
+  color: var(--destructive, #b42318);
+  font-size: var(--text-xs);
+}
+.game-card .local-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 0;
+  margin-top: 8px;
+}
+.make-wiki-form {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.make-wiki-form h2 {
+  font-size: var(--text-md);
+}
+.file-field {
+  display: grid;
+  gap: 6px;
+  max-width: 100%;
+}
+.file-field > label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.file-field input {
+  max-width: 100%;
+  font-size: var(--text-sm);
+}
+.notice-error {
+  border-color: var(--destructive, #b42318);
+}
+.generate-progress {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.generate-log {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
 }
 .generation-heading {
   display: flex;

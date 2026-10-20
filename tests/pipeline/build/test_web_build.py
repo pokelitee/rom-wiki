@@ -98,12 +98,20 @@ class BuildWikiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             unknown = Path(directory) / "unknown.gba"
             unknown.write_bytes(data)
-            files = build_wiki(unknown, root=_ROOT, pokedb=_pokedb)
+            files = build_wiki(unknown, root=_ROOT, pokedb=_pokedb, id_prefix="local-")
 
         manifest = json.loads(files["manifest.json"])
         self.assertEqual(manifest["local"]["profile"], "firered-us")
         self.assertFalse(manifest["local"]["verified"])
-        self.assertEqual(manifest["games"][0]["id"], "firered-us")
+        game_id = manifest["games"][0]["id"]
+        self.assertEqual(game_id, f"local-{manifest['local']['rom_sha256'][:12]}")
+        self.assertTrue(
+            all(
+                path.startswith(f"{game_id}/")
+                for path in files
+                if path != "manifest.json"
+            )
+        )
 
 
 if __name__ == "__main__":

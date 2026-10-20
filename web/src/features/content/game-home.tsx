@@ -27,19 +27,29 @@ export function GameHome({ game }: { game: Game }) {
           </Link>
         ))}
       </div>
-      <div className="notice">
-        <BookOpen size={20} />
-        <div>
-          <strong>Know your sources</strong>
-          <p>
-            Coverage varies by game and mechanic.{" "}
-            <Link to={`/${game.id}/docs/data-sources`}>
-              Read data sources and known limitations.
-            </Link>
-          </p>
+      {/* A wiki made in this browser for a game without a published site
+          has no guides. */}
+      {hasDocument(game, "data-sources") && (
+        <div className="notice">
+          <BookOpen size={20} />
+          <div>
+            <strong>Know your sources</strong>
+            <p>
+              Coverage varies by game and mechanic.{" "}
+              <Link to={`/${game.id}/docs/data-sources`}>
+                Read data sources and known limitations.
+              </Link>
+            </p>
+          </div>
         </div>
-      </div>
-      <Document game={game} id="index" titled={false} />
+      )}
+      {hasDocument(game, "index") && (
+        <Document game={game} id="index" titled={false} />
+      )}
     </>
   );
+}
+
+function hasDocument(game: Game, id: string): boolean {
+  return game.documents.some((document) => document.id === id);
 }
