@@ -177,11 +177,14 @@ unanchored byte scans cannot improve confidence.
   zero matches, so HGSS encodes them differently. The separately published
   `parse_shop_catalog` shops (27 unlocated specialty shops) are not yet linked
   to dispatch sites. Do not map inventories from shop or location names.
-- **BW roaming Tornadus and Thundurus.** Their species identity is decoded from
-  the routine at overlay 10 offset `0x95C4` (Tornadus is the literal 641,
-  Thundurus is computed as 642). Generation V roaming has no location-owned
-  activation script, so publishing it needs a schema decision (for example a
-  location-less roaming-species fact), not more binary parsing.
+- **BW roaming Tornadus and Thundurus.** The routine at overlay 10 offset
+  `0x95C4` (identical in Black and White) only classifies a species as a
+  roaming slot: 641 (Tornadus) is slot 1, 642 (Thundurus) slot 0, anything
+  else 2. It does not say which of the two roams in which version (Thundurus
+  in Black, Tornadus in White) or when roaming starts, and Generation V has
+  no location-owned activation script to read that from. Publishing roamers
+  needs the native code that picks the version's roamer, not a schema
+  decision alone.
 - **Generation V location section labels** — decoded map headers provide a
   broad display name and stable header identity, but no floor/room label. Warps
   already carry `destination_section_name` when an explicit profile mapping is
@@ -212,8 +215,11 @@ unanchored byte scans cannot improve confidence.
 
 - **Rival name.** Trainer records store the ROM's default rival name ("Terry"
   on FireRed/LeafGreen); the player-chosen name lives in save data.
-- **Compound names.** All-caps ROM names are recased per word, so names that
-  later games write with an inner capital read as one word ("Thunderpunch").
+- **Compound names.** All-caps ROM names are recased per word. Run-together
+  names take their inner capitals from PokéDB's word boundaries
+  ("THUNDERPUNCH" reads "ThunderPunch"; see `scripts/gen3_compound_names.py`),
+  but a name whose slug is one word or was later renamed keeps a single
+  capital ("Smokescreen", "Smellingsalt").
 - **Emerald systems.** Battle Frontier facilities, contests, and Berry
   mechanics are not decoded.
 - **Unused trainer slots** are published as stored, by decision: about 100
