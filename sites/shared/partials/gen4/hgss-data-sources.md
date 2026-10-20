@@ -111,9 +111,11 @@ decoded starter table and leads to a valid trainer record; nothing is inferred
 from trainer names, adjacent IDs, levels, or party similarity. This applies to
 retail HGSS and the supported Sacred Gold/Storm Silver profiles.
 
-Trainer-class payout multipliers remain unavailable because Platinum's locator
-does not occur in HGSS and no unique HGSS table reference is established. The
-phone-rematch state machines remain undecoded.
+Prize money uses each trainer class's multiplier from the battle overlay's
+prize table (`sPrizeMoneyTbl` in pret/pokeheartgold): rows of trainer class
+and multiplier, where a class the table doesn't list uses its third row. A
+trainer pays 4 x the level of its last Pokémon x that multiplier, doubled for a
+double battle. The phone-rematch state machines remain undecoded.
 
 Talk-triggered trainer battles are joined from literal `CallTrainerBattle`
 field-script commands, the same way as other Generation IV profiles, but

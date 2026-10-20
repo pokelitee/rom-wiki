@@ -119,7 +119,7 @@ tables end, so a Gen III hack that repointed its moved tables, like FireRed Omeg
 needs no offsets or counts in its profile. Set an explicit offset only for a table
 the hack moved without repointing every reference. The symbol
 tables are generated (see [Generated files from pret](../development.md#generated-files-from-pret));
-adding a symbol name to a profile means rerunning `scripts/pret/symbols.py`.
+adding a symbol name to a profile means rerunning `scripts/generate/profile_symbols.py`.
 
 When PokéDB contains generation-specific sprites, set the optional reference key:
 

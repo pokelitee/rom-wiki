@@ -120,9 +120,9 @@ from .trainers import parse_trainer_record, trainer_name_index
 # Gen5RomHandler.hasMoveTutors() returns true only for Black 2/White 2 --
 # tutors were introduced in the sequels and don't exist in this release at all.
 #
-# Roaming Tornadus/Thundurus species identity is decoded (see
-# docs/development/open-items.md) but not yet wired into any dataset here;
-# publishing it needs a schema decision, not more binary parsing.
+# Roaming Tornadus/Thundurus are not published: the known routine only
+# classifies roaming species, not which one roams in each version (see
+# docs/development/open-items.md).
 BASE_SPECIES_COUNT = GEN5_BASE_SPECIES_COUNT
 INTERNAL_MEMBERS = PERSONAL_INTERNAL_MEMBERS
 FORM_MEMBERS = PERSONAL_FORM_MEMBERS

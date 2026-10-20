@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -206,7 +207,14 @@ def _patched(engine, messages, encounters, events, matrices, scripts=None):
 class Arm9EncounterMapDatasetTests(unittest.TestCase):
     def test_raises_profile_error_when_metadata_is_missing(self) -> None:
         profile = _profile()
-        profile.layout.pop("encounters")  # type: ignore[attr-defined]
+        profile = replace(
+            profile,
+            layout={
+                key: value
+                for key, value in profile.layout.items()
+                if key != "encounters"
+            },
+        )
         result = _result(profile)
 
         with self.assertRaises(ProfileError):

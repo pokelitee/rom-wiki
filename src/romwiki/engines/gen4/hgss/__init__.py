@@ -75,7 +75,6 @@ from romwiki.engines.gen4.shared.trainer_party import (
 )
 from romwiki.engines.gen4.shared.trainers import (
     parse_trainer_class_genders,
-    parse_trainer_class_prize_multipliers,
     parse_trainer_record,
 )
 
@@ -134,6 +133,7 @@ from .scripts import (
     parse_trainer_battle_commands,
 )
 from .trades import NPC_TRADE_RECORD_SIZE, parse_npc_trade_record
+from .trainers import parse_trainer_class_prize_multipliers
 from .tutors import (
     TUTOR_COMPATIBILITY_RECORD_SIZE,
     TUTOR_COUNT,

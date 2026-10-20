@@ -4,6 +4,8 @@ import re
 
 from romwiki.util.text import normalize_display_name
 
+from .compound_names import COMPOUND_NAMES
+
 # Generation III's proprietary single-byte character table (the same map
 # used by every Gen III game). Verified against the real FireRed and
 # LeafGreen ROMs: decoding the move-name table at the offsets in
@@ -72,16 +74,17 @@ def gen3_display_name(value: str) -> str:
     """Recase a name the ROM stores in capitals ("HP UP" -> "HP Up").
 
     Generation III stores every name in capitals, and the readable spelling
-    isn't recorded anywhere, so each word is capitalized: a name the games
-    later spelled with an inner capital reads "Thunderpunch". "POKé" counts
-    as capitals, since the games write it that way.
+    isn't recorded anywhere, so each word is capitalized. A word that runs
+    several together ("THUNDERPUNCH") takes the casing PokéDB's word
+    boundaries give it ("ThunderPunch"; see `compound_names.py`). "POKé"
+    counts as capitals, since the games write it that way.
     """
     capitals = value.replace("é", "É")
     if not capitals.isupper():
         return value
     recased = normalize_display_name(capitals).split(" ")
     return " ".join(
-        word if _UPPERCASE_WORD.fullmatch(word) else display
+        word if _UPPERCASE_WORD.fullmatch(word) else COMPOUND_NAMES.get(word, display)
         for word, display in zip(value.split(" "), recased, strict=True)
     )
 

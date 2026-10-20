@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from romwiki.pipeline.enrichment.pokemon import enrich_personal_dataset
 from romwiki.sources import PokeDBGeneration
@@ -9,7 +10,7 @@ from tests.pipeline.enrichment.test_pokemon import FORM_SPECIES, _source_record
 
 class LearnsetEnrichmentTests(unittest.TestCase):
     def test_associates_named_moves_with_species_members(self) -> None:
-        defaults = {
+        defaults: dict[int, dict[str, Any]] = {
             pokemon_id: {
                 "id": pokemon_id,
                 "name": f"pokemon-{pokemon_id}",

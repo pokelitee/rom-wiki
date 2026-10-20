@@ -22,7 +22,7 @@ from romwiki.util.json_io import write_json_atomic
 
 GENERATOR_RUNTIME_SCHEMA_VERSION = 1
 GENERATOR_BUNDLE_SCHEMA_VERSION = 1
-# The repository files `romwiki.web_build.build_wiki` reads: profiles, site
+# The repository files `romwiki.sites.web_build.build_wiki` reads: profiles, site
 # descriptors, and the guides published with each site.
 _RESOURCE_PATTERNS = (
     "profiles/**/*.toml",

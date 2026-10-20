@@ -58,3 +58,15 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 disallow_untyped_defs = true
+
+# Tests are type-checked too, with three relaxations: small helpers needn't
+# be annotated (their bodies are still checked); test doubles -- SimpleNamespace
+# fakes, partial dict fixtures, deliberately invalid values -- needn't match
+# the full types they stand in for; and assertions may use an optional value
+# directly, since an unexpected None fails the test anyway.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = true
+strict_optional = false
+disable_error_code = ["arg-type", "typeddict-item", "dict-item", "list-item"]

@@ -91,12 +91,23 @@ class DecodeGen3NameTableTests(unittest.TestCase):
 class Gen3DisplayNameTests(unittest.TestCase):
     def test_recases_each_word_of_an_all_caps_name(self) -> None:
         cases = {
-            "THUNDERPUNCH": "Thunderpunch",
+            "SMOKESCREEN": "Smokescreen",
             "KING'S ROCK": "King's Rock",
             "MT. MOON": "Mt. Moon",
             "S.S. TICKET": "S.S. Ticket",
             "TATE&LIZA": "Tate&Liza",
             "POKé BALL": "Poké Ball",
+        }
+        for value, expected in cases.items():
+            with self.subTest(value=value):
+                self.assertEqual(gen3_display_name(value), expected)
+
+    def test_restores_the_inner_capitals_of_run_together_names(self) -> None:
+        cases = {
+            "THUNDERPUNCH": "ThunderPunch",
+            "BLACKGLASSES": "BlackGlasses",
+            "NEVERMELTICE": "NeverMeltIce",
+            "LIGHTNINGROD": "LightningRod",
         }
         for value, expected in cases.items():
             with self.subTest(value=value):

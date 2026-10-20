@@ -26,17 +26,17 @@ def _make_raw_message_archive(
 
     result = bytearray(struct.pack("<HH", len(messages), archive_key))
     offset = table_end
-    for index, encoded in enumerate(encoded_messages):
+    for index, encoded_message in enumerate(encoded_messages):
         entry_key = (archive_key * 0x2FD * (index + 1)) & 0xFFFF
         entry_mask = entry_key | entry_key << 16
         result.extend(
             struct.pack(
                 "<II",
                 offset ^ entry_mask,
-                (len(encoded) // 2) ^ entry_mask,
+                (len(encoded_message) // 2) ^ entry_mask,
             )
         )
-        offset += len(encoded)
+        offset += len(encoded_message)
     result.extend(b"".join(encoded_messages))
     return bytes(result)
 

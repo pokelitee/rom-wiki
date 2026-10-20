@@ -10,6 +10,6 @@ provenance and PokéDB reference content are kept distinct.
 
 Sacred Gold and Storm Silver are published as one paired hack reference. Sacred
 Gold is compared against HeartGold and Storm Silver against SoulSilver.
-Trainer objects are linked to maps. Script-only battle links, trainer-class
-payout multipliers, and other undecoded script-driven mechanics remain explicit
-blockers rather than receiving retail assumptions.
+Trainers are linked to the maps and scripts that battle them, with their prize
+money. Phone rematches, the opening rival battle, and specialty-shop
+inventories remain undecoded rather than receiving retail assumptions.

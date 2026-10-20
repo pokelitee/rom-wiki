@@ -215,7 +215,7 @@ def _imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     module_parts = _module_name(path).split(".")
     package_parts = module_parts if path.name == "__init__.py" else module_parts[:-1]
-    imported = set()
+    imported: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imported.update(alias.name for alias in node.names)

@@ -1,10 +1,25 @@
 from __future__ import annotations
 
 import unittest
+from collections.abc import Callable
+from functools import partial
+from typing import Any
 from unittest.mock import Mock, patch
 
 from romwiki.pipeline.build.workflow import GameBuildWorkflow
 from romwiki.util.errors import DataSourceError, ProfileError
+
+
+def _recording(
+    calls: list[str], label: str, build: Callable[[], dict[str, Any]]
+) -> Callable[[], dict[str, Any]]:
+    """A side effect that records `label` before building its dataset."""
+
+    def effect() -> dict[str, Any]:
+        calls.append(label)
+        return build()
+
+    return effect
 
 
 class GameBuildWorkflowTests(unittest.TestCase):
@@ -12,16 +27,16 @@ class GameBuildWorkflowTests(unittest.TestCase):
     def test_builds_baseline_before_current_and_compares_results(
         self, context_type: Mock
     ) -> None:
-        calls = []
+        calls: list[str] = []
         current_context = Mock()
         baseline_context = Mock()
         current_context.profile = _profile("hack")
         baseline_context.profile = _profile("base")
-        current_context.moves.side_effect = lambda: (
-            calls.append("current") or _moves("hack", 60)
+        current_context.moves.side_effect = _recording(
+            calls, "current", lambda: _moves("hack", 60)
         )
-        baseline_context.moves.side_effect = lambda: (
-            calls.append("baseline") or _moves("base", 50)
+        baseline_context.moves.side_effect = _recording(
+            calls, "baseline", lambda: _moves("base", 50)
         )
         context_type.side_effect = [current_context, baseline_context]
         current = _inspection("hack")
@@ -55,7 +70,7 @@ class GameBuildWorkflowTests(unittest.TestCase):
     def test_full_build_finishes_baseline_phase_before_current_phase(
         self, context_type: Mock
     ) -> None:
-        calls = []
+        calls: list[str] = []
         current_context = Mock()
         baseline_context = Mock()
         current_context.profile = _profile("hack", optional=True)
@@ -69,11 +84,11 @@ class GameBuildWorkflowTests(unittest.TestCase):
             "trainers",
             "locations",
         ):
-            getattr(current_context, kind).side_effect = lambda kind=kind: (
-                calls.append(f"current:{kind}") or _empty_dataset(kind, "hack")
+            getattr(current_context, kind).side_effect = _recording(
+                calls, f"current:{kind}", partial(_empty_dataset, kind, "hack")
             )
-            getattr(baseline_context, kind).side_effect = lambda kind=kind: (
-                calls.append(f"baseline:{kind}") or _empty_dataset(kind, "base")
+            getattr(baseline_context, kind).side_effect = _recording(
+                calls, f"baseline:{kind}", partial(_empty_dataset, kind, "base")
             )
         context_type.side_effect = [current_context, baseline_context]
         workflow = GameBuildWorkflow(

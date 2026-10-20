@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,6 +38,26 @@ class GbaImageInspectTests(unittest.TestCase):
             with self.assertRaises(InvalidRomError):
                 GbaImage.inspect(path)
 
+    def test_hashes_the_whole_image(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "rom.gba"
+            content = make_gba_header() + _EXTRA_DATA
+            path.write_bytes(content)
+
+            image = GbaImage.inspect(path)
+
+            self.assertEqual(image.hashes.sha256, hashlib.sha256(content).hexdigest())
+
+    def test_rejects_an_image_larger_than_the_cartridge_space(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "rom.gba"
+            with path.open("wb") as stream:
+                stream.write(make_gba_header())
+                stream.truncate(0x2000000 + 1)
+
+            with self.assertRaisesRegex(InvalidRomError, "larger than 32 MiB"):
+                GbaImage.inspect(path)
+
     def test_to_dict_reports_source_name_size_hashes_and_header(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "rom.gba"
@@ -61,6 +82,15 @@ class ReadBytesTests(unittest.TestCase):
             data = read_bytes(image, 0xC0, 4)
 
             self.assertEqual(data, _EXTRA_DATA[:4])
+
+    def test_reads_from_the_image_read_at_inspection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "rom.gba"
+            path.write_bytes(make_gba_header() + _EXTRA_DATA)
+            image = GbaImage.inspect(path)
+            path.unlink()
+
+            self.assertEqual(read_bytes(image, 0xC0, 4), _EXTRA_DATA[:4])
 
     def test_rejects_a_read_past_the_end_of_the_image(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

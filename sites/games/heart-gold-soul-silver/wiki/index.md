@@ -9,6 +9,7 @@ tutors, NPC trades, specialty shops, Pickup tables, and the Generation IV type
 chart. ROM provenance and PokéDB reference content are kept distinct.
 
 HeartGold and SoulSilver are published as one paired retail reference and parsed
-independently before records are merged by stable identity. Trainer objects are
-linked to maps; script-only battle links, trainer-class payout multipliers, and
-other script-driven mechanics remain explicit blockers pending exact decoders.
+independently before records are merged by stable identity. Trainers are linked
+to the maps and scripts that battle them, with their prize money. Phone
+rematches, the opening rival battle, and specialty-shop inventories remain
+undecoded rather than receiving assumptions.

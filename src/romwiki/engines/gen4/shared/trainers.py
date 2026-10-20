@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from dataclasses import dataclass
 
 from romwiki.schema import ClassGenderTrainer, RecordProvenance, TrainerPokemon
 from romwiki.util.errors import InvalidRomError
@@ -22,15 +23,29 @@ def parse_trainer_class_genders(data: bytes, *, count: int) -> tuple[str, ...]:
     return tuple("female" if value == 1 else "male" for value in data)
 
 
+@dataclass(frozen=True, slots=True)
+class TrainerClassPrizes:
+    """Each trainer class's victory-money multiplier, by class ID, and where
+    in the table it was read.
+    """
+
+    multipliers: tuple[int, ...]
+    # Byte offset of each class's multiplier from the start of the table.
+    offsets: tuple[int, ...]
+
+
 def parse_trainer_class_prize_multipliers(
     data: bytes, *, count: int
-) -> tuple[int, ...]:
-    if len(data) != count:
+) -> TrainerClassPrizes:
+    """Decode a one-byte-per-class multiplier table (Diamond/Pearl/Platinum's
+    `sTrainerClassPrizeMul`). `data` starts at the table.
+    """
+    if len(data) < count:
         raise InvalidRomError(
             "Gen IV trainer class prize multiplier table has size "
             f"{len(data)}; expected {count}"
         )
-    return tuple(data)
+    return TrainerClassPrizes(tuple(data[:count]), tuple(range(count)))
 
 
 def parse_trainer_record(

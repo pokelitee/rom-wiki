@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import argparse
 import json
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 from romwiki.cli import build_parser, main
@@ -88,13 +90,15 @@ class MainErrorHandlingTests(unittest.TestCase):
     def test_site_group_exposes_data_and_frontend_commands(self) -> None:
         parser = build_parser()
         subparsers = next(
-            action for action in parser._actions if getattr(action, "choices", None)
+            action
+            for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)
         )
         site_parser = subparsers.choices["site"]
         site_subparsers = next(
             action
             for action in site_parser._actions
-            if getattr(action, "choices", None)
+            if isinstance(action, argparse._SubParsersAction)
         )
 
         self.assertEqual(
@@ -766,7 +770,7 @@ def _site_generation(
     current: tuple[str, ...],
     baselines: tuple[str | None, ...],
 ) -> _SiteGeneration:
-    def inspection(profile_id: str | None) -> SimpleNamespace | None:
+    def inspection(profile_id: str | None) -> Any:
         if profile_id is None:
             return None
         return SimpleNamespace(

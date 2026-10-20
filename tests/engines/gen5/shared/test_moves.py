@@ -12,7 +12,7 @@ class Gen5MoveTests(unittest.TestCase):
         # Real Thunderbolt record from a Black/White ROM: electric/special,
         # 95 power, 100 accuracy, 15 PP, 10% paralysis chance, single target.
         data = bytearray(36)
-        data[0] = 12  # type: electric
+        data[0] = 12  # electric
         data[2] = 2  # category: special
         data[3] = 95  # power
         data[4] = 100  # accuracy

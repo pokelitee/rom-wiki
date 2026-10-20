@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from romwiki.pipeline.enrichment.moves import enrich_move_dataset
 from romwiki.sources import PokeDBGeneration
@@ -8,7 +9,7 @@ from romwiki.sources import PokeDBGeneration
 
 class MoveEnrichmentTests(unittest.TestCase):
     def test_names_public_moves_and_preserves_internal_records(self) -> None:
-        dataset = {
+        dataset: dict[str, Any] = {
             "game": "test",
             "engine": "gen4_hgss",
             "source": {"archive": "moves.narc"},
