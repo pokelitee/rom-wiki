@@ -31,10 +31,8 @@ class Gen3EmeraldAdapterTests(unittest.TestCase):
     def test_exposes_emerald_record_counts_rather_than_fire_red_counts(self) -> None:
         self.assertEqual(self.engine.items.ITEM_RECORD_COUNT, 377)
         self.assertEqual(self.engine.trainers.TRAINER_RECORD_COUNT, 855)
-        self.assertEqual(emerald.ENCOUNTER_HEADER_COUNT, 124)
         self.assertNotEqual(emerald.ITEM_RECORD_COUNT, frlg.ITEM_RECORD_COUNT)
         self.assertNotEqual(emerald.TRAINER_RECORD_COUNT, frlg.TRAINER_RECORD_COUNT)
-        self.assertNotEqual(emerald.ENCOUNTER_HEADER_COUNT, frlg.ENCOUNTER_HEADER_COUNT)
 
     def test_reuses_the_shared_generation_iii_record_parsers(self) -> None:
         self.assertIs(self.engine.trainers.parse_trainer_record, parse_trainer_record)

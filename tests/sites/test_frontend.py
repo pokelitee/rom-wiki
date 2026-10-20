@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 import pytest
 
@@ -352,10 +353,12 @@ def test_snapshot_command_pins_and_publishes_unless_asked_not_to(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     published: list[Path] = []
-    monkeypatch.setattr(
-        "romwiki.cli.frontend.publish_snapshot",
-        lambda archive: published.append(archive) or [],
-    )
+
+    def publish(archive: Path) -> list[str]:
+        published.append(archive)
+        return []
+
+    monkeypatch.setattr("romwiki.cli.frontend.publish_snapshot", publish)
     root = tmp_path
     wiki = make_repository(root)
     write_public_dataset(wiki, "pokemon", pokemon_dataset())
@@ -477,7 +480,7 @@ def test_evolution_chains_cover_the_whole_branching_family() -> None:
         assert isinstance(steps, list)
         return {node["slug"]: [shape(step["target"]) for step in steps]}
 
-    wurmple = {
+    wurmple: dict[str, Any] = {
         "wurmple": [{"silcoon": [{"beautifly": []}]}, {"cascoon": [{"dustox": []}]}]
     }
     assert shape(chains["dustox"]) == wurmple

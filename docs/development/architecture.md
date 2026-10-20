@@ -33,16 +33,20 @@ mechanics.
 The top-level directories follow their owning layer:
 
 ```text
-config/                 local-registry examples
-profiles/               committed ROM and hack identification contracts
-src/romwiki/            extraction, normalization, publication, and site tooling
-tests/                   source-aligned automated coverage
-sites/games/            per-game configuration and authored wiki content
-sites/portal/           catalog landing site
-sites/shared/           reusable publication partials
-sites/frontend-snapshot/ pinned complete frontend publication manifest
-web/                    shared React frontend and generated local data
-docs/development/       contributor documentation
+config/                   local-registry examples
+profiles/                 committed ROM and hack identification contracts
+profiles/symbols/         generated pret symbol subsets profiles resolve against
+src/romwiki/              extraction, normalization, publication, and site tooling
+tests/                    source-aligned automated coverage
+scripts/                  publication checks, local serving, and test fixtures
+scripts/generate/         generators for committed files derived from pret/PokéDB
+sites/games/              per-game configuration and authored wiki content
+sites/portal/             catalog landing site
+sites/shared/             reusable publication partials
+sites/frontend-snapshot/  pinned complete frontend publication manifest
+sites/generator-runtime/  pinned PokéDB packs for the browser generator
+web/                      shared React frontend and generated local data
+docs/development/         contributor documentation
 ```
 
 `sites/shared/partials/genN/` owns publication prose reused by games with the
@@ -138,6 +142,17 @@ Mature engine adapters also declare the layout and parameter keys they accept.
 The profile contract rejects missing and misspelled keys before extraction starts;
 an engine's first partial vertical slice may declare a deliberately smaller
 contract and expand it alongside its supported datasets.
+
+Retail Generation III and Platinum profiles name tables by their pret symbol
+(`<name>_symbol`) instead of an offset. The loader resolves each against the
+profile's generated table in `profiles/symbols/` into the usual `<name>_offset`,
+so engines read offsets only, and an explicit offset in a profile always wins.
+For Generation III the symbol tables also list every retail code site that
+points to each table; when a ROM is identified, `pipeline/extraction/
+table_locations.py` reads those sites in it, so a hack that moved and repointed a
+table is followed without an offset in its profile. A profile records the profile
+it extends (`parent`), and a ROM no profile's hash knows can be matched by header
+alone to a retail profile, unverified (`ProfileRepository.identify_by_header`).
 
 Platform readers own values encoded by the container itself, and engine decoders
 own stable format defaults such as sentinels and standard record counts. A profile
@@ -514,10 +529,9 @@ The `gen4_platinum` and `gen5_bw` engines exercise the complete normalized pipel
 against two real generations, including retail games, single-version hacks, and
 sibling-version hack families. The `gen4_hgss` adapter independently exercises
 Pokémon, ability, move, item, encounter, trainer, and location pipelines against
-HeartGold and SoulSilver. Trainer-to-map
-references from direct overworld trainer events are available, but scripted battle
-references and trainer-class payout multipliers remain explicitly unavailable
-pending exact ROM locators. Generation-specific binary decoding stays in each
+HeartGold and SoulSilver, including trainers linked to the maps and scripts that
+battle them and their prize money. What remains undecoded is tracked in
+[Open items](open-items.md). Generation-specific binary decoding stays in each
 engine package; optional presentation behavior is advertised through dataset
 capabilities.
 
@@ -566,3 +580,26 @@ serial run.
 Schema-versioned state under `.romwiki/` binds each site to its ROMs, resolved
 profiles, selected engine, PokéDB input, generation sources, and generated-data
 file metadata. Unchanged sites skip generation; `--clean` bypasses that reuse.
+
+The browser generator's PokéDB packs follow the same pattern. `romwiki site
+pack-pokedb` packs each PokéDB generation into one compressed file, dropping
+fields the pipeline doesn't read, archives them deterministically, pins the
+archive in `sites/generator-runtime/manifest.json`, and publishes it to the same
+release.
+
+## In-browser generation
+
+`romwiki.sites.web_build.build_wiki` builds one game's frontend bundle from a ROM
+entirely in memory: it identifies the ROM (by hash, or by header as an unverified
+retail game), runs `GameBuildWorkflow` without caches, and renders through the
+same `sites/frontend.render_game` that `site export-web` uses, so the two cannot
+drift. `id_prefix` publishes the game under `local-<first 12 hex digits of the
+ROM's SHA-256>`, an ID no published game uses.
+
+The Pages build serves the generator's downloads under `generator/`: the
+`romwiki` wheel, a zip of the profiles, site descriptors, and guides
+`build_wiki` reads, and the restored PokéDB packs, each checksummed in a manifest
+(`sites/generator_runtime.py`, `romwiki site bundle-generator`). In the browser,
+`web/src/generate/worker.ts` runs `build_wiki` under Pyodide with the ROM mounted
+read-only, and the data client reads `local-*` resources from IndexedDB, so every
+page renders a local wiki unchanged. See [Frontend](frontend.md#browser-generator).

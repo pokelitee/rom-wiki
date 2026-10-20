@@ -77,17 +77,6 @@ TUTOR_LOCATIONS = {
     29: "Verdanturf Town",  # Fury Cutter
 }
 
-# `gWildMonHeaders`: verified against the real Emerald ROM -- struct shape
-# and slot counts are the shared Gen III fact (`gen3/shared/constants.py`'s
-# `ENCOUNTER_HEADER_SIZE`); this leaf's table offset/count are its own.
-# Header 0 (mapGroup 0/mapNum 16) decodes to Wurmple/Poochyena/Zigzagoon,
-# Route 101's real land encounters; header 1 (mapNum 17) includes Ralts,
-# Route 102's well-known Emerald-exclusive encounter -- confirming both the
-# struct layout and the table location. Terminated by a {0xFF, 0xFF, ...}
-# sentinel immediately after entry 123, same convention as FireRed/
-# LeafGreen. Real count differs from FireRed/LeafGreen's 132.
-ENCOUNTER_HEADER_COUNT = 124
-
 
 # `gRegionMapEntries`: one 8-byte entry per region map section, starting at
 # section 0, with the section's name pointer at +4 (`struct RegionMapLocation`).

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import os
 import re
+import tomllib
 import unittest
 from collections.abc import Callable, Iterator
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +108,29 @@ class RomEvidenceTests(unittest.TestCase):
                     else {TableLocation.SYMBOL, TableLocation.POINTER}
                 )
                 self.assertLessEqual(set(profile.table_locations.values()), expected)
+
+    def test_gen3_encounter_tables_end_where_pret_sizes_them(self) -> None:
+        # Encounter counts come from the table's 0xFF terminator; for retail
+        # builds that must leave exactly the terminator row of pret's table.
+        for result in self._inspected(_GEN3_ENGINES):
+            assert result.match is not None
+            profile = result.match.profile
+            if profile.id not in self.retail_tables:
+                continue
+            engine = get_engine(profile.engine).encounters
+            platform = get_platform(profile.platform)
+            assert platform.read_bytes is not None
+            read = platform.read_bytes
+            symbols = tomllib.loads(
+                (_PROFILES_DIR / "symbols" / f"{profile.id}.toml").read_text("utf-8")
+            )["symbols"]
+            size = symbols[profile.symbols["encounter_offset"].name]["size"]
+            with self.subTest(profile=profile.id):
+                count = engine.count_encounter_headers(
+                    partial(read, result.image),
+                    profile.int_parameter("encounter_offset"),
+                )
+                self.assertEqual(count, size // engine.ENCOUNTER_HEADER_SIZE - 1)
 
     def test_every_reachable_gen3_script_decodes(self) -> None:
         for result in self._inspected(_GEN3_ENGINES):

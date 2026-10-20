@@ -5,6 +5,7 @@ from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from romwiki.engines.gen4.shared.trainers import TrainerClassPrizes
 from romwiki.engines.registry import TRAINER_LOCATIONS, TRAINER_SCRIPT_REFERENCES
 from romwiki.pipeline.extraction.identify import InspectionResult
 from romwiki.pipeline.extraction.trainers.class_gender import (
@@ -99,7 +100,9 @@ class ExtractClassGenderTrainerDatasetTests(unittest.TestCase):
             image=fixture.result.image, match=SimpleNamespace(profile=fixture.profile)
         )
         fixture.platform.read_overlay = Mock(return_value=(9, bytes(200)))
-        fixture.engine.parse_trainer_class_prize_multipliers = Mock(return_value=(150,))
+        fixture.engine.parse_trainer_class_prize_multipliers = Mock(
+            return_value=TrainerClassPrizes(multipliers=(150,), offsets=(0,))
+        )
 
         with fixture.patches():
             envelope = extract_class_gender_trainer_dataset(fixture.result)
@@ -228,6 +231,7 @@ class _Fixture:
             archive_cls=archive_cls,
             filesystem_from_image=Mock(return_value=self.filesystem),
             read_overlay=Mock(),
+            read_overlay_decompressed=None,
             read_code_binary=Mock(return_value=b"ARM9" * 200),
         )
 

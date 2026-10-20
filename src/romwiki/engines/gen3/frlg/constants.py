@@ -146,13 +146,6 @@ TUTOR_LOCATIONS = {
     14: "Fuchsia City",  # Substitute
 }
 
-# One entry per map (mapGroup/mapNum, not a species-style index), so no
-# dummy record. Terminated by a {0xFF, 0xFF, ...} sentinel. Struct shape
-# and slot counts are shared (see `gen3/shared/constants.py`'s
-# `ENCOUNTER_HEADER_SIZE`); only this count differs per game (Emerald has
-# 124).
-ENCOUNTER_HEADER_COUNT = 132
-
 
 # `sMapNames`: one name pointer per Kanto/Sevii region map section. FireRed/
 # LeafGreen's sections start at 88 (`KANTO_MAPSEC_START`), after the Hoenn

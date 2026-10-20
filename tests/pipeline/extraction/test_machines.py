@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 from romwiki.engines.gen5.bw import MACHINE_TABLE_LOCATOR
@@ -14,7 +15,7 @@ from romwiki.util.errors import InvalidRomError, ProfileError
 
 
 def _profile(**overrides: object) -> GameProfile:
-    fields = {
+    fields: dict[str, Any] = {
         "id": "test",
         "name": "Test",
         "platform": "nintendo-ds",
@@ -27,7 +28,7 @@ def _profile(**overrides: object) -> GameProfile:
         "parameters": {},
     }
     fields.update(overrides)
-    return GameProfile(**fields)  # type: ignore[arg-type]
+    return GameProfile(**fields)
 
 
 def _move_table(count: int, move_id: int = 1) -> bytes:

@@ -91,10 +91,10 @@ class Gen4TrainerTests(unittest.TestCase):
             parse_trainer_class_genders(b"\x03", count=1)
 
     def test_decodes_trainer_class_prize_multiplier_table(self) -> None:
-        self.assertEqual(
-            parse_trainer_class_prize_multipliers(b"\x00\x04\x28", count=3),
-            (0, 4, 40),
-        )
+        prizes = parse_trainer_class_prize_multipliers(b"\x00\x04\x28\xff", count=3)
+
+        self.assertEqual(prizes.multipliers, (0, 4, 40))
+        self.assertEqual(prizes.offsets, (0, 1, 2))
         with self.assertRaisesRegex(InvalidRomError, "has size 2; expected 3"):
             parse_trainer_class_prize_multipliers(b"\x00\x04", count=3)
 

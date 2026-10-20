@@ -74,8 +74,9 @@ value range rather than located by name.
   masks cover 15 tutors, each located from the script that teaches its move.
 - **Names:** all-caps ROM names are recased per word ("HP Up", "TM01", "Mt.
   Moon"); move, item, and ability descriptions come from the ROM's own text.
-  Names that later games write with an inner capital read as one word, e.g.
-  "Thunderpunch".
+  Names that run several words together take their inner capitals from
+  PokéDB's word boundaries ("ThunderPunch", "BlackGlasses"); a few it has no
+  boundary for keep one capital ("Smokescreen").
 
 Trainers are published exactly as the ROMs store them. About 100 unused
 trainer slots share one placeholder party (a level-5 Ekans) and have no name,

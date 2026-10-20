@@ -1,6 +1,6 @@
 """Emerald event-script commands: the shared 0x00-0xC6 range plus the
 commands after it, generated from pret/pokeemerald (see
-`scripts/pret/gen3_script_commands.py`).
+`scripts/generate/gen3_script_commands.py`).
 """
 
 from __future__ import annotations

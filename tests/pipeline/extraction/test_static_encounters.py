@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from dataclasses import replace
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 from romwiki.pipeline.extraction.identify import InspectionResult
@@ -16,7 +17,7 @@ from romwiki.util.errors import ProfileError
 
 
 def _profile(**overrides) -> GameProfile:
-    fields = {
+    fields: dict[str, Any] = {
         "id": "test",
         "name": "Test",
         "platform": "nintendo-ds",

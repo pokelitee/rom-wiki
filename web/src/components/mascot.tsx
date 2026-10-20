@@ -98,6 +98,9 @@ export function useFavicon(icon: string | undefined, theme: string) {
     const card = style.getPropertyValue("--card").trim();
     const dark = document.documentElement.classList.contains("dark");
     const image = new Image();
+    // Until the trimmed copy is ready, `icon` is the sprite's own URL; reading
+    // it without CORS would taint the canvas.
+    image.crossOrigin = "anonymous";
     image.onload = () => {
       const size = 64;
       const canvas = document.createElement("canvas");

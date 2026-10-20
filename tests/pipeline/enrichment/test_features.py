@@ -5,9 +5,12 @@ from pathlib import Path
 
 from romwiki.pipeline.enrichment.features import effective_features
 from romwiki.profiles.loader import ProfileRepository
+from romwiki.profiles.models import GameProfile
 
 
 class DatasetFeatureTests(unittest.TestCase):
+    profiles: dict[str, GameProfile]
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.profiles = {

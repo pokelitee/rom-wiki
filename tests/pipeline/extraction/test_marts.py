@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 from romwiki.pipeline.extraction.marts import _shop_records, extract_mart_dataset
@@ -49,7 +50,7 @@ def _fake_platform(
 
 
 def _profile(**overrides: object) -> GameProfile:
-    fields = {
+    fields: dict[str, Any] = {
         "id": "test",
         "name": "Test",
         "platform": "nintendo-ds",
@@ -62,7 +63,7 @@ def _profile(**overrides: object) -> GameProfile:
         "parameters": {},
     }
     fields.update(overrides)
-    return GameProfile(**fields)  # type: ignore[arg-type]
+    return GameProfile(**fields)
 
 
 def _shop(shop_id: int, item_ids: tuple[int, ...], archive: str = "arm9") -> Shop:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -50,7 +51,7 @@ class _Engine:
         self.common_mart_items: tuple = ()
         self.specialty_mart_inventories: tuple = ()
         self.item_data_members: tuple = ()
-        self.item_prices_by_member: dict[int, int] = {}
+        self.item_prices_by_member: dict[bytes, int] = {}
         self.roaming_commands_by_script: dict[int, tuple] = {}
         self.mart_commands_by_script: dict[int, tuple] = {}
         self.gift_commands_by_script: dict[int, tuple] = {}
@@ -289,7 +290,12 @@ class Arm9EventMapDatasetTests(unittest.TestCase):
 
     def test_raises_profile_error_when_metadata_is_missing(self) -> None:
         profile = _profile(layout_overrides={})
-        del profile.layout["scripts"]  # type: ignore[attr-defined]
+        profile = replace(
+            profile,
+            layout={
+                key: value for key, value in profile.layout.items() if key != "scripts"
+            },
+        )
         result = _result(profile)
 
         with self.assertRaises(ProfileError):

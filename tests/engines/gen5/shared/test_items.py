@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 import unittest
+from typing import Any
 
 from romwiki.engines.gen5.shared.items import parse_item_record
 from romwiki.util.errors import InvalidRomError
@@ -142,7 +143,7 @@ class Gen5ItemTests(unittest.TestCase):
         # Real Black ROM facts: Revive=1 (revive only), Sacred Ash=3 (revive
         # + whole party), Rare Candy=5 (bit 0 shared, but redirected by bit
         # 2 into "level up" rather than "revive").
-        def make(byte17: int) -> object:
+        def make(byte17: int) -> Any:
             data = bytearray(36)
             data[12] = 1
             data[17] = byte17

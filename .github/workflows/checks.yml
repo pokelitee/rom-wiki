@@ -36,7 +36,10 @@ jobs:
       - name: Check formatting
         run: python -m ruff format --check .
       - name: Type check
-        run: python -m mypy src/romwiki
+        # Scripts are standalone modules, so they are checked on their own.
+        run: |
+          python -m mypy src/romwiki tests
+          python -m mypy scripts
       - name: Run offline tests
         run: python -m pytest -q
       - name: Build and verify installed package

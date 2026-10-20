@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock
 
 from romwiki.pipeline.build.context import GameBuildContext
@@ -39,7 +40,9 @@ def _context(
     )
 
 
-def _extractor(calls: list, schema_version: int = MOVES_RAW_SCHEMA_VERSION) -> callable:
+def _extractor(
+    calls: list, schema_version: int = MOVES_RAW_SCHEMA_VERSION
+) -> Callable[[Any], dict]:
     def extract(result) -> dict:
         calls.append(result)
         return {
@@ -257,7 +260,7 @@ class GameBuildContextCanonicalFormTests(unittest.TestCase):
         self.assertEqual(json.loads(fresh)["counts"]["changed"], 1)
 
 
-def _encounter_extractor(walking_rate: int) -> callable:
+def _encounter_extractor(walking_rate: int) -> Callable[[Any], dict]:
     def extract(result) -> dict:
         return {
             "schema_version": ENCOUNTERS_RAW_SCHEMA_VERSION,

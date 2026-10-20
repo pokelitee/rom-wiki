@@ -96,8 +96,9 @@ export function MakeWiki({
           Generate wiki
         </Button>
         <p className="muted">
-          Generation takes from under a minute for DS games to a few minutes
-          for Game Boy Advance games. Keep this tab open until it finishes.
+          Generation usually takes under a minute, plus a few seconds the
+          first time to load the generator. Keep this tab open until it
+          finishes.
         </p>
       </section>
       <section className="panel make-wiki-form" aria-labelledby="import-heading">

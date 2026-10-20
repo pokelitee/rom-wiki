@@ -4,6 +4,7 @@ import struct
 import unittest
 
 from romwiki.engines.gen4.platinum import find_item_archive_members, parse_item_record
+from romwiki.schema import ItemPartyEffects
 from romwiki.util.errors import InvalidRomError
 
 
@@ -38,13 +39,15 @@ class Gen4ItemTests(unittest.TestCase):
         self.assertEqual(item.field_pocket_id, 4)
         self.assertEqual(item.battle_pocket_mask, 5)
         self.assertEqual(item.field_use_function_id, 8)
-        self.assertTrue(item.party_effects.heal_sleep)
-        self.assertTrue(item.party_effects.revive)
-        self.assertEqual(item.party_effects.attack_stages, 2)
-        self.assertTrue(item.party_effects.hp_restore)
-        self.assertEqual(item.party_effects.special_defense_ev_amount, 6)
-        self.assertEqual(item.party_effects.hp_restored, 20)
-        self.assertEqual(item.party_effects.friendship_medium_amount, 3)
+        effects = item.party_effects
+        assert isinstance(effects, ItemPartyEffects)
+        self.assertTrue(effects.heal_sleep)
+        self.assertTrue(effects.revive)
+        self.assertEqual(effects.attack_stages, 2)
+        self.assertTrue(effects.hp_restore)
+        self.assertEqual(effects.special_defense_ev_amount, 6)
+        self.assertEqual(effects.hp_restored, 20)
+        self.assertEqual(effects.friendship_medium_amount, 3)
         self.assertEqual(item.item_id, 162)
         self.assertEqual(item.data_archive_member, 139)
         self.assertEqual(item.provenance.member, 139)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from romwiki.engines.gen5.b2w2.static_encounters import (
@@ -100,6 +101,8 @@ class ProfileRepositoryTests(unittest.TestCase):
                 "trainer_names_member": 729,
                 "trainer_classes_member": 730,
                 "trainer_class_gender_offset": 0xFFB90,
+                "trainer_class_prize_overlay_id": 12,
+                "trainer_class_prize_offset": 0x34C04,
                 "starter_species_overlay_id": 61,
                 "starter_species_offset": 0x1A98,
                 "starter_species_count": 3,
@@ -208,8 +211,10 @@ class ProfileRepositoryTests(unittest.TestCase):
             value.id: value
             for value in ProfileRepository.load(Path("profiles")).profiles
         }
-        heartgold = profiles["heartgold-us"]
-        heartgold.layout["unknown"] = "a/0/3/7"
+        heartgold = replace(
+            profiles["heartgold-us"],
+            layout={**profiles["heartgold-us"].layout, "unknown": "a/0/3/7"},
+        )
 
         with self.assertRaisesRegex(ProfileError, "unsupported layout: unknown"):
             enabled_dataset_kinds(heartgold)
