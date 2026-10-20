@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from romwiki.sites.snapshot_release import publish_snapshot
+from romwiki.sites.snapshot_release import POKEDB_PACKS, publish_snapshot
 from romwiki.util.errors import SiteError
 
 
@@ -83,3 +83,42 @@ def test_a_missing_gh_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, "run", missing)
     with pytest.raises(SiteError, match="GitHub CLI"):
         publish_snapshot(Path("frontend-new.tar.gz"))
+
+
+def test_pokedb_packs_are_published_apart_from_frontend_snapshots(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = FakeRelease(
+        {"frontend-main.tar.gz", "pokedb-main.tar", "pokedb-old.tar"},
+        main_archive="pokedb-main.tar",
+    )
+    monkeypatch.setattr(subprocess, "run", release.run)
+
+    removed = publish_snapshot(Path("pokedb-new.tar"), POKEDB_PACKS)
+
+    assert removed == ["pokedb-old.tar"]
+    assert release.assets == {
+        "frontend-main.tar.gz",
+        "pokedb-main.tar",
+        "pokedb-new.tar",
+    }
+
+
+def test_the_first_archive_of_a_kind_needs_no_pin_on_main(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = FakeRelease({"pokedb-stray.tar"}, main_archive="unused")
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if command[1] == "api":
+            raise subprocess.CalledProcessError(
+                1, command, stderr="Not Found (HTTP 404)"
+            )
+        return release.run(command, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run)
+
+    assert publish_snapshot(Path("pokedb-new.tar"), POKEDB_PACKS) == [
+        "pokedb-stray.tar"
+    ]
+    assert release.assets == {"pokedb-new.tar"}

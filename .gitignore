@@ -11,6 +11,7 @@ node_modules/
 *.tsbuildinfo
 web/dist/
 web/public/data/
+web/public/generator/
 web/playwright-report/
 web/test-results/
 
@@ -25,6 +26,8 @@ sites/games/*/wiki/data/
 # The frontend snapshot archive is a `snapshots` release asset; only the
 # manifest that pins its checksums is tracked.
 sites/frontend-snapshot/*.tar.gz
+# Likewise the PokéDB packs the browser generator serves.
+sites/generator-runtime/*.tar
 
 # User-supplied game images and related emulator data must remain local.
 *.nds

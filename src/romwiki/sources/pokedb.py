@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import json
 import re
 import unicodedata
@@ -9,6 +10,20 @@ from typing import Any
 
 from romwiki.util.errors import DataSourceError
 from romwiki.util.text import name_slug
+
+POKEDB_PACK_SCHEMA_VERSION = 1
+# A generation's PokéDB directories, by the section name a pack stores them under.
+_SECTIONS = {
+    "pokemon_default": ("pokemon", "default"),
+    "pokemon_variant": ("pokemon", "variant"),
+    "ability": ("ability",),
+    "item": ("item",),
+    "move": ("move",),
+}
+# Pokémon fields the pipeline doesn't read (learnsets and stats come from the
+# ROM). Packs drop them, which keeps one generation under half a megabyte
+# compressed instead of about twenty.
+_UNPACKED_POKEMON_FIELDS = frozenset({"moves", "unverified_historical_fields"})
 
 _ITEM_REFERENCE_SLUG_ALIASES = {
     "parlyzheal": "paralyze-heal",
@@ -85,12 +100,34 @@ class PokeDBGeneration:
 
     @classmethod
     def load(cls, root: Path) -> PokeDBGeneration:
-        resolved = root.resolve()
-        defaults = _load_objects(resolved / "pokemon" / "default")
-        variants = _load_objects(resolved / "pokemon" / "variant")
-        abilities = _load_objects(resolved / "ability")
-        items = _load_objects(resolved / "item")
-        moves = _load_objects(resolved / "move")
+        """Load a generation from its PokéDB directory."""
+        return cls._from_sections(_load_sections(root))
+
+    @classmethod
+    def load_pack(cls, data: bytes) -> PokeDBGeneration:
+        """Load a generation from a pack made by `pack_pokedb`."""
+        try:
+            pack = json.loads(gzip.decompress(data))
+        except (OSError, EOFError, json.JSONDecodeError) as error:
+            raise DataSourceError("Invalid PokéDB pack") from error
+        if (
+            not isinstance(pack, dict)
+            or pack.get("schema_version") != POKEDB_PACK_SCHEMA_VERSION
+            or not isinstance(pack.get("sections"), dict)
+            or pack["sections"].keys() != _SECTIONS.keys()
+        ):
+            raise DataSourceError("Unsupported PokéDB pack")
+        return cls._from_sections(pack["sections"])
+
+    @classmethod
+    def _from_sections(
+        cls, sections: dict[str, list[dict[str, Any]]]
+    ) -> PokeDBGeneration:
+        defaults = sections["pokemon_default"]
+        variants = sections["pokemon_variant"]
+        abilities = sections["ability"]
+        items = sections["item"]
+        moves = sections["move"]
         pokemon_by_id = {item["id"]: item for item in defaults}
         if len(pokemon_by_id) != len(defaults):
             raise DataSourceError("PokéDB default Pokémon IDs must be unique")
@@ -458,6 +495,39 @@ def _pick_versioned_text(
         ),
     )
     return fallback, mapping[fallback]
+
+
+def pack_pokedb(root: Path) -> bytes:
+    """One generation's PokéDB directory as a single compressed file.
+
+    The same input always gives the same bytes, so a pack's checksum
+    identifies its contents.
+    """
+    sections = _load_sections(root)
+    for name in ("pokemon_default", "pokemon_variant"):
+        sections[name] = [
+            {
+                key: value
+                for key, value in item.items()
+                if key not in _UNPACKED_POKEMON_FIELDS
+            }
+            for item in sections[name]
+        ]
+    source = json.dumps(
+        {"schema_version": POKEDB_PACK_SCHEMA_VERSION, "sections": sections},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return gzip.compress(source, compresslevel=9, mtime=0)
+
+
+def _load_sections(root: Path) -> dict[str, list[dict[str, Any]]]:
+    resolved = root.resolve()
+    return {
+        name: _load_objects(resolved.joinpath(*parts))
+        for name, parts in _SECTIONS.items()
+    }
 
 
 def _load_objects(directory: Path) -> list[dict[str, Any]]:
