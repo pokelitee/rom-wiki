@@ -4,7 +4,7 @@ A command is a one-byte opcode followed by fixed-width little-endian
 operands; jump and call targets are absolute ROM addresses. The operand
 widths are generated from pret/pokefirered's and pret/pokeemerald's
 `asm/macros/event.inc` and `data/script_cmd_table.inc` into
-`script_command_table.py` (see `scripts/pret/gen3_script_commands.py`). The
+`script_command_table.py` (see `scripts/generate/gen3_script_commands.py`). The
 two games share opcodes 0x00-0xC6; each leaf adds its own later commands.
 
 Disassembling every script reachable from every map's object, coordinate,

@@ -217,7 +217,7 @@ unanchored byte scans cannot improve confidence.
   on FireRed/LeafGreen); the player-chosen name lives in save data.
 - **Compound names.** All-caps ROM names are recased per word. Run-together
   names take their inner capitals from PokéDB's word boundaries
-  ("THUNDERPUNCH" reads "ThunderPunch"; see `scripts/gen3_compound_names.py`),
+  ("THUNDERPUNCH" reads "ThunderPunch"; see `scripts/generate/gen3_compound_names.py`),
   but a name whose slug is one word or was later renamed keeps a single
   capital ("Smokescreen", "Smellingsalt").
 - **Emerald systems.** Battle Frontier facilities, contests, and Berry

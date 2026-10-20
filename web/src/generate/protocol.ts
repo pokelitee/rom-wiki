@@ -12,7 +12,7 @@ export type WorkerMessage =
   | { type: "progress"; message: string }
   | {
       type: "done";
-      // `path -> bytes`, as `romwiki.web_build.build_wiki` returns them.
+      // `path -> bytes`, as `romwiki.sites.web_build.build_wiki` returns them.
       files: Record<string, Uint8Array>;
       // SHA-256 of the generator wheel that built them.
       generator: string;

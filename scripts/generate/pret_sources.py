@@ -1,4 +1,4 @@
-"""Read files from the pret commits pinned in `sources.toml`.
+"""Read files from the pret commits pinned in `pret_sources.toml`.
 
 Downloads are cached under `.romwiki/pret-cache/<commit>/`, so a pinned file
 is fetched once and every later run is offline and reproducible.
@@ -10,8 +10,9 @@ import tomllib
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-_SOURCES = Path(__file__).with_name("sources.toml")
+from common import ROOT
+
+_SOURCES = Path(__file__).with_name("pret_sources.toml")
 _CACHE = ROOT / ".romwiki" / "pret-cache"
 
 

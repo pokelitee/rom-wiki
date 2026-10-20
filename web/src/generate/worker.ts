@@ -1,4 +1,4 @@
-// Runs `romwiki.web_build.build_wiki` in Pyodide, off the page's thread.
+// Runs `romwiki.sites.web_build.build_wiki` in Pyodide, off the page's thread.
 import type { BuildRequest, WorkerMessage } from "./protocol";
 
 const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v0.29.5/full/";
@@ -149,7 +149,7 @@ logging.getLogger().setLevel(logging.INFO)
 const BUILD = `
 from pathlib import Path
 from romwiki.sources import PokeDBGeneration
-from romwiki.web_build import build_wiki
+from romwiki.sites.web_build import build_wiki
 
 build_wiki(
     Path(rom_path),
