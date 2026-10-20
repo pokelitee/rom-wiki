@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from romwiki.engines.gen3.shared.scripts import GOTO, TERMINATORS
+from romwiki.engines.gen5.b2w2.opcode_table import OPCODE_TABLE as B2W2_OPCODE_TABLE
+from romwiki.engines.gen5.shared.script_disassembler import disassemble_script
+from romwiki.engines.gen5.shared.script_opcode_table import OPCODE_TABLE
+from romwiki.engines.gen5.shared.starter_branches import STARTER_VARIABLE
 from romwiki.engines.registry import get_engine
 from romwiki.pipeline.extraction.identify import InspectionResult, inspect_rom
 from romwiki.pipeline.extraction.locations.gba_map_events import map_scripts
@@ -17,6 +21,7 @@ from romwiki.pipeline.extraction.map_headers import iter_gba_map_headers
 from romwiki.pipeline.extraction.reference_names import (
     extract_reference_descriptions,
 )
+from romwiki.pipeline.extraction.trainers.support import scripts_archive_options
 from romwiki.platforms.registry import get_platform
 from romwiki.profiles.loader import ProfileRepository
 from romwiki.profiles.models import GameProfile, TableLocation
@@ -30,6 +35,7 @@ _GAMES_CONFIG = _ROOT / ".local/games.toml"
 _ENABLE = "ROMWIKI_ROM_TESTS"
 _GEN3_ENGINES = frozenset({"gen3_frlg", "gen3_emerald"})
 _GEN4_ENGINES = frozenset({"gen4_platinum", "gen4_hgss"})
+_GEN5_ENGINES = frozenset({"gen5_bw", "gen5_b2w2"})
 # The right Pokédex bank matches PokéDB's text for its own version for 86-91%
 # of species; a sibling version's bank matches 40-51%.
 _MIN_POKEDEX_MATCH = 0.8
@@ -183,6 +189,41 @@ class RomEvidenceTests(unittest.TestCase):
             with self.subTest(profile=profile.id):
                 self.assertEqual(trades, set(range(trade_count)))
                 self.assertGreater(event_pokemon, 0)
+
+    def test_gen5_starter_variable_is_set_only_by_the_starter_choice(self) -> None:
+        # The starter-branch decoder trusts STARTER_VARIABLE because one script,
+        # the starter choice, sets it to each starter index and nothing else
+        # writes it.
+        for result in self._inspected(_GEN5_ENGINES):
+            assert result.match is not None
+            profile = result.match.profile
+            opcode_table = (
+                B2W2_OPCODE_TABLE if profile.engine == "gen5_b2w2" else OPCODE_TABLE
+            )
+            platform = get_platform(profile.platform)
+            filesystem = platform.filesystem_from_image(result.image)
+            archive = platform.archive_cls.from_bytes(
+                filesystem.read(profile.layout["scripts"]),
+                **scripts_archive_options(profile),
+            )
+            writes: dict[int, set[tuple[str, int]]] = {}
+            for member in archive.members:
+                for instruction in disassemble_script(
+                    archive.read(member.index), opcode_table=opcode_table
+                ):
+                    if (
+                        instruction.name in ("WorkSetConst", "WorkSet")
+                        and instruction.params[0] == STARTER_VARIABLE
+                    ):
+                        writes.setdefault(member.index, set()).add(
+                            (instruction.name, instruction.params[1])
+                        )
+            with self.subTest(profile=profile.id):
+                self.assertEqual(len(writes), 1, writes)
+                [values] = writes.values()
+                self.assertEqual(
+                    values, {("WorkSetConst", index) for index in range(3)}
+                )
 
     def test_gen4_pokedex_banks_match_their_own_version(self) -> None:
         pokedb_root = self.registry.pokedb_root

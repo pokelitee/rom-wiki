@@ -10,30 +10,50 @@ from romwiki.engines.gen5.b2w2.trainers import (
     resolve_common_script_trainer_id,
     trainer_name_index,
 )
+from romwiki.engines.gen5.shared.starter_branches import Gen5StarterBranchFamily
 
 
 class B2W2TrainerVariantTests(unittest.TestCase):
-    def test_preserves_the_fire_branch_despite_its_static_name(self) -> None:
+    def test_relates_decoded_starter_branches_despite_a_static_name(self) -> None:
+        # The first record's message-table name is stale ("Marlon"); the family
+        # comes from the decoded branch and is still the rival's.
         records = [
-            {"trainer_id": trainer_id, "name": name}
-            for trainer_id, name in (
-                (161, "Marlon"),
-                (162, "Rival"),
-                (163, "Rival"),
-            )
+            {
+                "trainer_id": trainer_id,
+                "class_name": "PKMN Trainer",
+                "name": name,
+                "party": [{"species_id": 1}],
+                "script_references": [{"name": "Aspertia City"}],
+            }
+            for trainer_id, name in ((161, "Marlon"), (162, "Rival"), (163, "Rival"))
         ]
+        family = Gen5StarterBranchFamily(
+            script_file_id=854,
+            position=0,
+            selected=((0, 161), (1, 162)),
+            fallthrough_trainer_id=163,
+        )
         contract = resolve_trainer_variants(
             "black-2-us",
             {"trainer_variant_contract": "b2w2-retail-v1"},
             records,
+            selector_data={
+                "starter_branch_families": (family,),
+                "starter_species": (495, 498, 501),
+                "species_names": {495: "snivy", 498: "tepig", 501: "oshawott"},
+            },
         )
 
-        family = contract["battle_families"][0]
+        [decoded] = contract["battle_families"]
+        self.assertEqual(decoded["label"], "Aspertia City rival battle")
         self.assertEqual(
-            [variant["trainer_id"] for variant in family["variants"]],
+            [variant["trainer_id"] for variant in decoded["variants"]],
             [161, 162, 163],
         )
-        self.assertEqual(family["variants"][0]["conditions"][0]["value"], "snivy")
+        self.assertEqual(
+            [variant["conditions"][0]["value"] for variant in decoded["variants"]],
+            ["snivy", "tepig", "oshawott"],
+        )
 
     def test_inherits_the_bw_common_script_band_rule(self) -> None:
         # Verified against real Black 2 ROM data: B2W2 reuses BW's band

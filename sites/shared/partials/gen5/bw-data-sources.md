@@ -373,10 +373,13 @@ those being written into the engine.
 A script may stage more than one such battle -- Nuvema Town holds both rivals'
 opening battles, sharing the starter variable -- so a group is closed when an
 index repeats, which is exactly where the next battle site begins. Groups are
-only published when at least two indices each guard a distinct literal battle.
-Black and Blaze Black derive the same fifteen groups with the same
-index-to-record mapping, so a hack that renumbers or relocates these battles is
-described from its own ROM.
+only published when at least two indices each guard a distinct literal battle,
+and a battle staged by several scripts (a map entered from different sides) is
+published once. Only branches on the starter variable itself (`0x4030`, written
+solely by the starter-choice script) count, so scratch variables that happen to
+hold 0-2 select nothing. Black and Blaze Black derive the same fourteen battles
+with the same index-to-record mapping, so a hack that renumbers or relocates
+these battles is described from its own ROM.
 
 Both mechanisms resolve trainer IDs to real trainer records only -- battles
 whose ID doesn't resolve are left unlinked rather than guessed at. Verified

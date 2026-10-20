@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from romwiki.engines.gen5.shared.starter_families import starter_branch_families
 from romwiki.schema.trainers import unverified_trainer_variants
 from romwiki.util.errors import ProfileError
 
@@ -11,80 +12,6 @@ _CONTRACTS = {
     "blaze-black-2-volt-white-2-v1.1",
     "blaze-black-2-redux-volt-white-2-redux-v1.4.1",
 }
-_RIVAL_GROUPS = (
-    ("aspertia", "Aspertia City rival battle", (161, 162, 163)),
-    ("floccesy-ranch", "Floccesy Ranch rival battle", (166, 167, 168)),
-    ("castelia-sewers", "Castelia Sewers rival battle", (588, 589, 590)),
-    ("pwt", "Pokémon World Tournament rival battle", (368, 369, 370)),
-    ("undella", "Undella Town rival battle", (378, 379, 380)),
-    ("route-13", "Route 13 rival battle", (701, 702, 703)),
-    ("victory-road", "Victory Road rival battle", (684, 685, 686)),
-    ("undella-rematch", "Undella Town rival rematch", (693, 694, 695)),
-    ("driftveil-rematch", "Driftveil City rival rematch", (696, 697, 698)),
-    ("seasonal-rematch", "Seasonal rival rematch", (794, 795, 796)),
-)
-_STARTERS = (
-    ("snivy", "Player chose Snivy"),
-    ("tepig", "Player chose Tepig"),
-    ("oshawott", "Player chose Oshawott"),
-)
-
-
-def _rival_families(profile_id: str, available: set[object]) -> list[dict[str, Any]]:
-    families = []
-    for order, (stage, label, trainer_ids) in enumerate(_RIVAL_GROUPS):
-        if not all(value in available for value in trainer_ids):
-            continue
-        families.append(
-            {
-                "id": f"hugh-{stage}",
-                "label": label,
-                "order": order,
-                "provenance": {
-                    "source": "B2W2 ROM field-script selection",
-                    "reference": f"{profile_id}:hugh:{stage}",
-                    "verification": (
-                        "Starter-variable branches were traced to the complete Tepig, "
-                        "Oshawott, and Snivy trainer-record run. The first record's "
-                        "static message-table name was intentionally ignored."
-                    ),
-                },
-                "variants": [
-                    {
-                        "trainer_id": trainer_id,
-                        "order": variant_order,
-                        "conditions": [
-                            {
-                                "kind": "starter-choice",
-                                "value": starter,
-                                "label": starter_label,
-                            },
-                            {
-                                "kind": "story-stage",
-                                "value": stage,
-                                "label": label,
-                            },
-                            *(
-                                [
-                                    {
-                                        "kind": "rematch-stage",
-                                        "value": "rematch",
-                                        "label": "Rematch",
-                                    }
-                                ]
-                                if stage == "seasonal-rematch"
-                                else []
-                            ),
-                        ],
-                    }
-                    for variant_order, (
-                        trainer_id,
-                        (starter, starter_label),
-                    ) in enumerate(zip(trainer_ids, _STARTERS, strict=True))
-                ],
-            }
-        )
-    return families
 
 
 def _decoded_difficulty_families(
@@ -278,11 +205,13 @@ def resolve_trainer_variants(
             f"Profile {profile_id!r} must select a verified B2W2 trainer variant contract"
         )
     available = {record.get("trainer_id") for record in records}
-    difficulty_families = _decoded_difficulty_families(
-        profile_id, records, selector_data
-    )
-    families = _rival_families(profile_id, available)
-    families.extend(difficulty_families)
+    records_by_id: dict[int, Mapping[str, Any]] = {
+        trainer_id: record
+        for record in records
+        if record.get("party") and (trainer_id := record.get("trainer_id")) is not None
+    }
+    families = starter_branch_families(profile_id, records_by_id, selector_data)
+    families.extend(_decoded_difficulty_families(profile_id, records, selector_data))
     families.extend(_n_families(profile_id, available))
     return {
         "trainer_variant_support": {

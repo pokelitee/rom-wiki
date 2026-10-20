@@ -4,11 +4,13 @@ import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from romwiki.engines.common.script_control_flow import OpcodeTable
 from romwiki.engines.gen5.shared.script_disassembler import (
     Gen5Instruction,
     disassemble_script,
 )
 from romwiki.engines.gen5.shared.script_opcode_table import (
+    OPCODE_TABLE,
     STACK_CMP,
     STACK_CMP_EQUAL,
     STACK_PUSH,
@@ -17,10 +19,19 @@ from romwiki.engines.gen5.shared.script_opcode_table import (
 )
 from romwiki.util.errors import InvalidRomError
 
-#: The stack-comparison idiom BW uses to branch on the player's starter:
-#: push a variable, push a constant, compare for equality, then jump past the
-#: guarded block when it does not match.
+#: The stack-comparison idiom Generation V uses to branch on the player's
+#: starter: push a variable, push a constant, compare for equality, then jump
+#: past the guarded block when it does not match. The guarded block is a single
+#: battle, or a tag battle whose first trainer is the starter-selected partner.
 CALL_TRAINER_BATTLE = 0x0085
+CALL_TRAINER_MULTI_BATTLE = 0x0086
+_BATTLES = frozenset({CALL_TRAINER_BATTLE, CALL_TRAINER_MULTI_BATTLE})
+
+#: The starter variable: the starter-choice script (Black/White script 782,
+#: Black 2/White 2 script 854) sets it to the chosen starter's index, and no
+#: other script writes it. Other variables compared against small constants
+#: select something else, such as a rematch stage.
+STARTER_VARIABLE = 0x4030
 
 #: Starters are stored as species halfwords, one per starter index.
 STARTER_SPECIES_ENTRY_SIZE = 2
@@ -76,6 +87,7 @@ def parse_starter_branch_families(
     script_file_id: int,
     trainer_count: int,
     starter_species: Sequence[int] | None = None,
+    opcode_table: OpcodeTable = OPCODE_TABLE,
 ) -> tuple[Gen5StarterBranchFamily, ...]:
     """Decode a script file's starter-selected battles.
 
@@ -92,7 +104,7 @@ def parse_starter_branch_families(
     if not starter_species:
         return ()
     starter_count = len(starter_species)
-    instructions = disassemble_script(data)
+    instructions = disassemble_script(data, opcode_table=opcode_table)
     if not instructions:
         return ()
     ordered = sorted(instructions, key=lambda value: value.offset)
@@ -121,7 +133,7 @@ def parse_starter_branch_families(
 
 
 def _guard_groups(
-    guards: Sequence[tuple[int, int, int, int]],
+    guards: Sequence[tuple[int, int, int, int, tuple[int, ...]]],
 ) -> list[list[tuple[int, int]]]:
     """Split guards into one group per battle site.
 
@@ -132,15 +144,16 @@ def _guard_groups(
     """
     groups: list[list[tuple[int, int]]] = []
     current: list[tuple[int, int]] = []
-    current_variable: int | None = None
-    for _offset, variable, index, trainer_id in sorted(guards):
-        starts_new = variable != current_variable or any(
-            index == seen for seen, _ in current
-        )
+    current_site: tuple[int, tuple[int, ...]] | None = None
+    for _offset, variable, index, trainer_id, battle in sorted(guards):
+        # A site's branches share the variable, the battle command, and every
+        # operand but the selected trainer (a tag battle's opponents).
+        site = (variable, battle)
+        starts_new = site != current_site or any(index == seen for seen, _ in current)
         if starts_new and current:
             groups.append(current)
             current = []
-        current_variable = variable
+        current_site = site
         current.append((index, trainer_id))
     if current:
         groups.append(current)
@@ -149,31 +162,38 @@ def _guard_groups(
 
 def _starter_guards(
     ordered: Sequence[Gen5Instruction], trainer_count: int, starter_count: int
-) -> list[tuple[int, int, int, int]]:
-    """(offset, variable, starter index, trainer ID) for each guarded battle."""
+) -> list[tuple[int, int, int, int, tuple[int, ...]]]:
+    """(offset, variable, starter index, trainer ID, battle) for each guarded
+    battle, where `battle` is the command and its other operands.
+    """
     guards = []
     for position in range(len(ordered) - 4):
         window = ordered[position : position + 5]
-        opcodes = [instruction.opcode for instruction in window]
-        if opcodes != [
-            STACK_PUSH,
-            STACK_PUSH_CONST,
-            STACK_CMP,
-            VM_JUMP_IF,
-            CALL_TRAINER_BATTLE,
-        ]:
+        opcodes = [instruction.opcode for instruction in window[:4]]
+        if opcodes != [STACK_PUSH, STACK_PUSH_CONST, STACK_CMP, VM_JUMP_IF]:
+            continue
+        if window[4].opcode not in _BATTLES:
             continue
         if window[2].params[0] != STACK_CMP_EQUAL:
             continue
         variable = window[0].params[0]
         index = window[1].params[0]
         trainer_id = window[4].params[0]
+        if variable != STARTER_VARIABLE:
+            continue
         if not 0 <= index < starter_count:
             continue
         if not 0 < trainer_id < trainer_count:
             continue
-        guards.append((window[0].offset, variable, index, trainer_id))
+        guards.append(
+            (window[0].offset, variable, index, trainer_id, _battle_shape(window[4]))
+        )
     return guards
+
+
+def _battle_shape(battle: Gen5Instruction) -> tuple[int, ...]:
+    """The battle command and the operands every starter branch shares."""
+    return (battle.opcode, *battle.params[1:])
 
 
 def _fallthrough_battle(
@@ -191,15 +211,15 @@ def _fallthrough_battle(
     battles = [
         instruction
         for instruction in ordered
-        if instruction.opcode == CALL_TRAINER_BATTLE
-        and 0 < instruction.params[0] < trainer_count
+        if instruction.opcode in _BATTLES and 0 < instruction.params[0] < trainer_count
     ]
     last_guarded = max(
         (i for i, b in enumerate(battles) if b.params[0] in guarded), default=None
     )
     if last_guarded is None:
         return None
+    shape = _battle_shape(battles[last_guarded])
     for battle in battles[last_guarded + 1 :]:
-        if battle.params[0] not in guarded:
+        if battle.params[0] not in guarded and _battle_shape(battle) == shape:
             return battle.params[0]
     return None

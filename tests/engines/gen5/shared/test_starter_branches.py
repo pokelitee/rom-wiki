@@ -12,14 +12,25 @@ from romwiki.util.errors import InvalidRomError
 STARTERS = (495, 498, 501)
 
 
-def _guard(index: int, trainer_id: int, *, skip: int) -> bytes:
+def _guard(index: int, trainer_id: int, *, skip: int, variable: int = 0x4030) -> bytes:
     """The stack-compare idiom BW uses to guard one starter's battle."""
     return (
-        struct.pack("<HH", 0x0009, 0x4030)  # StackPush(starter variable)
+        struct.pack("<HH", 0x0009, variable)  # StackPush(starter variable)
         + struct.pack("<HH", 0x0008, index)  # StackPushConst(starter index)
         + struct.pack("<HH", 0x0011, 1)  # StackCmp(equal)
         + struct.pack("<HBi", 0x001F, 0xFF, skip)  # VMJumpIf
         + struct.pack("<HHHH", 0x0085, trainer_id, 0, 1)  # CallTrainerBattle
+    )
+
+
+def _tag_guard(index: int, partner: int, *, skip: int) -> bytes:
+    """A guarded tag battle: the starter selects the partner, not the foes."""
+    return (
+        struct.pack("<HH", 0x0009, 0x4030)
+        + struct.pack("<HH", 0x0008, index)
+        + struct.pack("<HH", 0x0011, 1)
+        + struct.pack("<HBi", 0x001F, 0xFF, skip)
+        + struct.pack("<HHHHH", 0x0086, partner, 342, 356, 0)  # Multi battle
     )
 
 
@@ -123,6 +134,33 @@ class Gen5StarterBranchTests(unittest.TestCase):
         body = _group(((0, 53), (7, 54)), fallthrough=55) + _HALT
 
         self.assertEqual(self._parse(body), ())
+
+    def test_ignores_branches_on_any_other_variable(self) -> None:
+        # Scratch variables compared with small constants select other things,
+        # such as a rematch stage.
+        skip = len(_guard(0, 1, skip=0))
+        body = (
+            _guard(0, 53, skip=skip, variable=0x8020)
+            + _guard(1, 54, skip=0, variable=0x8020)
+            + _BATTLE
+            + _HALT
+        )
+
+        self.assertEqual(self._parse(body), ())
+
+    def test_decodes_a_tag_battle_by_its_partner(self) -> None:
+        size = len(_tag_guard(0, 1, skip=0))
+        body = (
+            _tag_guard(0, 588, skip=size)
+            + _tag_guard(1, 589, skip=0)
+            + struct.pack("<HHHHH", 0x0086, 590, 342, 356, 0)
+            + _HALT
+        )
+
+        [family] = self._parse(body)
+
+        self.assertEqual(family.selected, ((0, 588), (1, 589)))
+        self.assertEqual(family.fallthrough_trainer_id, 590)
 
 
 if __name__ == "__main__":
