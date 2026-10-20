@@ -535,10 +535,8 @@ ever hit this in one *unused* map-name table entry, not a real page name).
 
 ## Known coverage limitations
 
-- **Black/White roaming Pokémon:** Tornadus and Thundurus's species identity is
-  now decoded (species 641 and 642 respectively, hand-derived from the real
-  ARM Thumb code at overlay 10 rather than trusted from a community tool's
-  published offset — see `gen5/bw/__init__.py`'s module comment), but not yet
-  published as structured data: Gen5's roaming mechanic has no location-tied
-  activation script the way other engines' roaming Pokémon do, so surfacing
-  this fact needs its own schema decision rather than a per-map record.
+- **Black/White roaming Pokémon:** Tornadus and Thundurus are not published.
+  The code at overlay 10 that recognizes them only classifies a species as a
+  roaming slot; which of the two roams in each version, and when, is decided
+  elsewhere in native code, and Generation V has no location-tied activation
+  script to read it from.

@@ -24,7 +24,7 @@ Extraction uses the ignored `.local/games.toml` registry. Generating game data a
 
 ## Architecture
 
-`src/romwiki/` owns platform readers, engines, normalized schemas, extraction, enrichment, comparisons, relationships, and data publication. `web/` owns routing and presentation through shared React/TypeScript components, Tailwind, and selected shadcn/ui controls. `sites/` owns game descriptors, authored Markdown, shared prose, and the pinned frontend snapshot manifest; no MkDocs application or generated record bodies are tracked.
+`src/romwiki/` owns platform readers, engines, normalized schemas, extraction, enrichment, comparisons, relationships, data publication, and the in-memory build the browser generator runs. `web/` owns routing and presentation through shared React/TypeScript components, Tailwind, and selected shadcn/ui controls, plus the browser generator. `profiles/` identifies supported ROMs and locates their data, `sites/` owns game descriptors, authored Markdown, shared prose, and the pinned snapshot manifests, and `scripts/` holds publication checks and the generators for committed derived files; no MkDocs application or generated record bodies are tracked.
 
 The app uses hash routes below `/rom-wiki/`, compact section indexes, and content-addressed detail chunks. Generated data and build artifacts are ignored. The previous MkDocs implementation remains available in Git history at `04b72f2`.
 
@@ -36,6 +36,8 @@ The app uses hash routes below `/rom-wiki/`, compact section indexes, and conten
 - [Operations](docs/operations.md): local inputs, generation, snapshots, and recovery.
 - [CLI reference](docs/cli-reference.md): command arguments and output options.
 - [Data contracts](docs/development/data-contracts.md): normalized and frontend publication guarantees.
+- [Adding a game](docs/development/adding-a-game.md): profiles, symbols, and verification for a new ROM or hack.
+- [Open items](docs/development/open-items.md): what isn't covered yet and why.
 
 ## Contributing
 

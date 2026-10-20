@@ -1,53 +1,17 @@
 # Open Items
 
-This is the remaining selector-decoding work after the cross-engine coverage
-pass. Scope is not limited to one title or a fixed set of axes: starter, story,
-partner, rematch, version, season, and difficulty variants are all in scope when
-the ROM selector can be proven. Names, adjacent IDs, levels, and party similarity
-may identify research candidates but never publish a label.
+What the published wikis don't cover yet, grouped by what blocks each item, and
+the limits of the in-browser generator. Every variant axis (starter, story,
+partner, rematch, version, season, difficulty) is in scope once the ROM's own
+selector is proven. Names, adjacent IDs, levels, and party similarity may point
+research at candidates but never publish a label.
 
-## 1. Open but bounded
+## 1. Blocked on native code
 
-### B2W2 difficulty level-offset band table
-
-The only bounded binary lookup still open, and its value is narrow. The
-Normal/Challenge differences for the verified dispatch pairs are already stored
-in the ROM records — Challenge Gym records carry an extra party member at
-identical levels, and League rematch Challenge records are +1 level. The missing
-table is a separate *runtime* adjustment, so it affects a displayed level on an
-engine whose level/stat divergence is already documented, not the parties.
-
-Four anchored approaches failed; none should be repeated without a new idea:
-
-1. Unanchored byte search over arm9 plus 344 overlays (4.3 MB) for a
-   level-indexed ramp or `(threshold, offset)` pairs. Returns only noise.
-2. Searching for a Gym difficulty dispatch table. Challenge IDs are consecutive
-   (`764`–`771`) while Normal IDs are not (`156,157,154,153,158,155,159,160`),
-   so the Normal order should be data — but that sequence appears nowhere as u16
-   or u32, in either order, and neither do the League IDs or interleaved pairs.
-3. Following the Challenge IDs at `arm9+0x8D4B6`. They sit in a long mixed list
-   of trainer and non-trainer IDs with no clean bounds and no pointer resolving
-   to a plausible start.
-4. Tracing forward from the decoded `GameGetDifficulty` field-script opcode
-   (`0x2AF`) to its native VM handler, intending to then find that handler's
-   other callers in the battle-engine overlay. Stalls at the same
-   missing-anchor problem one level deeper: the VM dispatch table's own
-   location and the battle-engine overlay hosting the actual level-adjustment
-   code are both unknown, and finding them requires full-binary
-   cross-reference analysis (function-boundary detection plus a call-graph
-   search across all overlays) that isn't tractable with byte-pattern
-   scanning alone. No public source documents a byte offset either — checked
-   Ajarmar/universal-pokemon-randomizer-zx's `Gen5RomHandler.java`, which
-   only needs `getEliteFourTrainers(isChallengeMode)` to swap trainer
-   indices and never touches this runtime level-adjustment code path, so it
-   was never reverse-engineered there either. A future attempt likely needs
-   proper disassembly tooling with auto-analysis (e.g. Ghidra) rather than ad
-   hoc capstone scanning.
-
-The missing anchor is the code that applies the adjustment, reachable from the
-save-data difficulty flag or from trainer-party load rather than another data
-scan. Leave it unresolved until one of those routines provides a code anchor;
-the known party records and runtime behavior are already documented.
+The game makes these choices in ARM code rather than in readable scripts or
+tables. Each needs a code anchor: the routine that produces the value, ideally
+cross-checked against a decompilation. Repeating name/ID clustering or
+unanchored byte scans cannot improve confidence.
 
 ### Runtime trainer selectors
 
@@ -139,6 +103,60 @@ the known party records and runtime behavior are already documented.
   the same category of problem as the B2W2 difficulty band table above, not
   a script-scanning problem. No further script-side work will move this;
   the next attempt needs an ARM9 code anchor.
+
+### B2W2 Challenge Mode level offsets
+
+The only bounded binary lookup still open, and its value is narrow. The
+Normal/Challenge differences for the verified dispatch pairs are already stored
+in the ROM records — Challenge Gym records carry an extra party member at
+identical levels, and League rematch Challenge records are +1 level. The missing
+table is a separate *runtime* adjustment, so it affects a displayed level on an
+engine whose level/stat divergence is already documented, not the parties.
+
+Four anchored approaches failed; none should be repeated without a new idea:
+
+1. Unanchored byte search over arm9 plus 344 overlays (4.3 MB) for a
+   level-indexed ramp or `(threshold, offset)` pairs. Returns only noise.
+2. Searching for a Gym difficulty dispatch table. Challenge IDs are consecutive
+   (`764`–`771`) while Normal IDs are not (`156,157,154,153,158,155,159,160`),
+   so the Normal order should be data — but that sequence appears nowhere as u16
+   or u32, in either order, and neither do the League IDs or interleaved pairs.
+3. Following the Challenge IDs at `arm9+0x8D4B6`. They sit in a long mixed list
+   of trainer and non-trainer IDs with no clean bounds and no pointer resolving
+   to a plausible start.
+4. Tracing forward from the decoded `GameGetDifficulty` field-script opcode
+   (`0x2AF`) to its native VM handler, intending to then find that handler's
+   other callers in the battle-engine overlay. Stalls at the same
+   missing-anchor problem one level deeper: the VM dispatch table's own
+   location and the battle-engine overlay hosting the actual level-adjustment
+   code are both unknown, and finding them requires full-binary
+   cross-reference analysis (function-boundary detection plus a call-graph
+   search across all overlays) that isn't tractable with byte-pattern
+   scanning alone. No public source documents a byte offset either — checked
+   Ajarmar/universal-pokemon-randomizer-zx's `Gen5RomHandler.java`, which
+   only needs `getEliteFourTrainers(isChallengeMode)` to swap trainer
+   indices and never touches this runtime level-adjustment code path, so it
+   was never reverse-engineered there either. A future attempt likely needs
+   proper disassembly tooling with auto-analysis (e.g. Ghidra) rather than ad
+   hoc capstone scanning.
+
+The missing anchor is the code that applies the adjustment, reachable from the
+save-data difficulty flag or from trainer-party load rather than another data
+scan. Leave it unresolved until one of those routines provides a code anchor;
+the known party records and runtime behavior are already documented.
+
+### Black/White roaming Pokémon
+
+Tornadus and Thundurus are not published. The routine at overlay 10 offset
+`0x95C4` (identical in Black and White) only classifies a species as a roaming
+slot: 641 (Tornadus) is slot 1, 642 (Thundurus) slot 0, anything else 2. It
+does not say which of the two roams in which version (Thundurus in Black,
+Tornadus in White) or when roaming starts, and Generation V has no
+location-owned activation script to read that from. Publishing roamers needs
+the native code that picks the version's roamer.
+
+## 2. Blocked on our tooling
+
 - **B2W2 story dispatch** — verified contract families are published, but the
   complete script selector that would replace the contract lists is not
   decoded. The three known rival-battle script sites (Aspertia member 854,
@@ -162,11 +180,7 @@ the known party records and runtime behavior are already documented.
   The currently-published, hand-verified `_RIVAL_GROUPS` list remains
   accurate and untouched.
 
-These are worthwhile only when work begins from a new code anchor: the producer
-of the trainer variable or state-table lookup. Repeating name/ID clustering or
-unanchored byte scans cannot improve confidence.
-
-## 2. Not currently recoverable as structured ROM facts
+## 3. Not yet decoded
 
 - **HGSS specialty-shop inventory content.** Shop dispatch is decoded: 65
   `MartBuy`/`SpecialMartBuy`/`DecorationMart`/`SealMart` sites are published as
@@ -177,14 +191,18 @@ unanchored byte scans cannot improve confidence.
   zero matches, so HGSS encodes them differently. The separately published
   `parse_shop_catalog` shops (27 unlocated specialty shops) are not yet linked
   to dispatch sites. Do not map inventories from shop or location names.
-- **BW roaming Tornadus and Thundurus.** The routine at overlay 10 offset
-  `0x95C4` (identical in Black and White) only classifies a species as a
-  roaming slot: 641 (Tornadus) is slot 1, 642 (Thundurus) slot 0, anything
-  else 2. It does not say which of the two roams in which version (Thundurus
-  in Black, Tornadus in White) or when roaming starts, and Generation V has
-  no location-owned activation script to read that from. Publishing roamers
-  needs the native code that picks the version's roamer, not a schema
-  decision alone.
+- **Emerald systems.** Battle Frontier facilities, contests, and Berry
+  mechanics are not decoded.
+
+## 4. Not in the ROM
+
+- **Rival name.** Trainer records store the ROM's default rival name ("Terry"
+  on FireRed/LeafGreen); the player-chosen name lives in save data.
+- **Compound names.** All-caps ROM names are recased per word. Run-together
+  names take their inner capitals from PokéDB's word boundaries
+  ("THUNDERPUNCH" reads "ThunderPunch"; see `scripts/generate/gen3_compound_names.py`),
+  but a name whose slug is one word or was later renamed keeps a single
+  capital ("Smokescreen", "Smellingsalt").
 - **Generation V location section labels** — decoded map headers provide a
   broad display name and stable header identity, but no floor/room label. Warps
   already carry `destination_section_name` when an explicit profile mapping is
@@ -210,23 +228,31 @@ unanchored byte scans cannot improve confidence.
   Completing this needs either a reliable header-ID-keyed source that doesn't
   currently exist, or a different verification strategy entirely -- not more
   binary parsing, and not a data-entry pass against the current mechanism.
+- **Per-save state.** Which honey trees, Great Marsh and Trophy Garden pool
+  entries, Poké Radar chains, and dual-slot picks are active comes from save
+  data, so the guides describe the rules rather than one save's selection.
 
-## 3. Generation III
+## 5. Published as stored
 
-- **Rival name.** Trainer records store the ROM's default rival name ("Terry"
-  on FireRed/LeafGreen); the player-chosen name lives in save data.
-- **Compound names.** All-caps ROM names are recased per word. Run-together
-  names take their inner capitals from PokéDB's word boundaries
-  ("THUNDERPUNCH" reads "ThunderPunch"; see `scripts/generate/gen3_compound_names.py`),
-  but a name whose slug is one word or was later renamed keeps a single
-  capital ("Smokescreen", "Smellingsalt").
-- **Emerald systems.** Battle Frontier facilities, contests, and Berry
-  mechanics are not decoded.
 - **Unused trainer slots** are published as stored, by decision: about 100
   FireRed/LeafGreen slots share one placeholder party, as do about 175 on
   Platinum. Nothing is hidden by inference.
 
-## 4. Release validation
+## 6. Browser generator limits
+
+- **Unknown ROMs** are read as the retail game their header names and marked
+  unverified. Generation III tables a hack moved are found through the retail
+  code pointers; a DS hack, or a Generation III hack that moved a table without
+  repointing every reference or changed record formats (CFRU, the expansion
+  projects), needs a profile. Content checks reject what doesn't decode, and the
+  page shows the error.
+- **Version families** (FireRed/LeafGreen, HGSS, Black/White, Black 2/White 2)
+  are published from two ROMs; a wiki made from one ROM covers that version.
+- **Runtime:** Pyodide loads from jsDelivr on first use, so generating needs
+  network access once. Wikis are stored per browser and can be evicted under
+  storage pressure; export keeps a copy.
+
+## 7. Release validation
 
 Routine development uses the Python suite and focused data generation. Before preparing a complete React publication:
 
